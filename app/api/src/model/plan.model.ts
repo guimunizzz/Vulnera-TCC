@@ -1,25 +1,25 @@
 export class Plan {
-  private readonly _id: string;
+  private readonly _id?: string;
   private _name: string = "";
   private _maxApplications: number = 0;
   private _price: number = 0;
   private readonly _createAt?: Date;
 
   constructor(
-    id: string,
     name: string,
     maxApplications: number = 0,
     price: number = 0,
     createAt?: Date,
+    id?: string,
   ) {
     this._id = id;
     this.Name = name;
     this.MaxApplications = maxApplications;
-    this._price = price;
+    this.Price = price;
     this._createAt = createAt;
   }
 
-  public get Id(): string {
+  get Id(): string | undefined {
     return this._id;
   }
 
