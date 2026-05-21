@@ -29,7 +29,7 @@ datasource db {
 // companyRole: "OWNER" | "MEMBER" | null               (Enum - CompanyRole)
 // password:    bcrypt hash (cost 12) — nunca em claro
 // --------------------------------------------------------------------------
-model User {
+model Users {
   id          String   @id @default(cuid())
   email       String   @unique
   password    String
@@ -59,7 +59,7 @@ model Company {
   updatedAt DateTime @updatedAt
 
   plan          Plan           @relation(fields: [planId], references: [id])
-  users         User[]
+  users         Users[]
   subscriptions Subscription[]
   applications  Application[]
   projects      Project[]
@@ -120,7 +120,7 @@ model RefreshToken {
   revokedAt DateTime?
   createdAt DateTime  @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -138,7 +138,7 @@ model PasswordResetToken {
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -207,7 +207,7 @@ model ProjectMember {
   createdAt DateTime @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id])
+  user    Users    @relation(fields: [userId], references: [id])
 
   @@unique([projectId, userId])
   @@index([projectId])
