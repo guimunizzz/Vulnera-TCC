@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+package-lock.json
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Prisma
+apps/api/prisma/migrations/*.sql
+!apps/api/prisma/migrations/.gitkeep
+
+# Uploads (evidências)
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pino-*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Turbo
+.turbo/
+
+# Testing
+coverage/
+
+# Expo
+apps/mobile/.expo/
+apps/mobile/expo-env.d.ts
+
+# Next.js
+apps/web/.next/
+
+# TypeScript
+*.tsbuildinfo
+
+# SonarQube
+.sonarqube/
+TECH_STATUS.md

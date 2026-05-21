@@ -1,0 +1,13 @@
+{
+  "name": "vulnera",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "app/api",
+    "app/mobile",
+    "app/web"
+  ],
+  "scripts": {
+    "api": "npm run dev --workspace=app/api"
+  }
+}
