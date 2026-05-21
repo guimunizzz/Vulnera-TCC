@@ -21,4 +21,18 @@ export class PlanService {
       price: plan.Price,
     });
   }
+
+  async atualizarPlan(id: string, name: string, maxApplications: number, price: number) {
+    const plan = new Plan(name, maxApplications, price);
+
+    return await this._repository.update(id, {
+      name: plan.Name,
+      maxApplications: plan.MaxApplications,
+      price: plan.Price,
+    });
+  }
+
+  async excluirPlan(id: string) {
+    return await this._repository.delete(id);
+  }
 }
