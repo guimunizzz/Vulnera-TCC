@@ -1,14 +1,14 @@
 export class Company {
   private readonly _id: string;
   private _name: string = "";
-  private _planId: number = 0;
+  private _planId: string = "";
   private readonly _createdAt?: Date;
   private readonly _updatedAt?: Date;
 
 
 constructor(    id: string,
     name: string,
-    planId: number,
+    planId: string,
     createdAt?: Date,
     updatedAt?: Date,
   ) {
@@ -27,7 +27,7 @@ constructor(    id: string,
     return this._name;
   }
 
-  public get PlanId(): number {
+  public get PlanId(): string {
     return this._planId;
   }
 
@@ -44,7 +44,7 @@ constructor(    id: string,
     this._name = value;
   }
 
-  public set PlanId(value: number) {
+  public set PlanId(value: string) {
     this._validarPlanId(value);
     this._planId = value;
   }
@@ -60,12 +60,12 @@ constructor(    id: string,
     }
   }
 
-  private _validarPlanId(value: number): void {
-    if (typeof value !== "number") {
-      throw new TypeError("O ID do plano deve ser um número(integer)");
+  private _validarPlanId(value: string): void {
+    if (typeof value !== "string") {
+      throw new TypeError("O ID do plano deve ser um texto(string)");
     }
 
-    if (value.toString().trim() === "") {
+    if (value.trim() === "") {
       throw new Error("O ID do plano não pode ser vazio");
     }
   }

@@ -54,7 +54,7 @@ model Users {
 model Company {
   id        String   @id @default(cuid())
   name      String
-  planId    Int
+  planId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
