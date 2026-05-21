@@ -1,0 +1,215 @@
+// Vulnera — Prisma Schema
+//
+// Banco TEMPORÁRIO: MySQL (ambiente local não tem Postgres). Ver ADR-008.
+// Migração para PostgreSQL futura: trocar `provider = "mysql"` por
+// `provider = "postgresql"` e ajustar `DATABASE_URL`. Por isso, NÃO usar
+// features exclusivas do Postgres (sem @db.Uuid, sem enums nativos).
+// Os "enums" do domínio (Role, CompanyRole, SubscriptionStatus) estão
+// representados como String, validados em TypeScript / class-validator.
+//
+// Onda 2: User, Company, Plan, Subscription, RefreshToken, PasswordResetToken
+// Onda 3: (camada comercial — sem novos models, apenas index composto em Subscription)
+// Onda 4: Application, Project, ProjectMember
+// Onda 5+: Vulnerability, Evidence, VulnerabilityComment, Maturity, Reports,
+//          Notifications, Chat, AuditLog
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------------------------------
+// User
+// --------------------------------------------------------------------------
+// role:        "ADMIN" | "PENTESTER" | "CLIENT"        (Enum - Roles)
+// companyRole: "OWNER" | "MEMBER" | null               (Enum - CompanyRole)
+// password:    bcrypt hash (cost 12) — nunca em claro
+// --------------------------------------------------------------------------
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String
+  role        String   @default("CLIENT")
+  companyId   String?
+  companyRole String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company             Company?              @relation(fields: [companyId], references: [id])
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  projectMembers      ProjectMember[]
+
+  @@index([companyId])
+}
+
+// --------------------------------------------------------------------------
+// Company
+// --------------------------------------------------------------------------
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  planId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan          Plan           @relation(fields: [planId], references: [id])
+  users         User[]
+  subscriptions Subscription[]
+  applications  Application[]
+  projects      Project[]
+
+  @@index([planId])
+}
+
+// --------------------------------------------------------------------------
+// Plan
+// --------------------------------------------------------------------------
+model Plan {
+  id              String   @id @default(cuid())
+  name            String
+  maxApplications Int
+  price           Decimal  @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
+
+  companies     Company[]
+  subscriptions Subscription[]
+}
+
+// --------------------------------------------------------------------------
+// Subscription
+// --------------------------------------------------------------------------
+// status: "PENDING_APPROVAL" | "ACTIVE" | "REJECTED" | "SUSPENDED" | "CANCELED"
+// --------------------------------------------------------------------------
+model Subscription {
+  id        String    @id @default(cuid())
+  companyId String
+  planId    String
+  status    String
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  plan    Plan    @relation(fields: [planId], references: [id])
+
+  @@index([companyId])
+  @@index([planId])
+  // findActiveByCompany filtra por companyId AND status — índice composto
+  // serve tanto essa consulta quanto listagem por empresa.
+  @@index([companyId, status])
+}
+
+// --------------------------------------------------------------------------
+// RefreshToken
+// --------------------------------------------------------------------------
+// tokenHash: SHA-256 do refresh token em claro. O token bruto vai para o
+// cliente via cookie HttpOnly. Rotacionar a cada refresh (revokedAt + novo).
+// --------------------------------------------------------------------------
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// --------------------------------------------------------------------------
+// PasswordResetToken
+// --------------------------------------------------------------------------
+// tokenHash: SHA-256 do token enviado por e-mail. used = true após consumo.
+// --------------------------------------------------------------------------
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// --------------------------------------------------------------------------
+// Application
+// --------------------------------------------------------------------------
+// RN03 — quantidade limitada por Plan da Subscription ativa
+// RN04 — pertence a UMA Company; companyId é imutável após criação
+// RN05 — pode ter no máximo um Project (back-relation 1-para-1)
+// --------------------------------------------------------------------------
+model Application {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  companyId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company  @relation(fields: [companyId], references: [id])
+  project Project?
+
+  @@index([companyId])
+}
+
+// --------------------------------------------------------------------------
+// Project
+// --------------------------------------------------------------------------
+// status: "PENDING" | "IN_PROGRESS" | "IN_REVIEW" | "COMPLETED"
+//   (máquina de estados mínima da Onda 4; máquina formal do vault
+//    [[Maquina - Project]] tem 7 estados e será expandida na Onda 5+)
+// RN05 — applicationId UNIQUE: garante 1:1 com Application
+// RN06 — companyId é denormalizado de Application.companyId
+//        (mantido consistente pelo service)
+// RN07 — criação só com Subscription ACTIVE (validada via guard)
+// --------------------------------------------------------------------------
+model Project {
+  id                 String   @id @default(cuid())
+  name               String
+  applicationId      String   @unique
+  companyId          String
+  status             String   @default("PENDING")
+  remediationService Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  application Application      @relation(fields: [applicationId], references: [id])
+  company     Company          @relation(fields: [companyId], references: [id])
+  members     ProjectMember[]
+
+  @@index([companyId])
+  @@index([status])
+}
+
+// --------------------------------------------------------------------------
+// ProjectMember
+// --------------------------------------------------------------------------
+// RN08 — N pentesters por Project; junção User <-> Project
+// RN17 — visibilidade de PENTESTER é filtrada por presença em ProjectMember
+// onDelete: Cascade no projectId — se o Project for removido, vínculos somem
+// --------------------------------------------------------------------------
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
