@@ -2,17 +2,20 @@ export class Plan {
   private readonly _id: string;
   private _name: string = "";
   private _maxApplications: number = 0;
+  private _price: number = 0;
   private readonly _createAt?: Date;
 
   constructor(
     id: string,
     name: string,
     maxApplications: number = 0,
+    price: number = 0,
     createAt?: Date,
   ) {
     this._id = id;
     this.Name = name;
     this.MaxApplications = maxApplications;
+    this._price = price;
     this._createAt = createAt;
   }
 
@@ -26,6 +29,10 @@ export class Plan {
 
   public get MaxApplications(): number {
     return this._maxApplications;
+  }
+
+  public get Price(): number {
+    return this._price;
   }
 
   public get CreateAt(): Date | undefined {
@@ -42,6 +49,11 @@ export class Plan {
     this._maxApplications = value;
   }
 
+  public set Price(value: number) {
+    this._validarPrice(value);
+    this._price = value;
+  }
+
   private _validarName(value: string): void {
     if (typeof value !== "string") {
       throw new TypeError("O nome do plano deve ser um texto(string)");
@@ -56,4 +68,9 @@ export class Plan {
     }
   }
 
+  private _validarPrice(value: number): void {
+    if (typeof value !== "number" || value < 0) {
+      throw new TypeError("O preço do plano deve ser um número não negativo");
+    }
+  }
 }
