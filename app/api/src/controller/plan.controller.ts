@@ -2,11 +2,11 @@ import { Request, Response } from "express";
 import { PlanService } from "../service/plan.service";
 
 export class PlanController {
-  constructor(private readonly planService: PlanService) {}
+  constructor(private readonly _service = new PlanService()) { }
 
   searchAll = async (req: Request, res: Response): Promise<void> => {
     try {
-      const plans = await this.planService.selecionarTodos();
+      const plans = await this._service.selecionarTodos();
       res.status(200).json({
         mensagem: "Planos listados com sucesso.",
         recurso: plans,
@@ -23,9 +23,9 @@ export class PlanController {
   searchById = async (req: Request<{ id: string }>,res: Response,): Promise<void> => {
     try {
       const { id } = req.params;
-      const plan = await this.planService.selecionarPorId(id);
+      const plan = await this._service.selecionarPorId(id);
 
-      if (!plan || plan.length === 0) {
+      if (!plan) {
         res.status(404).json({
           mensagem: "Plano não encontrado.",
         });
@@ -48,7 +48,7 @@ export class PlanController {
   insertPlan = async (req: Request, res: Response): Promise<void> => {
     try {
       const { name, maxApplications, price } = req.body;
-      const plan = await this.planService.adicionarPlan(name, maxApplications, price );
+      const plan = await this._service.adicionarPlan(name, maxApplications, price );
       res.status(201).json({
         mensagem: "Plano criado com sucesso.",
         recurso: plan,
@@ -66,7 +66,7 @@ export class PlanController {
     try {
       const { id } = req.params;
       const { name, maxApplications, price } = req.body;
-      const plan = await this.planService.atualizarPlan(id, name, maxApplications, price);
+      const plan = await this._service.atualizarPlan(id, name, maxApplications, price);
       res.status(200).json({
         mensagem: "Plano atualizado com sucesso.",
         recurso: plan,
@@ -83,7 +83,7 @@ export class PlanController {
   deletePlan = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      await this.planService.excluirPlan(id);
+      await this._service.excluirPlan(id);
       res.status(200).json({
         mensagem: "Plano deletado com sucesso.",
       });
