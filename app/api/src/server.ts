@@ -1,15 +1,15 @@
 import express from "express";
+import { apiRoutes } from "./routes/routes";
 import { EnvVar } from "./config/EnvVar";
-import path from 'node:path';
-import router from "./routes/route";
+import { EnvKeys } from "./config/enum/EnvKeys";
 
 const app = express();
-
 app.use(express.json());
-app.use('/', router)
+app.use("/api", apiRoutes);
 
-app.use('/produtos', express.static(path.resolve('uploads/Images')));
+const port = EnvVar.getNumber(EnvKeys.PORT);
+app.listen(port, () => {
+  console.log(`🚀 Vulnera API rodando em http://localhost:${port}`);
+});
 
-app.listen(EnvVar.SERVER_PORT, ()=> {
-    console.log(`Servidor rodando em http://localhost:${EnvVar.SERVER_PORT}`)
-})
+export { app };

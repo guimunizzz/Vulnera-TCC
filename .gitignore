@@ -62,4 +62,7 @@ apps/web/.next/
 
 # SonarQube
 .sonarqube/
+
+
 TECH_STATUS.md
+static-analysis.datadog.yml

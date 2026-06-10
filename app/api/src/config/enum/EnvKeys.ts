@@ -1,4 +1,7 @@
-export enum EnvKey {
-    SERVER_PORT = 'SERVER_PORT',
-    DATABASE_URL = 'DATABASE_URL',
+export enum EnvKeys {
+  PORT = "PORT",
+  DATABASE_URL = "DATABASE_URL",
+  JWT_SECRET = "JWT_SECRET",
+  JWT_REFRESH_SECRET = "JWT_REFRESH_SECRET",
+  NODE_ENV = "NODE_ENV",
 }

@@ -1,32 +1,26 @@
-import { prisma } from '../database/prisma.database';
+import type { PrismaClient } from "@prisma/client";
+import type { Plan, CreatePlanDTO, UpdatePlanDTO } from "../model/plan.model";
 
 export class PlanRepository {
-  async selectAll() {
-    return prisma.plan.findMany();
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async findById(id: string): Promise<Plan | null> {
+    return this.prisma.plan.findUnique({ where: { id } });
   }
 
-  async selectById(id: string) {
-    return prisma.plan.findUnique({
-      where: { id },
-    });
+  async findAll(): Promise<Plan[]> {
+    return this.prisma.plan.findMany({ orderBy: { createdAt: "desc" } });
   }
 
-  async insert(plan: { name: string; maxApplications: number; price: number }) {
-    return prisma.plan.create({
-      data: plan,
-    });
+  async create(data: CreatePlanDTO): Promise<Plan> {
+    return this.prisma.plan.create({ data });
   }
 
-  async update(id: string, plan: { name: string; maxApplications: number; price: number }) {
-    return prisma.plan.update({
-      where: { id },
-      data: plan,
-    });
+  async update(id: string, data: UpdatePlanDTO): Promise<Plan> {
+    return this.prisma.plan.update({ where: { id }, data });
   }
 
-  async delete(id: string) {
-    return prisma.plan.delete({
-      where: { id },
-    });
+  async delete(id: string): Promise<void> {
+    await this.prisma.plan.delete({ where: { id } });
   }
 }

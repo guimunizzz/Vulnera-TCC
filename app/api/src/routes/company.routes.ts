@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { makePlanController } from "../factory/plan.factory";
+import { makeCompanyController } from "../factory/company.factory";
 
 // TODO Sprint 2 (KAN-202): aplicar authMiddleware quando estiver disponível
 // import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
-const controller = makePlanController();
+const controller = makeCompanyController();
 
 // router.use(authMiddleware);
 
@@ -15,4 +15,4 @@ router.post("/", (req, res) => controller.create(req, res));
 router.put("/:id", (req, res) => controller.update(req, res));
 router.delete("/:id", (req, res) => controller.delete(req, res));
 
-export { router as planRoutes };
+export { router as companyRoutes };

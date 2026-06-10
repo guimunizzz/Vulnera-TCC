@@ -1,32 +1,49 @@
-import { Company } from "../model/company.model"; //ficou sem usar
 import { CompanyRepository } from "../repository/company.repository";
+import { PlanRepository } from "../repository/plan.repository";
+import {
+  CompanyEntity,
+  CreateCompanyDTO,
+  UpdateCompanyDTO,
+} from "../model/company.model";
 
 export class CompanyService {
-  constructor(private readonly _repository = new CompanyRepository()) {}
+  constructor(
+    private readonly repository: CompanyRepository,
+    private readonly planRepository: PlanRepository,
+  ) {}
 
-  async selecionarTodos() {
-    return await this._repository.selectAll();
+  async getById(id: string): Promise<CompanyEntity> {
+    const company = await this.repository.findById(id);
+    if (!company) throw new Error("COMPANY_NOT_FOUND");
+    return new CompanyEntity(company);
   }
 
-  async selecionarPorId(id: string) {
-    return await this._repository.selectById(id);
+  async list(): Promise<CompanyEntity[]> {
+    const companies = await this.repository.findAll();
+    return companies.map((c) => new CompanyEntity(c));
   }
 
-  async adicionarCompany(name: string, planId: string) {
-    return await this._repository.insert({
-      name,
-      planId,
-    });
+  async create(dto: CreateCompanyDTO): Promise<CompanyEntity> {
+    const plan = await this.planRepository.findById(dto.planId);
+    if (!plan) throw new Error("PLAN_NOT_FOUND");
+    const created = await this.repository.create(dto);
+    return new CompanyEntity(created);
   }
 
-  async atualizarCompany(id: string, name: string, planId: string) {
-    return await this._repository.update(id, {
-      name,
-      planId,
-    });
+  async update(id: string, dto: UpdateCompanyDTO): Promise<CompanyEntity> {
+    await this.getById(id);
+
+    if (dto.planId !== undefined) {
+      const plan = await this.planRepository.findById(dto.planId);
+      if (!plan) throw new Error("PLAN_NOT_FOUND");
+    }
+
+    const updated = await this.repository.update(id, dto);
+    return new CompanyEntity(updated);
   }
 
-  async excluirCompany(id: string) {
-    return await this._repository.delete(id);
+  async delete(id: string): Promise<void> {
+    await this.getById(id);
+    await this.repository.delete(id);
   }
 }

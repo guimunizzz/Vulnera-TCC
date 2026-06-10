@@ -1,32 +1,30 @@
-import { prisma } from '../database/prisma.database';
+import type { PrismaClient } from "@prisma/client";
+import type {
+  Company,
+  CreateCompanyDTO,
+  UpdateCompanyDTO,
+} from "../model/company.model";
 
 export class CompanyRepository {
-  async selectAll() {
-    return prisma.company.findMany();
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async findById(id: string): Promise<Company | null> {
+    return this.prisma.company.findUnique({ where: { id } });
   }
 
-  async selectById(id: string) {
-    return prisma.company.findUnique({
-      where: { id },
-    });
+  async findAll(): Promise<Company[]> {
+    return this.prisma.company.findMany({ orderBy: { createdAt: "desc" } });
   }
 
-  async insert(company: { name: string; planId: string }) {
-    return prisma.company.create({
-      data: company,
-    });
+  async create(data: CreateCompanyDTO): Promise<Company> {
+    return this.prisma.company.create({ data });
   }
 
-  async update(id: string, company: { name: string; planId: string }) {
-    return prisma.company.update({
-      where: { id },
-      data: company,
-    });
+  async update(id: string, data: UpdateCompanyDTO): Promise<Company> {
+    return this.prisma.company.update({ where: { id }, data });
   }
 
-  async delete(id: string) {
-    return prisma.company.delete({
-      where: { id },
-    });
+  async delete(id: string): Promise<void> {
+    await this.prisma.company.delete({ where: { id } });
   }
 }

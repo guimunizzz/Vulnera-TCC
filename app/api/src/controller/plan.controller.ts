@@ -1,98 +1,138 @@
-import { Request, Response } from "express";
-import { PlanService } from "../service/plan.service";
+import type { Request, Response } from "express";
+import type { PlanService } from "../service/plan.service";
+import type { CreatePlanDTO, UpdatePlanDTO } from "../model/plan.model";
 
 export class PlanController {
-  constructor(private readonly _service = new PlanService()) { }
+  constructor(private readonly service: PlanService) {}
 
-  searchAll = async (req: Request, res: Response): Promise<void> => {
+  async list(req: Request, res: Response): Promise<Response> {
     try {
-      const plans = await this._service.selecionarTodos();
-      res.status(200).json({
-        mensagem: "Planos listados com sucesso.",
-        recurso: plans,
-      });
+      const plans = await this.service.list();
+      return res.status(200).json(plans.map((p) => p.toResponse()));
     } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        mensagem: "Erro interno do servidor.",
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      });
+      console.error("PlanController.list", error);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
-  };
+  }
 
-  searchById = async (req: Request<{ id: string }>,res: Response,): Promise<void> => {
+  async getById(req: Request, res: Response): Promise<Response> {
     try {
-      const { id } = req.params;
-      const plan = await this._service.selecionarPorId(id);
+      const id = req.params.id as string;
+      if (!id) return res.status(400).json({ error: "MISSING_ID" });
+      const plan = await this.service.getById(id);
+      return res.status(200).json(plan.toResponse());
+    } catch (error: any) {
+      if (error.message === "PLAN_NOT_FOUND") {
+        return res.status(404).json({ error: "PLAN_NOT_FOUND" });
+      }
+      console.error("PlanController.getById", error);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
+    }
+  }
 
-      if (!plan) {
-        res.status(404).json({
-          mensagem: "Plano não encontrado.",
-        });
-        return;
+  async create(req: Request, res: Response): Promise<Response> {
+    try {
+      const body = req.body as Partial<CreatePlanDTO>;
+
+      // 🚧 [FUTURO] migrar pra zod
+      if (!body.name || typeof body.name !== "string") {
+        return res.status(400).json({ error: "INVALID_NAME" });
+      }
+      if (
+        typeof body.maxApplications !== "number" ||
+        body.maxApplications < 1
+      ) {
+        return res.status(400).json({ error: "INVALID_MAX_APPLICATIONS" });
+      }
+      if (typeof body.maxProjects !== "number" || body.maxProjects < 1) {
+        return res.status(400).json({ error: "INVALID_MAX_PROJECTS" });
+      }
+      if (typeof body.price !== "number" || body.price < 0) {
+        return res.status(400).json({ error: "INVALID_PRICE" });
+      }
+      if (typeof body.includesRemediation !== "boolean") {
+        return res.status(400).json({ error: "INVALID_INCLUDES_REMEDIATION" });
       }
 
-      res.status(200).json({
-        mensagem: "Plano encontrado com sucesso.",
-        recurso: plan,
-      });
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        mensagem: "Erro interno do servidor.",
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      });
-    }
-  };
+      const dto: CreatePlanDTO = {
+        name: body.name,
+        maxApplications: body.maxApplications,
+        maxProjects: body.maxProjects,
+        includesRemediation: body.includesRemediation,
+        price: body.price,
+      };
 
-  insertPlan = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { name, maxApplications, price } = req.body;
-      const plan = await this._service.adicionarPlan(name, maxApplications, price );
-      res.status(201).json({
-        mensagem: "Plano criado com sucesso.",
-        recurso: plan,
-      });
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        mensagem: "Erro interno do servidor.",
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      });
+      const plan = await this.service.create(dto);
+      return res.status(201).json(plan.toResponse());
+    } catch (error: any) {
+      if (error.message === "INVALID_MAX_APPLICATIONS") {
+        return res.status(400).json({ error: "INVALID_MAX_APPLICATIONS" });
+      }
+      if (error.message === "INVALID_MAX_PROJECTS") {
+        return res.status(400).json({ error: "INVALID_MAX_PROJECTS" });
+      }
+      console.error("PlanController.create", error);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
-  };
+  }
 
-  updatePlan = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+  async update(req: Request, res: Response): Promise<Response> {
     try {
-      const { id } = req.params;
-      const { name, maxApplications, price } = req.body;
-      const plan = await this._service.atualizarPlan(id, name, maxApplications, price);
-      res.status(200).json({
-        mensagem: "Plano atualizado com sucesso.",
-        recurso: plan,
-      });
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        mensagem: "Erro interno do servidor.",
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      });
-    }
-  };
+      const id = req.params.id as string;
+      const body = req.body as UpdatePlanDTO;
 
-  deletePlan = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
-    try {
-      const { id } = req.params;
-      await this._service.excluirPlan(id);
-      res.status(200).json({
-        mensagem: "Plano deletado com sucesso.",
-      });
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        mensagem: "Erro interno do servidor.",
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      });
+      if (
+        body.name !== undefined &&
+        (typeof body.name !== "string" || !body.name)
+      ) {
+        return res.status(400).json({ error: "INVALID_NAME" });
+      }
+      if (
+        body.maxApplications !== undefined &&
+        (typeof body.maxApplications !== "number" || body.maxApplications < 1)
+      ) {
+        return res.status(400).json({ error: "INVALID_MAX_APPLICATIONS" });
+      }
+      if (
+        body.maxProjects !== undefined &&
+        (typeof body.maxProjects !== "number" || body.maxProjects < 1)
+      ) {
+        return res.status(400).json({ error: "INVALID_MAX_PROJECTS" });
+      }
+      if (
+        body.price !== undefined &&
+        (typeof body.price !== "number" || body.price < 0)
+      ) {
+        return res.status(400).json({ error: "INVALID_PRICE" });
+      }
+      if (
+        body.includesRemediation !== undefined &&
+        typeof body.includesRemediation !== "boolean"
+      ) {
+        return res.status(400).json({ error: "INVALID_INCLUDES_REMEDIATION" });
+      }
+
+      const plan = await this.service.update(id, body);
+      return res.status(200).json(plan.toResponse());
+    } catch (error: any) {
+      if (error.message === "PLAN_NOT_FOUND") {
+        return res.status(404).json({ error: "PLAN_NOT_FOUND" });
+      }
+      console.error("PlanController.update", error);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
-  };
+  }
+
+  async delete(req: Request, res: Response): Promise<Response> {
+    try {
+      await this.service.delete(req.params.id as string);
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error.message === "PLAN_NOT_FOUND") {
+        return res.status(404).json({ error: "PLAN_NOT_FOUND" });
+      }
+      console.error("PlanController.delete", error);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
+    }
+  }
 }
