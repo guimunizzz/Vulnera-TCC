@@ -50,16 +50,16 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | Task                                                           | Status | Owner | Notas |
 | -------------------------------------------------------------- | ------ | ----- | ----- |
 | Criar pastas faltantes (factory/, middleware/, utils/, tests/) | ✅     | R     | —     |
-| Auditar model files existentes                                 | 📋     | R     | —     |
-| Criar factories pros recursos atuais                           | 📋     | R     | —     |
-| Criar routes/routes.ts central                                 | 📋     | R     | —     |
-| Refatorar server.ts pra usar routes.ts                         | 📋     | R     | —     |
-| Reescrever user.routes.ts pra usar factory                     | 📋     | R     | —     |
-| Conformar Services (sem Prisma direto)                         | 📋     | R     | —     |
-| Conformar Repositories (sem lógica)                            | 📋     | R     | —     |
-| Adicionar scripts em package.json                              | 📋     | R     | —     |
-| Aplicar schema.prisma revisado + migrate                       | 📋     | R     | —     |
-| Adicionar .env.example, .env.test                              | 📋     | R     | —     |
+| Auditar model files existentes                                 | ✅     | R     | plan e company reescritos no padrão type+DTO+entity |
+| Criar factories pros recursos atuais                           | ✅     | R     | plan.factory.ts, company.factory.ts |
+| Criar routes/routes.ts central                                 | ✅     | R     | registra /plans e /companies |
+| Refatorar server.ts pra usar routes.ts                         | ✅     | R     | monta apiRoutes em /api, exporta app |
+| Reescrever user.routes.ts pra usar factory                     | ✅     | R     | Removido — será recriado na Sprint 2 (junto com user.controller.ts) |
+| Conformar Services (sem Prisma direto)                         | ✅     | R     | plan.service.ts e company.service.ts injetam repository |
+| Conformar Repositories (sem lógica)                            | ✅     | R     | findAll/findById/create/update/delete via PrismaClient injetado |
+| Adicionar scripts em package.json                              | ✅     | R     | dev/build/lint/test/prisma:* conforme §11; eslint+jest configurados |
+| Aplicar schema.prisma revisado + migrate                       | 🚧     | R     | schema já revisado; falta `prisma migrate dev` (precisa MySQL local rodando) |
+| Adicionar .env.example, .env.test                              | 🚧     | R     | .env.example existe; falta .env.test |
 | Criar docker-compose.yml na raiz                               | 📋     | R     | —     |
 
 ---

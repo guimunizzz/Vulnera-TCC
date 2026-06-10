@@ -1,38 +1,35 @@
 import { PlanRepository } from "../repository/plan.repository";
-import { Plan } from "../model/plan.model";
+import { PlanEntity, CreatePlanDTO, UpdatePlanDTO } from "../model/plan.model";
 
 export class PlanService {
-  constructor(private readonly _repository = new PlanRepository()) {}
+  constructor(private readonly repository: PlanRepository) {}
 
-  async selecionarTodos() {
-    return await this._repository.selectAll();
+  async getById(id: string): Promise<PlanEntity> {
+    const plan = await this.repository.findById(id);
+    if (!plan) throw new Error("PLAN_NOT_FOUND");
+    return new PlanEntity(plan);
   }
 
-  async selecionarPorId(id: string) {
-    return await this._repository.selectById(id);
+  async list(): Promise<PlanEntity[]> {
+    const plans = await this.repository.findAll();
+    return plans.map((p) => new PlanEntity(p));
   }
 
-  async adicionarPlan(name: string, maxApplications: number, price: number) {
-    const plan = new Plan(name, maxApplications, price);
-
-    return await this._repository.insert({
-      name: plan.Name,
-      maxApplications: plan.MaxApplications,
-      price: plan.Price,
-    });
+  async create(dto: CreatePlanDTO): Promise<PlanEntity> {
+    if (dto.maxApplications < 1) throw new Error("INVALID_MAX_APPLICATIONS");
+    if (dto.maxProjects < 1) throw new Error("INVALID_MAX_PROJECTS");
+    const created = await this.repository.create(dto);
+    return new PlanEntity(created);
   }
 
-  async atualizarPlan(id: string, name: string, maxApplications: number, price: number) {
-    const plan = new Plan(name, maxApplications, price);
-
-    return await this._repository.update(id, {
-      name: plan.Name,
-      maxApplications: plan.MaxApplications,
-      price: plan.Price,
-    });
+  async update(id: string, dto: UpdatePlanDTO): Promise<PlanEntity> {
+    await this.getById(id);
+    const updated = await this.repository.update(id, dto);
+    return new PlanEntity(updated);
   }
 
-  async excluirPlan(id: string) {
-    return await this._repository.delete(id);
+  async delete(id: string): Promise<void> {
+    await this.getById(id);
+    await this.repository.delete(id);
   }
 }

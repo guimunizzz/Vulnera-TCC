@@ -1,72 +1,38 @@
-export class Company {
-  private readonly _id: string;
-  private _name: string = "";
-  private _planId: string = "";
-  private readonly _createdAt?: Date;
-  private readonly _updatedAt?: Date;
+import type { Company as PrismaCompany } from "@prisma/client";
 
+// === TYPE ===================================================================
+export type Company = PrismaCompany;
 
-constructor(    id: string,
-    name: string,
-    planId: string,
-    createdAt?: Date,
-    updatedAt?: Date,
-  ) {
-    this._id = id;
-    this._name = name;
-    this._planId = planId;
-    this._createdAt = createdAt;
-    this._updatedAt = updatedAt;
-  }
+// === DTOs ===================================================================
+export type CreateCompanyDTO = {
+  name: string;
+  cnpj?: string;
+  planId: string;
+};
 
-  public get Id(): string {
-    return this._id;
-  }
+export type UpdateCompanyDTO = Partial<CreateCompanyDTO>;
 
-  public get Name(): string {
-    return this._name;
-  }
+export type CompanyResponseDTO = {
+  id: string;
+  name: string;
+  cnpj: string | null;
+  planId: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
-  public get PlanId(): string {
-    return this._planId;
-  }
+// === ENTITY =================================================================
+export class CompanyEntity {
+  constructor(private readonly data: Company) {}
 
-  public get CreatedAt(): Date | undefined {
-    return this._createdAt;
-  }
-
-  public get UpdatedAt(): Date | undefined {
-    return this._updatedAt;
-  }
-
-  public set Name(value: string) {
-    this._validarName(value);
-    this._name = value;
-  }
-
-  public set PlanId(value: string) {
-    this._validarPlanId(value);
-    this._planId = value;
-  }
-
-  // Validações
-  private _validarName(value: string): void {
-    if (typeof value !== "string") {
-      throw new TypeError("O nome da empresa deve ser um texto(string)");
-    }
-
-    if (value.trim() === "") {
-      throw new Error("O nome da empresa não pode ser vazio");
-    }
-  }
-
-  private _validarPlanId(value: string): void {
-    if (typeof value !== "string") {
-      throw new TypeError("O ID do plano deve ser um texto(string)");
-    }
-
-    if (value.trim() === "") {
-      throw new Error("O ID do plano não pode ser vazio");
-    }
+  toResponse(): CompanyResponseDTO {
+    return {
+      id: this.data.id,
+      name: this.data.name,
+      cnpj: this.data.cnpj,
+      planId: this.data.planId,
+      createdAt: this.data.createdAt.toISOString(),
+      updatedAt: this.data.updatedAt.toISOString(),
+    };
   }
 }

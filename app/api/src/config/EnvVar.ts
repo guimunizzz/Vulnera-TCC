@@ -1,38 +1,21 @@
-import 'dotenv/config';
-import { EnvKey } from './enum/EnvKeys'
+import "dotenv/config";
+import { EnvKeys } from "./enum/EnvKeys";
 
 export class EnvVar {
-    private constructor() { }
+  static get(key: EnvKeys): string {
+    const value = process.env[key];
+    if (!value) throw new Error(`Missing environment variable: ${key}`);
+    return value;
+  }
 
-    public static getString(chave:EnvKey):string {
-        const valor = process.env[chave];
+  static getOptional(key: EnvKeys, defaultValue: string): string {
+    return process.env[key] ?? defaultValue;
+  }
 
-        if (valor === undefined) {
-            throw new Error(`Variavel ${chave} não definida no .env`);
-        }
-        return valor;
-    }
-
-    public static getNumber(chave:EnvKey):number {
-        const valor = this.getString(chave);
-        const valorConvertido = Number(valor);
-
-        if (Number.isNaN(valorConvertido)) {
-            throw new TypeError(`Variavel ${chave} deve ser um numero`);
-        }
-        return valorConvertido;
-    }
-
-    public static getBoolean(chave:EnvKey):boolean {
-        const valor = this.getString(chave).toLowerCase();
-
-        return ['true', '1', 'yes', 'on'].includes(valor);
-    }
-
-    public static get SERVER_PORT():number {
-        return this.getNumber(EnvKey.SERVER_PORT);
-    }
-    public static get DATABASE_URL():string {
-        return this.getString(EnvKey.DATABASE_URL);
-    }
+  static getNumber(key: EnvKeys): number {
+    const value = EnvVar.get(key);
+    const num = Number(value);
+    if (Number.isNaN(num)) throw new Error(`Env ${key} is not a number`);
+    return num;
+  }
 }
