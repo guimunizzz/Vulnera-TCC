@@ -68,7 +68,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 
 | Task                                     | Status | Owner | PR  |
 | ---------------------------------------- | ------ | ----- | --- |
-| KAN-101: Schema + migrations             | 📋     | R     | —   |
+| KAN-101: Schema + migrations             | 🚧     | R     | feat/sprint-1-foundation — schema validado (19 tabelas), `.env` ajustado p/ user `vulnera`, `prisma generate` ok; `prisma migrate dev` pendente (Docker/MySQL local não disponível) |
 | KAN-102: docker-compose                  | ✅     | R     | feat/sprint-1-foundation — arquivo criado, execução pendente (Docker não instalado) |
 | KAN-103: /api/health                     | 📋     | R     | —   |
 | KAN-104: Jest + Supertest setup          | 📋     | R     | —   |
