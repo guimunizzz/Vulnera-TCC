@@ -18,10 +18,10 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Sprint atual       | **Sprint 0 — Refactor**             |
+| Sprint atual       | **Sprint 1 — Fundação**             |
 | Data início        | 2026-XX-XX (a definir)              |
 | Data alvo TCC      | 2026-XX-XX (16 semanas após início) |
-| Última atualização | 2026-XX-XX por @rafael              |
+| Última atualização | 2026-06-11 por @rafael              |
 
 ---
 
@@ -32,7 +32,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | Sprint                             | Foco                                       | Status | % concluído |
 | ---------------------------------- | ------------------------------------------ | ------ | ----------- |
 | 0 — Refactor                       | Alinhar código atual com CLAUDE.md v2      | 🚧     | 0%          |
-| 1 — Fundação                       | Infra, schema, server base, frontend setup | 📋     | 0%          |
+| 1 — Fundação                       | Infra, schema, server base, frontend setup | 🚧     | em progresso |
 | 2 — Auth + User                    | JWT, register, login, CRUD User            | 📋     | 0%          |
 | 3 — Company + Plan + Subscription  | Onboarding e modelo comercial              | 📋     | 0%          |
 | 4 — Application + Project + Member | Catálogo e gestão de projetos              | 📋     | 0%          |
@@ -69,7 +69,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | Task                                     | Status | Owner | PR  |
 | ---------------------------------------- | ------ | ----- | --- |
 | KAN-101: Schema + migrations             | 📋     | R     | —   |
-| KAN-102: docker-compose                  | 📋     | R     | —   |
+| KAN-102: docker-compose                  | ✅     | R     | feat/sprint-1-foundation — arquivo criado, execução pendente (Docker não instalado) |
 | KAN-103: /api/health                     | 📋     | R     | —   |
 | KAN-104: Jest + Supertest setup          | 📋     | R     | —   |
 | KAN-105: GitHub Actions                  | 📋     | R     | —   |
