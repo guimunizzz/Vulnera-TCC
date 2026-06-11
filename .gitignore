@@ -63,6 +63,6 @@ apps/web/.next/
 # SonarQube
 .sonarqube/
 
-
+package-lock.json
 TECH_STATUS.md
 static-analysis.datadog.yml
