@@ -71,7 +71,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | KAN-101: Schema + migrations             | 🚧     | R     | feat/sprint-1-foundation — schema validado (19 tabelas), `.env` ajustado p/ user `vulnera`, `prisma generate` ok; `prisma migrate dev` pendente (Docker/MySQL local não disponível) |
 | KAN-102: docker-compose                  | ✅     | R     | feat/sprint-1-foundation — arquivo criado, execução pendente (Docker não instalado) |
 | KAN-103: /api/health                     | ✅     | R     | feat/sprint-1-foundation — testado via curl, retorna 200 ok |
-| KAN-104: Jest + Supertest setup          | 📋     | R     | —   |
+| KAN-104: Jest + Supertest setup          | ✅     | R     | feat/sprint-1-foundation — jest.config.ts, app.ts extraído de server.ts, smoke test /api/health passando (1/1); `prisma migrate deploy` no setup pendente (Docker/MySQL local) |
 | KAN-105: GitHub Actions                  | 📋     | R     | —   |
 | KAN-106: ESLint + tsconfig strict        | 📋     | R     | —   |
 | KAN-107: Seed inicial (TechNova + Admin) | 📋     | R     | —   |
