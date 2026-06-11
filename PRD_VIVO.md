@@ -32,7 +32,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | Sprint                             | Foco                                       | Status | % concluído |
 | ---------------------------------- | ------------------------------------------ | ------ | ----------- |
 | 0 — Refactor                       | Alinhar código atual com CLAUDE.md v2      | 🚧     | 0%          |
-| 1 — Fundação                       | Infra, schema, server base, frontend setup | 🚧     | em progresso |
+| 1 — Fundação                       | Infra, schema, server base, frontend setup | 🚧     | 50%         |
 | 2 — Auth + User                    | JWT, register, login, CRUD User            | 📋     | 0%          |
 | 3 — Company + Plan + Subscription  | Onboarding e modelo comercial              | 📋     | 0%          |
 | 4 — Application + Project + Member | Catálogo e gestão de projetos              | 📋     | 0%          |
@@ -267,8 +267,8 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | ---- | -------------------------------- | ----------- |
 | —    | Refactor inicial                 | A registrar |
 | —    | Primeira PR mergeada             | A registrar |
-| —    | API rodando localmente           | A registrar |
-| —    | Primeiro teste passando          | A registrar |
+| 2026-06-11 | API rodando localmente           | `/api/health` respondendo 200 em http://localhost:3001 (`npm run dev`) |
+| 2026-06-11 | Primeiro teste passando          | Smoke test `tests/integration/health.test.ts` (Jest+Supertest) — 1/1 |
 | —    | MVP funcional (Sprint 5 fechada) | A registrar |
 | —    | Apresentação TCC                 | A registrar |
 
@@ -280,7 +280,30 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 
 | Data | Bloqueio | Impacta | Responsável | Status |
 | ---- | -------- | ------- | ----------- | ------ |
-| —    | —        | —       | —           | —      |
+| 2026-06-11 | Docker não instalado no Windows da máquina de dev; porta 3306 já ocupada por serviço local `MySQL80` (sem usuário `vulnera`) | KAN-101, KAN-102, KAN-104, KAN-107, KAN-105 (test job da CI) | R | Aberto |
+
+---
+
+## Estado parcial da sessão (2026-06-11)
+
+> Sprint 1 segue 🚧 (50%). KAN-101 e KAN-107 ficaram 🚧 por dependerem de banco MySQL,
+> que não está disponível nesta sessão (Docker não instalado; MySQL local `MySQL80`
+> não tem o usuário/banco `vulnera`). Tudo que NÃO depende de banco foi concluído.
+
+Pendente de execução (assim que Docker ou MySQL local com user `vulnera` estiver disponível):
+
+- [ ] KAN-101: rodar `cd app/api && npx prisma migrate dev --name initial` (gera `prisma/migrations/*_initial/migration.sql` com as 19 tabelas) e `npx prisma generate` de novo.
+- [ ] KAN-102: `docker compose up -d` na raiz e validar os 3 containers (`db` healthy, Mailhog em :8025, Sonar em :9000).
+- [ ] KAN-104: descomentar/implementar o `prisma migrate deploy` em `tests/setup.ts` contra `vulnera_test` (criar o banco antes, conforme passo 5 do KAN-104).
+- [ ] KAN-107: `npm run db:seed` + validar via `npx prisma studio` (3 plans, 1 admin, 1 company, 1 subscription ACTIVE, 1 owner).
+- [ ] KAN-105: confirmar que o job `test` da CI passa (`prisma migrate deploy` precisa da migration `initial` do KAN-101 existir no repo).
+
+Observações registradas durante a sessão:
+
+- `npx prisma migrate status` retornou `P1000: Authentication failed` contra `localhost:3306` com user `vulnera` — confirma que o `MySQL80` local não serve para este projeto; usar o `db` do docker-compose (KAN-102).
+- `package-lock.json` está no `.gitignore` (raiz e `app/api`) mas o workflow de CI (KAN-105) referencia `app/api/package-lock.json` em `cache-dependency-path`. Decisão pendente: versionar lockfiles ou ajustar o workflow.
+- Adicionar `"prisma": {"seed": ...}` ao `package.json` (KAN-107) gerou um aviso de depreciação do Prisma 6 sugerindo migrar para `prisma.config.ts` — não crítico, fica como nota para o futuro.
+- `app/api/src/server.ts` foi dividido: `app.ts` (Express app + rotas, sem `listen`) e `server.ts` (só `app.listen`). Necessário porque `app.listen()` no mesmo arquivo importado pelo Supertest deixava o Jest com handle aberto (processo não finalizava).
 
 ---
 
