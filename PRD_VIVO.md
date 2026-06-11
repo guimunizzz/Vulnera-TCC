@@ -73,7 +73,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | KAN-103: /api/health                     | ✅     | R     | feat/sprint-1-foundation — testado via curl, retorna 200 ok |
 | KAN-104: Jest + Supertest setup          | ✅     | R     | feat/sprint-1-foundation — jest.config.ts, app.ts extraído de server.ts, smoke test /api/health passando (1/1); `prisma migrate deploy` no setup pendente (Docker/MySQL local) |
 | KAN-105: GitHub Actions                  | ✅     | R     | feat/sprint-1-foundation — jobs lint/build/test (ubuntu) + sonarqube com `needs`; test job depende de migration `initial` (KAN-101 pendente) |
-| KAN-106: ESLint + tsconfig strict        | 📋     | R     | —   |
+| KAN-106: ESLint + tsconfig strict        | ✅     | R     | feat/sprint-1-foundation — tsconfig com resolveJsonModule+exclude, lint e build sem erros |
 | KAN-107: Seed inicial (TechNova + Admin) | 📋     | R     | —   |
 | KAN-108: React+Vite+Tailwind setup       | 📋     | I     | —   |
 | KAN-109: Componentes UI base             | 📋     | I     | —   |
