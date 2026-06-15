@@ -1,0 +1,41 @@
+services:
+  db:
+    image: mysql:8
+    container_name: vulnera-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: vulnera
+      MYSQL_USER: vulnera
+      MYSQL_PASSWORD: vulnera
+    ports:
+      - "3306:3306"
+    volumes:
+      - vulnera-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: vulnera-mail
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  sonarqube:
+    image: sonarqube:10-community
+    container_name: vulnera-sonar
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - vulnera-sonar-data:/opt/sonarqube/data
+      - vulnera-sonar-ext:/opt/sonarqube/extensions
+
+volumes:
+  vulnera-db-data:
+  vulnera-sonar-data:
+  vulnera-sonar-ext:
