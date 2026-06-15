@@ -35,7 +35,7 @@ export class UserController {
   getById = async (req: Request, res: Response): Promise<void> => {
     try {
       const actor = req.user!;
-      const user = await this.service.getById(actor, req.params.id);
+      const user = await this.service.getById(actor, req.params.id as string);
       res.status(200).json(user);
     } catch (err) {
       this.handleError(err, res);
@@ -46,7 +46,7 @@ export class UserController {
     try {
       const actor = req.user!;
       const { name, email } = req.body ?? {};
-      const user = await this.service.update(actor, req.params.id, { name, email });
+      const user = await this.service.update(actor, req.params.id as string, { name, email });
       res.status(200).json(user);
     } catch (err) {
       this.handleError(err, res);
@@ -56,7 +56,7 @@ export class UserController {
   delete = async (req: Request, res: Response): Promise<void> => {
     try {
       const actor = req.user!;
-      await this.service.delete(actor, req.params.id);
+      await this.service.delete(actor, req.params.id as string);
       res.status(204).send();
     } catch (err) {
       this.handleError(err, res);

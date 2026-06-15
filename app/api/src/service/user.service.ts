@@ -23,10 +23,13 @@ export class UserService {
     if (actor.role === "PENTESTER" && actor.userId !== target.id) {
       throw new Error("FORBIDDEN");
     }
-    // client só vê quem é da própria company
-    if (actor.role === "CLIENT") {
+    // client só vê a si mesmo ou quem é da própria company
+    if (actor.role === "CLIENT" && actor.userId !== target.id) {
       const me = await this.userRepo.findById(actor.userId);
-      if (!me || me.companyId !== target.companyId) throw new Error("FORBIDDEN");
+      // companyId null não pode "casar" com companyId null de outro usuário
+      if (!me?.companyId || me.companyId !== target.companyId) {
+        throw new Error("FORBIDDEN");
+      }
     }
     return UserEntity.toResponse(target);
   }
