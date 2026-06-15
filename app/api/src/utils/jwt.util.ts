@@ -13,6 +13,7 @@
  * - Em prod, segredos devem ter ≥32 chars aleatórios
  */
 
+import { randomUUID } from "node:crypto";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import { EnvVar } from "../config/EnvVar";
 import { EnvKeys } from "../config/enum/EnvKeys";
@@ -30,12 +31,18 @@ export function signAccessToken(payload: JwtPayload): string {
   return jwt.sign(payload, secret, opts);
 }
 
-/** Assina o refresh token (longo). */
+/**
+ * Assina o refresh token (longo).
+ *
+ * Inclui um `jti` aleatório: sem ele, duas chamadas de login/refresh no mesmo
+ * segundo pro mesmo usuário gerariam tokens idênticos (mesmo payload + mesmo
+ * `iat`), e o hash duplicado violaria a constraint unique de RefreshToken.
+ */
 export function signRefreshToken(payload: JwtPayload): string {
   const secret = EnvVar.get(EnvKeys.JWT_REFRESH_SECRET);
   const ttl = EnvVar.getOptional(EnvKeys.JWT_REFRESH_TTL, "7d");
   const opts: SignOptions = { expiresIn: ttl as SignOptions["expiresIn"] };
-  return jwt.sign(payload, secret, opts);
+  return jwt.sign({ ...payload, jti: randomUUID() }, secret, opts);
 }
 
 /** Verifica o access token. Lança erro se inválido/expirado. */
