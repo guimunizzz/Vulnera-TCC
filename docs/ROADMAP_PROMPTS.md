@@ -12,6 +12,14 @@
 
 ## SPRINT 0 — Refactor (antes de começar)
 
+**Status:** ✅ Concluída em 2026-06-10
+
+### Histórico
+- Branch: `refactor/align-claude-md`
+- PR: #2 → develop
+- Mergeado em: 2026-06-10
+- Notas: Todas as R1-R14 do REFACTOR_PLAN.md executadas. Factories criadas (plan, company), routes.ts central, server.ts refatorado, conformidade de services/repositories validada.
+
 ```
 # Tarefa: Refactor inicial do projeto Vulnera
 
@@ -61,6 +69,14 @@ Quando confirmar os 3 pontos, comece pela R1 do REFACTOR_PLAN.md.
 ---
 
 ## SPRINT 1 — Fundação
+
+**Status:** 🚧 Backend 100% concluído em 2026-06-11 (mergeado); frontend 📋 Iann pendente (KAN-108/109/110)
+
+### Histórico
+- Branch: `feat/sprint-1-foundation`
+- PR: #3 → develop
+- Mergeado em: 2026-06-11
+- Notas: KAN-101 (migration `initial`) resolvido via CI (serviço mysql no GitHub Actions, não dependeu de Docker local). KAN-107 (seed) criado mas `db:seed` manual ainda pendente de Docker local. Frontend tasks (KAN-108/109/110, owner Iann) não iniciadas.
 
 ```
 # Tarefa: Sprint 1 do Vulnera — Fundação (Infra + Schema + Server base)
@@ -174,6 +190,14 @@ Se sim, comece pela KAN-101.
 ---
 
 ## SPRINT 2 — Auth + User
+
+**Status:** 🚧 Backend 100% concluído em 2026-06-15; aguardando PR → develop; frontend 📋 Iann pendente (KAN-213/214/215)
+
+### Histórico
+- Branch: `feat/sprint-2-auth-user`
+- PR: pendente (não criada ainda)
+- Mergeado em: —
+- Notas: Todos os 12 KANs de backend (KAN-201 a KAN-212) implementados. auth.service com register/login/refresh/logout e rotação de refresh token (SHA-256). 9 testes de auth (AUTH-01..09) + 3 testes de user (USR-01..03). Commit mais recente `f8f742e parcial` contém os test fixtures e suites finalizados. Frontend (KAN-213/214/215, owner Iann) não iniciado — app/web só tem placeholder package.json.
 
 ```
 # Tarefa: Sprint 2 do Vulnera — Auth + User CRUD
