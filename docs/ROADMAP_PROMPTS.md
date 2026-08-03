@@ -1,910 +1,532 @@
-# ROADMAP_PROMPTS.md — Prompts pro Claude Code por sprint
+# ROADMAP_PROMPTS.md — Prompts de execução por fase
 
-> **Como usar este arquivo:**
-> 1. Antes de **cada sprint**, abra o Claude Code (`claude` no terminal) na raiz do repo
-> 2. Copie o bloco entre as linhas tracejadas da sprint correspondente
-> 3. Cole no Claude Code, ele vai trabalhar de forma autocontida
-> 4. Se acabarem tokens, abra nova sessão, cole o MESMO prompt — ele vai ler `PRD_VIVO.md`, ver o que falta, e continuar
+> **v4 · 2026-08-03.** Substitui a versão por sprints (8 sprints de 2 semanas, tarefas divididas entre Guilherme e Iann). Agora é **execução solo-delegada**: Rafael supervisiona, Claude Code implementa tudo — backend e frontend.
 >
-> **Princípio dos prompts:** cada um é autocontido. Nenhum depende de contexto da sessão anterior. Tudo o que o Claude Code precisa saber está no repo (`CLAUDE.md` + `PRD_VIVO.md` + `BACKLOG.md`).
+> **Como usar:** abra o Claude Code **na raiz do repositório** e cole o prompt da fase. Cada prompt é autocontido. Se a sessão morrer no meio, cole o **mesmo** prompt — ele lê o `PRD_VIVO.md`, descobre onde parou e continua.
+>
+> **Entrega: 25/10/2026.** 12 semanas, 6 fases, sem buffer.
 
 ---
 
-## SPRINT 0 — Refactor (antes de começar)
+## Cronograma
 
-**Status:** ✅ Concluída em 2026-06-10
+| Fase  | Escopo                                         | Semanas | Período       | Status         |
+| ----- | ---------------------------------------------- | ------- | ------------- | -------------- |
+| 0–2   | Refactor · Fundação · Auth + User (backend)    | —       | até 15/06     | ✅             |
+| **3** | Refactor plural + Subscription + bootstrap web | 1–2     | 04/08 → 17/08 | 📋 **próxima** |
+| 4     | Application + Project + Member + telas         | 3–4     | 18/08 → 31/08 | 📋             |
+| 5     | Vulnerability + Evidence ⭐                    | 5–7     | 01/09 → 21/09 | 📋             |
+| 6     | Relatórios (pdf-lib) + Dashboards              | 8–9     | 22/09 → 05/10 | 📋             |
+| 7     | Mobile enxuto + Push                           | 10–11   | 06/10 → 15/10 | 📋             |
+| 8     | Maturidade (checklist) + fechamento TCC        | 12      | 16/10 → 25/10 | 📋             |
 
-### Histórico
-- Branch: `refactor/align-claude-md`
-- PR: #2 → develop
-- Mergeado em: 2026-06-10
-- Notas: Todas as R1-R14 do REFACTOR_PLAN.md executadas. Factories criadas (plan, company), routes.ts central, server.ts refatorado, conformidade de services/repositories validada.
+**Cortado do escopo:** IA / Gemini · chat · tickets · e-mail transacional · Prometheus/Grafana.
+**Enxugado:** mobile (só o essencial pra demo) · maturidade (checklist de perguntas, não SAMM completo).
 
-```
-# Tarefa: Refactor inicial do projeto Vulnera
-
-## Contexto
-
-Estou começando o desenvolvimento do meu TCC, projeto Vulnera Security (plataforma SaaS de gestão de análises de segurança). O repositório atual tem código parcial que precisa ser alinhado a um padrão arquitetural definido em CLAUDE.md.
-
-## Leitura obrigatória (NÃO PULE)
-
-Antes de fazer QUALQUER alteração, leia:
-
-1. `CLAUDE.md` (raiz do repo ou app/api/) — fonte da verdade do padrão de código
-2. `REFACTOR_PLAN.md` — lista exata de tarefas R1-R14 do refactor
-3. `PRD_VIVO.md` — estado atual; veja FEAT-00
-
-Se algum desses arquivos não existir no repo, pare e me avise.
-
-## Execução
-
-Execute as tarefas R1 a R14 do REFACTOR_PLAN.md em ordem. PARE a cada R# concluída e me peça revisão antes de continuar.
-
-Para CADA tarefa concluída, atualize PRD_VIVO.md mudando o status correspondente em FEAT-00 de 📋 para ✅.
-
-## Regras invioláveis
-
-- Não invente nada fora do que está em CLAUDE.md
-- Não use a pasta `services/` (plural). Use `service/` (singular).
-- Não importe `@prisma/client` fora de arquivos da pasta `repository/`
-- Cada recurso DEVE ter uma factory em `factory/`
-- 1 arquivo por model (type + dto + entity juntos)
-- Nomenclatura: kebab + role (`plan.controller.ts`)
-
-## Continuidade
-
-Se a sessão acabar antes de terminar, anote em PRD_VIVO.md exatamente em qual R# parou e o que falta. Próxima sessão, leia PRD_VIVO.md e retome de onde parou.
-
-## Confirmação
-
-Antes de começar, responda:
-1. Você encontrou CLAUDE.md? Qual o caminho?
-2. Você encontrou REFACTOR_PLAN.md? Qual o caminho?
-3. Existe alguma divergência entre o que CLAUDE.md prescreve e o que está no repo que eu não mencionei?
-
-Quando confirmar os 3 pontos, comece pela R1 do REFACTOR_PLAN.md.
-```
+> ⚠️ Sem buffer. Se acumular mais de uma semana de atraso até o fim da Fase 6, **a Fase 7 encolhe primeiro** — mobile vira demonstração de telas com dados de seed, sem push funcional.
 
 ---
 
-## SPRINT 1 — Fundação
+## Leitura obrigatória em toda sessão
 
-**Status:** 🚧 Backend 100% concluído em 2026-06-11 (mergeado); frontend 📋 Iann pendente (KAN-108/109/110)
+Todo prompt assume que você leu, nesta ordem:
 
-### Histórico
-- Branch: `feat/sprint-1-foundation`
-- PR: #3 → develop
-- Mergeado em: 2026-06-11
-- Notas: KAN-101 (migration `initial`) resolvido via CI (serviço mysql no GitHub Actions, não dependeu de Docker local). KAN-107 (seed) criado mas `db:seed` manual ainda pendente de Docker local. Frontend tasks (KAN-108/109/110, owner Iann) não iniciadas.
+1. `PRD_VIVO.md` — onde o projeto parou
+2. `CLAUDE.md` — §0.1 (docs vivos), §0.2 (modo solo), §2 (pastas), §5 (padrão de código)
+3. `docs/Vulnera/00-Hub/Contexto Mestre v4.md` — fonte de verdade do domínio
+4. `app/api/prisma/schema.prisma` — **os campos reais** (o schema vence qualquer suposição)
+
+Ignore `docs/Vulnera/repomix-output.xml`. Ignore `docs/Vulnera/vulnera.md` e `docs/Vulnera/00-Hub/Fonte Original - MVP Vulnera.md` — são histórico (NestJS, PostgreSQL, 7 meses) e não valem mais.
+
+---
+
+# FASE 3 — Refactor plural + Subscription + bootstrap web
+
+**Branch:** `feat/fase-3-empresas` (de `develop`) · **Período:** 04/08 → 17/08
 
 ```
-# Tarefa: Sprint 1 do Vulnera — Fundação (Infra + Schema + Server base)
+Execute a Fase 3 do Vulnera. Sessão aberta na raiz do repositório.
 
-## Contexto
+LEITURA OBRIGATÓRIA antes de tocar em qualquer arquivo:
+- PRD_VIVO.md
+- CLAUDE.md (§0.1, §0.2, §2 estrutura de pastas, §5 walkthrough)
+- docs/Vulnera/00-Hub/Contexto Mestre v4.md
+- docs/Vulnera/07-Decisoes/ADR-009 - Pastas no plural e cadeia de camadas.md
+- app/api/prisma/schema.prisma  ← campos REAIS
 
-Sou o Rafael, tech lead. O refactor da Sprint 0 foi concluído. Agora vou implementar a fundação do projeto: schema completo no banco, server.ts mínimo, CI funcional, testes configurados, seeds e healthcheck.
+CHECKPOINT 0 — Auditoria (faça ANTES de escrever código)
+Me diga, sem alterar nada:
+a) Quais models existem em schema.prisma? Liste. Faltam Vulnerability, Evidence,
+   VulnerabilityComment, AuditLog, Notification, Report, MaturityDomain,
+   MaturityControl, MaturityAssessment, MaturityScore?
+b) Os arquivos de company e plan (model/service/repository/controller/factory)
+   estão completos ou são stubs? Abra e confira.
+c) Existe subscription em algum lugar? Existe require-role.middleware?
+d) O que `npm run check` retorna hoje em app/api?
+PARE e reporte antes do Checkpoint 1.
 
-## Leitura obrigatória
+CHECKPOINT 1 — Refactor para plural
+Renomeie as pastas de recurso em app/api/src:
+  controller/ → controllers/
+  model/      → models/
+  repository/ → repositories/
+  service/    → services/
+  factory/    → factories/
+  middleware/ → middlewares/
+Mantenha config/ e database/ no singular (convenção fixa do CLAUDE.md §2).
+Use `git mv` para preservar histórico. Atualize TODOS os imports.
+Atualize também docs/architecture.md, que documenta a convenção antiga.
+Critério: `npm run build` e `npm run test` passam igual antes do rename.
 
-Antes de qualquer mudança:
+CHECKPOINT 2 — Schema completo
+Se faltarem models (ver Checkpoint 0), complete o schema.prisma com os 19 do
+domínio — a especificação de cada um está em docs/Vulnera/02-Dominio/Entidades/.
+Rode `npx prisma migrate dev --name complete_domain_models`.
+⚠️ Isso é alteração de schema: me mostre o diff e ESPERE minha confirmação
+antes de rodar a migration.
 
-1. `CLAUDE.md` — padrão de código
-2. `PRD_VIVO.md` — veja Sprint 1 (FEAT-01) e marque ela como 🚧 no §2
-3. `BACKLOG.md` — tasks KAN-101 a KAN-111 com descrição
-4. `app/api/prisma/schema.prisma` — schema completo (já existente)
+CHECKPOINT 3 — Backend: require-role, AuditLog, Subscription
+1. middlewares/require-role.middleware.ts — requireRole(...roles), 403 FORBIDDEN
+2. repositories/audit-log.repository.ts — create(actorUserId, entity, entityId,
+   action, metadata), append-only. Confira no schema se metadata é Json ou String.
+3. Plan: complete o que faltar. GET / e GET /:id PÚBLICOS (sem authMiddleware);
+   POST/PUT/DELETE com authMiddleware + requireRole("ADMIN").
+   Planos: BASIC, PRO, Enterprise (NÃO PRO_PLUS — nome antigo).
+4. Company: complete o que faltar. Criador vira owner (User.companyId setado na
+   criação). CNPJ único, regex de formato apenas (14 dígitos ou máscara), SEM
+   dígito verificador. GET /companies/me ANTES de /:id no router.
+   CLIENT vê/edita só a própria; ADMIN vê todas.
+5. Subscription completa (5 camadas + factory + routes):
+   - POST /subscriptions → cria PENDING + AuditLog SUBSCRIPTION_REQUESTED
+   - GET /subscriptions/pending → admin-only, ANTES de /:id
+   - GET /subscriptions/current → a ACTIVE da company do usuário
+   - POST /:id/approve → ACTIVE + activatedAt + AuditLog
+   - POST /:id/reject → REJECTED + AuditLog
+   REGRA DE OURO: 1 subscription ACTIVE por company, validada NO REQUEST E DE
+   NOVO NO APPROVE (o estado pode mudar entre os dois).
+   Erros: ALREADY_HAS_ACTIVE_SUBSCRIPTION 409, INVALID_STATUS_TRANSITION 400.
+6. Plugue tudo em routes/routes.ts.
+NÃO IMPLEMENTAR: notificação por e-mail / Nodemailer (fora de escopo).
 
-## Execução
+CHECKPOINT 4 — Testes backend
+tests/integration/{plan,company,subscription}.test.ts cobrindo:
+- PLAN: GET público sem token 200; POST sem admin 403; maxApplications<1 400;
+  nome duplicado 409; update admin 200; delete admin 204
+- COMP: criar vincula owner; CNPJ inválido 400; CNPJ duplicado 409;
+  CLIENT não vê company de outro 404; GET /me devolve a própria; ADMIN lista todas
+- SUB: cria PENDING; segunda ACTIVE 409; approve muda estado e gera AuditLog;
+  approve de REJECTED 400; reject funciona; não-admin approve 403; /pending admin-only
+Estenda cleanDatabase() em tests/setup.ts na ordem de FK do CLAUDE.md §12.
+`npm run check` verde, cobertura ≥80% nos três services.
 
-Execute as tasks abaixo EM ORDEM, marcando ✅ em PRD_VIVO.md ao concluir cada uma:
+CHECKPOINT 5 — Bootstrap do frontend web
+app/web hoje só tem package.json. Monte do zero:
+1. Vite + React + TypeScript + Tailwind + Radix + TanStack Query + Zustand + Axios
+2. Tema dark: bg #0a0a0a, accent emerald #10b981. Severidades (usar da Fase 5 em
+   diante): critical #dc2626, high #ea580c, medium #f59e0b, low #10b981, info #3b82f6
+3. components/ui/: Button, Input, Card, Badge, Table, Modal, Spinner, Layout
+4. api/client.ts — Axios com interceptor de refresh e FILA de requisições
+   concorrentes (se dois requests recebem 401 juntos, só um refresh dispara)
+5. store/auth.store.ts — Zustand com persist em localStorage
+6. pages/Login.tsx, pages/Register.tsx, ProtectedRoute, pages/Dashboard.tsx (stub)
+7. hooks/useApiError.ts — mapeia código SCREAMING_SNAKE para mensagem PT-BR
 
-### KAN-101 — Aplicar schema e rodar migrations
-- Garantir que o schema.prisma está com os modelos: User, Company, Plan, Subscription, RefreshToken, PasswordResetToken, Application, Project, ProjectMember, Vulnerability, Evidence, VulnerabilityComment, AuditLog, MaturityDomain, MaturityControl, MaturityAssessment, MaturityScore, Notification, Report
-- Rodar `npx prisma migrate dev --name initial`
-- Validar que todas as tabelas foram criadas (use prisma studio ou query direta)
+CHECKPOINT 6 — Telas da Fase 3
+1. pages/Plans.tsx — PÚBLICA, 3 cards comparativos, PRO destacado.
+   CTA → /onboarding?plan=<id> se logado, /register se não
+2. pages/Onboarding.tsx — wizard de 3 passos com useState (SEM lib de wizard):
+   dados da empresa → escolha de plano (pré-seleciona ?plan=) → confirmação.
+   Ao confirmar: createCompany + requestSubscription → /dashboard com aviso
+   "assinatura pendente de aprovação"
+3. pages/admin/PendingSubscriptions.tsx — só ADMIN (redireciona senão).
+   TanStack Query em /subscriptions/pending, botões Aprovar/Rejeitar com Modal
+   de confirmação + invalidation. Estado vazio amigável.
+4. Rotas no App.tsx + item "Aprovações" na Sidebar visível só pra ADMIN
 
-### KAN-102 — docker-compose.yml na raiz
-- Criar com 3 serviços: mysql:8, mailhog:v1.0.1, sonarqube:10-community
-- Conforme template em REFACTOR_PLAN.md R13
-- Testar: `docker compose up -d` e validar ping no banco
+CHECKPOINT 7 — Smoke E2E e encerramento
+Roteiro manual: abrir /plans deslogado → registrar CLIENT → onboarding cria
+company + subscription PENDING → logar como admin do seed → aprovar → some da
+lista → tentar segunda subscription → 409 tratado na UI → CLIENT não acessa
+/admin/subscriptions → conferir AuditLog no Prisma Studio.
+Depois: protocolo CLAUDE.md §0.1 completo (PRD_VIVO, BACKLOG, este arquivo com
+badge + Histórico, Changelog do vault) + relatório §0.2 S5 + PR
+"[Fase 3] Refactor plural + Subscription + bootstrap web" para develop.
 
-### KAN-103 — Endpoint /api/health
-- Criar `routes/health.routes.ts` com `GET /` que retorna `{status:"ok",timestamp:new Date().toISOString(),uptime:process.uptime()}`
-- Plugar em `routes/routes.ts`: `router.use("/health", healthRoutes)`
-- NÃO aplicar authMiddleware (rota pública)
-- Validar com: `curl http://localhost:3000/api/health`
-
-### KAN-104 — Jest + Supertest setup
-- Instalar: `npm i -D jest @types/jest ts-jest supertest @types/supertest`
-- Criar `jest.config.ts` com preset ts-jest
-- Criar `.env.test` com DATABASE_URL apontando pra `vulnera_test`
-- Criar `tests/setup.ts` que roda `prisma migrate deploy` antes da suite
-- Criar `tests/integration/health.test.ts` validando GET /api/health (smoke test)
-- `npm run test` deve passar
-
-### KAN-105 — GitHub Actions CI
-- Criar/atualizar `.github/workflows/build.yml` com 3 jobs:
-  - `lint`: `npm ci && npm run lint`
-  - `build`: `npm ci && npm run build`
-  - `test`: usa serviço mysql, roda `npm ci && npm run test`
-- Workflow dispara em push e PR para main/develop
-
-### KAN-106 — ESLint + tsconfig strict
-- `tsconfig.json` com `strict: true`, `noImplicitAny: true`, `target: ES2022`
-- `.eslintrc.json` com TypeScript-eslint recommended
-- Rodar `npm run lint` — corrigir warnings antes de commitar
-
-### KAN-107 — Seed inicial
-- Criar `prisma/seed.ts` (executado via `tsx prisma/seed.ts`)
-- Conteúdo:
-  - 3 Plans: BASIC (R$499, 2 apps, 1 projeto), PRO (R$1499, 5 apps, 3 projetos, includesRemediation), PRO_PLUS (sob consulta, 999 apps)
-  - 1 admin com email "admin@vulnera.local" e senha "admin12345" (hasheada bcrypt 12)
-  - 1 Company "TechNova Solutions" com Subscription ACTIVE no PRO
-  - 1 Owner da TechNova com email "owner@technova.demo" e senha "demo12345"
-- Adicionar em package.json: `"db:seed": "tsx prisma/seed.ts"`
-- Rodar `npm run db:seed` e validar
-
-### KAN-111 — Atualizar PRD_VIVO.md
-- Marcar FEAT-01 como ✅
-- Atualizar Sprint 1 no §2 com status ✅ e % concluído = 100%
-- Adicionar marco no §6: "Sprint 1 concluída em YYYY-MM-DD"
-
-## Tasks de frontend (Iann, paralelo)
-
-Iann (vibecoder frontend) está fazendo em paralelo:
-- KAN-108: Setup React+Vite+Tailwind em `app/web`
-- KAN-109: Componentes UI base
-- KAN-110: Landing page
-
-NÃO execute essas tasks. Foque só no back-end. Marque elas como "Owner: I" e deixe que ele atualize o PRD quando concluir.
-
-## Critérios de pronto da Sprint 1
-
-- [ ] `docker compose up -d` sobe MySQL + Mailhog + SonarQube
-- [ ] `npm run dev` sobe API em localhost:3000
-- [ ] `curl localhost:3000/api/health` retorna 200 com status:ok
-- [ ] `npm run test` passa
-- [ ] `npm run lint` passa
-- [ ] `npm run build` passa
-- [ ] `npm run db:seed` popula banco com TechNova
-- [ ] CI verde no GitHub Actions
-- [ ] PRD_VIVO.md atualizado com tudo da Sprint 1 ✅
-
-## Continuidade
-
-Se acabar tokens no meio:
-1. Anote em PRD_VIVO.md exatamente em qual KAN-XXX parou
-2. Próxima sessão: cole este mesmo prompt
-3. Você (Claude Code) vai ler PRD_VIVO.md primeiro e retomar daquele ponto
-
-## Confirmação
-
-Responda:
-1. CLAUDE.md está em qual caminho?
-2. PRD_VIVO.md existe?
-3. O refactor da Sprint 0 está concluído (FEAT-00 com tudo ✅)?
-
-Se sim, comece pela KAN-101.
+NÃO FAZER NESTA FASE: e-mail, dígito verificador de CNPJ, zod, qualquer coisa
+de Application/Project (Fase 4), IA (cortada do escopo).
 ```
 
 ---
 
-## SPRINT 2 — Auth + User
+# FASE 4 — Application + Project + ProjectMember
 
-**Status:** 🚧 Backend 100% concluído em 2026-06-15; aguardando PR → develop; frontend 📋 Iann pendente (KAN-213/214/215)
-
-### Histórico
-- Branch: `feat/sprint-2-auth-user`
-- PR: pendente (não criada ainda)
-- Mergeado em: —
-- Notas: Todos os 12 KANs de backend (KAN-201 a KAN-212) implementados. auth.service com register/login/refresh/logout e rotação de refresh token (SHA-256). 9 testes de auth (AUTH-01..09) + 3 testes de user (USR-01..03). Commit mais recente `f8f742e parcial` contém os test fixtures e suites finalizados. Frontend (KAN-213/214/215, owner Iann) não iniciado — app/web só tem placeholder package.json.
+**Branch:** `feat/fase-4-projetos` · **Período:** 18/08 → 31/08 · **Depende de:** Fase 3
 
 ```
-# Tarefa: Sprint 2 do Vulnera — Auth + User CRUD
+Execute a Fase 4 do Vulnera. Sessão na raiz do repositório.
+Leituras de sempre (PRD_VIVO, CLAUDE.md, Contexto Mestre v4, schema.prisma).
+Regras de domínio: docs/Vulnera/02-Dominio/Regras de Negocio/RN03..RN08.
 
-## Contexto
+CHECKPOINT 1 — Application
+CRUD completo (models → repositories → services → controllers → factories → routes).
+Regra crítica no service.create:
+  - buscar subscription ACTIVE da company; se não houver → 422 NO_ACTIVE_SUBSCRIPTION
+  - contar applications da company; se count >= plan.maxApplications
+    → 422 PLAN_LIMIT_REACHED
+  - companyId vem do req.user, NUNCA do body
+URL validada por regex. Isolamento: CLIENT só a própria company; ADMIN todas.
 
-Sprint 1 concluída. Banco configurado, server rodando, CI verde. Agora vou implementar autenticação completa (register, login, refresh, logout) e CRUD de User. JWT a partir desta sprint vai proteger todas as outras rotas.
+CHECKPOINT 2 — Project
+CRUD + máquina de estados.
+  - 1-para-1 com Application → 409 APPLICATION_ALREADY_HAS_PROJECT
+  - companyId SEMPRE herdado da Application, nunca do body (RN06)
+  - POST /projects/:id/transition {toStatus}
+    PENDING → IN_PROGRESS → IN_REVIEW → COMPLETED, e IN_REVIEW → IN_PROGRESS
+    Qualquer outra → 400 INVALID_STATUS_TRANSITION
+  - PENTESTER lista só projetos onde é membro (RN17)
+Toda transição gera AuditLog STATUS_CHANGE.
 
-## Leitura obrigatória
+CHECKPOINT 3 — ProjectMember
+Subrota dentro de routes/project.routes.ts:
+  router.use("/:projectId/members", projectMemberRoutes)
+Endpoints: POST / · GET / · DELETE /:userId
+  - só ADMIN gerencia
+  - usuário alvo precisa ter role PENTESTER → 400 USER_NOT_PENTESTER
+  - par (projectId, userId) único → 409 MEMBER_ALREADY_EXISTS
 
-1. `CLAUDE.md` — em especial §5 (walkthrough), §8 (Auth JWT) e §9 (códigos de erro)
-2. `PRD_VIVO.md` — marcar Sprint 2 (FEAT-02) como 🚧
-3. `BACKLOG.md` — tasks KAN-201 a KAN-215
+CHECKPOINT 4 — Testes
+APP-01..04: gate de limite estoura no plano BASIC; sem subscription ativa 422;
+URL inválida 400; TEN-01..03 isolamento entre companies.
+PROJ-01..05: 1-para-1; companyId herdado da Application (não do body);
+máquina completa feliz; transição inválida 400; TEN-04..05 pentester não-membro.
+Estenda cleanDatabase(): projectMember → project → application antes de subscription.
+Cobertura ≥80% nos services novos.
 
-## Execução
+CHECKPOINT 5 — Frontend
+1. pages/Applications.tsx — tabela por company, filtro, botão "Nova aplicação"
+   (modal com nome + URL + descrição). Erro PLAN_LIMIT_REACHED renderizado de
+   forma amigável, com o limite do plano atual.
+2. pages/NewAnalysis.tsx — wizard: escolher aplicação → tipo (PENTEST/DAST/SAST)
+   → nível e escopo → flag de remediação → cria Project em PENDING
+3. pages/ProjectDetail.tsx — header com badge de status e botão de transição
+   (respeitando a máquina e a role); abas:
+   Visão geral (metadados + membros, com gestão de membros se ADMIN) /
+   Findings (placeholder "Fase 5") / Relatórios (placeholder "Fase 6")
+4. Sidebar: "Aplicações" e "Projetos" ativos. Breadcrumb company → app → projeto
+   (ajuda muito na demo).
 
-Execute EM ORDEM, marcando ✅ em PRD_VIVO.md ao concluir:
+CHECKPOINT 6 — Smoke e encerramento
+Criar aplicações até estourar o limite do BASIC → 422 amigável → criar projeto →
+transitar estados pela UI → adicionar pentester como membro (e confirmar que
+CLIENT não consegue) → logar como pentester e ver só o projeto atribuído.
+Protocolo §0.1 + relatório §0.2 S5 + PR para develop.
 
-### KAN-201 — utils/jwt.util.ts e utils/hash.util.ts
-Conforme §8 do CLAUDE.md.
-- jwt.util.ts: signAccessToken (15min), verifyAccessToken, signRefreshToken (7d)
-- hash.util.ts: hashPassword (bcrypt cost 12), comparePassword
-
-### KAN-202 — middleware/auth.middleware.ts
-Conforme §8 do CLAUDE.md. Extrai Bearer, valida, popula req.user. 401 em erro.
-
-### KAN-203 — model/user.model.ts
-- type User = PrismaUser
-- DTOs: RegisterDTO {name,email,password}, LoginDTO {email,password}, AuthResponseDTO {accessToken,refreshToken,user}, UserResponseDTO {id,name,email,role,companyId,companyRole,createdAt}
-- class UserEntity com toResponse() que OMITE password
-
-### KAN-204 — repository/user.repository.ts
-findByEmail, findById, findAll, create, update, delete
-
-### KAN-205 — repository/refresh-token.repository.ts
-- create(userId, tokenHash, expiresAt) — armazena SHA-256 hash, não o token cru
-- findByHash(tokenHash) — retorna RefreshToken | null
-- revoke(id) — set revokedAt = now()
-- deleteAllForUser(userId) — limpa todos os tokens (usado em logout-all)
-
-### KAN-206 — service/auth.service.ts
-- register(dto): valida email único, hashea senha, cria User. Retorna { user, accessToken, refreshToken }
-- login(dto): busca user por email, compara hash, emite tokens. Lança INVALID_CREDENTIALS se errado.
-- refresh(refreshToken): hashea o token recebido, busca no banco, valida não revogado/expirado, REVOGA o atual e emite novo par (rotação obrigatória)
-- logout(refreshToken): revoga o token correspondente
-
-### KAN-207 — controller/auth.controller.ts
-Endpoints: register, login, refresh, logout
-Validação manual:
-- email: existe + regex /@.+\./
-- password: ≥ 8 chars
-- name: ≥ 3 chars
-Erros possíveis: MISSING_EMAIL, INVALID_EMAIL, MISSING_PASSWORD, WEAK_PASSWORD, EMAIL_ALREADY_EXISTS, INVALID_CREDENTIALS, MISSING_REFRESH_TOKEN, INVALID_TOKEN
-
-### KAN-208 — service/user.service.ts e controller/user.controller.ts
-CRUD com regras:
-- admin: lista todos os users
-- client: lista apenas users da própria company
-- pentester: lista apenas a si mesmo
-- delete: forbidden se for ele mesmo (admin pode deletar outros)
-- Rota especial: GET /me (devolve req.user expandido com dados do banco)
-
-### KAN-209 — factory/auth.factory.ts e factory/user.factory.ts
-Padrão estrito do CLAUDE.md §5.5.
-
-### KAN-210 — routes/auth.routes.ts (PÚBLICO) e routes/user.routes.ts (autenticado)
-- auth.routes.ts: NÃO aplicar authMiddleware
-- user.routes.ts: aplicar authMiddleware. Rota `/me` ANTES de `/:id` para evitar conflito de match.
-- Plugar AMBOS em routes/routes.ts
-
-### KAN-211 — tests/integration/auth.test.ts
-Casos canários (mínimo):
-- AUTH-01: registro válido retorna 201 com tokens
-- AUTH-02: registro com email duplicado retorna 409 EMAIL_ALREADY_EXISTS
-- AUTH-03: registro com senha curta retorna 400 WEAK_PASSWORD
-- AUTH-04: login válido retorna 200 com tokens
-- AUTH-05: login com senha errada retorna 401 INVALID_CREDENTIALS
-- AUTH-06: refresh válido retorna 200 com NOVO par de tokens
-- AUTH-07: refresh com token revogado retorna 401 INVALID_TOKEN
-- AUTH-08: logout revoga o refresh token
-- AUTH-09: rota protegida sem token retorna 401 UNAUTHORIZED
-
-### KAN-212 — tests/integration/user.test.ts
-- USR-01: GET /me com token válido retorna dados do user
-- USR-02: GET /users como client não-admin retorna apenas users da própria company
-- USR-03: DELETE /users/:id (a si mesmo) retorna 403 FORBIDDEN
-
-## Tasks frontend (Iann, paralelo)
-
-KAN-213, KAN-214, KAN-215 são dele. Não execute. Marque owner: I no PRD.
-
-## Critérios de pronto
-
-- [ ] Posso registrar via `POST /api/auth/register`
-- [ ] Posso logar via `POST /api/auth/login` e receber tokens
-- [ ] Posso renovar via `POST /api/auth/refresh` com rotação
-- [ ] Posso fazer logout
-- [ ] Rota protegida sem token retorna 401
-- [ ] `npm run test` passa com 100% dos canários AUTH-XX
-- [ ] PRD_VIVO.md com FEAT-02 ✅
-
-## Continuidade
-
-Se a sessão acabar: anote em PRD_VIVO.md em qual KAN parou. Reinicie nova sessão colando este mesmo prompt.
-
-## Confirmação
-
-1. Sprint 1 está ✅ no PRD_VIVO.md?
-2. Banco está rodando (docker compose up)?
-3. Existe usuário admin no seed?
-
-Comece pela KAN-201.
+NÃO FAZER: vulnerabilities (Fase 5), upload, chat.
 ```
 
 ---
 
-## SPRINT 3 — Company + Plan + Subscription
+# FASE 5 — Vulnerability + Evidence ⭐ NÚCLEO
+
+**Branch:** `feat/fase-5-findings` · **Período:** 01/09 → 21/09 (3 semanas) · **Depende de:** Fase 4
 
 ```
-# Tarefa: Sprint 3 do Vulnera — Company + Plan + Subscription
+Execute a Fase 5 do Vulnera — o núcleo do produto e a fase mais pesada.
+Leituras de sempre. Regras: docs/Vulnera/02-Dominio/Regras de Negocio/RN09..RN12,
+RN20, RN21 e docs/Vulnera/02-Dominio/Conceitos/CVSS.md.
+Instalar no backend: multer + @types/multer.
 
-## Contexto
+CONCEITO CRÍTICO: cada Vulnerability é INSTÂNCIA INDIVIDUAL, ligada a 1 Project,
+1 Application e 1 Company. NÃO existe catálogo compartilhado de CVEs. A mesma SQL
+Injection em duas empresas são dois registros independentes.
 
-Sprint 2 concluída — auth funcional. Agora implemento o modelo comercial: Company, Plan e Subscription com fluxo de aprovação manual pelo admin.
+CHECKPOINT 1 — CVSS
+utils/cvss.util.ts — calculateCvss(vector: string) → { score, severity }
+Parser MANUAL do vector CVSS 3.1 (AV/AC/PR/UI/S/C/I/A) com as fórmulas oficiais
+da FIRST, comentadas em PT-BR (a banca vai perguntar como calcula).
+Faixas: 0.1–3.9 LOW · 4.0–6.9 MEDIUM · 7.0–8.9 HIGH · 9.0–10 CRITICAL.
+Vector inválido → INVALID_CVSS_VECTOR.
+Teste com pelo menos 4 vectors conhecidos. Canônico:
+  AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H = 9.8 CRITICAL
 
-## Leitura obrigatória
+CHECKPOINT 2 — Vulnerability
+CRUD completo. Service:
+  - create/update recalcula score e severidade a partir do vector
+  - applicationId e companyId desnormalizados, herdados do Project
+  - owaspCategory obrigatória (OWASP Top 10 2021) — RN11
+  - POST /:id/transition: OPEN → IN_PROGRESS → FIXED → CLOSED + AuditLog
+  - POST /:id/override-severity {newSeverity, justification}
+    justification ≥ 20 caracteres, senão 400 MISSING_JUSTIFICATION
+    gera AuditLog SEVERITY_OVERRIDE com valores antes/depois no metadata
+Quem escreve: PENTESTER membro do projeto ou ADMIN. CLIENT é read-only.
 
-1. `CLAUDE.md`
-2. `PRD_VIVO.md` — marcar FEAT-03 como 🚧
-3. `BACKLOG.md` — KAN-301 a KAN-312
+CHECKPOINT 3 — Evidence e Comment
+1. Evidence: POST /vulnerabilities/:vulnId/evidences (multipart)
+   multer memoryStorage → validação → gravação manual
+   - MIME whitelist: image/png, image/jpeg, application/pdf, text/plain
+   - MAGIC NUMBER nos primeiros bytes (não confiar no header declarado):
+     PNG 89 50 4E 47 · JPEG FF D8 FF · PDF 25 50 44 46 · txt valida UTF-8
+   - máximo 10MB → 400 FILE_TOO_LARGE; tipo errado → 400 INVALID_FILE_TYPE
+   - renomear para UUID + extensão, salvar em uploads/{companyId}/{vulnId}/
+   - GET autenticado que valida o acesso do ator à company antes de servir
+2. VulnerabilityComment: POST/GET /vulnerabilities/:id/comments (GET paginado),
+   DELETE só do autor ou admin
 
-## Execução
+CHECKPOINT 4 — Testes
+BIZ-03: CVSS calculado corretamente · BIZ-04: severidade derivada do score
+BIZ-05: override sem justificativa 400 · BIZ-06: justificativa curta (<20) 400
+BIZ-07: override válido gera AuditLog · BIZ-08: transição inválida 400
+BIZ-09: upload .exe 400 INVALID_FILE_TYPE + upload PNG válido 201
+TEN-06: vulnerability da company A invisível para B
+Estenda cleanDatabase(): evidence → vulnerabilityComment → vulnerability antes
+de projectMember. Cobertura ≥80%.
 
-### KAN-301 — Company CRUD completo
-- model/company.model.ts (type + DTOs + CompanyEntity com toResponse)
-- repository/company.repository.ts
-- service/company.service.ts
-  - Regras: ao criar, validar planId existente. Cliente OWNER pode editar a própria; MEMBER só lê.
-- controller/company.controller.ts
-- Códigos: COMPANY_NOT_FOUND, INVALID_NAME, INVALID_CNPJ, PLAN_NOT_FOUND, FORBIDDEN
+CHECKPOINT 5 — Frontend
+1. ProjectDetail aba Findings: tabela com filtros (severidade, status, OWASP),
+   badges coloridos por severidade, paginação, contador "X críticos abertos"
+   no header do projeto
+2. pages/FindingEditor.tsx:
+   - título, campo de vector CVSS com cálculo EM TEMPO REAL (espelhe o cvss.util
+     em TypeScript no front — não faça round-trip ao servidor a cada tecla)
+   - select de OWASP Top 10 2021
+   - descrição, impacto, recomendação (textarea)
+   - upload drag-drop multi-arquivo com preview e barra de progresso
+   - timeline de comentários
+   - botões de transição de status e de override (modal pedindo justificativa
+     com contador de caracteres, desabilitado abaixo de 20)
+3. pages/FindingDetail.tsx — versão read-only para o CLIENT
 
-### KAN-302 — factory/company.factory.ts + routes/company.routes.ts
-Plugar em routes/routes.ts: `router.use("/companies", companyRoutes)`
+CHECKPOINT 6 — Smoke e encerramento
+Pentester cria finding com vector real → severidade calcula sozinha → sobe duas
+evidências (uma PNG válida, um .exe bloqueado) → comenta → faz override com
+justificativa → CLIENT abre e vê read-only → conferir AuditLog no Studio.
+Protocolo §0.1 + relatório + PR.
 
-### KAN-303 — Plan CRUD completo
-Já existe esqueleto desde o refactor. Completar conforme schema atualizado (maxApplications, maxProjects, includesRemediation, price). Conforme exemplo §5 do CLAUDE.md.
-
-Regras: apenas admin pode criar/editar/deletar planos. Clientes apenas listam (GET /api/plans público apenas para o catálogo, ou exige auth — decidir: vou usar autenticado mas todos podem listar).
-
-### KAN-304 — factory + routes plan
-
-### KAN-305 — Subscription CRUD + endpoints especiais
-- model/subscription.model.ts
-- repository com findActiveByCompany(companyId)
-- service:
-  - create: nasce em PENDING_APPROVAL
-  - approve: só admin, muda para ACTIVE, startDate=now, validar que não existe ACTIVE pra mesma company
-  - reject: só admin, muda para REJECTED
-  - current(companyId): retorna a ACTIVE atual ou null
-- controller com endpoints:
-  - GET /subscriptions (admin lista todas; cliente só vê suas)
-  - POST /subscriptions (cliente cria, status PENDING_APPROVAL)
-  - POST /subscriptions/:id/approve (só admin)
-  - POST /subscriptions/:id/reject (só admin)
-  - GET /subscriptions/current (cliente vê sua subscription ativa)
-- Códigos: SUBSCRIPTION_NOT_FOUND, INVALID_STATUS_TRANSITION, COMPANY_ALREADY_HAS_ACTIVE_SUBSCRIPTION, FORBIDDEN
-
-### KAN-306 — factory + routes subscription
-
-### KAN-307 — Notificação de subscription pendente
-- Instalar nodemailer: `npm i nodemailer @types/nodemailer`
-- Criar utils/mailer.util.ts apontando pra Mailhog (host: localhost, port: 1025, ignoreTLS: true)
-- No SubscriptionService.create: após criar, dispara e-mail pro admin "Nova subscription pendente: Company X, Plan Y"
-- Registrar AuditLog com action="CREATE" entityType="Subscription"
-- Não bloquear se e-mail falhar (try/catch silencioso, log warn)
-
-### KAN-308 — Testes de integração
-Mínimo:
-- BIZ-01: criar plan inválido (maxApplications<1) retorna 400
-- BIZ-02: criar segunda subscription ACTIVE pra mesma company retorna 409
-- COMP-01: client de company A não vê company B no GET /companies
-- SUB-01: aprovar subscription PENDING vira ACTIVE
-- SUB-02: aprovar subscription REJECTED retorna 422 INVALID_STATUS_TRANSITION
-- SUB-03: cliente não-admin tentando aprovar retorna 403
-
-## Tasks frontend (Iann, paralelo)
-KAN-309, 310, 311 — owner: I.
-
-## Critérios de pronto
-- [ ] Cliente consegue criar Company + Subscription pendente
-- [ ] Admin consegue listar pendentes, aprovar e rejeitar
-- [ ] E-mail aparece no Mailhog (http://localhost:8025)
-- [ ] AuditLog registra a criação da subscription
-- [ ] Testes passam
-- [ ] PRD_VIVO.md FEAT-03 ✅
-
-## Confirmação
-1. FEAT-02 está ✅?
-2. Mailhog está rodando (docker compose ps)?
-Comece pela KAN-301.
+NÃO FAZER: relatórios (Fase 6), IA (cortada), antivírus no upload (anote como
+limitação conhecida na documentação).
 ```
 
 ---
 
-## SPRINT 4 — Application + Project + ProjectMember
+# FASE 6 — Relatórios + Dashboards
+
+**Branch:** `feat/fase-6-relatorios` · **Período:** 22/09 → 05/10 · **Depende de:** Fase 5
 
 ```
-# Tarefa: Sprint 4 do Vulnera — Application + Project + ProjectMember
+Execute a Fase 6 do Vulnera. Leituras de sempre.
+Instalar no app/web: pdf-lib  (⚠️ NÃO @react-pdf/renderer — decisão revertida)
 
-## Contexto
+CHECKPOINT 1 — Backend
+1. GET /api/projects/:id/report-data — JSON consolidado num único request:
+   { project, company, application,
+     vulnerabilities: [...],
+     stats: { total, bySeverity{...}, byStatus{...}, byOwasp{...} },
+     topRisks: [5 maiores por score],
+     maturity: <null até a Fase 8> }
+   Permissão: CLIENT da company, PENTESTER membro, ADMIN. Senão 403/404.
+2. Report metadata (5 camadas): POST /api/reports {projectId, type:
+   EXECUTIVE|TECHNICAL} registra a geração + AuditLog REPORT_GENERATED.
+   GET /api/reports?projectId= lista o histórico.
+3. Testes RPT-01..03: números batem com o banco; isolamento cross-company;
+   pentester não-membro 403.
 
-Sprint 3 concluída — modelo comercial pronto. Agora implemento o catálogo de aplicações e o ciclo de projetos de análise.
+CHECKPOINT 2 — PDFs com pdf-lib
+⚠️ A API do pdf-lib é IMPERATIVA: você cria o PDFDocument, adiciona páginas e
+desenha texto/retângulos por coordenada. Não existem componentes React como no
+@react-pdf/renderer. Reserve tempo para isso.
+1. lib/pdf/base.ts — helpers reutilizáveis: página A4, cabeçalho com nome da
+   empresa, rodapé paginado, fontes StandardFonts.Helvetica, paleta de severidade,
+   função drawText com quebra de linha automática e função drawBarChart
+   (retângulos proporcionais — o gráfico é desenhado à mão)
+2. lib/pdf/executive.ts — 3 a 5 páginas: capa, sumário executivo, gráfico de
+   barras por severidade, top 5 riscos com recomendação curta, conclusão.
+   Seção de maturidade fica como placeholder condicional (chega na Fase 8).
+3. lib/pdf/technical.ts — capa, sumário, uma seção por finding (título,
+   severidade, vector + score, OWASP, descrição, impacto, recomendação,
+   evidências PNG/JPEG embutidas via embedPng/embedJpg, comentários),
+   apêndice com glossário
+4. Botões "Gerar PDF Executivo" e "Gerar PDF Técnico" na aba Relatórios do
+   ProjectDetail: busca report-data → gera o PDF → download via Blob →
+   registra POST /api/reports
 
-## Leitura obrigatória
+CHECKPOINT 3 — Dashboards
+Dashboard.tsx roteia o conteúdo pela role do Zustand.
+- CLIENT: cards de KPI (total de findings, % remediados = FIXED+CLOSED/total,
+  críticos abertos) + donut Recharts por severidade + 5 findings mais recentes
+- PENTESTER: projetos atribuídos com status, findings registrados na semana
+- ADMIN: companies ativas, subscriptions pendentes (link pra tela da Fase 3),
+  findings críticos abertos globais, top companies por volume
 
-1. `CLAUDE.md`
-2. `PRD_VIVO.md` — marcar FEAT-04 como 🚧
-3. `BACKLOG.md` — KAN-401 a KAN-412
-4. `app/api/prisma/schema.prisma` — modelos Application, Project, ProjectMember (já presentes)
+CHECKPOINT 4 — Smoke e encerramento
+Gerar os dois PDFs de um projeto com findings reais, abrir e conferir o visual;
+dashboards corretos nos três perfis; Report registrado no banco.
+Protocolo §0.1 + relatório + PR.
 
-## Execução
-
-### KAN-401 — Application CRUD
-- model/application.model.ts (type + DTOs + entity)
-- repository com countByCompany(companyId)
-- service com REGRA CRÍTICA:
-  - Ao criar Application, validar que Subscription da Company está ACTIVE
-  - Validar `count < plan.maxApplications` da subscription ativa
-  - companyId vem do req.user (não do body) — segurança
-- controller
-- Códigos: APPLICATION_NOT_FOUND, INVALID_NAME, INVALID_URL, PLAN_LIMIT_REACHED, NO_ACTIVE_SUBSCRIPTION
-
-### KAN-402 — factory + routes
-Plugar em routes/routes.ts
-
-### KAN-403 — Project CRUD
-- model/project.model.ts
-- repository
-- service com REGRAS:
-  - Ao criar: companyId herda de Application.companyId (desnormalizado)
-  - Subscription da Company deve estar ACTIVE
-  - hasRemediation herda do plano (Pro inclui, Basic não)
-  - Status nasce em PENDING
-  - Endpoint POST /:id/transition aceita {to: status}, valida transição
-- Transições válidas (máquina mínima desta sprint):
-  - PENDING → IN_PROGRESS
-  - IN_PROGRESS → IN_REVIEW
-  - IN_REVIEW → COMPLETED
-  - IN_REVIEW → IN_PROGRESS (retrabalho)
-- controller
-- Códigos: PROJECT_NOT_FOUND, INVALID_STATUS_TRANSITION, APPLICATION_NOT_FOUND, NO_ACTIVE_SUBSCRIPTION
-
-### KAN-404 — factory + routes project
-
-### KAN-405 — ProjectMember (sub-resource)
-- model/project-member.model.ts
-- repository com existsForProject(projectId, userId), findByProject(projectId)
-- service:
-  - Adicionar: validar que User.role === "PENTESTER" (lança USER_NOT_PENTESTER)
-  - Validar projeto existe
-  - Unique (projectId, userId)
-- controller
-
-### KAN-406 — Subrota nested em project
-Em routes/project.routes.ts:
-```typescript
-import { projectMemberRoutes } from "./project-member.routes";
-router.use("/:projectId/members", projectMemberRoutes);
-```
-
-projectMemberRoutes endpoints:
-- POST /  (adicionar — exige projectId via params, userId via body)
-- GET /
-- DELETE /:userId
-
-### KAN-407 — Testes Application
-Canários multi-tenant (TENABLE-like):
-- TEN-01: client A cria app, client B não consegue ver no GET /applications
-- TEN-02: client B tentando GET /applications/:idDoA retorna 404 NOT_FOUND
-- TEN-03: ao atingir limite do plano, criar nova app retorna 422 PLAN_LIMIT_REACHED
-- APP-01: criar app sem subscription ativa retorna 422 NO_ACTIVE_SUBSCRIPTION
-
-### KAN-408 — Testes Project
-- PROJ-01: criar project copia companyId da application
-- PROJ-02: transição PENDING → COMPLETED inválida retorna 422
-- PROJ-03: TEN-04: client A não vê project de client B
-- PROJ-04: TEN-05: GET /projects/:id de outra company retorna 404
-
-## Critérios de pronto
-- [ ] Posso criar Application até o limite do plano
-- [ ] Posso criar Project ligado a Application
-- [ ] Posso transicionar Project pelos estados válidos
-- [ ] Multi-tenant isolado (testes TEN-XX passando)
-- [ ] PRD_VIVO.md FEAT-04 ✅
-
-Comece pela KAN-401.
+NÃO FAZER: agendamento de relatório, export CSV, envio por e-mail.
 ```
 
 ---
 
-## SPRINT 5 — Vulnerability + Evidence ⭐ CORE
+# FASE 7 — Mobile enxuto + Push
+
+**Branch:** `feat/fase-7-mobile` · **Período:** 06/10 → 15/10 · **Depende de:** Fase 5
 
 ```
-# Tarefa: Sprint 5 do Vulnera — Vulnerability + Evidence (NÚCLEO DO PRODUTO)
+Execute a Fase 7 do Vulnera. Leituras de sempre.
+Instalar no app/mobile: expo, expo-router, expo-secure-store, expo-notifications,
+@tanstack/react-query, axios. No backend: expo-server-sdk.
 
-## Contexto
+ESCOPO DELIBERADAMENTE ENXUTO. O mobile é read-only, exclusivo do CLIENT, e
+existe para a demo. NÃO construa paridade com o web. Se algo estourar o prazo,
+corte funcionalidade do mobile, nunca do backend.
 
-Esta é a sprint mais importante do MVP. Implemento o coração do Vulnera: registro de vulnerabilidades estilo Tenable/Wiz (cada vulnerability é instância individual), upload de evidências, comentários, e auditoria de mudanças sensíveis.
+CHECKPOINT 1 — Mobile base
+app/mobile hoje só tem package.json. Bootstrap Expo + TypeScript + Expo Router.
+Tema dark igual ao web. api/client.ts espelhando o interceptor do web, mas com
+SecureStore no lugar de localStorage.
+Telas (só estas cinco):
+  1. Login
+  2. Home — lista de projetos da company (TanStack Query)
+  3. ProjectDetail — metadados + lista de findings
+  4. FindingDetail — read-only: badge de severidade, descrição, evidências em
+     carrossel, comentários
+  5. Configurações — logout e status de notificações
+NÃO FAZER no mobile: criar/editar nada, upload, geração de PDF, telas de admin,
+telas de pentester.
 
-## Leitura obrigatória
+CHECKPOINT 2 — Push
+1. Migration: coluna expoPushToken (String?) no model User
+   → npx prisma migrate dev --name add_expo_push_token
+   (me mostre o diff e espere confirmação antes de rodar)
+2. POST /api/notifications/register-push — autenticado, salva o token no usuário
+3. Mobile: pede permissão no startup, captura o token, registra no backend
+4. utils/push.util.ts — sendPushToUsers(userIds, title, body, data?) usando
+   expo-server-sdk
+5. Hook em VulnerabilityService.create: se severidade final é CRITICAL, dispara
+   push para os CLIENT da company com token registrado.
+   ⚠️ try/catch com log — falha de push NUNCA quebra a criação do finding.
 
-1. `CLAUDE.md`
-2. `PRD_VIVO.md` — marcar FEAT-05 como 🚧
-3. `BACKLOG.md` — KAN-501 a KAN-512
-4. `schema.prisma` — modelos Vulnerability, Evidence, VulnerabilityComment, AuditLog
+CHECKPOINT 3 — Testes e smoke
+PUSH-01: register-push salva o token no usuário
+PUSH-02: criar finding CRITICAL chama o disparo (mock do envio; não bater na API
+da Expo dentro do CI)
+Smoke manual: abrir no Expo Go, logar, navegar até um finding, e criar um finding
+CRITICAL pelo web para ver o push chegar no aparelho.
+Protocolo §0.1 + relatório + PR.
 
-## CONCEITO CRÍTICO
-
-Cada Vulnerability é uma INSTÂNCIA INDIVIDUAL. Pertence a:
-- 1 Project
-- 1 Application (desnormalizado, mesmo da Project)
-- 1 Company (desnormalizado, mesmo da Project)
-
-NÃO HÁ catálogo compartilhado de vulnerabilidades. Mesmo que TechNova e Acme tenham a mesma SQL Injection, são 2 registros distintos.
-
-Isolamento garantido por TODA query incluir filtro por companyId.
-
-## Execução
-
-### KAN-501 — utils/cvss.util.ts
-Função que recebe CVSS vector string e calcula:
-- Score numérico (0.0-10.0) — pode delegar pra lib `cvss-calculator` (npm)
-- Severidade categórica:
-  - 0.0 → NONE
-  - 0.1-3.9 → LOW
-  - 4.0-6.9 → MEDIUM
-  - 7.0-8.9 → HIGH
-  - 9.0-10.0 → CRITICAL
-
-Exporta `calculateCvss(vector: string): { score: number; severity: string }`
-
-### KAN-502 — Vulnerability CRUD
-- model/vulnerability.model.ts
-  - DTOs: CreateVulnerabilityDTO, UpdateVulnerabilityDTO, VulnerabilityResponseDTO
-  - VulnerabilityEntity com toResponse() e métodos de domínio
-- repository com:
-  - findByProject(projectId), countBySeverity(companyId)
-  - findById, create, update, delete
-- service com REGRAS:
-  - Ao criar:
-    - Validar projectId existe
-    - Buscar Project pra copiar applicationId e companyId (desnormalização)
-    - Se cvssVector fornecido, calcular cvssScore e severityCalculated
-    - severityFinal default = severityCalculated
-  - Ao atualizar severityFinal manualmente (override):
-    - Exigir severityOverrideReason (≥ 20 chars)
-    - Registrar AuditLog action=SEVERITY_OVERRIDE com diff antes/depois
-  - Ao mudar status:
-    - Validar transição:
-      - OPEN → IN_PROGRESS (analista, se hasRemediation=true)
-      - IN_PROGRESS → FIXED (analista)
-      - FIXED → REVALIDATION (cliente confirma fix)
-      - REVALIDATION → CLOSED (analista valida)
-      - REVALIDATION → OPEN (não foi corrigido)
-      - OPEN → RISK_ACCEPTED (cliente aceita risco, exige justificativa)
-    - Registrar AuditLog action=STATUS_CHANGE
-- controller
-- Códigos: VULNERABILITY_NOT_FOUND, INVALID_CVSS_VECTOR, MISSING_OVERRIDE_REASON, SHORT_OVERRIDE_REASON, INVALID_STATUS_TRANSITION
-
-### KAN-503 — factory + routes vulnerability
-Plugar em routes/routes.ts: `router.use("/vulnerabilities", vulnerabilityRoutes)`
-
-### KAN-504 — Evidence (upload)
-- Instalar multer: `npm i multer @types/multer`
-- model/evidence.model.ts
-- repository com findByVulnerability(vulnId)
-- service:
-  - Validação MIME: jpg, jpeg, png, txt, log
-  - Validação magic number (não confiar só no MIME enviado pelo cliente):
-    - JPEG: bytes FF D8 FF
-    - PNG: 89 50 4E 47
-    - TXT/LOG: validar que é texto (ASCII/UTF-8 puro)
-  - Tamanho máximo 10MB
-  - Renomear pra UUID + ext original
-  - Salvar em volume local `./uploads/<companyId>/<vulnId>/<uuid>.<ext>`
-  - Persistir metadados no banco
-- controller com upload via multer:
-  ```typescript
-  router.post("/:vulnerabilityId/evidences", multer({ limits: { fileSize: 10*1024*1024 } }).single("file"), ...)
-  ```
-
-### KAN-505 — factory/evidence.factory.ts + nested routes
-Em vulnerability.routes.ts:
-```typescript
-router.use("/:vulnerabilityId/evidences", evidenceRoutes);
-```
-
-### KAN-506 — VulnerabilityComment (nested)
-- model/vulnerability-comment.model.ts
-- repository
-- service (qualquer membro do projeto pode comentar)
-- controller
-- Subrota: `/vulnerabilities/:vulnerabilityId/comments`
-
-### KAN-507 — AuditLog helper
-- repository/audit-log.repository.ts
-- utils/audit.util.ts com função:
-  ```typescript
-  export async function logAudit(params: { actorId, companyId, entityType, entityId, action, before?, after? }): Promise<void>
-  ```
-- Chamar de VulnerabilityService no override e status change
-- Chamar de SubscriptionService no approve/reject
-
-### KAN-508 — Testes Vulnerability
-Mínimo:
-- BIZ-03: criar vuln calcula severity automática a partir do CVSS
-- BIZ-04: override de severity sem reason retorna 400
-- BIZ-05: override com reason curta (<20) retorna 400
-- BIZ-06: override válido cria AuditLog
-- BIZ-07: status transition inválida retorna 422
-- BIZ-08: status transition válida atualiza + cria AuditLog
-- TEN-06: client A não vê vulnerabilities de client B
-
-### KAN-509 — Testes Evidence
-- BIZ-09: upload de arquivo .exe retorna 400 INVALID_FILE_TYPE
-- EVID-01: upload válido salva arquivo e retorna 201 com metadados
-- EVID-02: upload sem field "file" retorna 400
-
-## Critérios de pronto
-- [ ] Pentester cria vuln com CVSS, severity calcula sozinha
-- [ ] Override de severity exige justificativa e cria AuditLog
-- [ ] Upload de evidência valida tipo + tamanho
-- [ ] Thread de comentários funciona
-- [ ] Multi-tenant rigoroso (TEN-XX passando)
-- [ ] PRD_VIVO.md FEAT-05 ✅
-
-⚠️ Esta sprint é DENSA. Se acabar tokens, anote no PRD em qual KAN parou. NÃO comece tarefa nova sem fechar a anterior.
-
-Comece pela KAN-501.
+NÃO FAZER: Firebase, mobile para PENTESTER ou ADMIN, viewer de PDF (cortado —
+se sobrar tempo, um botão que abre o PDF no navegador do sistema resolve).
 ```
 
 ---
 
-## SPRINT 6 — Relatórios + Dashboard
+# FASE 8 — Maturidade (checklist) + fechamento do TCC
+
+**Branch:** `feat/fase-8-maturidade-tcc` · **Período:** 16/10 → 25/10 · **Depende de:** Fase 6
 
 ```
-# Tarefa: Sprint 6 do Vulnera — Relatórios PDF + Dashboards
+Execute a Fase 8 do Vulnera — a última. Leituras de sempre.
 
-## Contexto
+ESCOPO DA MATURIDADE — SIMPLIFICADO (decisão de 2026-08-03):
+É um CHECKLIST DE PERGUNTAS para avaliar o ambiente do cliente, não uma avaliação
+SAMM completa. Estrutura: domínios → perguntas → resposta em escala simples.
+NÃO implemente scoring ponderado, níveis de maturidade por domínio, nem
+comparativo histórico. Média simples por domínio basta.
 
-Núcleo do produto funciona. Agora gero relatórios PDF (executivo e técnico) no front, e dashboards por perfil (cliente, pentester, admin).
+CHECKPOINT 1 — Maturidade backend
+1. Estender prisma/seed.ts com os domínios e perguntas. Sugestão (ajuste se o
+   Rafael tiver preferência): Gestão de Acesso · Backup e Recuperação ·
+   Segurança de Rede · Gestão de Vulnerabilidades · Monitoramento e Logs ·
+   Conscientização · Segurança no Código. 3 a 4 perguntas objetivas por domínio,
+   respondíveis por quem conhece o ambiente. Ex. em Gestão de Acesso:
+   "Existe MFA obrigatório para acessos administrativos?"
+2. CRUD de MaturityAssessment (5 camadas):
+   - POST /api/maturity/assessments — cria avaliação vazia para uma company
+   - POST /api/maturity/assessments/:id/scores — batch [{controlId, score 1-5,
+     notes?}]; recalcula a média geral
+   - GET /api/maturity/assessments/:companyId/latest
+   Só ADMIN preenche (RN19).
+3. Testes MAT-01..03: batch persiste; latest devolve a mais recente;
+   isolamento por company.
 
-## Leitura obrigatória
+CHECKPOINT 2 — Maturidade frontend
+pages/MaturityAssessment.tsx — lista de domínios na lateral, perguntas do domínio
+ativo no centro com seletor 1–5 e campo de observação, média por domínio e média
+geral, botão salvar (batch).
+Radar Recharts de 7 eixos com a média por domínio.
+Seção de maturidade no PDF executivo: tabela de médias por domínio + radar
+desenhado à mão com pdf-lib (linhas e polígono por coordenada — o Recharts não
+renderiza dentro do PDF).
 
-1. `CLAUDE.md`
-2. `PRD_VIVO.md` — marcar FEAT-06 como 🚧
-3. `BACKLOG.md` — KAN-601 a KAN-611
+CHECKPOINT 3 — Seed de demo TechNova
+Esta é a demo que a banca vai ver. Estender o seed com dados verossímeis:
+- 5 aplicações realistas (e-commerce, app mobile, API B2B, sistema interno,
+  portal do cliente)
+- 10 findings distribuídos: 2 CRITICAL, 3 HIGH, 3 MEDIUM, 2 LOW — descrições
+  plausíveis, vectors CVSS reais, categorias OWASP variadas, pelo menos uma
+  evidência anexada e comentários em alguns
+- 1 avaliação de maturidade preenchida com respostas variadas
+- 2 pentesters e 2 usuários CLIENT
+O seed precisa ser idempotente (upsert) ou documentar o reset limpo.
 
-## Execução
+CHECKPOINT 4 — Evidências de qualidade
+1. Rodar o pipeline do SonarQube no GitHub Actions; capturar Quality Gate,
+   cobertura e security hotspots em docs/evidencias/sonarqube/
+2. OWASP ZAP baseline contra a stack local; relatório HTML em
+   docs/evidencias/zap/
+3. Corrigir o que for grave E barato. O que não for, listar como "limitações
+   conhecidas" no README — isso RENDE na banca, demonstra maturidade de engenharia.
 
-### KAN-601 — GET /api/projects/:id/report-data
+CHECKPOINT 5 — Documentação final
+1. docs/DEMO.md — roteiro passo a passo da demo nos três perfis, com tempo
+   estimado por passo (~10 min no total): landing → planos → onboarding →
+   aprovação do admin → aplicação e projeto → pentester registra finding CRITICAL
+   (push chega no celular) → evidência → relatórios PDF → maturidade → dashboards
+2. README.md na raiz — pitch, stack, setup do zero (clone → docker → migrate →
+   seed → três apps rodando), screenshots, diagrama de arquitetura em Mermaid,
+   limitações conhecidas, trabalho futuro (IA, chat, tickets, observabilidade)
+3. PRD_VIVO.md: todas as features ✅, progresso 100%, marco final
+4. Atualizar docs/Vulnera/00-Hub/Contexto Mestre v4.md com o estado final
 
-Endpoint consolidado que retorna TUDO que o frontend precisa pra gerar o PDF, num único request:
+CHECKPOINT 6 — Encerramento
+Rodar o docs/DEMO.md inteiro, do zero, cronometrando. Cada passo tem que
+funcionar sem improviso — se algo falhar, conserte antes de seguir.
+Depois: relatório final + PR para develop + PR develop → main + tag v1.0.0.
+Sugira no relatório uma estrutura de slides (problema → solução → arquitetura →
+demo → qualidade → lições aprendidas). Os slides o Rafael monta.
 
-```typescript
-{
-  project: ProjectResponseDTO,
-  company: CompanyResponseDTO,
-  application: ApplicationResponseDTO,
-  vulnerabilities: VulnerabilityResponseDTO[],
-  stats: {
-    total: number,
-    bySeverity: { CRITICAL: n, HIGH: n, MEDIUM: n, LOW: n },
-    byStatus: { OPEN: n, FIXED: n, ... },
-    byOwasp: { A01: n, A02: n, ... }
-  },
-  maturity?: MaturityAssessmentResponseDTO  // se existir
-}
-```
-
-Em service/project.service.ts adicionar método `getReportData(projectId, requesterId)`.
-Validar permissão (admin/pentester membro/cliente da company).
-
-### KAN-602 — report.model.ts + service + controller
-- Apenas metadados (PDF é gerado client-side)
-- Ao gerar PDF, frontend chama POST /api/reports {projectId, type} pra registrar no banco
-- Endpoint útil pra auditoria ("quem gerou qual relatório quando")
-
-### KAN-603 — factory + routes report
-
-### KAN-610 — Testes report-data
-- BIZ-10: GET /projects/:id/report-data devolve estatísticas corretas
-- REP-01: cliente da outra company recebe 403/404
-- REP-02: POST /reports registra metadados
-
-## Tasks frontend (Guilherme + Iann)
-
-KAN-604, 605, 606 (relatórios PDF) — Guilherme
-KAN-607, 608, 609 (dashboards) — Iann
-
-NÃO execute essas. São frontend. Marque owners no PRD.
-
-## Critérios de pronto
-- [ ] /api/projects/:id/report-data retorna JSON consolidado
-- [ ] /api/reports registra metadados
-- [ ] PRD_VIVO.md FEAT-06 ✅
-
-Comece pela KAN-601.
-```
-
----
-
-## SPRINT 7 — Mobile + IA Gemini
-
-```
-# Tarefa: Sprint 7 do Vulnera — Backend pra Mobile + Integração IA Gemini
-
-## Contexto
-
-Frontend mobile (Expo) sendo feito pelo Iann em paralelo. Eu cuido do back-end pra suportar push notifications e implemento a integração com Gemini pra sugerir descrições de findings.
-
-## Leitura obrigatória
-
-1. `CLAUDE.md`
-2. `PRD_VIVO.md` — marcar FEAT-07 como 🚧
-3. `BACKLOG.md` — KAN-707 a KAN-712
-
-## Execução
-
-### KAN-707 — Push setup (back-end suporte)
-- Adicionar coluna `expoPushToken: String?` no model User (migration)
-
-### KAN-708 — POST /api/notifications/register-push
-- Endpoint protegido
-- Recebe `{ token: string }`
-- Atualiza req.user.expoPushToken
-- Retorna 204
-
-### KAN-709 — Service que envia push em finding CRITICAL
-- Instalar: `npm i expo-server-sdk`
-- utils/push.util.ts com `sendPushToUser(userId, title, body, data?)`
-- Hook em VulnerabilityService.create:
-  ```typescript
-  if (created.severityFinal === "CRITICAL") {
-    // buscar usuários da company com role=CLIENT e expoPushToken não-nulo
-    // enviar push em paralelo (não bloquear retorno)
-  }
-  ```
-- Não bloquear se push falhar (try/catch silencioso, log)
-
-### KAN-710 — utils/gemini.util.ts
-- Instalar: `npm i @google/generative-ai`
-- Wrapper que lê GEMINI_API_KEY de EnvVar
-- Função `suggestFinding({ title, techStack, owaspCategory? }): Promise<{ description, owaspCategory, recommendation }>`
-- Modelo: gemini-1.5-flash (rate limit razoável)
-- Prompt template em português, força retorno JSON estruturado
-
-### KAN-711 — AI endpoints
-- model/ai.model.ts com DTOs SuggestFindingDTO, FindingSuggestionResponseDTO
-- service/ai.service.ts com suggestFinding(dto)
-- controller/ai.controller.ts com POST /api/ai/suggest-finding
-- Rate limit por user: máx 10 requests/hora (in-memory simples, Map<userId, timestamps[]>)
-- Códigos: AI_RATE_LIMITED, AI_PROVIDER_UNAVAILABLE, INVALID_INPUT
-- factory + routes plugado em routes.ts
-
-## Tasks mobile (Iann)
-KAN-701 a 706, 712 — frontend mobile. NÃO execute.
-
-## Critérios de pronto
-- [ ] POST /api/notifications/register-push funciona
-- [ ] Criação de vuln CRITICAL dispara push (testar manualmente)
-- [ ] POST /api/ai/suggest-finding retorna JSON estruturado da Gemini
-- [ ] Rate limit respeitado
-- [ ] PRD_VIVO.md FEAT-07 ✅
-
-## Confirmação
-1. Tem GEMINI_API_KEY no .env? Se não, eu (Rafael) gero em ai.studio.google.com antes de começar.
-
-Comece pela KAN-707.
+NÃO FAZER: qualquer feature nova. A Fase 8 é fechamento — bug fix, polimento,
+documentação e demo. Escopo novo vira "trabalho futuro" no README.
 ```
 
 ---
 
-## SPRINT 8 — Maturidade + Polimento + Apresentação
+## Prompt de retomada (sessão interrompida)
 
 ```
-# Tarefa: Sprint 8 do Vulnera — Maturidade + Polimento + Apresentação
+Retomando o Vulnera. Sessão na raiz do repositório.
+1. Leia PRD_VIVO.md, rode `git status` e `git log --oneline -15`.
+2. Abra o prompt da fase atual em docs/ROADMAP_PROMPTS.md e compare os
+   checkpoints com o que existe de fato no código.
+3. Me diga: checkpoints concluídos, checkpoint em andamento, próximo passo
+   concreto. Não refaça o que já está pronto.
+4. Continue de onde parou.
+```
 
-## Contexto
+## Prompt de fechamento de fase
 
-Última sprint! Implemento avaliação de maturidade, gero relatórios finais (Sonar, OWASP ZAP), reviso documentação e me preparo pra apresentação.
-
-## Leitura obrigatória
-
-1. `CLAUDE.md`
-2. `PRD_VIVO.md` — marcar FEAT-08 como 🚧
-3. `BACKLOG.md` — KAN-801 a KAN-815
-
-## Execução
-
-### KAN-801 — Seed de domínios e controles de maturidade
-- 7 domínios: Gestão de Acesso, Backup e Recuperação, Segurança de Rede, Gestão de Vulnerabilidades, Monitoramento e SIEM, Conscientização de Pessoal, Segurança de Código
-- 3 controles por domínio (21 controles totais)
-- Adicionar em prisma/seed.ts
-
-### KAN-802 — MaturityAssessment CRUD
-- model/maturity-assessment.model.ts
-  - DTOs: CreateAssessmentDTO {companyId, notes}, ScoreEntryDTO {controlId, score:1-5, isCompliant, notes?}, BatchScoresDTO {scores: ScoreEntryDTO[]}
-- repository
-- service:
-  - create(dto): cria Assessment com overallScore=0, level=BASIC
-  - saveScores(assessmentId, batch): upsert dos MaturityScore, recalcula overallScore (média dos scores) e level (>=4 ADVANCED, >=2.5 INTERMEDIATE, senão BASIC)
-  - getByCompany(companyId): última assessment + scores
-- controller
-- Endpoint especial: POST /:id/scores recebe BatchScoresDTO
-
-### KAN-803 — factory + routes maturity
-
-### KAN-808 — Rodar SonarQube manual
-- Executar análise local: `sonar-scanner` apontando pra http://localhost:9000
-- Salvar screenshot do dashboard como `docs/evidencias/sonar.png`
-
-### KAN-809 — Rodar OWASP ZAP baseline
-- Subir API
-- `docker run -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://host.docker.internal:3000`
-- Salvar saída como `docs/evidencias/zap-baseline.txt`
-
-### KAN-810 — Smoke tests E2E manuais
-Criar `docs/DEMO.md` com roteiro passo a passo da demo:
-1. Admin: login, aprovar subscription pendente
-2. Cliente: login como TechNova, ver dashboard, criar Application
-3. Admin: criar Project, atribuir pentester
-4. Pentester: login, ver projeto, criar Vulnerability (com CVSS), upload evidência, mudar status
-5. Cliente: ver finding mobile, receber push
-6. Admin: gerar relatório PDF executivo
-7. Admin: preencher Maturity Assessment
-
-Rodar tudo manualmente, anotar bugs encontrados, abrir issues no JIRA.
-
-### KAN-811 — README + diagrama
-- README.md na raiz com:
-  - Pitch curto
-  - Stack
-  - Como rodar localmente
-  - Screenshots (landing, dashboard, relatório)
-  - Diagrama de arquitetura (Mermaid ou imagem)
-
-### KAN-814 — PRD_VIVO.md final
-- Todas as features ✅
-- Sprint 8 ✅
-- Marco no §6: "TCC concluído em YYYY-MM-DD"
-
-## Tasks finais (Iann + Rafael)
-- KAN-804, 805, 807 (frontend de maturidade) — Iann
-- KAN-806 (maturity no PDF) — Guilherme
-- KAN-812, 813 (slides + ensaios) — todos
-
-## Critérios de pronto
-- [ ] Maturity Assessment criada, scores salvos, level calculado
-- [ ] Sonar rodou e capturou evidência
-- [ ] ZAP rodou e capturou evidência
-- [ ] README e diagrama prontos
-- [ ] PRD 100% ✅
-- [ ] Slides finalizados
-- [ ] 3 ensaios feitos
-
-Comece pela KAN-801.
+```
+Fechar a fase atual do Vulnera:
+1. cd app/api && npm run check ; cd ../web && npm run build
+2. Rodar o smoke E2E do último checkpoint do prompt da fase
+3. Protocolo CLAUDE.md §0.1 completo: PRD_VIVO (✅ + marco + %), docs/BACKLOG.md
+   (tasks ✅), docs/ROADMAP_PROMPTS.md (badge + seção Histórico), Changelog do
+   vault, ADR novo se houve decisão
+4. Relatório §0.2 S5
+5. Commits organizados + PR para develop com checklist na descrição.
+   Liste as KANs do Jira correspondentes para eu mover para Done.
 ```
 
 ---
 
-## Como recuperar contexto se acabarem tokens no meio
-
-Se você abrir uma sessão nova e quiser continuar, cole isto:
-
-```
-# Recuperação de contexto
-
-Estou no meio do desenvolvimento do projeto Vulnera (TCC). Acabaram os tokens da sessão anterior. Preciso continuar de onde parei.
-
-## O que fazer
-
-1. Leia `CLAUDE.md` na raiz pra entender o padrão de código.
-2. Leia `PRD_VIVO.md` pra ver:
-   - Qual sprint está em andamento (status 🚧 no §2)
-   - Qual KAN-XXX estava sendo trabalhada (status 🚧 dentro da feature correspondente)
-3. Leia `BACKLOG.md` na sprint atual pra ver a descrição completa da task em andamento.
-4. Continue de onde a sessão anterior parou.
-5. Quando concluir a task, marque ✅ no PRD_VIVO e siga pra próxima.
-
-## Regra de ouro
-Não invente. Se tiver dúvida sobre como fazer, releia CLAUDE.md ou me pergunte.
-
-Comece lendo os 3 arquivos e me mostre o status atual.
-```
-
----
-
-## Resumo de uso
-
-| Quando | O que colar |
-|--------|-------------|
-| Antes de começar | Prompt da Sprint 0 |
-| Início Sprint N | Prompt da Sprint N |
-| Sessão nova no meio | Prompt de "Recuperação de contexto" |
-| Bug específico fora do roadmap | Prompt manual descrevendo o bug |
-
----
-
-*Este arquivo é estável durante toda a execução do TCC. Ele não é atualizado conforme você avança — quem rastreia o avanço é o PRD_VIVO.md.*
+_Este arquivo é estável durante a execução. Quem rastreia o avanço é o `PRD_VIVO.md`. Ao concluir cada fase, acrescente aqui badge e histórico (CLAUDE.md §0.1 R3)._

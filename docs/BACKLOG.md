@@ -1,278 +1,149 @@
-# BACKLOG.md — Sprints e tasks pro JIRA (project KAN)
+# BACKLOG.md — Vulnera
 
-## ⚠️ Status de execução (2026-06-16)
+> **v4 · 2026-08-03.** Substitui a versão por sprints com divisão por pessoa (Rafael/Guilherme/Iann). Agora é **fase e checkpoint**, execução solo-delegada.
+> Estimativas em horas-equivalentes — servem para dimensionar risco e revisão, não para prever o tempo do agente.
+> **Entrega: 25/10/2026.**
 
-| Sprint           | Foco                                    | Estado                                                                                 |
-| ---------------- | --------------------------------------- | -------------------------------------------------------------------------------------- |
-| **0 — Refactor** | Alinhar código com CLAUDE.md v2         | ✅ **CONCLUÍDA** (PR #2 mergeada em develop)                                           |
-| **1 — Fundação** | Infra, schema, server, CI, testes, seed | 🚧 **EM ANDAMENTO** — backend 100% (KAN-101..107+111 ✅); frontend 📋 Iann (KAN-108/109/110) |
-| **2 — Auth + User** | JWT, register, login, CRUD User      | 🚧 **EM ANDAMENTO** — backend 100% (KAN-201..212 ✅, branch `feat/sprint-2-auth-user` aguardando PR); frontend 📋 Iann (KAN-213/214/215) |
-| 3 a 8            | —                                       | 📋 Backlog                                                                             |
+## Status
 
-> **Como usar:** copie cada task pra criar uma issue tipo Task no JIRA.
+| Fase               | Escopo                                             | Estado         |
+| ------------------ | -------------------------------------------------- | -------------- |
+| 0 Refactor         | Alinhamento com CLAUDE.md                          | ✅             |
+| 1 Fundação         | Infra, schema, CI, migrations, seed, testes        | ✅ backend     |
+| 2 Auth + User      | JWT, refresh rotativo, CRUD, factories             | ✅ backend     |
+| **3 Empresas**     | **Refactor plural + Subscription + bootstrap web** | 📋 **próxima** |
+| 4 Projetos         | Application + Project + Member + telas             | 📋             |
+| 5 Findings         | Vulnerability + Evidence ⭐                        | 📋             |
+| 6 Relatórios       | report-data + PDFs pdf-lib + dashboards            | 📋             |
+| 7 Mobile           | Expo enxuto + Push                                 | 📋             |
+| 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 📋             |
 
-KANs concluídas: **KAN-001** (Sprint 0), **KAN-101 a KAN-107 + KAN-111** (Sprint 1 backend), **KAN-201 a KAN-212** (Sprint 2 backend).
-KANs pendentes (owner Iann): **KAN-108, KAN-109, KAN-110** (Sprint 1 frontend), **KAN-213, KAN-214, KAN-215** (Sprint 2 frontend).
-Bloqueios: branch `feat/sprint-2-auth-user` aguarda PR → develop; app/web sem implementação.
+⚠️ **O frontend web nunca foi iniciado** — `app/web` só tem `package.json`. O bootstrap inteiro (Vite, Tailwind, UI base, auth) entra na Fase 3, herdado das Sprints 1 e 2 que só tiveram backend.
 
----
-
-> Campo Sprint: usar o nome da sprint como label ou campo nativo do JIRA.
-> Estimativa: em **horas**, baseada em 4h/dia disponível.
->
-> Time:
->
-> - **R** = Rafael (40h/sprint)
-> - **G** = Guilherme (20h/sprint)
-> - **I** = Iann (20h/sprint)
+Restante estimado: **~200h-equivalente** em 12 semanas.
 
 ---
 
-## Sprint 0 — Refactor (1 semana ou paralelo)
+## Cronograma
 
-> Não é sprint contada. É o trabalho descrito em `REFACTOR_PLAN.md`.
-> Faça antes de iniciar a Sprint 1.
+| Semanas | Período       | Fase                         |
+| ------- | ------------- | ---------------------------- |
+| 1–2     | 04/08 → 17/08 | 3 — Empresas + bootstrap web |
+| 3–4     | 18/08 → 31/08 | 4 — Projetos                 |
+| 5–7     | 01/09 → 21/09 | 5 — Findings ⭐              |
+| 8–9     | 22/09 → 05/10 | 6 — Relatórios               |
+| 10–11   | 06/10 → 15/10 | 7 — Mobile                   |
+| 12      | 16/10 → 25/10 | 8 — Maturidade + fechamento  |
 
-| Task                                              | Estimativa | Owner |
-| ------------------------------------------------- | ---------- | ----- |
-| KAN-001: Refactor estrutura conforme CLAUDE.md v2 | 6h         | R     |
-
----
-
-## Sprint 1 — Fundação (semanas 1-2)
-
-**Objetivo:** Repositório com infra mínima, schema final, server rodando, CI verde, frontend setup paralelo.
-
-| Task                                                              | Estimativa | Owner | Descrição resumida                                                                                           |
-| ----------------------------------------------------------------- | ---------- | ----- | ------------------------------------------------------------------------------------------------------------ |
-| KAN-101: Aplicar schema.prisma revisado e rodar migrations        | 2h         | R     | Substitui schema atual, roda `prisma migrate dev --name initial`, verifica criação de todas as tabelas       |
-| KAN-102: docker-compose.yml com MySQL + Mailhog + SonarQube       | 2h         | R     | Cria arquivo, sobe via `docker compose up -d`, valida ping no banco                                          |
-| KAN-103: Server.ts mínimo com healthcheck /api/health             | 2h         | R     | Endpoint que devolve `{status:"ok",timestamp,uptime}`                                                        |
-| KAN-104: Configurar Jest + Supertest + .env.test + banco de teste | 4h         | R     | Setup jest.config.ts, globalSetup que roda migrate deploy no banco de teste, primeiro teste smoke do /health |
-| KAN-105: GitHub Actions com lint + build + test                   | 3h         | R     | Workflow build.yml com 3 jobs: lint, build, test (com serviço mysql)                                         |
-| KAN-106: ESLint + tsconfig strict configurados                    | 2h         | R     | `npm run lint` e `npm run build` passam sem erro                                                             |
-| KAN-107: Seed inicial com TechNova + Admin + Plans                | 3h         | R     | prisma/seed.ts cria 3 Plans (BASIC, PRO, PRO_PLUS), 1 admin, 1 company TechNova com subscription PRO ativa   |
-| KAN-108: Setup React+Vite+Tailwind em app/web                     | 4h         | I     | Vite create, instala Tailwind+Radix, configura tailwind.config + global.css com tema dark cyberpunk          |
-| KAN-109: Componentes base (Button, Input, Card, Badge, Layout)    | 6h         | I     | Wrappers de Radix com Tailwind, exportados em components/ui/                                                 |
-| KAN-110: Landing page do Vulnera                                  | 8h         | I     | Implementar a partir do prompt cyberpunk dark cinematic. Visual matriz/neon.                                 |
-| KAN-111: Documentar PRD_VIVO.md com status inicial das features   | 2h         | R     | Marca Sprint 1 como em progresso, demais como backlog                                                        |
-
-**Total estimado:** R: 18h · G: 0h · I: 18h
-**Saída esperada:** Repositório bootado, banco com seed, CI verde, landing visível em localhost.
+> **Sem buffer.** Válvula de escape: atraso acumulado > 1 semana até o fim da Fase 6 → a Fase 7 encolhe primeiro (mobile vira demo de telas com seed, sem push funcional).
 
 ---
 
-## Sprint 2 — Auth + User (semanas 3-4)
+## FASE 3 — Empresas + bootstrap web (~44h)
 
-**Objetivo:** Sistema de autenticação completo. CRUD de User. Tokens JWT funcionais. Canários AUTH passando.
+| #    | Task                                                            | h   | Estado |
+| ---- | --------------------------------------------------------------- | --- | ------ |
+| 3.0  | Auditoria: schema, completude de company/plan, `npm run check`  | 2   | 📋     |
+| 3.1  | Refactor plural (`git mv` + imports + docs/architecture.md)     | 3   | 📋     |
+| 3.2  | Completar schema com os models faltantes + migration            | 3   | 📋     |
+| 3.3  | `require-role` middleware                                       | 1   | 📋     |
+| 3.4  | AuditLog repository                                             | 2   | 📋     |
+| 3.5  | Completar Plan (GET público, CUD admin, BASIC/PRO/Enterprise)   | 3   | 📋     |
+| 3.6  | Completar Company + vínculo de owner                            | 4   | 📋     |
+| 3.7  | Subscription + approve/reject + invariante 1-ACTIVE + auditoria | 7   | 📋     |
+| 3.8  | Testes PLAN/COMP/SUB                                            | 5   | 📋     |
+| 3.9  | Bootstrap web: Vite, Tailwind, Radix, TanStack, Zustand, Axios  | 5   | 📋     |
+| 3.10 | UI base + client.ts com fila de refresh + auth store            | 5   | 📋     |
+| 3.11 | Login, Register, ProtectedRoute, Dashboard stub                 | 4   | 📋     |
+| 3.12 | Plans pública + Onboarding wizard + PendingSubscriptions        | 10  | 📋     |
 
-| Task                                                                    | Estimativa | Owner | Descrição resumida                                                                                                |
-| ----------------------------------------------------------------------- | ---------- | ----- | ----------------------------------------------------------------------------------------------------------------- |
-| KAN-201: Criar utils/jwt.util.ts e utils/hash.util.ts                   | 2h         | G     | signAccessToken, verifyAccessToken, signRefreshToken; bcrypt cost 12                                              |
-| KAN-202: Criar middleware/auth.middleware.ts                            | 2h         | G     | Extrai Bearer, valida, popula req.user, 401 em caso de erro                                                       |
-| KAN-203: Implementar user.model.ts (type+DTOs+entity)                   | 2h         | G     | RegisterDTO, LoginDTO, AuthResponseDTO, UserResponseDTO (sem password); UserEntity com toResponse()               |
-| KAN-204: user.repository.ts                                             | 2h         | G     | findByEmail, findById, findAll, create, update, delete                                                            |
-| KAN-205: refresh-token.repository.ts                                    | 2h         | G     | create (com hash SHA-256), findByHash, revoke, deleteAllForUser                                                   |
-| KAN-206: auth.service.ts                                                | 5h         | G     | register, login, refresh, logout. Valida email único, hash bcrypt, salva refresh hasheado, rotação a cada refresh |
-| KAN-207: auth.controller.ts                                             | 4h         | G     | Endpoints register, login, refresh, logout. Validação manual de email/senha. Status corretos.                     |
-| KAN-208: user.service.ts e user.controller.ts (CRUD)                    | 4h         | G     | CRUD com regra: admin lista todos, client vê só sua company, pentester vê só si mesmo                             |
-| KAN-209: factory/auth.factory.ts e factory/user.factory.ts              | 2h         | G     | makeAuthController, makeUserController                                                                            |
-| KAN-210: routes/auth.routes.ts (público) e user.routes.ts (autenticado) | 2h         | G     | Plug em routes.ts central                                                                                         |
-| KAN-211: Testes de integração — Auth                                    | 4h         | R     | tests/integration/auth.test.ts: register, login válido/inválido, refresh, logout. Cobre AUTH-01 a 09              |
-| KAN-212: Testes de integração — User CRUD                               | 3h         | R     | tests/integration/user.test.ts: list, getById, update self, delete forbidden                                      |
-| KAN-213: Frontend — página de Login                                     | 4h         | I     | Form com email/senha, chama POST /api/auth/login, salva token, redireciona pra dashboard mockada                  |
-| KAN-214: Frontend — página de Register                                  | 4h         | I     | Form com nome/email/senha, chama POST /api/auth/register, redireciona pra login                                   |
-| KAN-215: Frontend — interceptor Axios com JWT                           | 3h         | I     | Configura axios global com Bearer token, refresh automático em 401                                                |
+## FASE 4 — Projetos (~33h)
 
-**Total estimado:** R: 7h · G: 25h (excede 20h, dividir) · I: 11h
+| #   | Task                                                    | h   | Estado |
+| --- | ------------------------------------------------------- | --- | ------ |
+| 4.1 | Application CRUD + gate de limite do plano              | 7   | 📋     |
+| 4.2 | Project CRUD + máquina de estados + `/transition`       | 7   | 📋     |
+| 4.3 | ProjectMember subrota (só PENTESTER)                    | 5   | 📋     |
+| 4.4 | Testes APP/PROJ + TEN-01..05                            | 7   | 📋     |
+| 4.5 | Applications + wizard NewAnalysis                       | 8   | 📋     |
+| 4.6 | ProjectDetail com abas + gestão de membros + breadcrumb | 6   | 📋     |
 
-⚠️ **Atenção:** carga do Guilherme estourou. Mover KAN-211 e KAN-212 pra Rafael (já estão) e adiar KAN-205 (refresh-token repo) pra início da Sprint 3 se necessário.
+## FASE 5 — Findings ⭐ (~46h)
 
----
+| #   | Task                                                              | h   | Estado |
+| --- | ----------------------------------------------------------------- | --- | ------ |
+| 5.1 | `cvss.util` — parser manual 3.1 + testes com vectors conhecidos   | 4   | 📋     |
+| 5.2 | Vulnerability CRUD + transition + override justificado            | 9   | 📋     |
+| 5.3 | Evidence multipart (MIME + magic number + UUID) + GET autenticado | 8   | 📋     |
+| 5.4 | VulnerabilityComment nested paginado                              | 4   | 📋     |
+| 5.5 | AuditLog integrado (override + transition)                        | 3   | 📋     |
+| 5.6 | Testes BIZ-03..09 + TEN-06                                        | 8   | 📋     |
+| 5.7 | Lista de findings com filtros e badges                            | 4   | 📋     |
+| 5.8 | FindingEditor (CVSS live, drag-drop, comentários, override)       | 10  | 📋     |
 
-## Sprint 3 — Company + Plan + Subscription (semanas 5-6)
+## FASE 6 — Relatórios (~34h)
 
-**Objetivo:** Empresa cliente cadastrada, planos disponíveis, assinatura criada com aprovação.
+| #   | Task                                                 | h   | Estado |
+| --- | ---------------------------------------------------- | --- | ------ |
+| 6.1 | `GET /projects/:id/report-data` consolidado          | 5   | 📋     |
+| 6.2 | Report metadata + AuditLog                           | 2   | 📋     |
+| 6.3 | Testes RPT-01..03                                    | 3   | 📋     |
+| 6.4 | `lib/pdf/base.ts` — helpers, gráfico de barras à mão | 6   | 📋     |
+| 6.5 | PDF Executivo                                        | 6   | 📋     |
+| 6.6 | PDF Técnico (com evidências embutidas)               | 7   | 📋     |
+| 6.7 | Dashboards cliente / pentester / admin               | 5   | 📋     |
 
-| Task                                                                              | Estimativa | Owner | Descrição resumida                                                                                          |
-| --------------------------------------------------------------------------------- | ---------- | ----- | ----------------------------------------------------------------------------------------------------------- |
-| KAN-301: company.model.ts + repository + service + controller                     | 6h         | G     | CRUD básico. Admin lista todas; cliente vê só a própria                                                     |
-| KAN-302: factory/company.factory.ts + routes/company.routes.ts                    | 1h         | G     | Plug em routes.ts                                                                                           |
-| KAN-303: plan.model.ts + repository + service + controller (já parcial)           | 4h         | R     | Completar conforme schema (maxProjects, includesRemediation). Validações §5 do CLAUDE.md                    |
-| KAN-304: factory/plan.factory.ts + routes/plan.routes.ts                          | 1h         | R     | Plug em routes.ts                                                                                           |
-| KAN-305: subscription.model.ts + repository + service + controller                | 6h         | R     | CRUD + endpoints especiais: POST /:id/approve, POST /:id/reject, GET /current. Regra: 1 ACTIVE por company. |
-| KAN-306: factory/subscription.factory.ts + routes/subscription.routes.ts          | 1h         | R     |                                                                                                             |
-| KAN-307: Notificar admin de nova subscription pendente (log + e-mail via Mailhog) | 3h         | R     | Service envia e-mail simples (Nodemailer + Mailhog) e cria registro em AuditLog                             |
-| KAN-308: Testes integração Company + Plan + Subscription                          | 5h         | R     | Cobertura mínima dos 3 CRUDs + fluxo de aprovação                                                           |
-| KAN-309: Frontend — onboarding (Company + Owner + Subscription pendente)          | 8h         | I     | Wizard de 1 página: dados da empresa + usuário owner + escolha de plano                                     |
-| KAN-310: Frontend — página de planos pública                                      | 4h         | I     | Tabela de comparação dos 3 planos, alinhada com landing                                                     |
-| KAN-311: Frontend — dashboard admin com lista de subscriptions pendentes          | 5h         | I     | Lista, botão Aprovar/Rejeitar (placeholder, integra depois)                                                 |
-| KAN-312: Atualizar PRD_VIVO.md com features da Sprint 3 ✅                        | 1h         | R     |                                                                                                             |
+> ⚠️ **pdf-lib é imperativo.** Sem componentes React: cria-se o documento e desenha-se por coordenada. Gráficos são retângulos e linhas desenhados à mão. Reservar tempo de aprendizado na 6.4.
 
-**Total estimado:** R: 21h · G: 7h · I: 17h
+## FASE 7 — Mobile enxuto (~24h)
 
----
+| #   | Task                                                     | h   | Estado |
+| --- | -------------------------------------------------------- | --- | ------ |
+| 7.1 | Bootstrap Expo + Router + client com SecureStore         | 6   | 📋     |
+| 7.2 | Login + Home + ProjectDetail                             | 7   | 📋     |
+| 7.3 | FindingDetail read-only + Configurações                  | 5   | 📋     |
+| 7.4 | Push: migration + endpoint + registro + trigger CRITICAL | 6   | 📋     |
 
-## Sprint 4 — Application + Project + ProjectMember (semanas 7-8)
+> Escopo deliberadamente cortado: sem criação/edição, sem upload, sem PDF, sem telas de admin ou pentester. Se estourar o prazo, corte mais do mobile — nunca do backend.
 
-**Objetivo:** Catálogo de aplicações, projetos abertos, atribuição de pentesters. Isolamento multi-tenant validado.
+## FASE 8 — Maturidade + TCC (~32h)
 
-| Task                                                                         | Estimativa | Owner | Descrição resumida                                                                   |
-| ---------------------------------------------------------------------------- | ---------- | ----- | ------------------------------------------------------------------------------------ |
-| KAN-401: application.model.ts + repository + service + controller            | 6h         | R     | Service valida: subscription ACTIVE + count < maxApplications                        |
-| KAN-402: factory/application.factory.ts + routes/application.routes.ts       | 1h         | R     |                                                                                      |
-| KAN-403: project.model.ts + repository + service + controller                | 6h         | R     | 1-1 com Application. Service valida companyId herdado. Endpoint POST /:id/transition |
-| KAN-404: factory/project.factory.ts + routes/project.routes.ts               | 1h         | R     |                                                                                      |
-| KAN-405: project-member.model.ts + repository + service + controller         | 4h         | G     | CRUD básico. Validação: user a adicionar tem role=PENTESTER                          |
-| KAN-406: project-member como subrota: POST /projects/:projectId/members      | 2h         | G     | Configurar nested route em project.routes.ts                                         |
-| KAN-407: Testes integração Application (gate de limite, isolamento)          | 4h         | R     | Cobertura: limite de plano + canários TEN-01 a TEN-03                                |
-| KAN-408: Testes integração Project (transição, isolamento)                   | 4h         | R     | Cobertura: máquina mínima + TEN-04, TEN-05                                           |
-| KAN-409: Frontend — lista de aplicações por company                          | 4h         | I     | Tabela com filtro, botão criar nova app                                              |
-| KAN-410: Frontend — wizard de nova análise (cria Project)                    | 5h         | I     | Form com escopo, tipo, nível, flag remediation                                       |
-| KAN-411: Frontend — detalhe de projeto com tabs (visão/findings/chat futuro) | 6h         | I     | Layout completo, tabs apenas com "visão geral" preenchida                            |
-| KAN-412: Atualizar PRD_VIVO.md ✅                                            | 1h         | R     |                                                                                      |
+| #   | Task                                                            | h   | Estado |
+| --- | --------------------------------------------------------------- | --- | ------ |
+| 8.1 | Seed de domínios e perguntas do checklist                       | 3   | 📋     |
+| 8.2 | MaturityAssessment CRUD + scores em batch                       | 5   | 📋     |
+| 8.3 | Tela de avaliação + radar                                       | 6   | 📋     |
+| 8.4 | Maturidade no PDF executivo (radar à mão com pdf-lib)           | 3   | 📋     |
+| 8.5 | Seed demo TechNova (5 apps, 10 findings, maturidade preenchida) | 4   | 📋     |
+| 8.6 | SonarQube (pipeline) + ZAP baseline — evidências capturadas     | 3   | 📋     |
+| 8.7 | `docs/DEMO.md` + README + diagrama + limitações conhecidas      | 5   | 📋     |
+| 8.8 | Smoke E2E cronometrado + tag `v1.0.0`                           | 3   | 📋     |
 
-**Total estimado:** R: 22h · G: 6h · I: 15h
-
----
-
-## Sprint 5 — Vulnerability + Evidence (semanas 9-10)
-
-**Objetivo:** Núcleo do produto. Findings com CVSS automático, evidências, comentários, auditoria.
-
-| Task                                                                       | Estimativa | Owner | Descrição resumida                                                                                                 |
-| -------------------------------------------------------------------------- | ---------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
-| KAN-501: utils/cvss.util.ts — calcula score → severidade                   | 3h         | R     | Função que recebe CVSS vector, retorna {score, severity}. Implementa tabela 0.1-3.9/4-6.9/7-8.9/9-10               |
-| KAN-502: vulnerability.model.ts + repository + service + controller        | 8h         | R     | CRUD completo + transition de status. Service calcula severidade ao salvar. Override exige justificativa ≥20 chars |
-| KAN-503: factory/vulnerability.factory.ts + routes/vulnerability.routes.ts | 1h         | R     |                                                                                                                    |
-| KAN-504: evidence.model.ts + repository + service + controller (upload)    | 6h         | G     | POST /vulnerabilities/:id/evidences (multipart). Validação MIME + magic + tamanho. Nome reescrito UUID             |
-| KAN-505: factory/evidence.factory.ts + nested routes                       | 2h         | G     |                                                                                                                    |
-| KAN-506: vulnerability-comment como nested resource                        | 4h         | G     | POST /vulnerabilities/:id/comments. List paginada                                                                  |
-| KAN-507: audit-log.repository.ts + helper para registrar mudanças          | 4h         | R     | createLog(actor, entity, action, diff). Chamado por VulnerabilityService no override e status change               |
-| KAN-508: Testes integração Vulnerability (CVSS calc, isolamento)           | 5h         | R     | Cobre BIZ-03 a BIZ-08 + TEN-04                                                                                     |
-| KAN-509: Testes integração Evidence (MIME, upload)                         | 3h         | R     | BIZ-09 + happy path                                                                                                |
-| KAN-510: Frontend — lista de findings por projeto                          | 5h         | I     | Tabela com filtros (severidade, status, OWASP)                                                                     |
-| KAN-511: Frontend — editor de finding (criar/editar)                       | 8h         | I     | Form complexo: CVSS, OWASP, descrição, evidências (upload drag-drop), comentários                                  |
-| KAN-512: Atualizar PRD_VIVO.md ✅                                          | 1h         | R     |                                                                                                                    |
-
-**Total estimado:** R: 24h · G: 12h · I: 13h
+> Slides e ensaios ficam com o Rafael, fora da contagem.
+> **Maturidade simplificada:** checklist de perguntas por domínio, escala 1–5, média simples. Sem scoring ponderado, sem níveis por domínio, sem comparativo histórico.
 
 ---
 
-## Sprint 6 — Relatórios + Dashboard (semanas 11-12)
+## Removido do escopo
 
-**Objetivo:** Relatórios PDF executivo e técnico, dashboards por perfil.
+| Removido                                                       | Quando     | Motivo                                      |
+| -------------------------------------------------------------- | ---------- | ------------------------------------------- |
+| IA / Gemini (sugestão de finding, rate limit, botão no editor) | 2026-08-03 | Corte de prazo; não é o que a banca avalia  |
+| Chat em tempo real (Socket.IO)                                 | 2026-07-26 | `VulnerabilityComment` cobre a comunicação  |
+| Tickets de suporte                                             | 2026-07-26 | Escopo administrativo sem valor de demo     |
+| E-mail transacional (Nodemailer/Mailhog)                       | 2026-07-26 | `AuditLog` cobre a rastreabilidade          |
+| Prometheus + Grafana                                           | 2026-07-26 | Observabilidade não é critério de avaliação |
+| Testes E2E (Playwright)                                        | 2026-07-26 | Integração + smoke manual cobrem            |
+| Viewer de PDF no mobile                                        | 2026-08-03 | Corte do escopo mobile                      |
+| Maturidade completa estilo SAMM                                | 2026-08-03 | Vira checklist simples                      |
 
-| Task                                                                      | Estimativa | Owner | Descrição resumida                                                                          |
-| ------------------------------------------------------------------------- | ---------- | ----- | ------------------------------------------------------------------------------------------- |
-| KAN-601: Endpoint GET /projects/:id/report-data                           | 3h         | R     | Retorna JSON consolidado: dados do projeto, findings agregados por severidade, maturidade   |
-| KAN-602: report.model.ts + repository + service + controller (metadados)  | 3h         | R     | Tabela Report registra cada geração (auditoria)                                             |
-| KAN-603: factory + routes                                                 | 1h         | R     |                                                                                             |
-| KAN-604: Frontend — instalar @react-pdf/renderer e criar Report base      | 3h         | G     | Setup, componente PDFDownloadLink, layout de página A4                                      |
-| KAN-605: Frontend — Relatório Executivo (PDF)                             | 8h         | G     | 3-5 páginas: capa, sumário, gráfico de severidade, top 5 riscos, conclusão. Fontes nativas. |
-| KAN-606: Frontend — Relatório Técnico (PDF)                               | 8h         | G     | 20+ páginas: lista completa de findings, evidências thumbnail, CVSS, OWASP                  |
-| KAN-607: Frontend — dashboard cliente (KPIs + gráfico severidade)         | 5h         | I     | Cards de KPI animados, gráfico Recharts de findings por severidade                          |
-| KAN-608: Frontend — dashboard pentester (meus projetos)                   | 4h         | I     | Lista projetos atribuídos, findings da semana                                               |
-| KAN-609: Frontend — dashboard admin (visão global)                        | 5h         | I     | Métricas agregadas: companies ativas, subscriptions pendentes, findings críticos abertos    |
-| KAN-610: Testes integração de geração de relatório (endpoint report-data) | 3h         | R     | Cobre BIZ-10 + dados consolidados corretos                                                  |
-| KAN-611: Atualizar PRD_VIVO.md ✅                                         | 1h         | R     |                                                                                             |
-
-**Total estimado:** R: 11h · G: 19h · I: 14h
+Tudo isso entra como **trabalho futuro** no README — e a redução consciente de escopo sob restrição de prazo é material de defesa na banca.
 
 ---
 
-## Sprint 7 — Mobile + IA Gemini (semanas 13-14)
+## Regras
 
-**Objetivo:** App mobile do cliente funcional. Assistente IA integrado.
-
-| Task                                                                             | Estimativa | Owner | Descrição resumida                                                                       |
-| -------------------------------------------------------------------------------- | ---------- | ----- | ---------------------------------------------------------------------------------------- |
-| KAN-701: Setup Expo em app/mobile com TypeScript                                 | 3h         | I     | Expo create, configura tema dark, expo-secure-store, axios                               |
-| KAN-702: Mobile — tela de Login                                                  | 3h         | I     | Form simples, salva token em SecureStore, deep link pra Home                             |
-| KAN-703: Mobile — Home com lista de projetos                                     | 4h         | I     | TanStack Query lista projetos da company do usuário                                      |
-| KAN-704: Mobile — Detalhe de projeto + lista de findings                         | 5h         | I     | Tabs: visão, findings, status                                                            |
-| KAN-705: Mobile — Detalhe de finding (read-only)                                 | 4h         | I     | Severidade, descrição, evidências (carrossel), comentários                               |
-| KAN-706: Mobile — viewer de PDF do relatório                                     | 4h         | I     | Instala expo-print + expo-sharing, baixa PDF do back, exibe                              |
-| KAN-707: Mobile — Expo Push setup + token registration                           | 4h         | R     | Pede permissão, registra token no back, salva no User                                    |
-| KAN-708: Back — POST /notifications/register-push (salva expoPushToken no User)  | 2h         | R     | Adicionar coluna expoPushToken em User via migration. Endpoint protegido                 |
-| KAN-709: Back — service que envia push pra Expo quando finding CRITICAL é criado | 4h         | R     | Hook no VulnerabilityService.create — se severity=CRITICAL, dispara push                 |
-| KAN-710: utils/gemini.util.ts — cliente Gemini autenticado                       | 3h         | R     | Wrapper do @google/generative-ai. Lê GEMINI_API_KEY do env                               |
-| KAN-711: ai.controller.ts + service.ts — endpoints de sugestão                   | 6h         | R     | POST /ai/suggest-finding (título + stack → JSON estruturado). Rate limit por user (10/h) |
-| KAN-712: Frontend — botão "Sugerir com IA" no editor de finding                  | 4h         | I     | Chama endpoint, preenche campos, marca aiAssisted=true                                   |
-| KAN-713: Atualizar PRD_VIVO.md ✅                                                | 1h         | R     |                                                                                          |
-
-**Total estimado:** R: 19h · G: 0h · I: 24h (excede — adiar KAN-706 ou KAN-712 se preciso)
-
-⚠️ Guilherme com 0 horas nesta sprint. Pode pegar tarefas atrasadas da Sprint 6 (relatórios PDF).
-
----
-
-## Sprint 8 — Maturidade + Polimento + Apresentação (semanas 15-16)
-
-**Objetivo:** Avaliação de maturidade, testes finais, demo, slides do TCC.
-
-| Task                                                                      | Estimativa | Owner | Descrição resumida                                                                                                          |
-| ------------------------------------------------------------------------- | ---------- | ----- | --------------------------------------------------------------------------------------------------------------------------- |
-| KAN-801: Seed dos 7 domínios e ~21 controles de maturidade                | 3h         | I     | Domínios: Gestão de Acesso, Backup, Rede, Vulnerabilidades, Monitoramento, Conscientização, Código. Cada um com 3 controles |
-| KAN-802: maturity-assessment.model.ts + repository + service + controller | 6h         | R     | CRUD da avaliação + endpoint pra salvar scores em batch                                                                     |
-| KAN-803: factory + routes /maturity                                       | 1h         | R     |                                                                                                                             |
-| KAN-804: Frontend — tela de avaliação de maturidade (admin)               | 8h         | I     | Layout TechNova-like: domínios laterais, controles centrais, score + radar lateral                                          |
-| KAN-805: Frontend — radar chart de maturidade com Recharts                | 3h         | I     | Spider chart de 7 eixos, comparativo com avaliação anterior se houver                                                       |
-| KAN-806: Adicionar score de maturidade no relatório executivo PDF         | 2h         | G     | Incluir seção com radar (renderizado como imagem ou SVG inline)                                                             |
-| KAN-807: Revisar e expandir seed de demo (TechNova com dados realistas)   | 4h         | I     | 5 aplicações fictícias, 10 findings de diferentes severidades, 1 maturidade preenchida                                      |
-| KAN-808: Rodar SonarQube manualmente, capturar relatório                  | 2h         | R     | Salvar screenshots/relatório como evidência pro TCC                                                                         |
-| KAN-809: Rodar OWASP ZAP baseline scan contra staging local               | 2h         | R     | Mesmo: capturar relatório como evidência                                                                                    |
-| KAN-810: Smoke tests E2E manuais dos 3 perfis (script de demo)            | 4h         | R     | Documentar passo a passo da demo no docs/DEMO.md                                                                            |
-| KAN-811: Documentação final — README + diagrama de arquitetura            | 4h         | R + I | README com setup, screenshots, diagrama                                                                                     |
-| KAN-812: Slides do TCC                                                    | 6h         | I + R | Apresentação com problema, solução, demo, stack, resultados                                                                 |
-| KAN-813: Ensaio de apresentação (3 sessões)                               | 6h         | Todos | 30min cada, com cronômetro e feedback                                                                                       |
-| KAN-814: Atualizar PRD_VIVO.md final ✅ todas as features                 | 1h         | R     |                                                                                                                             |
-| KAN-815: BUFFER pra imprevistos                                           | 5h         | R     |                                                                                                                             |
-
-**Total estimado:** R: 25h · G: 2h · I: 21h
-
----
-
-## Resumo geral
-
-| Sprint    | Foco                           | R       | G      | I       | Total   |
-| --------- | ------------------------------ | ------- | ------ | ------- | ------- |
-| 0         | Refactor                       | 6       | 0      | 0       | 6       |
-| 1         | Fundação                       | 18      | 0      | 18      | 36      |
-| 2         | Auth + User                    | 7       | 25     | 11      | 43      |
-| 3         | Company + Plan + Subscription  | 21      | 7      | 17      | 45      |
-| 4         | Application + Project + Member | 22      | 6      | 15      | 43      |
-| 5         | Vulnerability + Evidence       | 24      | 12     | 13      | 49      |
-| 6         | Relatórios + Dashboard         | 11      | 19     | 14      | 44      |
-| 7         | Mobile + IA                    | 19      | 0      | 24      | 43      |
-| 8         | Maturidade + Apresentação      | 25      | 2      | 21      | 48      |
-| **Total** |                                | **173** | **71** | **133** | **377** |
-
-**Capacidade total disponível:**
-
-- Rafael: 40h × 8 = 320h (sobra: ~150h pra imprevistos)
-- Guilherme: 20h × 8 = 160h (sobra: 89h)
-- Iann: 20h × 8 = 160h (sobra: 27h — apertado)
-
-⚠️ **Iann tá no limite.** Se ele atrasar, descer features dele pra sprints posteriores. Não dar mais nada crítico pra ele.
-
----
-
-## Como importar no JIRA
-
-1. Crie o projeto **KAN** se ainda não existir
-2. Crie cada Sprint manualmente no JIRA (Sprint 1, Sprint 2, etc.)
-3. Para cada linha desta tabela:
-   - Criar issue tipo **Task**
-   - Título = código + descrição (ex: "KAN-101: Aplicar schema.prisma...")
-   - Estimativa em horas
-   - Atribuir owner
-   - Atribuir à Sprint correspondente
-   - Descrição = texto da coluna "Descrição resumida"
-4. Quando concluir, mover para coluna "Done" no Kanban e atualizar `PRD_VIVO.md`
-
-⚠️ Os IDs `KAN-XXX` aqui são **sugestões**. O JIRA vai numerar automaticamente conforme você cria.
-
----
-
-_Documento vivo. Ajustar conforme sprints vão acontecendo. Tarefas que sobram migram pra sprint seguinte._
+- ✅ marcado pelo agente ao concluir (CLAUDE.md §0.1 R2)
+- Consolidar ou dividir task = editar a linha, nunca duplicar
+- Task descoberta no meio de uma fase → adicionar com `(descoberta)` na descrição
+- JIRA sincronizado manualmente ao fim de cada fase, com as KANs listadas no relatório do agente
