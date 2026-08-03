@@ -1,5 +1,7 @@
 # REFACTOR_PLAN.md — Plano de refactor do código atual
 
+> ✅ **CONCLUÍDO em 2026-06-10.** PR #2 (`refactor/align-claude-md`) mergeada em develop. Documento mantido como histórico. Para mudanças estruturais futuras, criar novo plano.
+
 > **Objetivo:** alinhar o repositório existente com o `CLAUDE.md` v2.
 > **Estimativa:** 4-6 horas de trabalho (Rafael) — fazer em uma sessão.
 > **Quando fazer:** ANTES de começar a Sprint 1. Branch dedicada: `refactor/align-claude-md`.

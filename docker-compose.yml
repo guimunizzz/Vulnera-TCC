@@ -8,7 +8,9 @@ services:
       MYSQL_USER: vulnera
       MYSQL_PASSWORD: vulnera
     ports:
-      - "3306:3306"
+      # host 3307 -> container 3306 (porta 3306 local já é usada pelo serviço
+      # Windows MySQL80; dentro do container continua 3306)
+      - "3307:3306"
     volumes:
       - vulnera-db-data:/var/lib/mysql
     healthcheck:

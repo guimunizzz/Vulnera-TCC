@@ -60,8 +60,11 @@ jobs:
           --health-retries=5
     env:
       DATABASE_URL: "mysql://vulnera:vulnera@localhost:3306/vulnera_test"
-      JWT_SECRET: "test-secret"
+      JWT_ACCESS_SECRET: "test-access-secret"
+      JWT_ACCESS_TTL: "15m"
       JWT_REFRESH_SECRET: "test-refresh-secret"
+      JWT_REFRESH_TTL: "7d"
+      BCRYPT_COST: "4"
       PORT: 3002
       NODE_ENV: test
     steps:

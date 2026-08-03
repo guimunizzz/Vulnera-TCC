@@ -1,16 +1,19 @@
 # BACKLOG.md — Sprints e tasks pro JIRA (project KAN)
 
-## ⚠️ Status de execução (11/09)
+## ⚠️ Status de execução (2026-06-16)
 
-| Sprint           | Foco                                    | Estado                                                                                                                   |                                                                         |
-| ---------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| **0 — Refactor** | Alinhar código com CLAUDE.md v2         | ✅ **CONCLUÍDA** (merged em develop)                                                                                     |                                                                         |
-| **1 — Fundação** | Infra, schema, server, CI, testes, seed | 🚧 **EM ANDAMENTO** — código 100% pronto, ~75% executado (pendente Docker local pra finalizar `migrate dev` + `db:seed`) | > **Como usar:** copie cada task pra criar uma issue tipo Task no JIRA. |
-| 2 — Auth + User  | JWT, register, login, CRUD User         | 📋 Próxima                                                                                                               |                                                                         |
-| 3 a 8            | —                                       | 📋 Backlog                                                                                                               |                                                                         |
+| Sprint           | Foco                                    | Estado                                                                                 |
+| ---------------- | --------------------------------------- | -------------------------------------------------------------------------------------- |
+| **0 — Refactor** | Alinhar código com CLAUDE.md v2         | ✅ **CONCLUÍDA** (PR #2 mergeada em develop)                                           |
+| **1 — Fundação** | Infra, schema, server, CI, testes, seed | 🚧 **EM ANDAMENTO** — backend 100% (KAN-101..107+111 ✅); frontend 📋 Iann (KAN-108/109/110) |
+| **2 — Auth + User** | JWT, register, login, CRUD User      | 🚧 **EM ANDAMENTO** — backend 100% (KAN-201..212 ✅, branch `feat/sprint-2-auth-user` aguardando PR); frontend 📋 Iann (KAN-213/214/215) |
+| 3 a 8            | —                                       | 📋 Backlog                                                                             |
 
-KANs concluídas até agora: **KAN-001** (refactor), **KAN-102/103/104/105/106/111** (parcial Sprint 1).
-KANs com código pronto aguardando execução: **KAN-101, KAN-107**.
+> **Como usar:** copie cada task pra criar uma issue tipo Task no JIRA.
+
+KANs concluídas: **KAN-001** (Sprint 0), **KAN-101 a KAN-107 + KAN-111** (Sprint 1 backend), **KAN-201 a KAN-212** (Sprint 2 backend).
+KANs pendentes (owner Iann): **KAN-108, KAN-109, KAN-110** (Sprint 1 frontend), **KAN-213, KAN-214, KAN-215** (Sprint 2 frontend).
+Bloqueios: branch `feat/sprint-2-auth-user` aguarda PR → develop; app/web sem implementação.
 
 ---
 
