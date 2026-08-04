@@ -37,7 +37,18 @@ Atores: `ADMIN` · `CLIENT` · `PENTESTER` → ver [[Roles]] e [[Matriz de Permi
 
 ## Prazo e estado
 
-| Campo | Valor |\n|---|---|\n| **Prazo** | **3 meses** (~13 semanas) — revisado em 2026-07-26 |\n| Progresso | **Fase 0 concluída** (refactor de stack e do vault). **Fases 1 e 2 NÃO estão concluídas no código Express atual** — auditoria de 2026-07-26 encontrou apenas arquivos-stub vazios (0 bytes) em `app/api/src/` e nenhuma linha de auth. A implementação NestJS anterior de Auth + Users + Companies + Plans + Applications + Projects (sessões 16–18, "Ondas 2–4") foi **apagada** pelo commit `654fd80 refactoring` no mesmo dia em que o vault foi atualizado para declarar essas fases como prontas. |\n| Fase atual | **Fase 1/2 — Fundação + Auth (retrabalho em Express)**, não Fase 3 |\n| Modo de execução | Solo-delegado: Rafael supervisiona, Claude Code executa |\n| Branch de integração | `develop` |\n\n> [!warning] Divergência vault × código — auditoria de 2026-07-26\n> `schema.prisma` tem **9 models** implementados (User, Company, Plan, Subscription, RefreshToken, PasswordResetToken, Application, Project, ProjectMember), não 19. `src/` está em **singular** (`controller/`, `model/`, `repository/`, `service/`), não plural como manda [[ADR-009 - Pastas no plural e cadeia de camadas]]. Não existem `middlewares/`, `utils/`, `database/`, testes, `docker-compose`, migrations nem seed. `app/web` e `app/mobile` têm apenas `package.json`, sem código. Ver sessão de auditoria em [[Changelog do Projeto]].\n\nDetalhamento em [[Roadmap Fases]] e [[Roadmap MVP]].
+| Campo | Valor |
+|---|---|
+| **Prazo** | **3 meses** (~13 semanas), entrega 25/10/2026 |
+| Progresso | **Fases 0-4 concluídas.** Backend: schema completo (19 models), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember. Frontend: bootstrapado na Fase 3 (Vite+React+Tailwind+Radix+TanStack Query+Zustand+Axios), com telas de Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions/Applications/NewAnalysis/Projects/ProjectDetail funcionando ponta a ponta (validado com smoke E2E manual no navegador). |
+| Fase atual | **Fase 5 — Vulnerability + Evidence** ⭐ (núcleo do produto), a próxima |
+| Modo de execução | Solo-delegado: Rafael supervisiona, Claude Code executa |
+| Branch de integração | `develop` |
+
+> [!info] Nota sobre a divergência vault × código de 2026-07-26 (histórico)
+> A auditoria de 2026-07-26 encontrou o código real muito atrás do que o vault documentava na época (schema com só 9 models, controllers vazios). Isso **já não é mais verdade** — corrigido nas sessões de 2026-08-04 (Fases 3 e 4). Ver [[Changelog do Projeto]], sessões 21 e 22, para o estado real por fase. **Lição registrada:** antes de confiar num diagnóstico anterior do vault sobre o estado do código, confira o código — documentação pode ficar desatualizada mais rápido do que se espera.
+
+Detalhamento em [[Roadmap Fases]] e [[Roadmap MVP]] — ambos também pendentes da mesma correção, se ainda não atualizados.
 
 ## Stack definitiva
 

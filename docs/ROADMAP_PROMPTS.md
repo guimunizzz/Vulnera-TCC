@@ -14,8 +14,8 @@
 | ----- | ---------------------------------------------- | ------- | ------------- | -------------- |
 | 0–2   | Refactor · Fundação · Auth + User (backend)    | —       | até 15/06     | ✅             |
 | 3     | Refactor plural + Subscription + bootstrap web | 1–2     | 04/08 → 17/08 | ✅ Concluída em 2026-08-04 |
-| **4** | **Application + Project + Member + telas**     | 3–4     | 18/08 → 31/08 | 📋 **próxima** |
-| 5     | Vulnerability + Evidence ⭐                    | 5–7     | 01/09 → 21/09 | 📋             |
+| 4     | Application + Project + Member + telas         | 3–4     | 18/08 → 31/08 | ✅ Concluída em 2026-08-04 |
+| **5** | **Vulnerability + Evidence** ⭐                | 5–7     | 01/09 → 21/09 | 📋 **próxima** |
 | 6     | Relatórios (pdf-lib) + Dashboards              | 8–9     | 22/09 → 05/10 | 📋             |
 | 7     | Mobile enxuto + Push                           | 10–11   | 06/10 → 15/10 | 📋             |
 | 8     | Maturidade (checklist) + fechamento TCC        | 12      | 16/10 → 25/10 | 📋             |
@@ -174,7 +174,7 @@ Desvios do prompt original:
 
 ---
 
-# FASE 4 — Application + Project + ProjectMember
+# FASE 4 — Application + Project + ProjectMember ✅ Concluída em 2026-08-04
 
 **Branch:** `feat/fase-4-projetos` · **Período:** 18/08 → 31/08 · **Depende de:** Fase 3
 
@@ -239,6 +239,22 @@ Protocolo §0.1 + relatório §0.2 S5 + PR para develop.
 
 NÃO FAZER: vulnerabilities (Fase 5), upload, chat.
 ```
+
+## Histórico
+
+**Branch:** `feat/fase-4-projetos` · **Data:** 2026-08-04 · **PR:** aberto manualmente pelo Rafael
+
+Todos os 6 checkpoints concluídos numa sessão contínua, sem pausas intermediárias (autorização já dada nas fases anteriores para seguir sem parar a cada checkpoint quando o trabalho está indo bem).
+
+Desvios do prompt original:
+- **ProjectMember GET foi aberto além de ADMIN.** O prompt dizia "só ADMIN gerencia", e a primeira implementação gateou o subrouter inteiro (GET+POST+DELETE) com `requireRole("ADMIN")`. Isso quebrava o requisito do Checkpoint 5 de a aba "Visão geral" do ProjectDetail mostrar os membros pra CLIENT e PENTESTER também — só a *gestão* (adicionar/remover) é ADMIN-only, a *leitura* segue a mesma regra de visibilidade do próprio Project (RN16/RN17). Corrigido antes de escrever o frontend; `ProjectMemberService.list()` agora recebe o actor e valida com a mesma lógica de `assertCanView` do ProjectService.
+- **Tipo de análise**: o prompt do frontend dizia "tipo (PENTEST/DAST/SAST)", mas `analysisType` no schema é `SAST | DAST | MATURITY | COMBO` (sem "PENTEST"). Segui o schema — é a fonte de verdade (CLAUDE.md R5) — e usei os 4 valores reais no wizard.
+- **PENTESTER não gerencia Applications** (list/create bloqueados com FORBIDDEN) — não estava explícito no prompt pra esse recurso; decisão por analogia com RN17 (pentester interage via Project, não diretamente com o catálogo de aplicações da company).
+- **Application.delete() é soft delete** (`isActive=false`), não `DELETE` físico — exigido pela RN04, não estava no texto literal do Checkpoint 1 mas é regra de negócio pré-existente.
+- **Sem DELETE para Project** — não pedido explicitamente no Checkpoint 2, e apagar um engagement de segurança em andamento não faz sentido de produto; anotado, não implementado.
+- Testes: 20 novos (6 Application + 11 Project + 3 ProjectMember), total 51/51. Cobertura de linha: application 85.4%, project 100%, project-member 100%.
+- Smoke E2E do Checkpoint 6 foi feito com navegador real, cobrindo os 3 roles: CLIENT criando aplicação e projeto, ADMIN transicionando status e atribuindo pentester, PENTESTER vendo só o projeto atribuído (RN17 confirmada visualmente), e o gate visual de `PLAN_LIMIT_REACHED` com uma empresa de teste no plano BASIC (mensagem "Limite de 2 aplicações do plano BASIC atingido..." confirmada na tela).
+- Durante o smoke E2E, dois processos `vite`/`node` órfãos de sessões anteriores ficaram presos nas portas 3000/3001 (um deles chegou a fazer o Vite cair pra 3001, colidindo com a API) — identificados via `netstat` e finalizados via `taskkill`. Não é um bug do código, só higiene de ambiente de dev local no Windows.
 
 ---
 

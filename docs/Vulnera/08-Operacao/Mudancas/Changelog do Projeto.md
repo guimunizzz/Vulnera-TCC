@@ -9,6 +9,51 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-08-04 (sessão 22 — Fase 4 implementada: Application + Project + ProjectMember)
+
+### Objetivo
+
+Executar a Fase 4 completa (`docs/ROADMAP_PROMPTS.md`): CRUD de Application com gate de plano/assinatura (RN03/RN07), CRUD de Project com máquina de estados mínima e RN05/RN06, ProjectMember (RN08), telas web correspondentes e smoke E2E nos 3 roles. Branch `feat/fase-4-projetos`, seguindo direto da Fase 3 concluída na mesma data.
+
+### Backend
+
+1. **Application** — `models/repositories/services/controllers/factories/routes` completos.
+   - `create()`: busca a Subscription ACTIVE da company (404 `USER_HAS_NO_COMPANY` se o actor não tem company; 422 `NO_ACTIVE_SUBSCRIPTION` se não há assinatura ativa); conta applications ativas e compara com `plan.maxApplications` da assinatura (422 `PLAN_LIMIT_REACHED`) — RN03 + RN07.
+   - `companyId` nunca sai do DTO — sempre resolvido do `req.user`, mesmo que o body tente mandar um diferente (testado explicitamente).
+   - `delete()` é soft delete (`isActive=false`), nunca `DELETE` físico — RN04. Contagem do limite do plano só considera `isActive=true`.
+   - URL validada por regex no controller (`INVALID_URL`).
+2. **Project** — máquina de estados mínima de 4 estados (`PENDING → IN_PROGRESS → IN_REVIEW → COMPLETED`, com retorno `IN_REVIEW → IN_PROGRESS`) — a mesma simplificação que o schema já documentava como decisão prévia, não a máquina de 7 estados do vault ([[Maquina - Project]], que continua como referência futura). Toda transição grava `AuditLog` `STATUS_CHANGE` com `diffJson` `{from, to}`.
+   - RN05 (1-para-1 com Application) e RN06 (`companyId` sempre herdado da Application) — sem `@unique` no schema pra RN05, invariante garantida no service (`findByApplication` + 409 `APPLICATION_ALREADY_HAS_PROJECT`).
+   - RN17: `list()`/`getById()`/`transition()` para PENTESTER checam `ProjectMemberRepository.findOne()` — só vê/transiciona projetos onde está atribuído.
+   - CLIENT nunca transiciona status (só ADMIN e PENTESTER-membro).
+3. **ProjectMember** — subrota `/projects/:projectId/members` (`mergeParams: true`).
+   - **Ajuste feito a meio da implementação**: a primeira versão gateava `GET` também com `requireRole("ADMIN")`, seguindo ao pé da letra "só ADMIN gerencia" do prompt. Ao chegar no Checkpoint 5 (frontend), ficou claro que o requisito "Visão geral (metadados + membros, com gestão de membros se ADMIN)" implica que a **leitura** deveria ser visível a qualquer um que pode ver o próprio Project (CLIENT da company, PENTESTER membro, ADMIN) — só a **gestão** (POST/DELETE) é exclusiva de ADMIN. Corrigido: `ProjectMemberService.list()` passou a receber o actor e aplicar a mesma checagem de visibilidade do `ProjectService` (RN16/RN17); só `POST`/`DELETE` mantêm `requireRole("ADMIN")` na rota.
+   - Alvo precisa ter `role=PENTESTER` (400 `USER_NOT_PENTESTER`); par único (409 `MEMBER_ALREADY_EXISTS`).
+
+### Testes
+
+20 novos: `application.test.ts` (6 — APP-01..04 + TEN-01/02 combinado + TEN-03), `project.test.ts` (11 — PROJ-01..09 + TEN-04/05, os PROJ-06..09 adicionados depois pra cobrir list/getById/update como CLIENT/ADMIN que a primeira rodada de cobertura não pegava), `project-member.test.ts` (3 — MEMBER-01..03). Total 51/51. Cobertura de linha: `application.service.ts` 85.4%, `project.service.ts` 100% (subiu de 66.6% depois de completar os casos de CLIENT/ADMIN em list/getById/update), `project-member.service.ts` 100%.
+
+### Frontend
+
+`ApplicationsPage` (tabela + filtro + modal "Nova aplicação" + soft-delete com confirmação + erro `PLAN_LIMIT_REACHED` customizado mostrando o número do limite e o nome do plano — não é só a mensagem genérica do `useApiError`), `NewAnalysisPage` (wizard 4 passos: aplicação → tipo → nível/escopo → remediação, pré-seleciona a aplicação via `?applicationId=`), `ProjectsPage` (lista, degrada graciosamente pra PENTESTER que não pode buscar nomes de Application), `ProjectDetailPage` (breadcrumb company→app→projeto, badge + botões de transição espelhando a máquina do backend, abas Visão geral/Findings/Relatórios com as duas últimas como placeholder, gestão de membros condicionada a `role === "ADMIN"`). Sidebar com "Aplicações" (ADMIN/CLIENT) e "Projetos" (todos).
+
+Nota sobre o tipo de análise: o prompt do frontend dizia "tipo (PENTEST/DAST/SAST)", mas `analysisType` no schema é `SAST | DAST | MATURITY | COMBO` — sem "PENTEST". Seguido o schema (fonte de verdade), com os 4 valores reais no wizard.
+
+### Smoke E2E (navegador real, backend+frontend rodando)
+
+Login CLIENT (TechNova, seed) → Aplicações → criar aplicação → contador de limite do plano PRO correto → wizard Nova Análise completo (4 passos, aplicação pré-selecionada) → ProjectDetail com breadcrumb e metadados corretos, sem controles de transição/gestão de membros pro CLIENT. Login ADMIN → transição PENDING→IN_PROGRESS→IN_REVIEW pela UI (badge e botões corretos a cada passo) → atribuir pentester via select (usado `form_input` depois que o clique simulado em `<select>` nativo não registrou a opção). Login PENTESTER (criado direto no banco pra teste) → sidebar sem "Aplicações"/"Aprovações" → `/projects` mostra só o projeto atribuído (RN17 confirmada visualmente) → ProjectDetail com breadcrumb degradado ("Empresa" genérico, já que ele não pode resolver o nome real) → transição própria funciona. Empresa de teste extra no plano BASIC pra confirmar visualmente a mensagem "Limite de 2 aplicações do plano BASIC atingido...". Todos os dados de teste limpos do banco de dev ao final.
+
+### Limitações conhecidas / decisões autônomas
+
+- PENTESTER não gerencia (nem lista) Applications diretamente — decisão por analogia com RN17, não estava explícito no prompt pra esse recurso.
+- Sem `DELETE` para Project — não pedido explicitamente, e não faz sentido de produto apagar um engagement em andamento.
+- Durante os testes manuais, processos `vite`/`node` órfãos de sessões anteriores ficaram presos em portas (3000/3001), causando um `404` intermitente na API por colisão de porta — resolvido identificando via `netstat` e matando via `taskkill`. Não é bug de código, é higiene de ambiente local.
+
+### Pendente
+
+- PR `feat/fase-4-projetos` → `develop` — Rafael abre manualmente.
+
 ## 2026-08-04 (sessão 21 — Fase 3 implementada: Company + Plan + Subscription + bootstrap web)
 
 ### Objetivo
