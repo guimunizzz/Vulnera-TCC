@@ -34,10 +34,10 @@ async function main() {
   });
 
   await prisma.plan.upsert({
-    where: { name: "PRO_PLUS" },
+    where: { name: "Enterprise" },
     update: {},
     create: {
-      name: "PRO_PLUS",
+      name: "Enterprise",
       maxApplications: 999,
       maxProjects: 999,
       includesRemediation: true,

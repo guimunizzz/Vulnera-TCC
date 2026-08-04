@@ -13,8 +13,8 @@
 | Fase  | Escopo                                         | Semanas | Período       | Status         |
 | ----- | ---------------------------------------------- | ------- | ------------- | -------------- |
 | 0–2   | Refactor · Fundação · Auth + User (backend)    | —       | até 15/06     | ✅             |
-| **3** | Refactor plural + Subscription + bootstrap web | 1–2     | 04/08 → 17/08 | 📋 **próxima** |
-| 4     | Application + Project + Member + telas         | 3–4     | 18/08 → 31/08 | 📋             |
+| 3     | Refactor plural + Subscription + bootstrap web | 1–2     | 04/08 → 17/08 | ✅ Concluída em 2026-08-04 |
+| **4** | **Application + Project + Member + telas**     | 3–4     | 18/08 → 31/08 | 📋 **próxima** |
 | 5     | Vulnerability + Evidence ⭐                    | 5–7     | 01/09 → 21/09 | 📋             |
 | 6     | Relatórios (pdf-lib) + Dashboards              | 8–9     | 22/09 → 05/10 | 📋             |
 | 7     | Mobile enxuto + Push                           | 10–11   | 06/10 → 15/10 | 📋             |
@@ -40,7 +40,7 @@ Ignore `docs/Vulnera/repomix-output.xml`. Ignore `docs/Vulnera/vulnera.md` e `do
 
 ---
 
-# FASE 3 — Refactor plural + Subscription + bootstrap web
+# FASE 3 — Refactor plural + Subscription + bootstrap web ✅ Concluída em 2026-08-04
 
 **Branch:** `feat/fase-3-empresas` (de `develop`) · **Período:** 04/08 → 17/08
 
@@ -155,6 +155,22 @@ badge + Histórico, Changelog do vault) + relatório §0.2 S5 + PR
 NÃO FAZER NESTA FASE: e-mail, dígito verificador de CNPJ, zod, qualquer coisa
 de Application/Project (Fase 4), IA (cortada do escopo).
 ```
+
+## Histórico
+
+**Branch:** `feat/fase-3-empresas` · **Data:** 2026-08-04 · **PR:** aberto manualmente pelo Rafael (ver mensagem sugerida no fim desta sessão)
+
+Todos os 8 checkpoints concluídos em uma única sessão contínua (com pausas de confirmação nos Checkpoints 0→1 e 1→3; do Checkpoint 3 em diante o Rafael autorizou seguir sem pausar).
+
+Desvios do prompt original:
+- **Checkpoint 0 revelou que o Checkpoint 2 (schema completo) era desnecessário** — os 19 models do domínio já estavam completos em `schema.prisma` desde antes (a documentação do vault, incluindo o Changelog da sessão 20, afirmava o contrário — 9 models, arquivos vazios — mas isso já não era verdade no código; a divergência doc-vs-código foi corrigida nesta sessão, ver `docs/Vulnera/08-Operacao/Mudancas/Changelog do Projeto.md`).
+- **AuditLog**: o schema usa `actorId`/`entityType`/`diffJson: String?` (não `actorUserId`/`entity`/`metadata: Json` como o prompt supunha). Implementado conforme o schema real.
+- **Subscription**: `status` default é `"PENDING_APPROVAL"` (não `"PENDING"`); não existe campo `activatedAt` — o approve reutiliza `startDate`. `reject` reaproveita o campo `approvedBy` pra guardar quem rejeitou (schema não tem `rejectedBy` separado).
+- **CORS foi adicionado ao backend** (`cors` + env `CORS_ORIGIN`, não estava no prompt) — sem isso a SPA não conseguiria chamar a API a partir do navegador; tratado como bug bloqueante da própria task (CLAUDE.md §0.2 S6).
+- **Stack do frontend diverge da descrição legada do vault** (`Front-end Web React.md`/`Estrutura - Web React.md`, que ainda descreviam Next.js App Router + shadcn/ui CLI + Socket.IO + Recharts, herdados da era pré-pivô Express/Vite). Implementado: Vite SPA + React Router (não Next.js), Radix primitives direto + Tailwind (não shadcn CLI), TanStack Query + Zustand juntos (não "ou"), sem Socket.IO/Recharts nesta fase (não usados em nenhuma tela da Fase 3). Ver ADR-020 e correção nas duas notas do vault.
+- Dev DB tinha uma linha órfã `PRO_PLUS` de seed anterior à correção do `seed.ts` — limpa manualmente durante o Checkpoint 6.
+- Testes cobrem 31/31 (13 pré-existentes + 18 novos de PLAN/COMP/SUB), cobertura de linha nos 3 services novos entre 94% e 100%.
+- Smoke E2E do Checkpoint 7 foi feito com navegador real (Chrome via extensão) contra backend+frontend rodando, não só roteiro manual descrito em texto — cobriu registro → onboarding → aprovação admin → bloqueio de rota admin pra CLIENT → console sem erros.
 
 ---
 

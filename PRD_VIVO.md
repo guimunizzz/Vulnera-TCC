@@ -18,10 +18,10 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Sprint atual       | **Sprint 2 — Auth + User** (backend completo; aguardando merge em develop e frontend Iann) |
+| Sprint atual       | **Sprint 3 — Company + Plan + Subscription** (concluída; branch `feat/fase-3-empresas` aguardando PR → develop) |
 | Data início        | 2026-06-10 (Sprint 0)               |
-| Data alvo TCC      | 2026-XX-XX (16 semanas após início) |
-| Última atualização | 2026-06-16 por @rafael              |
+| Data alvo TCC      | 2026-10-25 (12 semanas restantes, ver `docs/BACKLOG.md` v4) |
+| Última atualização | 2026-08-04 por Claude Code (sessão Fase 3) |
 
 ---
 
@@ -32,9 +32,9 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | Sprint                             | Foco                                       | Status | % concluído |
 | ---------------------------------- | ------------------------------------------ | ------ | ----------- |
 | 0 — Refactor                       | Alinhar código atual com CLAUDE.md v2      | ✅     | 100%        |
-| 1 — Fundação                       | Infra, schema, server base, frontend setup | 🚧     | 73% (8/11 ✅; KAN-108/109/110 📋 Iann) |
-| 2 — Auth + User                    | JWT, register, login, CRUD User            | 🚧     | 80% (12/15 ✅; KAN-213/214/215 📋 Iann; branch aguardando merge) |
-| 3 — Company + Plan + Subscription  | Onboarding e modelo comercial              | 📋     | 0%          |
+| 1 — Fundação                       | Infra, schema, server base, frontend setup | 🚧     | 91% (10/11 ✅; KAN-108/109 feitos na Fase 3; falta só KAN-110 landing) |
+| 2 — Auth + User                    | JWT, register, login, CRUD User            | ✅     | 100% (15/15 ✅; KAN-213/214/215 feitos na Fase 3; branch `feat/sprint-2-auth-user` ainda aguardando PR próprio) |
+| 3 — Company + Plan + Subscription  | Onboarding e modelo comercial              | ✅     | 100% — concluída em 2026-08-04 |
 | 4 — Application + Project + Member | Catálogo e gestão de projetos              | 📋     | 0%          |
 | 5 — Vulnerability + Evidence       | Núcleo do produto                          | 📋     | 0%          |
 | 6 — Relatórios + Dashboard         | PDFs e dashboards                          | 📋     | 0%          |
@@ -75,9 +75,9 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | KAN-105: GitHub Actions                  | ✅     | R     | 4 jobs: lint, build, test (serviço mysql ubuntu), sonarqube |
 | KAN-106: ESLint + tsconfig strict        | ✅     | R     | feat/sprint-1-foundation — tsconfig com resolveJsonModule+exclude, lint e build sem erros |
 | KAN-107: Seed inicial (TechNova + Admin) | ✅     | R     | `prisma/seed.ts` criado (3 Plans, 1 admin, 1 company TechNova, 1 subscription ACTIVE); script `db:seed` no package.json |
-| KAN-108: React+Vite+Tailwind setup       | 📋     | I     | —   |
-| KAN-109: Componentes UI base             | 📋     | I     | —   |
-| KAN-110: Landing page                    | 📋     | I     | —   |
+| KAN-108: React+Vite+Tailwind setup       | ✅     | Claude | feat/fase-3-empresas — bootstrap completo de app/web (Vite+React+TS+Tailwind), feito no Checkpoint 5 da Fase 3 |
+| KAN-109: Componentes UI base             | ✅     | Claude | feat/fase-3-empresas — Button/Input/Label/Card/Alert/Dialog (Radix + Tailwind) |
+| KAN-110: Landing page                    | 📋     | —     | Não coberto pela Fase 3 — a página pública de planos (`/plans`, KAN-310) cobre a entrada pública por ora; landing de marketing dedicada não estava no escopo do prompt |
 | KAN-111: Atualizar PRD_VIVO.md           | ✅     | R     | Auditoria pós-Sprint 2 via chore/docs-audit-sprint-2 (2026-06-16) |
 
 ---
@@ -98,9 +98,9 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | KAN-210: routes                     | ✅     | G     | feat/sprint-2-auth-user — auth (público) + user (autenticado, /me antes /:id) |
 | KAN-211: Testes Auth (AUTH-01 a 09) | ✅     | R     | feat/sprint-2-auth-user — 9 cenários: register/login/refresh/logout/rotação |
 | KAN-212: Testes User                | ✅     | R     | feat/sprint-2-auth-user — 3 cenários: USR-01/02/03 (me, visibilidade, auto-delete) |
-| KAN-213: Login page (web)           | 📋     | I     | — (app/web placeholder) |
-| KAN-214: Register page (web)        | 📋     | I     | — (app/web placeholder) |
-| KAN-215: Axios interceptor          | 📋     | I     | — (app/web placeholder) |
+| KAN-213: Login page (web)           | ✅     | Claude | feat/fase-3-empresas — LoginPage com useApiError, testado no navegador |
+| KAN-214: Register page (web)        | ✅     | Claude | feat/fase-3-empresas — RegisterPage, redireciona pro onboarding |
+| KAN-215: Axios interceptor          | ✅     | Claude | feat/fase-3-empresas — client.ts com fila de refresh concorrente |
 
 ---
 
@@ -108,17 +108,17 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 
 | Task                                        | Status | Owner | PR  |
 | ------------------------------------------- | ------ | ----- | --- |
-| KAN-301: Company CRUD                       | 📋     | G     | —   |
-| KAN-302: Company factory + routes           | 📋     | G     | —   |
-| KAN-303: Plan CRUD completo                 | 📋     | R     | —   |
-| KAN-304: Plan factory + routes              | 📋     | R     | —   |
-| KAN-305: Subscription CRUD + approve/reject | 📋     | R     | —   |
-| KAN-306: Subscription factory + routes      | 📋     | R     | —   |
-| KAN-307: Notificação admin (email + audit)  | 📋     | R     | —   |
-| KAN-308: Testes integração                  | 📋     | R     | —   |
-| KAN-309: Onboarding (web)                   | 📋     | I     | —   |
-| KAN-310: Página de planos pública           | 📋     | I     | —   |
-| KAN-311: Dashboard admin (pendentes)        | 📋     | I     | —   |
+| KAN-301: Company CRUD                       | ✅     | Claude | feat/fase-3-empresas — ownership (criador vira OWNER), CNPJ (regex, sem dígito verificador), /me, escopo CLIENT/ADMIN |
+| KAN-302: Company factory + routes           | ✅     | Claude | feat/fase-3-empresas — auth em todas as rotas, /me antes de /:id |
+| KAN-303: Plan CRUD completo                 | ✅     | Claude | feat/fase-3-empresas — unicidade de nome, GET público, CUD admin-only |
+| KAN-304: Plan factory + routes              | ✅     | Claude | feat/fase-3-empresas |
+| KAN-305: Subscription CRUD + approve/reject | ✅     | Claude | feat/fase-3-empresas — regra de ouro (1 ACTIVE/company) validada no request E no approve |
+| KAN-306: Subscription factory + routes      | ✅     | Claude | feat/fase-3-empresas |
+| KAN-307: Notificação admin (email + audit)  | ✅     | Claude | feat/fase-3-empresas — só a parte de AuditLog (SUBSCRIPTION_REQUESTED/APPROVED/REJECTED); e-mail continua fora de escopo (cortado, ver BACKLOG "Removido do escopo") |
+| KAN-308: Testes integração                  | ✅     | Claude | feat/fase-3-empresas — 18 testes novos (PLAN/COMP/SUB), 31/31 total, cobertura services 94-100% |
+| KAN-309: Onboarding (web)                   | ✅     | Claude | feat/fase-3-empresas — wizard 3 passos (useState), testado no navegador |
+| KAN-310: Página de planos pública           | ✅     | Claude | feat/fase-3-empresas — `/plans`, 3 cards, sem auth |
+| KAN-311: Dashboard admin (pendentes)        | ✅     | Claude | feat/fase-3-empresas — PendingSubscriptions, TanStack Query + modal de confirmação |
 
 ---
 
@@ -271,6 +271,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 2026-06-11 | API rodando localmente           | `/api/health` respondendo 200 em http://localhost:3001 (`npm run dev`) |
 | 2026-06-11 | Primeiro teste passando          | Smoke test `tests/integration/health.test.ts` (Jest+Supertest) — 1/1 |
 | 2026-06-15 | Sprint 2 (Auth + User) — backend completo | Branch `feat/sprint-2-auth-user`. Auth JWT (register/login/refresh/logout), CRUD User, 12 testes de integração (9 auth + 3 user). Aguardando PR → develop |
+| 2026-08-04 | Sprint 3 (Company + Plan + Subscription) concluída | Branch `feat/fase-3-empresas`, aguardando PR → develop (Rafael abre manualmente). Refactor de pastas pro plural (ADR-009); require-role middleware; AuditLog; Subscription completa com regra de ouro (1 ACTIVE/company, revalidada no approve); Plan e Company completados (ownership, CNPJ, auth); CORS habilitado na API; 18 testes novos (31/31 total); bootstrap completo do `app/web` (Vite+React+Tailwind+Radix+TanStack Query+Zustand+Axios); telas Plans/Onboarding/PendingSubscriptions; smoke E2E manual no navegador real, ponta a ponta, sem erros de console. Ver ADR-020 |
 | —    | MVP funcional (Sprint 5 fechada) | A registrar |
 | —    | Apresentação TCC                 | A registrar |
 
@@ -284,7 +285,8 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | ---- | -------- | ------- | ----------- | ------ |
 | 2026-06-11 | Docker não instalado na máquina de dev local; porta 3306 ocupada por `MySQL80` | KAN-101, KAN-102, KAN-104, KAN-107 | R | ✅ Resolvido — migration `initial` foi aplicada via CI (job `test` usa mysql como serviço no GitHub Actions); seed pode ser rodado quando Docker disponível |
 | 2026-06-16 | Branch `feat/sprint-2-auth-user` com Sprint 2 backend completa não foi mergeada em develop | Sprint 2 no board, início da Sprint 3 | R | Aberto — criar PR e mergear |
-| 2026-06-16 | Frontend (app/web) só tem placeholder `package.json` — KAN-108/109/110/213/214/215 não iniciados | Sprint 1 e 2 ficam em 🚧; Iann não iniciou | I | Aberto — ⚠️ verificar com Iann |
+| 2026-06-16 | Frontend (app/web) só tem placeholder `package.json` — KAN-108/109/110/213/214/215 não iniciados | Sprint 1 e 2 ficam em 🚧; Iann não iniciou | I | ✅ Resolvido em 2026-08-04 — bootstrap completo feito na Fase 3 (Claude Code); só falta KAN-110 (landing de marketing dedicada) |
+| 2026-08-04 | Branch `feat/fase-3-empresas` completa (backend + web) não foi mergeada em develop | Início da Fase 4 | R | Aberto — Rafael vai abrir o PR manualmente |
 
 ---
 

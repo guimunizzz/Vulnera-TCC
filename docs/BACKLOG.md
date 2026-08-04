@@ -11,14 +11,14 @@
 | 0 Refactor         | Alinhamento com CLAUDE.md                          | ✅             |
 | 1 Fundação         | Infra, schema, CI, migrations, seed, testes        | ✅ backend     |
 | 2 Auth + User      | JWT, refresh rotativo, CRUD, factories             | ✅ backend     |
-| **3 Empresas**     | **Refactor plural + Subscription + bootstrap web** | 📋 **próxima** |
-| 4 Projetos         | Application + Project + Member + telas             | 📋             |
+| 3 Empresas         | Refactor plural + Subscription + bootstrap web     | ✅ concluída 2026-08-04 |
+| **4 Projetos**     | **Application + Project + Member + telas**         | 📋 **próxima** |
 | 5 Findings         | Vulnerability + Evidence ⭐                        | 📋             |
 | 6 Relatórios       | report-data + PDFs pdf-lib + dashboards            | 📋             |
 | 7 Mobile           | Expo enxuto + Push                                 | 📋             |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 📋             |
 
-⚠️ **O frontend web nunca foi iniciado** — `app/web` só tem `package.json`. O bootstrap inteiro (Vite, Tailwind, UI base, auth) entra na Fase 3, herdado das Sprints 1 e 2 que só tiveram backend.
+✅ **Frontend web bootstrapado na Fase 3** (2026-08-04) — `app/web` tem Vite+React+TS+Tailwind+Radix+TanStack Query+Zustand+Axios, com Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions funcionando ponta a ponta (smoke E2E manual validado no navegador). Próximas fases só adicionam telas, não infraestrutura.
 
 Restante estimado: **~200h-equivalente** em 12 semanas.
 
@@ -39,23 +39,23 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 
 ---
 
-## FASE 3 — Empresas + bootstrap web (~44h)
+## FASE 3 — Empresas + bootstrap web (~44h) — ✅ concluída em 2026-08-04
 
 | #    | Task                                                            | h   | Estado |
 | ---- | --------------------------------------------------------------- | --- | ------ |
-| 3.0  | Auditoria: schema, completude de company/plan, `npm run check`  | 2   | 📋     |
-| 3.1  | Refactor plural (`git mv` + imports + docs/architecture.md)     | 3   | 📋     |
-| 3.2  | Completar schema com os models faltantes + migration            | 3   | 📋     |
-| 3.3  | `require-role` middleware                                       | 1   | 📋     |
-| 3.4  | AuditLog repository                                             | 2   | 📋     |
-| 3.5  | Completar Plan (GET público, CUD admin, BASIC/PRO/Enterprise)   | 3   | 📋     |
-| 3.6  | Completar Company + vínculo de owner                            | 4   | 📋     |
-| 3.7  | Subscription + approve/reject + invariante 1-ACTIVE + auditoria | 7   | 📋     |
-| 3.8  | Testes PLAN/COMP/SUB                                            | 5   | 📋     |
-| 3.9  | Bootstrap web: Vite, Tailwind, Radix, TanStack, Zustand, Axios  | 5   | 📋     |
-| 3.10 | UI base + client.ts com fila de refresh + auth store            | 5   | 📋     |
-| 3.11 | Login, Register, ProtectedRoute, Dashboard stub                 | 4   | 📋     |
-| 3.12 | Plans pública + Onboarding wizard + PendingSubscriptions        | 10  | 📋     |
+| 3.0  | Auditoria: schema, completude de company/plan, `npm run check`  | 2   | ✅     |
+| 3.1  | Refactor plural (`git mv` + imports + docs/architecture.md)     | 3   | ✅     |
+| 3.2  | Completar schema com os models faltantes + migration            | 3   | ✅ não precisou — schema já tinha os 19 models |
+| 3.3  | `require-role` middleware                                       | 1   | ✅     |
+| 3.4  | AuditLog repository                                             | 2   | ✅     |
+| 3.5  | Completar Plan (GET público, CUD admin, BASIC/PRO/Enterprise)   | 3   | ✅     |
+| 3.6  | Completar Company + vínculo de owner                            | 4   | ✅     |
+| 3.7  | Subscription + approve/reject + invariante 1-ACTIVE + auditoria | 7   | ✅     |
+| 3.8  | Testes PLAN/COMP/SUB                                            | 5   | ✅     |
+| 3.9  | Bootstrap web: Vite, Tailwind, Radix, TanStack, Zustand, Axios  | 5   | ✅     |
+| 3.10 | UI base + client.ts com fila de refresh + auth store            | 5   | ✅     |
+| 3.11 | Login, Register, ProtectedRoute, Dashboard stub                 | 4   | ✅     |
+| 3.12 | Plans pública + Onboarding wizard + PendingSubscriptions        | 10  | ✅     |
 
 ## FASE 4 — Projetos (~33h)
 

@@ -1,6 +1,6 @@
 // Rotas públicas de autenticação — SEM authMiddleware.
 import { Router } from "express";
-import { makeAuthController } from "../factory/auth.factory";
+import { makeAuthController } from "../factories/auth.factory";
 
 const router = Router();
 const controller = makeAuthController();

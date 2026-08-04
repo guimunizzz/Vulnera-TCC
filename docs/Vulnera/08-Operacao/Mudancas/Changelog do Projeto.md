@@ -9,6 +9,53 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-08-04 (sessão 21 — Fase 3 implementada: Company + Plan + Subscription + bootstrap web)
+
+### Objetivo
+
+Executar a Fase 3 completa (`docs/ROADMAP_PROMPTS.md`) em modo solo-delegado (`CLAUDE.md` §0.2): refactor de pastas pro plural, backend de Company/Plan/Subscription, bootstrap do `app/web` do zero e as 3 telas da fase. Branch `feat/fase-3-empresas`.
+
+### Achado que corrige o diagnóstico da sessão 20
+
+A sessão 20 (mesmo repositório, 2026-07-26) tinha concluído que o projeto estava "na prática na Fase 0/1", com apenas 9 models no schema e arquivos de código vazios — e recomendou refazer tudo em Express do zero. **Isso não era mais verdade no momento desta sessão**: o `schema.prisma` já tinha os 19 models completos do domínio, `Company`/`Plan` já eram CRUDs reais e funcionais (só sem auth aplicada), e a estrutura de pastas já estava com bastante trabalho feito — só ainda no singular. O Checkpoint 0 desta sessão (auditoria antes de escrever qualquer código, conforme `CLAUDE.md` §0.2 S2) confirmou isso comparando com o código real, não com o vault. Registrando aqui pra não repetir o mesmo diagnóstico desatualizado numa sessão futura — **sempre confirme no código antes de confiar num changelog anterior.**
+
+### Checkpoints executados
+
+1. **Auditoria** — confirmou schema completo (19 models), Company/Plan como CRUDs reais (não stubs), ausência de `require-role`/`Subscription`/`AuditLog`. `npm run check` falhava só por Docker/MySQL não estarem no ar — não por código quebrado.
+2. **Refactor pro plural** — `controller/model/repository/service/factory/middleware` → plural, via `git mv` (preserva histórico), imports corrigidos em 19+ arquivos, `docs/architecture.md` atualizado. `config/` e `database/` mantidos singular (ADR-009). Build e testes idênticos antes/depois.
+3. ~~Schema completo~~ — pulado, schema já estava completo (ver "Achado" acima).
+4. **Backend**:
+   - `middlewares/require-role.middleware.ts` — `requireRole(...roles)`, 403 FORBIDDEN.
+   - `repositories/audit-log.repository.ts` — append-only, `create()` conforme os campos reais do schema (`actorId`, `entityType`, `diffJson: String?`).
+   - **Subscription** completa (model, repository, service, controller, factory, routes) — `request`/`listPending`/`getCurrent`/`approve`/`reject`. Regra de ouro (1 ACTIVE por company) validada no `request` **e de novo no `approve`**, porque o estado pode mudar entre os dois.
+   - **Plan** — unicidade de nome (`PLAN_ALREADY_EXISTS`), rotas com GET público e POST/PUT/DELETE `authMiddleware + requireRole("ADMIN")`.
+   - **Company** — criador vira dono (`User.companyId` + `companyRole="OWNER"` setados na criação), CNPJ único com regex de formato (14 dígitos ou máscara, sem dígito verificador), `GET /companies/me`, escopo CLIENT (só a própria) / ADMIN (todas) resolvido no service.
+   - `prisma/seed.ts` corrigido: plano `PRO_PLUS` → `Enterprise`.
+   - **CORS habilitado na API** (não estava no prompt original — bug bloqueante descoberto ao montar o cliente Axios do frontend; ver [[ADR-020 - Stack final do frontend web e CORS]]).
+5. **Testes** — 18 testes novos (`plan.test.ts`, `company.test.ts`, `subscription.test.ts`, prefixos PLAN/COMP/SUB + canários TEN-01/TEN-02 de tenancy), 3 fixtures novas. Total 31/31 passando. Cobertura de linha nos 3 services novos: 100% (plan), 100% (subscription), 94.7% (company).
+6. **Bootstrap do `app/web`** — do zero: Vite + React 18 + TS + Tailwind + Radix + TanStack Query + Zustand + Axios. Cliente Axios com interceptor de refresh + fila de requests concorrentes. Zustand auth store com `persist`. `useApiError` mapeando os códigos SCREAMING_SNAKE do backend (que usa `{code}` em alguns controllers e `{error}` em outros — o hook lê os dois) pra PT-BR. Componentes base (Button/Input/Label/Card/Alert/Dialog).
+7. **Telas da Fase 3** — `PlansPage` pública (3 cards, plano com `price=0` mostra "Sob consulta"), `OnboardingPage` (wizard 3 passos só com `useState`, cria Company + Subscription em sequência), `PendingSubscriptionsPage` (admin-only, TanStack Query, aprovar/rejeitar com modal Radix Dialog e invalidação automática da lista). Sidebar com item "Aprovações" visível só pra ADMIN.
+8. **Smoke E2E real** — feito com navegador de verdade (Chrome via extensão), não só roteiro em texto: `/plans` deslogado → registro → onboarding cria Company+Subscription → dashboard sem "Aprovações" pro CLIENT → login admin → "Aprovações" aparece → aprovar via modal → lista atualiza sozinha → CLIENT tentando `/admin/subscriptions` direto por URL é redirecionado → console sem erros.
+
+### Decisões registradas
+
+- [[ADR-020 - Stack final do frontend web e CORS]] — SPA Vite (não Next.js App Router), Radix direto (não shadcn CLI), TanStack Query + Zustand juntos, CORS habilitado.
+
+### Correção de documentação
+
+- [[Front-end Web React]] e [[Estrutura - Web React]] — corrigidas: ainda descreviam Next.js App Router, `shadcn/ui` CLI e Socket.IO/Recharts como se fossem a stack real; adicionado callout apontando a estrutura de fato implementada.
+
+### Limitações conhecidas / decisões autônomas (S3 — não-irreversíveis, decididas e documentadas)
+
+- `PendingSubscriptionsPage` resolve nome de empresa/plano com duas chamadas extras (`GET /companies`, `GET /plans`) em vez de um endpoint que já devolva os nomes — aceitável no volume da Fase 3.
+- Onboarding não valida formato de CNPJ no client, só no submit (resposta da API) — simplicidade proposital.
+- `GET /companies` e `GET /companies/:id` ficaram admin-only; CLIENT usa só `/me`. Não há endpoint de listagem para CLIENT (não haveria uso: isolamento multi-tenant).
+
+### Pendente
+
+- PR `feat/fase-3-empresas` → `develop` — o Rafael abre manualmente (mensagem de PR sugerida no relatório de encerramento da sessão).
+- Branch `feat/sprint-2-auth-user` (Auth+User backend) continua sem merge — bloqueio pré-existente, não criado nesta sessão.
+
 ## 2026-07-26 (sessão 20 — auditoria de código real vs vault)
 
 ### Objetivo
