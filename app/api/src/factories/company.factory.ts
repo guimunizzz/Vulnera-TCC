@@ -1,4 +1,4 @@
-// app/api/src/factory/company.factory.ts
+// app/api/src/factories/company.factory.ts
 //
 // FACTORY METHOD para o recurso Company
 // ----------------------------------------------------------------------------
@@ -28,10 +28,10 @@
 // ----------------------------------------------------------------------------
 
 import { prisma } from "../database/prisma.database";
-import { CompanyRepository } from "../repository/company.repository";
-import { PlanRepository } from "../repository/plan.repository";
-import { CompanyService } from "../service/company.service";
-import { CompanyController } from "../controller/company.controller";
+import { CompanyRepository } from "../repositories/company.repository";
+import { PlanRepository } from "../repositories/plan.repository";
+import { CompanyService } from "../services/company.service";
+import { CompanyController } from "../controllers/company.controller";
 
 export function makeCompanyController(): CompanyController {
   // Ordem: mais interno (Repository) → mais externo (Controller)

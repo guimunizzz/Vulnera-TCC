@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import type { CompanyService } from "../service/company.service";
-import type { CreateCompanyDTO, UpdateCompanyDTO } from "../model/company.model";
+import type { CompanyService } from "../services/company.service";
+import type { CreateCompanyDTO, UpdateCompanyDTO } from "../models/company.model";
 
 export class CompanyController {
   constructor(private readonly service: CompanyService) {}

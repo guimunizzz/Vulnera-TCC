@@ -6,7 +6,7 @@
  */
 
 import type { Request, Response } from "express";
-import type { AuthService } from "../service/auth.service";
+import type { AuthService } from "../services/auth.service";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

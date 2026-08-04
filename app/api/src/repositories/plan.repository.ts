@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import type { Plan, CreatePlanDTO, UpdatePlanDTO } from "../model/plan.model";
+import type { Plan, CreatePlanDTO, UpdatePlanDTO } from "../models/plan.model";
 
 export class PlanRepository {
   constructor(private readonly prisma: PrismaClient) {}

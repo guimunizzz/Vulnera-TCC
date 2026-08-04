@@ -4,8 +4,8 @@
  * Lógica do CRUD de usuário com regras de autorização por role.
  */
 
-import { UserEntity, type UserResponseDTO, type UserRole } from "../model/user.model";
-import type { UserRepository } from "../repository/user.repository";
+import { UserEntity, type UserResponseDTO, type UserRole } from "../models/user.model";
+import type { UserRepository } from "../repositories/user.repository";
 
 interface Actor {
   userId: string;

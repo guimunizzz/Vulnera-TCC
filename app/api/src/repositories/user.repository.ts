@@ -6,7 +6,7 @@
  */
 
 import type { PrismaClient, User } from "@prisma/client";
-import type { UserRole } from "../model/user.model";
+import type { UserRole } from "../models/user.model";
 
 export interface CreateUserData {
   name: string;

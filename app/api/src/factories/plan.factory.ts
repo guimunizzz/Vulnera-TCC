@@ -1,4 +1,4 @@
-// app/api/src/factory/plan.factory.ts
+// app/api/src/factories/plan.factory.ts
 //
 // FACTORY METHOD para o recurso Plan
 // ----------------------------------------------------------------------------
@@ -24,9 +24,9 @@
 // ----------------------------------------------------------------------------
 
 import { prisma } from "../database/prisma.database";
-import { PlanRepository } from "../repository/plan.repository";
-import { PlanService } from "../service/plan.service";
-import { PlanController } from "../controller/plan.controller";
+import { PlanRepository } from "../repositories/plan.repository";
+import { PlanService } from "../services/plan.service";
+import { PlanController } from "../controllers/plan.controller";
 
 export function makePlanController(): PlanController {
   // Ordem: mais interno (Repository) → mais externo (Controller)

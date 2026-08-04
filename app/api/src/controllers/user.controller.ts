@@ -7,7 +7,7 @@
  */
 
 import type { Request, Response } from "express";
-import type { UserService } from "../service/user.service";
+import type { UserService } from "../services/user.service";
 
 export class UserController {
   constructor(private readonly service: UserService) {}

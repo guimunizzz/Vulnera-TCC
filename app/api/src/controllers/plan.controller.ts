@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import type { PlanService } from "../service/plan.service";
-import type { CreatePlanDTO, UpdatePlanDTO } from "../model/plan.model";
+import type { PlanService } from "../services/plan.service";
+import type { CreatePlanDTO, UpdatePlanDTO } from "../models/plan.model";
 
 export class PlanController {
   constructor(private readonly service: PlanService) {}

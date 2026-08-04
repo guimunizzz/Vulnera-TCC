@@ -1,5 +1,5 @@
-import { PlanRepository } from "../repository/plan.repository";
-import { PlanEntity, CreatePlanDTO, UpdatePlanDTO } from "../model/plan.model";
+import { PlanRepository } from "../repositories/plan.repository";
+import { PlanEntity, CreatePlanDTO, UpdatePlanDTO } from "../models/plan.model";
 
 export class PlanService {
   constructor(private readonly repository: PlanRepository) {}

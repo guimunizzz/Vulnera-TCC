@@ -8,7 +8,7 @@
 
 import { prisma } from "../../src/database/prisma.database";
 import { hashPassword } from "../../src/utils/hash.util";
-import type { UserRole } from "../../src/model/user.model";
+import type { UserRole } from "../../src/models/user.model";
 import type { User } from "@prisma/client";
 
 export interface SeedUserInput {

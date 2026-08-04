@@ -1,4 +1,4 @@
-// app/api/src/factory/auth.factory.ts
+// app/api/src/factories/auth.factory.ts
 //
 // FACTORY METHOD para o recurso Auth
 // ----------------------------------------------------------------------------
@@ -7,10 +7,10 @@
 // ----------------------------------------------------------------------------
 
 import { prisma } from "../database/prisma.database";
-import { AuthController } from "../controller/auth.controller";
-import { AuthService } from "../service/auth.service";
-import { UserRepository } from "../repository/user.repository";
-import { RefreshTokenRepository } from "../repository/refresh-token.repository";
+import { AuthController } from "../controllers/auth.controller";
+import { AuthService } from "../services/auth.service";
+import { UserRepository } from "../repositories/user.repository";
+import { RefreshTokenRepository } from "../repositories/refresh-token.repository";
 
 export function makeAuthController(): AuthController {
   const userRepo = new UserRepository(prisma);

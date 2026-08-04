@@ -1,4 +1,4 @@
-// app/api/src/factory/user.factory.ts
+// app/api/src/factories/user.factory.ts
 //
 // FACTORY METHOD para o recurso User
 // ----------------------------------------------------------------------------
@@ -7,9 +7,9 @@
 // ----------------------------------------------------------------------------
 
 import { prisma } from "../database/prisma.database";
-import { UserController } from "../controller/user.controller";
-import { UserService } from "../service/user.service";
-import { UserRepository } from "../repository/user.repository";
+import { UserController } from "../controllers/user.controller";
+import { UserService } from "../services/user.service";
+import { UserRepository } from "../repositories/user.repository";
 
 export function makeUserController(): UserController {
   const userRepo = new UserRepository(prisma);

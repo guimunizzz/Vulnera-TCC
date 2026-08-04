@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { makePlanController } from "../factory/plan.factory";
+import { makePlanController } from "../factories/plan.factory";
 
 // TODO Sprint 2 (KAN-202): aplicar authMiddleware quando estiver disponível
-// import { authMiddleware } from "../middleware/auth.middleware";
+// import { authMiddleware } from "../middlewares/auth.middleware";
 
 const router = Router();
 const controller = makePlanController();

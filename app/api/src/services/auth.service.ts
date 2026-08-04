@@ -6,8 +6,8 @@
  * Erros: lança Error com .message = SCREAMING_SNAKE. O controller traduz pra HTTP.
  */
 
-import type { UserRepository } from "../repository/user.repository";
-import { RefreshTokenRepository } from "../repository/refresh-token.repository";
+import type { UserRepository } from "../repositories/user.repository";
+import { RefreshTokenRepository } from "../repositories/refresh-token.repository";
 import { hashPassword, comparePassword } from "../utils/hash.util";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.util";
 import {
@@ -16,7 +16,7 @@ import {
   type LoginDTO,
   type RegisterDTO,
   type UserRole,
-} from "../model/user.model";
+} from "../models/user.model";
 
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7d
 

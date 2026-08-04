@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/auth.middleware";
-import { makeUserController } from "../factory/user.factory";
+import { authMiddleware } from "../middlewares/auth.middleware";
+import { makeUserController } from "../factories/user.factory";
 
 const router = Router();
 const controller = makeUserController();

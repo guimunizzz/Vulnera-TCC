@@ -3,7 +3,7 @@ import type {
   Company,
   CreateCompanyDTO,
   UpdateCompanyDTO,
-} from "../model/company.model";
+} from "../models/company.model";
 
 export class CompanyRepository {
   constructor(private readonly prisma: PrismaClient) {}

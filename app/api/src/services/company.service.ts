@@ -1,10 +1,10 @@
-import { CompanyRepository } from "../repository/company.repository";
-import { PlanRepository } from "../repository/plan.repository";
+import { CompanyRepository } from "../repositories/company.repository";
+import { PlanRepository } from "../repositories/plan.repository";
 import {
   CompanyEntity,
   CreateCompanyDTO,
   UpdateCompanyDTO,
-} from "../model/company.model";
+} from "../models/company.model";
 
 export class CompanyService {
   constructor(
