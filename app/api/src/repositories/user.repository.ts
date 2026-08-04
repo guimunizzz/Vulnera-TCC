@@ -50,6 +50,14 @@ export class UserRepository {
     return this.prisma.user.update({ where: { id }, data });
   }
 
+  /** Vincula o usuário a uma company recém-criada, tornando-o dono dela. */
+  setCompanyOwnership(userId: string, companyId: string, companyRole: string): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { companyId, companyRole },
+    });
+  }
+
   delete(id: string): Promise<User> {
     return this.prisma.user.delete({ where: { id } });
   }

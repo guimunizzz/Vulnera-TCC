@@ -7,6 +7,21 @@ status: ativo
 > [!info] Nota refatorada em 2026-07-26
 > Stack e convenções atualizadas conforme [[Contexto Mestre v4]]. Referências a NestJS, PostgreSQL, Next.js e `@react-pdf/renderer` foram substituídas por Express, MySQL, React + Vite e `pdf-lib`.
 
+> [!warning] Correção em 2026-08-04 (ver [[ADR-020 - Stack final do frontend web e CORS]])
+> A estrutura abaixo (`app/`, grupos de rota `(public)/(admin)/(pentester)/(client)`, `components.json` do shadcn/ui) é o desenho **Next.js App Router** que não foi o que acabou implementado no bootstrap real da Fase 3. `app/web` é uma **SPA Vite**: código em `src/`, roteamento com `react-router-dom` (guards por role via `<ProtectedRoute roles={[...]} />` aninhado, não por pasta de grupo), componentes Radix+Tailwind direto (sem CLI do shadcn/ui). A estrutura real ficou:
+> ```text
+> app/web/src/
+> ├── components/{ui,layout}/
+> ├── pages/{auth,admin}/
+> ├── lib/{api,cn.ts,query-client.ts}
+> ├── store/auth.store.ts
+> ├── hooks/use-api-error.ts
+> ├── types/*.types.ts
+> ├── App.tsx
+> └── main.tsx
+> ```
+> O restante desta nota (papel de cada camada conceitual, segurança) continua válido — só a árvore de pastas concreta diverge do que está descrito abaixo.
+
 # Estrutura - Web React
 
 ## Objetivo

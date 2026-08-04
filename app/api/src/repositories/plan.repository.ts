@@ -12,6 +12,10 @@ export class PlanRepository {
     return this.prisma.plan.findMany({ orderBy: { createdAt: "desc" } });
   }
 
+  async findByName(name: string): Promise<Plan | null> {
+    return this.prisma.plan.findUnique({ where: { name } });
+  }
+
   async create(data: CreatePlanDTO): Promise<Plan> {
     return this.prisma.plan.create({ data });
   }

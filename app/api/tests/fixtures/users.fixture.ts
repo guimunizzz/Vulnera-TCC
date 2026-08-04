@@ -17,6 +17,7 @@ export interface SeedUserInput {
   password: string;
   role: UserRole;
   companyId?: string | null;
+  companyRole?: string | null;
 }
 
 export async function seedUser(input: SeedUserInput): Promise<User> {
@@ -27,6 +28,7 @@ export async function seedUser(input: SeedUserInput): Promise<User> {
       password: await hashPassword(input.password),
       role: input.role,
       companyId: input.companyId ?? null,
+      companyRole: input.companyRole ?? null,
     },
   });
 }

@@ -71,6 +71,9 @@ export class PlanController {
       if (error.message === "INVALID_MAX_PROJECTS") {
         return res.status(400).json({ error: "INVALID_MAX_PROJECTS" });
       }
+      if (error.message === "PLAN_ALREADY_EXISTS") {
+        return res.status(409).json({ error: "PLAN_ALREADY_EXISTS" });
+      }
       console.error("PlanController.create", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
@@ -117,6 +120,9 @@ export class PlanController {
     } catch (error: any) {
       if (error.message === "PLAN_NOT_FOUND") {
         return res.status(404).json({ error: "PLAN_NOT_FOUND" });
+      }
+      if (error.message === "PLAN_ALREADY_EXISTS") {
+        return res.status(409).json({ error: "PLAN_ALREADY_EXISTS" });
       }
       console.error("PlanController.update", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });

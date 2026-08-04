@@ -30,6 +30,7 @@
 import { prisma } from "../database/prisma.database";
 import { CompanyRepository } from "../repositories/company.repository";
 import { PlanRepository } from "../repositories/plan.repository";
+import { UserRepository } from "../repositories/user.repository";
 import { CompanyService } from "../services/company.service";
 import { CompanyController } from "../controllers/company.controller";
 
@@ -37,7 +38,8 @@ export function makeCompanyController(): CompanyController {
   // Ordem: mais interno (Repository) → mais externo (Controller)
   const repository = new CompanyRepository(prisma);
   const planRepository = new PlanRepository(prisma);
-  const service = new CompanyService(repository, planRepository);
+  const userRepository = new UserRepository(prisma);
+  const service = new CompanyService(repository, planRepository, userRepository);
   const controller = new CompanyController(service);
   return controller;
 }

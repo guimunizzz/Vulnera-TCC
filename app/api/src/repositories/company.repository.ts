@@ -16,6 +16,10 @@ export class CompanyRepository {
     return this.prisma.company.findMany({ orderBy: { createdAt: "desc" } });
   }
 
+  async findByCnpj(cnpj: string): Promise<Company | null> {
+    return this.prisma.company.findUnique({ where: { cnpj } });
+  }
+
   async create(data: CreateCompanyDTO): Promise<Company> {
     return this.prisma.company.create({ data });
   }
