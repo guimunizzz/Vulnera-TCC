@@ -12,8 +12,8 @@
 | 1 Fundação         | Infra, schema, CI, migrations, seed, testes        | ✅ backend     |
 | 2 Auth + User      | JWT, refresh rotativo, CRUD, factories             | ✅ backend     |
 | 3 Empresas         | Refactor plural + Subscription + bootstrap web     | ✅ concluída 2026-08-04 |
-| **4 Projetos**     | **Application + Project + Member + telas**         | 📋 **próxima** |
-| 5 Findings         | Vulnerability + Evidence ⭐                        | 📋             |
+| 4 Projetos         | Application + Project + Member + telas             | ✅ concluída 2026-08-04 |
+| **5 Findings**     | **Vulnerability + Evidence** ⭐                    | 📋 **próxima** |
 | 6 Relatórios       | report-data + PDFs pdf-lib + dashboards            | 📋             |
 | 7 Mobile           | Expo enxuto + Push                                 | 📋             |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 📋             |
@@ -57,16 +57,16 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | 3.11 | Login, Register, ProtectedRoute, Dashboard stub                 | 4   | ✅     |
 | 3.12 | Plans pública + Onboarding wizard + PendingSubscriptions        | 10  | ✅     |
 
-## FASE 4 — Projetos (~33h)
+## FASE 4 — Projetos (~33h) — ✅ concluída em 2026-08-04
 
 | #   | Task                                                    | h   | Estado |
 | --- | ------------------------------------------------------- | --- | ------ |
-| 4.1 | Application CRUD + gate de limite do plano              | 7   | 📋     |
-| 4.2 | Project CRUD + máquina de estados + `/transition`       | 7   | 📋     |
-| 4.3 | ProjectMember subrota (só PENTESTER)                    | 5   | 📋     |
-| 4.4 | Testes APP/PROJ + TEN-01..05                            | 7   | 📋     |
-| 4.5 | Applications + wizard NewAnalysis                       | 8   | 📋     |
-| 4.6 | ProjectDetail com abas + gestão de membros + breadcrumb | 6   | 📋     |
+| 4.1 | Application CRUD + gate de limite do plano              | 7   | ✅     |
+| 4.2 | Project CRUD + máquina de estados + `/transition`       | 7   | ✅     |
+| 4.3 | ProjectMember subrota (gestão ADMIN, leitura ampliada)  | 5   | ✅ leitura ampliada pra CLIENT/PENTESTER-membro além de ADMIN — não estava no texto original, necessário pra ProjectDetail funcionar |
+| 4.4 | Testes APP/PROJ + TEN-01..05                            | 7   | ✅ 20 testes novos, cobertura services 85-100% |
+| 4.5 | Applications + wizard NewAnalysis                       | 8   | ✅     |
+| 4.6 | ProjectDetail com abas + gestão de membros + breadcrumb | 6   | ✅     |
 
 ## FASE 5 — Findings ⭐ (~46h)
 

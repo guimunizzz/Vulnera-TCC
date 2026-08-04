@@ -18,10 +18,10 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Sprint atual       | **Sprint 3 — Company + Plan + Subscription** (concluída; branch `feat/fase-3-empresas` aguardando PR → develop) |
+| Sprint atual       | **Sprint 4 — Application + Project + Member** (concluída; branch `feat/fase-4-projetos` aguardando PR → develop) |
 | Data início        | 2026-06-10 (Sprint 0)               |
 | Data alvo TCC      | 2026-10-25 (12 semanas restantes, ver `docs/BACKLOG.md` v4) |
-| Última atualização | 2026-08-04 por Claude Code (sessão Fase 3) |
+| Última atualização | 2026-08-04 por Claude Code (sessão Fase 4) |
 
 ---
 
@@ -35,7 +35,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 1 — Fundação                       | Infra, schema, server base, frontend setup | 🚧     | 91% (10/11 ✅; KAN-108/109 feitos na Fase 3; falta só KAN-110 landing) |
 | 2 — Auth + User                    | JWT, register, login, CRUD User            | ✅     | 100% (15/15 ✅; KAN-213/214/215 feitos na Fase 3; branch `feat/sprint-2-auth-user` ainda aguardando PR próprio) |
 | 3 — Company + Plan + Subscription  | Onboarding e modelo comercial              | ✅     | 100% — concluída em 2026-08-04 |
-| 4 — Application + Project + Member | Catálogo e gestão de projetos              | 📋     | 0%          |
+| 4 — Application + Project + Member | Catálogo e gestão de projetos              | ✅     | 100% — concluída em 2026-08-04 |
 | 5 — Vulnerability + Evidence       | Núcleo do produto                          | 📋     | 0%          |
 | 6 — Relatórios + Dashboard         | PDFs e dashboards                          | 📋     | 0%          |
 | 7 — Mobile + IA Gemini             | App mobile e assistente IA                 | 📋     | 0%          |
@@ -126,17 +126,17 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 
 | Task                                        | Status | Owner | PR  |
 | ------------------------------------------- | ------ | ----- | --- |
-| KAN-401: Application CRUD                   | 📋     | R     | —   |
-| KAN-402: Application factory + routes       | 📋     | R     | —   |
-| KAN-403: Project CRUD + transition          | 📋     | R     | —   |
-| KAN-404: Project factory + routes           | 📋     | R     | —   |
-| KAN-405: ProjectMember CRUD                 | 📋     | G     | —   |
-| KAN-406: Nested route /projects/:id/members | 📋     | G     | —   |
-| KAN-407: Testes Application (TEN-01 a 03)   | 📋     | R     | —   |
-| KAN-408: Testes Project (TEN-04, 05)        | 📋     | R     | —   |
-| KAN-409: Lista de aplicações (web)          | 📋     | I     | —   |
-| KAN-410: Wizard nova análise (web)          | 📋     | I     | —   |
-| KAN-411: Detalhe de projeto (web)           | 📋     | I     | —   |
+| KAN-401: Application CRUD                   | ✅     | Claude | feat/fase-4-projetos — RN03 (limite do plano) + RN07 (assinatura ativa) no create; companyId sempre do req.user; delete é soft (RN04) |
+| KAN-402: Application factory + routes       | ✅     | Claude | feat/fase-4-projetos |
+| KAN-403: Project CRUD + transition          | ✅     | Claude | feat/fase-4-projetos — máquina mínima de 4 estados (PENDING→IN_PROGRESS→IN_REVIEW→COMPLETED, retorno IN_REVIEW→IN_PROGRESS); toda transição gera AuditLog STATUS_CHANGE |
+| KAN-404: Project factory + routes           | ✅     | Claude | feat/fase-4-projetos |
+| KAN-405: ProjectMember CRUD                 | ✅     | Claude | feat/fase-4-projetos — GET visível a quem vê o projeto (CLIENT/PENTESTER-membro/ADMIN); POST/DELETE só ADMIN |
+| KAN-406: Nested route /projects/:id/members | ✅     | Claude | feat/fase-4-projetos — router com mergeParams |
+| KAN-407: Testes Application (TEN-01 a 03)   | ✅     | Claude | feat/fase-4-projetos — 6 testes (APP-01..04 + TEN-01/02/03) |
+| KAN-408: Testes Project (TEN-04, 05)        | ✅     | Claude | feat/fase-4-projetos — 11 testes (PROJ-01..09 + TEN-04/05) + 3 de ProjectMember |
+| KAN-409: Lista de aplicações (web)          | ✅     | Claude | feat/fase-4-projetos — tabela + filtro + modal + erro PLAN_LIMIT_REACHED amigável (testado no navegador) |
+| KAN-410: Wizard nova análise (web)          | ✅     | Claude | feat/fase-4-projetos — 4 passos com useState, testado no navegador |
+| KAN-411: Detalhe de projeto (web)           | ✅     | Claude | feat/fase-4-projetos — abas, transição de status, gestão de membros (ADMIN), breadcrumb; testado com os 3 roles no navegador |
 
 ---
 
@@ -272,6 +272,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 2026-06-11 | Primeiro teste passando          | Smoke test `tests/integration/health.test.ts` (Jest+Supertest) — 1/1 |
 | 2026-06-15 | Sprint 2 (Auth + User) — backend completo | Branch `feat/sprint-2-auth-user`. Auth JWT (register/login/refresh/logout), CRUD User, 12 testes de integração (9 auth + 3 user). Aguardando PR → develop |
 | 2026-08-04 | Sprint 3 (Company + Plan + Subscription) concluída | Branch `feat/fase-3-empresas`, aguardando PR → develop (Rafael abre manualmente). Refactor de pastas pro plural (ADR-009); require-role middleware; AuditLog; Subscription completa com regra de ouro (1 ACTIVE/company, revalidada no approve); Plan e Company completados (ownership, CNPJ, auth); CORS habilitado na API; 18 testes novos (31/31 total); bootstrap completo do `app/web` (Vite+React+Tailwind+Radix+TanStack Query+Zustand+Axios); telas Plans/Onboarding/PendingSubscriptions; smoke E2E manual no navegador real, ponta a ponta, sem erros de console. Ver ADR-020 |
+| 2026-08-04 | Sprint 4 (Application + Project + Member) concluída | Branch `feat/fase-4-projetos`, aguardando PR → develop. Application CRUD com gate RN03 (limite do plano) + RN07 (assinatura ativa) + soft delete (RN04); Project CRUD + máquina de estados mínima (4 estados) com AuditLog STATUS_CHANGE em toda transição; ProjectMember com leitura ampliada (RN16/RN17) e gestão ADMIN-only; 20 testes novos (51/51 total), cobertura services 85-100%; telas Applications/NewAnalysis/ProjectDetail/Projects; smoke E2E extenso no navegador (CLIENT, ADMIN, PENTESTER) incluindo o gate visual de PLAN_LIMIT_REACHED |
 | —    | MVP funcional (Sprint 5 fechada) | A registrar |
 | —    | Apresentação TCC                 | A registrar |
 

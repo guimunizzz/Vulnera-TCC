@@ -8,10 +8,12 @@ export class ProjectMemberController {
   async list(req: Request, res: Response): Promise<Response> {
     try {
       const projectId = req.params.projectId as string;
-      const members = await this.service.list(projectId);
+      const actor = req.user!;
+      const members = await this.service.list(actor, projectId);
       return res.status(200).json(members.map((m) => m.toResponse()));
     } catch (error: any) {
       if (error.message === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "PROJECT_NOT_FOUND" });
+      if (error.message === "FORBIDDEN") return res.status(403).json({ error: "FORBIDDEN" });
       console.error("ProjectMemberController.list", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }

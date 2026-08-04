@@ -5,8 +5,8 @@
  *
  * O backend não é 100% consistente na chave do corpo do erro: alguns
  * controllers (auth, user) devolvem { code }, outros (plan, company,
- * subscription) devolvem { error } — ver CLAUDE.md, ambos os formatos
- * carregam o código em SCREAMING_SNAKE. Este hook lê os dois.
+ * subscription, application, project) devolvem { error } — ver CLAUDE.md,
+ * ambos os formatos carregam o código em SCREAMING_SNAKE. Este hook lê os dois.
  */
 
 import { useCallback } from "react";
@@ -45,7 +45,28 @@ const MESSAGES: Record<string, string> = {
   // subscription
   SUBSCRIPTION_NOT_FOUND: "Assinatura não encontrada.",
   ALREADY_HAS_ACTIVE_SUBSCRIPTION: "Esta empresa já tem uma assinatura ativa.",
-  INVALID_STATUS_TRANSITION: "Esta assinatura não pode mais ser alterada.",
+
+  // application
+  APPLICATION_NOT_FOUND: "Aplicação não encontrada.",
+  INVALID_URL: "URL inválida. Use o formato https://exemplo.com.",
+  INVALID_ENVIRONMENT: "Ambiente inválido.",
+  NO_ACTIVE_SUBSCRIPTION: "Sua empresa ainda não tem uma assinatura ativa. Aguarde a aprovação do admin.",
+  PLAN_LIMIT_REACHED: "Limite de aplicações do plano atual atingido.",
+
+  // project
+  PROJECT_NOT_FOUND: "Projeto não encontrado.",
+  INVALID_APPLICATION_ID: "Selecione uma aplicação válida.",
+  INVALID_ANALYSIS_TYPE: "Tipo de análise inválido.",
+  INVALID_ANALYSIS_LEVEL: "Nível de análise inválido.",
+  INVALID_HAS_REMEDIATION: "Valor inválido para remediação.",
+  APPLICATION_ALREADY_HAS_PROJECT: "Esta aplicação já tem um projeto de análise.",
+  INVALID_STATUS_TRANSITION: "Essa transição de status não é permitida.",
+
+  // project member
+  INVALID_USER_ID: "Selecione um usuário válido.",
+  USER_NOT_PENTESTER: "Só é possível atribuir usuários com perfil Pentester.",
+  MEMBER_ALREADY_EXISTS: "Este pentester já está atribuído ao projeto.",
+  MEMBER_NOT_FOUND: "Este usuário não está atribuído ao projeto.",
 
   // genérico
   INTERNAL_ERROR: "Algo deu errado no servidor. Tente novamente.",
@@ -59,12 +80,21 @@ function messageForCode(code: string): string {
   return "Não foi possível concluir a ação. Tente novamente.";
 }
 
+/** Extrai o código bruto do erro — útil quando a tela precisa de lógica extra
+ * além da mensagem genérica (ex: PLAN_LIMIT_REACHED mostrando o número do limite). */
+export function getApiErrorCode(error: unknown): string | undefined {
+  if (axios.isAxiosError(error)) {
+    return (error.response?.data?.code ?? error.response?.data?.error) as string | undefined;
+  }
+  return undefined;
+}
+
 export function useApiError(): (error: unknown) => string {
   return useCallback((error: unknown): string => {
-    if (axios.isAxiosError(error)) {
-      const code = (error.response?.data?.code ?? error.response?.data?.error) as string | undefined;
-      if (code) return messageForCode(code);
-      if (error.code === "ERR_NETWORK") return "Não foi possível conectar ao servidor.";
+    const code = getApiErrorCode(error);
+    if (code) return messageForCode(code);
+    if (axios.isAxiosError(error) && error.code === "ERR_NETWORK") {
+      return "Não foi possível conectar ao servidor.";
     }
     return "Não foi possível concluir a ação. Tente novamente.";
   }, []);

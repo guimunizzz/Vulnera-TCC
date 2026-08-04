@@ -16,7 +16,7 @@ describe("ProjectMember (list/add/remove)", () => {
   });
 
   // MEMBER-01
-  it("só ADMIN gerencia membros — CLIENT e PENTESTER recebem 403", async () => {
+  it("GET de membros é visível a quem vê o projeto (CLIENT dono); só ADMIN gerencia (POST/DELETE)", async () => {
     const plan = await seedPlan({ name: "BASIC" });
     const company = await seedCompany({ name: "Acme", planId: plan.id });
     const application = await seedApplication({ name: "App 1", companyId: company.id });
@@ -39,12 +39,20 @@ describe("ProjectMember (list/add/remove)", () => {
     const clientToken = await loginAs(app, client.email, PASSWORD);
     const pentesterToken = await loginAs(app, pentester.email, PASSWORD);
 
+    // CLIENT dono do projeto pode VER a lista de membros...
+    const listAsClient = await request(app)
+      .get(`/api/projects/${project.id}/members`)
+      .set("Authorization", `Bearer ${clientToken}`);
+    expect(listAsClient.status).toBe(200);
+
+    // ...mas não pode gerenciar (adicionar)
     const asClient = await request(app)
       .post(`/api/projects/${project.id}/members`)
       .set("Authorization", `Bearer ${clientToken}`)
       .send({ userId: pentester.id });
     expect(asClient.status).toBe(403);
 
+    // PENTESTER não-membro não vê a lista (RN17 também vale aqui)
     const asPentester = await request(app)
       .get(`/api/projects/${project.id}/members`)
       .set("Authorization", `Bearer ${pentesterToken}`);
