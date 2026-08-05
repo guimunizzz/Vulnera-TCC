@@ -8,4 +8,5 @@ export enum EnvKeys {
   BCRYPT_COST = "BCRYPT_COST",
   NODE_ENV = "NODE_ENV",
   CORS_ORIGIN = "CORS_ORIGIN",
+  UPLOADS_DIR = "UPLOADS_DIR",
 }

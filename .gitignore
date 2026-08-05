@@ -19,12 +19,14 @@ coverage/
 .env.production.local
 
 # Prisma
-apps/api/prisma/migrations/*.sql
-!apps/api/prisma/migrations/.gitkeep
+app/api/prisma/migrations/*.sql
+!app/api/prisma/migrations/.gitkeep
 
-# Uploads (evidências)
-apps/api/uploads/*
-!apps/api/uploads/.gitkeep
+# Uploads (evidências) — path corrigido de "apps/" (plural, não existe) pra
+# "app/" (singular, estrutura real do repo); regra duplicada e reforçada em
+# app/api/.gitignore, que é a que realmente vale pro caminho relativo.
+app/api/uploads/*
+!app/api/uploads/.gitkeep
 
 # Logs
 *.log

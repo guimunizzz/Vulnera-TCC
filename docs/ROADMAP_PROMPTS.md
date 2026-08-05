@@ -258,7 +258,7 @@ Desvios do prompt original:
 
 ---
 
-# FASE 5 — Vulnerability + Evidence ⭐ NÚCLEO
+# FASE 5 — Vulnerability + Evidence ⭐ NÚCLEO ✅ Concluída em 2026-08-05
 
 **Branch:** `feat/fase-5-findings` · **Período:** 01/09 → 21/09 (3 semanas) · **Depende de:** Fase 4
 
@@ -337,6 +337,25 @@ Protocolo §0.1 + relatório + PR.
 NÃO FAZER: relatórios (Fase 6), IA (cortada), antivírus no upload (anote como
 limitação conhecida na documentação).
 ```
+
+## Histórico
+
+**Branch:** `feat/fase-5-findings` · **Data:** 2026-08-05 · **PR:** a abrir pelo Rafael
+
+Todos os 6 checkpoints concluídos numa sessão contínua, com "esforço adicional" pedido explicitamente pelo Rafael — cada checkpoint foi validado com testes reais antes de seguir pro próximo (13 vectors CVSS conferidos à mão, 97 testes automatizados, smoke E2E completo no navegador com upload de arquivo real e conferência do AuditLog no Prisma Studio).
+
+Desvios do prompt original:
+- **Máquina de estados simplificada (4 estados, igual ao Project na Fase 4).** O vault documenta uma máquina de 6 estados pra Vulnerability (OPEN/IN_PROGRESS/FIXED/REVALIDATION/CLOSED/RISK_ACCEPTED — `Maquina - Vulnerability.md`) com transições que dependem de `project.hasRemediation` (RN13/RN14: quem move pra FIXED muda se o projeto tem serviço de remediação). O Checkpoint 2 pediu literalmente `OPEN → IN_PROGRESS → FIXED → CLOSED`, então segui isso — mesma decisão e mesmo racional da simplificação do Project. REVALIDATION/RISK_ACCEPTED e a bifurcação por `hasRemediation` ficam como trabalho futuro.
+- **DELETE de Vulnerability é ADMIN-only, físico (hard delete).** "CRUD completo" não detalhava quem podia apagar. Diferente de Application (RN04 exige soft-delete explícito), Vulnerability não tem `isActive` no schema — o comentário do schema.prisma já diz "soft-delete não-implementado" como padrão do projeto. Restringi a ADMIN (não PENTESTER) porque apagar um finding é mais sensível que editá-lo num produto de auditoria de segurança; sempre gera AuditLog DELETE.
+- **PUT com novo cvssVector reseta o override anterior.** RN21 fala em auditar `SEVERITY_CHANGE` quando o vetor muda; não estava explícito o que acontece com um override manual pré-existente. Decidi que mudar o vetor invalida o override (a justificativa foi escrita pro score antigo) — `severityFinal` volta a acompanhar `severityCalculated` e `severityOverrideReason` é limpo. Gera AuditLog `SEVERITY_CHANGE` com from/to.
+- **VulnerabilityComment: qualquer ator que pode VER o finding pode comentar**, não só ADMIN/PENTESTER-membro (que é a regra de escrita do finding em si). CLIENT comenta normalmente — é canal de comunicação, testado no smoke (CLIENT comentando funcionou). DELETE continua restrito ao autor ou ADMIN, como pedido.
+- **Validação do upload ignora o `Content-Type` declarado por completo** — não só como "dupla checagem", é a ÚNICA fonte de verdade pro tipo aceito (a whitelist e a detecção por magic number são a mesma função). Testado explicitamente no smoke: um `.exe` disfarçado de `.png` (Content-Type: image/png) foi bloqueado do mesmo jeito.
+- **Bug pré-existente corrigido (bloqueava o Checkpoint 6):** o `.gitignore` da raiz apontava pra `apps/api/uploads/*` (plural, resquício de estrutura antiga) — nunca bateu com o caminho real `app/api/uploads/`. Corrigido nos dois `.gitignore` (raiz e `app/api/`), senão evidências reais de upload seriam commitadas por engano.
+- **UPLOADS_DIR nova env var** (`EnvKeys`/`EnvVar`, como manda o CLAUDE.md §6) — testes gravam em `uploads-test/` em vez de `uploads/`, pra nunca poluir o volume real de dev com arquivo de teste.
+- Testes: 24 novos (13 unitários de CVSS + 11 de integração: vulnerability/evidence/vulnerability-comment), total 97/97. Cobertura de linha nos 3 services novos: vulnerability 97.6%, evidence 95%, vulnerability-comment 96.4% (todos ≥80% em statements também).
+- Smoke E2E do Checkpoint 6 feito com navegador real e arquivos binários de verdade (PNG com assinatura válida + "executável" com cabeçalho MZ): pentester criou o finding com o vetor canônico (score calculado em tempo real no cliente = 9.8 CRITICAL, igual ao backend), subiu as duas evidências (PNG aceito, .exe bloqueado por magic number mesmo com Content-Type forjado), comentou, fez override pra MEDIUM com justificativa — CLIENT abriu a mesma URL e viu tudo read-only (sem botão Editar, sem zona de upload, com o override e a severidade calculada original visíveis). AuditLog conferido no Prisma Studio: 3 registros (Project STATUS_CHANGE + Vulnerability CREATE + Vulnerability SEVERITY_OVERRIDE), todos com o actor e o diff corretos.
+- ⚠️ **Limitação conhecida (documentar no README/DEMO, conforme pedido):** não há varredura antivírus/malware no upload — a validação é de tipo (magic number) e tamanho, não de conteúdo malicioso embutido num arquivo do tipo aceito (ex: polyglot files, exploit em parser de imagem).
+- Observação de bibliotecas (não bloqueou nada, só registro): `npm audit` no backend aponta 4 vulnerabilidades pré-existentes (2 baixas, 2 altas) em dependências de ferramenta (`eslint`/`jest`/`esbuild` transitivos) — nenhuma nova, nenhuma em dependência de runtime além do `body-parser` do Express. Não corrigido nesta sessão (fora do escopo da Fase 5); considerar `npm audit fix` numa sessão de manutenção.
 
 ---
 

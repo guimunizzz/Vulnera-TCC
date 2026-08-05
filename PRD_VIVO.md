@@ -18,10 +18,10 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Sprint atual       | **Sprint 4 — Application + Project + Member** (concluída; branch `feat/fase-4-projetos` aguardando PR → develop) |
+| Sprint atual       | **Sprint 5 — Vulnerability + Evidence** ⭐ (concluída; branch `feat/fase-5-findings` aguardando PR → develop) |
 | Data início        | 2026-06-10 (Sprint 0)               |
-| Data alvo TCC      | 2026-10-25 (12 semanas restantes, ver `docs/BACKLOG.md` v4) |
-| Última atualização | 2026-08-04 por Claude Code (sessão Fase 4) |
+| Data alvo TCC      | 2026-10-25 (11 semanas restantes, ver `docs/BACKLOG.md` v4) |
+| Última atualização | 2026-08-05 por Claude Code (sessão Fase 5) |
 
 ---
 
@@ -36,7 +36,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 2 — Auth + User                    | JWT, register, login, CRUD User            | ✅     | 100% (15/15 ✅; KAN-213/214/215 feitos na Fase 3; branch `feat/sprint-2-auth-user` ainda aguardando PR próprio) |
 | 3 — Company + Plan + Subscription  | Onboarding e modelo comercial              | ✅     | 100% — concluída em 2026-08-04 |
 | 4 — Application + Project + Member | Catálogo e gestão de projetos              | ✅     | 100% — concluída em 2026-08-04 |
-| 5 — Vulnerability + Evidence       | Núcleo do produto                          | 📋     | 0%          |
+| 5 — Vulnerability + Evidence       | Núcleo do produto                          | ✅     | 100% — concluída em 2026-08-05 |
 | 6 — Relatórios + Dashboard         | PDFs e dashboards                          | 📋     | 0%          |
 | 7 — Mobile + IA Gemini             | App mobile e assistente IA                 | 📋     | 0%          |
 | 8 — Maturidade + Apresentação      | Polimento e entrega                        | 📋     | 0%          |
@@ -144,17 +144,17 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 
 | Task                                        | Status | Owner | PR  |
 | ------------------------------------------- | ------ | ----- | --- |
-| KAN-501: utils/cvss (cálculo automático)    | 📋     | R     | —   |
-| KAN-502: Vulnerability CRUD + transition    | 📋     | R     | —   |
-| KAN-503: Vulnerability factory + routes     | 📋     | R     | —   |
-| KAN-504: Evidence CRUD (upload MIME)        | 📋     | G     | —   |
-| KAN-505: Evidence factory + nested routes   | 📋     | G     | —   |
-| KAN-506: VulnerabilityComment nested        | 📋     | G     | —   |
-| KAN-507: AuditLog helper                    | 📋     | R     | —   |
-| KAN-508: Testes Vulnerability (BIZ-03 a 08) | 📋     | R     | —   |
-| KAN-509: Testes Evidence (BIZ-09)           | 📋     | R     | —   |
-| KAN-510: Lista de findings (web)            | 📋     | I     | —   |
-| KAN-511: Editor de finding (web)            | 📋     | I     | —   |
+| KAN-501: utils/cvss (cálculo automático)    | ✅     | Claude | feat/fase-5-findings — parser manual CVSS 3.1, 13 testes unitários (vetor canônico + Log4Shell + Heartbleed + vetores LOW/MEDIUM calculados à mão) |
+| KAN-502: Vulnerability CRUD + transition    | ✅     | Claude | feat/fase-5-findings — máquina de 4 estados (OPEN→IN_PROGRESS→FIXED→CLOSED); override-severity com justificativa ≥20 chars; PUT com vetor novo reseta override anterior (RN21) |
+| KAN-503: Vulnerability factory + routes     | ✅     | Claude | feat/fase-5-findings |
+| KAN-504: Evidence CRUD (upload MIME)        | ✅     | Claude | feat/fase-5-findings — multer memoryStorage + magic number (ignora Content-Type declarado) + UUID + uploads/{companyId}/{vulnId}/ |
+| KAN-505: Evidence factory + nested routes   | ✅     | Claude | feat/fase-5-findings — GET de download autenticado, valida acesso à company antes de servir |
+| KAN-506: VulnerabilityComment nested        | ✅     | Claude | feat/fase-5-findings — GET paginado, POST aberto a quem tem acesso de leitura, DELETE autor/admin |
+| KAN-507: AuditLog helper                    | ✅     | Claude | feat/fase-5-findings — CREATE (RN20), SEVERITY_CHANGE (RN21), STATUS_CHANGE, SEVERITY_OVERRIDE, DELETE |
+| KAN-508: Testes Vulnerability (BIZ-03 a 08) | ✅     | Claude | feat/fase-5-findings — 17 testes de integração + TEN-06 |
+| KAN-509: Testes Evidence (BIZ-09)           | ✅     | Claude | feat/fase-5-findings — 7 testes (.exe bloqueado, Content-Type forjado, .txt UTF-8, tamanho, roles) |
+| KAN-510: Lista de findings (web)            | ✅     | Claude | feat/fase-5-findings — aba Findings no ProjectDetail: filtros, badges, paginação, contador de críticos abertos |
+| KAN-511: Editor de finding (web)            | ✅     | Claude | feat/fase-5-findings — FindingEditor (CVSS live client-side, drag-drop, override, transição) + FindingDetail read-only |
 
 ---
 
@@ -273,7 +273,8 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 2026-06-15 | Sprint 2 (Auth + User) — backend completo | Branch `feat/sprint-2-auth-user`. Auth JWT (register/login/refresh/logout), CRUD User, 12 testes de integração (9 auth + 3 user). Aguardando PR → develop |
 | 2026-08-04 | Sprint 3 (Company + Plan + Subscription) concluída | Branch `feat/fase-3-empresas`, aguardando PR → develop (Rafael abre manualmente). Refactor de pastas pro plural (ADR-009); require-role middleware; AuditLog; Subscription completa com regra de ouro (1 ACTIVE/company, revalidada no approve); Plan e Company completados (ownership, CNPJ, auth); CORS habilitado na API; 18 testes novos (31/31 total); bootstrap completo do `app/web` (Vite+React+Tailwind+Radix+TanStack Query+Zustand+Axios); telas Plans/Onboarding/PendingSubscriptions; smoke E2E manual no navegador real, ponta a ponta, sem erros de console. Ver ADR-020 |
 | 2026-08-04 | Sprint 4 (Application + Project + Member) concluída | Branch `feat/fase-4-projetos`, aguardando PR → develop. Application CRUD com gate RN03 (limite do plano) + RN07 (assinatura ativa) + soft delete (RN04); Project CRUD + máquina de estados mínima (4 estados) com AuditLog STATUS_CHANGE em toda transição; ProjectMember com leitura ampliada (RN16/RN17) e gestão ADMIN-only; 20 testes novos (51/51 total), cobertura services 85-100%; telas Applications/NewAnalysis/ProjectDetail/Projects; smoke E2E extenso no navegador (CLIENT, ADMIN, PENTESTER) incluindo o gate visual de PLAN_LIMIT_REACHED |
-| —    | MVP funcional (Sprint 5 fechada) | A registrar |
+| 2026-08-05 | Sprint 5 (Vulnerability + Evidence — núcleo do produto) concluída | Branch `feat/fase-5-findings`, aguardando PR → develop. `utils/cvss.util.ts` — parser manual CVSS 3.1 com as fórmulas oficiais do FIRST, validado contra 5 vetores conhecidos (canônico 9.8, Log4Shell 10.0, Heartbleed 7.5, mais LOW/MEDIUM calculados à mão); Vulnerability CRUD com RN09 (herda project/application/company), RN10/RN21 (severidade calculada + override justificado ≥20 chars, sempre auditado), RN11 (OWASP obrigatória), RN20 (auditoria na criação), máquina de 4 estados (mesma simplificação do Project); Evidence com upload multipart validado por magic number (Content-Type declarado é ignorado por completo, não só double-checado) + UUID + `uploads/{companyId}/{vulnId}/`; VulnerabilityComment paginado; 24 testes novos (97/97 total), cobertura 95-97% nos 3 services novos; telas aba Findings (filtros/badges/contador de críticos) + FindingEditor (CVSS ao vivo no cliente, drag-drop, override, transição) + FindingDetail read-only; smoke E2E completo no navegador com arquivos binários reais (PNG aceito, .exe bloqueado mesmo com Content-Type forjado) e AuditLog conferido no Prisma Studio. Ver ROADMAP_PROMPTS.md §Histórico pra desvios do prompt original |
+| —    | MVP funcional (Sprint 6 fechada) | A registrar |
 | —    | Apresentação TCC                 | A registrar |
 
 ---
@@ -288,6 +289,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 2026-06-16 | Branch `feat/sprint-2-auth-user` com Sprint 2 backend completa não foi mergeada em develop | Sprint 2 no board, início da Sprint 3 | R | Aberto — criar PR e mergear |
 | 2026-06-16 | Frontend (app/web) só tem placeholder `package.json` — KAN-108/109/110/213/214/215 não iniciados | Sprint 1 e 2 ficam em 🚧; Iann não iniciou | I | ✅ Resolvido em 2026-08-04 — bootstrap completo feito na Fase 3 (Claude Code); só falta KAN-110 (landing de marketing dedicada) |
 | 2026-08-04 | Branch `feat/fase-3-empresas` completa (backend + web) não foi mergeada em develop | Início da Fase 4 | R | Aberto — Rafael vai abrir o PR manualmente |
+| 2026-08-05 | Branch `feat/fase-5-findings` completa (backend + web) não foi mergeada em develop | Início da Fase 6 | R | Aberto — Rafael vai abrir o PR manualmente |
 
 ---
 

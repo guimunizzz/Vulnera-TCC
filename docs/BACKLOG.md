@@ -13,7 +13,7 @@
 | 2 Auth + User      | JWT, refresh rotativo, CRUD, factories             | ✅ backend     |
 | 3 Empresas         | Refactor plural + Subscription + bootstrap web     | ✅ concluída 2026-08-04 |
 | 4 Projetos         | Application + Project + Member + telas             | ✅ concluída 2026-08-04 |
-| **5 Findings**     | **Vulnerability + Evidence** ⭐                    | 📋 **próxima** |
+| **5 Findings**     | **Vulnerability + Evidence** ⭐                    | ✅ concluída 2026-08-05 |
 | 6 Relatórios       | report-data + PDFs pdf-lib + dashboards            | 📋             |
 | 7 Mobile           | Expo enxuto + Push                                 | 📋             |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 📋             |
@@ -68,18 +68,18 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | 4.5 | Applications + wizard NewAnalysis                       | 8   | ✅     |
 | 4.6 | ProjectDetail com abas + gestão de membros + breadcrumb | 6   | ✅     |
 
-## FASE 5 — Findings ⭐ (~46h)
+## FASE 5 — Findings ⭐ (~46h) — ✅ concluída em 2026-08-05
 
 | #   | Task                                                              | h   | Estado |
 | --- | ----------------------------------------------------------------- | --- | ------ |
-| 5.1 | `cvss.util` — parser manual 3.1 + testes com vectors conhecidos   | 4   | 📋     |
-| 5.2 | Vulnerability CRUD + transition + override justificado            | 9   | 📋     |
-| 5.3 | Evidence multipart (MIME + magic number + UUID) + GET autenticado | 8   | 📋     |
-| 5.4 | VulnerabilityComment nested paginado                              | 4   | 📋     |
-| 5.5 | AuditLog integrado (override + transition)                        | 3   | 📋     |
-| 5.6 | Testes BIZ-03..09 + TEN-06                                        | 8   | 📋     |
-| 5.7 | Lista de findings com filtros e badges                            | 4   | 📋     |
-| 5.8 | FindingEditor (CVSS live, drag-drop, comentários, override)       | 10  | 📋     |
+| 5.1 | `cvss.util` — parser manual 3.1 + testes com vectors conhecidos   | 4   | ✅     |
+| 5.2 | Vulnerability CRUD + transition + override justificado            | 9   | ✅ máquina simplificada de 4 estados (mesmo padrão do Project); DELETE ADMIN-only |
+| 5.3 | Evidence multipart (MIME + magic number + UUID) + GET autenticado | 8   | ✅ Content-Type declarado é ignorado — magic number é a única fonte de verdade |
+| 5.4 | VulnerabilityComment nested paginado                              | 4   | ✅ qualquer ator com acesso de leitura comenta, não só ADMIN/PENTESTER |
+| 5.5 | AuditLog integrado (override + transition)                        | 3   | ✅ + CREATE (RN20) e SEVERITY_CHANGE em edição de vetor (RN21) |
+| 5.6 | Testes BIZ-03..09 + TEN-06                                        | 8   | ✅ 24 testes novos (13 unit CVSS + 11 integração), 97/97 total |
+| 5.7 | Lista de findings com filtros e badges                            | 4   | ✅ + contador de críticos abertos no header do projeto |
+| 5.8 | FindingEditor (CVSS live, drag-drop, comentários, override)       | 10  | ✅ + FindingDetail read-only separado pro CLIENT |
 
 ## FASE 6 — Relatórios (~34h)
 
@@ -136,6 +136,7 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | Testes E2E (Playwright)                                        | 2026-07-26 | Integração + smoke manual cobrem            |
 | Viewer de PDF no mobile                                        | 2026-08-03 | Corte do escopo mobile                      |
 | Maturidade completa estilo SAMM                                | 2026-08-03 | Vira checklist simples                      |
+| Varredura antivírus/malware no upload de Evidence               | 2026-08-05 | Validação é de tipo (magic number) e tamanho, não de conteúdo malicioso — limitação conhecida, documentar no README/DEMO |
 
 Tudo isso entra como **trabalho futuro** no README — e a redução consciente de escopo sob restrição de prazo é material de defesa na banca.
 

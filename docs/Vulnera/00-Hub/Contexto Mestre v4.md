@@ -40,8 +40,8 @@ Atores: `ADMIN` · `CLIENT` · `PENTESTER` → ver [[Roles]] e [[Matriz de Permi
 | Campo | Valor |
 |---|---|
 | **Prazo** | **3 meses** (~13 semanas), entrega 25/10/2026 |
-| Progresso | **Fases 0-4 concluídas.** Backend: schema completo (19 models), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember. Frontend: bootstrapado na Fase 3 (Vite+React+Tailwind+Radix+TanStack Query+Zustand+Axios), com telas de Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions/Applications/NewAnalysis/Projects/ProjectDetail funcionando ponta a ponta (validado com smoke E2E manual no navegador). |
-| Fase atual | **Fase 5 — Vulnerability + Evidence** ⭐ (núcleo do produto), a próxima |
+| Progresso | **Fases 0-5 concluídas.** Backend: schema completo (19 models), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember, Vulnerability+Evidence+VulnerabilityComment (núcleo do produto — CVSS 3.1 manual, upload validado por magic number, AuditLog completo). Frontend: bootstrapado na Fase 3, com telas de Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions/Applications/NewAnalysis/Projects/ProjectDetail/Findings/FindingEditor/FindingDetail funcionando ponta a ponta (validado com smoke E2E manual no navegador, incluindo upload de arquivo real). |
+| Fase atual | **Fase 6 — Relatórios + Dashboards**, a próxima |
 | Modo de execução | Solo-delegado: Rafael supervisiona, Claude Code executa |
 | Branch de integração | `develop` |
 
