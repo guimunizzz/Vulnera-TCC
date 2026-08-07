@@ -8,6 +8,8 @@ import { ApplicationsPage } from "./pages/applications-page";
 import { NewAnalysisPage } from "./pages/new-analysis-page";
 import { ProjectsPage } from "./pages/projects-page";
 import { ProjectDetailPage } from "./pages/project-detail-page";
+import { FindingEditorPage } from "./pages/finding-editor-page";
+import { FindingDetailPage } from "./pages/finding-detail-page";
 import { PendingSubscriptionsPage } from "./pages/admin/pending-subscriptions-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
@@ -26,10 +28,18 @@ export function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          <Route path="/findings/:id" element={<FindingDetailPage />} />
 
           <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/new-analysis" element={<NewAnalysisPage />} />
+          </Route>
+
+          {/* Escrita de finding (create/update/transition/override) é ADMIN
+              ou PENTESTER-membro — CLIENT é sempre read-only (FindingDetailPage). */}
+          <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+            <Route path="/projects/:projectId/findings/new" element={<FindingEditorPage />} />
+            <Route path="/findings/:id/edit" element={<FindingEditorPage />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={["ADMIN"]} />}>

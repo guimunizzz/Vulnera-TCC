@@ -68,6 +68,27 @@ const MESSAGES: Record<string, string> = {
   MEMBER_ALREADY_EXISTS: "Este pentester já está atribuído ao projeto.",
   MEMBER_NOT_FOUND: "Este usuário não está atribuído ao projeto.",
 
+  // vulnerability (finding)
+  VULNERABILITY_NOT_FOUND: "Finding não encontrado.",
+  INVALID_PROJECT_ID: "Selecione um projeto válido.",
+  INVALID_TITLE: "Informe um título.",
+  INVALID_DESCRIPTION: "Informe uma descrição.",
+  INVALID_OWASP_CATEGORY: "Selecione uma categoria OWASP válida.",
+  MISSING_CVSS_VECTOR: "Informe o vetor CVSS.",
+  INVALID_CVSS_VECTOR: "Vetor CVSS inválido. Confira as 8 métricas (AV/AC/PR/UI/S/C/I/A).",
+  INVALID_SEVERITY: "Selecione uma severidade válida.",
+  MISSING_JUSTIFICATION: "A justificativa precisa ter pelo menos 20 caracteres.",
+
+  // evidence
+  EVIDENCE_NOT_FOUND: "Evidência não encontrada.",
+  MISSING_FILE: "Selecione um arquivo.",
+  INVALID_FILE_TYPE: "Tipo de arquivo não permitido. Use PNG, JPEG, PDF ou TXT.",
+  FILE_TOO_LARGE: "Arquivo maior que o limite de 10MB.",
+
+  // vulnerability comment
+  COMMENT_NOT_FOUND: "Comentário não encontrado.",
+  INVALID_CONTENT: "Escreva algo antes de comentar.",
+
   // genérico
   INTERNAL_ERROR: "Algo deu errado no servidor. Tente novamente.",
 };

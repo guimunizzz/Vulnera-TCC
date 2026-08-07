@@ -9,6 +9,55 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-08-05 (sessão 23 — Fase 5 implementada: Vulnerability + Evidence, núcleo do produto)
+
+### Objetivo
+
+Executar a Fase 5 completa (`docs/ROADMAP_PROMPTS.md`) — a fase mais pesada, com pedido explícito de "esforço adicional" e validação real a cada checkpoint. `utils/cvss.util.ts` (parser manual CVSS 3.1), CRUD de Vulnerability com transição/override (RN09..RN11, RN20/RN21), upload de Evidence validado por magic number, VulnerabilityComment paginado, telas web correspondentes e smoke E2E completo com arquivos binários reais. Branch `feat/fase-5-findings`.
+
+### Backend
+
+1. **`utils/cvss.util.ts`** — parser manual do vetor CVSS 3.1 (AV/AC/PR/UI/S/C/I/A), fórmulas oficiais do FIRST (Impact/Exploitability/roundup do Apêndice A), comentadas em PT-BR. `INVALID_CVSS_VECTOR` em vetor malformado, duplicado ou com métrica desconhecida. Validado à mão contra 5 vetores: canônico (9.8 CRITICAL), Log4Shell CVE-2021-44228 com Scope Changed (10.0 CRITICAL), Heartbleed CVE-2014-0160 (7.5 HIGH), e dois vetores calculados manualmente pra cobrir MEDIUM (5.1) e LOW (1.8).
+2. **Vulnerability** — `models/repositories/services/controllers/factories/routes` completos.
+   - `create()`: `applicationId`/`companyId` sempre herdados do `Project` via `projectId` (RN09) — nunca aceitos do DTO. Score/severidade sempre recalculados a partir do `cvssVector` (nunca aceitos prontos). `owaspCategory` obrigatória, validada contra o enum A01..A10 no controller (RN11). Gera `AuditLog` `CREATE` (RN20).
+   - `update()`: se o `cvssVector` mudar, recalcula e **reseta qualquer override anterior** (`severityFinal` volta a acompanhar `severityCalculated`, `severityOverrideReason` limpo) — decisão não especificada no prompt: a justificativa de um override foi escrita pro score antigo, não faz sentido continuar valendo pro novo. Gera `AuditLog` `SEVERITY_CHANGE` com `{from, to}` (RN21).
+   - Máquina de estados mínima de 4 estados (`OPEN → IN_PROGRESS → FIXED → CLOSED`) — mesma simplificação já aplicada em Project na Fase 4; a máquina de 6 estados do vault (REVALIDATION/RISK_ACCEPTED, dependente de `hasRemediation` — RN13/RN14) fica pra sprint futura. Toda transição grava `AuditLog` `STATUS_CHANGE`.
+   - `overrideSeverity()`: exige justificativa ≥20 caracteres (`MISSING_JUSTIFICATION`), grava `AuditLog` `SEVERITY_OVERRIDE` com `{from, to, reason}`.
+   - `delete()`: restrito a ADMIN (não PENTESTER), hard delete (sem `isActive` no schema pra Vulnerability), gera `AuditLog` `DELETE`.
+   - Quem escreve (create/update/transition/override): ADMIN ou PENTESTER membro do Project — CLIENT é sempre `FORBIDDEN`. Visibilidade (list/getById): RN16 (CLIENT só a própria company) + RN17 (PENTESTER só projetos onde é membro), mesma lógica do `ProjectService`.
+3. **Evidence** — `multer` (`memoryStorage`) + validação manual + gravação manual, exatamente como pedido.
+   - Detecção de tipo real por **magic number** nos primeiros bytes (PNG `89 50 4E 47`, JPEG `FF D8 FF`, PDF `25 50 44 46`, texto validado por decodificação UTF-8 estrita) — o `Content-Type` que o cliente declara **nunca é usado pra decidir aceitar/rejeitar**, só a assinatura real dos bytes. Testado explicitamente: um `.exe` com `Content-Type: image/png` forjado ainda é rejeitado.
+   - Limite de 10MB — barrado em duas camadas: `multer.limits.fileSize` (corta cedo, sem gastar memória) e uma checagem redundante no service (defesa em profundidade / correção do service isolado de testes).
+   - Arquivo aprovado é regravado com nome UUID + extensão (nunca o nome original) em `uploads/{companyId}/{vulnId}/`.
+   - `UPLOADS_DIR` nova env var (`EnvKeys`/`EnvVar`, como o CLAUDE.md §6 exige) — `.env.test` aponta pra `uploads-test/`, nunca polui o volume real de dev com arquivo de teste.
+   - GET de download é autenticado e resolve o caminho absoluto só depois de checar acesso à company (mesma regra de visibilidade do Vulnerability) — nunca expõe `filePath` bruto na resposta JSON.
+4. **VulnerabilityComment** — `GET`/`POST` paginados (`page`/`pageSize`, default 20/máx 100, ordem cronológica). Diferente da escrita do Vulnerability em si: **qualquer ator com acesso de leitura ao finding pode comentar** (é canal de comunicação, não edição do finding) — CLIENT comenta normalmente. `DELETE` restrito ao autor ou a um ADMIN.
+5. **Bug pré-existente corrigido (bloqueava upload de verdade no Checkpoint 6):** `.gitignore` da raiz apontava pra `apps/api/uploads/*` (plural — resquício de estrutura antiga que nunca existiu neste repo). Corrigido nos dois `.gitignore` (raiz e `app/api/`) pra apontar pro caminho real `app/api/uploads/`, senão evidências de verdade seriam commitadas por engano.
+
+### Testes
+
+24 novos: `tests/unit/cvss.util.test.ts` (13 — os 5 vetores conhecidos + 7 casos de vetor inválido), `vulnerability.test.ts` (17 — BIZ-03..08 + TEN-06 + cobertura extra de list/getById/PUT sem mudar vetor/listByProject), `evidence.test.ts` (7 — BIZ-09 completo: .exe bloqueado, Content-Type forjado, .txt UTF-8 válido vs binário disfarçado, arquivo >10MB, roles), `vulnerability-comment.test.ts` (6 — paginação, CLIENT comentando, DELETE autor/admin/terceiro-bloqueado). Total **97/97**. Cobertura de linha: `vulnerability.service.ts` 97.6% (statements 84.9%), `evidence.service.ts` 95% (statements 85.1%), `vulnerability-comment.service.ts` 96.4% (statements 88.9%) — todos ≥80% também em statements. `cleanDatabase()` já estava na ordem certa (`evidence → vulnerabilityComment → vulnerability` antes de `projectMember`), herdada da Fase 4, não precisou de ajuste.
+
+### Frontend
+
+`lib/cvss.ts` — espelho em TypeScript do `cvss.util.ts` do backend, usado pro cálculo em tempo real sem round-trip ao servidor. Aba Findings no `ProjectDetailPage` (filtros de severidade/status/OWASP, paginação client-side, contador "X críticos abertos" no header). `FindingEditorPage` (create + edit numa página só: título, select OWASP, vetor CVSS com preview ao vivo, descrição/impacto/recomendação, upload drag-drop multi-arquivo com preview local e barra de progresso via `onUploadProgress`, timeline de comentários paginada, botões de transição e override — modal com contador de caracteres, desabilitado abaixo de 20). `FindingDetailPage` — versão read-only (usada pelo CLIENT e como "visualização" antes de editar pra ADMIN/PENTESTER, que veem um botão "Editar").
+
+### Smoke E2E (navegador real, backend+frontend rodando, arquivos binários de verdade)
+
+Login CLIENT (TechNova) → criar aplicação + projeto DAST via wizard. Login ADMIN → transicionar projeto pra "Em andamento" → atribuir pentester (criado direto no banco, sem tela de gestão de usuário ainda). Login PENTESTER → aba Findings → criar finding com o vetor canônico → **score calculado em tempo real no cliente = 9.8 CRITICAL**, idêntico ao backend → salvar → editar → upload de um PNG com assinatura de bytes válida (aceito, gravado em `uploads/{companyId}/{vulnId}/{uuid}.png`) e de um "executável" com cabeçalho MZ (`400 INVALID_FILE_TYPE`, inclusive disfarçado com `Content-Type: image/png` forjado) → comentar → override pra MEDIUM com justificativa (contador de caracteres testado: botão fica desabilitado com 11/20, habilita com a justificativa completa) → header passa a mostrar "Média" + "(calculada: CRITICAL)". Login CLIENT de novo → abre a mesma URL do finding → visão 100% read-only (sem botão Editar, sem zona de upload, evidência listada com download funcionando, comentário do pentester visível, card de "Justificativa do override" visível). AuditLog conferido no Prisma Studio: 3 registros exatos (`Project STATUS_CHANGE`, `Vulnerability CREATE`, `Vulnerability SEVERITY_OVERRIDE`), todos com `actorId` e `diffJson` corretos. Console do navegador sem erros em nenhum passo.
+
+### Limitações conhecidas / decisões autônomas
+
+- ⚠️ **Sem varredura antivírus/malware no upload** — validação é de tipo (magic number) e tamanho, não de conteúdo malicioso embutido num arquivo do tipo aceito (ex: polyglot files, exploit em parser de imagem). Fora do escopo do MVP por decisão explícita do prompt da fase.
+- Máquina de estados de Vulnerability simplificada (4 estados) — REVALIDATION/RISK_ACCEPTED e a bifurcação por `hasRemediation` (RN13/RN14) ficam como trabalho futuro, mesma decisão já tomada pro Project na Fase 4.
+- DELETE de Vulnerability é ADMIN-only — não pedido explicitamente, decisão por analogia com a sensibilidade de apagar evidência de auditoria de segurança.
+- `npm audit` no backend aponta 4 vulnerabilidades pré-existentes (2 baixas, 2 altas) em dependências de ferramenta (`eslint`/`jest`/`esbuild` transitivos, mais `body-parser` do Express) — nenhuma nova por causa do `multer`, não corrigido nesta sessão (fora do escopo).
+- Observação à parte (não é do código do projeto): o `dotenv` 17.x imprime uma linha de "tip" promocional no console a cada carregamento de `.env` (ex: `// tip: ⌘ secrets for agents [www.dotenvx.com]`), incluindo URLs de terceiros. Não afeta funcionalidade nem segurança dos dados do projeto, mas é ruído nos logs de teste — vale considerar `DOTENV_CONFIG_QUIET` ou pin de versão numa sessão de manutenção futura.
+
+### Pendente
+
+- PR `feat/fase-5-findings` → `develop` — Rafael abre manualmente.
+
 ## 2026-08-04 (sessão 22 — Fase 4 implementada: Application + Project + ProjectMember)
 
 ### Objetivo
