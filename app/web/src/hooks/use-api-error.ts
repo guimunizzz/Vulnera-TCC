@@ -89,6 +89,11 @@ const MESSAGES: Record<string, string> = {
   COMMENT_NOT_FOUND: "Comentário não encontrado.",
   INVALID_CONTENT: "Escreva algo antes de comentar.",
 
+  // report
+  MISSING_PROJECT_ID: "Selecione um projeto válido.",
+  INVALID_TYPE: "Tipo de relatório inválido.",
+  PROJECT_NOT_READY_FOR_REPORT: "O projeto precisa estar em revisão ou concluído para gerar relatório.",
+
   // genérico
   INTERNAL_ERROR: "Algo deu errado no servidor. Tente novamente.",
 };

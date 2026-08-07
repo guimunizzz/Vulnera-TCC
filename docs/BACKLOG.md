@@ -14,7 +14,7 @@
 | 3 Empresas         | Refactor plural + Subscription + bootstrap web     | ✅ concluída 2026-08-04 |
 | 4 Projetos         | Application + Project + Member + telas             | ✅ concluída 2026-08-04 |
 | **5 Findings**     | **Vulnerability + Evidence** ⭐                    | ✅ concluída 2026-08-05 |
-| 6 Relatórios       | report-data + PDFs pdf-lib + dashboards            | 📋             |
+| 6 Relatórios       | report-data + PDFs pdf-lib + dashboards            | ✅ concluída 2026-08-07 |
 | 7 Mobile           | Expo enxuto + Push                                 | 📋             |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 📋             |
 
@@ -81,17 +81,17 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | 5.7 | Lista de findings com filtros e badges                            | 4   | ✅ + contador de críticos abertos no header do projeto |
 | 5.8 | FindingEditor (CVSS live, drag-drop, comentários, override)       | 10  | ✅ + FindingDetail read-only separado pro CLIENT |
 
-## FASE 6 — Relatórios (~34h)
+## FASE 6 — Relatórios (~34h) — ✅ concluída em 2026-08-07
 
 | #   | Task                                                 | h   | Estado |
 | --- | ---------------------------------------------------- | --- | ------ |
-| 6.1 | `GET /projects/:id/report-data` consolidado          | 5   | 📋     |
-| 6.2 | Report metadata + AuditLog                           | 2   | 📋     |
-| 6.3 | Testes RPT-01..03                                    | 3   | 📋     |
-| 6.4 | `lib/pdf/base.ts` — helpers, gráfico de barras à mão | 6   | 📋     |
-| 6.5 | PDF Executivo                                        | 6   | 📋     |
-| 6.6 | PDF Técnico (com evidências embutidas)               | 7   | 📋     |
-| 6.7 | Dashboards cliente / pentester / admin               | 5   | 📋     |
+| 6.1 | `GET /projects/:id/report-data` consolidado          | 5   | ✅ RN18 aplicada (Project precisa IN_REVIEW/COMPLETED, 422 PROJECT_NOT_READY_FOR_REPORT) |
+| 6.2 | Report metadata + AuditLog                           | 2   | ✅ AuditLog REPORT_GENERATED; quem gera inclui CLIENT (PDF client-side: gerar = baixar) |
+| 6.3 | Testes RPT-01..03                                    | 3   | ✅ 9 testes de report (+1 subscription/active), 107/107 total |
+| 6.4 | `lib/pdf/base.ts` — helpers, gráfico de barras à mão | 6   | ✅ + `sanitizeForFont` (achado no smoke: WinAnsi não cobre emoji/setas) |
+| 6.5 | PDF Executivo                                        | 6   | ✅ capa + sumário + KPIs + gráfico + top 5 riscos + maturidade placeholder + conclusão |
+| 6.6 | PDF Técnico (com evidências embutidas)               | 7   | ✅ embedPng/embedJpg + comentários + glossário |
+| 6.7 | Dashboards cliente / pentester / admin               | 5   | ✅ + `GET /subscriptions/active` (novo, admin-only) pro KPI "empresas ativas" |
 
 > ⚠️ **pdf-lib é imperativo.** Sem componentes React: cria-se o documento e desenha-se por coordenada. Gráficos são retângulos e linhas desenhados à mão. Reservar tempo de aprendizado na 6.4.
 

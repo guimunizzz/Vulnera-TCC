@@ -1,3 +1,9 @@
+# Stack completa (banco + API + web) sobe junta com um comando:
+#   docker compose up --build
+# Acesso: web http://localhost:3000 · API http://localhost:3001/api ·
+# MySQL localhost:3307 · Mailhog http://localhost:8025
+# Ver docs/Vulnera/07-Decisoes/ADR-021 - Stack completa no Docker Compose.md
+
 services:
   db:
     image: mysql:8
@@ -9,7 +15,9 @@ services:
       MYSQL_PASSWORD: vulnera
     ports:
       # host 3307 -> container 3306 (porta 3306 local já é usada pelo serviço
-      # Windows MySQL80; dentro do container continua 3306)
+      # Windows MySQL80; dentro do container continua 3306). A API usa o
+      # nome do serviço ("db:3306") pela rede interna do compose — só o host
+      # (Prisma Studio local, clientes de banco) precisa de 3307.
       - "3307:3306"
     volumes:
       - vulnera-db-data:/var/lib/mysql
@@ -19,6 +27,52 @@ services:
       timeout: 5s
       retries: 10
 
+  api:
+    build:
+      context: ./app/api
+    container_name: vulnera-api
+    environment:
+      PORT: "3001"
+      NODE_ENV: production
+      # db:3306 = nome do serviço na rede interna do compose (não localhost/3307,
+      # que é só o mapeamento pro host).
+      DATABASE_URL: mysql://vulnera:vulnera@db:3306/vulnera
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_access_secret_troque_em_producao_0123456789}
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_troque_em_producao_9876543210}
+      JWT_REFRESH_TTL: 7d
+      BCRYPT_COST: "12"
+      CORS_ORIGIN: http://localhost:3000
+      UPLOADS_DIR: uploads
+    ports:
+      - "3001:3001"
+    volumes:
+      # evidências sobrevivem a `docker compose down` (sem -v)
+      - vulnera-api-uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  web:
+    build:
+      context: ./app/web
+      args:
+        # endereço que o NAVEGADOR (no host) usa — não o nome do serviço Docker.
+        # Vite embute isso no bundle em build time, não dá pra trocar depois.
+        VITE_API_URL: http://localhost:3001/api
+    container_name: vulnera-web
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
   mailhog:
     image: mailhog/mailhog:v1.0.1
     container_name: vulnera-mail
@@ -26,18 +80,6 @@ services:
       - "1025:1025"
       - "8025:8025"
 
-  sonarqube:
-    image: sonarqube:10-community
-    container_name: vulnera-sonar
-    ports:
-      - "9000:9000"
-    environment:
-      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
-    volumes:
-      - vulnera-sonar-data:/opt/sonarqube/data
-      - vulnera-sonar-ext:/opt/sonarqube/extensions
-
 volumes:
   vulnera-db-data:
-  vulnera-sonar-data:
-  vulnera-sonar-ext:
+  vulnera-api-uploads:

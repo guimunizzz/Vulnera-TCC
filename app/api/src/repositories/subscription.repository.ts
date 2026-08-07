@@ -24,6 +24,14 @@ export class SubscriptionRepository {
     });
   }
 
+  /** Usado pelo dashboard admin — "quantas empresas têm assinatura ativa agora". */
+  async findAllActive(): Promise<Subscription[]> {
+    return this.prisma.subscription.findMany({
+      where: { status: "ACTIVE" },
+      orderBy: { startDate: "desc" },
+    });
+  }
+
   async findActiveByCompany(companyId: string): Promise<Subscription | null> {
     return this.prisma.subscription.findFirst({
       where: { companyId, status: "ACTIVE" },

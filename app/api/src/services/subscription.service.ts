@@ -60,6 +60,12 @@ export class SubscriptionService {
     return pending.map((s) => new SubscriptionEntity(s));
   }
 
+  /** Dashboard admin (Fase 6) — companies com assinatura ACTIVE agora (1 subscription ACTIVE por company, ver regra de ouro). */
+  async listActive(): Promise<SubscriptionEntity[]> {
+    const active = await this.repository.findAllActive();
+    return active.map((s) => new SubscriptionEntity(s));
+  }
+
   async getCurrent(actor: Actor): Promise<SubscriptionEntity> {
     const user = await this.userRepository.findById(actor.userId);
     if (!user?.companyId) throw new Error("USER_HAS_NO_COMPANY");

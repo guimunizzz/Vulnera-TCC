@@ -359,7 +359,7 @@ Desvios do prompt original:
 
 ---
 
-# FASE 6 — Relatórios + Dashboards
+# FASE 6 — Relatórios + Dashboards ✅ Concluída em 2026-08-07
 
 **Branch:** `feat/fase-6-relatorios` · **Período:** 22/09 → 05/10 · **Depende de:** Fase 5
 
@@ -415,6 +415,24 @@ Protocolo §0.1 + relatório + PR.
 
 NÃO FAZER: agendamento de relatório, export CSV, envio por e-mail.
 ```
+
+## Histórico
+
+**Branch:** `feat/fase-6-relatorios` · **Data:** 2026-08-07 · **PR:** a abrir pelo Rafael
+
+Todos os 4 checkpoints concluídos numa sessão contínua. Cada checkpoint foi validado antes de seguir pro próximo — inclusive um smoke headless dos dois PDFs (rodando `lib/pdf/*` fora do browser via `vite.ssrLoadModule`, já que a extensão do Chrome não conectou nesta sessão) que pegou e corrigiu um bug real antes de qualquer usuário ver.
+
+Desvios do prompt original:
+- **RN18 aplicada nos dois pontos do fluxo de relatório** (`GET report-data` e `POST /reports`), não só mencionada — o prompt não detalhava o gate de status, mas `docs/Vulnera/02-Dominio/Regras de Negocio/RN18` é explícita ("Relatórios só podem ser gerados com Project em IN_REVIEW ou superior") e `report-data` é o primeiro passo do próprio fluxo de geração (não existe outro consumidor hoje). Novo código de erro `PROJECT_NOT_READY_FOR_REPORT` → 422.
+- **`GET /projects/:id/report-data` é montado em `project.routes.ts`** (não em `report.routes.ts`), porque a URL exigida pelo enunciado é aninhada em `/projects/:id` — a lógica continua 100% em `ReportService`/`ReportController`, só o *mount point* da rota é que segue a URL pedida em vez do recurso "dono" da lógica. Documentado em comentário no próprio arquivo.
+- **Quem pode GERAR relatório inclui o CLIENT**, não só ADMIN/PENTESTER-membro. Diferente da escrita de Vulnerability (CLIENT é sempre read-only lá), aqui faz sentido porque o PDF é gerado no browser do próprio usuário — "gerar" e "baixar" são o mesmo clique, e a Matriz de Permissões lista "baixar relatório" como ação do Client Owner/Member.
+- **Nenhum endpoint novo de agregação pros dashboards.** Reutilizei os endpoints já escopados por role da Fase 4/5 (`GET /vulnerabilities` e `GET /projects` sem filtro já retornam ADMIN=tudo/CLIENT=própria company/PENTESTER=projetos-membro) e computei os KPIs no frontend. Única adição real: `GET /subscriptions/active` (admin-only, mesma forma de `/pending`) porque `Company` não tem campo `isActive` no schema — "empresas ativas" só existe via `Subscription.status === ACTIVE`.
+- **`sanitizeForFont()` em `lib/pdf/base.ts`** — não estava no prompt, descoberto durante o smoke: `StandardFonts.Helvetica` do pdf-lib só codifica WinAnsi/cp1252 (cobre acento PT-BR e pontuação tipográfica de sobra, mas não emoji nem setas unicode). Sem sanitizar, um finding com emoji no título ou comentário derrubaria a geração do PDF inteiro com uma exceção do pdf-lib. Corrigido testando caractere a caractere via `font.widthOfTextAtSize` (pergunta pro próprio pdf-lib em vez de manter tabela cp1252 à mão) e trocando por `?` o que não tem glifo — aplicado em `wrapText()` (cobre a maioria do texto de usuário) e nos ~5 pontos que desenham título direto sem quebra de linha.
+- **Paleta do PDF: capa em tema escuro (replica a UI), corpo em fundo branco.** O enunciado pediu "layout temático"; usei a cor de destaque (`#10b981`) e a paleta de severidade EXATAMENTE iguais ao `tailwind.config.ts` do app/web (mesma fonte, `lib/severity-colors.ts` no frontend), mas não repliquei os tokens escuros de UI (`background`/`border`/`muted`) nas páginas de conteúdo — um relatório técnico de 20+ páginas em tema escuro seria ruim de imprimir e cansativo de ler. Capa dark + corpo claro com acentos de marca é o padrão de mercado pra esse tipo de documento.
+- Testes: 10 novos (9 report + 1 subscription/active), total 107/107. Cobertura de `report.service.ts`: 89% statements / 97% lines.
+- Smoke: dados sintéticos primeiro (pegou o bug do WinAnsi), depois PDFs gerados com dados REAIS do banco de dev (mesmo finding da TechNova da Fase 5, incluindo a evidência PNG real e o comentário do Bruno Pentester) via login programático + `report-data` real — conferido visualmente com o Read tool (que renderiza PDF). Dashboards validados via chamadas diretas à API nos 3 perfis (ADMIN/CLIENT/PENTESTER) contra o banco de dev real, já que a extensão do Chrome não conectou.
+- ⚠️ **Não verificado no browser real:** o embed da evidência PNG no PDF Técnico (`embedPng`) usa `axios` com `responseType: "blob"`, que só produz um `Blob` de verdade no adapter XHR do browser — em Node (ambiente do smoke headless) isso não funciona e cai no fallback gracioso já previsto no código ("evidência não pôde ser carregada", sem derrubar o PDF). Arquitetura revisada e é o mesmo padrão já usado (e correto) desde a Fase 5 pro download de evidência; mesmo assim, vale um clique de confirmação visual da Rafael quando abrir o app de verdade.
+- Efeito colateral do smoke: o projeto de demo da TechNova (`Análise DAST — Portal do Cliente`) foi transicionado de `IN_PROGRESS` para `IN_REVIEW` via API (ADMIN, RN15) pra poder testar `report-data`/RN18 com dado real — fica assim de propósito, pra Rafael já conseguir clicar em "Gerar PDF" na demo sem precisar mexer no status primeiro.
 
 ---
 

@@ -49,6 +49,17 @@ export class SubscriptionController {
     }
   }
 
+  /** Dashboard admin (Fase 6) — empresas com assinatura ativa agora. */
+  async listActive(req: Request, res: Response): Promise<Response> {
+    try {
+      const subscriptions = await this.service.listActive();
+      return res.status(200).json(subscriptions.map((s) => s.toResponse()));
+    } catch (error) {
+      console.error("SubscriptionController.listActive", error);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
+    }
+  }
+
   async current(req: Request, res: Response): Promise<Response> {
     try {
       const actor = req.user!;
