@@ -116,7 +116,10 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | 8.4 | Maturidade no PDF executivo (radar à mão com pdf-lib)           | 3   | 📋     |
 | 8.5 | Seed demo TechNova (5 apps, 10 findings, maturidade preenchida) | 4   | 📋     |
 | 8.6 | SonarQube (pipeline) + ZAP baseline — evidências capturadas     | 3   | 📋     |
-| 8.7 | `docs/DEMO.md` + README + diagrama + limitações conhecidas      | 5   | 📋     |
+| 8.7 | `docs/DEMO.md` + README + diagrama + limitações conhecidas (base pronta: ver "Limitações conhecidas — Fase 5" no fim deste arquivo) | 5   | 📋     |
+| 8.9 | (descoberta 2026-08-07) Rota DELETE de Evidence — hoje não existe (L-05) | 1 | 📋 |
+| 8.10 | (descoberta 2026-08-07) Rate limiting em upload e login (L-07)  | 2   | 📋     |
+| 8.11 | (descoberta 2026-08-07) PDF Executivo: título longo sobrepõe o texto de CVSS/OWASP no "Top 5 riscos" (`lib/pdf/executive.ts`) | 1 | 📋 |
 | 8.8 | Smoke E2E cronometrado + tag `v1.0.0`                           | 3   | 📋     |
 
 > Slides e ensaios ficam com o Rafael, fora da contagem.
@@ -139,6 +142,27 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | Varredura antivírus/malware no upload de Evidence               | 2026-08-05 | Validação é de tipo (magic number) e tamanho, não de conteúdo malicioso — limitação conhecida, documentar no README/DEMO |
 
 Tudo isso entra como **trabalho futuro** no README — e a redução consciente de escopo sob restrição de prazo é material de defesa na banca.
+
+---
+
+## Limitações conhecidas — Fase 5 (Vulnerability + Evidence)
+
+> Levantadas na sessão de endurecimento de **2026-08-07**. Todas foram
+> **encontradas, avaliadas e conscientemente não corrigidas** — cada uma tem o
+> motivo registrado. Material direto para a seção de limitações do README/DEMO
+> (task 8.7) e para a defesa na banca: saber onde o sistema não protege vale
+> mais que fingir que protege em tudo.
+
+| # | Limitação | Por que não foi corrigida | Mitigação existente |
+| --- | --- | --- | --- |
+| L-01 | **Sem varredura antivírus/malware no upload.** A validação é de tipo e tamanho, não de conteúdo. | Exigiria integrar engine de AV — fora do escopo do MVP (já registrado em "Removido do escopo" em 2026-08-05). | Tipo restrito a 4 formatos por magic number; nome reescrito com UUID; nada é executado no servidor. |
+| L-02 | **Polyglot é aceito.** Arquivo com header PNG/JPEG/PDF válido seguido de payload arbitrário passa na validação. | Bloquear exigiria parse completo de cada formato. A assinatura prova como o arquivo se apresenta, não que o resto seja inofensivo. | Nome UUID (nunca executável pelo nome), extensão derivada do tipo **detectado**, download sempre `attachment` + `nosniff`, nenhum caminho de código que interprete o conteúdo. Comportamento coberto por teste (SEC-EV-07). |
+| L-03 | **PDF com bytes antes do `%PDF` é recusado.** A spec do PDF tolera até 1024 bytes de lixo antes do header; exigimos offset 0. | Falso-negativo **preferido de propósito**: aceitar assinatura em offset arbitrário é justamente o que facilita polyglot (L-02). | PDFs de ferramentas normais começam em offset 0. Coberto por teste que documenta a escolha. |
+| L-04 | **Acesso negado responde 403, não 404.** Um atacante com um ID válido de outra company aprende que o recurso existe. | O `CLAUDE.md` §9 define `FORBIDDEN`→403 como padrão do projeto, e as Fases 3/4 já usam 403 em TEN-01..06. Mudar só a Fase 5 criaria inconsistência; mudar tudo quebraria contrato já mergeado. | IDs são `cuid()`, não enumeráveis por força bruta — o ganho do 404 é marginal. Isolamento em si é total e provado por TEN-07..13. |
+| L-05 | **Não há rota de DELETE para Evidence.** Uma evidência anexada por engano não pode ser removida pela API. | Criar a rota é **feature nova**, fora do escopo de uma sessão de endurecimento. | Anexar evidência errada exige refazer o finding ou remoção manual no banco. **Candidata a task da Fase 8.** |
+| L-06 | **`text/plain` aceita qualquer texto UTF-8**, inclusive HTML, SVG, JS ou script shell renomeados para `.txt`. | Texto não tem assinatura binária própria; distinguir "texto de log" de "texto que é código" exigiria heurística frágil e cheia de falso-positivo. | Servido sempre como `attachment` + `nosniff` + `Content-Type: text/plain` — o navegador não renderiza. Bytes de controle são recusados desde 2026-08-07. |
+| L-07 | **Sem rate limiting em nenhuma rota**, inclusive upload e login. | Fora do escopo do MVP; exigiria middleware novo e decisão sobre store (memória × Redis, e Redis está fora do escopo). | Limites de tamanho e de partes no multipart reduzem o custo por requisição. **Candidata a task da Fase 8.** |
+| L-08 | **Uploads ficam em disco local**, não em storage externo com versionamento. | Decisão de infraestrutura do MVP (`UPLOADS_DIR` + volume Docker). | Volume nomeado sobrevive a `docker compose down`; caminho sempre contido sob `UPLOADS_ROOT`. |
 
 ---
 

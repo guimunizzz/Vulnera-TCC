@@ -2,7 +2,12 @@
 #   docker compose up --build
 # Acesso: web http://localhost:3000 · API http://localhost:3001/api ·
 # MySQL localhost:3307 · Mailhog http://localhost:8025
-# Ver docs/Vulnera/07-Decisoes/ADR-021 - Stack completa no Docker Compose.md
+#
+# ⚠️ A referência original apontava para um "ADR-021 - Stack completa no Docker
+# Compose" que nunca foi escrito (commit c131aef, "unificando docker — não
+# finalizado"). O número ADR-021 foi ocupado por outra decisão em 2026-08-07
+# (máquina de Vulnerability). Quando o trabalho do Docker for concluído, o ADR
+# dele deve ser criado como ADR-022.
 
 services:
   db:

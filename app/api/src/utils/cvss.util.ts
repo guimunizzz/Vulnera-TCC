@@ -14,6 +14,15 @@
  * duplicada ou desconhecida) lança Error("INVALID_CVSS_VECTOR") — quem
  * chama (VulnerabilityService) deixa o erro subir pro controller traduzir
  * em 400.
+ *
+ * VERSÃO: só CVSS v3.1. Um vetor com prefixo de outra versão ("CVSS:3.0/",
+ * "CVSS:4.0/") é REJEITADO de propósito — as fórmulas abaixo são as do 3.1,
+ * e calcular um vetor 3.0 com elas em silêncio produziria um score que não
+ * corresponde ao que a fonte daquele vetor publicou. Ver `assertSupportedVersion`.
+ *
+ * ESCOPO: só o Base Score. As métricas Temporal (E/RL/RC) e Environmental
+ * (CR/IR/AR/MAV/...) não são suportadas — um vetor que as inclua é rejeitado,
+ * nunca silenciosamente ignorado.
  */
 
 export type CvssSeverity = "NONE" | "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
@@ -40,12 +49,22 @@ const REQUIRED_METRICS = ["AV", "AC", "PR", "UI", "S", "C", "I", "A"] as const;
 type MetricKey = (typeof REQUIRED_METRICS)[number];
 
 /**
- * Roundup conforme o Apêndice A da spec do FIRST — arredonda pra 1 casa
- * decimal SEMPRE pra cima. Não dá pra usar Math.round comum porque o
- * ponto flutuante do JS erra em casos de borda (ex: 4.0 vira 3.9999999996).
- * O algoritmo trabalha em inteiros (score × 100000) pra evitar esse erro.
+ * Roundup conforme o Apêndice A da spec do FIRST ("Floating Point Rounding") —
+ * arredonda pra 1 casa decimal SEMPRE pra cima.
+ *
+ * Por que não `Math.ceil(x * 10) / 10`, que é o jeito óbvio? Porque o CVSS
+ * v3.0 usava essa fórmula e ela erra quando o ponto flutuante representa o
+ * valor um fio acima do real. O exemplo do próprio Apêndice A: `0.1 + 0.2`
+ * dá `0.30000000000000004` em IEEE-754, e o `ceil` ingênuo devolve **0.4**
+ * em vez de 0.3. O v3.1 corrigiu isso definindo aritmética em INTEIROS
+ * (score × 100000), que é o que está implementado aqui.
+ *
+ * Exportada pra que o teste unitário possa exercitar o algoritmo diretamente
+ * nos valores de borda — nos 2592 vetores BASE possíveis os dois arredondamentos
+ * coincidem (ver cvss.util.test.ts), então só o teste direto prova qual dos
+ * dois está implementado.
  */
-function roundUp(input: number): number {
+export function roundUp(input: number): number {
   const intInput = Math.round(input * 100000);
   if (intInput % 10000 === 0) {
     return intInput / 100000;
@@ -53,9 +72,21 @@ function roundUp(input: number): number {
   return (Math.floor(intInput / 10000) + 1) / 10;
 }
 
+/**
+ * Rejeita vetor de versão que não seja 3.1. O prefixo é opcional (vetor sem
+ * prefixo é assumido como 3.1, que é o único suportado), mas se vier um
+ * prefixo `CVSS:x.y/` ele PRECISA ser 3.1 — calcular um vetor 3.0 com as
+ * fórmulas do 3.1 em silêncio seria pior que recusar.
+ */
+function assertSupportedVersion(vector: string): void {
+  const prefixMatch = /^CVSS:(\d+\.\d+)\//.exec(vector);
+  if (prefixMatch && prefixMatch[1] !== "3.1") throw new Error("INVALID_CVSS_VECTOR");
+}
+
 /** Extrai as 8 métricas base do vetor, validando presença e ausência de duplicidade. */
 function parseVector(vector: string): Record<MetricKey, string> {
   if (!vector || typeof vector !== "string") throw new Error("INVALID_CVSS_VECTOR");
+  assertSupportedVersion(vector);
 
   const withoutPrefix = vector.startsWith("CVSS:3.1/") ? vector.slice("CVSS:3.1/".length) : vector;
   const segments = withoutPrefix.split("/").filter(Boolean);
@@ -67,7 +98,9 @@ function parseVector(vector: string): Record<MetricKey, string> {
 
     const [key, value] = parts;
     if (!REQUIRED_METRICS.includes(key as MetricKey)) throw new Error("INVALID_CVSS_VECTOR");
-    if (parsed[key as MetricKey]) throw new Error("INVALID_CVSS_VECTOR"); // métrica repetida
+    // `in` em vez de truthiness: `parsed[key]` seria "" (falsy) num segmento
+    // tipo "C:", e a duplicata "C:/C:H" passaria batido.
+    if (key in parsed) throw new Error("INVALID_CVSS_VECTOR"); // métrica repetida
     parsed[key as MetricKey] = value;
   }
 

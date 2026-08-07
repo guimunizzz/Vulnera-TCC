@@ -20,7 +20,17 @@ import type { NextFunction, Request, Response } from "express";
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: {
+    // O multer corta o STREAM ao passar do limite — não bufferiza os 10MB+1
+    // antes de reclamar. Sem isso, um POST de 500MB seria acumulado inteiro
+    // em memória antes de qualquer validação.
+    fileSize: 10 * 1024 * 1024, // 10MB
+    // Um upload = um arquivo. Sem estes limites o multipart aceita quantidade
+    // arbitrária de partes/campos, que é DoS barato mesmo com fileSize baixo.
+    files: 1,
+    fields: 5,
+    parts: 10,
+  },
 });
 
 export function uploadSingleFile(req: Request, res: Response, next: NextFunction): void {

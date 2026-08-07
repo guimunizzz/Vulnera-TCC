@@ -19,6 +19,9 @@ import type { VulnerabilitySeverity } from "../../types/vulnerability.types";
 
 const SEVERITIES: VulnerabilitySeverity[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const MIN_JUSTIFICATION_LENGTH = 20;
+// Espelha FIELD_LIMITS.justificationMax do backend. A justificativa vai
+// inteira pro diffJson do AuditLog e pra trilha impressa no PDF Técnico.
+const MAX_JUSTIFICATION_LENGTH = 1000;
 
 export function OverrideSeverityDialog({
   vulnerabilityId,
@@ -95,10 +98,13 @@ export function OverrideSeverityDialog({
               value={justification}
               onChange={(e) => setJustification(e.target.value)}
               rows={4}
+              maxLength={MAX_JUSTIFICATION_LENGTH}
               placeholder="Explique por que a severidade final diverge da calculada pelo CVSS (mínimo 20 caracteres)..."
             />
             <span className={cn("text-xs", isTooShort ? "text-severity-critical" : "text-severity-low")}>
-              {trimmedLength}/{MIN_JUSTIFICATION_LENGTH} caracteres mínimos
+              {isTooShort
+                ? `${trimmedLength}/${MIN_JUSTIFICATION_LENGTH} caracteres mínimos`
+                : `${trimmedLength} caracteres (máximo ${MAX_JUSTIFICATION_LENGTH})`}
             </span>
           </div>
 

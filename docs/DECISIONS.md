@@ -272,6 +272,59 @@ src/
 
 ---
 
+## D16 — Endurecimento da Fase 5: decisões tomadas (2026-08-07)
+
+Decisões da sessão de hardening (branch `fix/fase-5-hardening`) que mudam
+comportamento ou fixam um trade-off. Detalhamento em
+`docs/ROADMAP_PROMPTS.md` §Fase 5 → Sessão de endurecimento.
+
+**D16.1 — Acesso negado continua respondendo 403, não 404.**
+Considerou-se trocar para 404 em cross-tenant ("não revele existência"). Mantido
+403 porque: o `CLAUDE.md` §9 define `FORBIDDEN`→403 como padrão do projeto; as
+Fases 3/4 já usam 403 nos canários TEN-01..06; e os IDs são `cuid()`, não
+enumeráveis — o ganho do 404 é marginal frente à inconsistência de contrato.
+Registrado como limitação consciente **L-04** em `docs/BACKLOG.md`.
+*Alternativa descartada:* 404 só em Evidence (criaria incoerência com
+Vulnerability e Comment).
+
+**D16.2 — Assinatura de arquivo só no offset 0.**
+Um PDF com lixo antes do `%PDF` (que a spec do PDF tolera) é **recusado**. O
+falso-negativo é preferido de propósito: aceitar assinatura em offset arbitrário
+é justamente o que facilita polyglot. Limitação **L-03**.
+
+**D16.3 — Polyglot é aceito, com mitigações.**
+Bloquear exigiria parse completo de cada formato. Mitigado por nome UUID,
+extensão do tipo **detectado**, `attachment` + `nosniff`, e nenhum caminho de
+código que interprete o conteúdo no servidor. Limitação **L-02**, coberta por
+teste que documenta o comportamento.
+
+**D16.4 — Novo evento de auditoria `SEVERITY_OVERRIDE_RESET`.**
+Trocar o vetor CVSS descarta o override manual (D da Fase 5, mantida), mas o
+descarte passou a ter evento próprio, com a justificativa que deixou de valer.
+Sem ele, a trilha do PDF Técnico mostrava um override sumindo sem explicação.
+*Impacto:* `diffJson` do `SEVERITY_CHANGE` também mudou (ganhou vetor e score
+de origem/destino) — o teste da Fase 5 que fixava o formato foi atualizado.
+
+**D16.5 — Limites de tamanho de texto são regra de produto, não só de banco.**
+`FIELD_LIMITS` no model. Título limitado a 180 por causa do `VARCHAR(191)` (era
+500); descrição/impacto/recomendação a 5000 **mesmo cabendo 64KB no `TEXT`**,
+porque 50 mil caracteres geram um PDF Técnico inutilizável. Justificativa de
+override ganhou teto de 1000 (`JUSTIFICATION_TOO_LONG`).
+
+**D16.6 — Aviso de caractere não-renderizável é não-bloqueante.**
+O `FindingEditorPage` avisa quais caracteres virarão `?` no PDF, mas **salva
+assim mesmo**. O dado no banco é UTF-8 e está correto; impedir o registro de um
+finding legítimo por causa de um emoji seria pior que o `?` no relatório.
+
+**D16.7 — Máquina de Vulnerability tem 4 estados, definitivamente.**
+Ver [[ADR-021 - Maquina de Vulnerability com 4 estados]].
+
+**D16.8 — Silenciar o dotenv no código, não em variável de ambiente.**
+`quiet: true` em `tests/setup.ts` e `EnvVar.ts`. `.env*` está no `.gitignore`, então
+`DOTENV_CONFIG_QUIET` no `.env` não sobreviveria a um clone.
+
+---
+
 ## Pauta sugerida pra call com o time (30 min)
 
 1. **5 min** — Rafael apresenta decisões D1, D2, D3 (estrutura e nomenclatura)
