@@ -9,6 +9,46 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-08-07 (sessão 24 — Fase 6 implementada: Relatórios + Dashboards)
+
+### Objetivo
+
+Executar a Fase 6 completa (`docs/ROADMAP_PROMPTS.md`) — `report-data` consolidado, PDFs Executivo e Técnico 100% client-side com `pdf-lib` (decisão revertida de `@react-pdf/renderer`), e os 3 dashboards por role. Branch `feat/fase-6-relatorios`.
+
+### Backend
+
+1. **`GET /projects/:id/report-data`** — projeção agregada computada em `report.service.ts` a partir de Project/Application/Company/Vulnerability/Evidence/VulnerabilityComment (nenhuma tabela nova). Resolve nomes de autor/responsável/comentaristas em UMA query batch (`UserRepository.findByIds`, novo) em vez de N+1. **RN18 aplicada** ("Relatórios exigem Project em IN_REVIEW ou superior") — `assertProjectReady()` bloqueia com `422 PROJECT_NOT_READY_FOR_REPORT` se o Project ainda não chegou em IN_REVIEW/COMPLETED; validado nos dois pontos do fluxo (`report-data` e `generate()`), já que `report-data` é o primeiro passo do próprio fluxo de geração e hoje não tem outro consumidor.
+2. **`POST/GET /reports`** — metadado de geração (`title`, `type`, `generatedBy`, `createdAt`). Toda geração grava `AuditLog` `REPORT_GENERATED`. Quem pode gerar: ADMIN, PENTESTER-membro **ou CLIENT da company** — diferente da escrita de Vulnerability (lá CLIENT é sempre read-only); aqui o PDF é montado no browser do próprio usuário, então "gerar" e "baixar" são o mesmo clique, e a Matriz de Permissões já lista "baixar relatório" como ação do Client Owner/Member.
+3. **Rota `GET /:id/report-data` montada em `project.routes.ts`**, não em `report.routes.ts` — a URL exigida pelo enunciado é aninhada em `/projects/:id`, mas a lógica inteira mora em `ReportService`/`ReportController` (reaproveitados via `report.factory.ts`). Documentado em comentário no código pra não confundir sessões futuras.
+4. **`GET /subscriptions/active`** (novo, admin-only, mesmo padrão de `/pending`) — `Company` não tem campo `isActive` no schema; "empresas ativas" só existe via `Subscription.status === ACTIVE`. Usado só pelo dashboard admin.
+5. **Nenhum outro endpoint novo pros dashboards** — `GET /vulnerabilities` e `GET /projects` sem filtro já vêm escopados por role desde a Fase 4/5 (ADMIN=tudo, CLIENT=própria company via RN16, PENTESTER=projetos onde é membro via RN17); os 3 dashboards só compõem esses dados no frontend.
+
+### Testes
+
+10 novos: `report.test.ts` (9 — stats/byOwasp/topRisks batendo com o banco, RN18 com 422, isolamento cross-company 403, PENTESTER não-membro 403, PENTESTER-membro 200, POST/GET reports + AuditLog) e 1 em `subscription.test.ts` (`GET /subscriptions/active` admin-only, só ACTIVE). Total **107/107**. Cobertura de `report.service.ts`: 89.4% statements / 97.4% lines.
+
+### Frontend
+
+`lib/pdf/base.ts` — helpers pdf-lib imperativos: página A4, cabeçalho/rodapé paginado, capa em tema escuro (replica a UI), `drawText`/`wrapText` com quebra automática e pulo de página sozinho, `drawBarChart` (retângulos proporcionais desenhados à mão), `drawChip`, paleta idêntica ao `tailwind.config.ts` do app/web (verde `#10b981` + paleta de severidade — mesma fonte usada em `lib/severity-colors.ts` pro Recharts). **`sanitizeForFont()`** — achado durante o smoke, não estava no prompt: `StandardFonts.Helvetica` só codifica WinAnsi/cp1252, não cobre emoji nem setas unicode; sem sanitizar, um finding com esses caracteres no título/comentário derrubava a geração do PDF inteiro. `lib/pdf/executive.ts` (capa + sumário + KPIs + gráfico de severidade + top 5 riscos + maturidade placeholder condicional + conclusão — 3 páginas no smoke com 3 findings) e `lib/pdf/technical.ts` (capa + sumário + 1 seção por finding com evidências PNG/JPEG embutidas via `embedPng`/`embedJpg` — PDF/TXT viram referência em texto, não dá pra virar pixel — + comentários + apêndice glossário). Aba Relatórios no `ProjectDetailPage`: gate visual quando o Project não está pronto (RN18), botões "Gerar PDF Executivo"/"Gerar PDF Técnico" (busca `report-data` → gera o PDF no browser → download via Blob → registra `POST /reports`) e histórico de gerações. `Dashboard.tsx` roteando por role: `ClientDashboard` (KPIs + `SeverityDonut` via Recharts + 5 recentes), `PentesterDashboard` (projetos atribuídos + findings da semana) e `AdminDashboard` (empresas ativas + pendentes com link pra tela da Fase 3 + críticos globais + top companies por volume).
+
+### Smoke (duas camadas — extensão do Chrome não conectou nesta sessão)
+
+1. **Headless com dados sintéticos** via `vite.ssrLoadModule` (roda `lib/pdf/*` fora do browser, mas dentro do pipeline do Vite pra `import.meta.env` existir) — pegou e corrigiu o bug do WinAnsi (`sanitizeForFont`) antes de qualquer usuário real ver.
+2. **Headless com dados REAIS do banco de dev** — login programático como ADMIN, `report-data` de verdade do finding da TechNova (Fase 5), PDFs gerados e inspecionados visualmente (via ferramenta que renderiza PDF): cover, KPIs, gráfico, seção do finding com CVSS/OWASP/descrição/impacto/recomendação/justificativa de override/comentário real do Bruno Pentester, tudo correto. Embed da evidência PNG caiu no fallback gracioso (ver limitação abaixo — artefato do ambiente headless, não bug de produto).
+3. **Dashboards validados via API direta** (não via UI) nos 3 perfis contra o banco de dev real: ADMIN vê 1 company ativa / 0 pendente / 1 finding global; CLIENT vê o mesmo 1 finding escopado pra própria company; PENTESTER vê 1 projeto atribuído + 1 finding via membership.
+
+### Limitações conhecidas / decisões autônomas
+
+- ⚠️ **Inspeção visual no navegador real não foi feita nesta sessão** — a extensão do Chrome (`claude-in-chrome`) não conectou. Todo o smoke acima foi feito por API direta + PDFs gerados fora do browser. A arquitetura e os dados foram validados de ponta a ponta; falta só o "olho humano" vendo renderizado no app rodando. Servidores de dev (API `:3001`, Web `:3000`, Prisma Studio `:5555`) foram deixados rodando pro Rafael conferir.
+- ⚠️ **Embed de evidência (`embedPng`) não verificado no navegador de verdade** — `axios` com `responseType: "blob"` só produz um `Blob` real no adapter XHR do browser; em Node (ambiente do smoke headless) cai no fallback já previsto no código, sem derrubar o PDF. É o mesmo padrão de download já usado (e correto) desde a Fase 5; mesmo assim, vale um clique de confirmação do Rafael.
+- Projeto de demo da TechNova foi transicionado de `IN_PROGRESS` pra `IN_REVIEW` via API (ADMIN, RN15) durante o smoke, de propósito — assim o Rafael já consegue clicar em "Gerar PDF" na demo sem precisar mexer no status primeiro.
+- Nenhum endpoint de agregação novo pros dashboards (decisão de simplicidade) — só `GET /subscriptions/active`, porque não tinha outro jeito de saber "empresas ativas" sem tabela/campo específico.
+
+### Pendente
+
+- PR `feat/fase-6-relatorios` → `develop` — Rafael abre manualmente.
+- Conferência visual no navegador real (extensão do Chrome) — dashboards nos 3 perfis + os dois PDFs abertos de verdade.
+
 ## 2026-08-05 (sessão 23 — Fase 5 implementada: Vulnerability + Evidence, núcleo do produto)
 
 ### Objetivo

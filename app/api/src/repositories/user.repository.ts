@@ -34,6 +34,12 @@ export class UserRepository {
     });
   }
 
+  /** Resolução em lote (ex: nomes de autor/responsável no report-data) — evita N+1 chamada a chamada. */
+  findByIds(ids: string[]): Promise<User[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.prisma.user.findMany({ where: { id: { in: ids } } });
+  }
+
   create(data: CreateUserData): Promise<User> {
     return this.prisma.user.create({
       data: {

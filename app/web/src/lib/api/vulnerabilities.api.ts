@@ -8,6 +8,8 @@ import type {
 } from "../../types/vulnerability.types";
 
 export const vulnerabilitiesApi = {
+  /** Sem projectId — GET /vulnerabilities "cru". Escopo já vem resolvido pelo backend por role (ADMIN=tudo, CLIENT=própria company, PENTESTER=projetos onde é membro) — usado pelos dashboards. */
+  list: () => apiClient.get<Vulnerability[]>("/vulnerabilities").then((res) => res.data),
   listByProject: (projectId: string) =>
     apiClient.get<Vulnerability[]>("/vulnerabilities", { params: { projectId } }).then((res) => res.data),
   getById: (id: string) => apiClient.get<Vulnerability>(`/vulnerabilities/${id}`).then((res) => res.data),

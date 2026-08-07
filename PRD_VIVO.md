@@ -18,10 +18,10 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Sprint atual       | **Sprint 5 — Vulnerability + Evidence** ⭐ (concluída; branch `feat/fase-5-findings` aguardando PR → develop) |
+| Sprint atual       | **Sprint 6 — Relatórios + Dashboards** (concluída; branch `feat/fase-6-relatorios` aguardando PR → develop) |
 | Data início        | 2026-06-10 (Sprint 0)               |
 | Data alvo TCC      | 2026-10-25 (11 semanas restantes, ver `docs/BACKLOG.md` v4) |
-| Última atualização | 2026-08-05 por Claude Code (sessão Fase 5) |
+| Última atualização | 2026-08-07 por Claude Code (sessão Fase 6) |
 
 ---
 
@@ -37,7 +37,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 3 — Company + Plan + Subscription  | Onboarding e modelo comercial              | ✅     | 100% — concluída em 2026-08-04 |
 | 4 — Application + Project + Member | Catálogo e gestão de projetos              | ✅     | 100% — concluída em 2026-08-04 |
 | 5 — Vulnerability + Evidence       | Núcleo do produto                          | ✅     | 100% — concluída em 2026-08-05 |
-| 6 — Relatórios + Dashboard         | PDFs e dashboards                          | 📋     | 0%          |
+| 6 — Relatórios + Dashboard         | PDFs e dashboards                          | ✅     | 100% — concluída em 2026-08-07 |
 | 7 — Mobile + IA Gemini             | App mobile e assistente IA                 | 📋     | 0%          |
 | 8 — Maturidade + Apresentação      | Polimento e entrega                        | 📋     | 0%          |
 
@@ -162,16 +162,16 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 
 | Task                                 | Status | Owner | PR  |
 | ------------------------------------ | ------ | ----- | --- |
-| KAN-601: /projects/:id/report-data   | 📋     | R     | —   |
-| KAN-602: Report metadata CRUD        | 📋     | R     | —   |
-| KAN-603: Report factory + routes     | 📋     | R     | —   |
-| KAN-604: react-pdf setup             | 📋     | G     | —   |
-| KAN-605: Relatório Executivo PDF     | 📋     | G     | —   |
-| KAN-606: Relatório Técnico PDF       | 📋     | G     | —   |
-| KAN-607: Dashboard cliente           | 📋     | I     | —   |
-| KAN-608: Dashboard pentester         | 📋     | I     | —   |
-| KAN-609: Dashboard admin             | 📋     | I     | —   |
-| KAN-610: Testes report-data (BIZ-10) | 📋     | R     | —   |
+| KAN-601: /projects/:id/report-data   | ✅     | Claude | feat/fase-6-relatorios — RN18 aplicada (Project IN_REVIEW/COMPLETED, senão 422 PROJECT_NOT_READY_FOR_REPORT), stats/topRisks/evidências/comentários consolidados num request |
+| KAN-602: Report metadata CRUD        | ✅     | Claude | feat/fase-6-relatorios — POST /reports gera AuditLog REPORT_GENERATED; GET /reports?projectId= lista histórico; quem gera inclui CLIENT (PDF client-side) |
+| KAN-603: Report factory + routes     | ✅     | Claude | feat/fase-6-relatorios — report-data montado em project.routes.ts (URL aninhada exigida), resto do CRUD em report.routes.ts |
+| KAN-604: pdf-lib setup               | ✅     | Claude | feat/fase-6-relatorios — decisão revertida de @react-pdf/renderer pra pdf-lib (API imperativa); lib/pdf/base.ts com helpers reutilizáveis |
+| KAN-605: Relatório Executivo PDF     | ✅     | Claude | feat/fase-6-relatorios — capa tema escuro + sumário + KPIs + gráfico de barras à mão + top 5 riscos + maturidade placeholder + conclusão (3 páginas no smoke) |
+| KAN-606: Relatório Técnico PDF       | ✅     | Claude | feat/fase-6-relatorios — 1 seção por finding com evidências PNG/JPEG embutidas (embedPng/embedJpg) + comentários + glossário |
+| KAN-607: Dashboard cliente           | ✅     | Claude | feat/fase-6-relatorios — KPIs + donut Recharts por severidade + 5 findings recentes |
+| KAN-608: Dashboard pentester         | ✅     | Claude | feat/fase-6-relatorios — projetos atribuídos + findings registrados na semana |
+| KAN-609: Dashboard admin             | ✅     | Claude | feat/fase-6-relatorios — empresas ativas (GET /subscriptions/active, novo) + assinaturas pendentes + críticos globais + top companies |
+| KAN-610: Testes report-data (RPT-01..03) | ✅ | Claude | feat/fase-6-relatorios — 9 testes de report + 1 de subscription/active, 107/107 total |
 
 ---
 
@@ -274,6 +274,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 2026-08-04 | Sprint 3 (Company + Plan + Subscription) concluída | Branch `feat/fase-3-empresas`, aguardando PR → develop (Rafael abre manualmente). Refactor de pastas pro plural (ADR-009); require-role middleware; AuditLog; Subscription completa com regra de ouro (1 ACTIVE/company, revalidada no approve); Plan e Company completados (ownership, CNPJ, auth); CORS habilitado na API; 18 testes novos (31/31 total); bootstrap completo do `app/web` (Vite+React+Tailwind+Radix+TanStack Query+Zustand+Axios); telas Plans/Onboarding/PendingSubscriptions; smoke E2E manual no navegador real, ponta a ponta, sem erros de console. Ver ADR-020 |
 | 2026-08-04 | Sprint 4 (Application + Project + Member) concluída | Branch `feat/fase-4-projetos`, aguardando PR → develop. Application CRUD com gate RN03 (limite do plano) + RN07 (assinatura ativa) + soft delete (RN04); Project CRUD + máquina de estados mínima (4 estados) com AuditLog STATUS_CHANGE em toda transição; ProjectMember com leitura ampliada (RN16/RN17) e gestão ADMIN-only; 20 testes novos (51/51 total), cobertura services 85-100%; telas Applications/NewAnalysis/ProjectDetail/Projects; smoke E2E extenso no navegador (CLIENT, ADMIN, PENTESTER) incluindo o gate visual de PLAN_LIMIT_REACHED |
 | 2026-08-05 | Sprint 5 (Vulnerability + Evidence — núcleo do produto) concluída | Branch `feat/fase-5-findings`, aguardando PR → develop. `utils/cvss.util.ts` — parser manual CVSS 3.1 com as fórmulas oficiais do FIRST, validado contra 5 vetores conhecidos (canônico 9.8, Log4Shell 10.0, Heartbleed 7.5, mais LOW/MEDIUM calculados à mão); Vulnerability CRUD com RN09 (herda project/application/company), RN10/RN21 (severidade calculada + override justificado ≥20 chars, sempre auditado), RN11 (OWASP obrigatória), RN20 (auditoria na criação), máquina de 4 estados (mesma simplificação do Project); Evidence com upload multipart validado por magic number (Content-Type declarado é ignorado por completo, não só double-checado) + UUID + `uploads/{companyId}/{vulnId}/`; VulnerabilityComment paginado; 24 testes novos (97/97 total), cobertura 95-97% nos 3 services novos; telas aba Findings (filtros/badges/contador de críticos) + FindingEditor (CVSS ao vivo no cliente, drag-drop, override, transição) + FindingDetail read-only; smoke E2E completo no navegador com arquivos binários reais (PNG aceito, .exe bloqueado mesmo com Content-Type forjado) e AuditLog conferido no Prisma Studio. Ver ROADMAP_PROMPTS.md §Histórico pra desvios do prompt original |
+| 2026-08-07 | Sprint 6 (Relatórios + Dashboards) concluída | Branch `feat/fase-6-relatorios`, aguardando PR → develop. `GET /projects/:id/report-data` consolidado (project/company/application/findings/stats/topRisks/maturity=null) com RN18 aplicada (Project precisa IN_REVIEW/COMPLETED); `POST/GET /reports` com AuditLog REPORT_GENERATED; `lib/pdf/base.ts` com helpers pdf-lib imperativos (página A4, cabeçalho/rodapé paginado, drawText com quebra automática, drawBarChart à mão, `sanitizeForFont` — achado no smoke, WinAnsi não cobre emoji/setas unicode); PDF Executivo (capa tema escuro + KPIs + gráfico + top 5 riscos + conclusão, 3-5 páginas) e PDF Técnico (1 seção por finding com evidências PNG/JPEG embutidas via embedPng/embedJpg + comentários + glossário) — paleta idêntica ao tailwind.config.ts do app/web; 3 dashboards por role (CLIENT: KPIs + donut Recharts + recentes; PENTESTER: projetos atribuídos + findings da semana; ADMIN: empresas ativas via `GET /subscriptions/active` novo + pendentes + críticos globais + top companies), todos reaproveitando os endpoints já escopados por role das Fases 4/5; 10 testes novos (107/107 total); smoke em duas camadas — dados sintéticos via `vite.ssrLoadModule` headless (pegou o bug do WinAnsi antes de qualquer usuário ver) e depois PDFs gerados com dados reais do banco de dev (evidência PNG real embutida, comentário real), conferidos visualmente; dashboards validados via API direta nos 3 perfis contra o banco de dev — a extensão do Chrome não conectou nesta sessão, então a inspeção visual no navegador de verdade fica pendente pro Rafael conferir. Ver ROADMAP_PROMPTS.md §Histórico pra desvios do prompt original |
 | —    | MVP funcional (Sprint 6 fechada) | A registrar |
 | —    | Apresentação TCC                 | A registrar |
 
@@ -290,6 +291,8 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 2026-06-16 | Frontend (app/web) só tem placeholder `package.json` — KAN-108/109/110/213/214/215 não iniciados | Sprint 1 e 2 ficam em 🚧; Iann não iniciou | I | ✅ Resolvido em 2026-08-04 — bootstrap completo feito na Fase 3 (Claude Code); só falta KAN-110 (landing de marketing dedicada) |
 | 2026-08-04 | Branch `feat/fase-3-empresas` completa (backend + web) não foi mergeada em develop | Início da Fase 4 | R | Aberto — Rafael vai abrir o PR manualmente |
 | 2026-08-05 | Branch `feat/fase-5-findings` completa (backend + web) não foi mergeada em develop | Início da Fase 6 | R | Aberto — Rafael vai abrir o PR manualmente |
+| 2026-08-07 | Branch `feat/fase-6-relatorios` completa (backend + web) não foi mergeada em develop | Início da Fase 7 | R | Aberto — Rafael vai abrir o PR manualmente |
+| 2026-08-07 | Extensão do Chrome não conectou nesta sessão — smoke visual de PDF e dashboards foi feito via API direta + PDFs gerados fora do browser (headless), não no app rodando de verdade | Confiança visual da Fase 6 | R | Aberto — Rafael confere no navegador quando puder (servidores dev deixados rodando) |
 
 ---
 

@@ -40,8 +40,8 @@ Atores: `ADMIN` · `CLIENT` · `PENTESTER` → ver [[Roles]] e [[Matriz de Permi
 | Campo | Valor |
 |---|---|
 | **Prazo** | **3 meses** (~13 semanas), entrega 25/10/2026 |
-| Progresso | **Fases 0-5 concluídas.** Backend: schema completo (19 models), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember, Vulnerability+Evidence+VulnerabilityComment (núcleo do produto — CVSS 3.1 manual, upload validado por magic number, AuditLog completo). Frontend: bootstrapado na Fase 3, com telas de Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions/Applications/NewAnalysis/Projects/ProjectDetail/Findings/FindingEditor/FindingDetail funcionando ponta a ponta (validado com smoke E2E manual no navegador, incluindo upload de arquivo real). |
-| Fase atual | **Fase 6 — Relatórios + Dashboards**, a próxima |
+| Progresso | **Fases 0-6 concluídas.** Backend: schema completo (19 models), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember, Vulnerability+Evidence+VulnerabilityComment (núcleo do produto — CVSS 3.1 manual, upload validado por magic number, AuditLog completo), report-data consolidado (RN18) + Report metadata + `GET /subscriptions/active`. Frontend: bootstrapado na Fase 3, com telas de Login/Register/Dashboard(3 variantes por role)/Plans/Onboarding/PendingSubscriptions/Applications/NewAnalysis/Projects/ProjectDetail(+aba Relatórios)/Findings/FindingEditor/FindingDetail funcionando ponta a ponta. PDF Executivo e Técnico gerados 100% client-side com pdf-lib (ADR-003), validados com dados reais do banco de dev (smoke headless via `vite.ssrLoadModule`, já que a extensão do Chrome não conectou nesta sessão — inspeção visual no navegador real fica pendente). |
+| Fase atual | **Fase 7 — Mobile enxuto + Push**, a próxima |
 | Modo de execução | Solo-delegado: Rafael supervisiona, Claude Code executa |
 | Branch de integração | `develop` |
 

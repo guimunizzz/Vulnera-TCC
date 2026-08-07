@@ -6,6 +6,7 @@ import { applicationsApi } from "../lib/api/applications.api";
 import { projectMembersApi } from "../lib/api/project-members.api";
 import { usersApi } from "../lib/api/users.api";
 import { vulnerabilitiesApi } from "../lib/api/vulnerabilities.api";
+import { reportsApi } from "../lib/api/reports.api";
 import { useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
 import { useCompanyName } from "../hooks/use-company-name";
@@ -16,8 +17,25 @@ import { FindingStatusBadge } from "../components/ui/finding-status-badge";
 import { Button } from "../components/ui/button";
 import { Alert } from "../components/ui/alert";
 import { cn } from "../lib/cn";
+import { downloadBlob } from "../lib/pdf/base";
+import { generateExecutivePdf } from "../lib/pdf/executive";
+import { generateTechnicalPdf } from "../lib/pdf/technical";
 import type { ProjectStatus } from "../types/project.types";
 import { OWASP_CATEGORIES, OWASP_LABELS, type VulnerabilitySeverity, type VulnerabilityStatus } from "../types/vulnerability.types";
+import type { ReportType } from "../types/report.types";
+
+const REPORT_TYPE_LABELS: Record<ReportType, string> = { EXECUTIVE: "Executivo", TECHNICAL: "Técnico" };
+const REPORT_READY_STATUSES: ProjectStatus[] = ["IN_REVIEW", "COMPLETED"];
+
+/** Nome de arquivo seguro pro PDF baixado — sem acento/espaço, evita problema em alguns SOs. */
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // remove diacríticos isolados pelo NFD (á → a + ´)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
 
 const ALLOWED_TRANSITIONS: Record<ProjectStatus, ProjectStatus[]> = {
   PENDING: ["IN_PROGRESS"],
@@ -49,6 +67,7 @@ export function ProjectDetailPage() {
   const [statusFilter, setStatusFilter] = useState<VulnerabilityStatus | "">("");
   const [owaspFilter, setOwaspFilter] = useState("");
   const [findingsPage, setFindingsPage] = useState(1);
+  const [generatingType, setGeneratingType] = useState<ReportType | null>(null);
   const FINDINGS_PAGE_SIZE = 10;
 
   const role = useAuthStore((s) => s.user?.role);
@@ -138,6 +157,34 @@ export function ProjectDetailPage() {
     mutationFn: (userId: string) => projectMembersApi.remove(id!, userId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["projects", id, "members"] }),
     onError: (err: unknown) => setError(getErrorMessage(err)),
+  });
+
+  const projectReady = !!project && REPORT_READY_STATUSES.includes(project.status);
+
+  const { data: reportHistory } = useQuery({
+    queryKey: ["reports", "byProject", id],
+    queryFn: () => reportsApi.listByProject(id!),
+    enabled: !!id && tab === "reports",
+  });
+
+  // Fluxo client-side (ADR-003): busca o JSON consolidado → desenha o PDF
+  // com pdf-lib inteiramente no browser → baixa via Blob → só DEPOIS
+  // registra o metadado no servidor. O servidor nunca vê o PDF em si.
+  const generateReportMutation = useMutation({
+    mutationFn: async (type: ReportType) => {
+      setGeneratingType(type);
+      const data = await reportsApi.getReportData(id!);
+      const blob = type === "EXECUTIVE" ? await generateExecutivePdf(data) : await generateTechnicalPdf(data);
+      const fileName = `relatorio-${type === "EXECUTIVE" ? "executivo" : "tecnico"}-${slugify(project?.name ?? id!)}.pdf`;
+      downloadBlob(blob, fileName);
+      await reportsApi.create(id!, type);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reports", "byProject", id] });
+      setError(null);
+    },
+    onError: (err: unknown) => setError(getErrorMessage(err)),
+    onSettled: () => setGeneratingType(null),
   });
 
   if (isLoading || !project) {
@@ -422,8 +469,68 @@ export function ProjectDetailPage() {
       )}
 
       {tab === "reports" && (
-        <div className="mt-6 rounded-lg border border-border p-8 text-center text-muted">
-          Disponível na Fase 6 — Relatórios.
+        <div className="mt-6">
+          {!projectReady && (
+            <div className="rounded-lg border border-border p-8 text-center text-muted">
+              Relatórios ficam disponíveis quando o projeto está em revisão ou concluído (RN18). Status atual:{" "}
+              <StatusBadge status={project.status} />.
+            </div>
+          )}
+
+          {projectReady && (
+            <>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  disabled={generateReportMutation.isPending}
+                  onClick={() => generateReportMutation.mutate("EXECUTIVE")}
+                >
+                  {generatingType === "EXECUTIVE" ? "Gerando PDF..." : "Gerar PDF Executivo"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={generateReportMutation.isPending}
+                  onClick={() => generateReportMutation.mutate("TECHNICAL")}
+                >
+                  {generatingType === "TECHNICAL" ? "Gerando PDF..." : "Gerar PDF Técnico"}
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted">
+                O PDF é montado no seu navegador a partir dos dados atuais do projeto — nada é enviado ao servidor
+                além do registro de que o relatório foi gerado.
+              </p>
+
+              <h2 className="mt-8 mb-3 font-semibold text-foreground">Histórico de gerações</h2>
+              {(!reportHistory || reportHistory.length === 0) && (
+                <p className="text-sm text-muted">Nenhum relatório gerado ainda.</p>
+              )}
+              {reportHistory && reportHistory.length > 0 && (
+                <div className="overflow-hidden rounded-lg border border-border">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-surface text-muted">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Título</th>
+                        <th className="px-4 py-3 font-medium">Tipo</th>
+                        <th className="px-4 py-3 font-medium">Gerado por</th>
+                        <th className="px-4 py-3 font-medium">Data</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportHistory.map((report) => (
+                        <tr key={report.id} className="border-t border-border">
+                          <td className="px-4 py-3 text-foreground">{report.title}</td>
+                          <td className="px-4 py-3 text-muted">{REPORT_TYPE_LABELS[report.type]}</td>
+                          <td className="px-4 py-3 text-muted">{userName(report.generatedBy)}</td>
+                          <td className="px-4 py-3 text-muted">
+                            {new Date(report.createdAt).toLocaleString("pt-BR")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

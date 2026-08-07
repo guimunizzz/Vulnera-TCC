@@ -111,6 +111,36 @@ describe("Subscription (request/pending/current/approve/reject)", () => {
     expect(asAdmin.body[0].id).toBe(sub.id);
   });
 
+  // Dashboard admin (Fase 6) — GET /api/subscriptions/active é admin-only e só lista ACTIVE
+  it("GET /api/subscriptions/active é admin-only e lista só as com status ACTIVE", async () => {
+    const plan = await seedPlan({ name: "BASIC" });
+    const activeCompany = await seedCompany({ name: "Acme Ativa", planId: plan.id });
+    const pendingCompany = await seedCompany({ name: "Beta Pendente", planId: plan.id });
+    await seedSubscription({ companyId: activeCompany.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    await seedSubscription({ companyId: pendingCompany.id, planId: plan.id, status: "PENDING_APPROVAL" });
+
+    const admin = await seedUser({ name: "Admin", email: "admin@vulnera.local", password: PASSWORD, role: "ADMIN" });
+    const client = await seedUser({
+      name: "Client",
+      email: "client@vulnera.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: activeCompany.id,
+      companyRole: "OWNER",
+    });
+    const adminToken = await loginAs(app, admin.email, PASSWORD);
+    const clientToken = await loginAs(app, client.email, PASSWORD);
+
+    const asClient = await request(app).get("/api/subscriptions/active").set("Authorization", `Bearer ${clientToken}`);
+    expect(asClient.status).toBe(403);
+
+    const asAdmin = await request(app).get("/api/subscriptions/active").set("Authorization", `Bearer ${adminToken}`);
+    expect(asAdmin.status).toBe(200);
+    expect(asAdmin.body).toHaveLength(1);
+    expect(asAdmin.body[0].companyId).toBe(activeCompany.id);
+    expect(asAdmin.body[0].status).toBe("ACTIVE");
+  });
+
   // SUB-05 — approve + regra de ouro revalidada
   it("POST /:id/approve ativa a subscription; uma 2ª pendente da mesma company é barrada mesmo já tendo passado no request", async () => {
     const plan = await seedPlan({ name: "BASIC" });
