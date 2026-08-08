@@ -19,6 +19,7 @@ import { projectsApi } from "../lib/api/projects.api";
 import { useApiError } from "../hooks/use-api-error";
 import { useCompanyName } from "../hooks/use-company-name";
 import { calculateCvss } from "../lib/cvss";
+import { acharCaracteresNaoRenderizaveis } from "../lib/font-safety";
 import { Breadcrumb } from "../components/layout/breadcrumb";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -45,6 +46,16 @@ const TRANSITION_LABELS: Record<VulnerabilityStatus, string> = {
   FIXED: "Marcar como corrigido",
   CLOSED: "Fechar finding",
 };
+
+// Espelham FIELD_LIMITS do backend (app/api/src/models/vulnerability.model.ts).
+// O backend é a validação de verdade; aqui é UX — o usuário vê o limite
+// enquanto digita em vez de perder o texto num 400 depois de submeter.
+const LIMITES = {
+  title: 180,
+  description: 5000,
+  impact: 5000,
+  recommendation: 5000,
+} as const;
 
 export function FindingEditorPage() {
   const { projectId: newProjectId, id } = useParams<{ projectId?: string; id?: string }>();
@@ -88,6 +99,14 @@ export function FindingEditorPage() {
   }, [existing]);
 
   const livePreview = useMemo(() => calculateCvss(cvssVector), [cvssVector]);
+
+  // Aviso NÃO-BLOQUEANTE: caracteres fora do WinAnsi/cp1252 viram "?" nos PDFs
+  // (StandardFonts do pdf-lib não têm glifo pra eles) — ver lib/font-safety.ts.
+  // O finding salva normalmente; o texto no banco continua correto.
+  const caracteresProblematicos = useMemo(
+    () => acharCaracteresNaoRenderizaveis(title, description, impact, recommendation),
+    [title, description, impact, recommendation],
+  );
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -179,6 +198,21 @@ export function FindingEditorPage() {
 
       {formError && <Alert className="mt-4">{formError}</Alert>}
 
+      {caracteresProblematicos.length > 0 && (
+        <div
+          role="status"
+          className="mt-4 rounded-md border border-severity-medium/40 bg-severity-medium/10 px-4 py-3 text-sm text-foreground"
+        >
+          <strong className="font-semibold">Atenção — caracteres não suportados no relatório PDF:</strong>{" "}
+          <span className="font-mono">{caracteresProblematicos.join(" ")}</span>
+          <p className="mt-1 text-muted">
+            Estes caracteres vão aparecer como <span className="font-mono">?</span> nos relatórios Executivo e Técnico
+            (a fonte padrão do PDF cobre só o conjunto WinAnsi). O finding será salvo normalmente — troque-os se o texto
+            precisar sair legível no relatório.
+          </p>
+        </div>
+      )}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <form
           className="flex flex-col gap-4 lg:col-span-2"
@@ -191,7 +225,16 @@ export function FindingEditorPage() {
         >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="finding-title">Título</Label>
-            <Input id="finding-title" required value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input
+              id="finding-title"
+              required
+              maxLength={LIMITES.title}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <span className="text-xs text-muted">
+              {title.length}/{LIMITES.title}
+            </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -244,14 +287,27 @@ export function FindingEditorPage() {
               id="finding-description"
               required
               rows={4}
+              maxLength={LIMITES.description}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+            <span className="text-xs text-muted">
+              {description.length}/{LIMITES.description}
+            </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="finding-impact">Impacto</Label>
-            <Textarea id="finding-impact" rows={3} value={impact} onChange={(e) => setImpact(e.target.value)} />
+            <Textarea
+              id="finding-impact"
+              rows={3}
+              maxLength={LIMITES.impact}
+              value={impact}
+              onChange={(e) => setImpact(e.target.value)}
+            />
+            <span className="text-xs text-muted">
+              {impact.length}/{LIMITES.impact}
+            </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -259,9 +315,13 @@ export function FindingEditorPage() {
             <Textarea
               id="finding-recommendation"
               rows={3}
+              maxLength={LIMITES.recommendation}
               value={recommendation}
               onChange={(e) => setRecommendation(e.target.value)}
             />
+            <span className="text-xs text-muted">
+              {recommendation.length}/{LIMITES.recommendation}
+            </span>
           </div>
 
           <div className="flex justify-end gap-2">

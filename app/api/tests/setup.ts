@@ -1,7 +1,12 @@
 import * as dotenv from "dotenv";
 import * as path from "path";
 
-dotenv.config({ path: path.resolve(__dirname, "../.env.test") });
+// quiet: true silencia o banner promocional que o dotenv 17.x imprime a cada
+// carga ("◇ injected env (N) from .env.test // tip: ..."). Fica aqui, no
+// código versionado, e não numa variável de ambiente — .env* está no
+// .gitignore, então quem clonasse o repo veria o banner de novo na saída dos
+// testes (e ela vira screenshot de evidência do TCC).
+dotenv.config({ path: path.resolve(__dirname, "../.env.test"), quiet: true });
 
 import { prisma } from "../src/database/prisma.database";
 

@@ -9,6 +9,93 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-08-07 (sessão 25 — Endurecimento da Fase 5)
+
+### Objetivo
+
+Endurecer a Fase 5 (Vulnerability + Evidence), **sem features novas**. Critério: o que uma banca de TCC em segurança da informação atacaria neste código, e o que quebraria numa demo ao vivo. Branch `fix/fase-5-hardening`.
+
+**Testes 107 → 225**, todos verdes. Cobertura dos services da Fase 5 toda ≥90%.
+
+### CVSS — o parser estava correto; o que faltava era prova
+
+Nenhum erro de cálculo encontrado. O que foi feito:
+
+1. **13 vetores oficiais** do FIRST/NVD viraram teste, **5 deles com Scope Changed** (Log4Shell 10.0, Zerologon 10.0, CVE-2012-1516 9.1 com PR:H, CVE-2013-0375 6.4 com PR:L, CVE-2013-1937 6.1 com UI:R). 13/13 conferem. Duas divergências na primeira rodada eram erro do **vetor de teste** (escrevi `S:C` onde o NVD publica `S:U`), não do código — o parser deu o valor matematicamente correto do vetor que recebeu, o que é validação mais forte ainda.
+2. **Varredura exaustiva dos 2592 vetores base possíveis**: nenhum produz NaN/Infinity nem sai de [0,10].
+3. **Arredondamento**: o código **já usava** a aritmética inteira do Apêndice A do 3.1, não o `Math.ceil(x*10)/10` do 3.0. Achado que virou evidência: nos 2592 vetores base os dois algoritmos **coincidem** — a diferença só aparece em valores intermediários (como os que métricas temporais/ambientais produzem). Provado com o exemplo canônico do Apêndice A: `0.1+0.2 = 0.30000000000000004` → o correto devolve **0.3**, o ingênuo devolveria **0.4**. `roundUp` passou a ser exportada para permitir esse teste direto.
+4. **Versão**: `CVSS:3.0/` já era rejeitado, mas **por acidente** (o segmento não batia com nenhuma métrica) — sem teste, e quebraria se alguém mexesse no parser. Agora há `assertSupportedVersion()` explícita. Métricas temporais/ambientais (`E:`, `RL:`, `CR:`…) idem: rejeitadas, nunca ignoradas em silêncio.
+5. **Paridade front/back**: teste novo importa `app/web/src/lib/cvss.ts` na suíte da API e roda os mesmos 2592 vetores nos dois — **0 divergências**; ambos recusam as mesmas entradas malformadas.
+6. **Corrigido**: a detecção de métrica duplicada usava `if (parsed[key])`, falsy para string vazia — `C:/C:H` passava batido. Trocado por `key in parsed` (espelhado no front).
+
+### Upload e download — superfície de ataque (27 testes, SEC-EV-01..07)
+
+**Corrigido — validação de texto aceitava binário (severidade média).** O fallback `text/plain` aprovava qualquer buffer cujos bytes fossem code points UTF-8 válidos, e bytes de controle **são** UTF-8 válido: `Buffer.from([0x00,0x01,0x02])` passava como texto e era gravado como `.txt`. Substituído por `isPlainText()`, que rejeita controles fora de TAB/LF/CR.
+
+**Corrigido — dois 500 por estouro de `VARCHAR(191)`.** `Evidence.originalName` e `Vulnerability.title` eram gravados crus; valores longos estouravam a coluna e o erro do Prisma vazava como `500 INTERNAL_ERROR`. Agora `sanitizeOriginalName()` e `FIELD_LIMITS` devolvem 400.
+
+**Corrigido — multipart sem limite de partes.** Adicionados `files: 1`, `fields: 5`, `parts: 10`.
+
+**Confirmado sem furo** (virou teste, que é o valor): o caminho do download já derivava 100% do registro no banco — nenhum componente vem da URL, só o `evidenceId` como chave de busca. A autorização já acontecia **antes** de tocar o disco (provado com teste que apaga o arquivo e ainda recebe 403, não 500). O `content-disposition` do Express já fazia basename e escapava CRLF. A extensão em disco já vinha do tipo **detectado**, não do nome enviado. O limite de 10MB já era aplicado pelo multer **no stream** (provado medindo `heapUsed` num POST de 25MB).
+
+**Defesa em profundidade adicionada**: `resolveDentroDeUploads()` valida contenção sob `UPLOADS_ROOT` na leitura e na escrita; `X-Content-Type-Options: nosniff` no download.
+
+**Polyglot documentado como limitação aceita** (L-02 em `docs/BACKLOG.md`), com as quatro mitigações verificadas por teste.
+
+### Isolamento multi-tenant — TEN-07 a TEN-13
+
+Existia só o TEN-06, que cobria **leitura** de Vulnerability. Adicionados canários para Evidence (list/download/upload), Comment (list/create/delete) e escrita de Vulnerability (update/transition/override/delete), nos dois vetores: **CLIENT cross-tenant** (RN16) e **PENTESTER sem ProjectMember** (RN17). **Nenhum furo encontrado** — o valor é a prova, que não existia.
+
+Três decisões de escrita: cada bloco tem **controle positivo** (o membro legítimo faz a mesma operação com sucesso — senão o canário passaria com a rota quebrada devolvendo 403 pra todos); cada bloco **verifica efeito colateral no banco** depois do 403; e o **TEN-13** prova que `companyId`/`projectId`/`severityFinal`/`cvssScore` forjados no corpo são integralmente ignorados (mass assignment).
+
+Status mantido em **403**, não 404, conforme `CLAUDE.md` §9 e o padrão das Fases 3/4 — registrado como limitação consciente L-04.
+
+### Auditoria — buraco na trilha, corrigido
+
+O `PUT` com vetor novo descartava o override manual (decisão correta da Fase 5, ver sessão 23) mas registrava só um `SEVERITY_CHANGE` genérico. Na trilha impressa no PDF Técnico, um `SEVERITY_OVERRIDE` **sumia sem explicação** — quem auditasse não conseguia reconstruir a história do finding.
+
+Novo evento **`SEVERITY_OVERRIDE_RESET`** com `reason: "CVSS_VECTOR_CHANGED"`, severidade descartada, **a justificativa que deixou de valer** e a severidade recalculada. Só dispara quando havia override ativo. O `SEVERITY_CHANGE` passou a registrar também vetor e score de origem/destino.
+
+### Alinhamento com a Fase 6
+
+Novo `app/web/src/lib/font-safety.ts`: detecta caracteres fora do WinAnsi/cp1252 iterando por *code point*. O `FindingEditorPage` mostra aviso **não-bloqueante** listando exatamente quais virarão `?` no PDF. Não-bloqueante de propósito — o dado no banco é UTF-8 e está correto; impedir o registro de um finding legítimo por causa de um emoji seria pior. O `sanitizeForFont()` da Fase 6 continua sendo a rede de segurança; isto é a prevenção na origem.
+
+Limites de tamanho (`FIELD_LIMITS`) em título/descrição/impacto/recomendação/comentário e **teto de 1000 na justificativa de override** (novo `JUSTIFICATION_TOO_LONG`) — sem teto, texto de 50 mil caracteres ia inteiro pro `diffJson` do AuditLog e pro PDF.
+
+### Máquina de estados — [[ADR-021 - Maquina de Vulnerability com 4 estados]]
+
+A divergência vault (6 estados) × código (4) nunca tinha virado ADR, e quem lia o vault concluía que faltou implementar. Argumento central encontrado na investigação: **os dois estados faltantes dependem de regras que também não existem no código** — `REVALIDATION` precisa do fluxo de remediation service (RN13/RN14), `RISK_ACCEPTED` precisa de uma alçada formal de aceite de risco que a [[Matriz de Permissoes]] não define. Implementá-los sem as regras que os governam produziria transições sem semântica.
+
+[[Maquina - Vulnerability]] reestruturada em "Implementado no MVP" × "Modelo conceitual completo"; RN12 com callout apontando qual máquina vale; RN13 e RN14 marcadas como não implementadas (estavam `status: ativo` sem nada no código).
+
+### Validação em navegador real
+
+A extensão do Chrome **conectou** (não conectara na sessão 24), fechando as duas pendências herdadas da Fase 6:
+
+- ✅ **Embed de evidência no PDF Técnico CONFIRMADO** — PNG 480×240 subido pela UI, PDF gerado e aberto no Chrome: imagem embutida e renderizada (`/Subtype /Image`, `/Width 480 /Height 240`). **O fallback não foi acionado**: `axios` com `responseType: "blob"` produz Blob real no adapter XHR, exatamente como suspeitado na sessão 24.
+- ✅ PDFs Executivo e Técnico e os 3 dashboards conferidos visualmente. Zero erros de console.
+- ✅ Upload no navegador real: PNG aceito, executável MZ/PE renomeado para `.png` (com `Content-Type: image/png` enviado pelo browser) **bloqueado**.
+- ✅ CLIENT read-only provado via `fetch` no console, não só pela UI: PUT/transition/override/DELETE/upload **403**; GET 200; comentar 201.
+- ✅ Path traversal ao vivo (`../`, `%2e%2e%2f`, `....//`, caminho absoluto): todos 404.
+
+O mesmo PDF **provou o problema que o aviso novo previne**: a seta `→` saiu como `?` e o emoji `⚠️` como `??`.
+
+### Ambiente e ferramentas
+
+O `npm run check` **não rodava num clone limpo**: `.env`/`.env.test` não existem (estão no `.gitignore`) e o `jest.config.ts` em TypeScript exige `ts-node`, ausente das devDependencies — **adicionado ao `package.json`**.
+
+Banner do dotenv 17.x silenciado **no código versionado** (`quiet: true` em `tests/setup.ts` e `EnvVar.ts`), não numa variável de ambiente: `.env*` está no `.gitignore`, então quem clonasse veria o banner de volta na saída dos testes (que vira screenshot de evidência do TCC).
+
+### Pendências registradas
+
+- **Limitações conhecidas L-01..L-08** em `docs/BACKLOG.md` — cada uma com o motivo de não ter sido corrigida. Base pronta para a task 8.7 (README/DEMO).
+- **Bug da Fase 6 (não corrigido, §0.2 S6):** no PDF Executivo, "Top 5 riscos", título longo sobrepõe o texto `CVSS x.x · Axx · Categoria` (`lib/pdf/executive.ts`). Task 8.11.
+- **Tasks descobertas:** 8.9 (rota DELETE de Evidence, que não existe), 8.10 (rate limiting).
+- **`CLAUDE.md` §2 corrigido para plural** — exigia singular, contra o [[ADR-009 - Pastas no plural e cadeia de camadas]], o [[Contexto Mestre v4]] e o código real. Rafael confirmou nesta sessão (R4 exige confirmação humana antes de editar regra eterna).
+- **Colisão de ADR:** o `docker-compose.yml` referenciava um "ADR-021 - Stack completa no Docker Compose" nunca escrito (commit `c131aef`). ADR-021 foi usado para a máquina de estados; o compose agora registra que o ADR do Docker deve ser **ADR-022**.
+
+---
+
 ## 2026-08-07 (sessão 24 — Fase 6 implementada: Relatórios + Dashboards)
 
 ### Objetivo

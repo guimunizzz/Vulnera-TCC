@@ -31,7 +31,11 @@ const SCOPE_VALUES = ["U", "C"];
 const REQUIRED_METRICS = ["AV", "AC", "PR", "UI", "S", "C", "I", "A"] as const;
 type MetricKey = (typeof REQUIRED_METRICS)[number];
 
-/** Roundup do Apêndice A da spec — evita erro de ponto flutuante do JS. */
+/**
+ * Roundup do Apêndice A da spec — aritmética em inteiros porque o
+ * `Math.ceil(x * 10) / 10` do CVSS 3.0 erra quando o float representa o
+ * valor um fio acima do real (0.1 + 0.2 = 0.30000000000000004 → 0.4).
+ */
 function roundUp(input: number): number {
   const intInput = Math.round(input * 100000);
   if (intInput % 10000 === 0) return intInput / 100000;
@@ -40,6 +44,11 @@ function roundUp(input: number): number {
 
 function parseVector(vector: string): Record<MetricKey, string> | null {
   if (!vector || typeof vector !== "string") return null;
+
+  // Só CVSS 3.1. Prefixo de outra versão é recusado — nunca calculado com as
+  // fórmulas do 3.1 em silêncio (idêntico ao backend).
+  const prefixMatch = /^CVSS:(\d+\.\d+)\//.exec(vector);
+  if (prefixMatch && prefixMatch[1] !== "3.1") return null;
 
   const withoutPrefix = vector.startsWith("CVSS:3.1/") ? vector.slice("CVSS:3.1/".length) : vector;
   const segments = withoutPrefix.split("/").filter(Boolean);
@@ -50,7 +59,8 @@ function parseVector(vector: string): Record<MetricKey, string> | null {
     if (parts.length !== 2) return null;
     const [key, value] = parts;
     if (!REQUIRED_METRICS.includes(key as MetricKey)) return null;
-    if (parsed[key as MetricKey]) return null;
+    // `in` em vez de truthiness: "C:" grava "" (falsy) e a duplicata passaria.
+    if (key in parsed) return null;
     parsed[key as MetricKey] = value;
   }
 

@@ -55,6 +55,13 @@ export class EvidenceController {
       const actor = req.user!;
       const { absolutePath, fileName, mimeType } = await this.service.getFileForDownload(actor, evidenceId);
       res.setHeader("Content-Type", mimeType);
+      // nosniff: impede o navegador de reinterpretar o corpo por heurística de
+      // conteúdo (um .txt cujo conteúdo pareça HTML não pode virar HTML
+      // renderizado). Combina com o `attachment` que o res.download já força.
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      // res.download monta o Content-Disposition via `content-disposition`, que
+      // já faz basename e escapa/percent-encoda CR-LF e aspas — o fileName é
+      // sanitizado no service por garantia, não porque o header aceite injeção.
       return res.download(absolutePath, fileName);
     } catch (error: any) {
       if (error.message === "EVIDENCE_NOT_FOUND") return res.status(404).json({ error: "EVIDENCE_NOT_FOUND" });
