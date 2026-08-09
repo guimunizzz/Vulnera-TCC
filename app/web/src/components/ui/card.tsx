@@ -166,7 +166,7 @@ export function Separator({
  * vai substituí-lo. Um esqueleto de 20px trocado por um card de 120px produz um
  * salto de layout — que é exatamente o que ele deveria evitar.
  */
-export function Skeleton({ className }: { className?: string }) {
+export function Skeleton({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <div
       aria-hidden="true"
@@ -176,7 +176,10 @@ export function Skeleton({ className }: { className?: string }) {
         // opacidade e muda com o tema.
         className,
       )}
-      style={{ backgroundColor: "var(--color-skeleton-base)" }}
+      // `style` existe para o esqueleto de gráfico, que precisa de alturas
+      // variadas para desenhar a silhueta de barras — alturas calculadas não
+      // podem virar classe do Tailwind (ele varre o código como texto).
+      style={{ backgroundColor: "var(--color-skeleton-base)", ...style }}
     />
   );
 }

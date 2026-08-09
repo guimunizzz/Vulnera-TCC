@@ -130,6 +130,9 @@ export function ApplicationsPage() {
                   <td className="px-4 py-3 text-fg-muted">{application.environment}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
+                      <LinkButton variant="secundario" size="sm" to={`/applications/${application.id}/dashboard`}>
+                        Painel
+                      </LinkButton>
                       <LinkButton variant="secundario" size="sm" to={`/new-analysis?applicationId=${application.id}`}>
                         Nova análise
                       </LinkButton>

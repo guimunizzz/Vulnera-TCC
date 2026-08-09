@@ -12,6 +12,7 @@ import { FindingEditorPage } from "./pages/finding-editor-page";
 import { FindingDetailPage } from "./pages/finding-detail-page";
 import { PendingSubscriptionsPage } from "./pages/admin/pending-subscriptions-page";
 import { StyleguidePage } from "./pages/styleguide-page";
+import { ApplicationDashboardPage } from "./pages/application-dashboard-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
 
@@ -39,6 +40,7 @@ export function App() {
 
           <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
             <Route path="/applications" element={<ApplicationsPage />} />
+            <Route path="/applications/:id/dashboard" element={<ApplicationDashboardPage />} />
             <Route path="/new-analysis" element={<NewAnalysisPage />} />
           </Route>
 

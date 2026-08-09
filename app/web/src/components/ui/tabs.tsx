@@ -36,7 +36,7 @@
  * Dashboard da aplicação (CP5, quatro visões), detalhe de projeto.
  */
 
-import { useCallback, useId, useRef, type ReactNode } from "react";
+import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "../../lib/cn";
 import { TrocaDeConteudo } from "../../motion/components";
@@ -68,8 +68,13 @@ export function Tabs({ abas, ativa: ativaExterna, aoMudar, paramUrl, className }
   const base = useId();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
 
+  // Estado interno para o caso NÃO CONTROLADO e SEM `paramUrl`. Sem ele, um
+  // `<Tabs abas={...} />` puro renderiza a primeira aba e nunca troca — os
+  // cliques chamariam um `aoMudar` inexistente. Precedência: prop externa >
+  // URL > estado interno, do mais explícito ao menos.
+  const [ativaInterna, setAtivaInterna] = useState<string | null>(null);
   const doUrl = paramUrl ? params.get(paramUrl) : null;
-  const ativa = ativaExterna ?? doUrl ?? abas[0]?.id;
+  const ativa = ativaExterna ?? doUrl ?? ativaInterna ?? abas[0]?.id;
   const indiceAtivo = Math.max(
     0,
     abas.findIndex((a) => a.id === ativa),
@@ -77,6 +82,7 @@ export function Tabs({ abas, ativa: ativaExterna, aoMudar, paramUrl, className }
 
   const selecionar = useCallback(
     (id: string) => {
+      setAtivaInterna(id);
       aoMudar?.(id);
       if (paramUrl) {
         const novos = new URLSearchParams(params);

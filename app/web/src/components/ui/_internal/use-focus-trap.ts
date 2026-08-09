@@ -47,14 +47,33 @@ const FOCAVEIS = [
   "[contenteditable]:not([contenteditable='false'])",
 ].join(",");
 
+/**
+ * O elemento está visível o bastante para receber foco?
+ *
+ * ⚠️ NÃO use `offsetParent === null` para isto. É o atalho comum e está errado
+ * em dois casos que importam aqui:
+ *   1. `offsetParent` é `null` para QUALQUER elemento `position: fixed` — e
+ *      overlay é justamente onde tudo é fixed. Um botão fixed dentro do painel
+ *      seria excluído da armadilha e o Tab escaparia por ele.
+ *   2. `offsetParent` é sempre `null` no jsdom, o que tornaria a armadilha
+ *      intestável — e uma armadilha de foco que não se testa não se mantém.
+ *
+ * A checagem correta é a cadeia de estilo computado, que é o que o navegador
+ * de fato usa para decidir se algo é focável.
+ */
+function estaVisivel(el: HTMLElement): boolean {
+  if (el.hasAttribute("hidden") || el.getAttribute("aria-hidden") === "true") return false;
+  if (el.closest("[inert]")) return false;
+
+  for (let atual: HTMLElement | null = el; atual; atual = atual.parentElement) {
+    const estilo = getComputedStyle(atual);
+    if (estilo.display === "none" || estilo.visibility === "hidden" || estilo.visibility === "collapse") return false;
+  }
+  return true;
+}
+
 function focaveisDe(raiz: HTMLElement): HTMLElement[] {
-  return Array.from(raiz.querySelectorAll<HTMLElement>(FOCAVEIS)).filter((el) => {
-    // `offsetParent === null` pega display:none e ancestrais escondidos.
-    // `hidden`/`aria-hidden` pega o resto. Elemento invisível que recebe foco é
-    // pior que elemento sem foco: o cursor de teclado simplesmente "some".
-    if (el.hasAttribute("hidden") || el.getAttribute("aria-hidden") === "true") return false;
-    return el.offsetParent !== null || el.tagName === "DIALOG";
-  });
+  return Array.from(raiz.querySelectorAll<HTMLElement>(FOCAVEIS)).filter(estaVisivel);
 }
 
 export interface OpcoesFocusTrap {

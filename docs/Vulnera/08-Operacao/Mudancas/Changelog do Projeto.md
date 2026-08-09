@@ -1054,3 +1054,78 @@ Transformar o domínio documentado do vault em schema Prisma completo, criando t
 - 1 schema Prisma criado (21 models, 10 enums, constraints críticas)
 - 1 seed criado (3 planos + 5 domínios + 15 controles)
 - 1 package.json atualizado
+
+---
+
+## Sessão — Fase 6.5: Design System + Dashboards analíticos (2026-08-09)
+
+Branch `feat/fase-6.5-design-system`, **não commitada** (pedido explícito do
+prompt). Fase inserida entre a 6 e a 7 de propósito: o mobile herda os tokens.
+
+### Frontend — a fundação
+
+- **`app/web/src/styles/tokens.css`**: 7 rampas OKLCH × 11 passos, todas na mesma
+  espinha de lightness. Primitivos (`--iris-500`) separados de semânticos
+  (`--color-accent`), com a regra imposta por build — `bg-iris-500` **não
+  compila**, porque o `tailwind.config.ts` só expõe semânticos.
+- **Direção estética**: fundo slate-azulado (nunca preto puro — halation),
+  Archivo + JetBrains Mono, e um único acento **violeta** reservado à ação. O
+  emerald anterior colidia com "remediado"; violeta é o único matiz a >30° de
+  todas as cores que já têm significado no produto.
+- **Três temas** (dark/light/system) sem flash, via script síncrono no `<head>`.
+- **`scripts/check-contrast.mjs`**: converte OKLCH→sRGB à mão e mede WCAG 2.1.
+  **66 pares, 0 falhas, 77 primitivos, 0 fora do gamut.** Encontrou 4
+  reprovações reais e 15 cores fora do gamut, todas corrigidas.
+- **Rota `/styleguide`** (só em dev), com os dois temas lado a lado.
+
+### Frontend — componentes e movimento
+
+- **Radix removido por completo** (ADR-023). 4 pacotes fora, um deles
+  (`react-select`) dependência morta desde a Fase 3. ~30 componentes próprios,
+  cada um com bloco `CONTRATO DE ACESSIBILIDADE` em PT-BR.
+- Maquinaria em `components/ui/_internal/`, **não reexportada**: focus trap,
+  dismiss, scroll lock, `inert`, portal, ancoragem e navegação de lista.
+- **`motion` 13** com hook central de `prefers-reduced-motion` e 8 padrões
+  (stagger só na primeira montagem, overlay com saída mais rápida que a entrada,
+  contador com spring, gráfico desenhando uma vez só).
+
+### Backend — métricas
+
+- **4 endpoints aditivos** (ADR-025): `summary`, `timeseries`, `insights`,
+  `comparison`. Nenhum contrato existente tocado.
+- **Histórico reconstruído sem migration**, de `Vulnerability.createdAt` +
+  `AuditLog.diffJson`.
+- Agregação 100% no banco. Risk score `Σ(cvss²/10)` documentado; MTTR por
+  mediana; aging em 4 faixas; insights determinísticos (IA continua fora,
+  ADR-017).
+- **Desempenho com 502 findings: 9 a 17 ms por endpoint** (limite: 500 ms).
+
+### Testes
+
+- Backend **225 → 247** (MET-01..18, TEN-14..17). Regressão das Fases 3-6 verde.
+- Frontend **0 → 24**, com Vitest + Testing Library + `axe-core`
+  (A11Y-01..14, TEMA-01..04, MOV-01..02, FILT-01..04, AXE-01).
+
+### Bugs encontrados durante a execução
+
+Cinco, todos silenciosos: colisão de chave entre `borderWidth` e `borderColor`
+no Tailwind; spread sobrescrevendo datas com `undefined` (zerava risk score e
+aging sem erro); `companyId` lido do JWT onde ele não existe (403 para todo
+CLIENT); `offsetParent` na armadilha de foco (errado para todo `position:
+fixed`); `Tabs` sem estado interno.
+
+### Pendências
+
+- ⚠️ **A extensão do Chrome não conectou** — a validação visual no navegador real
+  (10 itens) fica para o Rafael. Limitação L-10.
+- 🚧 O CP7 ficou parcial: as 13 telas usam os tokens novos e compilam, mas só 4
+  receberam o polimento de skeleton/vazio/erro. Task 6.5.11.
+- Acessibilidade provada em jsdom, **não** em leitor de tela real. Limitação L-09.
+
+### Documentos
+
+ADR-022 (Docker), ADR-023 (componentes próprios), ADR-024 (temas — **reverte** o
+corte de "toggle de tema"), ADR-025 (métricas). `docs/DESIGN_SYSTEM.md` criado —
+é o que a Fase 7 consome. `PRD_VIVO.md`, `docs/BACKLOG.md`,
+`docs/ROADMAP_PROMPTS.md`, `docs/DECISIONS.md`, `Fora do Escopo` e
+`Contexto Mestre v4` atualizados.

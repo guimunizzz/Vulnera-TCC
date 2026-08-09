@@ -15,6 +15,7 @@
 | 4 Projetos         | Application + Project + Member + telas             | ✅ concluída 2026-08-04 |
 | **5 Findings**     | **Vulnerability + Evidence** ⭐                    | ✅ concluída 2026-08-05 |
 | 6 Relatórios       | report-data + PDFs pdf-lib + dashboards            | ✅ concluída 2026-08-07 |
+| **6.5 Design System** | **Tokens OKLCH, componentes próprios, temas, métricas, dashboards** | ✅ concluída 2026-08-09 |
 | 7 Mobile           | Expo enxuto + Push                                 | 📋             |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 📋             |
 
@@ -95,11 +96,30 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 
 > ⚠️ **pdf-lib é imperativo.** Sem componentes React: cria-se o documento e desenha-se por coordenada. Gráficos são retângulos e linhas desenhados à mão. Reservar tempo de aprendizado na 6.4.
 
+## FASE 6.5 — Design System + Dashboards analíticos (~50h) — ✅ concluída em 2026-08-09
+
+| #    | Task                                                          | h  | Estado |
+| ---- | ------------------------------------------------------------- | -- | ------ |
+| 6.5.1 | Tokens OKLCH (7 rampas × 11 passos) + escalas + 3 temas       | 8  | ✅ primitivo × semântico imposto por build: `bg-iris-500` não compila |
+| 6.5.2 | `check-contrast.mjs` + calibragem WCAG dos dois temas         | 5  | ✅ 66 pares, 0 falhas; pegou 4 reprovações e 15 cores fora do gamut |
+| 6.5.3 | `/styleguide` com os dois temas lado a lado                   | 3  | ✅ só em dev (`import.meta.env.DEV`) |
+| 6.5.4 | ~30 componentes próprios + remoção do Radix                   | 14 | ✅ ADR-023; `react-select` era dependência morta |
+| 6.5.5 | Contrato de acessibilidade documentado e testado              | 5  | ✅ A11Y-01..14 + axe-core; achou bug no `offsetParent` |
+| 6.5.6 | Camada de movimento (`motion`) + `prefers-reduced-motion`     | 4  | ✅ hook central, 8 padrões |
+| 6.5.7 | Backend de métricas: 4 endpoints, agregação no banco          | 8  | ✅ ADR-025; sem migration |
+| 6.5.8 | Testes MET-01..18 + TEN-14..17 + desempenho com 500 findings  | 5  | ✅ 225 → 247; 9–17 ms por endpoint |
+| 6.5.9 | Dashboard de 4 abas + 5 gráficos tematizados                  | 8  | ✅ estado vazio desenhado, skeleton com a forma final, tooltip absoluto+relativo |
+| 6.5.10 | Filtros na URL + filtragem cruzada + chips                   | 5  | ✅ `useSearchParams` como fonte única; URL vence localStorage |
+| 6.5.11 | Migração das telas para os tokens                            | 6  | 🚧 tokens e componentes em todas as 13; **falta polimento de skeleton/vazio/erro** nas telas que só receberam a migração mecânica |
+| 6.5.12 | `seed-demo.ts` (90 findings em 90 dias)                      | 3  | ✅ semente fixa, idempotente, `--volume=500` |
+| 6.5.13 | Validação visual no navegador real                           | 3  | ❌ **bloqueada** — extensão do Chrome não conectou |
+| 6.5.14 | ADRs 022-025 + `docs/DESIGN_SYSTEM.md`                       | 4  | ✅ ADR-024 reverte o corte de "toggle de tema" |
+
 ## FASE 7 — Mobile enxuto (~24h)
 
 | #   | Task                                                     | h   | Estado |
 | --- | -------------------------------------------------------- | --- | ------ |
-| 7.1 | Bootstrap Expo + Router + client com SecureStore         | 6   | 📋     |
+| 7.1 | Bootstrap Expo + Router + client com SecureStore         | 6   | 📋 **ler `docs/DESIGN_SYSTEM.md` §8 antes** — os tokens vêm de lá, não se inventam |
 | 7.2 | Login + Home + ProjectDetail                             | 7   | 📋     |
 | 7.3 | FindingDetail read-only + Configurações                  | 5   | 📋     |
 | 7.4 | Push: migration + endpoint + registro + trigger CRITICAL | 6   | 📋     |
@@ -147,7 +167,8 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 
 ## Limitações conhecidas — Fase 5 (Vulnerability + Evidence)
 
-> Levantadas na sessão de endurecimento de **2026-08-07**. Todas foram
+> L-01..L-08 levantadas na sessão de endurecimento de **2026-08-07**; L-09..L-11 na Fase 6.5, em **2026-08-09**.
+> Contexto original: Todas foram
 > **encontradas, avaliadas e conscientemente não corrigidas** — cada uma tem o
 > motivo registrado. Material direto para a seção de limitações do README/DEMO
 > (task 8.7) e para a defesa na banca: saber onde o sistema não protege vale
@@ -162,6 +183,9 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 | L-05 | **Não há rota de DELETE para Evidence.** Uma evidência anexada por engano não pode ser removida pela API. | Criar a rota é **feature nova**, fora do escopo de uma sessão de endurecimento. | Anexar evidência errada exige refazer o finding ou remoção manual no banco. **Candidata a task da Fase 8.** |
 | L-06 | **`text/plain` aceita qualquer texto UTF-8**, inclusive HTML, SVG, JS ou script shell renomeados para `.txt`. | Texto não tem assinatura binária própria; distinguir "texto de log" de "texto que é código" exigiria heurística frágil e cheia de falso-positivo. | Servido sempre como `attachment` + `nosniff` + `Content-Type: text/plain` — o navegador não renderiza. Bytes de controle são recusados desde 2026-08-07. |
 | L-07 | **Sem rate limiting em nenhuma rota**, inclusive upload e login. | Fora do escopo do MVP; exigiria middleware novo e decisão sobre store (memória × Redis, e Redis está fora do escopo). | Limites de tamanho e de partes no multipart reduzem o custo por requisição. **Candidata a task da Fase 8.** |
+| L-09 | **A paridade de acessibilidade foi provada em jsdom, não em leitor de tela real.** NVDA e VoiceOver não foram testados. | Exigiria máquina com leitor de tela instalado e um protocolo de teste manual — fora do que uma sessão automatizada alcança. | 14 testes cobrindo role/ARIA/teclado/foco item a item do contrato, mais `axe-core` sem violações. O que NÃO se prova é a experiência de escuta: ordem de anúncio, verbosidade, se o texto faz sentido em voz alta. **Candidata a task da Fase 8.** |
+| L-10 | **A validação visual no navegador real não foi feita na Fase 6.5.** Aparência, responsividade em 375/768/1440 e console limpo não foram conferidos. | A extensão do Chrome não conectou na sessão (mesmo bloqueio da Fase 6). | Build e tipos limpos; 24 testes de frontend em jsdom; contraste medido matematicamente. **Pendente para o Rafael** — os 10 itens estão no bloqueio de 2026-08-09 do `PRD_VIVO.md`. |
+| L-11 | **O risk score da SÉRIE TEMPORAL é aproximado**, diferente do valor exato do `summary`. | Reconstruir o CVSS de cada finding aberto em cada período passado exigiria tabela de snapshot, que o ADR-025 evitou de propósito. | Serve para ver TENDÊNCIA, que é a função da linha. Está comentado no código, dito no ADR-025 e visível na interface. O `summary` — o número que a pessoa lê — é exato. |
 | L-08 | **Uploads ficam em disco local**, não em storage externo com versionamento. | Decisão de infraestrutura do MVP (`UPLOADS_DIR` + volume Docker). | Volume nomeado sobrevive a `docker compose down`; caminho sempre contido sob `UPLOADS_ROOT`. |
 
 ---
