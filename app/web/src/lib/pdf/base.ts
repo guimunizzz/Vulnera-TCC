@@ -380,7 +380,7 @@ export function severityColor(severity: string): RGB {
   return (COLORS.severity as Record<string, RGB>)[severity] ?? COLORS.severity.NONE;
 }
 
-// Mesmos rótulos PT-BR do SeverityBadge/FindingStatusBadge (components/ui) —
+// Mesmos rótulos PT-BR do SeverityBadge/StatusBadge (components/ui) —
 // fonte única pros dois PDFs não divergirem da UI nem entre si.
 export const SEVERITY_LABELS: Record<string, string> = {
   NONE: "Nenhuma",

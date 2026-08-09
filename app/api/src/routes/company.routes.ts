@@ -1,14 +1,17 @@
 import { Router } from "express";
 import { makeCompanyController } from "../factories/company.factory";
+import { makeMetricsController } from "../factories/metrics.factory";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/require-role.middleware";
 
 const router = Router();
 const controller = makeCompanyController();
+const metricsController = makeMetricsController();
 
 router.use(authMiddleware);
 
 // rota literal ANTES de paramétrica
+router.get("/me/metrics/comparison", (req, res) => metricsController.comparison(req, res));
 router.get("/me", (req, res) => controller.me(req, res));
 
 // listagem e detalhe por id: admin-only (CLIENT usa /me)

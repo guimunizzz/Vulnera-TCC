@@ -11,6 +11,7 @@ import { ProjectDetailPage } from "./pages/project-detail-page";
 import { FindingEditorPage } from "./pages/finding-editor-page";
 import { FindingDetailPage } from "./pages/finding-detail-page";
 import { PendingSubscriptionsPage } from "./pages/admin/pending-subscriptions-page";
+import { StyleguidePage } from "./pages/styleguide-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
 
@@ -20,6 +21,12 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/plans" element={<PlansPage />} />
+
+      {/* O styleguide é ferramenta de desenvolvimento e evidência para a banca,
+          não parte do produto. `import.meta.env.DEV` é avaliado em build time:
+          no bundle de produção o Vite elimina o ramo inteiro, e a página nem
+          sequer é empacotada. */}
+      {import.meta.env.DEV && <Route path="/styleguide" element={<StyleguidePage />} />}
 
       <Route element={<ProtectedRoute />}>
         <Route path="/onboarding" element={<OnboardingPage />} />

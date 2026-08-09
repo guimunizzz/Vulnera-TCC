@@ -96,7 +96,7 @@ export function NewAnalysisPage() {
 
         <div className="mb-6 flex gap-2">
           {STEPS.map((label, index) => (
-            <div key={label} className={cn("h-1 flex-1 rounded-full bg-border", index + 1 <= step && "bg-accent")} />
+            <div key={label} className={cn("h-1 flex-1 rounded-full bg-raised", index + 1 <= step && "bg-accent")} />
           ))}
         </div>
 
@@ -104,19 +104,19 @@ export function NewAnalysisPage() {
 
         {step === 1 && (
           <div className="flex flex-col gap-3">
-            {!applications?.length && <p className="text-sm text-muted">Nenhuma aplicação cadastrada ainda.</p>}
+            {!applications?.length && <p className="text-sm text-fg-muted">Nenhuma aplicação cadastrada ainda.</p>}
             {applications?.map((application) => (
               <button
                 key={application.id}
                 type="button"
                 onClick={() => setApplicationId(application.id)}
                 className={cn(
-                  "rounded-md border border-border p-4 text-left transition-colors hover:border-accent",
+                  "rounded-control border border-subtle p-4 text-left transition-colors hover:border-accent",
                   applicationId === application.id && "border-accent bg-accent/10",
                 )}
               >
-                <p className="font-medium text-foreground">{application.name}</p>
-                {application.url && <p className="text-sm text-muted">{application.url}</p>}
+                <p className="font-medium text-fg">{application.name}</p>
+                {application.url && <p className="text-sm text-fg-muted">{application.url}</p>}
               </button>
             ))}
             <Button onClick={goToType} className="mt-2">
@@ -133,16 +133,16 @@ export function NewAnalysisPage() {
                 type="button"
                 onClick={() => setAnalysisType(type.value)}
                 className={cn(
-                  "rounded-md border border-border p-4 text-left transition-colors hover:border-accent",
+                  "rounded-control border border-subtle p-4 text-left transition-colors hover:border-accent",
                   analysisType === type.value && "border-accent bg-accent/10",
                 )}
               >
-                <p className="font-medium text-foreground">{type.label}</p>
-                <p className="text-sm text-muted">{type.description}</p>
+                <p className="font-medium text-fg">{type.label}</p>
+                <p className="text-sm text-fg-muted">{type.description}</p>
               </button>
             ))}
             <div className="mt-2 flex gap-2">
-              <Button variant="secondary" onClick={() => setStep(1)}>
+              <Button variant="secundario" onClick={() => setStep(1)}>
                 Voltar
               </Button>
               <Button onClick={() => setStep(3)} className="flex-1">
@@ -155,7 +155,7 @@ export function NewAnalysisPage() {
         {step === 3 && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-foreground">Nível</span>
+              <span className="text-sm font-medium text-fg">Nível</span>
               <div className="flex gap-2">
                 {ANALYSIS_LEVELS.map((level) => (
                   <button
@@ -163,8 +163,8 @@ export function NewAnalysisPage() {
                     type="button"
                     onClick={() => setAnalysisLevel(level.value)}
                     className={cn(
-                      "flex-1 rounded-md border border-border py-2 text-sm transition-colors hover:border-accent",
-                      analysisLevel === level.value && "border-accent bg-accent/10 text-foreground",
+                      "flex-1 rounded-control border border-subtle py-2 text-sm transition-colors hover:border-accent",
+                      analysisLevel === level.value && "border-accent bg-accent/10 text-fg",
                     )}
                   >
                     {level.label}
@@ -174,13 +174,13 @@ export function NewAnalysisPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-foreground" htmlFor="scope-in">
+              <label className="text-sm font-medium text-fg" htmlFor="scope-in">
                 Escopo (dentro)
               </label>
               <textarea
                 id="scope-in"
                 rows={2}
-                className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 placeholder="Ex: /login, /checkout, API pública"
                 value={scopeIn}
                 onChange={(e) => setScopeIn(e.target.value)}
@@ -188,13 +188,13 @@ export function NewAnalysisPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-foreground" htmlFor="scope-out">
+              <label className="text-sm font-medium text-fg" htmlFor="scope-out">
                 Fora de escopo
               </label>
               <textarea
                 id="scope-out"
                 rows={2}
-                className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 placeholder="Ex: infraestrutura de terceiros"
                 value={scopeOut}
                 onChange={(e) => setScopeOut(e.target.value)}
@@ -202,7 +202,7 @@ export function NewAnalysisPage() {
             </div>
 
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setStep(2)}>
+              <Button variant="secundario" onClick={() => setStep(2)}>
                 Voltar
               </Button>
               <Button onClick={() => setStep(4)} className="flex-1">
@@ -214,31 +214,31 @@ export function NewAnalysisPage() {
 
         {step === 4 && (
           <div className="flex flex-col gap-4">
-            <label className="flex items-center gap-2 rounded-md border border-border p-4 text-sm">
+            <label className="flex items-center gap-2 rounded-control border border-subtle p-4 text-sm">
               <input
                 type="checkbox"
                 checked={hasRemediation}
                 onChange={(e) => setHasRemediation(e.target.checked)}
                 className="h-4 w-4 accent-accent"
               />
-              <span className="text-foreground">Incluir serviço de remediação</span>
+              <span className="text-fg">Incluir serviço de remediação</span>
             </label>
 
-            <div className="rounded-md border border-border p-4 text-sm">
+            <div className="rounded-control border border-subtle p-4 text-sm">
               <p>
-                <span className="text-muted">Aplicação:</span> {selectedApplication?.name}
+                <span className="text-fg-muted">Aplicação:</span> {selectedApplication?.name}
               </p>
               <p>
-                <span className="text-muted">Tipo:</span> {selectedType?.label}
+                <span className="text-fg-muted">Tipo:</span> {selectedType?.label}
               </p>
               <p>
-                <span className="text-muted">Nível:</span>{" "}
+                <span className="text-fg-muted">Nível:</span>{" "}
                 {ANALYSIS_LEVELS.find((l) => l.value === analysisLevel)?.label}
               </p>
             </div>
 
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setStep(3)} disabled={isSubmitting}>
+              <Button variant="secundario" onClick={() => setStep(3)} disabled={isSubmitting}>
                 Voltar
               </Button>
               <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">

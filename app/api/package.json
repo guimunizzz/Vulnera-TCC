@@ -16,7 +16,8 @@
     "prisma:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
     "db:seed": "tsx prisma/seed.ts",
-    "check": "npm run lint && npm run test"
+    "check": "npm run lint && npm run test",
+    "db:seed:demo": "tsx prisma/seed-demo.ts"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

@@ -20,14 +20,14 @@ import { useApiError } from "../hooks/use-api-error";
 import { useCompanyName } from "../hooks/use-company-name";
 import { calculateCvss } from "../lib/cvss";
 import { acharCaracteresNaoRenderizaveis } from "../lib/font-safety";
-import { Breadcrumb } from "../components/layout/breadcrumb";
+import { Breadcrumb } from "../components/ui/navigation";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
+import { Label } from "../components/ui/card";
 import { Textarea } from "../components/ui/textarea";
 import { Alert } from "../components/ui/alert";
-import { SeverityBadge } from "../components/ui/severity-badge";
-import { FindingStatusBadge } from "../components/ui/finding-status-badge";
+import { SeverityBadge } from "../components/ui/badge";
+import { StatusBadge } from "../components/ui/badge";
 import { OverrideSeverityDialog } from "../components/findings/override-severity-dialog";
 import { EvidenceUploader } from "../components/findings/evidence-uploader";
 import { CommentTimeline } from "../components/findings/comment-timeline";
@@ -149,29 +149,29 @@ export function FindingEditorPage() {
     onError: (err: unknown) => setFormError(getErrorMessage(err)),
   });
 
-  if (isEditMode && isLoading) return <p className="text-muted">Carregando...</p>;
+  if (isEditMode && isLoading) return <p className="text-fg-muted">Carregando...</p>;
 
   const transitions = existing ? ALLOWED_TRANSITIONS[existing.status] : [];
 
   return (
     <div>
       <Breadcrumb
-        items={[
-          { label: companyName ?? "Empresa" },
-          { label: project?.name ?? "Projeto", to: project ? `/projects/${project.id}` : undefined },
-          { label: isEditMode ? (existing?.title ?? "Finding") : "Novo finding" },
+        itens={[
+          { rotulo: companyName ?? "Empresa" },
+          { rotulo: project?.name ?? "Projeto", para: project ? `/projects/${project.id}` : undefined },
+          { rotulo: isEditMode ? (existing?.title ?? "Finding") : "Novo finding" },
         ]}
       />
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{isEditMode ? "Editar finding" : "Novo finding"}</h1>
+          <h1 className="text-2xl font-bold text-fg">{isEditMode ? "Editar finding" : "Novo finding"}</h1>
           {isEditMode && existing && (
             <div className="mt-2 flex items-center gap-2">
-              <FindingStatusBadge status={existing.status} />
-              <SeverityBadge severity={existing.severityFinal} />
+              <StatusBadge status={existing.status} />
+              <SeverityBadge severidade={existing.severityFinal} />
               {existing.severityFinal !== existing.severityCalculated && (
-                <span className="text-xs text-muted">(calculada: {existing.severityCalculated})</span>
+                <span className="text-xs text-fg-muted">(calculada: {existing.severityCalculated})</span>
               )}
             </div>
           )}
@@ -182,14 +182,14 @@ export function FindingEditorPage() {
             {transitions.map((toStatus) => (
               <Button
                 key={toStatus}
-                variant="secondary"
+                variant="secundario"
                 disabled={transitionMutation.isPending}
                 onClick={() => transitionMutation.mutate(toStatus)}
               >
                 {TRANSITION_LABELS[toStatus]}
               </Button>
             ))}
-            <Button variant="secondary" onClick={() => setIsOverrideOpen(true)}>
+            <Button variant="secundario" onClick={() => setIsOverrideOpen(true)}>
               Override de severidade
             </Button>
           </div>
@@ -201,11 +201,11 @@ export function FindingEditorPage() {
       {caracteresProblematicos.length > 0 && (
         <div
           role="status"
-          className="mt-4 rounded-md border border-severity-medium/40 bg-severity-medium/10 px-4 py-3 text-sm text-foreground"
+          className="mt-4 rounded-control border border-severity-medium/40 bg-severity-medium/10 px-4 py-3 text-sm text-fg"
         >
           <strong className="font-semibold">Atenção — caracteres não suportados no relatório PDF:</strong>{" "}
           <span className="font-mono">{caracteresProblematicos.join(" ")}</span>
-          <p className="mt-1 text-muted">
+          <p className="mt-1 text-fg-muted">
             Estes caracteres vão aparecer como <span className="font-mono">?</span> nos relatórios Executivo e Técnico
             (a fonte padrão do PDF cobre só o conjunto WinAnsi). O finding será salvo normalmente — troque-os se o texto
             precisar sair legível no relatório.
@@ -232,7 +232,7 @@ export function FindingEditorPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
-            <span className="text-xs text-muted">
+            <span className="text-xs text-fg-muted">
               {title.length}/{LIMITES.title}
             </span>
           </div>
@@ -244,7 +244,7 @@ export function FindingEditorPage() {
               required
               value={owaspCategory}
               onChange={(e) => setOwaspCategory(e.target.value)}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+              className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg"
             >
               <option value="" disabled>
                 Selecione...
@@ -270,13 +270,13 @@ export function FindingEditorPage() {
             <div className="flex items-center gap-2 text-sm">
               {livePreview ? (
                 <>
-                  <span className="text-foreground">Score: {livePreview.score.toFixed(1)}</span>
-                  <SeverityBadge severity={livePreview.severity} />
+                  <span className="text-fg">Score: {livePreview.score.toFixed(1)}</span>
+                  <SeverityBadge severidade={livePreview.severity} />
                 </>
               ) : cvssVector ? (
-                <span className="text-severity-critical">Vetor incompleto ou inválido</span>
+                <span className="text-severity-critical-ink">Vetor incompleto ou inválido</span>
               ) : (
-                <span className="text-muted">Preencha o vetor pra ver o cálculo em tempo real</span>
+                <span className="text-fg-muted">Preencha o vetor pra ver o cálculo em tempo real</span>
               )}
             </div>
           </div>
@@ -291,7 +291,7 @@ export function FindingEditorPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-            <span className="text-xs text-muted">
+            <span className="text-xs text-fg-muted">
               {description.length}/{LIMITES.description}
             </span>
           </div>
@@ -305,7 +305,7 @@ export function FindingEditorPage() {
               value={impact}
               onChange={(e) => setImpact(e.target.value)}
             />
-            <span className="text-xs text-muted">
+            <span className="text-xs text-fg-muted">
               {impact.length}/{LIMITES.impact}
             </span>
           </div>
@@ -319,13 +319,13 @@ export function FindingEditorPage() {
               value={recommendation}
               onChange={(e) => setRecommendation(e.target.value)}
             />
-            <span className="text-xs text-muted">
+            <span className="text-xs text-fg-muted">
               {recommendation.length}/{LIMITES.recommendation}
             </span>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => navigate(-1)}>
+            <Button type="button" variant="secundario" onClick={() => navigate(-1)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
@@ -342,16 +342,16 @@ export function FindingEditorPage() {
           {isEditMode && id ? (
             <>
               <div>
-                <h2 className="mb-3 font-semibold text-foreground">Evidências</h2>
+                <h2 className="mb-3 font-semibold text-fg">Evidências</h2>
                 <EvidenceUploader vulnerabilityId={id} canUpload />
               </div>
               <div>
-                <h2 className="mb-3 font-semibold text-foreground">Comentários</h2>
+                <h2 className="mb-3 font-semibold text-fg">Comentários</h2>
                 <CommentTimeline vulnerabilityId={id} />
               </div>
             </>
           ) : (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-fg-muted">
               Evidências, comentários e transições de status ficam disponíveis depois de salvar o finding.
             </p>
           )}

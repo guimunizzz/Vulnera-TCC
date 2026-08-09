@@ -15,7 +15,7 @@ import { companiesApi } from "../../lib/api/companies.api";
 import { subscriptionsApi } from "../../lib/api/subscriptions.api";
 import { vulnerabilitiesApi } from "../../lib/api/vulnerabilities.api";
 import { Card, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
+import { LinkButton } from "../ui/button";
 import { Alert } from "../ui/alert";
 import { KpiCard } from "./kpi-card";
 
@@ -60,7 +60,7 @@ export function AdminDashboard() {
   }, [findings, companies]);
 
   if (loadingCompanies || loadingActive || loadingPending || loadingFindings) {
-    return <p className="text-muted">Carregando...</p>;
+    return <p className="text-fg-muted">Carregando...</p>;
   }
 
   return (
@@ -71,7 +71,7 @@ export function AdminDashboard() {
         <KpiCard
           label="Críticos em aberto (global)"
           value={stats.criticalOpenGlobal}
-          accentClassName={stats.criticalOpenGlobal > 0 ? "text-severity-critical" : undefined}
+          accentClassName={stats.criticalOpenGlobal > 0 ? "text-severity-critical-ink" : undefined}
         />
       </div>
 
@@ -89,21 +89,19 @@ export function AdminDashboard() {
         <CardHeader>
           <CardTitle>Top empresas por volume de findings</CardTitle>
         </CardHeader>
-        {stats.topCompanies.length === 0 && <p className="text-sm text-muted">Nenhum finding registrado ainda.</p>}
+        {stats.topCompanies.length === 0 && <p className="text-sm text-fg-muted">Nenhum finding registrado ainda.</p>}
         <ul className="flex flex-col gap-2">
           {stats.topCompanies.map((c) => (
-            <li key={c.companyId} className="flex items-center justify-between rounded-md bg-background px-3 py-2 text-sm">
-              <span className="text-foreground">{c.name}</span>
-              <span className="text-muted">{c.count} finding{c.count > 1 ? "s" : ""}</span>
+            <li key={c.companyId} className="flex items-center justify-between rounded-control bg-canvas px-3 py-2 text-sm">
+              <span className="text-fg">{c.name}</span>
+              <span className="text-fg-muted">{c.count} finding{c.count > 1 ? "s" : ""}</span>
             </li>
           ))}
         </ul>
       </Card>
 
       <div>
-        <Button asChild variant="secondary">
-          <Link to="/admin/subscriptions">Ver assinaturas pendentes</Link>
-        </Button>
+        <LinkButton to="/admin/subscriptions"  variant="secundario">Ver assinaturas pendentes</LinkButton>
       </div>
     </div>
   );
