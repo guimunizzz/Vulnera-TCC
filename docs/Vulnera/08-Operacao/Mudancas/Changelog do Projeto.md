@@ -9,6 +9,48 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-08-10 (sessão 26 — Fase 7 implementada: Mobile enxuto + Push)
+
+### Objetivo
+
+Executar a Fase 7 completa (`docs/ROADMAP_PROMPTS.md`) — app mobile Expo read-only, exclusivo do CLIENT, herdando o design system da Fase 6.5, mais push notification via Expo Push Service disparado em finding CRITICAL. Branch `feat/fase-7-mobile`.
+
+### Mobile (`app/mobile`, do zero — só tinha `package.json`)
+
+1. **Bootstrap**: Expo SDK 57 + React 19 + `expo-router` (roteamento por arquivo) + TypeScript. Sem alias de import (`imports relativos sempre`, CLAUDE.md §13). `expo-doctor` rodado e usado pra corrigir 3 problemas reais antes de qualquer teste manual: `expo-font` faltando como peer dependency de `@expo/vector-icons`, versão errada desse pacote pro SDK instalado, e dois campos (`newArchEnabled`, `splash`) que não existem mais no schema do `app.json` dessa versão do Expo.
+2. **Tema**: `src/theme/tokens.ts` porta os valores de `app/web/src/styles/tokens.css` (só o tema escuro, único tema do produto) — OKLCH convertido pra hex sRGB com a matriz de Björn Ottosson (mesma fórmula do `oklch()` do navegador), calculado uma vez com um script Node e colado como constante, não em runtime. `docs/DESIGN_SYSTEM.md` §8 (escrita especificamente pra esta fase) foi conferida DEPOIS do tema já pronto — bateu na paleta/escala/vocabulário, mas apontou duas lacunas reais que ficaram de fora conscientemente: motion/`prefers-reduced-motion` e fontes customizadas via `expo-font` (Archivo/JetBrains Mono) — nenhum dos dois entrou, por serem polish e não correção, dentro do "escopo deliberadamente enxuto" que o próprio prompt pede.
+3. **Auth**: `store/auth.store.ts` — mesmo Zustand+persist do web, trocando `localStorage` por `expo-secure-store` (criptografado no Keychain/Keystore) via um adapter `StateStorage` pronto pra isso. `api/client.ts` espelha o interceptor de refresh-com-fila do web token por token.
+4. **5 telas, só as pedidas**: Login (sem register — ADR-004; bloqueia explicitamente ADMIN/PENTESTER, mobile é exclusivo do CLIENT), Home (lista de projetos, `TanStack Query`, pull-to-refresh), ProjectDetail (metadados + findings, sem filtro — não é paridade com o web), FindingDetail (severidade/CVSS, descrição/impacto/recomendação, evidências em carrossel — `<Image source={{uri,headers}}>`, token no header nunca na URL —, comentários), Configurações (status de push + logout com confirmação). Navegação por abas (Projetos/Configurações) com stack aninhado dentro da aba Projetos pro drill-down ganhar botão "voltar" nativo.
+5. **Acessibilidade**: pass básico nos componentes mais reutilizados (`Button`/`Card`) — `accessibilityRole`, `accessibilityLabel`, `accessibilityState`; ícones puramente decorativos (chevron) marcados como escondidos do leitor de tela. Não tem o rigor de teste automatizado que a Fase 6.5 tem no web.
+
+### Backend — Push
+
+1. **Migration `add_expo_push_token`**: `User.expoPushToken String?`. Gerada com `prisma migrate dev --create-only` (não aplica), diff mostrado ao Rafael, e só aplicada (banco de dev E de teste) depois de confirmação explícita — exatamente como pedido no prompt.
+2. **`POST /api/notifications/register-push`**: recurso `notification` enxuto — sem `model`/DTO dedicado (não existe entidade nova sendo serializada, só um campo em `User`), `service`/`controller`/`factory`/`routes` normais. Valida formato do token (`Expo(nent)?PushToken[...]`) antes de gravar.
+3. **`utils/push.util.ts`**: `sendPushToUsers(recipients, title, body, data?)` com `expo-server-sdk` — desvio do prompt (que descrevia `sendPushToUsers(userIds, ...)`): `recipients` é `{userId, expoPushToken}[]` já resolvido, porque um `util` (mesma família de `cvss.util`/`jwt.util`) não pode tocar banco (CLAUDE.md P1 — só `repositories/` importa Prisma). Quem resolve é `VulnerabilityService`, que já tem `UserRepository` injetado (`findClientsWithPushToken`, novo). Best-effort por design: nunca lança, token inválido vira `skipped`, falha de envio vira `failures[]`.
+4. **Hook em `VulnerabilityService.create`**: severidade final CRITICAL dispara push pros CLIENT da company com token registrado, sempre dentro de `try/catch` isolado — falha de push (rede, token morto, Expo fora do ar) fica só num `console.error`, nunca desfaz a criação do finding já concluída e auditada.
+5. **Achado de infra corrigido**: `expo-server-sdk` publica só build ESM (`import ... from "node:assert"` sem transpilar) — o Jest (CommonJS) quebrava com "Cannot use import statement outside a module" em QUALQUER teste que subisse o Express, porque a cadeia `app.ts → routes.ts → vulnerability.routes.ts → vulnerability.service.ts → push.util.ts` chega lá. Resolvido com mock manual global (`jest.config.ts` → `moduleNameMapper` mapeando `expo-server-sdk` pra `tests/mocks/expo-server-sdk.ts`) — uma correção só pra toda a suíte, que de quebra já cumpre o "mock do envio, não bater na API da Expo" pedido no PUSH-02.
+
+### Testes
+
+13 novos: `notification.test.ts` (4 — PUSH-01: token salvo, formato inválido 400, sem auth 401, token sobrescrito num 2º registro), `vulnerability-push.test.ts` (3 — PUSH-02: CRITICAL dispara o envio de verdade pro CLIENT com token via spy em `Expo.prototype.sendPushNotificationsAsync`, não-CRITICAL não dispara nada, CLIENT sem token registrado não gera destinatário nem quebra a criação), `push.util.test.ts` (5 unitários isolados — token válido enviado, formato inválido pulado sem chamar o SDK, ticket de erro do Expo vira `failures` sem lançar, exceção do SDK idem, lista vazia não chama o SDK). Total **259/259**. Cobertura: `notification.service.ts` 100%, `push.util.ts` 100% statements/lines (66% branch — só os `??` de fallback de um `recipient` desalinhado, que não acontece na prática dado o cursor sempre sincronizado).
+
+### Smoke (sem Chrome — não se aplica a app nativo; sem device físico — fora do alcance do agente)
+
+Três camadas de validação headless: (1) `tsc --noEmit` + eslint limpos; (2) `expo-doctor` (achou e corrigiu os 3 problemas reais listados acima); (3) `npx expo export --platform android` compilou os 1441 módulos do bundle completo sem erro — prova que toda a árvore de rotas do `expo-router` e os componentes resolvem de verdade, não só que o TypeScript tipa certo. Ambiente deixado pronto pro Rafael terminar a validação com o corpo real: API e web rodando localmente (não os containers Docker, que estavam com build de dois dias atrás sem o endpoint de push — trocado pro modo "Desenvolvimento" do ADR-022, `db`/`mailhog` no Docker + `npm run dev` local), `npx expo start` ativo esperando conexão, `.env` do mobile já apontando pro IP da rede Wi-Fi da máquina (`10.87.169.58:3001/api` — `localhost` não funciona no celular físico, só no emulador com endereço especial).
+
+### Limitações conhecidas / decisões autônomas
+
+- ⚠️ **Smoke manual no Expo Go não foi feito** — abrir o app num celular físico, logar, navegar até um finding e ver o push de um CRITICAL criado pelo web chegando no aparelho exige hardware real. Fica pendente pro Rafael, com o ambiente todo já de pé.
+- Sem motion/`prefers-reduced-motion` nem fontes customizadas (Archivo/JetBrains Mono) — `docs/DESIGN_SYSTEM.md` §8 recomendava portar os dois; decisão consciente de não fazer isso, dentro do "escopo deliberadamente enxuto" do prompt da fase.
+- RN24 do vault (push filtrável por categoria, com preferências por usuário) não foi implementada — o checkpoint da fase só pediu "logout e status de notificações" na tela de Configurações, sem toggle por categoria. Mesma lógica de simplificação já usada em fases anteriores quando o vault descreve um modelo mais completo do que o prompt da fase pede.
+- Duplicação de `react` entre workspaces (`react@18.3.1` no web, `react@19.2.3` no mobile) — `expo-doctor` aponta como aviso, mas é inevitável: os dois apps têm requisitos de versão genuinamente diferentes, e é assim que `npm workspaces` resolve isso corretamente (nested `node_modules` em vez de hoist quebrado). Sem efeito prático em Expo Go/managed workflow.
+
+### Pendente
+
+- PR `feat/fase-7-mobile` → `develop` — Rafael abre manualmente.
+- Smoke manual no Expo Go (celular físico) — ver acima.
+
 ## 2026-08-07 (sessão 25 — Endurecimento da Fase 5)
 
 ### Objetivo

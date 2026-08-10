@@ -58,15 +58,16 @@ datasource db {
 // role: "ADMIN" | "PENTESTER" | "CLIENT"
 // companyRole: "OWNER" | "MEMBER" | null (somente CLIENTs têm companyRole)
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  password    String // bcrypt cost 12 — NUNCA armazenar em claro
-  name        String
-  role        String   @default("CLIENT")
-  companyId   String?
-  companyRole String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String // bcrypt cost 12 — NUNCA armazenar em claro
+  name          String
+  role          String   @default("CLIENT")
+  companyId     String?
+  companyRole   String?
+  expoPushToken String? // Fase 7 — token do Expo Push Service; null até o app mobile registrar (POST /notifications/register-push)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   company             Company?               @relation(fields: [companyId], references: [id])
   refreshTokens       RefreshToken[]
