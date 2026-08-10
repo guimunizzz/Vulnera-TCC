@@ -31,3 +31,40 @@ Interface principal web para operação administrativa e uso do cliente.
 - gestão de projetos
 - visualização de findings
 - geração de relatórios client-side
+
+---
+
+> [!warning] Atualizado na Fase 6.5 (2026-08-09) — a stack mudou
+>
+> **Radix removido.** A biblioteca de componentes é própria: ~30 componentes em
+> `app/web/src/components/ui/`, cada um com contrato de acessibilidade escrito e
+> testado. Ver [[ADR-023 - Biblioteca de componentes propria em vez de Radix]].
+>
+> **Design tokens em OKLCH**, com três temas (dark/light/system) e contraste WCAG
+> medido por ferramenta que falha o build. Ver
+> [[ADR-024 - Sistema de temas com tokens OKLCH]].
+>
+> **`motion` adicionado** para a camada de movimento.
+>
+> **Testes de frontend passaram a existir**: Vitest + Testing Library +
+> `axe-core`.
+
+## Stack real (2026-08-09)
+
+| Camada | Escolha |
+|---|---|
+| Build | Vite 5 |
+| UI | React 18 · **biblioteca de componentes própria** (sem Radix) |
+| Estilo | Tailwind 3.4 sobre design tokens em OKLCH (`src/styles/tokens.css`) |
+| Fontes | Archivo Variable (interface) · JetBrains Mono Variable (dados) |
+| Movimento | `motion` 13 |
+| Roteamento | `react-router-dom` 6 |
+| Estado de servidor | TanStack Query 5 |
+| Estado de cliente | Zustand 5 |
+| HTTP | Axios, com fila de refresh concorrente |
+| Gráficos | Recharts 3, tematizado pelos tokens em tempo de execução |
+| PDF | pdf-lib, client-side ([[ADR-003 - PDF gerado no cliente]]) |
+| Testes | Vitest · Testing Library · axe-core |
+
+**Especificação completa do design system: `docs/DESIGN_SYSTEM.md`.**
+É o documento que a Fase 7 (mobile) consome.

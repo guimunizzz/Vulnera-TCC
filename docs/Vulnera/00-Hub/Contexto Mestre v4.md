@@ -41,7 +41,7 @@ Atores: `ADMIN` · `CLIENT` · `PENTESTER` → ver [[Roles]] e [[Matriz de Permi
 |---|---|
 | **Prazo** | **3 meses** (~13 semanas), entrega 25/10/2026 |
 | Progresso | **Fases 0-6 concluídas.** Backend: schema completo (19 models), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember, Vulnerability+Evidence+VulnerabilityComment (núcleo do produto — CVSS 3.1 manual, upload validado por magic number, AuditLog completo), report-data consolidado (RN18) + Report metadata + `GET /subscriptions/active`. Frontend: bootstrapado na Fase 3, com telas de Login/Register/Dashboard(3 variantes por role)/Plans/Onboarding/PendingSubscriptions/Applications/NewAnalysis/Projects/ProjectDetail(+aba Relatórios)/Findings/FindingEditor/FindingDetail funcionando ponta a ponta. PDF Executivo e Técnico gerados 100% client-side com pdf-lib (ADR-003), validados com dados reais do banco de dev (smoke headless via `vite.ssrLoadModule`, já que a extensão do Chrome não conectou nesta sessão — inspeção visual no navegador real fica pendente). |
-| Fase atual | **Fase 7 — Mobile enxuto + Push**, a próxima |
+| Fase atual | **Fase 7 — Mobile enxuto + Push**, a próxima. A Fase 6.5 (design system, biblioteca de componentes própria, temas e dashboards analíticos) foi inserida ANTES dela de propósito: o mobile herda os tokens de `docs/DESIGN_SYSTEM.md` em vez de inventar os próprios. |
 | Modo de execução | Solo-delegado: Rafael supervisiona, Claude Code executa |
 | Branch de integração | `develop` |
 
@@ -62,7 +62,14 @@ Detalhamento em [[Roadmap Fases]] e [[Roadmap MVP]] — ambos também pendentes 
 | Testes | Jest + Supertest (integração) |
 
 ### Frontend web
-React + Vite + Tailwind + Radix + TanStack Query + Zustand + Axios + Recharts + **pdf-lib**.
+React + Vite + Tailwind + TanStack Query + Zustand + Axios + Recharts + **pdf-lib** + **motion**.
+
+> [!warning] **Radix removido na Fase 6.5** (2026-08-09)
+> A biblioteca de componentes é própria — ~30 componentes em
+> `app/web/src/components/ui/`, com contrato de acessibilidade escrito e testado.
+> Ver [[ADR-023 - Biblioteca de componentes propria em vez de Radix]].
+> Design tokens em OKLCH com três temas: [[ADR-024 - Sistema de temas com tokens OKLCH]].
+> Especificação completa em `docs/DESIGN_SYSTEM.md` — **é o que a Fase 7 consome**.
 
 ### Mobile
 Expo + React Native + Expo Router + expo-secure-store.
@@ -193,6 +200,9 @@ Não resolver sozinho. Notas que dependem delas ficam marcadas como pendentes.
 | **F-02** | Provedor de IA continua Gemini? | [[ADR-011 - Provedor de IA em revisao]] |
 | **F-03** | Quais domínios e controles de maturidade? | [[ADR-013 - Dominios de maturidade em aberto]] |
 
+> [!note] F-01 respondida na prática
+> O Factory Method segue obrigatório e foi aplicado também ao recurso de métricas da Fase 6.5 (`metrics.factory.ts`). Ver [[Adr 019 factory method confirmado]].
+
 ---
 
 ## Processo
@@ -210,7 +220,9 @@ Ordem de limpeza no `cleanDatabase()`:
 
 ## Fora do escopo do MVP
 
-Chat em tempo real (Socket.IO) · tickets de suporte · e-mail transacional · reset de senha · pagamento real · Redis/filas · i18n · toggle de tema · deploy em produção · Prometheus · Grafana · zod `[FUTURO]` · middleware global de erro `[FUTURO]`.
+Chat em tempo real (Socket.IO) · tickets de suporte · e-mail transacional · reset de senha · pagamento real · Redis/filas · i18n · deploy em produção · Prometheus · Grafana · zod `[FUTURO]` · middleware global de erro `[FUTURO]`.
+
+> ~~toggle de tema~~ — **restaurado na Fase 6.5**, ver [[ADR-024 - Sistema de temas com tokens OKLCH]].
 
 Ver [[Fora do Escopo]].
 

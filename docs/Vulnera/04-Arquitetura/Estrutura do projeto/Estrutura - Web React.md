@@ -301,3 +301,45 @@ Ao gerar front-end, o Claude deve:
 - priorizar fluxo funcional
 - manter consistência visual simples
 - conectar telas aos módulos documentados
+
+---
+
+> [!warning] Estrutura atualizada na Fase 6.5 (2026-08-09)
+
+```
+app/web/
+├── index.html               # script inline de tema (antes do 1º paint)
+├── tailwind.config.ts       # expõe SÓ tokens semânticos
+├── vitest.config.ts
+├── scripts/
+│   └── check-contrast.mjs   # mede WCAG lendo tokens.css; falha o build
+└── src/
+    ├── styles/
+    │   ├── tokens.css       # FONTE ÚNICA: cor, tipo, espaço, raio, motion
+    │   └── base.css         # regras de base (depois do preflight)
+    ├── design/              # tema: theme.ts, provider, toggle
+    ├── motion/              # tokens.ts, use-motion.ts, components.tsx
+    ├── components/
+    │   ├── ui/              # ~30 componentes + index.ts (barril)
+    │   │   └── _internal/   # focus trap, dismiss, portal, ancoragem…
+    │   │                    #   NÃO reexportado — é maquinaria, não API
+    │   ├── metrics/         # chart-shell, charts, kpi-card, filter-bar
+    │   ├── layout/          # app-layout, sidebar, protected-route
+    │   └── findings/
+    ├── hooks/               # use-filtros-metricas (URL como fonte única)
+    ├── lib/api/             # um arquivo por recurso + client.ts
+    ├── pages/               # uma por rota (+ styleguide, só em dev)
+    ├── test/                # setup.ts e sistema.test.tsx
+    ├── types/
+    └── store/
+```
+
+**Duas regras estruturais que valem registrar:**
+
+1. `components/ui/_internal/` **não** é reexportado pelo barril. Uma tela que
+   importasse `useFocusTrap` estaria construindo um overlay fora do contrato de
+   acessibilidade.
+2. `styles/base.css` é importado no `main.tsx` **depois** do `index.css`, não por
+   `@import`. O preflight do Tailwind reseta `body` e títulos; se base.css viesse
+   antes, o reset apagaria tudo o que ele define. E um `@import` no fim do
+   `index.css` seria inválido — a spec exige `@import` antes de qualquer regra.

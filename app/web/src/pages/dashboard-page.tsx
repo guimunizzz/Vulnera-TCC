@@ -16,8 +16,8 @@ export function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-foreground">Olá, {user?.name}</h1>
-      <p className="mt-1 text-muted">Bem-vindo à Vulnera. Esta é a sua área de trabalho.</p>
+      <h1 className="text-2xl font-bold text-fg">Olá, {user?.name}</h1>
+      <p className="mt-1 text-fg-muted">Bem-vindo à Vulnera. Esta é a sua área de trabalho.</p>
 
       <div className="mt-6">
         {user?.role === "CLIENT" && <ClientDashboard />}

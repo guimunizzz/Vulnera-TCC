@@ -6,7 +6,7 @@ import { plansApi } from "../../lib/api/plans.api";
 import { useApiError } from "../../hooks/use-api-error";
 import { Button } from "../../components/ui/button";
 import { Alert } from "../../components/ui/alert";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../components/ui/dialog";
+import { Dialog, DialogDescription, DialogTitle } from "../../components/ui/dialog";
 import type { Subscription } from "../../types/subscription.types";
 
 type PendingAction = { subscription: Subscription; type: "approve" | "reject" } | null;
@@ -55,21 +55,21 @@ export function PendingSubscriptionsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-foreground">Assinaturas pendentes</h1>
-      <p className="mt-1 text-muted">Aprove ou recuse os pedidos de assinatura das empresas.</p>
+      <h1 className="text-2xl font-bold text-fg">Assinaturas pendentes</h1>
+      <p className="mt-1 text-fg-muted">Aprove ou recuse os pedidos de assinatura das empresas.</p>
 
       {error && <Alert className="mt-4">{error}</Alert>}
 
-      {isLoading && <p className="mt-6 text-muted">Carregando...</p>}
+      {isLoading && <p className="mt-6 text-fg-muted">Carregando...</p>}
 
       {!isLoading && subscriptions?.length === 0 && (
-        <p className="mt-6 text-muted">Nenhuma assinatura pendente no momento.</p>
+        <p className="mt-6 text-fg-muted">Nenhuma assinatura pendente no momento.</p>
       )}
 
       {!isLoading && subscriptions && subscriptions.length > 0 && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-border">
+        <div className="mt-6 overflow-hidden rounded-container border border-subtle">
           <table className="w-full text-left text-sm">
-            <thead className="bg-surface text-muted">
+            <thead className="bg-surface text-fg-muted">
               <tr>
                 <th className="px-4 py-3 font-medium">Empresa</th>
                 <th className="px-4 py-3 font-medium">Plano</th>
@@ -79,19 +79,19 @@ export function PendingSubscriptionsPage() {
             </thead>
             <tbody>
               {subscriptions.map((sub) => (
-                <tr key={sub.id} className="border-t border-border">
-                  <td className="px-4 py-3 text-foreground">{companyName(sub.companyId)}</td>
-                  <td className="px-4 py-3 text-foreground">{planName(sub.planId)}</td>
-                  <td className="px-4 py-3 text-muted">{new Date(sub.createdAt).toLocaleString("pt-BR")}</td>
+                <tr key={sub.id} className="border-t border-subtle">
+                  <td className="px-4 py-3 text-fg">{companyName(sub.companyId)}</td>
+                  <td className="px-4 py-3 text-fg">{planName(sub.planId)}</td>
+                  <td className="px-4 py-3 text-fg-muted">{new Date(sub.createdAt).toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <Button
-                        variant="secondary"
+                        variant="secundario"
                         onClick={() => setPendingAction({ subscription: sub, type: "approve" })}
                       >
                         Aprovar
                       </Button>
-                      <Button variant="danger" onClick={() => setPendingAction({ subscription: sub, type: "reject" })}>
+                      <Button variant="destrutivo" onClick={() => setPendingAction({ subscription: sub, type: "reject" })}>
                         Recusar
                       </Button>
                     </div>
@@ -103,8 +103,8 @@ export function PendingSubscriptionsPage() {
         </div>
       )}
 
-      <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
-        <DialogContent>
+      <Dialog aberto={pendingAction !== null} aoFechar={() => setPendingAction(null)}>
+        <>
           <DialogTitle>{pendingAction?.type === "approve" ? "Aprovar assinatura?" : "Recusar assinatura?"}</DialogTitle>
           <DialogDescription>
             {pendingAction?.type === "approve"
@@ -112,18 +112,18 @@ export function PendingSubscriptionsPage() {
               : "O pedido de assinatura será recusado."}
           </DialogDescription>
           <div className="mt-6 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setPendingAction(null)} disabled={isMutating}>
+            <Button variant="secundario" onClick={() => setPendingAction(null)} disabled={isMutating}>
               Cancelar
             </Button>
             <Button
-              variant={pendingAction?.type === "approve" ? "primary" : "danger"}
+              variant={pendingAction?.type === "approve" ? "primario" : "destrutivo"}
               onClick={confirmAction}
               disabled={isMutating}
             >
               {isMutating ? "Processando..." : "Confirmar"}
             </Button>
           </div>
-        </DialogContent>
+        </>
       </Dialog>
     </div>
   );

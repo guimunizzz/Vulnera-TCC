@@ -1,18 +1,17 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import { applicationsApi } from "../lib/api/applications.api";
 import { subscriptionsApi } from "../lib/api/subscriptions.api";
 import { plansApi } from "../lib/api/plans.api";
 import { getApiErrorCode, useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
 import { useCompanyName } from "../hooks/use-company-name";
-import { Breadcrumb } from "../components/layout/breadcrumb";
-import { Button } from "../components/ui/button";
+import { Breadcrumb } from "../components/ui/navigation";
+import { Button, LinkButton } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
+import { Label } from "../components/ui/card";
 import { Alert } from "../components/ui/alert";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../components/ui/dialog";
+import { Dialog, DialogDescription, DialogTitle } from "../components/ui/dialog";
 import type { Application } from "../types/application.types";
 
 export function ApplicationsPage() {
@@ -85,12 +84,12 @@ export function ApplicationsPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: companyName ?? "Empresa" }, { label: "Aplicações" }]} />
+      <Breadcrumb itens={[{ rotulo: companyName ?? "Empresa" }, { rotulo: "Aplicações" }]} />
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Aplicações</h1>
-          <p className="mt-1 text-muted">
+          <h1 className="text-2xl font-bold text-fg">Aplicações</h1>
+          <p className="mt-1 text-fg-muted">
             {currentPlan
               ? `${applications?.length ?? 0}/${currentPlan.maxApplications} aplicações do plano ${currentPlan.name}`
               : "Cadastre as aplicações que serão analisadas."}
@@ -106,16 +105,16 @@ export function ApplicationsPage() {
         className="mt-6 max-w-sm"
       />
 
-      {isLoading && <p className="mt-6 text-muted">Carregando...</p>}
+      {isLoading && <p className="mt-6 text-fg-muted">Carregando...</p>}
 
       {!isLoading && filtered.length === 0 && (
-        <p className="mt-6 text-muted">Nenhuma aplicação encontrada.</p>
+        <p className="mt-6 text-fg-muted">Nenhuma aplicação encontrada.</p>
       )}
 
       {!isLoading && filtered.length > 0 && (
-        <div className="mt-4 overflow-hidden rounded-lg border border-border">
+        <div className="mt-4 overflow-hidden rounded-container border border-subtle">
           <table className="w-full text-left text-sm">
-            <thead className="bg-surface text-muted">
+            <thead className="bg-surface text-fg-muted">
               <tr>
                 <th className="px-4 py-3 font-medium">Nome</th>
                 <th className="px-4 py-3 font-medium">URL</th>
@@ -125,17 +124,20 @@ export function ApplicationsPage() {
             </thead>
             <tbody>
               {filtered.map((application) => (
-                <tr key={application.id} className="border-t border-border">
-                  <td className="px-4 py-3 text-foreground">{application.name}</td>
-                  <td className="px-4 py-3 text-muted">{application.url ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted">{application.environment}</td>
+                <tr key={application.id} className="border-t border-subtle">
+                  <td className="px-4 py-3 text-fg">{application.name}</td>
+                  <td className="px-4 py-3 text-fg-muted">{application.url ?? "—"}</td>
+                  <td className="px-4 py-3 text-fg-muted">{application.environment}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      <Button variant="secondary" asChild>
-                        <Link to={`/new-analysis?applicationId=${application.id}`}>Nova análise</Link>
-                      </Button>
+                      <LinkButton variant="secundario" size="sm" to={`/applications/${application.id}/dashboard`}>
+                        Painel
+                      </LinkButton>
+                      <LinkButton variant="secundario" size="sm" to={`/new-analysis?applicationId=${application.id}`}>
+                        Nova análise
+                      </LinkButton>
                       {role !== "PENTESTER" && (
-                        <Button variant="danger" onClick={() => setDeleteTarget(application)}>
+                        <Button variant="destrutivo" onClick={() => setDeleteTarget(application)}>
                           Remover
                         </Button>
                       )}
@@ -148,8 +150,8 @@ export function ApplicationsPage() {
         </div>
       )}
 
-      <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (!open) resetForm(); }}>
-        <DialogContent>
+      <Dialog aberto={isCreateOpen} aoFechar={() => { setIsCreateOpen(false); resetForm(); }}>
+        <>
           <DialogTitle>Nova aplicação</DialogTitle>
           <DialogDescription>Cadastre o alvo que será analisado.</DialogDescription>
 
@@ -184,7 +186,7 @@ export function ApplicationsPage() {
             </div>
 
             <div className="mt-2 flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)}>
+              <Button type="button" variant="secundario" onClick={() => setIsCreateOpen(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
@@ -192,28 +194,28 @@ export function ApplicationsPage() {
               </Button>
             </div>
           </form>
-        </DialogContent>
+        </>
       </Dialog>
 
-      <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent>
+      <Dialog aberto={deleteTarget !== null} aoFechar={() => setDeleteTarget(null)}>
+        <>
           <DialogTitle>Remover aplicação?</DialogTitle>
           <DialogDescription>
             &quot;{deleteTarget?.name}&quot; deixará de aparecer na lista. Isso libera uma vaga no limite do plano.
           </DialogDescription>
           <div className="mt-6 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending}>
+            <Button variant="secundario" onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending}>
               Cancelar
             </Button>
             <Button
-              variant="danger"
+              variant="destrutivo"
               onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Removendo..." : "Remover"}
             </Button>
           </div>
-        </DialogContent>
+        </>
       </Dialog>
     </div>
   );

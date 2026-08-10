@@ -1,0 +1,576 @@
+/* ==========================================================================
+   tokens.css — Design tokens do Vulnera
+   --------------------------------------------------------------------------
+   O QUE É
+   A única fonte da verdade visual do produto. Cor, tipografia, espaçamento,
+   raio, borda, elevação e movimento nascem aqui e em nenhum outro lugar.
+
+   POR QUE EXISTE
+   Antes da Fase 6.5 havia 9 cores em hex dentro do tailwind.config.ts, num
+   tema só. Trocar de tema era impossível sem tocar em componente, e o mobile
+   da Fase 7 ia inventar a própria paleta. Este arquivo resolve os dois: o
+   tema troca em `:root[data-theme]` sem componente saber, e o mobile lê daqui.
+
+   QUEM USA
+   - `tailwind.config.ts`, que expõe os semânticos como classes utilitárias
+   - `scripts/check-contrast.mjs`, que mede o contraste WCAG lendo este arquivo
+   - `docs/DESIGN_SYSTEM.md`, que documenta como consumir
+   - Fase 7 (mobile), que porta os mesmos valores
+
+   ==========================================================================
+   AS DUAS CAMADAS — e por que a distinção não é burocracia
+   ==========================================================================
+   PRIMITIVO  (`--iris-500`)  = "esta é a cor violeta, passo 500".
+                                 Não diz onde se usa. Não muda com o tema.
+   SEMÂNTICO  (`--color-accent`) = "esta é a cor de ação".
+                                 Aponta para um primitivo, e aponta para
+                                 OUTRO primitivo quando o tema muda.
+
+   🎯 REGRA INVIOLÁVEL: componente usa SOMENTE semântico.
+      Um `bg-iris-500` num botão prega aquele botão ao tema escuro para
+      sempre — é exatamente o bug que esta fase veio consertar.
+
+   ==========================================================================
+   FORMATO DOS VALORES — por que "0.59 0.204 292" e não "oklch(...)"
+   ==========================================================================
+   Os tokens de cor guardam só os TRÊS COMPONENTES do OKLCH, sem a função.
+   Isso é o que permite ao Tailwind aplicar opacidade:
+
+       // tailwind.config.ts
+       accent: "oklch(var(--color-accent) / <alpha-value>)"
+       // habilita bg-accent, bg-accent/50, text-accent/80...
+
+   Se o token guardasse `oklch(0.59 0.204 292)` inteiro, `bg-accent/50` não
+   funcionaria sem relative color syntax (`oklch(from ...)`), que é recente
+   demais para se depender dela.
+
+   ⚠️ EXCEÇÃO: tokens que JÁ embutem alpha (scrim, tints de hover) guardam a
+   cor inteira e NÃO aceitam o modificador de opacidade do Tailwind. Estão
+   marcados um a um lá embaixo.
+
+   ==========================================================================
+   POR QUE OKLCH E NÃO HEX
+   ==========================================================================
+   Em OKLCH o L é lightness PERCEPTUAL: dois tons com o mesmo L parecem ter
+   o mesmo brilho, mesmo em matizes diferentes. Em hex/HSL isso é falso —
+   `hsl(60 100% 50%)` (amarelo) é muito mais claro que `hsl(240 100% 50%)`
+   (azul) apesar do mesmo "50%". Como a rampa de severidade atravessa
+   vermelho→laranja→amarelo→azul, é justamente onde HSL mente mais. Com OKLCH
+   dá para fixar uma "espinha de lightness" comum a todos os matizes e ter
+   badges que pesam igual na tela.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. PRIMITIVOS — as rampas
+   --------------------------------------------------------------------------
+   Todas as rampas cromáticas compartilham a MESMA espinha de lightness
+   (o passo 500 tem sempre L≈0.60, o 900 sempre L≈0.29, etc). É isso que faz
+   um chip CRITICAL e um chip LOW terem o mesmo peso visual.
+
+   A crominância varia por matiz porque o gamut sRGB não é uniforme: amarelo
+   satura muito em L alto e quase nada em L baixo; azul o contrário. Forçar a
+   mesma crominância em todos produziria cores fora do gamut, que o navegador
+   clampa — e cor clampada é cor que mente. `npm run check:contrast` avisa.
+   ========================================================================== */
+
+:root {
+  /* --- Neutros (matiz 255 — slate frio) ---------------------------------
+     Não são cinzas puros: carregam 0.002–0.018 de crominância no mesmo eixo
+     frio do acento. Cinza puro ao lado de violeta parece esverdeado por
+     contraste simultâneo; um neutro levemente frio faz a tela ler como um
+     sistema só, e não como "cinza com adesivos coloridos". */
+  --neutral-50: 0.985 0.002 255;
+  --neutral-100: 0.967 0.004 255;
+  --neutral-200: 0.928 0.006 255;
+  --neutral-300: 0.869 0.009 255;
+  --neutral-400: 0.715 0.013 255;
+  --neutral-500: 0.585 0.016 255;
+  --neutral-600: 0.470 0.018 255;
+  --neutral-700: 0.372 0.018 255;
+  --neutral-800: 0.272 0.017 255;
+  --neutral-900: 0.218 0.015 255;
+  --neutral-950: 0.170 0.013 255;
+
+  /* --- Iris (matiz 292 — a cor de AÇÃO) ---------------------------------
+     Violeta foi escolhido por eliminação, não por gosto: num produto de
+     segurança o vermelho é CRITICAL, o laranja é HIGH, o âmbar é MEDIUM, o
+     azul é LOW e o verde é "remediado". Violeta é o único matiz a mais de
+     30° de todos eles — ou seja, o único que nunca compete com o dado.
+     Ver docs/DESIGN_SYSTEM.md §Direção estética. */
+  --iris-50: 0.970 0.009 292; /* #f5f4fb */
+  --iris-100: 0.932 0.022 292; /* #e8e6f7 */
+  --iris-200: 0.876 0.048 292; /* #d6d1f4 */
+  --iris-300: 0.795 0.102 292; /* #bdb0f9 */
+  --iris-400: 0.706 0.157 292; /* #a38bf9 */
+  --iris-500: 0.596 0.200 292; /* #855fea */
+  --iris-600: 0.520 0.200 292; /* #7046cf */
+  --iris-700: 0.442 0.200 292; /* #5b2bb5 */
+  --iris-800: 0.362 0.182 292; /* #461592 */
+  --iris-900: 0.290 0.143 292; /* #310e6a */
+  --iris-950: 0.222 0.102 292; /* #1f0a45 */
+
+  /* --- Vermelho (matiz 27) — CRITICAL / destrutivo / erro ---------------- */
+  --red-50: 0.970 0.008 27; /* #faf3f2 */
+  --red-100: 0.932 0.022 27; /* #f7e3e1 */
+  --red-200: 0.876 0.048 27; /* #f4cbc5 */
+  --red-300: 0.795 0.106 27; /* #f9a197 */
+  --red-400: 0.706 0.173 27; /* #f96e63 */
+  --red-500: 0.596 0.210 27; /* #e13331 */
+  --red-600: 0.520 0.197 27; /* #c11c1f */
+  --red-700: 0.442 0.168 27; /* #9b1416 */
+  --red-800: 0.362 0.133 27; /* #741111 */
+  --red-900: 0.290 0.104 27; /* #540b0b */
+  --red-950: 0.222 0.075 27; /* #370706 */
+
+  /* --- Laranja (matiz 55) — HIGH ----------------------------------------
+     A crominância despenca abaixo de L 0.60: no gamut sRGB o laranja só é
+     realmente saturado por volta de L 0.70. Daí o passo 400 ser o mais vivo
+     da rampa, e não o 500 como nas outras. */
+  --orange-50: 0.970 0.010 55; /* #fbf3ef */
+  --orange-100: 0.932 0.025 55; /* #f7e5d9 */
+  --orange-200: 0.876 0.056 55; /* #f4cdb4 */
+  --orange-300: 0.795 0.123 55; /* #f9a66c */
+  --orange-400: 0.706 0.163 55; /* #eb8023 */
+  --orange-500: 0.596 0.137 55; /* #bb651b */
+  --orange-600: 0.520 0.120 55; /* #9c5313 */
+  --orange-700: 0.442 0.102 55; /* #7d410d */
+  --orange-800: 0.362 0.081 55; /* #5d300b */
+  --orange-900: 0.290 0.063 55; /* #432207 */
+  --orange-950: 0.222 0.045 55; /* #2b1505 */
+
+  /* --- Âmbar (matiz 85) — MEDIUM ----------------------------------------
+     O matiz mais problemático da rampa. Amarelo só existe com crominância
+     alta em L ≥ 0.79; escurecido vira oliva. Por isso o chip MEDIUM no tema
+     claro carrega o matiz no FUNDO (âmbar-100, inequivocamente amarelo) e usa
+     o texto escuro só como texto — a identidade da cor não depende dele. */
+  --amber-50: 0.970 0.018 85; /* #fbf4e8 */
+  --amber-100: 0.932 0.045 85; /* #f6e7c7 */
+  --amber-200: 0.876 0.098 85; /* #f4d28a */
+  --amber-300: 0.795 0.147 85; /* #e7b435 */
+  --amber-400: 0.706 0.135 85; /* #c79823 */
+  --amber-500: 0.596 0.114 85; /* #9e791a */
+  --amber-600: 0.520 0.099 85; /* #836414 */
+  --amber-700: 0.442 0.084 85; /* #684f0e */
+  --amber-800: 0.362 0.067 85; /* #4e3a0b */
+  --amber-900: 0.290 0.052 85; /* #372907 */
+  --amber-950: 0.222 0.038 85; /* #231904 */
+
+  /* --- Azul (matiz 258) — LOW -------------------------------------------
+     258 e não 255 (dos neutros): parece pouco, mas o que separa os dois é a
+     crominância (0.19 contra 0.016), não o matiz. 258 foi escolhido por outro
+     motivo — é onde o gamut sRGB é mais largo para azul, e em 245 o teto de
+     crominância cai a 0.15, o que deixaria o chip LOW visivelmente mais
+     apagado que os outros quatro. */
+  --blue-50: 0.970 0.008 258; /* #f2f5fb */
+  --blue-100: 0.932 0.020 258; /* #e0e9f6 */
+  --blue-200: 0.876 0.044 258; /* #c5d8f4 */
+  --blue-300: 0.795 0.094 258; /* #97bef9 */
+  --blue-400: 0.706 0.144 258; /* #65a1f9 */
+  --blue-500: 0.596 0.190 258; /* #287bed */
+  --blue-600: 0.520 0.179 258; /* #1464cd */
+  --blue-700: 0.442 0.152 258; /* #0e4fa5 */
+  --blue-800: 0.362 0.121 258; /* #0b3b7b */
+  --blue-900: 0.290 0.095 258; /* #072959 */
+  --blue-950: 0.222 0.068 258; /* #051a3a */
+
+  /* --- Verde (matiz 155) — sucesso / remediado / série "resolvidos" ------
+     Teto de crominância em 0.15, abaixo do que o gamut permite: verde muito
+     saturado sobre fundo escuro vira néon e rouba atenção de CRITICAL, que é
+     exatamente o inverso da hierarquia que a tela precisa comunicar. */
+  --green-50: 0.970 0.026 155; /* #e8fbee */
+  --green-100: 0.932 0.069 155; /* #c5f7d5 */
+  --green-200: 0.876 0.150 155; /* #7bf3aa */
+  --green-300: 0.795 0.150 155; /* #5fd891 */
+  --green-400: 0.706 0.150 155; /* #3dbb76 */
+  --green-500: 0.596 0.137 155; /* #209659 */
+  --green-600: 0.520 0.120 155; /* #187c49 */
+  --green-700: 0.442 0.102 155; /* #116339 */
+  --green-800: 0.362 0.081 155; /* #0e4a2a */
+  --green-900: 0.290 0.063 155; /* #09341d */
+  --green-950: 0.222 0.045 155; /* #062111 */
+
+  /* ========================================================================
+     2. TIPOGRAFIA
+     ------------------------------------------------------------------------
+     PAR DE FONTES
+     Archivo (sans) — grotesca com x-height alta e aberturas fechadas. Aguenta
+     13–14px em tabela densa sem fechar os contornos, e tem personalidade
+     suficiente para não parecer "o default". Variável: um arquivo, 100–900.
+
+     JetBrains Mono (mono) — desenhada para leitura de código em sessão longa.
+     Aqui ela não é enfeite: um vetor `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H`
+     e um id `cuid()` só são conferíveis se `0`/`O` e `1`/`l`/`I` forem
+     inconfundíveis — que é exatamente o que ela resolve.
+
+     ESCALA MODULAR 1.200 (terça menor), ancorada em 0.875rem = 14px.
+     Não há valor solto: todo tamanho é um passo da razão.
+     ⚠️ `--text-xs` (11.7px) é reservado a MICRO-RÓTULO em caixa alta com
+     tracking aumentado — nunca a texto corrido. Corpo e tabela param no `sm`.
+     ====================================================================== */
+
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-xs: 0.729rem; /* 11.67px — micro-rótulo caixa alta */
+  --text-sm: 0.875rem; /* 14.00px — CORPO E TABELA (base da escala) */
+  --text-base: 1.05rem; /* 16.80px */
+  --text-lg: 1.26rem; /* 20.16px */
+  --text-xl: 1.512rem; /* 24.19px */
+  --text-2xl: 1.815rem; /* 29.03px */
+  --text-3xl: 2.177rem; /* 34.84px */
+  --text-4xl: 2.613rem; /* 41.80px */
+
+  /* Entrelinha cai conforme o corpo sobe — texto grande com leading de texto
+     pequeno parece frouxo, e vice-versa. */
+  --leading-xs: 1.4;
+  --leading-sm: 1.5;
+  --leading-base: 1.55;
+  --leading-lg: 1.4;
+  --leading-xl: 1.3;
+  --leading-2xl: 1.2;
+  --leading-3xl: 1.15;
+  --leading-4xl: 1.1;
+
+  /* Tracking por intenção. Corpo tamanho pequeno não leva tracking; título
+     grande fecha (senão "espalha"); micro-rótulo em caixa alta abre (senão
+     as maiúsculas colam). */
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.06em;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ========================================================================
+     3. ESPAÇAMENTO — escala de 4px, sem exceções
+     ------------------------------------------------------------------------
+     Sem meio-passo. O Tailwind traz 0.5/1.5/2.5/3.5 (2px/6px/10px/14px) por
+     padrão; foram REMOVIDOS no tailwind.config.ts. Meio-passo é a porta de
+     entrada do alinhamento "quase certo" que ninguém consegue justificar.
+     ====================================================================== */
+
+  --space-0: 0px;
+  --space-1: 0.25rem; /*  4px */
+  --space-2: 0.5rem; /*  8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
+  --space-20: 5rem; /* 80px */
+  --space-24: 6rem; /* 96px */
+
+  /* Alvo mínimo de toque (WCAG 2.5.5 / 2.5.8). Todo controle interativo
+     alcança 44px de altura ou área clicável — inclusive os "densos", que
+     usam padding invisível para chegar lá. */
+  --size-touch-target: 2.75rem; /* 44px */
+
+  /* ========================================================================
+     4. RAIO — três níveis, nomeados por INTENÇÃO
+     ------------------------------------------------------------------------
+     Nome por tamanho (`sm`/`md`/`lg`) obriga a decidir de novo a cada uso.
+     Nome por intenção decide uma vez: é controle? é contêiner? é overlay?
+     ====================================================================== */
+
+  --radius-control: 0.375rem; /*  6px — botão, input, chip, checkbox */
+  --radius-container: 0.625rem; /* 10px — card, painel, bloco de tabela */
+  --radius-overlay: 0.875rem; /* 14px — dialog, popover, drawer, toast */
+  --radius-full: 9999px; /*        avatar, pill, indicador */
+
+  /* ========================================================================
+     5. BORDA — três níveis, também por intenção
+     ====================================================================== */
+
+  --border-width: 1px;
+  --border-width-strong: 2px; /* estado selecionado / foco */
+
+  /* ========================================================================
+     6. MOVIMENTO
+     ------------------------------------------------------------------------
+     🎯 Nenhum componente inventa duração própria. Se um valor daqui não
+     serve, o valor está errado — corrija AQUI, não no componente.
+
+     Saída é sempre mais rápida que entrada: um overlay que demora a sumir faz
+     a interface inteira parecer pesada, porque o usuário já decidiu e está
+     esperando. Entrada ~base, saída ~fast.
+     ====================================================================== */
+
+  --duration-instant: 80ms; /* feedback de press, troca de cor de estado */
+  --duration-fast: 140ms; /* saída de overlay, hover */
+  --duration-base: 200ms; /* entrada de overlay, transição de conteúdo */
+  --duration-slow: 320ms; /* entrada de painel grande, drawer */
+  --duration-chart: 700ms; /* ÚNICA duração acima de 400ms: desenho de gráfico */
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* padrão: sai rápido, assenta */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* passa do ponto e volta */
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1); /* entrada com ênfase */
+
+  /* Física de spring para o `motion` (CP3). Centralizada aqui para que
+     `useMotionTokens()` leia daqui em vez de espalhar números pelos arquivos. */
+  --spring-stiffness: 320;
+  --spring-damping: 30;
+
+  /* ========================================================================
+     7. CAMADAS (z-index) — nomeado, para acabar com z-[9999]
+     ====================================================================== */
+
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-dropdown: 40;
+  --z-overlay: 50;
+  --z-modal: 60;
+  --z-toast: 70;
+
+}
+
+/* ==========================================================================
+   8. SEMÂNTICOS — TEMA ESCURO (padrão)
+   --------------------------------------------------------------------------
+   Escuro é o padrão porque a ferramenta é usada por horas em ambiente de
+   trabalho técnico, e porque o dado colorido (severidade) tem mais alcance
+   sobre fundo escuro: uma fatia vermelha sobre slate 0.17 salta; sobre branco
+   compete com o próprio branco.
+
+   O fundo NÃO é preto puro. #000 com texto branco produz halation (o texto
+   "vaza" nas bordas em telas LCD) e, em OLED, smearing ao rolar. L 0.17 dá
+   praticamente o mesmo contraste sem nenhum dos dois.
+
+   ⚠️ POR QUE `[data-theme]` E NÃO `:root[data-theme]`
+   Sem o `:root` na frente, o seletor casa com QUALQUER elemento — o que permite
+   temar uma subárvore. É o que faz a `/styleguide` conseguir mostrar os dois
+   temas lado a lado na mesma página, e é como se testa contraste sem trocar o
+   tema da aplicação inteira.
+
+   Não há conflito de cascata entre os dois blocos abaixo, mesmo com a mesma
+   especificidade: um elemento carrega `data-theme="dark"` OU `light`, nunca os
+   dois. Como custom property é herdada, uma subárvore com o atributo próprio
+   simplesmente sobrepõe o que herdou do ancestral.
+
+   O `:root` no primeiro seletor é a rede de segurança: se o script inline do
+   index.html falhar e nenhum atributo for estampado, a página fica escura em
+   vez de ficar sem cor nenhuma.
+   ========================================================================== */
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* --- Superfícies -------------------------------------------------------
+     No escuro, elevação é LIGHTNESS: cada nível sobe ~0.05 de L. Sombra quase
+     não lê sobre fundo escuro — quem informa "isto está por cima" é o tom. */
+  --color-bg-canvas: var(--neutral-950); /* a página */
+  --color-bg-surface: var(--neutral-900); /* card, painel */
+  --color-bg-raised: var(--neutral-800); /* item destacado dentro do card */
+  --color-bg-overlay: var(--neutral-800); /* dialog, popover, dropdown */
+  --color-bg-inset: 0.140 0.012 255; /* poço: input, code block, track */
+
+  /* --- Texto ------------------------------------------------------------- */
+  --color-text-primary: var(--neutral-50);
+  --color-text-secondary: var(--neutral-300);
+  --color-text-muted: var(--neutral-400);
+  --color-text-inverted: var(--neutral-950); /* sobre fundo claro sólido */
+
+  /* --- Bordas ------------------------------------------------------------
+     subtle  = separador DENTRO de uma superfície (linha de tabela)
+     default = a aresta de um card
+     strong  = aresta de controle e estado selecionado (3:1 obrigatório) */
+  --color-border-subtle: var(--neutral-800);
+  --color-border-default: 0.330 0.018 255;
+  --color-border-strong: var(--neutral-500); /* 600 mede só 2.55:1 — reprovado */
+
+  /* --- Ação -------------------------------------------------------------
+     O preenchimento é o passo 600 nos DOIS temas, e não o 500 no escuro: com
+     o 500 o texto branco mede 4.18:1 sobre o botão, abaixo do AA. O que muda
+     por tema é a direção do hover — no escuro ele CLAREIA (500), no claro
+     ESCURECE (700). Hover sempre se afasta do fundo; se andasse na direção do
+     fundo, o botão pareceria recuar ao ser apontado. */
+  --color-accent: var(--iris-600); /* preenchimento do botão primário */
+  --color-accent-hover: var(--iris-500);
+  --color-accent-active: var(--iris-700);
+  --color-accent-fg: var(--neutral-50); /* texto SOBRE o acento */
+  --color-accent-ink: var(--iris-300); /* link / texto de ação */
+  --color-accent-surface: var(--iris-950); /* fundo tingido de seleção */
+  --color-focus-ring: var(--iris-400);
+
+  /* --- Estados ----------------------------------------------------------- */
+  --color-success: var(--green-500);
+  --color-success-ink: var(--green-300);
+  --color-success-surface: var(--green-950);
+  --color-warning: var(--amber-500);
+  --color-warning-ink: var(--amber-300);
+  --color-warning-surface: var(--amber-950);
+  --color-danger: var(--red-600); /* mesma razão do acento: 500 reprova */
+  --color-danger-hover: var(--red-500);
+  --color-danger-fg: var(--neutral-50);
+  --color-danger-ink: var(--red-300);
+  --color-danger-surface: var(--red-950);
+
+  /* --- Severidade -------------------------------------------------------
+     Três papéis por severidade, e eles NÃO são intercambiáveis:
+       (sem sufixo) = preenchimento de gráfico  → mínimo 3:1 vs superfície
+       -text        = texto                     → mínimo 4.5:1
+       -surface     = fundo tingido do chip     → o -text tem que passar SOBRE ele
+     Medido em scripts/check-contrast.mjs, nos dois temas. */
+  --color-severity-critical: var(--red-500);
+  --color-severity-critical-ink: var(--red-300);
+  --color-severity-critical-surface: var(--red-900);
+  --color-severity-high: var(--orange-400);
+  --color-severity-high-ink: var(--orange-300);
+  --color-severity-high-surface: var(--orange-900);
+  --color-severity-medium: var(--amber-400);
+  --color-severity-medium-ink: var(--amber-300);
+  --color-severity-medium-surface: var(--amber-900);
+  --color-severity-low: var(--blue-500);
+  --color-severity-low-ink: var(--blue-300);
+  --color-severity-low-surface: var(--blue-900);
+  --color-severity-info: var(--neutral-500);
+  --color-severity-info-ink: var(--neutral-300);
+  --color-severity-info-surface: var(--neutral-800);
+
+  /* --- Séries de gráfico não-semânticas ---------------------------------
+     Para dimensões SEM significado próprio (categoria OWASP, aplicação). Nunca
+     reutilize cor de severidade aqui: um A01 pintado de vermelho seria lido
+     como "crítico" por qualquer pessoa que já viu a outra tela. */
+  --color-chart-1: var(--iris-400);
+  --color-chart-2: var(--blue-400);
+  --color-chart-3: var(--green-400);
+  --color-chart-4: var(--amber-400);
+  --color-chart-5: var(--orange-400);
+  --color-chart-6: var(--red-400);
+  --color-chart-grid: var(--neutral-800);
+  --color-chart-axis: var(--neutral-500);
+
+  /* --- Tokens com alpha embutido ----------------------------------------
+     ⚠️ Guardam a cor INTEIRA (não só L C H). Não aceitam `/opacidade` do
+     Tailwind — se precisar de outra opacidade, crie outro token. */
+  --color-scrim: oklch(0 0 0 / 0.66);
+  --color-bg-hover: oklch(1 0 0 / 0.055);
+  --color-bg-active: oklch(1 0 0 / 0.09);
+  --color-skeleton-base: oklch(var(--neutral-800));
+  --color-skeleton-sheen: oklch(1 0 0 / 0.06);
+
+  /* --- Elevação ---------------------------------------------------------
+     No escuro a sombra é discreta de propósito (o trabalho pesado é do tom da
+     superfície) e vem acompanhada de um anel escuro que separa a peça do
+     fundo mesmo quando os dois são escuros. */
+  --elevation-raised: 0 1px 2px oklch(0 0 0 / 0.4), 0 0 0 1px oklch(0 0 0 / 0.3);
+  --elevation-overlay: 0 10px 30px -8px oklch(0 0 0 / 0.6), 0 2px 8px -2px oklch(0 0 0 / 0.45), 0 0 0 1px oklch(0 0 0 / 0.4);
+  --elevation-modal: 0 28px 64px -16px oklch(0 0 0 / 0.72), 0 10px 24px -10px oklch(0 0 0 / 0.55), 0 0 0 1px oklch(0 0 0 / 0.45);
+}
+
+/* ==========================================================================
+   9. SEMÂNTICOS — TEMA CLARO
+   --------------------------------------------------------------------------
+   NÃO é o tema escuro invertido. Três coisas mudam de mecanismo:
+
+   1. ELEVAÇÃO. No escuro é lightness; no claro é SOMBRA. Card branco sobre
+      página branca só existe porque projeta sombra — subir mais o L não tem
+      para onde ir.
+   2. SEVERIDADE. As cores da Fase 3 foram calibradas contra #0a0a0a e falham
+      em branco (laranja e âmbar claros chegam a 2:1). Aqui o preenchimento de
+      gráfico desce para o passo 500/600 e o texto para 700/800.
+   3. HIERARQUIA DO FUNDO. No escuro a página é o tom mais ESCURO e o card
+      sobe. No claro a página é levemente CINZA e o card sobe para quase
+      branco — invertido de propósito, senão o card some.
+   ========================================================================== */
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-bg-canvas: var(--neutral-100);
+  --color-bg-surface: var(--neutral-50);
+  --color-bg-raised: var(--neutral-50); /* mesmo tom; quem eleva é a sombra */
+  --color-bg-overlay: var(--neutral-50);
+  --color-bg-inset: var(--neutral-100);
+
+  --color-text-primary: var(--neutral-900);
+  --color-text-secondary: var(--neutral-700);
+  --color-text-muted: var(--neutral-600);
+  --color-text-inverted: var(--neutral-50);
+
+  --color-border-subtle: var(--neutral-200);
+  --color-border-default: var(--neutral-300);
+  --color-border-strong: var(--neutral-500); /* 400 não alcança 3:1 no claro */
+
+  --color-accent: var(--iris-600);
+  --color-accent-hover: var(--iris-700);
+  --color-accent-active: var(--iris-800);
+  --color-accent-fg: var(--neutral-50);
+  --color-accent-ink: var(--iris-700);
+  --color-accent-surface: var(--iris-50);
+  --color-focus-ring: var(--iris-600);
+
+  --color-success: var(--green-600);
+  --color-success-ink: var(--green-700);
+  --color-success-surface: var(--green-50);
+  --color-warning: var(--amber-600);
+  --color-warning-ink: var(--amber-800);
+  --color-warning-surface: var(--amber-50);
+  --color-danger: var(--red-600);
+  --color-danger-hover: var(--red-700);
+  --color-danger-fg: var(--neutral-50);
+  --color-danger-ink: var(--red-700);
+  --color-danger-surface: var(--red-50);
+
+  --color-severity-critical: var(--red-600);
+  --color-severity-critical-ink: var(--red-700);
+  --color-severity-critical-surface: var(--red-100);
+  --color-severity-high: var(--orange-600);
+  --color-severity-high-ink: var(--orange-700);
+  --color-severity-high-surface: var(--orange-100);
+  --color-severity-medium: var(--amber-600);
+  --color-severity-medium-ink: var(--amber-800);
+  --color-severity-medium-surface: var(--amber-100);
+  --color-severity-low: var(--blue-600);
+  --color-severity-low-ink: var(--blue-700);
+  --color-severity-low-surface: var(--blue-100);
+  --color-severity-info: var(--neutral-500);
+  --color-severity-info-ink: var(--neutral-700);
+  --color-severity-info-surface: var(--neutral-200);
+
+  --color-chart-1: var(--iris-600);
+  --color-chart-2: var(--blue-600);
+  --color-chart-3: var(--green-600);
+  --color-chart-4: var(--amber-600);
+  --color-chart-5: var(--orange-600);
+  --color-chart-6: var(--red-600);
+  --color-chart-grid: var(--neutral-200);
+  --color-chart-axis: var(--neutral-500);
+
+  --color-scrim: oklch(0.218 0.015 255 / 0.44);
+  --color-bg-hover: oklch(0.218 0.015 255 / 0.05);
+  --color-bg-active: oklch(0.218 0.015 255 / 0.09);
+  --color-skeleton-base: oklch(var(--neutral-200));
+  --color-skeleton-sheen: oklch(1 0 0 / 0.75);
+
+  --elevation-raised: 0 1px 2px oklch(0.218 0.015 255 / 0.08), 0 0 0 1px oklch(0.218 0.015 255 / 0.06);
+  --elevation-overlay: 0 10px 30px -8px oklch(0.218 0.015 255 / 0.16), 0 2px 8px -2px oklch(0.218 0.015 255 / 0.1),
+    0 0 0 1px oklch(0.218 0.015 255 / 0.08);
+  --elevation-modal: 0 28px 64px -16px oklch(0.218 0.015 255 / 0.24), 0 10px 24px -10px oklch(0.218 0.015 255 / 0.14),
+    0 0 0 1px oklch(0.218 0.015 255 / 0.1);
+}
+
+/* ==========================================================================
+   10. MOVIMENTO REDUZIDO
+   --------------------------------------------------------------------------
+   `prefers-reduced-motion: reduce` NÃO significa "sem feedback" — significa
+   trocar deslocamento e escala por opacidade, e encurtar. Zerar as durações
+   aqui, na raiz, faz toda animação CSS obedecer de uma vez; o lado JS
+   (`motion`) obedece pelo hook `useReducedMotion` (ver src/motion/).
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 1ms;
+    --duration-fast: 1ms;
+    --duration-base: 1ms;
+    --duration-slow: 1ms;
+    --duration-chart: 1ms;
+  }
+}

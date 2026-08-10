@@ -7,7 +7,7 @@ import { subscriptionsApi } from "../lib/api/subscriptions.api";
 import { useApiError } from "../hooks/use-api-error";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
+import { Label } from "../components/ui/card";
 import { Alert } from "../components/ui/alert";
 import { Card, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { cn } from "../lib/cn";
@@ -69,7 +69,7 @@ export function OnboardingPage() {
 
   if (done) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="flex min-h-dvh items-center justify-center bg-canvas px-4">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>Empresa cadastrada!</CardTitle>
@@ -84,7 +84,7 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-canvas px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Configure sua empresa</CardTitle>
@@ -95,7 +95,7 @@ export function OnboardingPage() {
 
         <div className="mb-6 flex gap-2">
           {STEPS.map((label, index) => (
-            <div key={label} className={cn("h-1 flex-1 rounded-full bg-border", index + 1 <= step && "bg-accent")} />
+            <div key={label} className={cn("h-1 flex-1 rounded-full bg-raised", index + 1 <= step && "bg-accent")} />
           ))}
         </div>
 
@@ -128,18 +128,18 @@ export function OnboardingPage() {
                 type="button"
                 onClick={() => setPlanId(plan.id)}
                 className={cn(
-                  "rounded-md border border-border p-4 text-left transition-colors hover:border-accent",
+                  "rounded-control border border-subtle p-4 text-left transition-colors hover:border-accent",
                   planId === plan.id && "border-accent bg-accent/10",
                 )}
               >
-                <p className="font-medium text-foreground">{plan.name}</p>
-                <p className="text-sm text-muted">
+                <p className="font-medium text-fg">{plan.name}</p>
+                <p className="text-sm text-fg-muted">
                   Até {plan.maxApplications} aplicações · {plan.maxProjects} projetos
                 </p>
               </button>
             ))}
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setStep(1)}>
+              <Button variant="secundario" onClick={() => setStep(1)}>
                 Voltar
               </Button>
               <Button onClick={goToConfirmation} className="flex-1">
@@ -151,21 +151,21 @@ export function OnboardingPage() {
 
         {step === 3 && (
           <div className="flex flex-col gap-4">
-            <div className="rounded-md border border-border p-4 text-sm">
+            <div className="rounded-control border border-subtle p-4 text-sm">
               <p>
-                <span className="text-muted">Empresa:</span> {name}
+                <span className="text-fg-muted">Empresa:</span> {name}
               </p>
               {cnpj && (
                 <p>
-                  <span className="text-muted">CNPJ:</span> {cnpj}
+                  <span className="text-fg-muted">CNPJ:</span> {cnpj}
                 </p>
               )}
               <p>
-                <span className="text-muted">Plano:</span> {selectedPlan?.name}
+                <span className="text-fg-muted">Plano:</span> {selectedPlan?.name}
               </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setStep(2)} disabled={isSubmitting}>
+              <Button variant="secundario" onClick={() => setStep(2)} disabled={isSubmitting}>
                 Voltar
               </Button>
               <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">

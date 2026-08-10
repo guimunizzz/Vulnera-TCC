@@ -12,8 +12,8 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { vulnerabilitiesApi } from "../../lib/api/vulnerabilities.api";
 import { Card, CardHeader, CardTitle } from "../ui/card";
-import { SeverityBadge } from "../ui/severity-badge";
-import { FindingStatusBadge } from "../ui/finding-status-badge";
+import { SeverityBadge } from "../ui/badge";
+import { StatusBadge } from "../ui/badge";
 import { KpiCard } from "./kpi-card";
 import { SeverityDonut } from "./severity-donut";
 
@@ -36,7 +36,7 @@ export function ClientDashboard() {
     return { total, remediated, criticalOpen, bySeverity, recent };
   }, [findings]);
 
-  if (isLoading) return <p className="text-muted">Carregando...</p>;
+  if (isLoading) return <p className="text-fg-muted">Carregando...</p>;
 
   const remediatedPct = stats.total > 0 ? Math.round((stats.remediated / stats.total) * 100) : 0;
 
@@ -45,7 +45,7 @@ export function ClientDashboard() {
       <div className="grid gap-4 sm:grid-cols-3">
         <KpiCard label="Total de findings" value={stats.total} />
         <KpiCard label="Remediados" value={`${remediatedPct}%`} />
-        <KpiCard label="Críticos em aberto" value={stats.criticalOpen} accentClassName={stats.criticalOpen > 0 ? "text-severity-critical" : undefined} />
+        <KpiCard label="Críticos em aberto" value={stats.criticalOpen} accentClassName={stats.criticalOpen > 0 ? "text-severity-critical-ink" : undefined} />
       </div>
 
       <Card>
@@ -59,16 +59,16 @@ export function ClientDashboard() {
         <CardHeader>
           <CardTitle>Findings mais recentes</CardTitle>
         </CardHeader>
-        {stats.recent.length === 0 && <p className="text-sm text-muted">Nenhum finding registrado ainda.</p>}
+        {stats.recent.length === 0 && <p className="text-sm text-fg-muted">Nenhum finding registrado ainda.</p>}
         <ul className="flex flex-col gap-2">
           {stats.recent.map((f) => (
-            <li key={f.id} className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2">
-              <Link to={`/findings/${f.id}`} className="truncate text-sm text-foreground hover:text-accent hover:underline">
+            <li key={f.id} className="flex items-center justify-between gap-3 rounded-control bg-canvas px-3 py-2">
+              <Link to={`/findings/${f.id}`} className="truncate text-sm text-fg hover:text-accent-ink hover:underline">
                 {f.title}
               </Link>
               <div className="flex shrink-0 gap-2">
-                <SeverityBadge severity={f.severityFinal} />
-                <FindingStatusBadge status={f.status} />
+                <SeverityBadge severidade={f.severityFinal} />
+                <StatusBadge status={f.status} />
               </div>
             </li>
           ))}

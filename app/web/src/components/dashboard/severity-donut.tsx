@@ -20,7 +20,7 @@ export function SeverityDonut({ bySeverity }: SeverityDonutProps) {
     .filter((d) => d.value > 0);
 
   if (data.length === 0) {
-    return <p className="text-sm text-muted">Sem findings suficientes para o gráfico.</p>;
+    return <p className="text-sm text-fg-muted">Sem findings suficientes para o gráfico.</p>;
   }
 
   return (
@@ -44,8 +44,8 @@ export function SeverityDonut({ bySeverity }: SeverityDonutProps) {
         {data.map((d) => (
           <li key={d.key} className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SEVERITY_HEX[d.key] }} />
-            <span className="text-foreground">{d.name}</span>
-            <span className="text-muted">({d.value})</span>
+            <span className="text-fg">{d.name}</span>
+            <span className="text-fg-muted">({d.value})</span>
           </li>
         ))}
       </ul>

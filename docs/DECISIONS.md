@@ -336,3 +336,76 @@ Ver [[ADR-021 - Maquina de Vulnerability com 4 estados]].
 ---
 
 _Toda decisão vira regra escrita no CLAUDE.md. Toda exceção vira nova decisão neste arquivo._
+
+---
+
+## Fase 6.5 — Design System + Dashboards analíticos (2026-08-09)
+
+Quatro decisões arquiteturais, todas com ADR próprio em
+`docs/Vulnera/07-Decisoes/`.
+
+### ADR-022 — Stack completa no Docker Compose
+
+**Contexto:** o compose da raiz foi ampliado na sessão de 2026-08-07 (commit
+`c131aef`, "unificando docker — não finalizado") sem ADR, e o número 021 que ele
+referenciava foi ocupado por outra decisão no mesmo dia.
+
+**Decisão:** o `docker-compose.yml` da raiz é o único e descreve a stack inteira,
+com dois modos suportados — `up -d db mailhog` + `npm run dev` (dia a dia) e
+`up --build` (demonstração). **Não existe compose em `app/api`**; prompt que
+mandar `cd app/api && docker compose` está desatualizado.
+
+**Alternativa descartada:** manter só banco e Mailhog. A defesa se beneficia de
+"o projeto sobe num comando", e o modo de desenvolvimento não foi removido.
+
+### ADR-023 — Biblioteca de componentes própria em vez de Radix
+
+**Contexto:** a auditoria mediu 11 componentes somando 257 linhas (23 cada) e
+apenas 3 importações de Radix — das quais só o Dialog entregava acessibilidade
+real. `@radix-ui/react-select` estava instalado e nunca foi importado.
+
+**Decisão:** remover o Radix por completo e possuir ~30 componentes, cada um com
+contrato de acessibilidade escrito em PT-BR e provado por teste.
+
+**Custo assumido explicitamente:** focus trap, `inert`, navegação por setas,
+typeahead e retorno de foco passam a ser responsabilidade do projeto — e quebram
+silenciosamente. Mitigado por contrato escrito, maquinaria centralizada em
+`_internal/` (não reexportada) e 14 testes que verificam item por item.
+
+**Alternativa descartada:** manter o Radix e adicionar mais 8-10 pacotes.
+
+### ADR-024 — Sistema de temas com tokens OKLCH
+
+**Esta decisão REVERTE um corte de escopo.** "Alternância de tema" estava em
+`Fora do Escopo` e no ADR-014.
+
+**Por que reverter:** o corte foi feito quando "tema" significava uma
+funcionalidade a mais. Um sistema de tokens semânticos bem-feito **já é** um
+sistema de temas, e a camada de indireção precisa existir de qualquer forma para
+o mobile da Fase 7 consumir.
+
+**Decisão:** OKLCH (o L é perceptual — é onde HSL mais mente numa rampa que
+atravessa vermelho, amarelo e azul), primitivo separado de semântico e imposto
+por build, violeta como cor de ação (o único matiz a mais de 30 graus de todas as
+cores que já têm significado), três temas sem flash, e contraste medido por uma
+ferramenta que falha o build.
+
+**Alternativa descartada:** extrair tokens e manter um tema só. Foi ao calibrar o
+tema claro que quatro reprovações de contraste apareceram — num tema só,
+continuariam invisíveis.
+
+### ADR-025 — Métricas analíticas derivadas do AuditLog
+
+**Contexto:** zero agregação no backend (duas chamadas a `.count()` no projeto
+inteiro) e nenhuma série temporal. O schema não tem tabela de snapshot.
+
+**Decisão:** reconstruir o histórico de `Vulnerability.createdAt` mais
+`AuditLog.diffJson` (que registra `{from, to}`), **sem migration**. Agregação
+100% no banco. Risk score `soma de (cvss ao quadrado / 10)` — soma porque risco
+acumula, quadrática porque um 9,8 não vale três 3,2. MTTR por **mediana**, porque
+a média é destruída por um outlier (que aparece no aging, a métrica feita para
+encontrá-lo). Agregação por período em UTC.
+
+**Alternativa descartada:** tabela `VulnerabilitySnapshot` com job diário.
+Exigiria migration e scheduler (que não existe), começaria o histórico do zero, e
+o custo medido da reconstrução foi de 9 a 17 ms.

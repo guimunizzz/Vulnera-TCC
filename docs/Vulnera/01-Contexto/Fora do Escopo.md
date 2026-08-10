@@ -39,7 +39,20 @@ status: ativo
 - testes E2E automatizados (Playwright) — integração + smoke manual cobrem
 - deploy em produção
 - Redis, filas e workers
-- i18n e alternância de tema
+- i18n
+
+>[!info] Item removido desta lista em 2026-08-09
+> **Alternância de tema** constava aqui como cortada pelo prazo. Foi
+> **restaurada na Fase 6.5** — ver [[ADR-024 - Sistema de temas com tokens OKLCH]].
+>
+> O motivo da reversão: o corte foi feito quando "tema" significava *uma
+> funcionalidade a mais*. Na Fase 6.5 o problema mudou de natureza — a exigência
+> era um design system com tokens semânticos, e um sistema de tokens semânticos
+> bem-feito **já é** um sistema de temas. A camada de indireção
+> (`--color-surface` → `--neutral-900`) precisa existir de qualquer forma para o
+> mobile da Fase 7 consumir; o segundo tema é consequência quase gratuita dela.
+>
+> O `i18n` **continua fora**.
 
 Ver [[ADR-014 - Escopo reduzido para prazo de 3 meses]].
 

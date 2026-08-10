@@ -59,37 +59,37 @@ export function CommentTimeline({ vulnerabilityId }: { vulnerabilityId: string }
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
-        {data?.items.length === 0 && <p className="text-sm text-muted">Nenhum comentário ainda.</p>}
+        {data?.items.length === 0 && <p className="text-sm text-fg-muted">Nenhum comentário ainda.</p>}
         {data?.items.map((comment) => (
-          <div key={comment.id} className="rounded-md bg-background p-3 text-sm">
+          <div key={comment.id} className="rounded-control bg-canvas p-3 text-sm">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-foreground">{authorName(comment.authorId)}</span>
-              <div className="flex items-center gap-2 text-xs text-muted">
+              <span className="font-medium text-fg">{authorName(comment.authorId)}</span>
+              <div className="flex items-center gap-2 text-xs text-fg-muted">
                 <span>{new Date(comment.createdAt).toLocaleString("pt-BR")}</span>
                 {(currentUser?.role === "ADMIN" || comment.authorId === currentUser?.id) && (
                   <button
                     onClick={() => deleteMutation.mutate(comment.id)}
-                    className="text-severity-critical hover:underline"
+                    className="text-severity-critical-ink hover:underline"
                   >
                     Remover
                   </button>
                 )}
               </div>
             </div>
-            <p className="mt-1 text-foreground">{comment.content}</p>
+            <p className="mt-1 text-fg">{comment.content}</p>
           </div>
         ))}
       </div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 text-sm">
-          <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+          <Button variant="secundario" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             Anterior
           </Button>
-          <span className="text-muted">
+          <span className="text-fg-muted">
             {page} / {totalPages}
           </span>
-          <Button variant="secondary" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+          <Button variant="secundario" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
             Próxima
           </Button>
         </div>
@@ -104,7 +104,7 @@ export function CommentTimeline({ vulnerabilityId }: { vulnerabilityId: string }
       >
         <Textarea placeholder="Escreva um comentário..." value={content} onChange={(e) => setContent(e.target.value)} />
         {createMutation.isError && (
-          <p className="text-xs text-severity-critical">{getErrorMessage(createMutation.error)}</p>
+          <p className="text-xs text-severity-critical-ink">{getErrorMessage(createMutation.error)}</p>
         )}
         <div className="flex justify-end">
           <Button type="submit" disabled={!content.trim() || createMutation.isPending}>

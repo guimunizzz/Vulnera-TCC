@@ -4,7 +4,43 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
     <title>Vulnera</title>
+
+    <!--
+      TEMA ANTES DO PRIMEIRO PAINT.
+
+      Este script é síncrono e fica no <head> de propósito: o navegador PARA de
+      construir a página até executá-lo. É a única forma de estampar
+      `data-theme` antes de existir qualquer pixel. Se o tema fosse aplicado no
+      React, a página apareceria escura (o padrão do CSS) por um quadro e
+      trocaria para clara depois — o "flash" que o CP1 proíbe.
+
+      É uma cópia mínima de `src/design/theme.ts`. A duplicação é deliberada:
+      um módulo importado seria carregado depois do parse do HTML, tarde demais.
+      A chave e os valores TÊM que bater com os de lá — `theme.test.ts` confere.
+
+      O try/catch existe porque `localStorage` lança em modo privado de alguns
+      navegadores. Falhar aqui deixaria a página em branco.
+    -->
+    <script>
+      (function () {
+        try {
+          var escolhido = localStorage.getItem("vulnera:theme");
+          if (escolhido !== "dark" && escolhido !== "light" && escolhido !== "system") escolhido = "dark";
+          var resolvido =
+            escolhido === "system"
+              ? window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light"
+              : escolhido;
+          document.documentElement.setAttribute("data-theme", resolvido);
+          document.documentElement.style.colorScheme = resolvido;
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

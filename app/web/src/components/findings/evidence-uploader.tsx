@@ -97,12 +97,12 @@ export function EvidenceUploader({ vulnerabilityId, canUpload }: { vulnerability
           }}
           onClick={() => fileInputRef.current?.click()}
           className={cn(
-            "cursor-pointer rounded-lg border-2 border-dashed border-border p-6 text-center text-sm text-muted transition-colors hover:border-accent hover:text-foreground",
-            isDragging && "border-accent bg-accent/5 text-foreground",
+            "cursor-pointer rounded-container border-2 border-dashed border-subtle p-6 text-center text-sm text-fg-muted transition-colors hover:border-accent hover:text-fg",
+            isDragging && "border-accent bg-accent/5 text-fg",
           )}
         >
           Arraste arquivos aqui ou clique para selecionar
-          <div className="mt-1 text-xs text-muted">PNG, JPEG, PDF ou TXT · até 10MB cada</div>
+          <div className="mt-1 text-xs text-fg-muted">PNG, JPEG, PDF ou TXT · até 10MB cada</div>
           <input
             ref={fileInputRef}
             type="file"
@@ -119,18 +119,18 @@ export function EvidenceUploader({ vulnerabilityId, canUpload }: { vulnerability
       {queue.length > 0 && (
         <div className="flex flex-col gap-2">
           {queue.map((q) => (
-            <div key={q.id} className="flex items-center gap-3 rounded-md border border-border p-2">
+            <div key={q.id} className="flex items-center gap-3 rounded-control border border-subtle p-2">
               {q.previewUrl ? (
                 <img src={q.previewUrl} alt={q.file.name} className="h-10 w-10 rounded object-cover" />
               ) : (
-                <span className="flex h-10 w-10 items-center justify-center rounded bg-background text-lg">
+                <span className="flex h-10 w-10 items-center justify-center rounded bg-canvas text-lg">
                   {MIME_ICON[q.file.type] ?? "📎"}
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm text-foreground">{q.file.name}</div>
-                {q.status === "uploading" && <Progress value={q.progress} className="mt-1" />}
-                {q.status === "error" && <p className="mt-1 text-xs text-severity-critical">{q.error}</p>}
+                <div className="truncate text-sm text-fg">{q.file.name}</div>
+                {q.status === "uploading" && <Progress rotulo="Progresso do envio" valor={q.progress} className="mt-1" />}
+                {q.status === "error" && <p className="mt-1 text-xs text-severity-critical-ink">{q.error}</p>}
                 {q.status === "done" && <p className="mt-1 text-xs text-severity-low">Enviado</p>}
               </div>
             </div>
@@ -139,18 +139,18 @@ export function EvidenceUploader({ vulnerabilityId, canUpload }: { vulnerability
       )}
 
       <div className="flex flex-col gap-2">
-        {evidences?.length === 0 && <p className="text-sm text-muted">Nenhuma evidência anexada ainda.</p>}
+        {evidences?.length === 0 && <p className="text-sm text-fg-muted">Nenhuma evidência anexada ainda.</p>}
         {evidences?.map((evidence) => (
           <div
             key={evidence.id}
-            className="flex items-center justify-between rounded-md bg-background px-3 py-2 text-sm"
+            className="flex items-center justify-between rounded-control bg-canvas px-3 py-2 text-sm"
           >
             <div className="flex min-w-0 items-center gap-2">
               <span>{MIME_ICON[evidence.mimeType] ?? "📎"}</span>
-              <span className="truncate text-foreground">{evidence.originalName}</span>
-              <span className="shrink-0 text-xs text-muted">{formatBytes(evidence.sizeBytes)}</span>
+              <span className="truncate text-fg">{evidence.originalName}</span>
+              <span className="shrink-0 text-xs text-fg-muted">{formatBytes(evidence.sizeBytes)}</span>
             </div>
-            <button onClick={() => handleDownload(evidence)} className="shrink-0 text-accent hover:underline">
+            <button onClick={() => handleDownload(evidence)} className="shrink-0 text-accent-ink hover:underline">
               Baixar
             </button>
           </div>

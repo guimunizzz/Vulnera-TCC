@@ -10,11 +10,9 @@ import { reportsApi } from "../lib/api/reports.api";
 import { useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
 import { useCompanyName } from "../hooks/use-company-name";
-import { Breadcrumb } from "../components/layout/breadcrumb";
-import { StatusBadge } from "../components/ui/status-badge";
-import { SeverityBadge } from "../components/ui/severity-badge";
-import { FindingStatusBadge } from "../components/ui/finding-status-badge";
-import { Button } from "../components/ui/button";
+import { Breadcrumb } from "../components/ui/navigation";
+import { SeverityBadge, StatusBadge } from "../components/ui/badge";
+import { Button, LinkButton } from "../components/ui/button";
 import { Alert } from "../components/ui/alert";
 import { cn } from "../lib/cn";
 import { downloadBlob } from "../lib/pdf/base";
@@ -188,7 +186,7 @@ export function ProjectDetailPage() {
   });
 
   if (isLoading || !project) {
-    return <p className="text-muted">Carregando...</p>;
+    return <p className="text-fg-muted">Carregando...</p>;
   }
 
   const transitions = ALLOWED_TRANSITIONS[project.status];
@@ -197,25 +195,25 @@ export function ProjectDetailPage() {
   return (
     <div>
       <Breadcrumb
-        items={[
-          { label: companyName ?? "Empresa" },
-          { label: application?.name ?? "Aplicação" },
-          { label: project.name },
+        itens={[
+          { rotulo: companyName ?? "Empresa" },
+          { rotulo: application?.name ?? "Aplicação" },
+          { rotulo: project.name },
         ]}
       />
 
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-foreground">{project.name}</h1>
+            <h1 className="text-2xl font-bold text-fg">{project.name}</h1>
             <StatusBadge status={project.status} />
             {criticalOpenCount > 0 && (
-              <span className="rounded-full bg-severity-critical/20 px-2.5 py-1 text-xs font-medium text-severity-critical">
+              <span className="rounded-full bg-severity-critical/20 px-2.5 py-1 text-xs font-medium text-severity-critical-ink">
                 {criticalOpenCount} crítico{criticalOpenCount > 1 ? "s" : ""} aberto{criticalOpenCount > 1 ? "s" : ""}
               </span>
             )}
           </div>
-          <p className="mt-1 text-muted">
+          <p className="mt-1 text-fg-muted">
             {project.analysisType} · {ANALYSIS_LEVEL_LABELS[project.analysisLevel] ?? project.analysisLevel}
           </p>
         </div>
@@ -225,7 +223,7 @@ export function ProjectDetailPage() {
             {transitions.map((toStatus) => (
               <Button
                 key={toStatus}
-                variant={toStatus === "IN_PROGRESS" && project.status === "IN_REVIEW" ? "secondary" : "primary"}
+                variant={toStatus === "IN_PROGRESS" && project.status === "IN_REVIEW" ? "secundario" : "primario"}
                 onClick={() => transitionMutation.mutate(toStatus)}
                 disabled={transitionMutation.isPending}
               >
@@ -238,14 +236,14 @@ export function ProjectDetailPage() {
 
       {error && <Alert className="mt-4">{error}</Alert>}
 
-      <div className="mt-6 flex gap-1 border-b border-border">
+      <div className="mt-6 flex gap-1 border-b border-subtle">
         {(["overview", "findings", "reports"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              "border-b-2 border-transparent px-4 py-2 text-sm text-muted transition-colors hover:text-foreground",
-              tab === t && "border-accent text-foreground",
+              "border-b-2 border-transparent px-4 py-2 text-sm text-fg-muted transition-colors hover:text-fg",
+              tab === t && "border-accent text-fg",
             )}
           >
             {t === "overview" ? "Visão geral" : t === "findings" ? "Findings" : "Relatórios"}
@@ -255,57 +253,57 @@ export function ProjectDetailPage() {
 
       {tab === "overview" && (
         <div className="mt-6 grid gap-6 md:grid-cols-2">
-          <div className="rounded-lg border border-border p-4">
-            <h2 className="mb-3 font-semibold text-foreground">Metadados</h2>
+          <div className="rounded-container border border-subtle p-4">
+            <h2 className="mb-3 font-semibold text-fg">Metadados</h2>
             <dl className="flex flex-col gap-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-muted">Remediação incluída</dt>
-                <dd className="text-foreground">{project.hasRemediation ? "Sim" : "Não"}</dd>
+                <dt className="text-fg-muted">Remediação incluída</dt>
+                <dd className="text-fg">{project.hasRemediation ? "Sim" : "Não"}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-muted">Solicitado em</dt>
-                <dd className="text-foreground">{new Date(project.requestedAt).toLocaleDateString("pt-BR")}</dd>
+                <dt className="text-fg-muted">Solicitado em</dt>
+                <dd className="text-fg">{new Date(project.requestedAt).toLocaleDateString("pt-BR")}</dd>
               </div>
               {project.startedAt && (
                 <div className="flex justify-between">
-                  <dt className="text-muted">Iniciado em</dt>
-                  <dd className="text-foreground">{new Date(project.startedAt).toLocaleDateString("pt-BR")}</dd>
+                  <dt className="text-fg-muted">Iniciado em</dt>
+                  <dd className="text-fg">{new Date(project.startedAt).toLocaleDateString("pt-BR")}</dd>
                 </div>
               )}
               {project.closedAt && (
                 <div className="flex justify-between">
-                  <dt className="text-muted">Concluído em</dt>
-                  <dd className="text-foreground">{new Date(project.closedAt).toLocaleDateString("pt-BR")}</dd>
+                  <dt className="text-fg-muted">Concluído em</dt>
+                  <dd className="text-fg">{new Date(project.closedAt).toLocaleDateString("pt-BR")}</dd>
                 </div>
               )}
               {project.scopeIn && (
                 <div>
-                  <dt className="text-muted">Escopo</dt>
-                  <dd className="text-foreground">{project.scopeIn}</dd>
+                  <dt className="text-fg-muted">Escopo</dt>
+                  <dd className="text-fg">{project.scopeIn}</dd>
                 </div>
               )}
               {project.scopeOut && (
                 <div>
-                  <dt className="text-muted">Fora de escopo</dt>
-                  <dd className="text-foreground">{project.scopeOut}</dd>
+                  <dt className="text-fg-muted">Fora de escopo</dt>
+                  <dd className="text-fg">{project.scopeOut}</dd>
                 </div>
               )}
             </dl>
           </div>
 
-          <div className="rounded-lg border border-border p-4">
-            <h2 className="mb-3 font-semibold text-foreground">Pentesters atribuídos</h2>
+          <div className="rounded-container border border-subtle p-4">
+            <h2 className="mb-3 font-semibold text-fg">Pentesters atribuídos</h2>
 
-            {members?.length === 0 && <p className="text-sm text-muted">Nenhum pentester atribuído ainda.</p>}
+            {members?.length === 0 && <p className="text-sm text-fg-muted">Nenhum pentester atribuído ainda.</p>}
 
             <ul className="flex flex-col gap-2">
               {members?.map((member) => (
-                <li key={member.id} className="flex items-center justify-between rounded-md bg-surface px-3 py-2 text-sm">
-                  <span className="text-foreground">{userName(member.userId)}</span>
+                <li key={member.id} className="flex items-center justify-between rounded-control bg-surface px-3 py-2 text-sm">
+                  <span className="text-fg">{userName(member.userId)}</span>
                   {role === "ADMIN" && (
                     <button
                       onClick={() => removeMemberMutation.mutate(member.userId)}
-                      className="text-severity-critical hover:underline"
+                      className="text-severity-critical-ink hover:underline"
                     >
                       Remover
                     </button>
@@ -319,7 +317,7 @@ export function ProjectDetailPage() {
                 <select
                   value={selectedPentesterId}
                   onChange={(e) => setSelectedPentesterId(e.target.value)}
-                  className="flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+                  className="flex-1 rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg"
                 >
                   <option value="">Selecione um pentester...</option>
                   {pentesterCandidates.map((u) => (
@@ -329,7 +327,7 @@ export function ProjectDetailPage() {
                   ))}
                 </select>
                 <Button
-                  variant="secondary"
+                  variant="secundario"
                   disabled={!selectedPentesterId || addMemberMutation.isPending}
                   onClick={() => addMemberMutation.mutate(selectedPentesterId)}
                 >
@@ -351,7 +349,7 @@ export function ProjectDetailPage() {
                   setSeverityFilter(e.target.value as VulnerabilitySeverity | "");
                   setFindingsPage(1);
                 }}
-                className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+                className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg"
               >
                 <option value="">Todas as severidades</option>
                 {(["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"] as VulnerabilitySeverity[]).map((s) => (
@@ -367,7 +365,7 @@ export function ProjectDetailPage() {
                   setStatusFilter(e.target.value as VulnerabilityStatus | "");
                   setFindingsPage(1);
                 }}
-                className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+                className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg"
               >
                 <option value="">Todos os status</option>
                 {(["OPEN", "IN_PROGRESS", "FIXED", "CLOSED"] as VulnerabilityStatus[]).map((s) => (
@@ -383,7 +381,7 @@ export function ProjectDetailPage() {
                   setOwaspFilter(e.target.value);
                   setFindingsPage(1);
                 }}
-                className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+                className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg"
               >
                 <option value="">Todas as categorias OWASP</option>
                 {OWASP_CATEGORIES.map((cat) => (
@@ -395,21 +393,19 @@ export function ProjectDetailPage() {
             </div>
 
             {role !== "CLIENT" && (
-              <Button asChild>
-                <Link to={`/projects/${project.id}/findings/new`}>Novo finding</Link>
-              </Button>
+              <LinkButton to={`/projects/${project.id}/findings/new`}>Novo finding</LinkButton>
             )}
           </div>
 
           {filteredFindings.length === 0 && (
-            <p className="mt-6 text-muted">Nenhum finding encontrado com esses filtros.</p>
+            <p className="mt-6 text-fg-muted">Nenhum finding encontrado com esses filtros.</p>
           )}
 
           {filteredFindings.length > 0 && (
             <>
-              <div className="mt-4 overflow-hidden rounded-lg border border-border">
+              <div className="mt-4 overflow-hidden rounded-container border border-subtle">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-surface text-muted">
+                  <thead className="bg-surface text-fg-muted">
                     <tr>
                       <th className="px-4 py-3 font-medium">Título</th>
                       <th className="px-4 py-3 font-medium">Severidade</th>
@@ -420,20 +416,20 @@ export function ProjectDetailPage() {
                   </thead>
                   <tbody>
                     {paginatedFindings.map((finding) => (
-                      <tr key={finding.id} className="border-t border-border hover:bg-surface">
+                      <tr key={finding.id} className="border-t border-subtle hover:bg-surface">
                         <td className="px-4 py-3">
-                          <Link to={`/findings/${finding.id}`} className="text-foreground hover:text-accent hover:underline">
+                          <Link to={`/findings/${finding.id}`} className="text-fg hover:text-accent-ink hover:underline">
                             {finding.title}
                           </Link>
                         </td>
                         <td className="px-4 py-3">
-                          <SeverityBadge severity={finding.severityFinal} />
+                          <SeverityBadge severidade={finding.severityFinal} />
                         </td>
                         <td className="px-4 py-3">
-                          <FindingStatusBadge status={finding.status} />
+                          <StatusBadge status={finding.status} />
                         </td>
-                        <td className="px-4 py-3 text-muted">{finding.owaspCategory}</td>
-                        <td className="px-4 py-3 text-muted">
+                        <td className="px-4 py-3 text-fg-muted">{finding.owaspCategory}</td>
+                        <td className="px-4 py-3 text-fg-muted">
                           {new Date(finding.createdAt).toLocaleDateString("pt-BR")}
                         </td>
                       </tr>
@@ -445,17 +441,17 @@ export function ProjectDetailPage() {
               {findingsTotalPages > 1 && (
                 <div className="mt-4 flex items-center justify-center gap-2 text-sm">
                   <Button
-                    variant="secondary"
+                    variant="secundario"
                     disabled={findingsPage <= 1}
                     onClick={() => setFindingsPage((p) => p - 1)}
                   >
                     Anterior
                   </Button>
-                  <span className="text-muted">
+                  <span className="text-fg-muted">
                     {findingsPage} / {findingsTotalPages}
                   </span>
                   <Button
-                    variant="secondary"
+                    variant="secundario"
                     disabled={findingsPage >= findingsTotalPages}
                     onClick={() => setFindingsPage((p) => p + 1)}
                   >
@@ -471,7 +467,7 @@ export function ProjectDetailPage() {
       {tab === "reports" && (
         <div className="mt-6">
           {!projectReady && (
-            <div className="rounded-lg border border-border p-8 text-center text-muted">
+            <div className="rounded-container border border-subtle p-8 text-center text-fg-muted">
               Relatórios ficam disponíveis quando o projeto está em revisão ou concluído (RN18). Status atual:{" "}
               <StatusBadge status={project.status} />.
             </div>
@@ -487,26 +483,26 @@ export function ProjectDetailPage() {
                   {generatingType === "EXECUTIVE" ? "Gerando PDF..." : "Gerar PDF Executivo"}
                 </Button>
                 <Button
-                  variant="secondary"
+                  variant="secundario"
                   disabled={generateReportMutation.isPending}
                   onClick={() => generateReportMutation.mutate("TECHNICAL")}
                 >
                   {generatingType === "TECHNICAL" ? "Gerando PDF..." : "Gerar PDF Técnico"}
                 </Button>
               </div>
-              <p className="mt-2 text-xs text-muted">
+              <p className="mt-2 text-xs text-fg-muted">
                 O PDF é montado no seu navegador a partir dos dados atuais do projeto — nada é enviado ao servidor
                 além do registro de que o relatório foi gerado.
               </p>
 
-              <h2 className="mt-8 mb-3 font-semibold text-foreground">Histórico de gerações</h2>
+              <h2 className="mt-8 mb-3 font-semibold text-fg">Histórico de gerações</h2>
               {(!reportHistory || reportHistory.length === 0) && (
-                <p className="text-sm text-muted">Nenhum relatório gerado ainda.</p>
+                <p className="text-sm text-fg-muted">Nenhum relatório gerado ainda.</p>
               )}
               {reportHistory && reportHistory.length > 0 && (
-                <div className="overflow-hidden rounded-lg border border-border">
+                <div className="overflow-hidden rounded-container border border-subtle">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-surface text-muted">
+                    <thead className="bg-surface text-fg-muted">
                       <tr>
                         <th className="px-4 py-3 font-medium">Título</th>
                         <th className="px-4 py-3 font-medium">Tipo</th>
@@ -516,11 +512,11 @@ export function ProjectDetailPage() {
                     </thead>
                     <tbody>
                       {reportHistory.map((report) => (
-                        <tr key={report.id} className="border-t border-border">
-                          <td className="px-4 py-3 text-foreground">{report.title}</td>
-                          <td className="px-4 py-3 text-muted">{REPORT_TYPE_LABELS[report.type]}</td>
-                          <td className="px-4 py-3 text-muted">{userName(report.generatedBy)}</td>
-                          <td className="px-4 py-3 text-muted">
+                        <tr key={report.id} className="border-t border-subtle">
+                          <td className="px-4 py-3 text-fg">{report.title}</td>
+                          <td className="px-4 py-3 text-fg-muted">{REPORT_TYPE_LABELS[report.type]}</td>
+                          <td className="px-4 py-3 text-fg-muted">{userName(report.generatedBy)}</td>
+                          <td className="px-4 py-3 text-fg-muted">
                             {new Date(report.createdAt).toLocaleString("pt-BR")}
                           </td>
                         </tr>

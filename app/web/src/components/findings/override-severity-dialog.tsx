@@ -11,7 +11,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { vulnerabilitiesApi } from "../../lib/api/vulnerabilities.api";
 import { useApiError } from "../../hooks/use-api-error";
 import { cn } from "../../lib/cn";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog";
+import { Dialog, DialogDescription, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { Alert } from "../ui/alert";
@@ -54,8 +54,8 @@ export function OverrideSeverityDialog({
   const isTooShort = trimmedLength < MIN_JUSTIFICATION_LENGTH;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog aberto={open} aoFechar={() => onOpenChange(false)}>
+      <>
         <DialogTitle>Override de severidade</DialogTitle>
         <DialogDescription>
           A severidade calculada pelo CVSS continua registrada — isso muda só a severidade final exibida, com
@@ -72,14 +72,14 @@ export function OverrideSeverityDialog({
           {mutation.isError && <Alert>{getErrorMessage(mutation.error)}</Alert>}
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm text-foreground" htmlFor="override-severity">
+            <label className="text-sm text-fg" htmlFor="override-severity">
               Nova severidade
             </label>
             <select
               id="override-severity"
               value={newSeverity}
               onChange={(e) => setNewSeverity(e.target.value as VulnerabilitySeverity)}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+              className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg"
             >
               {SEVERITIES.map((s) => (
                 <option key={s} value={s}>
@@ -90,7 +90,7 @@ export function OverrideSeverityDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm text-foreground" htmlFor="override-justification">
+            <label className="text-sm text-fg" htmlFor="override-justification">
               Justificativa
             </label>
             <Textarea
@@ -101,7 +101,7 @@ export function OverrideSeverityDialog({
               maxLength={MAX_JUSTIFICATION_LENGTH}
               placeholder="Explique por que a severidade final diverge da calculada pelo CVSS (mínimo 20 caracteres)..."
             />
-            <span className={cn("text-xs", isTooShort ? "text-severity-critical" : "text-severity-low")}>
+            <span className={cn("text-xs", isTooShort ? "text-severity-critical-ink" : "text-severity-low")}>
               {isTooShort
                 ? `${trimmedLength}/${MIN_JUSTIFICATION_LENGTH} caracteres mínimos`
                 : `${trimmedLength} caracteres (máximo ${MAX_JUSTIFICATION_LENGTH})`}
@@ -109,7 +109,7 @@ export function OverrideSeverityDialog({
           </div>
 
           <div className="mt-2 flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="secundario" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isTooShort || mutation.isPending}>
@@ -117,7 +117,7 @@ export function OverrideSeverityDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
+      </>
     </Dialog>
   );
 }

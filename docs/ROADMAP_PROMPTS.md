@@ -656,3 +656,70 @@ Fechar a fase atual do Vulnera:
 ---
 
 _Este arquivo é estável durante a execução. Quem rastreia o avanço é o `PRD_VIVO.md`. Ao concluir cada fase, acrescente aqui badge e histórico (CLAUDE.md §0.1 R3)._
+
+---
+
+# Fase 6.5 — Design System + Dashboards analíticos ✅ Concluída em 2026-08-09
+
+> Fase inserida **entre a 6 e a 7**, de propósito: o mobile da Fase 7 herda os
+> tokens definidos aqui em vez de inventar os próprios.
+
+**Objetivo do prompt:** transformar o frontend utilitário em produto. Quatro
+entregas: design system próprio com temas, biblioteca de componentes sem Radix,
+camada de movimento, e dashboards analíticos por aplicação.
+
+## Histórico
+
+| Campo | Valor |
+|---|---|
+| Branch | `feat/fase-6.5-design-system` |
+| PR | — (o prompt pediu explicitamente para **não** commitar nem abrir PR) |
+| Data | 2026-08-09 |
+| Testes | backend 225 → **247** · frontend 0 → **24** |
+
+### O que foi entregue
+
+- **CP0** auditoria com números: 11 componentes / 257 linhas, 3 importações de
+  Radix (uma delas morta), zero agregação no backend.
+- **CP1** `tokens.css` com 7 rampas OKLCH, escalas de tipografia/espaçamento/
+  raio/elevação/movimento, 3 temas sem flash, `check-contrast.mjs` e
+  `/styleguide`.
+- **CP2** ~30 componentes próprios, Radix removido, contrato de acessibilidade
+  por componente.
+- **CP3** `motion` 13 com hook central de `prefers-reduced-motion` e 8 padrões.
+- **CP4** 4 endpoints de métricas, histórico reconstruído do `AuditLog`,
+  agregação no banco, 22 testes novos.
+- **CP5** dashboard de 4 abas com 5 gráficos tematizados.
+- **CP6** filtros na URL com filtragem cruzada e chips.
+- **CP7** migração das 13 telas (parcial — ver desvios).
+- **CP8** 24 testes de frontend; **validação no navegador bloqueada**.
+- **CP9** ADRs 022-025, `DESIGN_SYSTEM.md` e docs vivos.
+
+### Desvios do plano
+
+1. **O prompt mandava `cd app/api && docker compose up`.** Não existe compose em
+   `app/api` — o arquivo sempre esteve na raiz. Adaptado e registrado no ADR-022.
+2. **CP7 ficou parcial.** As 13 telas usam os tokens e os componentes novos, e o
+   build e os tipos estão limpos. Login, Register, Plans e o layout foram
+   **reescritos** com skeleton, estado vazio e estado de erro. As demais
+   receberam a migração mecânica (tokens, variantes, API dos componentes) mas
+   **não** o polimento tela a tela que o CP7 pedia. Registrado como task 6.5.11
+   em `docs/BACKLOG.md`.
+3. **CP8 parcialmente bloqueado.** A extensão do Chrome não conectou (mesmo
+   bloqueio da Fase 6). Substituído por validação headless: 24 testes com
+   jsdom + `axe-core`, mais a medição matemática de contraste. Isso cobre
+   acessibilidade e contraste, mas **não** cobre aparência real, responsividade
+   nem console do navegador. Limitações L-10 e L-09 no `BACKLOG.md`.
+4. **`Field` e `Label` coexistem.** O plano previa só `Field`; o `Label` avulso
+   foi mantido para formulários que já controlam os próprios ids — igualmente
+   correto em acessibilidade, só mais manual.
+
+### Bugs encontrados e corrigidos durante a execução
+
+| Onde | O quê |
+|---|---|
+| `tailwind.config.ts` | `borderWidth` e `borderColor` com a mesma chave `strong` faziam `border-strong` emitir largura **e** cor: todo `border border-strong` virava 2px em silêncio |
+| `metrics.service.ts` | `{ applicationId, de, ate, ...opcoes }` — o spread sobrescrevia as datas com `undefined`. O Prisma ignora `undefined`, mas em SQL cru `>= NULL` não casa nada: risk score e aging zeravam sem erro |
+| `metrics.service.ts` | lia `actor.companyId`, que **não existe no JWT** (`authMiddleware` popula só `{userId, role}`). Todo CLIENT recebia 403 |
+| `use-focus-trap.ts` | usava `offsetParent === null` para checar visibilidade — errado para todo elemento `position: fixed`, ou seja, todo overlay |
+| `tabs.tsx` | não funcionava sem controle externo nem `paramUrl`: os cliques chamavam um `aoMudar` inexistente |

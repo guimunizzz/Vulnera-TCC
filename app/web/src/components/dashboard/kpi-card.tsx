@@ -5,8 +5,8 @@ import { cn } from "../../lib/cn";
 export function KpiCard({ label, value, accentClassName }: { label: string; value: string | number; accentClassName?: string }) {
   return (
     <Card className="p-4">
-      <p className={cn("text-2xl font-bold text-foreground", accentClassName)}>{value}</p>
-      <p className="mt-1 text-sm text-muted">{label}</p>
+      <p className={cn("text-2xl font-bold text-fg", accentClassName)}>{value}</p>
+      <p className="mt-1 text-sm text-fg-muted">{label}</p>
     </Card>
   );
 }
