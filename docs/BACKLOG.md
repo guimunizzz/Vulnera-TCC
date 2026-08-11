@@ -17,7 +17,7 @@
 | 6 Relatórios       | report-data + PDFs pdf-lib + dashboards            | ✅ concluída 2026-08-07 |
 | **6.5 Design System** | **Tokens OKLCH, componentes próprios, temas, métricas, dashboards** | ✅ concluída 2026-08-09 |
 | 7 Mobile           | Expo enxuto + Push                                 | ✅ concluída 2026-08-10 |
-| 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 📋             |
+| 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 🚧 CP1-3 concluídos 2026-08-11 (backend+frontend+seed) |
 
 ✅ **Frontend web bootstrapado na Fase 3** (2026-08-04) — `app/web` tem Vite+React+TS+Tailwind+Radix+TanStack Query+Zustand+Axios, com Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions funcionando ponta a ponta (smoke E2E manual validado no navegador). Próximas fases só adicionam telas, não infraestrutura.
 
@@ -132,11 +132,11 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 
 | #   | Task                                                            | h   | Estado |
 | --- | --------------------------------------------------------------- | --- | ------ |
-| 8.1 | Seed de domínios e perguntas do checklist                       | 3   | 📋     |
-| 8.2 | MaturityAssessment CRUD + scores em batch                       | 5   | 📋     |
-| 8.3 | Tela de avaliação + radar                                       | 6   | 📋     |
-| 8.4 | Maturidade no PDF executivo (radar à mão com pdf-lib)           | 3   | 📋     |
-| 8.5 | Seed demo TechNova (5 apps, 10 findings, maturidade preenchida) | 4   | 📋     |
+| 8.1 | Seed de domínios e perguntas do checklist                       | 3   | ✅ 7 domínios × 4 perguntas, upsert |
+| 8.2 | MaturityAssessment CRUD + scores em batch                       | 5   | ✅ RN19; 10 testes MAT-01..03; achou/corrigiu bug em `cleanDatabase()` (faltava `maturityAssessment`) |
+| 8.3 | Tela de avaliação + radar                                       | 6   | ✅ `maturity-assessment-page.tsx` + `MaturityRadar` (Recharts); entrada nos 3 dashboards |
+| 8.4 | Maturidade no PDF executivo (radar à mão com pdf-lib)           | 3   | ✅ `drawRadarChart` novo (coordenada de `drawSvgPath` validada em smoke isolado antes); `report.service.ts` parou de devolver `maturity: null` fixo |
+| 8.5 | Seed demo TechNova (5 apps, 10 findings, maturidade preenchida) | 4   | ✅ 2C/3H/3M/2L exato, 2 evidências, 4 comentários, 1 avaliação (28 respostas); idempotente, contagens conferidas |
 | 8.6 | SonarQube (pipeline) + ZAP baseline — evidências capturadas     | 3   | 📋     |
 | 8.7 | `docs/DEMO.md` + README + diagrama + limitações conhecidas (base pronta: ver "Limitações conhecidas — Fase 5" no fim deste arquivo) | 5   | 📋     |
 | 8.9 | (descoberta 2026-08-07) Rota DELETE de Evidence — hoje não existe (L-05) | 1 | 📋 |
