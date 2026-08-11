@@ -23,4 +23,13 @@ export class ProjectMemberRepository {
       where: { projectId_userId: { projectId, userId } },
     });
   }
+
+  /** RN19 (maturidade) — "PENTESTER atribuído" à company: membro de ao menos um projeto dela. */
+  async existsForUserInCompany(userId: string, companyId: string): Promise<boolean> {
+    const found = await this.prisma.projectMember.findFirst({
+      where: { userId, project: { companyId } },
+      select: { id: true },
+    });
+    return !!found;
+  }
 }
