@@ -16,7 +16,7 @@
 | **5 Findings**     | **Vulnerability + Evidence** ⭐                    | ✅ concluída 2026-08-05 |
 | 6 Relatórios       | report-data + PDFs pdf-lib + dashboards            | ✅ concluída 2026-08-07 |
 | **6.5 Design System** | **Tokens OKLCH, componentes próprios, temas, métricas, dashboards** | ✅ concluída 2026-08-09 |
-| 7 Mobile           | Expo enxuto + Push                                 | 📋             |
+| 7 Mobile           | Expo enxuto + Push                                 | ✅ concluída 2026-08-10 |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 📋             |
 
 ✅ **Frontend web bootstrapado na Fase 3** (2026-08-04) — `app/web` tem Vite+React+TS+Tailwind+Radix+TanStack Query+Zustand+Axios, com Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions funcionando ponta a ponta (smoke E2E manual validado no navegador). Próximas fases só adicionam telas, não infraestrutura.
@@ -115,16 +115,18 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | 6.5.13 | Validação visual no navegador real                           | 3  | ❌ **bloqueada** — extensão do Chrome não conectou |
 | 6.5.14 | ADRs 022-025 + `docs/DESIGN_SYSTEM.md`                       | 4  | ✅ ADR-024 reverte o corte de "toggle de tema" |
 
-## FASE 7 — Mobile enxuto (~24h)
+## FASE 7 — Mobile enxuto (~24h) — ✅ concluída em 2026-08-10
 
 | #   | Task                                                     | h   | Estado |
 | --- | -------------------------------------------------------- | --- | ------ |
-| 7.1 | Bootstrap Expo + Router + client com SecureStore         | 6   | 📋 **ler `docs/DESIGN_SYSTEM.md` §8 antes** — os tokens vêm de lá, não se inventam |
-| 7.2 | Login + Home + ProjectDetail                             | 7   | 📋     |
-| 7.3 | FindingDetail read-only + Configurações                  | 5   | 📋     |
-| 7.4 | Push: migration + endpoint + registro + trigger CRITICAL | 6   | 📋     |
+| 7.1 | Bootstrap Expo + Router + client com SecureStore         | 6   | ✅ Expo SDK 57 + expo-router + tema portado de `tokens.css` (OKLCH→hex convertido, ver histórico) |
+| 7.2 | Login + Home + ProjectDetail                             | 7   | ✅ + bloqueio explícito de ADMIN/PENTESTER no login (mobile é exclusivo do CLIENT) |
+| 7.3 | FindingDetail read-only + Configurações                  | 5   | ✅ evidências em carrossel com header autenticado; Configurações com status de push + logout |
+| 7.4 | Push: migration + endpoint + registro + trigger CRITICAL | 6   | ✅ diff da migration mostrado e só aplicado após confirmação explícita do Rafael |
 
 > Escopo deliberadamente cortado: sem criação/edição, sem upload, sem PDF, sem telas de admin ou pentester. Se estourar o prazo, corte mais do mobile — nunca do backend.
+>
+> **Deviations conscientes do `docs/DESIGN_SYSTEM.md` §8** ("o que portar pra Fase 7"): motion/`prefers-reduced-motion` e fontes customizadas (Archivo/JetBrains Mono via `expo-font`) NÃO foram portados — fora do escopo enxuto pedido no prompt da fase (o app usa a fonte padrão do sistema e não tem nenhuma transição animada). Cor, escala tipográfica/espaçamento/raio e vocabulário `-ink`/`-surface` foram portados à risca. Contrato de acessibilidade: pass básico feito (`accessibilityRole`/`accessibilityLabel`/`accessibilityState` nos componentes interativos principais — Button, Card), mas não tem o mesmo rigor da Fase 6.5 (sem teste automatizado de a11y no mobile, sem auditoria completa) — trabalho futuro se o mobile ganhar mais telas.
 
 ## FASE 8 — Maturidade + TCC (~32h)
 

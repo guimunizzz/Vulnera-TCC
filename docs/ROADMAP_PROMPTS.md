@@ -493,7 +493,7 @@ Desvios do prompt original:
 
 ---
 
-# FASE 7 — Mobile enxuto + Push
+# FASE 7 — Mobile enxuto + Push ✅ Concluída em 2026-08-10
 
 **Branch:** `feat/fase-7-mobile` · **Período:** 06/10 → 15/10 · **Depende de:** Fase 5
 
@@ -543,6 +543,22 @@ Protocolo §0.1 + relatório + PR.
 NÃO FAZER: Firebase, mobile para PENTESTER ou ADMIN, viewer de PDF (cortado —
 se sobrar tempo, um botão que abre o PDF no navegador do sistema resolve).
 ```
+
+## Histórico
+
+**Branch:** `feat/fase-7-mobile` · **Data:** 2026-08-10 · **PR:** a abrir pelo Rafael
+
+Todos os 3 checkpoints concluídos numa sessão contínua. O pedido explícito de "atenção no CSS, deixe intuitivo" foi resolvido portando os tokens do design system da Fase 6.5 (`tokens.css`, que já previa isso em `docs/DESIGN_SYSTEM.md` §8) em vez de inventar uma paleta nova — o app herda a mesma identidade visual do web (cor, escala tipográfica, espaçamento, raio, vocabulário `-ink`/`-surface`), mais navegação por abas (Projetos/Configurações), pull-to-refresh, estados de carregamento/vazio/erro consistentes e alvo de toque mínimo de 44px em todo controle interativo.
+
+Desvios do prompt original:
+
+- **Migration com confirmação explícita, como pedido.** Gerei o diff via `prisma migrate dev --create-only` (não aplica), rodei `prisma generate` (só local, não toca o banco) pra poder escrever e tipar o resto do Checkpoint 2 enquanto esperava, e só apliquei (`prisma migrate dev` de verdade, no banco de dev E no de teste) depois do Rafael confirmar explicitamente. Diff era de uma linha: `ALTER TABLE User ADD COLUMN expoPushToken VARCHAR(191) NULL`.
+- **`sendPushToUsers(userIds, ...)` do prompt virou `sendPushToUsers(recipients, ...)`**, onde `recipients` é `{userId, expoPushToken}[]` já resolvido, não `string[]` de IDs crus. Um `util` puro (mesma família de `cvss.util`/`jwt.util`) não pode tocar banco — só `repositories/` importa Prisma (CLAUDE.md P1). Quem resolve userId→token é `VulnerabilityService`, que já tem `UserRepository` injetado (novo método `findClientsWithPushToken`).
+- **Recurso `notification` sem `model`/DTO dedicado.** Só existe um campo novo em `User` (`expoPushToken`), nenhuma entidade nova sendo serializada — criar um `notification.model.ts` vazio só por convenção pareceu ceremonial. `service`/`controller`/`factory`/`routes` seguem o padrão normal.
+- **`expo-server-sdk` publica ESM puro** (`import ... from "node:assert"` sem transpilar) — quebrava TODOS os 247 testes existentes ao ser importado (a cadeia `app.ts → routes.ts → vulnerability.routes.ts → vulnerability.factory.ts → vulnerability.service.ts → push.util.ts` já carrega em qualquer teste que sobe o Express). Resolvido com mock manual global (`jest.config.ts` → `moduleNameMapper` → `tests/mocks/expo-server-sdk.ts`), que também cumpre o "mock do envio; não bater na API da Expo" pedido no PUSH-02 — uma correção só, não uma por arquivo de teste.
+- **Sem paridade total com `docs/DESIGN_SYSTEM.md` §8** — a seção escrita especificamente pra esta fase recomendava portar também motion/`prefers-reduced-motion` e as fontes customizadas (Archivo/JetBrains Mono via `expo-font`). Não portei nenhum dos dois: sem transição animada em lugar nenhum, fonte é a padrão do sistema. Decisão consciente pelo "escopo deliberadamente enxuto" do próprio prompt da fase — motion e fonte customizada são polish, não correção. Contrato de acessibilidade recebeu um pass básico (`accessibilityRole`/`accessibilityLabel`/`accessibilityState` em `Button` e `Card`), sem o rigor de teste automatizado que a Fase 6.5 tem no web.
+- **Sem Chrome, sem device físico — validação em duas camadas headless.** A extensão do Chrome não conecta com um app React Native de qualquer forma (não é uma página web); a validação real foi: (1) `npx tsc --noEmit` + eslint limpos; (2) `npx expo-doctor` (achou e corrigiu 3 problemas reais: `expo-font` faltando como peer dependency do `@expo/vector-icons`, versão errada do `@expo/vector-icons` pro SDK 57, campos inválidos em `app.json` — `newArchEnabled`/`splash` não existem mais nesse schema); (3) `npx expo export --platform android` compilou os 1441 módulos do bundle sem erro, provando que toda a árvore de rotas/componentes resolve de verdade. **Smoke manual no Expo Go fica pendente pro Rafael** — exige aparelho físico, fora do alcance do agente. Ambiente deixado pronto: API+web locais rodando (não os containers Docker, que estavam com build antigo sem o endpoint de push — trocado pro modo "Desenvolvimento" do ADR-022), `npx expo start` ativo, `.env` do mobile já com o IP da rede Wi-Fi da máquina (`10.87.169.58`).
+- Testes: 259/259 (13 novos — PUSH-01 com 4 casos incluindo 401/400, PUSH-02 com 3 casos incluindo "não-CRITICAL não dispara" e "CLIENT sem token não quebra a criação", mais 5 unitários de `push.util.ts` cobrindo skip de token inválido, ticket de erro e exceção do SDK sem propagar).
 
 ---
 

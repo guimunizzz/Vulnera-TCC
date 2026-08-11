@@ -18,10 +18,10 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Sprint atual       | **Fase 6.5 — Design System + Dashboards analíticos** (concluída em 2026-08-09, branch `feat/fase-6.5-design-system` **não commitada**) |
+| Sprint atual       | **Fase 7 — Mobile enxuto + Push** (concluída; branch `feat/fase-7-mobile` aguardando PR → develop) |
 | Data início        | 2026-06-10 (Sprint 0)               |
 | Data alvo TCC      | 2026-10-25 (11 semanas restantes, ver `docs/BACKLOG.md` v4) |
-| Última atualização | 2026-08-09 por Claude Code (Fase 6.5 — design system, componentes próprios, temas, métricas e dashboards) |
+| Última atualização | 2026-08-10 por Claude Code (Fase 7 — mobile Expo read-only + push notifications) |
 
 ---
 
@@ -39,7 +39,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 5 — Vulnerability + Evidence       | Núcleo do produto                          | ✅     | 100% — concluída em 2026-08-05; **endurecida em 2026-08-07** (225 testes, cobertura ≥90%) |
 | 6 — Relatórios + Dashboard         | PDFs e dashboards                          | ✅     | 100% — concluída em 2026-08-07 |
 | **6.5 — Design System + Analytics** | **Tokens, componentes próprios, temas, métricas** | ✅ | **100% — concluída em 2026-08-09.** Inserida antes da Fase 7 de propósito: o mobile herda os tokens |
-| 7 — Mobile + IA Gemini             | App mobile e assistente IA                 | 📋     | 0%          |
+| 7 — Mobile enxuto + Push           | App mobile read-only (CLIENT) + Expo Push  | ✅     | 100% — concluída em 2026-08-10 |
 | 8 — Maturidade + Apresentação      | Polimento e entrega                        | 📋     | 0%          |
 
 ---
@@ -198,22 +198,24 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 
 ---
 
-### FEAT-07 — Mobile + IA Gemini (Sprint 7)
+### FEAT-07 — Mobile enxuto + Push (Sprint 7)
 
-| Task                                         | Status | Owner | PR  |
-| -------------------------------------------- | ------ | ----- | --- |
-| KAN-701: Setup Expo + TS                     | 📋     | I     | —   |
-| KAN-702: Tela Login mobile                   | 📋     | I     | —   |
-| KAN-703: Home com lista projetos             | 📋     | I     | —   |
-| KAN-704: Detalhe projeto                     | 📋     | I     | —   |
-| KAN-705: Detalhe finding read-only           | 📋     | I     | —   |
-| KAN-706: Viewer PDF                          | 📋     | I     | —   |
-| KAN-707: Expo Push setup                     | 📋     | R     | —   |
-| KAN-708: POST /notifications/register-push   | 📋     | R     | —   |
-| KAN-709: Service de push em finding CRITICAL | 📋     | R     | —   |
-| KAN-710: utils/gemini cliente                | 📋     | R     | —   |
-| KAN-711: AI endpoints (sugestões)            | 📋     | R     | —   |
-| KAN-712: Botão "Sugerir IA" no editor        | 📋     | I     | —   |
+> KAN-710/711/712 (IA/Gemini no mobile) cancelados — IA já estava fora do escopo desde 2026-08-03 (ver `docs/BACKLOG.md` "Removido do escopo"); o título da feature também foi corrigido (dizia "+ IA Gemini").
+
+| Task                                         | Status | Owner  | PR  |
+| -------------------------------------------- | ------ | ------ | --- |
+| KAN-701: Setup Expo + TS                     | ✅     | Claude | feat/fase-7-mobile — Expo SDK 57 + expo-router (file-based), tema dark portado de tokens.css (Fase 6.5), sem alias de import (imports relativos, CLAUDE.md §13) |
+| KAN-702: Tela Login mobile                   | ✅     | Claude | feat/fase-7-mobile — sem register (ADR-004); barra ADMIN/PENTESTER explicitamente (mobile é exclusivo do CLIENT) |
+| KAN-703: Home com lista projetos             | ✅     | Claude | feat/fase-7-mobile — TanStack Query, pull-to-refresh, GET /projects já escopado por role (RN16) |
+| KAN-704: Detalhe projeto                     | ✅     | Claude | feat/fase-7-mobile — metadados + lista de findings, sem filtro (não é paridade com o web) |
+| KAN-705: Detalhe finding read-only           | ✅     | Claude | feat/fase-7-mobile — severidade/CVSS, descrição/impacto/recomendação, evidências em carrossel (Image com header Authenticated, token nunca na URL), comentários |
+| KAN-706: Viewer PDF                          | ❌     | —      | Cortado pelo prompt da fase — fora do escopo do mobile |
+| KAN-707: Expo Push setup                     | ✅     | Claude | feat/fase-7-mobile — expo-notifications, permissão pedida no boot autenticado, canal Android configurado |
+| KAN-708: POST /notifications/register-push   | ✅     | Claude | feat/fase-7-mobile — recurso `notification` enxuto (sem model/DTO dedicado — só User.expoPushToken) |
+| KAN-709: Service de push em finding CRITICAL | ✅     | Claude | feat/fase-7-mobile — utils/push.util.ts (expo-server-sdk) + hook em VulnerabilityService.create, sempre em try/catch |
+| ~~KAN-710: utils/gemini cliente~~            | ❌     | —      | Cancelado — IA fora do escopo desde 2026-08-03 |
+| ~~KAN-711: AI endpoints (sugestões)~~        | ❌     | —      | Cancelado — idem |
+| ~~KAN-712: Botão "Sugerir IA" no editor~~    | ❌     | —      | Cancelado — idem |
 
 ---
 
@@ -300,6 +302,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 2026-08-07 | Sprint 6 (Relatórios + Dashboards) concluída | Branch `feat/fase-6-relatorios`, aguardando PR → develop. `GET /projects/:id/report-data` consolidado (project/company/application/findings/stats/topRisks/maturity=null) com RN18 aplicada (Project precisa IN_REVIEW/COMPLETED); `POST/GET /reports` com AuditLog REPORT_GENERATED; `lib/pdf/base.ts` com helpers pdf-lib imperativos (página A4, cabeçalho/rodapé paginado, drawText com quebra automática, drawBarChart à mão, `sanitizeForFont` — achado no smoke, WinAnsi não cobre emoji/setas unicode); PDF Executivo (capa tema escuro + KPIs + gráfico + top 5 riscos + conclusão, 3-5 páginas) e PDF Técnico (1 seção por finding com evidências PNG/JPEG embutidas via embedPng/embedJpg + comentários + glossário) — paleta idêntica ao tailwind.config.ts do app/web; 3 dashboards por role (CLIENT: KPIs + donut Recharts + recentes; PENTESTER: projetos atribuídos + findings da semana; ADMIN: empresas ativas via `GET /subscriptions/active` novo + pendentes + críticos globais + top companies), todos reaproveitando os endpoints já escopados por role das Fases 4/5; 10 testes novos (107/107 total); smoke em duas camadas — dados sintéticos via `vite.ssrLoadModule` headless (pegou o bug do WinAnsi antes de qualquer usuário ver) e depois PDFs gerados com dados reais do banco de dev (evidência PNG real embutida, comentário real), conferidos visualmente; dashboards validados via API direta nos 3 perfis contra o banco de dev — a extensão do Chrome não conectou nesta sessão, então a inspeção visual no navegador de verdade fica pendente pro Rafael conferir. Ver ROADMAP_PROMPTS.md §Histórico pra desvios do prompt original |
 | 2026-08-07 | Fase 5 endurecida (sessão de hardening) | Branch `fix/fase-5-hardening`, aguardando PR. Sem features novas — critério: "o que uma banca de segurança atacaria e o que quebraria numa demo". **Testes 107 → 225**, cobertura dos services da Fase 5 toda ≥90% (vulnerability 84.9→94.9%, evidence 85.1→94.6%, comment 88.9→91.7%). CVSS: parser confirmado correto contra **13 vetores oficiais** do FIRST/NVD (5 com Scope Changed), varredura exaustiva dos **2592 vetores base** provando ausência de NaN/Infinity e que o arredondamento é o do Apêndice A do 3.1, **paridade front/back com 0 divergências**, rejeição explícita de CVSS 3.0/temporais/ambientais. Upload: 27 testes de superfície de ataque (path traversal, IDOR, magic number, limite de 10MB no stream, Content-Disposition, extensão em disco, polyglot). Corrigidos: validação de texto que aceitava binário de controle, dois 500 por estouro de `VARCHAR(191)` (título e nome de arquivo), duplicata de métrica CVSS não detectada, ausência de limites de partes no multipart. Isolamento: **TEN-07..13** cobrindo Evidence, Comment e escrita de Vulnerability (nenhum furo — o valor é a prova, que não existia). Auditoria: novo evento `SEVERITY_OVERRIDE_RESET`, que fecha o buraco da trilha onde um override "sumia" sem explicação. Novo `font-safety.ts` avisando no editor sobre caracteres que virariam `?` no PDF. **ADR-021** documentando a máquina de 4 estados. **Navegador real (extensão do Chrome conectou, ao contrário da Fase 6):** embed de evidência PNG 480×240 no PDF Técnico **confirmado visualmente** — o fallback não foi acionado —, PDFs e 3 dashboards conferidos, CLIENT read-only provado via `fetch` no console (PUT/transition/override/DELETE/upload todos 403). Limitações conhecidas L-01..L-08 registradas em `docs/BACKLOG.md` |
 | 2026-08-09 | **Fase 6.5 (Design system + Dashboards analíticos) concluída** | Branch `feat/fase-6.5-design-system`, **não commitada** (o prompt pediu para não commitar). **Design system próprio**: `app/web/src/styles/tokens.css` com 7 rampas OKLCH × 11 passos na mesma espinha de lightness, primitivos separados de semânticos, tipografia Archivo+JetBrains Mono em escala modular 1.200, espaçamento 4px sem meio-passo, raio/borda/elevação nomeados por intenção, tokens de movimento. Três temas (dark/light/system) sem flash, via script síncrono no `<head>`. `scripts/check-contrast.mjs` converte OKLCH→sRGB à mão e mede WCAG: **66 pares, 0 falhas, 77 primitivos, 0 fora do gamut** — a ferramenta pegou 4 reprovações reais (texto branco sobre `iris-500` a 4,18:1) e 15 cores fora do gamut, todas corrigidas. Rota `/styleguide` (só em dev) com os dois temas lado a lado. **Radix removido por completo** (ADR-023): 4 pacotes fora, incluindo `react-select` que era dependência morta; ~30 componentes próprios com contrato de acessibilidade escrito em PT-BR e provado por teste. **Camada de movimento** com `motion` 13 e hook central de `prefers-reduced-motion`. **Backend de métricas** (ADR-025): 4 endpoints aditivos, histórico reconstruído de `Vulnerability.createdAt` + `AuditLog.diffJson` **sem migration**, toda agregação no banco, risk score `Σ(cvss²/10)` documentado, MTTR por mediana, aging em 4 faixas, insights determinísticos. **Dashboard analítico** por aplicação com 4 abas e filtros na URL. **Testes: backend 225 → 247** (MET-01..18 + TEN-14..17); **frontend 0 → 24** (A11Y-01..14, TEMA-01..04, MOV-01..02, FILT-01..04, AXE-01). Desempenho com 502 findings: 9–17 ms por endpoint (limite era 500). `prisma/seed-demo.ts` com 90 findings em 90 dias e trilha de auditoria. ⚠️ **A extensão do Chrome não conectou nesta sessão** — a validação visual no navegador real (os 10 itens do CP8) fica pendente para o Rafael. ADRs 022, 023, 024 e 025; `docs/DESIGN_SYSTEM.md` criado |
+| 2026-08-10 | Fase 7 (Mobile enxuto + Push) concluída | Branch `feat/fase-7-mobile`, aguardando PR → develop. **App mobile** (Expo SDK 57 + React 19 + expo-router file-based): bootstrap do zero (`app/mobile` só tinha `package.json`), tema portado à mão de `tokens.css` (OKLCH→hex via matriz de Björn Ottosson, só o tema escuro — o próprio tokens.css já previa isso: "Fase 7 (mobile), que porta os mesmos valores"), `store/auth.store.ts` com SecureStore (Zustand persist) no lugar de localStorage, `api/client.ts` espelhando o interceptor de refresh-com-fila do web. 5 telas, só as pedidas: Login (sem register, ADR-004; barra ADMIN/PENTESTER explicitamente), Home (lista de projetos, pull-to-refresh), ProjectDetail (metadados + findings, sem filtro), FindingDetail (severidade/CVSS, descrição/impacto/recomendação, evidências em carrossel com `<Image source={{uri,headers}}>` — token no header, nunca na URL —, comentários), Configurações (logout + status de push). Navegação por abas (Projetos/Configurações) com stack aninhado dentro da aba Projetos. **Push**: migration `expoPushToken String?` em `User` (diff mostrado e aplicado só depois de confirmação explícita do Rafael); `POST /notifications/register-push` (recurso enxuto, sem model/DTO dedicado); `utils/push.util.ts` com `expo-server-sdk`; hook em `VulnerabilityService.create` — CRITICAL dispara push pros CLIENT da company com token, sempre em try/catch (falha de push nunca quebra a criação do finding). **Achado de infra**: `expo-server-sdk` publica ESM puro e quebrava os 247 testes existentes ao ser importado pela cadeia `app.ts → vulnerability.service.ts` — corrigido com mock global (`moduleNameMapper` no jest.config.ts + `tests/mocks/expo-server-sdk.ts`), que também serve o "mock do envio" pedido no PUSH-02. **Testes: 247 → 259** (13 novos: PUSH-01 com 4 casos, PUSH-02 com 3, mais 5 unitários de `push.util.ts` cobrindo skip/erro/exceção). Bundle validado com `expo export --platform android` (1441 módulos, sem erro) já que a extensão do Chrome não conectou nesta sessão. **Pendente pro Rafael**: smoke manual no Expo Go (abrir o app no celular físico, logar, navegar, criar um finding CRITICAL pelo web e ver o push chegar) — isso exige aparelho físico e não pode ser feito por mim; ambiente deixado pronto (API+web locais, `expo start` rodando, `.env` do mobile já com o IP da rede local). Ver ROADMAP_PROMPTS.md §Histórico pra desvios do prompt original |
 | —    | MVP funcional (Sprint 6 fechada) | A registrar |
 | —    | Apresentação TCC                 | A registrar |
 
@@ -322,6 +325,8 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 2026-08-09 | Extensão do Chrome não conectou na sessão da Fase 6.5 — a validação visual dos 10 itens do CP8 (styleguide nos dois temas, troca sem flash, dashboards nos 3 papéis, filtragem cruzada, navegação só por teclado, overlays, responsivo 375/768/1440, `prefers-reduced-motion`, PDFs, console limpo) não foi feita | Confiança visual da Fase 6.5 | R | **Aberto** — substituído por validação headless (24 testes de frontend com jsdom + axe-core + `check-contrast`), que cobre acessibilidade e contraste mas **não** cobre aparência real, layout responsivo nem console do navegador |
 | 2026-08-09 | Branch `feat/fase-6.5-design-system` **não commitada** (o prompt pediu explicitamente para não commitar nem abrir PR) | Integração da Fase 6.5 | R | Aberto — Rafael decide quando commitar |
 | 2026-08-07 | PDF Executivo: no "Top 5 riscos", título longo sobrepõe o texto `CVSS x.x · Axx · Categoria` (`app/web/src/lib/pdf/executive.ts`) | Aparência do relatório na demo | R | Aberto — bug da Fase 6, fora do escopo do endurecimento (§0.2 S6). Task 8.11 no BACKLOG |
+| 2026-08-10 | Branch `feat/fase-7-mobile` completa (mobile + backend de push) não foi mergeada em develop | Início da Fase 8 | R | Aberto — Rafael vai abrir o PR manualmente |
+| 2026-08-10 | Smoke manual do app mobile no Expo Go (celular físico) não foi feito — exige aparelho real, fora do alcance do agente | Confiança de que o app roda de verdade fora do bundler/testes | R | Aberto — ambiente deixado pronto: API+web locais rodando, `npx expo start` ativo em `app/mobile`, `.env` já apontando pro IP da rede local (`10.87.169.58:3001/api`). Falta só o Rafael escanear o QR com o Expo Go e testar o fluxo (login → navegação → push de um CRITICAL criado pelo web) |
 
 ---
 

@@ -9,6 +9,7 @@ import { applicationRoutes } from "./application.routes";
 import { projectRoutes } from "./project.routes";
 import { vulnerabilityRoutes } from "./vulnerability.routes";
 import { reportRoutes } from "./report.routes";
+import { notificationRoutes } from "./notification.routes";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use("/applications", applicationRoutes);
 router.use("/projects", projectRoutes);
 router.use("/vulnerabilities", vulnerabilityRoutes);
 router.use("/reports", reportRoutes);
+router.use("/notifications", notificationRoutes);
 
 export { router as apiRoutes };
