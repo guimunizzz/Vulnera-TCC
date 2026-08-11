@@ -39,8 +39,20 @@ export interface ReportStats {
   byOwasp: Record<string, number>;
 }
 
-/** null até a Fase 8 — placeholder condicional no PDF executivo. */
-export type ReportMaturity = null;
+/** Média simples por domínio (sem peso) — mesma simplificação do backend. */
+export interface ReportMaturityDomain {
+  domainId: string;
+  domainName: string;
+  average: number;
+}
+
+/** null quando a company ainda não tem avaliação — PDF mostra aviso condicional. */
+export type ReportMaturity = {
+  overallScore: number;
+  level: string;
+  evaluatedAt: string;
+  domains: ReportMaturityDomain[];
+} | null;
 
 export interface ReportData {
   project: Project;

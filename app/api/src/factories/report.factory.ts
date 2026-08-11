@@ -3,9 +3,9 @@
 // FACTORY METHOD para o recurso Report (padrão GoF).
 // ReportService depende de quase todos os repositories do domínio de
 // findings porque report-data é uma projeção agregada (Project + Application
-// + Company + Vulnerability + Evidence + VulnerabilityComment + User) — sem
-// a factory, cada consumidor teria que remontar essa árvore de 10
-// dependências na mão.
+// + Company + Vulnerability + Evidence + VulnerabilityComment + User +
+// Maturity, esta última desde a Fase 8) — sem a factory, cada consumidor
+// teria que remontar essa árvore de 11 dependências na mão.
 //
 // Convenção: arquivo `<recurso>.factory.ts`, função `make<Recurso>Controller`.
 // Consumidor: report.routes.ts (POST/GET /reports) E project.routes.ts (que
@@ -22,6 +22,7 @@ import { VulnerabilityCommentRepository } from "../repositories/vulnerability-co
 import { UserRepository } from "../repositories/user.repository";
 import { ProjectMemberRepository } from "../repositories/project-member.repository";
 import { AuditLogRepository } from "../repositories/audit-log.repository";
+import { MaturityRepository } from "../repositories/maturity.repository";
 import { ReportService } from "../services/report.service";
 import { ReportController } from "../controllers/report.controller";
 
@@ -36,6 +37,7 @@ export function makeReportController(): ReportController {
   const userRepository = new UserRepository(prisma);
   const projectMemberRepository = new ProjectMemberRepository(prisma);
   const auditLogRepository = new AuditLogRepository(prisma);
+  const maturityRepository = new MaturityRepository(prisma);
 
   const service = new ReportService(
     repository,
@@ -48,6 +50,7 @@ export function makeReportController(): ReportController {
     userRepository,
     projectMemberRepository,
     auditLogRepository,
+    maturityRepository,
   );
   return new ReportController(service);
 }
