@@ -54,3 +54,28 @@ Uma segunda divergência apareceu na Fase 6.5: o prompt de execução instruía 
 [[ADR-005 - Desenvolvimento local com Docker minimo]]
 [[ADR-012 - SonarQube como pipeline separado]]
 [[ADR-021 - Maquina de Vulnerability com 4 estados]]
+
+## Atualização — 2026-08-11 (Fase 8, Checkpoint 4)
+
+`docker compose up --build` nunca tinha sido validado ponta a ponta antes
+desta sessão — não buildava. Dois bugs reais corrigidos:
+
+1. `app/web/Dockerfile` fazia `RUN npm install` isolado (sem o
+   `package-lock.json` do workspace, fora do build context de `app/web`) e
+   `@types/node` nunca tinha sido declarado em `app/web/package.json` — só
+   "funcionava" localmente por hoisting acidental do workspace raiz. A
+   imagem simplesmente não buildava. Corrigido adicionando `@types/node`
+   como devDependency.
+2. `vite preview` (servidor de produção do container `web`) bloqueia por
+   padrão hosts fora de `localhost`/`127.0.0.1` (proteção anti
+   DNS-rebinding do próprio Vite) — impedia até ferramentas rodando em
+   outro container (ex.: OWASP ZAP) de acessar `web:3000` via
+   `host.docker.internal`. Liberado via `preview.allowedHosts` em
+   `vite.config.ts`.
+
+A reprodutibilidade do build (Dockerfiles não usam `npm ci` nem copiam o
+lockfile — resolvem dependências "soltas" a cada build) **não** foi
+corrigida: exigiria mudar o build context de `app/api`/`app/web` pra raiz
+do repo (pra alcançar o `package-lock.json` único do workspace) e reescrever
+os `COPY` dos Dockerfiles — mudança estrutural maior que um fix de
+fechamento de fase. Registrado como limitação conhecida no README raiz.
