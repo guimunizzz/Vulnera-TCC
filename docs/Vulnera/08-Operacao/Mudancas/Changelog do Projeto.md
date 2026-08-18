@@ -9,6 +9,41 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-08-18 (sessão 27 — Fix: landing pública em "/" + botão de login na navbar)
+
+### Objetivo
+
+Corrigir o bug reportado: acessar `/` sem sessão redirecionava pro `/login` em vez de renderizar uma landing pública, e a navbar da landing não tinha atalho de login. Issue original escrita em vocabulário Next.js (`middleware`, `matcher`, `publicRoutes`) — traduzida pra arquitetura real (SPA Vite + React Router, sem middleware de rota; o equivalente é `ProtectedRoute` + a árvore de `App.tsx`). Branch `fix/landing-publica`, **não commitada** (prompt pediu para não commitar nem abrir PR).
+
+### Checkpoint 0 — a auditoria mudou o tamanho da task
+
+O redirecionamento indevido não estava no `ProtectedRoute` (que sempre esteve correto) — era um `<Navigate to="/dashboard" replace />` incondicional na própria rota `"/"` em `App.tsx`. O sintoma "`/` manda pro `/login`" era, na verdade, um **duplo redirect**: `/` força `/dashboard` → `ProtectedRoute` de `/dashboard` não acha sessão → `/login`.
+
+Mais importante: a issue descrevia uma landing com cena Three.js (efeito ASCII, samurai procedural, mergulho de câmera por scroll) "a portar" para React. A auditoria (grep por `three|THREE|ascii|samurai` e por `*.html` em todo o repositório, mais releitura do `PRD_VIVO.md`) confirmou que **essa landing nunca existiu neste repositório em nenhum formato** — nem componente React, nem HTML standalone. KAN-110 já estava marcado como 📋 pendente desde a Fase 3 ("landing de marketing dedicada não estava no escopo do prompt"). Não havia nada para portar — construir a cena descrita seria uma feature nova do tamanho de uma fase, não um bugfix de rota. Parado o trabalho e perguntado ao Rafael antes de prosseguir (conforme instruído no prompt desta sessão); decisão: placeholder mínimo agora, cena 3D completa vira task 8.12 no `BACKLOG.md`.
+
+### Implementado
+
+1. **`pages/landing-page.tsx`** (novo) — placeholder mínimo reaproveitando os componentes/tokens do design system da Fase 6.5 (mesmo padrão visual de `plans-page.tsx`/`login-page.tsx`, zero `@radix-ui`, zero cor fixa em hex). Navbar com brand + par de botões condicionais lendo `useAuthStore` (`accessToken`+`user`, mesmo critério do `ProtectedRoute`): sem sessão mostra "Entrar" (secundário/contorno, → `/login`) e "Iniciar Análise" (primário, → `/register`); com sessão mostra só "Ir para o Dashboard" (primário, → `/dashboard`) — nunca dois botões preenchidos competindo. Hero com o mesmo par de CTAs em tamanho `lg`, e 3 `Card`s de recursos (CVSS, relatórios, maturidade) dentro de `StaggerList`/`StaggerItem`. Não dispara nenhuma chamada HTTP — landing pública não pode ser "expulsa" por um 401 de fundo.
+2. **`App.tsx`** — rota `"/"` movida pra pública, fora do `ProtectedRoute`, no topo da árvore junto com `/login`/`/register`/`/plans`. Decisão registrada: usuário autenticado que acessa `/` continua vendo a landing (não é redirecionado pro dashboard) — é material de apresentação da banca, e expulsar quem já logou atrapalharia abrir a landing durante uma demo autenticada. O antigo `<Route path="/" element={<Navigate to="/dashboard" />} />` duplicado foi removido; o catch-all `*` (rota desconhecida → `/dashboard`) foi mantido como estava, fora do escopo deste bug.
+3. **Interceptor do Axios auditado** (`lib/api/client.ts`) — não faz redirect global em 401 (só tenta refresh e, falhando, `clearAuth()` + rejeita a promise). A armadilha descrita no prompt ("uma chamada de fundo falha e expulsa a landing") não existe hoje neste projeto, mas o ponto fica documentado porque a landing continua propositalmente sem nenhuma chamada autenticada.
+
+### Testes
+
+**24 → 30** no frontend. `pages/landing-page.test.tsx` (novo, LAND-01/02 — os dois estados da navbar). `App.test.tsx` (novo, ROTA-01..04 — `/` pública sem sessão, rota privada redireciona sem sessão, rota privada renderiza com sessão, `/` com sessão mostra o atalho do dashboard sem expulsar). `npm run check` verde nos dois workspaces: API 269/269 (inalterado — nenhum arquivo de backend tocado), web lint 0 erros (mesmos 7 warnings pré-existentes de fast-refresh, não introduzidos por esta sessão) + `check:contrast` 66/66 + 30/30 testes.
+
+### Validação em navegador real
+
+A extensão do Chrome não conectou nesta sessão — mesmo bloqueio recorrente das Fases 6/6.5/7/8. Repetido o fallback que já funcionou na Fase 8 Checkpoint 5: Playwright instalado ad-hoc no scratchpad (fora do repo), rodado contra `docker compose up -d --build web` **real** (rebuild de verdade da imagem de produção, não dev server) — 21/21 checks headless passando: login de verdade com `admin@vulnera.local` do seed, `/` sem sessão permanece em `/` sem redirect, botão "Entrar" navega pro `/login`, `/dashboard` sem sessão ainda vai pro `/login`, `/` com sessão mostra só "Ir para o Dashboard" e "Entrar" some, sem overflow horizontal nem erro de console em 375/768/1440px, landing renderiza normalmente com `prefers-reduced-motion` ativo. Screenshots capturados e conferidos visualmente (hierarquia primário/secundário correta, sem dois botões preenchidos competindo).
+
+### Limitações conhecidas / decisões autônomas
+
+- A landing "cena Three.js" da issue original continua **não implementada** — é a limitação central desta sessão, documentada acima e como task 8.12 no `BACKLOG.md`.
+- `docker compose up -d --build` foi executado para validar (rebuild das imagens `api`/`web` de produção) — ação local, não publicada, não é o mesmo que abrir PR/deploy.
+
+### Pendente
+
+- Rafael decide quando/se prioriza a task 8.12 (landing 3D completa) dentro do cronograma restante até 25/10/2026.
+
 ## 2026-08-10 (sessão 26 — Fase 7 implementada: Mobile enxuto + Push)
 
 ### Objetivo

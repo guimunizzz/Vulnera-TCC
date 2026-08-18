@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { LandingPage } from "./pages/landing-page";
 import { LoginPage } from "./pages/auth/login-page";
 import { RegisterPage } from "./pages/auth/register-page";
 import { PlansPage } from "./pages/plans-page";
@@ -20,6 +21,11 @@ import { ProtectedRoute } from "./components/layout/protected-route";
 export function App() {
   return (
     <Routes>
+      {/* Pública, sem ProtectedRoute. Renderiza igual com ou sem sessão — ver
+          landing-page.tsx sobre o porquê de não redirecionar quem já está
+          logado (é material de apresentação da banca). */}
+      <Route path="/" element={<LandingPage />} />
+
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/plans" element={<PlansPage />} />
@@ -63,7 +69,9 @@ export function App() {
         </Route>
       </Route>
 
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* Rota desconhecida: mantém o comportamento anterior a este fix (manda
+          pro dashboard, que redireciona pro login se não houver sessão) —
+          fora do escopo deste bug, não mexido. */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
