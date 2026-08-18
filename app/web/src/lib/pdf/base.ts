@@ -380,6 +380,85 @@ export function severityColor(severity: string): RGB {
   return (COLORS.severity as Record<string, RGB>)[severity] ?? COLORS.severity.NONE;
 }
 
+export interface RadarAxis {
+  label: string;
+  value: number; // já na escala 0..maxValue
+}
+
+/**
+ * Radar (gráfico de teia) desenhado à mão — pdf-lib não tem componente de
+ * gráfico pronto (Recharts não roda dentro do PDF), então cada anel, eixo e
+ * o polígono de dados são geometria pura por trigonometria, mesma filosofia
+ * do drawBarChart.
+ *
+ * ⚠️ `drawSvgPath` do pdf-lib usa coordenada LOCAL ao path com Y CRESCENDO
+ * PRA BAIXO (convenção SVG), ancorada em `options.x/y` — diferente do resto
+ * do pdf-lib (que é Y-pra-cima, origem no canto inferior esquerdo da
+ * página). Validado num PDF de teste isolado antes de entrar aqui: um ponto
+ * de página (px, py) vira, em coordenada local relativa à âncora (ax, ay),
+ * `(px - ax, ay - py)` — é essa conversão que as três funções abaixo fazem.
+ */
+export function drawRadarChart(ctx: ReportContext, cursor: Cursor, axes: RadarAxis[], maxValue: number): Cursor {
+  const diameter = 220;
+  const step = ensureSpace(ctx, cursor, diameter + 40);
+  const { page } = step;
+
+  const centerX = MARGIN + CONTENT_WIDTH / 2;
+  const centerY = step.y - diameter / 2 - 10;
+  const radius = diameter / 2;
+  const n = axes.length;
+  const angleStep = (2 * Math.PI) / n;
+  const startAngle = -Math.PI / 2; // primeiro eixo aponta pra cima
+
+  const pointAt = (index: number, fraction: number): { x: number; y: number } => {
+    const angle = startAngle + index * angleStep;
+    return {
+      x: centerX + Math.cos(angle) * radius * fraction,
+      y: centerY + Math.sin(angle) * radius * fraction,
+    };
+  };
+
+  // anéis de grade (20/40/60/80/100%) — um n-ágono por anel, não um círculo
+  for (const fraction of [0.2, 0.4, 0.6, 0.8, 1]) {
+    const points = Array.from({ length: n }, (_, i) => pointAt(i, fraction));
+    for (let i = 0; i < n; i++) {
+      page.drawLine({ start: points[i], end: points[(i + 1) % n], thickness: 0.5, color: COLORS.border });
+    }
+  }
+
+  // eixos (raios do centro até a borda)
+  for (let i = 0; i < n; i++) {
+    page.drawLine({ start: { x: centerX, y: centerY }, end: pointAt(i, 1), thickness: 0.5, color: COLORS.border });
+  }
+
+  // polígono de dados — conversão pageXY -> pathXY local à âncora (centerX, centerY)
+  const dataPoints = axes.map((axis, i) => pointAt(i, Math.max(0, Math.min(1, axis.value / maxValue))));
+  const svgPath =
+    dataPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x - centerX} ${centerY - p.y}`).join(" ") + " Z";
+  page.drawSvgPath(svgPath, {
+    x: centerX,
+    y: centerY,
+    color: COLORS.accent,
+    opacity: 0.25,
+    borderColor: COLORS.accent,
+    borderWidth: 1.5,
+  });
+
+  // rótulos dos eixos, alinhados conforme o quadrante (esquerda/centro/direita)
+  for (let i = 0; i < n; i++) {
+    const label = sanitizeForFont(axes[i].label, ctx.fonts.regular);
+    const labelPoint = pointAt(i, 1.16);
+    const width = ctx.fonts.regular.widthOfTextAtSize(label, 8);
+    const cosA = Math.cos(startAngle + i * angleStep);
+    let x = labelPoint.x - width / 2;
+    if (cosA > 0.3) x = labelPoint.x;
+    else if (cosA < -0.3) x = labelPoint.x - width;
+    page.drawText(label, { x, y: labelPoint.y - 3, size: 8, font: ctx.fonts.regular, color: COLORS.mutedInk });
+  }
+
+  return { page, y: centerY - radius - 30 };
+}
+
 // Mesmos rótulos PT-BR do SeverityBadge/StatusBadge (components/ui) —
 // fonte única pros dois PDFs não divergirem da UI nem entre si.
 export const SEVERITY_LABELS: Record<string, string> = {

@@ -13,6 +13,7 @@ import { FindingDetailPage } from "./pages/finding-detail-page";
 import { PendingSubscriptionsPage } from "./pages/admin/pending-subscriptions-page";
 import { StyleguidePage } from "./pages/styleguide-page";
 import { ApplicationDashboardPage } from "./pages/application-dashboard-page";
+import { MaturityAssessmentPage } from "./pages/maturity-assessment-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
 
@@ -37,6 +38,11 @@ export function App() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/findings/:id" element={<FindingDetailPage />} />
+
+          {/* Leitura liberada pros 3 roles (RN19 — ADMIN/CLIENT da própria
+              company/PENTESTER atribuído); a distinção ESCREVE-vs-LÊ é feita
+              dentro da própria página (canEdit) e reforçada pelo backend. */}
+          <Route path="/companies/:companyId/maturity" element={<MaturityAssessmentPage />} />
 
           <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
             <Route path="/applications" element={<ApplicationsPage />} />

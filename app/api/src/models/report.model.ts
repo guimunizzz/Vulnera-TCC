@@ -77,6 +77,21 @@ export type ReportStatsDTO = {
   byOwasp: Record<string, number>; // chaves A01..A10
 };
 
+// Fase 8 — média simples por domínio (SEM peso, SEM nível por domínio,
+// exatamente a mesma simplificação de maturity.service.ts).
+export type ReportMaturityDomainDTO = {
+  domainId: string;
+  domainName: string;
+  average: number; // média das respostas desse domínio nesta avaliação
+};
+
+export type ReportMaturityDTO = {
+  overallScore: number;
+  level: string;
+  evaluatedAt: string;
+  domains: ReportMaturityDomainDTO[];
+};
+
 export type ReportDataDTO = {
   project: ProjectResponseDTO;
   company: CompanyResponseDTO;
@@ -84,5 +99,7 @@ export type ReportDataDTO = {
   vulnerabilities: ReportVulnerabilityDTO[];
   stats: ReportStatsDTO;
   topRisks: ReportVulnerabilityDTO[]; // 5 maiores por cvssScore
-  maturity: null; // 🚧 [FUTURO] Fase 8 — placeholder condicional no PDF executivo
+  // null quando a company ainda não tem nenhuma avaliação de maturidade —
+  // o PDF executivo mostra um aviso condicional nesse caso (ver executive.ts).
+  maturity: ReportMaturityDTO | null;
 };

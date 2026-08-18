@@ -40,10 +40,10 @@ Atores: `ADMIN` · `CLIENT` · `PENTESTER` → ver [[Roles]] e [[Matriz de Permi
 | Campo | Valor |
 |---|---|
 | **Prazo** | **3 meses** (~13 semanas), entrega 25/10/2026 |
-| Progresso | **Fases 0-7 concluídas** (incluindo a 6.5, inserida no meio pra o mobile herdar tokens prontos). Backend: schema completo (19 models + `User.expoPushToken`), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember, Vulnerability+Evidence+VulnerabilityComment (núcleo — CVSS 3.1 manual, upload validado por magic number, AuditLog completo), report-data (RN18) + Report metadata, métricas/dashboard analítico (ADR-025), push notification via Expo (`utils/push.util.ts` + hook em CRITICAL). Frontend web: design system próprio em OKLCH (ADR-023/024, `docs/DESIGN_SYSTEM.md`), Login/Register/Dashboard(3 roles)/Plans/Onboarding/Applications/Projects/ProjectDetail(+Relatórios)/Findings/FindingEditor/FindingDetail/dashboard analítico, PDFs client-side (pdf-lib, ADR-003). **App mobile (Expo, novo na Fase 7)**: 5 telas read-only exclusivas do CLIENT (Login/Home/ProjectDetail/FindingDetail/Configurações), tema herdado dos tokens do web, push de findings CRITICAL. |
-| Fase atual | **Fase 8 — Maturidade + Apresentação**, a próxima e última antes da entrega. |
+| Progresso | **Fases 0-7 concluídas** (incluindo a 6.5, inserida no meio pra o mobile herdar tokens prontos) + **Fase 8 em andamento** (checklist de maturidade completo — backend, tela, radar no PDF — e seed de demo da TechNova; Sonar/ZAP/documentação final em progresso). Backend: schema completo (19 models + `User.expoPushToken`), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember, Vulnerability+Evidence+VulnerabilityComment (núcleo — CVSS 3.1 manual, upload validado por magic number, AuditLog completo), report-data (RN18, **maturidade real desde a Fase 8**) + Report metadata, métricas/dashboard analítico (ADR-025), push notification via Expo (`utils/push.util.ts` + hook em CRITICAL), **recurso Maturity completo (Fase 8)**. Frontend web: design system próprio em OKLCH (ADR-023/024, `docs/DESIGN_SYSTEM.md`), Login/Register/Dashboard(3 roles)/Plans/Onboarding/Applications/Projects/ProjectDetail(+Relatórios)/Findings/FindingEditor/FindingDetail/dashboard analítico/**Maturidade (Fase 8)**, PDFs client-side (pdf-lib, ADR-003, **radar desenhado à mão desde a Fase 8**). **App mobile (Expo, Fase 7)**: 5 telas read-only exclusivas do CLIENT (Login/Home/ProjectDetail/FindingDetail/Configurações), tema herdado dos tokens do web, push de findings CRITICAL. |
+| Fase atual | **Fase 8 — Maturidade + TCC**, a última antes da entrega. |
 | Modo de execução | Solo-delegado: Rafael supervisiona, Claude Code executa |
-| Branch de integração | `develop` |
+| Branch de integração | `dev` — **não** `develop` como o resto deste documento e o `CLAUDE.md` chamam. Divergência real do repositório descoberta na Fase 8 (2026-08-11): o workflow de CI sempre disparou em push/PR pra `develop`, que nunca existiu no GitHub — nenhuma PR das Fases 3-7 rodou o pipeline de verdade. Corrigido em `.github/workflows/build.yml` (agora aceita os dois nomes); as menções a "develop" neste documento ficam como estão até uma limpeza dedicada, mas na prática **use `dev`**. |
 
 > [!info] Nota sobre a divergência vault × código de 2026-07-26 (histórico)
 > A auditoria de 2026-07-26 encontrou o código real muito atrás do que o vault documentava na época (schema com só 9 models, controllers vazios). Isso **já não é mais verdade** — corrigido nas sessões de 2026-08-04 (Fases 3 e 4). Ver [[Changelog do Projeto]], sessões 21 e 22, para o estado real por fase. **Lição registrada:** antes de confiar num diagnóstico anterior do vault sobre o estado do código, confira o código — documentação pode ficar desatualizada mais rápido do que se espera.
@@ -146,8 +146,8 @@ Outras: cabeçalho comentado em PT-BR em todo arquivo novo · comentários expli
 
 | Item | Decisão |
 |---|---|
-| Docker Compose | **MySQL 8 + Mailhog apenas** |
-| SonarQube | **Pipeline separado no GitHub Actions** — saiu do compose ([[ADR-012 - SonarQube como pipeline separado]]) |
+| Docker Compose | **Stack completa** desde a Fase 8 (`docker compose up --build` sobe MySQL + Mailhog + API + Web num comando) — o modo enxuto original (só MySQL + Mailhog, com `npm run dev` local pra hot reload) continua disponível e é o do dia a dia. Ver [[ADR-022 - Stack completa no Docker Compose]] (substitui a linha antiga desta tabela) |
+| SonarQube | **Pipeline separado no GitHub Actions** — saiu do compose ([[ADR-012 - SonarQube como pipeline separado]]). Modo informativo, não bloqueia merge ([[ADR-007 - Sonar informativo e ZAP manual]]) |
 | CI principal | lint → build → test (com serviço MySQL) |
 | Auth | JWT HS256 · access 15min · refresh 7d rotativo · hash SHA-256 no banco · bcrypt cost 12 |
 | PDF | **pdf-lib**, client-side ([[ADR-003 - PDF gerado no cliente]]) |
@@ -198,10 +198,13 @@ Não resolver sozinho. Notas que dependem delas ficam marcadas como pendentes.
 |---|---|---|
 | **F-01** | Factory Method permanece na arquitetura? | [[ADR-010 - Factory Method pendente de confirmacao]] |
 | **F-02** | Provedor de IA continua Gemini? | [[ADR-011 - Provedor de IA em revisao]] |
-| **F-03** | Quais domínios e controles de maturidade? | [[ADR-013 - Dominios de maturidade em aberto]] |
+| ~~**F-03**~~ | ~~Quais domínios e controles de maturidade?~~ **Resolvida na Fase 8** | [[ADR-013 - Dominios de maturidade em aberto]], [[Adr 018 maturidade como checklist simplificado]] |
 
 > [!note] F-01 respondida na prática
-> O Factory Method segue obrigatório e foi aplicado também ao recurso de métricas da Fase 6.5 (`metrics.factory.ts`). Ver [[Adr 019 factory method confirmado]].
+> O Factory Method segue obrigatório e foi aplicado também ao recurso de métricas da Fase 6.5 (`metrics.factory.ts`) e ao de maturidade da Fase 8 (`maturity.factory.ts`). Ver [[Adr 019 factory method confirmado]].
+
+> [!note] F-03 resolvida na Fase 8 (2026-08-11)
+> 7 domínios × 4 perguntas cada (Gestão de Acesso, Backup e Recuperação, Segurança de Rede, Gestão de Vulnerabilidades, Monitoramento e Logs, Conscientização, Segurança no Código), catálogo em `prisma/seed.ts`. Checklist simplificado (decisão de 2026-08-03, [[Adr 018 maturidade como checklist simplificado]]): resposta 1-5, média simples por domínio e geral — sem scoring ponderado, sem nível por domínio, sem comparativo histórico.
 
 ---
 
@@ -209,12 +212,25 @@ Não resolver sozinho. Notas que dependem delas ficam marcadas como pendentes.
 
 - **Equipe:** Rafael, Guilherme e Iann — mantidos para delegação no JIRA ([[Distribuicao da Equipe]])
 - **JIRA:** board `KAN` · `rafaelscrum.atlassian.net` · movimentação manual ao fim de cada fase
-- **Branches:** `main` ← `develop` ← `feat/fase-N-<nome>` · **1 branch e 1 PR por fase**
+- **Branches:** `main` ← `dev` (o repositório real usa esse nome, não `develop` — ver linha "Branch de integração" acima) ← `feat/fase-N-<nome>` · **1 branch e 1 PR por fase**
 - **Testes:** toda PR de CRUD inclui integração — happy path + erros de validação + 1 regra de negócio · canários `TEN-xx` de tenancy · cobertura ≥80% nos services
 - **Documentos vivos:** mantidos para consumo por agentes · documentação desatualizada é bug · o código é a verdade
 
 Ordem de limpeza no `cleanDatabase()`:
 `auditLog → evidence → vulnerabilityComment → vulnerability → projectMember → project → application → subscription → company → refreshToken → user`
+
+> [!warning] Divergência com `CLAUDE.md` §12 (Fase 8, 2026-08-11)
+> `CLAUDE.md` diz "Plan e Maturity* ficam (vêm do seed)" — ou seja, essas
+> tabelas não deveriam ser limpas entre testes, só populadas uma vez.
+> **Na prática, `maturity.test.ts` cria seu próprio catálogo (domínio +
+> controles) a cada teste**, e `cleanDatabase()` precisa apagar
+> `maturityAssessment → maturityScore → maturityControl → maturityDomain`
+> pra não colidir com a constraint de nome único a cada corrida (bug real
+> encontrado e corrigido em `tests/setup.ts` na Fase 8 — a ausência de
+> `maturityAssessment.deleteMany()` não dava erro porque a FK não é
+> declarada no schema, só acumulava linha órfã pra sempre). `CLAUDE.md` não
+> foi editado por causa da regra "nunca editar sozinho" (§0) — fica
+> registrado aqui pro Rafael decidir se atualiza o texto ou o teste.
 
 ---
 

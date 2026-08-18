@@ -11,9 +11,11 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { vulnerabilitiesApi } from "../../lib/api/vulnerabilities.api";
+import { companiesApi } from "../../lib/api/companies.api";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { SeverityBadge } from "../ui/badge";
 import { StatusBadge } from "../ui/badge";
+import { LinkButton } from "../ui/button";
 import { KpiCard } from "./kpi-card";
 import { SeverityDonut } from "./severity-donut";
 
@@ -21,6 +23,10 @@ export function ClientDashboard() {
   const { data: findings, isLoading } = useQuery({
     queryKey: ["vulnerabilities", "all"],
     queryFn: vulnerabilitiesApi.list,
+  });
+  const { data: company } = useQuery({
+    queryKey: ["companies", "me"],
+    queryFn: companiesApi.me,
   });
 
   const stats = useMemo(() => {
@@ -54,6 +60,14 @@ export function ClientDashboard() {
         </CardHeader>
         <SeverityDonut bySeverity={stats.bySeverity} />
       </Card>
+
+      {company && (
+        <div>
+          <LinkButton to={`/companies/${company.id}/maturity`} variant="secundario">
+            Ver avaliação de maturidade
+          </LinkButton>
+        </div>
+      )}
 
       <Card>
         <CardHeader>

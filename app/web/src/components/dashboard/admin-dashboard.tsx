@@ -94,7 +94,12 @@ export function AdminDashboard() {
           {stats.topCompanies.map((c) => (
             <li key={c.companyId} className="flex items-center justify-between rounded-control bg-canvas px-3 py-2 text-sm">
               <span className="text-fg">{c.name}</span>
-              <span className="text-fg-muted">{c.count} finding{c.count > 1 ? "s" : ""}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-fg-muted">{c.count} finding{c.count > 1 ? "s" : ""}</span>
+                <Link to={`/companies/${c.companyId}/maturity`} className="text-accent-ink hover:underline">
+                  Maturidade
+                </Link>
+              </div>
             </li>
           ))}
         </ul>

@@ -95,3 +95,17 @@ Revisar esta decisão se:
 [[Seguranca da Aplicacao]]
 [[Politica de Desenvolvimento Seguro]]
 [[MOC - Arquitetura]]
+
+## Atualização — 2026-08-11 (Fase 8, Checkpoint 4)
+
+`TECH_STATUS.md` nunca chegou a ser implementado (era aspiracional desta
+ADR) — não recriado agora, fora do escopo de fechamento de fase. Evidências
+reais ficaram em `docs/evidencias/zap/` e `docs/evidencias/sonarqube/`
+(nome exigido pelo prompt da Fase 8), não em `zap-reports/` como esta ADR
+previa originalmente.
+
+Achado real ao rodar o ZAP pela primeira vez (não previsto aqui): o job
+`sonarqube` do CI **nunca tinha rodado em nenhuma fase anterior** — o
+workflow disparava em push/PR pra `develop`, mas a branch de integração
+real do GitHub sempre foi `dev`. Corrigido em `.github/workflows/build.yml`.
+Ver `PRD_VIVO.md` (marco 2026-08-11) pro relato completo.
