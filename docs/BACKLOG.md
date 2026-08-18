@@ -142,6 +142,7 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | 8.9 | (descoberta 2026-08-07) Rota DELETE de Evidence — hoje não existe (L-05) | 1 | 📋 |
 | 8.10 | (descoberta 2026-08-07) Rate limiting em upload e login (L-07)  | 2   | 📋     |
 | 8.11 | (descoberta 2026-08-07) PDF Executivo: título longo sobrepõe o texto de CVSS/OWASP no "Top 5 riscos" (`lib/pdf/executive.ts`) | 1 | 📋 |
+| 8.12 | (descoberta 2026-08-18, `fix/landing-publica`) Landing "cena Three.js" completa (efeito ASCII, samurai procedural, mergulho de câmera por scroll) — nunca foi implementada em nenhum formato neste repositório. KAN-110 ganhou só o placeholder mínimo (ver PRD_VIVO.md); a versão 3D descrita na issue original fica como feature nova, não bugfix. Exige `useHeroScene` com `dispose()`/`cancelAnimationFrame`/descarte de render targets no unmount (evitar vazar contexto WebGL a cada navegação landing↔dashboard) | 8 | 📋 |
 | 8.8 | Smoke E2E cronometrado + tag `v1.0.0`                           | 3   | 📋     |
 
 > Slides e ensaios ficam com o Rafael, fora da contagem.
