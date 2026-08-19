@@ -89,6 +89,6 @@ describe("Roteamento de App", () => {
     for (const link of dashboard) {
       expect(link).toHaveAttribute("href", "/dashboard");
     }
-    expect(screen.getByText("Gestão de análises de segurança, do achado ao relatório.")).toBeInTheDocument();
+    expect(screen.getByText("Encontre. Priorize. Remedie.")).toBeInTheDocument();
   });
 });
