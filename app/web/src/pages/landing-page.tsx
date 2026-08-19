@@ -21,6 +21,14 @@
  * 100% no vocabulário semântico — só o fundo atmosférico e o glitch são
  * exclusivos desta tela.
  *
+ * INTRO DE ABERTURA
+ * `<BootIntro>` cobre a tela por ~2,5s (pulável, e pulado por completo com
+ * `prefers-reduced-motion` ou depois da primeira vez na aba — ver o
+ * cabeçalho de `boot-intro.tsx`). Enquanto ativo, o resto da página fica
+ * `inert` (mesma lógica de foco dos overlays do design system, aplicada aqui
+ * à mão porque `_internal/use-dismiss.ts` é maquinaria de overlay via
+ * portal, não API pública desta tela).
+ *
  * QUEM CONSOME
  * `App.tsx`, rota "/" — pública, fora do `ProtectedRoute`. Não dispara
  * nenhuma chamada autenticada: um visitante sem sessão nunca pode ser
@@ -28,7 +36,7 @@
  * planos é público (mesmo endpoint sem auth que `plans-page.tsx` usa).
  */
 
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { LinkButton, Card, Skeleton, SeverityBadge } from "../components/ui";
@@ -37,6 +45,7 @@ import { plansApi } from "../lib/api/plans.api";
 import { useAuthStore } from "../store/auth.store";
 import { HeroFallback } from "../components/landing/hero-fallback";
 import { GlitchText } from "../components/landing/glitch-text";
+import { BootIntro } from "../components/landing/boot-intro";
 import "../components/landing/landing.css";
 
 /**
@@ -133,6 +142,24 @@ export function LandingPage() {
   // pra decidir se há sessão — as duas fontes de verdade ficam idênticas.
   const estaAutenticado = useAuthStore((s) => Boolean(s.accessToken && s.user));
 
+  // `BootIntro` decide sozinho se roda ou pula (reduced-motion, já visto na
+  // sessão) — `introAtivo` só reflete o resultado, pra `inert` do resto da
+  // página. Começa `true` (otimista: cobre o "flash" de conteúdo real antes
+  // do BootIntro decidir na montagem).
+  const [introAtivo, setIntroAtivo] = useState(true);
+  const conteudoRef = useRef<HTMLDivElement>(null);
+
+  // `inert` via `setAttribute`, não prop JSX — mesmo mecanismo de
+  // `_internal/use-dismiss.ts` (useInertForaDe), que o cabeçalho desta tela
+  // documenta não reaproveitar por não ser API pública. Setar direto no DOM
+  // evita depender de suporte de `inert` como prop no @types/react em uso.
+  useEffect(() => {
+    const el = conteudoRef.current;
+    if (!el) return;
+    if (introAtivo) el.setAttribute("inert", "");
+    else el.removeAttribute("inert");
+  }, [introAtivo]);
+
   const { data: planos, isLoading: carregandoPlanos } = useQuery({
     queryKey: ["plans"],
     queryFn: plansApi.list,
@@ -149,262 +176,269 @@ export function LandingPage() {
     // um novo stacking context: o `CyberCanvas` do hero (position: absolute)
     // não pode vazar atrás/na frente de outra seção por acidente de z-index.
     <div data-theme="dark" className="isolate min-h-dvh bg-canvas text-fg">
-      {/* ------------------------------------------------------------------
-          Navbar
-          ------------------------------------------------------------------ */}
-      <header className="sticky top-0 z-sticky border-b border-subtle bg-canvas/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="text-lg font-bold tracking-tight text-accent-ink">
-              Vulnera
-            </Link>
-            {/* Chip decorativo de "status" — flavor HUD, não um monitor real
-                (Prometheus/Grafana estão fora do escopo, ver Fora do Escopo.md). */}
-            <span className="hidden items-center gap-2 rounded-full border border-subtle bg-surface px-3 py-1 font-mono text-xs text-success-ink sm:inline-flex">
-              <span aria-hidden="true" className="h-[6px] w-[6px] rounded-full bg-success" />
-              OPERACIONAL // SUÍTE APPSEC
-            </span>
-          </div>
+      <BootIntro onFinished={() => setIntroAtivo(false)} />
 
-          <nav aria-label="Seções da página" className="hidden items-center gap-6 text-sm text-fg-secondary md:flex">
-            <a href="#recursos" className="press transition-colors duration-fast hover:text-fg">
-              Recursos
-            </a>
-            <a href="#metodologia" className="press transition-colors duration-fast hover:text-fg">
-              Metodologia
-            </a>
-            <a href="#planos" className="press transition-colors duration-fast hover:text-fg">
-              Planos
-            </a>
-          </nav>
+      {/* `inert` enquanto o BootIntro está de pé — ver o `useEffect` acima.
+          `ref` num `<div>` só, não em cada seção: `inert` se propaga pra
+          toda a subárvore sozinho. */}
+      <div ref={conteudoRef}>
+        {/* ------------------------------------------------------------------
+            Navbar
+            ------------------------------------------------------------------ */}
+        <header className="sticky top-0 z-sticky border-b border-subtle bg-canvas/85 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Link to="/" className="text-lg font-bold tracking-tight text-accent-ink">
+                <GlitchText text="Vulnera" variante="auto" />
+              </Link>
+              {/* Chip decorativo de "status" — flavor HUD, não um monitor real
+                  (Prometheus/Grafana estão fora do escopo, ver Fora do Escopo.md). */}
+              <span className="hidden items-center gap-2 rounded-full border border-subtle bg-surface px-3 py-1 font-mono text-xs text-success-ink sm:inline-flex">
+                <span aria-hidden="true" className="h-[6px] w-[6px] rounded-full bg-success" />
+                OPERACIONAL // SUÍTE APPSEC
+              </span>
+            </div>
 
-          <nav className="flex items-center gap-3" aria-label="Ações de conta">
-            {estaAutenticado ? (
-              <LinkButton to="/dashboard" variant="primario" size="sm">
-                Ir para o Dashboard
-              </LinkButton>
-            ) : (
-              <>
-                <LinkButton to="/login" variant="secundario" size="sm">
-                  Entrar
-                </LinkButton>
-                <LinkButton to="/register" variant="primario" size="sm">
-                  Iniciar Análise
-                </LinkButton>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+            <nav aria-label="Seções da página" className="hidden items-center gap-6 text-sm text-fg-secondary md:flex">
+              <a href="#recursos" className="press transition-colors duration-fast hover:text-fg">
+                Recursos
+              </a>
+              <a href="#metodologia" className="press transition-colors duration-fast hover:text-fg">
+                Metodologia
+              </a>
+              <a href="#planos" className="press transition-colors duration-fast hover:text-fg">
+                Planos
+              </a>
+            </nav>
 
-      <main>
-        {/* --------------------------------------------------------------
-            Hero
-            -------------------------------------------------------------- */}
-        <section className="relative overflow-hidden">
-          <HeroFallback />
-          <Suspense fallback={null}>
-            <CyberCanvas />
-          </Suspense>
-
-          <div className="relative mx-auto max-w-5xl px-4 py-20 text-center sm:py-24">
-            <GlitchText
-              as="h1"
-              variante="auto"
-              text="Encontre. Priorize. Remedie."
-              className="text-3xl font-bold uppercase tracking-tight text-fg sm:text-4xl"
-            />
-            <p className="mx-auto mt-6 max-w-2xl text-base text-fg-secondary">
-              O Vulnera unifica achados de SAST e DAST, escopo de projeto, trilha de auditoria e postura de risco
-              calculada continuamente — para times de segurança e para os clientes que acompanham o resultado.
-            </p>
-
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <nav className="flex items-center gap-3" aria-label="Ações de conta">
               {estaAutenticado ? (
-                <LinkButton to="/dashboard" variant="primario" size="lg">
+                <LinkButton to="/dashboard" variant="primario" size="sm">
                   Ir para o Dashboard
                 </LinkButton>
               ) : (
                 <>
-                  <LinkButton to="/register" variant="primario" size="lg">
-                    Iniciar Análise
+                  <LinkButton to="/login" variant="secundario" size="sm">
+                    Entrar
                   </LinkButton>
-                  <LinkButton to="/login" variant="secundario" size="lg">
-                    Explorar Demonstração
+                  <LinkButton to="/register" variant="primario" size="sm">
+                    Iniciar Análise
                   </LinkButton>
                 </>
               )}
-            </div>
+            </nav>
           </div>
-        </section>
+        </header>
 
-        {/* --------------------------------------------------------------
-            Recursos
-            -------------------------------------------------------------- */}
-        <section id="recursos" className="mx-auto max-w-6xl px-4 py-20">
-          <header className="mx-auto max-w-2xl text-center">
-            <h2 className="text-xl font-bold text-fg sm:text-2xl">Uma suíte, do achado ao relatório</h2>
-            <p className="mt-3 text-sm text-fg-muted">
-              Cada peça abaixo já roda em produção no Vulnera — não é roadmap.
-            </p>
-          </header>
+        <main>
+          {/* --------------------------------------------------------------
+              Hero
+              -------------------------------------------------------------- */}
+          <section className="relative overflow-hidden">
+            <HeroFallback />
+            <Suspense fallback={null}>
+              <CyberCanvas />
+            </Suspense>
 
-          <StaggerList className="mt-10 grid gap-6 sm:grid-cols-2">
-            {RECURSOS.map((recurso, i) => (
-              <StaggerItem key={recurso.titulo} indice={i}>
-                <Card titulo={recurso.titulo} className="glitch-hover h-full">
-                  <p className="text-sm text-fg-secondary">{recurso.descricao}</p>
-                </Card>
-              </StaggerItem>
-            ))}
-          </StaggerList>
-        </section>
+            <div className="relative mx-auto max-w-5xl px-4 py-20 text-center sm:py-24">
+              <GlitchText
+                as="h1"
+                variante="auto"
+                text="Encontre. Priorize. Remedie."
+                className="text-3xl font-bold uppercase tracking-tight text-fg sm:text-4xl"
+              />
+              <p className="mx-auto mt-6 max-w-2xl text-base text-fg-secondary">
+                O Vulnera unifica achados de SAST e DAST, escopo de projeto, trilha de auditoria e postura de risco
+                calculada continuamente — para times de segurança e para os clientes que acompanham o resultado.
+              </p>
 
-        {/* --------------------------------------------------------------
-            Metodologia — preview interativo de risk score
-            -------------------------------------------------------------- */}
-        <section id="metodologia" className="border-y border-subtle bg-surface/40 px-4 py-20">
-          <div className="mx-auto max-w-4xl">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                {estaAutenticado ? (
+                  <LinkButton to="/dashboard" variant="primario" size="lg">
+                    Ir para o Dashboard
+                  </LinkButton>
+                ) : (
+                  <>
+                    <LinkButton to="/register" variant="primario" size="lg">
+                      Iniciar Análise
+                    </LinkButton>
+                    <LinkButton to="/login" variant="secundario" size="lg">
+                      Explorar Demonstração
+                    </LinkButton>
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* --------------------------------------------------------------
+              Recursos
+              -------------------------------------------------------------- */}
+          <section id="recursos" className="mx-auto max-w-6xl px-4 py-20">
             <header className="mx-auto max-w-2xl text-center">
-              <h2 className="text-xl font-bold text-fg sm:text-2xl">Postura de risco, calculada — não estimada</h2>
+              <h2 className="text-xl font-bold text-fg sm:text-2xl">Uma suíte, do achado ao relatório</h2>
               <p className="mt-3 text-sm text-fg-muted">
-                A mesma fórmula que roda no dashboard: cada finding aberto contribui com{" "}
-                <code className="font-mono text-fg-secondary">CVSS² ÷ 10</code>. Amostra abaixo, não dado de cliente.
+                Cada peça abaixo já roda em produção no Vulnera — não é roadmap.
               </p>
             </header>
 
-            <Card className="mt-10" semPadding>
-              <div className="grid gap-8 p-6 sm:grid-cols-[auto_1fr] sm:items-center">
-                <div className="text-center sm:text-left">
-                  <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Risk score</p>
-                  <p className="mt-1 text-4xl font-bold text-accent-ink">
-                    <NumeroAnimado valor={riskScore} casas={2} />
-                  </p>
-                  <p className="mt-1 text-xs text-fg-muted">{totalAmostra} findings nesta amostra</p>
-                </div>
+            <StaggerList className="mt-10 grid gap-6 sm:grid-cols-2">
+              {RECURSOS.map((recurso, i) => (
+                <StaggerItem key={recurso.titulo} indice={i}>
+                  <Card titulo={recurso.titulo} className="glitch-hover h-full">
+                    <p className="text-sm text-fg-secondary">{recurso.descricao}</p>
+                  </Card>
+                </StaggerItem>
+              ))}
+            </StaggerList>
+          </section>
 
-                <div className="flex flex-col gap-3">
-                  {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((severidade) => {
-                    const contagem = porSeveridade[severidade] ?? 0;
-                    const largura = totalAmostra > 0 ? (contagem / totalAmostra) * 100 : 0;
-                    const destacar = severidade === "CRITICAL" || severidade === "HIGH";
-                    return (
-                      <div key={severidade} className="flex items-center gap-3">
-                        <span className={destacar ? "glitch-hover" : undefined}>
-                          <SeverityBadge severidade={severidade} className="w-24 shrink-0 justify-center" />
-                        </span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-inset">
-                          <div
-                            className={`h-full rounded-full ${BARRA_SEVERIDADE[severidade]}`}
-                            style={{ width: `${largura}%` }}
-                          />
-                        </div>
-                        <span className="w-6 shrink-0 text-right text-xs text-fg-muted" data-numeric>
-                          {contagem}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </Card>
-          </div>
-        </section>
+          {/* --------------------------------------------------------------
+              Metodologia — preview interativo de risk score
+              -------------------------------------------------------------- */}
+          <section id="metodologia" className="border-y border-subtle bg-surface/40 px-4 py-20">
+            <div className="mx-auto max-w-4xl">
+              <header className="mx-auto max-w-2xl text-center">
+                <h2 className="text-xl font-bold text-fg sm:text-2xl">Postura de risco, calculada — não estimada</h2>
+                <p className="mt-3 text-sm text-fg-muted">
+                  A mesma fórmula que roda no dashboard: cada finding aberto contribui com{" "}
+                  <code className="font-mono text-fg-secondary">CVSS² ÷ 10</code>. Amostra abaixo, não dado de cliente.
+                </p>
+              </header>
 
-        {/* --------------------------------------------------------------
-            Planos
-            -------------------------------------------------------------- */}
-        <section id="planos" className="mx-auto max-w-6xl px-4 py-20">
-          <header className="mx-auto max-w-2xl text-center">
-            <h2 className="text-xl font-bold text-fg sm:text-2xl">Planos</h2>
-            <p className="mt-3 text-sm text-fg-muted">
-              Do time enxerga o primeiro pentest até a operação com múltiplos squads.
-            </p>
-          </header>
-
-          <div className="mx-auto mt-10 max-w-5xl">
-            {carregandoPlanos && (
-              <div className="grid gap-6 sm:grid-cols-3" aria-busy="true">
-                <span className="sr-only">Carregando planos</span>
-                {/* A FORMA do card real (título, preço, 3 linhas, botão) —
-                    não um bloco único. `h-64` não existiria na escala custom
-                    de espaçamento deste projeto (o maior passo nomeado é
-                    `24` = 96px; ver tailwind.config.ts), e mesmo se existisse
-                    um retângulo só "pula" mais quando troca pelo card real
-                    do que um esqueleto com a mesma silhueta. */}
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex flex-col gap-4 rounded-container border border-subtle bg-surface p-6">
-                    <Skeleton className="h-5 w-24" />
-                    <Skeleton className="h-8 w-24" />
-                    <div className="flex flex-col gap-2 pt-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-2/3" />
-                    </div>
-                    <Skeleton className="mt-4 h-10 w-full" />
+              <Card className="mt-10" semPadding>
+                <div className="grid gap-8 p-6 sm:grid-cols-[auto_1fr] sm:items-center">
+                  <div className="text-center sm:text-left">
+                    <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Risk score</p>
+                    <p className="mt-1 text-4xl font-bold text-accent-ink">
+                      <NumeroAnimado valor={riskScore} casas={2} />
+                    </p>
+                    <p className="mt-1 text-xs text-fg-muted">{totalAmostra} findings nesta amostra</p>
                   </div>
-                ))}
-              </div>
-            )}
 
-            {!carregandoPlanos && planosOrdenados.length > 0 && (
-              <StaggerList className="grid gap-6 sm:grid-cols-3">
-                {planosOrdenados.map((plano, i) => (
-                  <StaggerItem key={plano.id} indice={i}>
-                    <Card className="glitch-hover flex h-full flex-col">
-                      <h3 className="text-sm font-semibold uppercase text-accent-ink">{plano.name}</h3>
-                      <p className="mt-1 text-2xl font-bold text-fg" data-numeric>
-                        {formatarPreco(plano.price)}
-                        {plano.price > 0 && <span className="text-sm font-regular text-fg-muted">/mês</span>}
-                      </p>
+                  <div className="flex flex-col gap-3">
+                    {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((severidade) => {
+                      const contagem = porSeveridade[severidade] ?? 0;
+                      const largura = totalAmostra > 0 ? (contagem / totalAmostra) * 100 : 0;
+                      const destacar = severidade === "CRITICAL" || severidade === "HIGH";
+                      return (
+                        <div key={severidade} className="flex items-center gap-3">
+                          <span className={destacar ? "glitch-hover" : undefined}>
+                            <SeverityBadge severidade={severidade} className="w-24 shrink-0 justify-center" />
+                          </span>
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-inset">
+                            <div
+                              className={`h-full rounded-full ${BARRA_SEVERIDADE[severidade]}`}
+                              style={{ width: `${largura}%` }}
+                            />
+                          </div>
+                          <span className="w-6 shrink-0 text-right text-xs text-fg-muted" data-numeric>
+                            {contagem}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </section>
 
-                      <ul className="mt-6 flex flex-1 flex-col gap-2 text-sm text-fg-secondary">
-                        <li>
-                          Até <strong className="font-semibold text-fg">{plano.maxApplications}</strong> aplicações
-                        </li>
-                        <li>
-                          Até <strong className="font-semibold text-fg">{plano.maxProjects}</strong> projetos
-                          simultâneos
-                        </li>
-                        <li>{plano.includesRemediation ? "Remediação incluída" : "Sem remediação incluída"}</li>
-                      </ul>
-
-                      <Link
-                        to="/register"
-                        className="press mt-6 inline-flex h-10 items-center justify-center rounded-control bg-accent px-4 text-sm font-medium text-accent-fg shadow-raised transition-colors duration-fast hover:bg-accent-hover"
-                      >
-                        Começar com {plano.name}
-                      </Link>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerList>
-            )}
-          </div>
-        </section>
-      </main>
-
-      {/* ------------------------------------------------------------------
-          Footer
-          ------------------------------------------------------------------ */}
-      <footer className="border-t border-subtle px-4 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-center text-xs text-fg-muted sm:flex-row sm:justify-between sm:text-left">
-          <p>Vulnera — projeto acadêmico de TCC. Não executa ataques reais; gestão do serviço de consultoria.</p>
-          {/* Sem link "Entrar" aqui: a navbar já mostra a ação certa pro
-              estado de sessão (Entrar/Iniciar Análise OU Dashboard), e um
-              segundo "Entrar" fixo no rodapé ignoraria esse mesmo estado —
-              apareceria até pra quem já está logado. */}
-          <nav aria-label="Links do rodapé" className="flex items-center gap-4">
-            <Link to="/plans" className="press hover:text-fg-secondary">
+          {/* --------------------------------------------------------------
               Planos
-            </Link>
-            <span className="inline-flex items-center gap-2 font-mono">
-              <span aria-hidden="true" className="h-[6px] w-[6px] rounded-full bg-success" />
-              status: operacional
-            </span>
-          </nav>
-        </div>
-      </footer>
+              -------------------------------------------------------------- */}
+          <section id="planos" className="mx-auto max-w-6xl px-4 py-20">
+            <header className="mx-auto max-w-2xl text-center">
+              <h2 className="text-xl font-bold text-fg sm:text-2xl">Planos</h2>
+              <p className="mt-3 text-sm text-fg-muted">
+                Do time enxerga o primeiro pentest até a operação com múltiplos squads.
+              </p>
+            </header>
+
+            <div className="mx-auto mt-10 max-w-5xl">
+              {carregandoPlanos && (
+                <div className="grid gap-6 sm:grid-cols-3" aria-busy="true">
+                  <span className="sr-only">Carregando planos</span>
+                  {/* A FORMA do card real (título, preço, 3 linhas, botão) —
+                      não um bloco único. `h-64` não existiria na escala custom
+                      de espaçamento deste projeto (o maior passo nomeado é
+                      `24` = 96px; ver tailwind.config.ts), e mesmo se existisse
+                      um retângulo só "pula" mais quando troca pelo card real
+                      do que um esqueleto com a mesma silhueta. */}
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex flex-col gap-4 rounded-container border border-subtle bg-surface p-6">
+                      <Skeleton className="h-5 w-24" />
+                      <Skeleton className="h-8 w-24" />
+                      <div className="flex flex-col gap-2 pt-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </div>
+                      <Skeleton className="mt-4 h-10 w-full" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!carregandoPlanos && planosOrdenados.length > 0 && (
+                <StaggerList className="grid gap-6 sm:grid-cols-3">
+                  {planosOrdenados.map((plano, i) => (
+                    <StaggerItem key={plano.id} indice={i}>
+                      <Card className="glitch-hover flex h-full flex-col">
+                        <h3 className="text-sm font-semibold uppercase text-accent-ink">{plano.name}</h3>
+                        <p className="mt-1 text-2xl font-bold text-fg" data-numeric>
+                          {formatarPreco(plano.price)}
+                          {plano.price > 0 && <span className="text-sm font-regular text-fg-muted">/mês</span>}
+                        </p>
+
+                        <ul className="mt-6 flex flex-1 flex-col gap-2 text-sm text-fg-secondary">
+                          <li>
+                            Até <strong className="font-semibold text-fg">{plano.maxApplications}</strong> aplicações
+                          </li>
+                          <li>
+                            Até <strong className="font-semibold text-fg">{plano.maxProjects}</strong> projetos
+                            simultâneos
+                          </li>
+                          <li>{plano.includesRemediation ? "Remediação incluída" : "Sem remediação incluída"}</li>
+                        </ul>
+
+                        <Link
+                          to="/register"
+                          className="press mt-6 inline-flex h-10 items-center justify-center rounded-control bg-accent px-4 text-sm font-medium text-accent-fg shadow-raised transition-colors duration-fast hover:bg-accent-hover"
+                        >
+                          Começar com {plano.name}
+                        </Link>
+                      </Card>
+                    </StaggerItem>
+                  ))}
+                </StaggerList>
+              )}
+            </div>
+          </section>
+        </main>
+
+        {/* ------------------------------------------------------------------
+            Footer
+            ------------------------------------------------------------------ */}
+        <footer className="border-t border-subtle px-4 py-10">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-center text-xs text-fg-muted sm:flex-row sm:justify-between sm:text-left">
+            <p>Vulnera — projeto acadêmico de TCC. Não executa ataques reais; gestão do serviço de consultoria.</p>
+            {/* Sem link "Entrar" aqui: a navbar já mostra a ação certa pro
+                estado de sessão (Entrar/Iniciar Análise OU Dashboard), e um
+                segundo "Entrar" fixo no rodapé ignoraria esse mesmo estado —
+                apareceria até pra quem já está logado. */}
+            <nav aria-label="Links do rodapé" className="flex items-center gap-4">
+              <Link to="/plans" className="press hover:text-fg-secondary">
+                Planos
+              </Link>
+              <span className="inline-flex items-center gap-2 font-mono">
+                <span aria-hidden="true" className="h-[6px] w-[6px] rounded-full bg-success" />
+                status: operacional
+              </span>
+            </nav>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

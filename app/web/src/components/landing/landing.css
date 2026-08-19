@@ -2,10 +2,11 @@
    landing.css — VFX exclusivo da landing pública
    ----------------------------------------------------------------------------
    O QUE FAZ
-   Keyframes e classes utilitárias do glitch (texto e elemento genérico) e do
+   Keyframes e classes utilitárias do glitch (texto e elemento genérico), do
    scanline/ruído estático que cobre o `<CyberCanvas>` quando a cena 3D não
-   monta. Importado só por `landing-page.tsx` — nenhuma outra tela carrega
-   este arquivo.
+   monta, e das linhas do `<BootIntro>` (o "boot de terminal" de abertura).
+   Importado só por `landing-page.tsx` — nenhuma outra tela carrega este
+   arquivo.
 
    POR QUE NÃO ESTÁ EM `base.css`
    `base.css` documenta a própria regra: "aqui só entra o que vale para o
@@ -205,5 +206,52 @@
 @media (prefers-reduced-motion: reduce) {
   .landing-canvas {
     transition: none;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   BootIntro — linhas do "boot de terminal"
+   ----------------------------------------------------------------------------
+   `boot-intro.tsx` NÃO monta em `prefers-reduced-motion: reduce` (o
+   componente inteiro retorna `null` e chama `onFinished` na hora) — estas
+   regras só existem pro caminho de movimento normal. Cada linha entra com
+   `animation-delay` calculado em JS (o escalonamento é dado explícito, não
+   `staggerChildren`, porque são nós DOM estáticos, não itens de lista do
+   `motion`) e fica no lugar (`animation-fill-mode: both`, embutido no
+   shorthand) até a próxima desmontar tudo.
+   ---------------------------------------------------------------------------- */
+
+.boot-line {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: landing-boot-line-in 220ms var(--ease-out, ease-out) both;
+}
+
+@keyframes landing-boot-line-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.boot-cursor {
+  /* Duas animações na mesma lista: a entrada (uma vez) e o piscar (looping).
+     Só um `animation-delay` é dado (em `style`) — a spec do CSS REPETE o
+     último valor da lista pras animações que sobram, então as duas herdam o
+     mesmo atraso, que é exatamente o que se quer: o cursor não pisca antes
+     de "entrar". */
+  animation:
+    landing-boot-line-in 220ms var(--ease-out, ease-out) both,
+    landing-boot-cursor-blink 1s linear infinite;
+}
+
+@keyframes landing-boot-cursor-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
   }
 }

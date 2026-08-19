@@ -14,13 +14,19 @@
  *            `metrics.model.ts` sobre a amostra fixa (24,04)
  *   LAND-06  planos vindos da API aparecem, ordenados por capacidade, com
  *            "Sob consulta" para o plano de preço 0 (Enterprise)
+ *   LAND-07  BootIntro aparece na primeira visita da aba (sessionStorage
+ *            vazio) e some ao ser pulado por clique, liberando o conteúdo
+ *   LAND-08  prefers-reduced-motion pula o BootIntro por completo — nem
+ *            monta, nem atrasa o conteúdo real
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LandingPage } from "./landing-page";
+import { INTRO_SESSION_KEY } from "../components/landing/boot-intro";
 import { useAuthStore } from "../store/auth.store";
 import { plansApi } from "../lib/api/plans.api";
 import type { Plan } from "../types/plan.types";
@@ -28,6 +34,19 @@ import type { Plan } from "../types/plan.types";
 vi.mock("../lib/api/plans.api", () => ({
   plansApi: { list: vi.fn() },
 }));
+
+/**
+ * `useReducedMotion` do `motion` resolve a media query UMA VEZ e memoriza —
+ * reinstalar o `matchMedia` depois disso não muda o valor (mesmo motivo
+ * documentado em `sistema.test.tsx`). Mockado aqui pela mesma razão: só o
+ * LAND-08 precisa de `reduzido = true`, e precisa poder ligar isso ANTES do
+ * primeiro render, de forma isolada dos outros testes deste arquivo.
+ */
+vi.mock("motion/react", async (original) => {
+  const real = await original<typeof import("motion/react")>();
+  return { ...real, useReducedMotion: () => reduzidoMockado };
+});
+let reduzidoMockado = false;
 
 const PLANOS_FIXTURE: Plan[] = [
   {
@@ -83,6 +102,12 @@ function renderLanding() {
 beforeEach(() => {
   limparAuth();
   vi.mocked(plansApi.list).mockResolvedValue([]);
+  reduzidoMockado = false;
+  // "Já visto" por padrão: LAND-01..06 testam a página, não o BootIntro —
+  // sem isso, os 2,5s (ou o clique) do intro bloqueariam o resto da página
+  // atrás de `inert`. LAND-07 limpa isso explicitamente pra testar o intro
+  // em si.
+  sessionStorage.setItem(INTRO_SESSION_KEY, "1");
 });
 
 afterEach(() => {
@@ -200,5 +225,43 @@ describe("LandingPage", () => {
     expect(screen.getByRole("link", { name: "Começar com ENTERPRISE" })).toBeInTheDocument();
 
     expect(screen.getByText("Sob consulta")).toBeInTheDocument();
+  });
+
+  it("LAND-07 — o BootIntro aparece na primeira visita e some ao ser pulado por clique", async () => {
+    sessionStorage.removeItem(INTRO_SESSION_KEY);
+    const user = userEvent.setup();
+    renderLanding();
+
+    const intro = screen.getByRole("status", { name: "Carregando Vulnera" });
+    expect(screen.getByText("vulnera_appsec_suite --init")).toBeInTheDocument();
+    // Enquanto o intro está de pé, o conteúdo real fica `inert` por baixo.
+    expect(document.querySelector("[inert]")).not.toBeNull();
+
+    // Pula por clique — não espera os 2,5s reais do timer.
+    await user.click(intro);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("status", { name: "Carregando Vulnera" })).not.toBeInTheDocument();
+    });
+    expect(document.querySelector("[inert]")).toBeNull();
+    expect(screen.getByRole("link", { name: "Entrar" })).toBeInTheDocument();
+    expect(sessionStorage.getItem(INTRO_SESSION_KEY)).toBe("1");
+
+    await waitFor(() => expect(plansApi.list).toHaveBeenCalled());
+  });
+
+  it("LAND-08 — prefers-reduced-motion pula o BootIntro por completo", async () => {
+    sessionStorage.removeItem(INTRO_SESSION_KEY);
+    reduzidoMockado = true;
+
+    renderLanding();
+
+    // Nunca chega a montar — nem o status, nem um flash de `inert`.
+    expect(screen.queryByRole("status", { name: "Carregando Vulnera" })).not.toBeInTheDocument();
+    expect(document.querySelector("[inert]")).toBeNull();
+    expect(screen.getByRole("link", { name: "Entrar" })).toBeInTheDocument();
+    expect(sessionStorage.getItem(INTRO_SESSION_KEY)).toBe("1");
+
+    await waitFor(() => expect(plansApi.list).toHaveBeenCalled());
   });
 });
