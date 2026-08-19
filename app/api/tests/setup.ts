@@ -22,6 +22,12 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.project.deleteMany();
   await prisma.application.deleteMany();
   await prisma.auditLog.deleteMany();
+  // MaturityAssessment.companyId não tem FK declarada no schema (é só uma
+  // String), então nunca dava erro de constraint por faltar aqui — mas sem
+  // isso, cada teste que cria uma avaliação deixava a linha órfã pra sempre
+  // no banco de teste (o cascade em MaturityScore só anda nessa direção:
+  // apagar o assessment apaga os scores, não o contrário).
+  await prisma.maturityAssessment.deleteMany();
   await prisma.maturityScore.deleteMany();
   await prisma.maturityControl.deleteMany();
   await prisma.maturityDomain.deleteMany();

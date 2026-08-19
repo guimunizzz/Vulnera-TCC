@@ -2,14 +2,15 @@
  * lib/pdf/executive.ts
  *
  * Relatório Executivo (3-5 páginas): capa, sumário executivo, gráfico de
- * barras por severidade, top 5 riscos com recomendação curta, conclusão.
- * Público-alvo é gestão, não segurança — texto curto, sem jargão técnico
- * profundo (isso fica pro relatório Técnico).
+ * barras por severidade, top 5 riscos com recomendação curta, seção de
+ * maturidade, conclusão. Público-alvo é gestão, não segurança — texto curto,
+ * sem jargão técnico profundo (isso fica pro relatório Técnico).
  *
- * Seção de maturidade é placeholder condicional: `data.maturity` só deixa
- * de ser `null` a partir da Fase 8 (MaturityAssessment), então por enquanto
- * o PDF sempre mostra o aviso "disponível em breve" em vez de omitir a seção
- * — o leitor sabe que o item existe no produto, só não foi avaliado ainda.
+ * Seção de maturidade (Fase 8) é condicional: `data.maturity` é `null`
+ * enquanto a company não tem nenhum MaturityAssessment preenchido — nesse
+ * caso o PDF mostra um aviso em vez de tabela/radar vazios. Quando existe,
+ * desenha a tabela de médias por domínio + o radar à mão (drawRadarChart —
+ * o Recharts da tela não roda dentro de um PDF gerado no cliente).
  */
 
 import type { PDFPage, RGB } from "pdf-lib";
@@ -23,6 +24,7 @@ import {
   drawCoverPage,
   drawDivider,
   drawFooters,
+  drawRadarChart,
   drawSectionTitle,
   drawText,
   ensureSpace,
@@ -35,7 +37,8 @@ import {
   type ReportContext,
 } from "./base";
 import { OWASP_LABELS } from "../../types/vulnerability.types";
-import type { ReportData, ReportVulnerability } from "../../types/report.types";
+import { MATURITY_LEVEL_LABELS, type MaturityLevel } from "../../types/maturity.types";
+import type { ReportData, ReportMaturityDomain, ReportVulnerability } from "../../types/report.types";
 
 export async function generateExecutivePdf(data: ReportData): Promise<Blob> {
   const ctx = await createReportContext(data.company.name);
@@ -96,14 +99,36 @@ export async function generateExecutivePdf(data: ReportData): Promise<Blob> {
 
   cursor = addPage(ctx);
   cursor = drawSectionTitle(ctx, cursor, "Maturidade de segurança");
-  cursor = drawText(
-    ctx,
-    cursor,
-    // 🚧 [FUTURO] Fase 8 — MaturityAssessment. data.maturity é sempre null até lá.
-    "A avaliação de maturidade de segurança da empresa estará disponível a partir de uma fase futura do produto " +
-      "(checklist por domínio, escala 1-5). Esta seção foi reservada para que o layout do relatório já a acomode.",
-    { color: COLORS.mutedInk, gapAfter: 16 },
-  );
+
+  if (data.maturity) {
+    const levelLabel = MATURITY_LEVEL_LABELS[data.maturity.level as MaturityLevel] ?? data.maturity.level;
+    cursor = drawText(
+      ctx,
+      cursor,
+      `Avaliação mais recente em ${new Date(data.maturity.evaluatedAt).toLocaleDateString("pt-BR")} — nível geral ` +
+        `${levelLabel} (média ${data.maturity.overallScore.toFixed(2)} de 5). Checklist por domínio, escala 1-5, ` +
+        `média simples — sem ponderação entre perguntas ou domínios.`,
+      { gapAfter: 16 },
+    );
+
+    cursor = drawMaturityTable(ctx, cursor, data.maturity.domains);
+    cursor = { ...cursor, y: cursor.y - 10 };
+
+    cursor = drawRadarChart(
+      ctx,
+      cursor,
+      data.maturity.domains.map((d) => ({ label: d.domainName, value: d.average })),
+      5,
+    );
+  } else {
+    cursor = drawText(
+      ctx,
+      cursor,
+      "Esta empresa ainda não tem uma avaliação de maturidade de segurança preenchida. O checklist por domínio " +
+        "(escala 1-5) pode ser respondido pelo administrador na área de Maturidade da plataforma.",
+      { color: COLORS.mutedInk, gapAfter: 16 },
+    );
+  }
 
   cursor = drawSectionTitle(ctx, cursor, "Conclusão");
   const conclusionText =
@@ -185,4 +210,49 @@ function drawRiskCard(ctx: ReportContext, cursor: Cursor, risk: ReportVulnerabil
     color: COLORS.mutedInk,
     gapAfter: 14,
   });
+}
+
+/** Tabela simples de 2 colunas (domínio / média) — desenhada linha a linha, mesmo estilo manual do resto do pdf-lib aqui. */
+function drawMaturityTable(ctx: ReportContext, cursor: Cursor, domains: ReportMaturityDomain[]): Cursor {
+  const rowHeight = 22;
+  let { page, y } = ensureSpace(ctx, cursor, rowHeight * 2);
+
+  const headerDomain = "Domínio";
+  const headerAvg = "Média (1-5)";
+  page.drawText(headerDomain, { x: MARGIN, y: y - 14, size: 9, font: ctx.fonts.bold, color: COLORS.mutedInk });
+  page.drawText(headerAvg, {
+    x: rightAlignX(page, ctx, headerAvg, 9),
+    y: y - 14,
+    size: 9,
+    font: ctx.fonts.bold,
+    color: COLORS.mutedInk,
+  });
+  y -= rowHeight;
+  page.drawLine({ start: { x: MARGIN, y: y + 6 }, end: { x: MARGIN + CONTENT_WIDTH, y: y + 6 }, thickness: 0.75, color: COLORS.border });
+
+  for (const domain of domains) {
+    const step = ensureSpace(ctx, { page, y }, rowHeight);
+    page = step.page;
+    y = step.y;
+
+    page.drawText(sanitizeForFont(domain.domainName, ctx.fonts.regular), {
+      x: MARGIN,
+      y: y - 14,
+      size: 10,
+      font: ctx.fonts.regular,
+      color: COLORS.ink,
+    });
+    const avgLabel = domain.average.toFixed(2);
+    page.drawText(avgLabel, {
+      x: rightAlignX(page, ctx, avgLabel, 10),
+      y: y - 14,
+      size: 10,
+      font: ctx.fonts.bold,
+      color: COLORS.ink,
+    });
+    y -= rowHeight;
+    page.drawLine({ start: { x: MARGIN, y: y + 6 }, end: { x: MARGIN + CONTENT_WIDTH, y: y + 6 }, thickness: 0.5, color: COLORS.border });
+  }
+
+  return { page, y: y - 6 };
 }

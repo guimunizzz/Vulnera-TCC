@@ -41,6 +41,7 @@ import type { UserRepository } from "../repositories/user.repository";
 import type { ProjectMemberRepository } from "../repositories/project-member.repository";
 import type { ReportRepository } from "../repositories/report.repository";
 import type { AuditLogRepository } from "../repositories/audit-log.repository";
+import type { MaturityRepository } from "../repositories/maturity.repository";
 import { ProjectEntity } from "../models/project.model";
 import { CompanyEntity } from "../models/company.model";
 import { ApplicationEntity } from "../models/application.model";
@@ -52,6 +53,7 @@ import {
   type ReportStatsDTO,
   type ReportVulnerabilityDTO,
   type ReportType,
+  type ReportMaturityDTO,
 } from "../models/report.model";
 import type { Project } from "@prisma/client";
 import type { UserRole } from "../models/user.model";
@@ -77,6 +79,7 @@ export class ReportService {
     private readonly userRepository: UserRepository,
     private readonly projectMemberRepository: ProjectMemberRepository,
     private readonly auditLogRepository: AuditLogRepository,
+    private readonly maturityRepository: MaturityRepository,
   ) {}
 
   async getReportData(actor: Actor, projectId: string): Promise<ReportDataDTO> {
@@ -129,6 +132,8 @@ export class ReportService {
       .sort((a, b) => (b.cvssScore ?? 0) - (a.cvssScore ?? 0))
       .slice(0, 5);
 
+    const maturity = await this.buildMaturitySection(project.companyId);
+
     return {
       project: new ProjectEntity(project).toResponse(),
       company: new CompanyEntity(company).toResponse(),
@@ -136,7 +141,41 @@ export class ReportService {
       vulnerabilities: reportVulnerabilities,
       stats,
       topRisks,
-      maturity: null, // 🚧 [FUTURO] Fase 8
+      maturity,
+    };
+  }
+
+  /**
+   * Fase 8 — seção de maturidade do relatório executivo. null quando a
+   * company ainda não tem nenhuma avaliação (empresa nova, admin não
+   * preencheu ainda) — o PDF mostra um aviso condicional nesse caso.
+   * overallScore/level vêm PRONTOS do assessment (já calculados e persistidos
+   * por MaturityService.submitScores) — aqui só agrupamos os scores por
+   * domínio pra tirar a média simples de cada um (não existe no banco).
+   */
+  private async buildMaturitySection(companyId: string): Promise<ReportMaturityDTO | null> {
+    const assessment = await this.maturityRepository.findLatestByCompanyWithDomains(companyId);
+    if (!assessment || assessment.scores.length === 0) return null;
+
+    const scoresByDomain = new Map<string, { domainName: string; scores: number[] }>();
+    for (const s of assessment.scores) {
+      const domain = s.control.domain;
+      const entry = scoresByDomain.get(domain.id) ?? { domainName: domain.name, scores: [] };
+      entry.scores.push(s.score);
+      scoresByDomain.set(domain.id, entry);
+    }
+
+    const domains = Array.from(scoresByDomain.entries()).map(([domainId, { domainName, scores }]) => ({
+      domainId,
+      domainName,
+      average: Math.round((scores.reduce((sum, v) => sum + v, 0) / scores.length) * 100) / 100,
+    }));
+
+    return {
+      overallScore: assessment.overallScore,
+      level: assessment.level,
+      evaluatedAt: assessment.createdAt.toISOString(),
+      domains,
     };
   }
 

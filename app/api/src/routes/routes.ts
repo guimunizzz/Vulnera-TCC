@@ -10,6 +10,7 @@ import { projectRoutes } from "./project.routes";
 import { vulnerabilityRoutes } from "./vulnerability.routes";
 import { reportRoutes } from "./report.routes";
 import { notificationRoutes } from "./notification.routes";
+import { maturityRoutes } from "./maturity.routes";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use("/projects", projectRoutes);
 router.use("/vulnerabilities", vulnerabilityRoutes);
 router.use("/reports", reportRoutes);
 router.use("/notifications", notificationRoutes);
+router.use("/maturity", maturityRoutes);
 
 export { router as apiRoutes };
