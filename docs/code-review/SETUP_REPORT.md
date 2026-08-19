@@ -50,6 +50,18 @@ O comando `python` padrão (3.11.15) não interpreta uma expressão f-string usa
 
 READY_FOR_REVIEW: NO
 
+## Revalidation after removal of prior blockers
+
+- Execution: `py -3.14 vulnera_codex_code_review_bootstrap/scripts/validate_review_setup.py --repo . --write-report`
+- Current branch: `code-review` at `646466b64fef3c797268a883d0ab9efd7bd9236d`.
+- Audit reference: `dev` at `49cac59122bc9d4e05e491339e1f4eb80aad838d`.
+- Relationship: `dev` remains an ancestor of `code-review`.
+- Working tree before writing the refreshed validation artifact: clean.
+- Unexpected changes outside the permitted setup paths: none.
+- Remaining validator blockers: none.
+
+READY_FOR_REVIEW: YES
+
 ## Revalidation for isolated review branch
 
 - Audit reference branch: `dev` at `71d5b3e7978f6a91633caaccc6bc11b1e521cb04`.

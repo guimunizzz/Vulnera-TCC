@@ -2,17 +2,14 @@
   "repo": "C:\\Users\\43737514801\\Documents\\Vulnera-TCC",
   "git_repo": true,
   "branch": "code-review",
-  "commit": "71d5b3e7978f6a91633caaccc6bc11b1e521cb04",
+  "commit": "646466b64fef3c797268a883d0ab9efd7bd9236d",
   "audit_reference_branch": "dev",
-  "audit_reference_commit": "71d5b3e7978f6a91633caaccc6bc11b1e521cb04",
+  "audit_reference_commit": "49cac59122bc9d4e05e491339e1f4eb80aad838d",
   "review_branch_derived_from_reference": true,
-  "working_tree_clean": false,
-  "unexpected_worktree_changes": [
-    "?? docs/Vulnera.zip",
-    "?? repomix-output.md"
-  ],
+  "working_tree_clean": true,
+  "unexpected_worktree_changes": [],
   "checklist_present": true,
-  "checklist_sha256": "c4c81ed6fa31e7232d5707c94d9054957c9f8c33925ae57e5900f700a857bc0d",
+  "checklist_sha256": "fa3e991deffb7ee253b5c5c92f941eaaeaff13e05ffc118f4c3c09a0b8147be3",
   "seeds_present": true,
   "manifest_present": true,
   "skill_present": true,
@@ -91,8 +88,6 @@
     }
   },
   "required_agents_missing": [],
-  "errors": [
-    "Existem mudanças locais fora do harness/docs/code-review; a revisão ficaria ambígua. Resolva ou autorize explicitamente antes de iniciar."
-  ],
-  "ready_for_review": false
+  "errors": [],
+  "ready_for_review": true
 }
