@@ -1,0 +1,98 @@
+{
+  "repo": "C:\\Users\\43737514801\\Documents\\Vulnera-TCC",
+  "git_repo": true,
+  "branch": "code-review",
+  "commit": "71d5b3e7978f6a91633caaccc6bc11b1e521cb04",
+  "audit_reference_branch": "dev",
+  "audit_reference_commit": "71d5b3e7978f6a91633caaccc6bc11b1e521cb04",
+  "review_branch_derived_from_reference": true,
+  "working_tree_clean": false,
+  "unexpected_worktree_changes": [
+    "?? docs/Vulnera.zip",
+    "?? repomix-output.md"
+  ],
+  "checklist_present": true,
+  "checklist_sha256": "c4c81ed6fa31e7232d5707c94d9054957c9f8c33925ae57e5900f700a857bc0d",
+  "seeds_present": true,
+  "manifest_present": true,
+  "skill_present": true,
+  "config_present": true,
+  "config_valid": true,
+  "agents": {
+    "adversarial-reviewer.toml": {
+      "valid": true,
+      "name": "adversarial_reviewer",
+      "model": "gpt-5.6-sol",
+      "reasoning": "xhigh",
+      "sandbox": "read-only"
+    },
+    "architecture-mapper.toml": {
+      "valid": true,
+      "name": "architecture_mapper",
+      "model": "gpt-5.6-terra",
+      "reasoning": "high",
+      "sandbox": "read-only"
+    },
+    "backend-auditor.toml": {
+      "valid": true,
+      "name": "backend_auditor",
+      "model": "gpt-5.6-terra",
+      "reasoning": "high",
+      "sandbox": "read-only"
+    },
+    "business-rules-auditor.toml": {
+      "valid": true,
+      "name": "business_rules_auditor",
+      "model": "gpt-5.6-sol",
+      "reasoning": "xhigh",
+      "sandbox": "read-only"
+    },
+    "checklist-indexer.toml": {
+      "valid": true,
+      "name": "checklist_indexer",
+      "model": "gpt-5.6-luna",
+      "reasoning": "high",
+      "sandbox": "read-only"
+    },
+    "data-infra-auditor.toml": {
+      "valid": true,
+      "name": "data_infra_auditor",
+      "model": "gpt-5.6-terra",
+      "reasoning": "high",
+      "sandbox": "read-only"
+    },
+    "flow-validator.toml": {
+      "valid": true,
+      "name": "flow_validator",
+      "model": "gpt-5.6-sol",
+      "reasoning": "xhigh",
+      "sandbox": "read-only"
+    },
+    "frontend-ux-auditor.toml": {
+      "valid": true,
+      "name": "frontend_ux_auditor",
+      "model": "gpt-5.6-terra",
+      "reasoning": "high",
+      "sandbox": "read-only"
+    },
+    "security-auditor.toml": {
+      "valid": true,
+      "name": "security_auditor",
+      "model": "gpt-5.6-sol",
+      "reasoning": "xhigh",
+      "sandbox": "read-only"
+    },
+    "test-quality-auditor.toml": {
+      "valid": true,
+      "name": "test_quality_auditor",
+      "model": "gpt-5.6-luna",
+      "reasoning": "high",
+      "sandbox": "read-only"
+    }
+  },
+  "required_agents_missing": [],
+  "errors": [
+    "Existem mudanças locais fora do harness/docs/code-review; a revisão ficaria ambígua. Resolva ou autorize explicitamente antes de iniciar."
+  ],
+  "ready_for_review": false
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Vulnera Code Review"
+  short_description: "Revisão multiagente read-only do estado real do Vulnera"
+  default_prompt: "Revise e mapeie o estado atual do Vulnera contra a Checklist Mestre, sem modificar o código."
+policy:
+  allow_implicit_invocation: false
