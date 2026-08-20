@@ -51,7 +51,7 @@ export function FindingDetailPage() {
     <div>
       <Breadcrumb
         itens={[
-          { rotulo: companyName ?? "Empresa" },
+          { rotulo: companyName ?? "Organização" },
           { rotulo: project?.name ?? "Projeto", para: project ? `/projects/${project.id}` : undefined },
           { rotulo: finding.title },
         ]}
