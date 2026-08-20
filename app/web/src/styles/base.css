@@ -1,0 +1,259 @@
+/**
+ * base.css — regras de base do produto.
+ *
+ * O QUE FAZ
+ * O mínimo que TODA página herda: tipografia, cor de fundo, foco visível,
+ * seleção de texto, barra de rolagem e números tabulares.
+ *
+ * POR QUE EXISTE SEPARADO
+ * Carregado no `main.tsx` depois do `index.css`, ou seja, depois do preflight
+ * do Tailwind — senão o reset apagaria estas regras. Ver o cabeçalho de
+ * index.css.
+ *
+ * REGRA
+ * Aqui só entra o que vale para o documento inteiro. Estilo de componente vive
+ * no componente. Se você está prestes a escrever `.card` aqui, pare.
+ */
+
+/* ---------------------------------------------------------------------------
+   Documento
+   --------------------------------------------------------------------------- */
+
+html {
+  /* A escala tipográfica é toda em rem: mexer aqui reescala a interface inteira
+     de forma proporcional. É também o que faz o zoom do navegador funcionar
+     direito para quem precisa dele. */
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background-color: oklch(var(--color-bg-canvas));
+  color: oklch(var(--color-text-primary));
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* A troca de tema anima. Sem isso, alternar dark→light é um flash branco na
+     cara de quem está trabalhando no escuro. Só cor — nada de layout. */
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out);
+}
+
+/* ---------------------------------------------------------------------------
+   Números — a regra mais subestimada de uma UI de dados
+   ---------------------------------------------------------------------------
+   `tabular-nums` fixa a largura de cada dígito. Sem isso, um KPI que anima de
+   "18" para "21" muda de LARGURA no meio da animação, e uma coluna de CVSS não
+   alinha na vírgula. Aplicado por padrão em tabela, em qualquer elemento com
+   `[data-numeric]` e em toda a família mono.
+   --------------------------------------------------------------------------- */
+
+table,
+[data-numeric],
+.font-mono,
+code,
+kbd,
+samp,
+pre {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.95em; /* mono renderiza opticamente maior que a sans no mesmo px */
+}
+
+/* ---------------------------------------------------------------------------
+   Foco
+   ---------------------------------------------------------------------------
+   `:focus-visible`, NUNCA `:focus`. A diferença: `:focus` pinta o anel também
+   em clique de mouse, o que leva metade dos times a removê-lo com
+   `outline: none` — e aí quem navega por teclado fica sem nada. `focus-visible`
+   é o navegador dizendo "esta pessoa está usando teclado".
+
+   O anel é desenhado com `outline` (e não box-shadow) de propósito: outline não
+   participa do layout, não é cortado por `overflow: hidden` do pai e continua
+   visível no modo de alto contraste do Windows.
+   --------------------------------------------------------------------------- */
+
+:focus-visible {
+  outline: var(--border-width-strong) solid oklch(var(--color-focus-ring));
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}
+
+/* O anel padrão do navegador em clique de mouse sai; o de teclado, acima, fica. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Seleção e rolagem
+   --------------------------------------------------------------------------- */
+
+::selection {
+  background-color: oklch(var(--color-accent) / 0.35);
+  color: oklch(var(--color-text-primary));
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(var(--color-border-strong)) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: oklch(var(--color-border-strong));
+  border-radius: var(--radius-full);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(var(--color-text-muted));
+}
+
+/* ---------------------------------------------------------------------------
+   Utilitários de acessibilidade
+   --------------------------------------------------------------------------- */
+
+/* Visível só para leitor de tela. Usado em rótulo de ícone, em `aria-live` de
+   status e no anúncio de mudança de página. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Link "pular para o conteúdo": invisível até receber foco por teclado. É a
+   primeira parada de quem navega por Tab e não quer atravessar a sidebar
+   inteira em toda página. */
+.skip-link {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: var(--z-toast);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-control);
+  background-color: oklch(var(--color-accent));
+  color: oklch(var(--color-accent-fg));
+  font-weight: var(--weight-medium);
+  transform: translateY(calc(-100% - var(--space-4)));
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* ---------------------------------------------------------------------------
+   Feedback tátil de press
+   ---------------------------------------------------------------------------
+   Em CSS, e não no `motion`, de propósito: é a animação mais frequente da
+   aplicação (todo botão, todo item clicável) e não vale um componente de
+   JavaScript por clique. `transform` é propriedade composta — não dispara
+   layout nem paint.
+
+   O `@media (prefers-reduced-motion: no-preference)` em volta é o que faz a
+   escala sumir de verdade para quem pediu menos movimento. Só encurtar a
+   duração não bastaria: o elemento ainda encolheria, instantaneamente.
+   --------------------------------------------------------------------------- */
+
+.press {
+  transition: transform var(--duration-instant) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .press:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: scale(0.97);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Alvo de toque estendido
+   ---------------------------------------------------------------------------
+   Controles densos (botão `sm`, ícone de 32px, chip removível) precisam de
+   44×44 de ÁREA CLICÁVEL sem ganhar 44px de altura no layout — senão uma barra
+   de ferramentas de seis ícones fica com a altura de um cabeçalho.
+
+   O pseudo-elemento resolve: invisível, centrado, sem participar do fluxo. O
+   `position: relative` no host é o que o ancora.
+   --------------------------------------------------------------------------- */
+
+.alvo-estendido {
+  position: relative;
+}
+
+.alvo-estendido::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  min-width: var(--size-touch-target);
+  min-height: var(--size-touch-target);
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+   Movimento reduzido — a rede de segurança global
+   ---------------------------------------------------------------------------
+   As durações já viram 1ms em tokens.css, o que cobre transições declaradas com
+   os tokens. Este bloco cobre o resto: animação de terceiro (Recharts),
+   `scroll-behavior` e qualquer duração que tenha escapado. Não é redundância —
+   é o piso.
+
+   Repare que NÃO zeramos a opacidade: reduzir movimento é trocar deslocamento
+   por fade, não remover feedback.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* EXCEÇÃO: indicador de progresso indeterminado.
+     A regra acima congelaria o spinner num quadro qualquer, e um spinner
+     parado comunica "travou", não "carregando" — o oposto do que ele existe
+     para dizer. Movimento reduzido pede menos movimento, não menos INFORMAÇÃO.
+     Aqui ele continua girando, mais devagar, num giro constante e previsível
+     (sem aceleração, que é o que incomoda). */
+  [data-motion-essencial] {
+    animation: spin 1.6s linear infinite !important;
+  }
+}

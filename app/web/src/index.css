@@ -1,0 +1,23 @@
+/**
+ * index.css — ponto de entrada do CSS.
+ *
+ * ORDEM IMPORTA, e é esta:
+ *   1. fontes    — precisam estar declaradas antes de qualquer uso
+ *   2. tokens    — precisam existir antes de qualquer regra que os leia
+ *   3. tailwind  — preflight (reset) + utilitários
+ *
+ * As regras de base do produto ficam em `styles/base.css`, importado no
+ * `main.tsx` DEPOIS deste arquivo. Motivo: o preflight do Tailwind (`@tailwind
+ * base`) reseta `body`, títulos e listas — se base.css viesse antes, o reset
+ * apagaria tudo o que ele define. Um `@import` no fim deste arquivo não
+ * resolveria: a especificação de CSS exige que todo `@import` venha antes de
+ * qualquer outra regra.
+ */
+
+@import "@fontsource-variable/archivo";
+@import "@fontsource-variable/jetbrains-mono";
+@import "./styles/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

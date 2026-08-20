@@ -45,3 +45,11 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+# Uploads (evidências — Fase 5). Regra do root .gitignore aponta pra
+# "apps/api/uploads" (plural, resquício de monorepo antigo) e nunca bateu
+# com o caminho real "app/api/uploads" — corrigido aqui, na raiz do próprio
+# pacote, onde o caminho relativo funciona de verdade.
+uploads/*
+!uploads/.gitkeep
+uploads-test/

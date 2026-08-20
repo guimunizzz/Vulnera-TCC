@@ -1,0 +1,345 @@
+---
+type: estrutura-projeto
+tags: [architecture, frontend, nextjs]
+status: ativo
+---
+
+> [!info] Nota refatorada em 2026-07-26
+> Stack e convenções atualizadas conforme [[Contexto Mestre v4]]. Referências a NestJS, PostgreSQL, Next.js e `@react-pdf/renderer` foram substituídas por Express, MySQL, React + Vite e `pdf-lib`.
+
+> [!warning] Correção em 2026-08-04 (ver [[ADR-020 - Stack final do frontend web e CORS]])
+> A estrutura abaixo (`app/`, grupos de rota `(public)/(admin)/(pentester)/(client)`, `components.json` do shadcn/ui) é o desenho **Next.js App Router** que não foi o que acabou implementado no bootstrap real da Fase 3. `app/web` é uma **SPA Vite**: código em `src/`, roteamento com `react-router-dom` (guards por role via `<ProtectedRoute roles={[...]} />` aninhado, não por pasta de grupo), componentes Radix+Tailwind direto (sem CLI do shadcn/ui). A estrutura real ficou:
+> ```text
+> app/web/src/
+> ├── components/{ui,layout}/
+> ├── pages/{auth,admin}/
+> ├── lib/{api,cn.ts,query-client.ts}
+> ├── store/auth.store.ts
+> ├── hooks/use-api-error.ts
+> ├── types/*.types.ts
+> ├── App.tsx
+> └── main.tsx
+> ```
+> O restante desta nota (papel de cada camada conceitual, segurança) continua válido — só a árvore de pastas concreta diverge do que está descrito abaixo.
+
+# Estrutura - Web React
+
+## Objetivo
+
+Definir a estrutura esperada para o front-end web do Vulnera.
+
+O front-end usa:
+
+- React + Vite App Router
+- React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Recharts
+- Axios ou fetch wrapper
+- Zustand ou TanStack Query
+- Socket.IO client
+
+## Estrutura principal
+
+```text
+apps/web/
+├── app/
+├── components/
+├── lib/
+├── public/
+├── styles/
+├── .env.local
+├── .env.example
+├── next.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+├── components.json
+├── package.json
+└── Dockerfile
+```
+
+## `app/`
+
+Contém as rotas do React + Vite App Router.
+
+A estrutura é separada por grupos de rota:
+
+```text
+app/
+├── (public)/
+├── (admin)/
+├── (pentester)/
+└── (client)/
+```
+
+## Rotas públicas
+
+```text
+(public)/
+├── page.tsx
+├── login/
+├── register/
+├── forgot-password/
+└── reset-password/
+```
+
+Usadas para:
+
+- landing page
+- login
+- cadastro
+- recuperação de senha
+- onboarding inicial
+
+## Área Admin
+
+```text
+(admin)/
+├── dashboard/
+├── companies/
+├── users/
+├── projects/
+├── pentesters/
+├── subscriptions/
+└── support/
+```
+
+Usada por administradores para:
+
+- gerir empresas
+- aprovar assinaturas
+- acompanhar projetos
+- atribuir pentesters
+- visualizar dashboard global
+- responder tickets
+
+## Área Pentester
+
+```text
+(pentester)/
+├── dashboard/
+├── projects/
+└── chat/
+```
+
+Usada por pentesters para:
+
+- acessar projetos atribuídos
+- registrar findings
+- anexar evidências
+- gerar relatórios
+- interagir via chat
+
+## Área Cliente
+
+```text
+(client)/
+├── dashboard/
+├── applications/
+├── projects/
+├── maturity/
+├── chat/
+├── support/
+└── settings/
+```
+
+Usada por clientes para:
+
+- cadastrar aplicações
+- abrir projetos
+- acompanhar findings
+- baixar relatórios
+- abrir tickets
+- configurar notificações
+
+## `components/`
+
+Organiza componentes reutilizáveis.
+
+```text
+components/
+├── ui/
+├── layout/
+├── dashboard/
+├── vulnerabilities/
+├── projects/
+├── maturity/
+├── chat/
+├── reports/
+└── shared/
+```
+
+## Componentes principais
+
+### `ui/`
+
+Componentes base, preferencialmente compatíveis com shadcn/ui.
+
+### `layout/`
+
+Componentes estruturais:
+
+- sidebar
+- header
+- navbar
+- notification bell
+
+### `dashboard/`
+
+Componentes de indicadores:
+
+- KPI card
+- gráficos de findings
+- radar de maturidade
+- activity feed
+
+### `vulnerabilities/`
+
+Componentes de findings:
+
+- tabela
+- card
+- badges
+- CVSS calculator
+- formulário
+- uploader
+- comentário
+
+### `projects/`
+
+Componentes de projeto:
+
+- card
+- badge de status
+- formulário
+- modal de atribuição
+
+## `lib/`
+
+Contém lógica compartilhada do front-end.
+
+```text
+lib/
+├── api/
+├── hooks/
+├── store/
+├── utils/
+└── auth.ts
+```
+
+## `lib/api/`
+
+Centraliza chamadas para a API:
+
+- `auth.api.ts`
+- `companies.api.ts`
+- `applications.api.ts`
+- `projects.api.ts`
+- `vulnerabilities.api.ts`
+- `maturity.api.ts`
+- `reports.api.ts`
+- `chat.api.ts`
+- `support.api.ts`
+- `notifications.api.ts`
+
+## `lib/hooks/`
+
+Hooks reutilizáveis:
+
+- `use-auth.ts`
+- `use-socket.ts`
+- `use-notifications.ts`
+- `use-projects.ts`
+- `use-vulnerabilities.ts`
+
+## `lib/store/`
+
+Estado global, se necessário:
+
+- `auth.store.ts`
+- `notification.store.ts`
+- `ui.store.ts`
+
+## Relação com produto
+
+Esta estrutura implementa:
+
+- [[Web Admin]]
+- [[Web Cliente]]
+- [[Autenticacao]]
+- [[Projetos]]
+- [[Findings]]
+- [[Relatorios]]
+- [[Dashboard]]
+- [[Chat e Comentarios]]
+- [[Notificacoes]]
+
+## Segurança no front-end
+
+O Claude deve considerar:
+
+- prevenção de XSS
+- não expor tokens indevidamente
+- não confiar em validação apenas no front-end
+- esconder informações conforme role
+- não renderizar HTML arbitrário
+
+Notas relacionadas:
+
+- [[Padrao - Prevencao de XSS]]
+- [[Padrao - Autenticacao e JWT]]
+- [[Padrao - Logs e Dados Sensiveis]]
+
+## Regra para o Claude
+
+Ao gerar front-end, o Claude deve:
+
+- respeitar separação por perfil
+- manter componentes pequenos
+- evitar telas complexas demais no primeiro MVP
+- priorizar fluxo funcional
+- manter consistência visual simples
+- conectar telas aos módulos documentados
+
+---
+
+> [!warning] Estrutura atualizada na Fase 6.5 (2026-08-09)
+
+```
+app/web/
+├── index.html               # script inline de tema (antes do 1º paint)
+├── tailwind.config.ts       # expõe SÓ tokens semânticos
+├── vitest.config.ts
+├── scripts/
+│   └── check-contrast.mjs   # mede WCAG lendo tokens.css; falha o build
+└── src/
+    ├── styles/
+    │   ├── tokens.css       # FONTE ÚNICA: cor, tipo, espaço, raio, motion
+    │   └── base.css         # regras de base (depois do preflight)
+    ├── design/              # tema: theme.ts, provider, toggle
+    ├── motion/              # tokens.ts, use-motion.ts, components.tsx
+    ├── components/
+    │   ├── ui/              # ~30 componentes + index.ts (barril)
+    │   │   └── _internal/   # focus trap, dismiss, portal, ancoragem…
+    │   │                    #   NÃO reexportado — é maquinaria, não API
+    │   ├── metrics/         # chart-shell, charts, kpi-card, filter-bar
+    │   ├── layout/          # app-layout, sidebar, protected-route
+    │   └── findings/
+    ├── hooks/               # use-filtros-metricas (URL como fonte única)
+    ├── lib/api/             # um arquivo por recurso + client.ts
+    ├── pages/               # uma por rota (+ styleguide, só em dev)
+    ├── test/                # setup.ts e sistema.test.tsx
+    ├── types/
+    └── store/
+```
+
+**Duas regras estruturais que valem registrar:**
+
+1. `components/ui/_internal/` **não** é reexportado pelo barril. Uma tela que
+   importasse `useFocusTrap` estaria construindo um overlay fora do contrato de
+   acessibilidade.
+2. `styles/base.css` é importado no `main.tsx` **depois** do `index.css`, não por
+   `@import`. O preflight do Tailwind reseta `body` e títulos; se base.css viesse
+   antes, o reset apagaria tudo o que ele define. E um `@import` no fim do
+   `index.css` seria inválido — a spec exige `@import` antes de qualquer regra.

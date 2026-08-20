@@ -1,17 +1,45 @@
 // Vulnera — Prisma Schema
+// ============================================================================
+// Banco: MySQL 8 (local via docker compose)
+// ORM: Prisma 5.x
+// ============================================================================
 //
-// Banco TEMPORÁRIO: MySQL (ambiente local não tem Postgres). Ver ADR-008.
-// Migração para PostgreSQL futura: trocar `provider = "mysql"` por
-// `provider = "postgresql"` e ajustar `DATABASE_URL`. Por isso, NÃO usar
-// features exclusivas do Postgres (sem @db.Uuid, sem enums nativos).
-// Os "enums" do domínio (Role, CompanyRole, SubscriptionStatus) estão
-// representados como String, validados em TypeScript / class-validator.
+// FILOSOFIA DESTE SCHEMA
 //
-// Onda 2: User, Company, Plan, Subscription, RefreshToken, PasswordResetToken
-// Onda 3: (camada comercial — sem novos models, apenas index composto em Subscription)
-// Onda 4: Application, Project, ProjectMember
-// Onda 5+: Vulnerability, Evidence, VulnerabilityComment, Maturity, Reports,
-//          Notifications, Chat, AuditLog
+// 1) Isolamento Tenable/Wiz-like:
+//    Cada Vulnerability é uma INSTÂNCIA INDIVIDUAL. Pertence a UM Project,
+//    que pertence a UMA Application, que pertence a UMA Company. Não há
+//    nenhuma "lib global de vulnerabilidades". Mesmo que duas Companies
+//    tenham a mesma CVE em apps idênticos, são 2 registros independentes.
+//
+// 2) Multi-tenant por chave estrangeira:
+//    Toda entidade derivada (Project, Vulnerability, Evidence) carrega
+//    companyId desnormalizado (mesmo quando já é alcançável por FK). Isso
+//    permite filtro O(1) por tenant em qualquer query e evita JOINs em
+//    todas as listagens. O Service garante consistência ao criar.
+//
+// 3) Sem enums nativos:
+//    String + validação em TypeScript. Razão: portabilidade entre
+//    MySQL/PostgreSQL e evita migration toda vez que adiciona valor.
+//
+// 4) IDs cuid():
+//    Curto, URL-safe, ordenável por criação. Suficiente pra TCC.
+//
+// 5) Soft-delete não-implementado:
+//    Pra TCC, delete é hard. Se entrar soft-delete, adicionar `deletedAt`.
+//
+// ============================================================================
+// ESTADO POR ONDA
+// ============================================================================
+//   ✅ MVP (sprints 1-5): User, Company, Plan, Subscription, RefreshToken,
+//                          PasswordResetToken, Application, Project,
+//                          ProjectMember, Vulnerability, Evidence,
+//                          VulnerabilityComment, AuditLog
+//   🔜 Pós-MVP (sprints 6-8): MaturityDomain, MaturityControl,
+//                              MaturityAssessment, MaturityScore,
+//                              Notification, Report
+//   ❄️  Futuro (depois TCC): ChatMessage, SupportTicket
+// ============================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -22,96 +50,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --------------------------------------------------------------------------
-// User
-// --------------------------------------------------------------------------
-// role:        "ADMIN" | "PENTESTER" | "CLIENT"        (Enum - Roles)
-// companyRole: "OWNER" | "MEMBER" | null               (Enum - CompanyRole)
-// password:    bcrypt hash (cost 12) — nunca em claro
-// --------------------------------------------------------------------------
-model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  password    String
-  name        String
-  role        String   @default("CLIENT")
-  companyId   String?
-  companyRole String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// ============================================================================
+// IDENTIDADE E ACESSO
+// ============================================================================
 
-  company             Company?              @relation(fields: [companyId], references: [id])
+// User — qualquer pessoa que loga
+// role: "ADMIN" | "PENTESTER" | "CLIENT"
+// companyRole: "OWNER" | "MEMBER" | null (somente CLIENTs têm companyRole)
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String // bcrypt cost 12 — NUNCA armazenar em claro
+  name          String
+  role          String   @default("CLIENT")
+  companyId     String?
+  companyRole   String?
+  expoPushToken String? // Fase 7 — token do Expo Push Service; null até o app mobile registrar (POST /notifications/register-push)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company             Company?               @relation(fields: [companyId], references: [id])
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   projectMembers      ProjectMember[]
+  vulnerabilities     Vulnerability[]        @relation("VulnerabilityAssignee")
+  vulnComments        VulnerabilityComment[]
+  evidences           Evidence[]
+  auditLogs           AuditLog[]
 
   @@index([companyId])
 }
 
-// --------------------------------------------------------------------------
-// Company
-// --------------------------------------------------------------------------
-model Company {
-  id        String   @id @default(cuid())
-  name      String
-  planId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  plan          Plan           @relation(fields: [planId], references: [id])
-  users         User[]
-  subscriptions Subscription[]
-  applications  Application[]
-  projects      Project[]
-
-  @@index([planId])
-}
-
-// --------------------------------------------------------------------------
-// Plan
-// --------------------------------------------------------------------------
-model Plan {
-  id              String   @id @default(cuid())
-  name            String
-  maxApplications Int
-  price           Decimal  @db.Decimal(10, 2)
-  createdAt       DateTime @default(now())
-
-  companies     Company[]
-  subscriptions Subscription[]
-}
-
-// --------------------------------------------------------------------------
-// Subscription
-// --------------------------------------------------------------------------
-// status: "PENDING_APPROVAL" | "ACTIVE" | "REJECTED" | "SUSPENDED" | "CANCELED"
-// --------------------------------------------------------------------------
-model Subscription {
-  id        String    @id @default(cuid())
-  companyId String
-  planId    String
-  status    String
-  startDate DateTime
-  endDate   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  company Company @relation(fields: [companyId], references: [id])
-  plan    Plan    @relation(fields: [planId], references: [id])
-
-  @@index([companyId])
-  @@index([planId])
-  // findActiveByCompany filtra por companyId AND status — índice composto
-  // serve tanto essa consulta quanto listagem por empresa.
-  @@index([companyId, status])
-}
-
-// --------------------------------------------------------------------------
-// RefreshToken
-// --------------------------------------------------------------------------
-// tokenHash: SHA-256 do refresh token em claro. O token bruto vai para o
-// cliente via cookie HttpOnly. Rotacionar a cada refresh (revokedAt + novo).
-// --------------------------------------------------------------------------
+// RefreshToken — armazenado HASHEADO (SHA-256). O token bruto vai no cookie.
+// Rotacionar a cada refresh: criar novo + revokedAt no antigo.
 model RefreshToken {
   id        String    @id @default(cuid())
   tokenHash String    @unique
@@ -125,11 +96,7 @@ model RefreshToken {
   @@index([userId])
 }
 
-// --------------------------------------------------------------------------
-// PasswordResetToken
-// --------------------------------------------------------------------------
-// tokenHash: SHA-256 do token enviado por e-mail. used = true após consumo.
-// --------------------------------------------------------------------------
+// PasswordResetToken — link de e-mail. used=true após consumo.
 model PasswordResetToken {
   id        String   @id @default(cuid())
   tokenHash String   @unique
@@ -143,63 +110,134 @@ model PasswordResetToken {
   @@index([userId])
 }
 
-// --------------------------------------------------------------------------
-// Application
-// --------------------------------------------------------------------------
-// RN03 — quantidade limitada por Plan da Subscription ativa
-// RN04 — pertence a UMA Company; companyId é imutável após criação
-// RN05 — pode ter no máximo um Project (back-relation 1-para-1)
-// --------------------------------------------------------------------------
+// ============================================================================
+// COMERCIAL
+// ============================================================================
+
+// Company — empresa cliente
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  cnpj      String?  @unique
+  planId    String // plano CONTRATADO inicialmente (referência simbólica;
+  // a fonte da verdade do plano ativo é Subscription)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan            Plan            @relation(fields: [planId], references: [id])
+  users           User[]
+  subscriptions   Subscription[]
+  applications    Application[]
+  projects        Project[]
+  vulnerabilities Vulnerability[]
+  auditLogs       AuditLog[]
+
+  @@index([planId])
+}
+
+// Plan — catálogo de planos (BASIC, PRO, PRO_PLUS)
+model Plan {
+  id                  String   @id @default(cuid())
+  name                String   @unique
+  maxApplications     Int
+  maxProjects         Int      @default(1)
+  includesRemediation Boolean  @default(false)
+  price               Decimal  @db.Decimal(10, 2)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  companies     Company[]
+  subscriptions Subscription[]
+}
+
+// Subscription — vínculo Company ↔ Plan
+// status: PENDING_APPROVAL | ACTIVE | REJECTED | SUSPENDED | CANCELED
+// Regra: só pode haver UMA subscription ACTIVE por companyId por vez
+model Subscription {
+  id         String    @id @default(cuid())
+  companyId  String
+  planId     String
+  status     String    @default("PENDING_APPROVAL")
+  startDate  DateTime?
+  endDate    DateTime?
+  approvedBy String? // userId do admin que aprovou
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  plan    Plan    @relation(fields: [planId], references: [id])
+
+  @@index([companyId])
+  @@index([planId])
+  // Índice composto crítico: findActiveByCompany(companyId)
+  @@index([companyId, status])
+}
+
+// ============================================================================
+// CATÁLOGO DE APLICAÇÕES
+// ============================================================================
+
+// Application — sistema-alvo da análise
+// Pertence a UMA Company. Reutilizável entre projetos no tempo.
+// RN03: count(Application by company) ≤ plan.maxApplications da Subscription ativa
 model Application {
   id          String   @id @default(cuid())
   name        String
-  description String?
+  url         String?
+  environment String   @default("PROD") // PROD | HOMOL | DEV
+  techStack   String?
+  description String?  @db.Text
   companyId   String
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  company Company  @relation(fields: [companyId], references: [id])
-  project Project?
+  company         Company         @relation(fields: [companyId], references: [id])
+  projects        Project[]
+  vulnerabilities Vulnerability[]
 
   @@index([companyId])
+  @@index([companyId, isActive])
 }
 
-// --------------------------------------------------------------------------
-// Project
-// --------------------------------------------------------------------------
-// status: "PENDING" | "IN_PROGRESS" | "IN_REVIEW" | "COMPLETED"
-//   (máquina de estados mínima da Onda 4; máquina formal do vault
-//    [[Maquina - Project]] tem 7 estados e será expandida na Onda 5+)
-// RN05 — applicationId UNIQUE: garante 1:1 com Application
-// RN06 — companyId é denormalizado de Application.companyId
-//        (mantido consistente pelo service)
-// RN07 — criação só com Subscription ACTIVE (validada via guard)
-// --------------------------------------------------------------------------
+// ============================================================================
+// PROJETOS DE ANÁLISE
+// ============================================================================
+
+// Project — uma análise específica
+// status mínima: PENDING | IN_PROGRESS | IN_REVIEW | COMPLETED
+// (máquina formal expandirá em sprints posteriores)
+// companyId é desnormalizado de Application.companyId — Service mantém
 model Project {
-  id                 String   @id @default(cuid())
-  name               String
-  applicationId      String   @unique
-  companyId          String
-  status             String   @default("PENDING")
-  remediationService Boolean  @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id             String    @id @default(cuid())
+  name           String
+  description    String?   @db.Text
+  applicationId  String
+  companyId      String // desnormalizado de Application — multi-tenant filter
+  analysisType   String    @default("DAST") // SAST | DAST | MATURITY | COMBO
+  analysisLevel  String    @default("BASIC") // BASIC | INTERMEDIATE | ADVANCED
+  hasRemediation Boolean   @default(false)
+  scopeIn        String?   @db.Text
+  scopeOut       String?   @db.Text
+  notes          String?   @db.Text
+  status         String    @default("PENDING")
+  requestedAt    DateTime  @default(now())
+  startedAt      DateTime?
+  closedAt       DateTime?
+  updatedAt      DateTime  @updatedAt
 
-  application Application      @relation(fields: [applicationId], references: [id])
-  company     Company          @relation(fields: [companyId], references: [id])
-  members     ProjectMember[]
+  application     Application     @relation(fields: [applicationId], references: [id])
+  company         Company         @relation(fields: [companyId], references: [id])
+  members         ProjectMember[]
+  vulnerabilities Vulnerability[]
 
   @@index([companyId])
+  @@index([applicationId])
   @@index([status])
+  @@index([companyId, status])
 }
 
-// --------------------------------------------------------------------------
-// ProjectMember
-// --------------------------------------------------------------------------
-// RN08 — N pentesters por Project; junção User <-> Project
-// RN17 — visibilidade de PENTESTER é filtrada por presença em ProjectMember
-// onDelete: Cascade no projectId — se o Project for removido, vínculos somem
-// --------------------------------------------------------------------------
+// ProjectMember — pentesters atribuídos
 model ProjectMember {
   id        String   @id @default(cuid())
   projectId String
@@ -213,3 +251,229 @@ model ProjectMember {
   @@index([projectId])
   @@index([userId])
 }
+
+// ============================================================================
+// VULNERABILIDADES (Tenable/Wiz-like — INSTÂNCIA INDIVIDUAL)
+// ============================================================================
+//
+// CADA vulnerability É ÚNICA. Não há "catálogo compartilhado".
+// Se duas Companies têm a mesma "SQL Injection em /search", são 2 registros.
+//
+// Isolamento garantido por 3 FKs (projectId, applicationId, companyId).
+// Em queries de listagem, sempre filtrar por companyId primeiro.
+//
+// Cálculo de severidade:
+//   cvssScore (0.0 - 10.0) → severityCalculated automático:
+//     0.1-3.9 LOW | 4.0-6.9 MEDIUM | 7.0-8.9 HIGH | 9.0-10.0 CRITICAL
+//   severityFinal: pode ser igual à calculated OU override manual
+//   Se override, severityOverrideReason é obrigatório (≥ 20 chars)
+//
+// Status:
+//   OPEN | IN_PROGRESS | FIXED | REVALIDATION | CLOSED | RISK_ACCEPTED
+//
+// Quem pode mudar status: depende de project.hasRemediation
+//   true  → analista pode mover OPEN→IN_PROGRESS→FIXED
+//   false → cliente quem move FIXED (analista só revalida)
+// ============================================================================
+
+model Vulnerability {
+  id                     String  @id @default(cuid())
+  title                  String
+  description            String  @db.Text
+  owaspCategory          String // A01..A10 do OWASP Top 10 2021
+  cvssVector             String? // CVSS:3.1/AV:N/AC:L/...
+  cvssScore              Float?
+  severityCalculated     String // LOW | MEDIUM | HIGH | CRITICAL — derivada do cvssScore
+  severityFinal          String // pode ser igual à calculada ou override
+  severityOverrideReason String? @db.Text
+  impact                 String? @db.Text
+  recommendation         String? @db.Text
+  status                 String  @default("OPEN")
+  aiAssisted             Boolean @default(false) // true se Gemini participou da descrição
+
+  // Foreign keys (cascata de isolamento)
+  projectId     String
+  applicationId String // desnormalizado de Project.applicationId
+  companyId     String // desnormalizado de Project.companyId — multi-tenant
+  createdBy     String // userId do pentester que criou
+  assignedTo    String? // userId do responsável (cliente ou pentester)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id])
+  company     Company     @relation(fields: [companyId], references: [id])
+  assignee    User?       @relation("VulnerabilityAssignee", fields: [assignedTo], references: [id])
+
+  evidences Evidence[]
+  comments  VulnerabilityComment[]
+
+  @@index([projectId])
+  @@index([applicationId])
+  @@index([companyId])
+  // Filtros mais usados nas listagens
+  @@index([companyId, status])
+  @@index([companyId, severityFinal])
+  @@index([projectId, status])
+}
+
+// Evidence — anexo de prova (imagem ou log)
+// Tipos aceitos: jpg, jpeg, png, txt, log
+// Validação MIME + magic number no upload. Limite 10MB.
+// Nomes reescritos com UUID antes de gravar em disco.
+model Evidence {
+  id              String   @id @default(cuid())
+  vulnerabilityId String
+  fileName        String // nome reescrito (UUID + ext)
+  originalName    String // nome enviado pelo usuário
+  filePath        String // caminho relativo no volume
+  mimeType        String
+  sizeBytes       Int
+  proof           String   @db.Text // descrição do que gerou a evidência (payload, request, etc)
+  uploadedBy      String // userId
+  createdAt       DateTime @default(now())
+
+  vulnerability Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  uploader      User          @relation(fields: [uploadedBy], references: [id])
+
+  @@index([vulnerabilityId])
+}
+
+// VulnerabilityComment — thread de discussão por finding
+model VulnerabilityComment {
+  id              String   @id @default(cuid())
+  vulnerabilityId String
+  authorId        String
+  content         String   @db.Text
+  createdAt       DateTime @default(now())
+
+  vulnerability Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  author        User          @relation(fields: [authorId], references: [id])
+
+  @@index([vulnerabilityId])
+}
+
+// ============================================================================
+// AUDITORIA
+// ============================================================================
+
+// AuditLog — trilha de ações sensíveis
+// entityType: "Vulnerability" | "Subscription" | "Report" | "User" | "Project"
+// action: "CREATE" | "UPDATE" | "DELETE" | "SEVERITY_OVERRIDE" | "STATUS_CHANGE" | "APPROVE"
+// diffJson: snapshot do "antes/depois" em JSON
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  companyId  String? // null para ações globais (admin)
+  entityType String
+  entityId   String
+  action     String
+  diffJson   String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  actor   User     @relation(fields: [actorId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([companyId])
+  @@index([actorId])
+}
+
+// ============================================================================
+// MATURIDADE (Sprint 8)
+// ============================================================================
+//
+// MaturityAssessment é a avaliação de UMA Company. Não tem projectId direto
+// (uma assessment vale para toda a company, não para um projeto específico).
+// Score consolidado é derivado dos MaturityScore individuais por subcontrole.
+//
+// MaturityDomain e MaturityControl são SEEDS (catálogo). Não há CRUD público;
+// admins do produto criam via seed/migration.
+
+model MaturityDomain {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+
+  controls MaturityControl[]
+}
+
+model MaturityControl {
+  id          String  @id @default(cuid())
+  domainId    String
+  name        String
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+
+  domain MaturityDomain  @relation(fields: [domainId], references: [id])
+  scores MaturityScore[]
+
+  @@index([domainId])
+}
+
+model MaturityAssessment {
+  id           String   @id @default(cuid())
+  companyId    String
+  overallScore Float    @default(0)
+  level        String   @default("BASIC") // BASIC | INTERMEDIATE | ADVANCED
+  notes        String?  @db.Text
+  evaluatedBy  String // userId do admin
+  createdAt    DateTime @default(now())
+
+  scores MaturityScore[]
+
+  @@index([companyId])
+}
+
+model MaturityScore {
+  id           String  @id @default(cuid())
+  assessmentId String
+  controlId    String
+  score        Int // 1..5
+  isCompliant  Boolean @default(false)
+  notes        String? @db.Text
+
+  assessment MaturityAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  control    MaturityControl    @relation(fields: [controlId], references: [id])
+
+  @@unique([assessmentId, controlId])
+  @@index([assessmentId])
+  @@index([controlId])
+}
+
+// ============================================================================
+// NOTIFICAÇÕES E RELATÓRIOS (Sprint 6-7)
+// ============================================================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  category    String // "FINDING_CRITICAL" | "STATUS_CHANGE" | "COMMENT" | "TICKET"
+  title       String
+  message     String   @db.Text
+  isRead      Boolean  @default(false)
+  sentAsPush  Boolean  @default(false)
+  sentAsEmail Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, isRead])
+}
+
+// Report — apenas METADADO do PDF gerado. O PDF em si é gerado client-side.
+model Report {
+  id          String   @id @default(cuid())
+  projectId   String
+  type        String // "EXECUTIVE" | "TECHNICAL"
+  title       String
+  generatedBy String // userId
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ============================================================================
+// FIM
+// ============================================================================

@@ -1,18 +1,111 @@
-name: Build
+name: CI
+
+# ⚠️ Fase 8 (2026-08-11): a branch de integração real no GitHub é "dev", não
+# "develop" (CLAUDE.md/roadmap chamam de "develop", mas o repo foi criado com
+# "dev" e ninguém percebeu — nenhuma PR de fase anterior rodou este pipeline
+# de verdade via evento pull_request por causa desse mismatch). Mantém
+# "develop" na lista por segurança/compatibilidade futura, mas "dev" é o que
+# importa hoje.
 on:
   push:
-    branches:
-      - main
+    branches: [main, dev, develop]
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [main, dev, develop]
+
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/api/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/api/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/api
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: vulnera_test
+          MYSQL_USER: vulnera
+          MYSQL_PASSWORD: vulnera
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: "mysql://vulnera:vulnera@localhost:3306/vulnera_test"
+      JWT_ACCESS_SECRET: "test-access-secret"
+      JWT_ACCESS_TTL: "15m"
+      JWT_REFRESH_SECRET: "test-refresh-secret"
+      JWT_REFRESH_TTL: "7d"
+      BCRYPT_COST: "4"
+      PORT: 3002
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/api/package-lock.json
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      # --coverage (em vez de `npm run test`) gera app/api/coverage/lcov.info —
+      # sem isso o Sonar analisa código estático mas mostra cobertura 0%
+      # (Fase 8, Checkpoint 4: a evidência de qualidade pede cobertura real).
+      - run: npm run test:coverage
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: app/api/coverage/lcov.info
+          retention-days: 7
+
   sonarqube:
     name: SonarQube
     runs-on: windows-latest
+    needs: [lint, build, test]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: api-coverage
+          path: app/api/coverage
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:

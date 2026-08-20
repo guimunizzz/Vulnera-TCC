@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Vulnera",
+    "slug": "vulnera-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0c1015",
+    "scheme": "vulnera",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "br.com.vulnera.mobile"
+    },
+    "android": {
+      "package": "br.com.vulnera.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#0c1015"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#7046cf"
+        }
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "router": {}
+    }
+  }
+}
