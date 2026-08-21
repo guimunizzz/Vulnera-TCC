@@ -278,5 +278,9 @@ Cortado do escopo do MVP deliberadamente (não é ausência por esquecimento):
 
 ---
 
+## Contribuidores - Agosto
+
+<img width="1623" height="825" alt="image" src="https://github.com/user-attachments/assets/a2c3002f-edd4-4eaf-8ce3-53eabf4c66fb" />
+
 *Vulnera — TCC de Rafael Guilherme. Ver `CLAUDE.md` pra convenções de
 código e `PRD_VIVO.md` pro estado de implementação fase a fase.*
