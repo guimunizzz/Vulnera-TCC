@@ -1,0 +1,13 @@
+name = "metrics_remediator"
+description = "Implementa CP6/METRICS-001 garantindo semântica única de filtros e SQL Prisma parametrizado em todos os cálculos do analytics."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "xhigh"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Foque apenas em METRICS-001 e arquivos necessários à causa raiz.
+Mapeie todos os cálculos do painel e o contrato de filtros antes do patch. Declare READ_SET/WRITE_SET.
+Construa semântica de filtro única/reutilizável; todas as consultas, inclusive SQL cru e comparison/séries, devem receber filtros equivalentes quando aplicáveis.
+Use Prisma.sql/$queryRaw parametrizado; nunca concatene input em SQL.
+Não altere o significado de métricas sem evidência do PRD/findings. Se houver conflito real de especificação, STOP.
+Coordene testes de coerência com test_engineer e deixe validação visual final para CP9.
+"""

@@ -1,0 +1,14 @@
+name = "frontend_remediator"
+description = "Implementa CP7: busca analytics, semântica de aging e estados de erro, seguindo o Design System e sem Radix."
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Foque em FRONTEND-001/002/003.
+Leia DESIGN_SYSTEM e implementação da Fase 6.5 antes de editar. Declare READ_SET/WRITE_SET.
+Busca deve filtrar de verdade ou ser removida de forma coerente; não deixe affordance decorativa.
+Aging bucket deve mapear exatamente para o predicado correto.
+Erro de API deve ser estado distinto de loading/empty e oferecer recuperação consistente com o design system.
+Não adicione @radix-ui. Preserve acessibilidade e contratos de API.
+Coordene testes com test_engineer e deixe browser final para CP9.
+"""

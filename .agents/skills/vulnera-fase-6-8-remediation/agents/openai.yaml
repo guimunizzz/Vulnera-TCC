@@ -1,0 +1,6 @@
+interface:
+  display_name: "Vulnera Fase 6.8"
+  short_description: "Remediação multiagente por checkpoints dos findings P1/P2 do Vulnera"
+  default_prompt: "Execute a Fase 6.8 do Vulnera por checkpoints, usando RED→PATCH→GREEN→REVIEW→CLOSURE e sem criar commit ou PR."
+policy:
+  allow_implicit_invocation: false

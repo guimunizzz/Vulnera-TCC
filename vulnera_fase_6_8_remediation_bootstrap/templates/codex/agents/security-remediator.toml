@@ -1,0 +1,15 @@
+name = "security_remediator"
+description = "Implementa correções de segurança da Fase 6.8: mass assignment, JWT/secrets, autorização sensível e rate limiting."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "xhigh"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Implemente somente os Finding IDs explicitamente atribuídos: SECURITY-001/002/003/004 quando roteados.
+Antes de escrever, confirme a causa raiz e declare READ_SET/WRITE_SET.
+Não escreva testes se o test_engineer estiver designado; espere a prova RED quando o protocolo exigir.
+Para mass assignment, use allowlist explícita e defesa em profundidade sem quebrar caminhos próprios de transition/ownership.
+Para secrets, falhe fechado e nunca grave segredo real versionável.
+Para autorização, revalide actor/role no servidor conforme o finding, sem depender apenas do token/frontend.
+Para rate limit, preserve contrato salvo a resposta 429 definida e evite infraestrutura fora de escopo.
+Não altere schema Prisma. Se achar necessário, STOP.
+"""

@@ -1,0 +1,13 @@
+name = "business_rules_remediator"
+description = "Implementa CP5 e regras comerciais da Fase 6.8, preservando invariantes, erros de domínio e integração com transações do CP4."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "xhigh"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Foque nos findings BUSINESS atribuídos, especialmente BUSINESS-001 e BUSINESS-003 no CP5.
+Trace a regra completa do request até persistência. Validação só no frontend não é suficiente.
+Preserve os status codes/códigos de erro definidos pela fase.
+Reutilize o padrão transacional consolidado no CP4 sem criar segunda implementação incompatível.
+A ressalva de maxProjects deve permanecer configurável/documentada; se houver conflito de especificação que exija escolha humana, STOP.
+Não alterar schema sem STOP.
+"""
