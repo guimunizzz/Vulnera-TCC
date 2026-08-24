@@ -5,7 +5,7 @@ import type * as NotificationsType from "expo-notifications";
 import { notificationsApi } from "../api/notifications.api";
 import { useAuthStore } from "../store/auth.store";
 
-export type PushStatus = "verificando" | "ativado" | "negado" | "erro" | "indisponivel";
+type PushStatus = "verificando" | "ativado" | "negado" | "erro" | "indisponivel";
 
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 const pushUnsupported = isExpoGo && Platform.OS === "android";
@@ -70,7 +70,11 @@ export function usePushRegistration(): PushStatus {
         await notificationsApi.registerPush(expoPushToken);
         if (!cancelled) setStatus("ativado");
       } catch (err) {
-        console.warn("[push] não foi possível registrar o token:", err);
+        // Nunca loga o objeto de erro cru: se vier de uma chamada à API, ele
+        // carrega error.config.headers (com o Authorization: Bearer vivo) e
+        // o corpo bruto da resposta — só a mensagem é segura pro console.
+        const mensagem = err instanceof Error ? err.message : String(err);
+        console.warn("[push] não foi possível registrar o token:", mensagem);
         if (!cancelled) setStatus("erro");
       }
     }

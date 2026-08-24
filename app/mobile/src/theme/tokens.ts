@@ -1,72 +1,71 @@
 /**
  * theme/tokens.ts
  *
- * Portação dos tokens de app/web/src/styles/tokens.css pro React Native.
- * O próprio tokens.css avisa (§0, "QUEM USA"): "Fase 7 (mobile), que porta
- * os mesmos valores" — é este arquivo.
+ * Paleta própria do mobile — 3ª rodada de feedback: v1 era gradiente
+ * violeta/rosa vibrante, v2 tirou gradiente mas ainda tingia TUDO (fundo,
+ * texto, borda) de violeta, o que lia como "roxo demais". Essa versão volta
+ * pra uma base neutra (cinza-chumbo, sem tingimento de cor) e reserva o
+ * violeta só pra DETALHES: botão primário, ícone/link ativo, badge de
+ * status selecionado — nunca preenchendo fundo de card/tela inteiro. Só a
+ * SEMÂNTICA de severidade (crítico=vermelho, alto=laranja, médio=âmbar,
+ * baixo=azul) é compartilhada com o web — os tons em si são livres.
  *
- * React Native não lê CSS/oklch() nativamente, então os valores em OKLCH do
- * web foram convertidos pra hex sRGB (matriz padrão de Björn Ottosson —
- * mesma fórmula usada pelo `oklch()` do navegador). Só o tema ESCURO foi
- * portado: é o único tema do produto hoje (`:root` sem `data-theme` já é
- * escuro por padrão em tokens.css) — o mobile não tem alternância de tema.
- *
- * Fontes customizadas (Archivo/JetBrains Mono) NÃO foram portadas — exigiriam
- * bundlar arquivo de fonte via expo-font, fora do escopo enxuto da Fase 7.
- * Usa a fonte padrão do sistema (San Francisco no iOS, Roboto no Android);
- * só o vetor CVSS usa uma fonte monoespaçada do sistema, pelo mesmo motivo
- * do web (0/O e 1/l/I inconfundíveis).
+ * Fontes customizadas (Archivo/JetBrains Mono) — carregadas via
+ * @expo-google-fonts/* e expo-font no app/_layout.tsx raiz, com guarda de
+ * loading antes do primeiro render (ver useFonts lá).
  */
 
 export const COLORS = {
-  // --- superfícies (dark, ver tokens.css §8) ---
-  canvas: "#0c1015", // --color-bg-canvas (neutral-950)
-  surface: "#151b21", // --color-bg-surface (neutral-900)
-  raised: "#21272f", // --color-bg-raised (neutral-800)
-  inset: "#06090e", // --color-bg-inset
+  // --- superfícies (cinza-chumbo neutro, SEM tingimento de violeta —
+  // degrade suave entre os 3 níveis pra card não parecer uma caixa
+  // separada flutuando no fundo) ---
+  canvas: "#0a0a0d",
+  surface: "#131318",
+  raised: "#1d1d24",
+  inset: "#050506",
 
-  // --- texto ---
-  textPrimary: "#f9fafb", // neutral-50
-  textSecondary: "#d0d4da", // neutral-300
-  textMuted: "#9ea4ab", // neutral-400
+  // --- texto (neutro) ---
+  textPrimary: "#f5f5f7",
+  textSecondary: "#b4b4bd",
+  textMuted: "#75757f",
 
-  // --- bordas ---
-  borderSubtle: "#21272f", // neutral-800
-  borderDefault: "#2f363f",
-  borderStrong: "#767c85", // neutral-500
+  // --- bordas (neutro) ---
+  borderSubtle: "#1f1f27",
+  borderDefault: "#2d2d37",
+  borderStrong: "#4c4c58",
 
-  // --- ação (iris) ---
-  accent: "#7046cf", // iris-600 — preenchimento de botão
-  accentHover: "#855fea", // iris-500
-  accentFg: "#f9fafb", // texto sobre o acento
-  accentInk: "#bdb0f9", // iris-300 — link / texto de ação
-  accentSurface: "#1f0a45", // iris-950
+  // --- ação (violeta — só pra detalhe: CTA, link, ícone/estado ativo) ---
+  accent: "#7c3aed",
+  accentHover: "#8b5cf6",
+  accentFg: "#ffffff",
+  accentInk: "#a78bfa",
+  accentSurface: "#1e1638",
 
   // --- estados ---
-  success: "#209659", // green-500
-  successInk: "#5fd891", // green-300
-  successSurface: "#062111", // green-950
-  danger: "#c11c1f", // red-600
-  dangerInk: "#f9a197", // red-300
-  dangerSurface: "#540b0b", // red-900
+  success: "#16a34a",
+  successInk: "#6ee7a0",
+  successSurface: "#052e16",
+  danger: "#dc2626",
+  dangerInk: "#fca5a5",
+  dangerSurface: "#2f0a0a",
 
-  // --- severidade (mesmo vocabulário do SeverityBadge web) ---
+  // --- severidade (mesma semântica do web, tons sólidos e mais escuros) ---
   severity: {
-    critical: "#e13331", // red-500
-    criticalInk: "#f9a197", // red-300
-    criticalSurface: "#540b0b", // red-900
-    high: "#eb8023", // orange-400
-    highInk: "#f9a66c", // orange-300
-    highSurface: "#432207", // orange-900
-    medium: "#c79823", // amber-400
-    mediumInk: "#e7b435", // amber-300
-    mediumSurface: "#372907", // amber-900
-    low: "#287bed", // blue-500
-    lowInk: "#97bef9", // blue-300
-    lowSurface: "#072959", // blue-900
-    info: "#767c85", // neutral-500
-    infoInk: "#d0d4da", // neutral-300
-    infoSurface: "#21272f", // neutral-800
+    critical: "#e11d48",
+    criticalInk: "#fda4af",
+    criticalSurface: "#2a0512",
+    high: "#ea580c",
+    highInk: "#fdba74",
+    highSurface: "#2b1103",
+    medium: "#ca8a04",
+    mediumInk: "#fde68a",
+    mediumSurface: "#2a2002",
+    low: "#0284c7",
+    lowInk: "#7dd3fc",
+    lowSurface: "#041f2e",
+    info: "#71717a",
+    infoInk: "#d4d4d8",
+    infoSurface: "#1c1c1f",
   },
 } as const;
 
@@ -105,15 +104,61 @@ export const FONT_SIZE = {
   "2xl": 29,
 } as const;
 
-export const FONT_WEIGHT = {
-  regular: "400",
-  medium: "500",
-  semibold: "600",
-  bold: "700",
+/**
+ * Nomes de família exatamente como o useFonts() registra (chave passada pro
+ * hook em app/_layout.tsx) — RN resolve fonte por nome de família, não por
+ * peso numérico em cima de uma família só, então cada peso é uma "família"
+ * separada aqui.
+ */
+export const FONT_FAMILY = {
+  regular: "Archivo_400Regular",
+  medium: "Archivo_500Medium",
+  semibold: "Archivo_600SemiBold",
+  bold: "Archivo_700Bold",
+  mono: "JetBrainsMono_400Regular",
+  // Só pro lockup da marca (wordmark VULNERA) — mesmo peso 700 do
+  // Lockup.dc.html original.
+  monoBold: "JetBrainsMono_700Bold",
 } as const;
 
-/** Fonte monoespaçada do sistema — só pro vetor CVSS (0/O, 1/l/I inconfundíveis). */
-export const MONO_FONT = "Courier New";
+/**
+ * Sombra — `card` é a elevação padrão, `raised` pra hero/modal, `glow` é um
+ * brilho colorido (cor do acento) reservado pra CTA primário e elementos que
+ * devem "chamar o olho" — uso pontual, não em todo card.
+ */
+export const SHADOW = {
+  card: {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  raised: {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  glow: {
+    shadowColor: "#7c3aed",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+} as const;
+
+/**
+ * Duração/easing padrão pra Reanimated — usar em vez de valores soltos
+ * espalhados pelas telas, pra toda transição do app ter o mesmo "peso".
+ */
+export const MOTION = {
+  fast: 150,
+  base: 250,
+  slow: 400,
+} as const;
 
 /** WCAG 2.5.5/2.5.8 — todo controle interativo alcança 44px, igual ao web (--size-touch-target). */
 export const TOUCH_TARGET = 44;

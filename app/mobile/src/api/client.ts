@@ -21,6 +21,17 @@ export const apiClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL,
 });
 
+// EXPO_PUBLIC_* é embutido no bundle em build time — nada barra um build de
+// produção saindo com URL http:// por engano (config errada de CI, .env
+// esquecido). http:// é esperado em dev (emulador/LAN), mas em produção
+// manda token e evidência em texto puro. Só avisa (não derruba o app) — o
+// objetivo é aparecer em log/crash-report, não quebrar o app em runtime.
+if (!__DEV__ && !process.env.EXPO_PUBLIC_API_URL?.startsWith("https://")) {
+  console.error(
+    "[client] EXPO_PUBLIC_API_URL não começa com https:// num build de produção — tokens e dados trafegariam em texto puro.",
+  );
+}
+
 apiClient.interceptors.request.use((config) => {
   const { accessToken } = useAuthStore.getState();
   if (accessToken) {
