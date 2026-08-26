@@ -9,6 +9,7 @@
  */
 
 import { StyleSheet, Text, View } from "react-native";
+import { BlurView } from "expo-blur";
 import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
 
 type Severidade = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
@@ -40,7 +41,9 @@ export function SeverityBadge({ severidade, cvss }: { severidade: string; cvss?:
   const cor = CORES_SEVERIDADE[s];
 
   return (
-    <View style={[styles.chip, { backgroundColor: cor.fundo }]}>
+    <View style={styles.chip}>
+      <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={[styles.chipTint, { backgroundColor: cor.fundo }]} />
       <View style={[styles.ponto, { backgroundColor: cor.ponto }]} />
       <Text style={[styles.texto, { color: cor.texto }]}>{ROTULO_SEVERIDADE[s]}</Text>
       {cvss != null && <Text style={[styles.cvss, { color: cor.texto }]}>{cvss.toFixed(1)}</Text>}
@@ -77,7 +80,9 @@ export function StatusBadge({ status }: { status: string }) {
   const info = ROTULO_ESTADO[status] ?? { texto: status, tom: "neutro" as TomBadge };
   const cor = TONS[info.tom];
   return (
-    <View style={[styles.chip, { backgroundColor: cor.fundo }]}>
+    <View style={styles.chip}>
+      <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={[styles.chipTint, { backgroundColor: cor.fundo }]} />
       <Text style={[styles.texto, { color: cor.texto }]}>{info.texto}</Text>
     </View>
   );
@@ -92,6 +97,15 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING[1] + 2,
     borderRadius: RADIUS.full,
     alignSelf: "flex-start",
+    overflow: "hidden",
+  },
+  // Tint na cor de severidade/status por cima do blur — pequeno assim, o
+  // blur em si quase não se percebe, mas mantém a mesma receita visual do
+  // resto do app (nunca cor sozinha: texto sempre junto, ver comentário
+  // do topo do arquivo).
+  chipTint: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.75,
   },
   ponto: {
     width: 6,

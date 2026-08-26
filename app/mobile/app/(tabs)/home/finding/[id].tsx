@@ -16,6 +16,7 @@ import { vulnerabilityCommentsApi } from "../../../../src/api/vulnerability-comm
 import { usersApi } from "../../../../src/api/users.api";
 import { useAuthStore } from "../../../../src/store/auth.store";
 import { useApiError } from "../../../../src/hooks/use-api-error";
+import { useTabBarClearance } from "../../../../src/hooks/use-tab-bar-clearance";
 import { SeverityBadge, StatusBadge } from "../../../../src/components/badge";
 import { Card } from "../../../../src/components/card";
 import { IconAvatar } from "../../../../src/components/icon-avatar";
@@ -51,6 +52,7 @@ export default function FindingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const getErrorMessage = useApiError();
   const currentUser = useAuthStore((s) => s.user);
+  const bottomClearance = useTabBarClearance();
 
   const findingQuery = useQuery({
     queryKey: ["vulnerabilities", id],
@@ -91,7 +93,7 @@ export default function FindingDetailScreen() {
   const authorInitial = (authorId: string): string => authorName(authorId).charAt(0).toUpperCase();
 
   return (
-    <Screen>
+    <Screen contentBottomPadding={bottomClearance}>
       <Animated.View entering={FadeInDown.duration(320)} style={styles.headerBlock}>
         <View style={styles.headerRow}>
           <SeverityBadge severidade={finding.severityFinal} cvss={finding.cvssScore} />

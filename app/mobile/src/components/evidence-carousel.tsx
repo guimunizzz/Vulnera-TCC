@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { Dimensions, FlatList, Image, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { evidencesApi } from "../api/evidences.api";
 import { useAuthStore } from "../store/auth.store";
 import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
@@ -69,6 +70,8 @@ export function EvidenceCarousel({
               />
             ) : (
               <View style={styles.fileBox}>
+                <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+                <View style={styles.fileBoxTint} />
                 <Ionicons name="document-text-outline" size={40} color={COLORS.textMuted} />
                 <Text style={styles.fileName} numberOfLines={1}>
                   {item.originalName}
@@ -107,11 +110,16 @@ const styles = StyleSheet.create({
   fileBox: {
     height: 220,
     borderRadius: RADIUS.container,
-    backgroundColor: COLORS.inset,
     alignItems: "center",
     justifyContent: "center",
     gap: SPACING[2],
     paddingHorizontal: SPACING[4],
+    overflow: "hidden",
+  },
+  fileBoxTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.inset,
+    opacity: 0.7,
   },
   fileName: { color: COLORS.textPrimary, fontSize: FONT_SIZE.sm, fontFamily: FONT_FAMILY.medium },
   fileHint: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, fontFamily: FONT_FAMILY.regular, textAlign: "center" },

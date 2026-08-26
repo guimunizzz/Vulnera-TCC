@@ -1,15 +1,16 @@
 /**
  * icon-avatar.tsx
  *
- * Chip circular colorido com ícone dentro — o "avatar de categoria" que dá
- * às linhas de lista (ProjectCard, FindingRow) a densidade visual do
+ * Chip circular de vidro fosco com ícone dentro — o "avatar de categoria"
+ * que dá às linhas de lista (ProjectCard, FindingRow) a densidade visual do
  * Mercado Livre (cada item com um ícone identificável de relance, não só
  * texto). Cor vem do próprio vocabulário de severidade/acento já definido
- * em tokens.ts — não inventa tom novo. Sólido, sem gradiente.
+ * em tokens.ts — não inventa tom novo.
  */
 
 import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import type { ComponentProps } from "react";
 import { COLORS, RADIUS } from "../theme/tokens";
 
@@ -41,7 +42,9 @@ export function IconAvatar({
   const shapeStyle = { width: size, height: size, borderRadius: RADIUS.full };
 
   return (
-    <View style={[styles.wrap, shapeStyle, { backgroundColor: cor.bg }]}>
+    <View style={[styles.wrap, shapeStyle]}>
+      <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={[styles.tint, { backgroundColor: cor.bg }]} />
       <Ionicons name={name} size={iconSize} color={cor.fg} />
     </View>
   );
@@ -51,5 +54,10 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  tint: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.6,
   },
 });
