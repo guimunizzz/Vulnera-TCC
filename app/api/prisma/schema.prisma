@@ -77,6 +77,7 @@ model User {
   vulnComments        VulnerabilityComment[]
   evidences           Evidence[]
   auditLogs           AuditLog[]
+  dastScans           DastScan[]
 
   @@index([companyId])
 }
@@ -472,6 +473,106 @@ model Report {
   createdAt   DateTime @default(now())
 
   @@index([projectId])
+}
+
+// ============================================================================
+// DAST (módulo de scans automatizados via OWASP ZAP)
+// ============================================================================
+//
+// Silo próprio: os findings do ZAP NÃO viram Vulnerability (ver ADR em
+// docs/Vulnera/07-Decisoes/ - "DAST como silo"). Motivo principal: o ZAP não
+// fornece vetor CVSS, só riskcode (HIGH/MEDIUM/LOW/INFO) — importar exigiria
+// inventar um vetor, o que contamina o cálculo automático que o resto do
+// schema depende (severityCalculated derivado de cvssScore).
+//
+// ⚠️ EXCEÇÃO à filosofia #3 do cabeçalho ("Sem enums nativos"): DastScanStatus
+// e DastRisk usam enum nativo do Prisma, não String. Os dois conjuntos de
+// valores são fechados por contrato externo (DastRisk é a taxonomia fixa do
+// ZAP; DastScanStatus é uma máquina de estados interna de 5 valores) e não se
+// espera adicionar valor sem tocar código de qualquer forma. Decisão
+// registrada em docs/Vulnera/07-Decisoes/ (ADR "DAST como silo") — sinalizada
+// ao Rafael por divergir da regra geral do schema.
+//
+// MaturityAssessment.companyId não tem FK à Company (deploy pré-Fase 5); aqui
+// requestedById TEM FK a User desde o início, seguindo o padrão já
+// consolidado no restante do schema (Vulnerability.assignee, etc.).
+
+enum DastScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum DastRisk {
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+// DastScan — uma execução de scan DAST contra uma targetUrl.
+// containerName é derivado de `id` (vulnera-zap-<id>) e persistido pra
+// permitir cancelamento (docker rm -f <containerName>) sem recalcular nada.
+model DastScan {
+  id             String         @id @default(cuid())
+  targetUrl      String         @db.VarChar(2048)
+  status         DastScanStatus @default(QUEUED)
+  requestedById  String
+  containerName  String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  durationMs     Int?
+  errorMessage   String?        @db.Text
+  htmlReportPath String?
+  jsonReportPath String?
+  alertsHigh     Int            @default(0)
+  alertsMedium   Int            @default(0)
+  alertsLow      Int            @default(0)
+  alertsInfo     Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  requestedBy User          @relation(fields: [requestedById], references: [id])
+  findings    DastFinding[]
+
+  @@index([requestedById])
+  @@index([status])
+  // Índice composto pro lock "1 scan por alvo de cada vez": WHERE status IN
+  // (QUEUED,RUNNING) AND targetUrl = ?. Prefixo de 191 chars — targetUrl é
+  // VarChar(2048), índice completo estouraria o teto de bytes por índice do
+  // MySQL (o projeto já foi mordido nisso duas vezes, ver §2 do CLAUDE.md).
+  @@index([status, targetUrl(length: 191)])
+}
+
+// DastFinding — um alerta do ZAP já normalizado (1 instance = 1 finding).
+// fingerprint = sha256(pluginId + "|" + normalizedUrl + "|" + (param ?? ""))
+// — NUNCA inclui evidence (ela muda entre scans da mesma vulnerabilidade).
+model DastFinding {
+  id            String   @id @default(cuid())
+  scanId        String
+  fingerprint   String // sha256 hex, 64 chars — seguro pro índice único
+  pluginId      String
+  title         String
+  risk          DastRisk
+  confidence    String
+  cweId         String?
+  wascId        String?
+  url           String   @db.Text
+  normalizedUrl String   @db.Text
+  param         String?
+  evidence      String?  @db.Text
+  description   String?  @db.Text
+  solution      String?  @db.Text
+  reference     String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  scan DastScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([scanId, fingerprint])
+  @@index([scanId])
+  @@index([risk])
 }
 
 // ============================================================================

@@ -19,7 +19,7 @@
 
 ## Antes de começar (fora da contagem dos 10 min)
 
-- Navegador aberto em **http://localhost:3000**
+- Navegador aberto em **http://localhost:8086**
 - Celular com o Expo Go instalado e o app mobile rodando (`npx expo start`
   em `app/mobile`, `.env` apontando pro IP da rede local) — só necessário
   pro passo 5 (push notification)
@@ -38,7 +38,7 @@
 
 ### 1. Landing + Planos — ~1 min
 
-1. Abra `http://localhost:3000` — sem sessão, redireciona pro login.
+1. Abra `http://localhost:8086` — sem sessão, redireciona pro login.
 2. Clique em **Planos** (ou vá direto em `/plans`) — página pública, 3 cards
    (Básico/Pro/Enterprise), sem precisar estar logado.
 3. Narrativa: "aqui é onde qualquer empresa nova entra — vê os planos antes

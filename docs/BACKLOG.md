@@ -18,6 +18,7 @@
 | **6.5 Design System** | **Tokens OKLCH, componentes próprios, temas, métricas, dashboards** | ✅ concluída 2026-08-09 |
 | 7 Mobile           | Expo enxuto + Push                                 | ✅ concluída 2026-08-10 |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 🚧 CP1-3 + CP4(ZAP) + docs concluídos 2026-08-11; Sonar bloqueado em Rafael |
+| **9 DAST (OWASP ZAP)** | **Scans automatizados: runner Docker, pipeline de findings, API, UI, PDF** | ✅ concluída 2026-09-05 |
 
 ✅ **Frontend web bootstrapado na Fase 3** (2026-08-04) — `app/web` tem Vite+React+TS+Tailwind+Radix+TanStack Query+Zustand+Axios, com Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions funcionando ponta a ponta (smoke E2E manual validado no navegador). Próximas fases só adicionam telas, não infraestrutura.
 
@@ -147,6 +148,25 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 
 > Slides e ensaios ficam com o Rafael, fora da contagem.
 > **Maturidade simplificada:** checklist de perguntas por domínio, escala 1–5, média simples. Sem scoring ponderado, sem níveis por domínio, sem comparativo histórico.
+
+## FASE 9 — DAST (OWASP ZAP) — ✅ concluída em 2026-09-05
+
+| #    | Task                                                             | Estado |
+| ---- | ----------------------------------------------------------------- | ------ |
+| 9.0  | Reconhecimento: flags do `zap-full-scan.py`, exit codes, estrutura do JSON | ✅ exit code ≠ 0 confirmado como normal (WARN sem FAIL); JSON real capturado virou fixture de teste |
+| 9.1  | Schema `DastScan`/`DastFinding` + migration                       | ✅ enum nativo (exceção à filosofia do schema, confirmada com o Rafael) |
+| 9.2  | `zap-runner.service.ts` — execFile, SSRF, timeout, cancelamento, fallback simulado | ✅ achado real: timeout de `isDockerAvailable()` (5s) baixo demais nesta máquina, subido pra 10s |
+| 9.3  | `dast-findings.service.ts` — parse, normalização, fingerprint, escopo | ✅ validado contra JSON real (24 findings, contadores batendo) |
+| 9.4  | API REST (model/repo/service/controller/factory/routes) + RBAC   | ✅ 7 rotas, ownership fina no service, `requestedByName` resolvido pro PDF |
+| 9.5  | Testes SEC/RBAC/PIPE/LIFE                                        | ✅ 42 testes novos (315/315 total), cobertura 89-96% nos 3 services novos, sem depender de Docker (`DAST_FORCE_SIMULATE`) |
+| 9.6  | Interface `/dast` (lista) + `/dast/scans/:id` (detalhe + polling) + `/dast/scans/:id/report` (iframe ZAP) | ✅ tabela HTML manual (mesmo padrão de `applications-page.tsx`), linha expansível construída do zero (não existia no design system) |
+| 9.7  | PDF client-side (`lib/pdf/dast-report.ts`)                       | ✅ reaproveita 100% `lib/pdf/base.ts`; validado com dado real + emoji + texto longo (13 páginas, PDF válido) |
+| 9.8  | Validação end-to-end (Juice Shop + testasp.vulnweb.com)          | ✅ ver `docs/DAST.md` §9 e PRD_VIVO.md §6 |
+| 9.9  | `docs/DAST.md` + 3 ADRs (028-030) + docs vivos                   | ✅ |
+
+> **Achado de infra (não específico do DAST):** `npm run check` do backend estava quebrado ANTES de qualquer código do módulo — Prisma Client desatualizado + `expo-server-sdk` ausente do `node_modules` + migration `add_expo_push_token` não aplicada no banco de teste. Resolvido como pré-requisito. Ver PRD_VIVO.md §7 (bloqueios).
+>
+> **Validação visual:** extensão do Chrome não conectou nesta sessão (mesmo bloqueio recorrente de sessões anteriores) — resolvido com o MESMO fallback já comprovado no projeto (Playwright ad-hoc, instalado no scratchpad): 26/26 checks contra a stack de dev real (`npm run dev` nos dois workspaces), cobrindo RBAC visual, responsivo (375/768/1440), polling ao vivo, expansão de linha, filtro/busca, download de PDF via clique real e abertura do relatório HTML do ZAP em nova aba — nenhum erro de console.
 
 ---
 

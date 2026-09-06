@@ -46,6 +46,10 @@ críticos seguem em aberto. A Vulnera resolve isso com:
 - **Checklist de maturidade de segurança** por domínio — visão rápida de
   quão preparado está o ambiente do cliente, sem pretender ser uma
   auditoria SAMM completa.
+- **Scans DAST automatizados via OWASP ZAP** — o pentester informa uma URL e
+  a plataforma sobe um container ZAP, roda spider + active scan e devolve
+  findings estruturados, o relatório HTML original e um PDF, sem mais
+  nenhuma intervenção manual (ver `docs/DAST.md`).
 - **App mobile read-only** pro cliente acompanhar findings e receber push
   quando algo crítico é registrado.
 - **Isolamento multi-tenant real**, provado por dezenas de testes de
@@ -103,7 +107,7 @@ flowchart TB
     end
 
     subgraph Docker["docker compose up --build"]
-        Web["web :3000\nvite preview"]
+        Web["web :8086→3000\nvite preview (entrada do app)"]
         Api["api :3001/api\nExpress + TS"]
         Db[("MySQL 8 :3307→3306")]
         Mail["Mailhog :8025"]
@@ -151,7 +155,7 @@ docker compose exec api npm run db:seed   # popula a empresa de demo (TechNova)
 
 Acesse:
 
-- **Web**: http://localhost:3000
+- **Web** (entrada do app): http://localhost:8086
 - **API**: http://localhost:3001/api
 - **Mailhog** (e-mails capturados): http://localhost:8025
 

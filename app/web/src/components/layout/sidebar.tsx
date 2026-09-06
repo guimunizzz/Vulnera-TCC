@@ -52,6 +52,12 @@ const ITENS: ItemNav[] = [
     papeis: ["ADMIN"],
     icone: <path d="M8 1.5 14 5v6l-6 3.5L2 11V5l6-3.5Zm-.8 8.7 4-4.2-1-1-3 3.2-1.4-1.5-1 1 2.4 2.5Z" />,
   },
+  {
+    para: "/dast",
+    rotulo: "DAST",
+    papeis: ["ADMIN", "PENTESTER"],
+    icone: <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm-.75 2v3h3v-1.5H8.75V5.5h-1.5Z" />,
+  },
 ];
 
 export function Sidebar({ aoNavegar, embutida }: { aoNavegar?: () => void; embutida?: boolean }) {

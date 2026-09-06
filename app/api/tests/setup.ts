@@ -15,6 +15,11 @@ import { prisma } from "../src/database/prisma.database";
  * (filhos antes dos pais). Chamar em beforeEach/afterEach pra isolar testes.
  */
 export async function cleanDatabase(): Promise<void> {
+  // DastFinding antes de DastScan (FK cascade cuidaria disso, mas explícito é
+  // mais seguro); DastScan antes de User — requestedById é RESTRICT, não
+  // CASCADE (deletar user com scan pendurado quebraria a constraint).
+  await prisma.dastFinding.deleteMany();
+  await prisma.dastScan.deleteMany();
   await prisma.evidence.deleteMany();
   await prisma.vulnerabilityComment.deleteMany();
   await prisma.vulnerability.deleteMany();
