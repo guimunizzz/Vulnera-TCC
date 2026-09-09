@@ -162,3 +162,17 @@ export const MOTION = {
 
 /** WCAG 2.5.5/2.5.8 — todo controle interativo alcança 44px, igual ao web (--size-touch-target). */
 export const TOUCH_TARGET = 44;
+
+/**
+ * Dimensões da tab bar flutuante (pill com glassmorphism, ver
+ * app/(tabs)/_layout.tsx) — exportado porque as telas com FlatList/
+ * ScrollView dentro das abas (home/index.tsx, settings.tsx) precisam desse
+ * mesmo número pra reservar espaço no rodapé e não deixar o último item
+ * escondido atrás do pill (que agora flutua por cima do conteúdo, não
+ * empurra mais como a barra dockada antiga fazia).
+ */
+export const TAB_BAR = {
+  height: 64,
+  sideMargin: 16,
+  bottomMargin: 16,
+} as const;

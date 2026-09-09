@@ -9,6 +9,7 @@
 
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
 import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
 import { Button } from "./button";
@@ -39,7 +40,9 @@ function Blob({
   return (
     <Animated.View entering={ZoomIn.duration(420)} style={styles.blobWrap}>
       <View style={[styles.blobHalo, { backgroundColor: tintSurface }]} />
-      <View style={[styles.blobCore, { backgroundColor: tintSurface, borderColor: tint }]}>
+      <View style={[styles.blobCore, { borderColor: tint }]}>
+        <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+        <View style={[styles.blobTint, { backgroundColor: tintSurface }]} />
         <Ionicons name={glyph} size={30} color={tint} />
       </View>
     </Animated.View>
@@ -96,6 +99,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  blobTint: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.65,
   },
   title: {
     color: COLORS.textPrimary,

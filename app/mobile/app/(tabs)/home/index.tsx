@@ -10,10 +10,12 @@
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { BlurView } from "expo-blur";
 import { useQuery } from "@tanstack/react-query";
 import { projectsApi } from "../../../src/api/projects.api";
 import { useApiError } from "../../../src/hooks/use-api-error";
 import { useAuthStore } from "../../../src/store/auth.store";
+import { useTabBarClearance } from "../../../src/hooks/use-tab-bar-clearance";
 import { haptics } from "../../../src/lib/haptics";
 import { ProjectCard } from "../../../src/components/project-card";
 import { ProjectCardSkeleton, SkeletonList } from "../../../src/components/skeleton";
@@ -37,6 +39,7 @@ export default function HomeScreen() {
   const getErrorMessage = useApiError();
   const userName = useAuthStore((s) => s.user?.name);
   const [filtro, setFiltro] = useState<Filtro>("TODOS");
+  const listaBottomPadding = useTabBarClearance();
 
   const { data: projects, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ["projects"],
@@ -75,7 +78,7 @@ export default function HomeScreen() {
       <FlatList
         data={projetosFiltrados}
         keyExtractor={(p) => p.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: listaBottomPadding }]}
         refreshing={isRefetching}
         onRefresh={() => {
           haptics.tap();
@@ -103,8 +106,10 @@ export default function HomeScreen() {
                       haptics.tap();
                       setFiltro(item.valor);
                     }}
-                    style={[styles.chip, ativo && styles.chipAtivo]}
+                    style={[styles.chip, ativo && styles.chipBordaAtiva]}
                   >
+                    <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+                    <View style={[styles.chipTint, ativo && styles.chipTintAtivo]} />
                     <Text style={[styles.chipText, ativo && styles.chipTextAtivo]}>{item.rotulo}</Text>
                   </Pressable>
                 );
@@ -164,12 +169,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING[4],
     paddingVertical: SPACING[2],
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.borderSubtle,
+    overflow: "hidden",
   },
-  chipAtivo: {
+  // Inativo: tint neutro. Ativo: tint na cor do acento — mesmo espírito do
+  // botão "Entrar" do login, vidro com cor de destaque em vez de virar
+  // cinza quando selecionado.
+  chipTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.surface,
+    opacity: 0.6,
+  },
+  chipTintAtivo: {
     backgroundColor: COLORS.accent,
+    opacity: 0.7,
+  },
+  chipBordaAtiva: {
     borderColor: COLORS.accent,
   },
   chipText: {

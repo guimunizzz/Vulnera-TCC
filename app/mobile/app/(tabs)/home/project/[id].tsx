@@ -16,6 +16,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { projectsApi } from "../../../../src/api/projects.api";
 import { vulnerabilitiesApi } from "../../../../src/api/vulnerabilities.api";
 import { useApiError } from "../../../../src/hooks/use-api-error";
+import { useTabBarClearance } from "../../../../src/hooks/use-tab-bar-clearance";
 import { haptics } from "../../../../src/lib/haptics";
 import { StatusBadge } from "../../../../src/components/badge";
 import { Card } from "../../../../src/components/card";
@@ -23,7 +24,7 @@ import { FindingRow } from "../../../../src/components/finding-row";
 import { FindingRowSkeleton, SkeletonList } from "../../../../src/components/skeleton";
 import { EmptyState, ErrorState, LoadingState } from "../../../../src/components/states";
 import { Screen } from "../../../../src/components/screen";
-import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SHADOW, SPACING } from "../../../../src/theme/tokens";
+import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../../../../src/theme/tokens";
 import type { Vulnerability } from "../../../../src/types/vulnerability.types";
 
 const ANALYSIS_LEVEL_LABELS: Record<string, string> = {
@@ -43,6 +44,7 @@ export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const getErrorMessage = useApiError();
+  const bottomClearance = useTabBarClearance();
 
   const projectQuery = useQuery({
     queryKey: ["projects", id],
@@ -87,7 +89,7 @@ export default function ProjectDetailScreen() {
       <FlatList
         data={findingsQuery.data ?? []}
         keyExtractor={(f) => f.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: bottomClearance }]}
         refreshing={findingsQuery.isRefetching}
         onRefresh={() => {
           haptics.tap();
@@ -102,14 +104,16 @@ export default function ProjectDetailScreen() {
         )}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Animated.View entering={FadeInDown.duration(360)} style={styles.hero}>
-              <View style={styles.titleRow}>
-                <Text style={styles.title}>{project.name}</Text>
-                <StatusBadge status={project.status} />
-              </View>
-              <Text style={styles.meta}>
-                {project.analysisType} · {ANALYSIS_LEVEL_LABELS[project.analysisLevel] ?? project.analysisLevel}
-              </Text>
+            <Animated.View entering={FadeInDown.duration(360)}>
+              <Card style={styles.hero}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.title}>{project.name}</Text>
+                  <StatusBadge status={project.status} />
+                </View>
+                <Text style={styles.meta}>
+                  {project.analysisType} · {ANALYSIS_LEVEL_LABELS[project.analysisLevel] ?? project.analysisLevel}
+                </Text>
+              </Card>
             </Animated.View>
 
             <View style={styles.tilesRow}>
@@ -157,16 +161,11 @@ const styles = StyleSheet.create({
     gap: SPACING[4],
     marginBottom: SPACING[1],
   },
+  // Card já dá vidro fosco + sombra — aqui só a faixa de acento à esquerda
+  // (detalhe de destaque, não o card inteiro pintado).
   hero: {
-    // Fundo neutro igual aos outros cards — o violeta fica só na faixa da
-    // borda esquerda (detalhe de destaque, não o card inteiro pintado).
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.container,
     borderLeftWidth: 3,
     borderLeftColor: COLORS.accent,
-    padding: SPACING[4],
-    gap: SPACING[2],
-    ...SHADOW.card,
   },
   titleRow: {
     flexDirection: "row",

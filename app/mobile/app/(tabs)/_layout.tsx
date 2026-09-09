@@ -15,20 +15,31 @@
  *
  * Também é onde o registro de push dispara (usePushRegistration) — roda uma
  * vez por sessão autenticada, independente de qual aba o usuário está vendo.
+ *
+ * Tab bar flutuante com glassmorphism: `tabBarStyle` posiciona o container
+ * como um pill absoluto (não dockado — por isso as telas dentro das abas
+ * reservam espaço extra no rodapé, ver TAB_BAR em theme/tokens.ts) e
+ * `tabBarBackground` desenha o vidro fosco (BlurView + tint) atrás dos
+ * ícones — é o mecanismo nativo do React Navigation pra isso, não uma tab
+ * bar reimplementada do zero.
  */
 
+import { StyleSheet, View } from "react-native";
 import { Redirect, Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
 import { useAuthStore } from "../../src/store/auth.store";
 import { usePushRegistration } from "../../src/hooks/use-push-registration";
 import { TabIcon } from "../../src/components/tab-icon";
 import { haptics } from "../../src/lib/haptics";
 import { LoadingState } from "../../src/components/states";
 import { Screen } from "../../src/components/screen";
-import { COLORS, FONT_FAMILY } from "../../src/theme/tokens";
+import { COLORS, FONT_FAMILY, RADIUS, SHADOW, TAB_BAR } from "../../src/theme/tokens";
 
 export default function TabsLayout() {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const insets = useSafeAreaInsets();
   usePushRegistration();
 
   if (!hasHydrated) {
@@ -50,7 +61,24 @@ export default function TabsLayout() {
         headerTintColor: COLORS.textPrimary,
         headerTitleStyle: { fontFamily: FONT_FAMILY.semibold },
         headerShadowVisible: false,
-        tabBarStyle: { backgroundColor: COLORS.surface, borderTopColor: COLORS.borderSubtle, height: 58, paddingBottom: 6, paddingTop: 6 },
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            left: TAB_BAR.sideMargin,
+            right: TAB_BAR.sideMargin,
+            bottom: insets.bottom + TAB_BAR.bottomMargin,
+            height: TAB_BAR.height,
+          },
+        ],
+        // Sombra vai no container (transparente) pra não ser cortada pelo
+        // overflow:hidden do vidro — ver nota no styles.backgroundWrap.
+        tabBarBackground: () => (
+          <View style={styles.backgroundWrap}>
+            <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
+            <View style={styles.tint} />
+          </View>
+        ),
+        tabBarItemStyle: styles.tabBarItem,
         tabBarLabelStyle: { fontFamily: FONT_FAMILY.medium, fontSize: 11 },
         tabBarActiveTintColor: COLORS.accentInk,
         tabBarInactiveTintColor: COLORS.textMuted,
@@ -80,3 +108,33 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    position: "absolute",
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "transparent",
+    ...SHADOW.raised,
+  },
+  // overflow:"hidden" fica aqui (não em `tabBar`) — é o que recorta o blur
+  // nas pontas arredondadas do pill; se fosse no container de fora, também
+  // cortaria a sombra no iOS.
+  backgroundWrap: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: RADIUS.full,
+    overflow: "hidden",
+  },
+  // Tint sólido semi-transparente por cima do blur — o vidro fosco puro
+  // varia demais de legibilidade dependendo do que rola atrás; isso
+  // garante contraste consistente do ícone/rótulo em qualquer conteúdo.
+  tint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.surface,
+    opacity: 0.55,
+  },
+  tabBarItem: {
+    paddingTop: 8,
+  },
+});

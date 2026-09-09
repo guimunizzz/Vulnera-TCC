@@ -14,12 +14,14 @@ import { useRouter } from "expo-router";
 import {
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { useMutation } from "@tanstack/react-query";
 import Animated, {
   Easing,
@@ -81,6 +83,8 @@ function FocusField({
 
   return (
     <Animated.View style={[styles.fieldWrap, borderStyle]}>
+      <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={styles.fieldTint} />
       <Animated.View style={iconColorStyle}>
         <Ionicons name={icon} size={18} color={COLORS.accentInk} />
       </Animated.View>
@@ -129,7 +133,12 @@ export default function LoginScreen() {
   return (
     <View style={styles.flex}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          showsVerticalScrollIndicator={false}
+        >
           <Animated.View entering={FadeInUp.duration(420)} style={styles.header}>
             <View style={styles.lockup}>
               <VulneraMark size={60} />
@@ -196,11 +205,12 @@ export default function LoginScreen() {
               onPress={() => loginMutation.mutate()}
               disabled={!email || !password || loginMutation.isPending}
               loading={loginMutation.isPending}
+              glass
             >
               Entrar
             </Button>
           </Animated.View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
@@ -209,7 +219,11 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas },
   container: {
-    flex: 1,
+    // flexGrow (não flex) — é contentContainerStyle de ScrollView agora:
+    // garante que o conteúdo preenche pelo menos a altura da tela (pro
+    // justifyContent:"center" continuar centralizando com teclado fechado)
+    // mas ainda permite rolar quando o teclado empurra o conteúdo.
+    flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: SPACING[6],
     gap: SPACING[8],
@@ -274,7 +288,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: RADIUS.control,
     paddingHorizontal: SPACING[3],
+    overflow: "hidden",
+  },
+  // Tint sólido por cima do blur — mesma razão da tab bar flutuante: vidro
+  // fosco puro varia demais de legibilidade dependendo do que tem atrás.
+  fieldTint: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.surface,
+    opacity: 0.5,
   },
   input: {
     flex: 1,

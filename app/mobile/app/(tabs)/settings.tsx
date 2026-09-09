@@ -14,10 +14,11 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { authApi } from "../../src/api/auth.api";
 import { useAuthStore } from "../../src/store/auth.store";
 import { usePushRegistration } from "../../src/hooks/use-push-registration";
+import { useTabBarClearance } from "../../src/hooks/use-tab-bar-clearance";
 import { haptics } from "../../src/lib/haptics";
 import { Card } from "../../src/components/card";
 import { Button } from "../../src/components/button";
-import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SHADOW, SPACING } from "../../src/theme/tokens";
+import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../../src/theme/tokens";
 
 const PUSH_LABEL: Record<string, { texto: string; cor: string; icone: keyof typeof Ionicons.glyphMap }> = {
   verificando: { texto: "Verificando...", cor: COLORS.textMuted, icone: "time-outline" },
@@ -34,6 +35,7 @@ export default function SettingsScreen() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const pushStatus = usePushRegistration();
   const pushInfo = PUSH_LABEL[pushStatus];
+  const contentBottomPadding = useTabBarClearance();
 
   async function handleLogout() {
     try {
@@ -56,15 +58,17 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Animated.View entering={FadeInUp.duration(360)} style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.name?.charAt(0)?.toUpperCase() ?? "?"}</Text>
-        </View>
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>{user?.name}</Text>
-          <Text style={styles.userEmail}>{user?.email}</Text>
-        </View>
+    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding }]}>
+      <Animated.View entering={FadeInUp.duration(360)}>
+        <Card style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{user?.name?.charAt(0)?.toUpperCase() ?? "?"}</Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{user?.name}</Text>
+            <Text style={styles.userEmail}>{user?.email}</Text>
+          </View>
+        </Card>
       </Animated.View>
 
       <Animated.View entering={FadeInDown.duration(360).delay(80)}>
@@ -100,16 +104,14 @@ const styles = StyleSheet.create({
     padding: SPACING[4],
     gap: SPACING[4],
   },
+  // Card já dá vidro fosco + sombra — aqui só o layout em linha e a faixa
+  // de acento à esquerda (detalhe, não o card inteiro pintado).
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING[3],
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.container,
     borderLeftWidth: 3,
     borderLeftColor: COLORS.accent,
-    padding: SPACING[4],
-    ...SHADOW.card,
   },
   avatar: {
     width: 52,
