@@ -2,11 +2,18 @@
  * dast-scan-detail-page.tsx
  *
  * Tela de acompanhamento de UM scan DAST. Enquanto QUEUED/RUNNING, faz
- * polling a cada 5s (encerra sozinho ao chegar num estado terminal) e mostra
- * um indicador de tempo decorrido — sem isso, minutos de silêncio (spider +
- * active scan do ZAP) parecem travamento. Ao concluir, mostra os contadores
- * por risco, a tabela de findings (filtro + busca + linha expansível) e os
- * dois botões de saída: PDF client-side e relatório HTML original do ZAP.
+ * polling a cada 3s (encerra sozinho ao chegar num estado terminal) e mostra
+ * BARRA DE PROGRESSO com percentual real, nome da fase e tempo decorrido —
+ * sem isso, minutos de silêncio (spider + active scan do ZAP) parecem
+ * travamento. Ao concluir, mostra os contadores por risco, a tabela de
+ * findings (filtro + busca + linha expansível) e os dois botões de saída: PDF
+ * client-side e relatório HTML original do ZAP.
+ *
+ * O percentual vem do backend (coluna `progress`), alimentado pela API do
+ * OWASP ZAP fase a fase — não é estimativa de tempo. Quando o scan cai no
+ * resultado simulado (Docker fora do ar ou falha do ZAP), a tela diz isso em
+ * letras grandes: um resultado de demonstração não pode se passar por real
+ * (docs/DAST-DOCKER-GAP.md §5).
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -18,7 +25,9 @@ import { Breadcrumb } from "../components/ui/navigation";
 import { Button, LinkButton } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Alert } from "../components/ui/alert";
-import { StatusBadge, SeverityBadge } from "../components/ui/badge";
+import { Badge, StatusBadge, SeverityBadge } from "../components/ui/badge";
+import { Progress } from "../components/ui/progress";
+import { useDastStatus } from "../components/dast/dast-status-banner";
 import { EmptyState, ErrorState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/card";
 import { downloadBlob } from "../lib/pdf/base";
@@ -26,6 +35,7 @@ import { generateDastReportPdf } from "../lib/pdf/dast-report";
 import {
   ACTIVE_DAST_STATUSES,
   DAST_RISK_LABELS,
+  labelDaFase,
   type DastFinding,
   type DastRisk,
 } from "../types/dast.types";
@@ -158,12 +168,18 @@ export function DastScanDetailPage() {
     queryKey: ["dast", "scans", id],
     queryFn: () => dastApi.getById(id!),
     enabled: !!id,
+    // 3s: mesma cadência com que o runner atualiza o percentual no banco.
     refetchInterval: (query) =>
-      query.state.data && ACTIVE_DAST_STATUSES.includes(query.state.data.status) ? 5000 : false,
+      query.state.data && ACTIVE_DAST_STATUSES.includes(query.state.data.status) ? 3000 : false,
   });
 
   const scan = scanQuery.data;
   const isActive = !!scan && ACTIVE_DAST_STATUSES.includes(scan.status);
+
+  // Só pra descobrir a posição na fila deste scan — quando ele ainda não
+  // ganhou vaga, "5%" não explica nada e "2º da fila" explica tudo.
+  const statusQuery = useDastStatus();
+  const posicaoNaFila = statusQuery.data?.queued.find((q) => q.scanId === id)?.position ?? null;
 
   const findingsQuery = useQuery({
     queryKey: ["dast", "scans", id, "findings"],
@@ -253,8 +269,13 @@ export function DastScanDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="break-all text-2xl font-bold text-fg">{scan.targetUrl}</h1>
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-2 flex flex-wrap items-center gap-3">
             <StatusBadge status={scan.status} />
+            {scan.simulated && (
+              <Badge tom="atencao" title="Resultado gerado sem executar o OWASP ZAP">
+                resultado simulado
+              </Badge>
+            )}
             <span className="text-sm text-fg-muted">Duração: {formatDuration(scan.durationMs)}</span>
           </div>
         </div>
@@ -290,15 +311,36 @@ export function DastScanDetailPage() {
       )}
 
       {isActive && (
-        <Alert tom="info" className="mt-4">
-          <p>
-            Scan em andamento: o ZAP primeiro rastreia o alvo (spider) e depois testa ativamente cada página
-            encontrada (active scan). Isso costuma levar alguns minutos — esta tela atualiza sozinha a cada 5
-            segundos, nenhuma ação é necessária.
+        <div className="mt-4 rounded-container border border-subtle bg-surface p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-medium text-fg">
+              {posicaoNaFila ? `Aguardando vaga — ${posicaoNaFila}º da fila` : labelDaFase(scan.phase)}
+            </h2>
+            <span className="font-mono text-sm text-fg-muted" data-numeric>
+              Tempo decorrido: {formatElapsed(elapsedSeconds)}
+            </span>
+          </div>
+
+          <Progress
+            className="mt-3"
+            valor={scan.progress}
+            rotulo="Progresso do scan"
+            textoDoValor={`${scan.progress}% — ${labelDaFase(scan.phase)}`}
+            mostrarValor
+          />
+
+          <p className="mt-3 text-sm text-fg-muted">
+            {posicaoNaFila
+              ? "Rodamos no máximo alguns scans ao mesmo tempo para não sobrecarregar a máquina. Este começa sozinho assim que uma vaga liberar — pode deixar a tela aberta."
+              : "O ZAP primeiro rastreia o alvo (spider) e depois testa ativamente cada página encontrada (active scan). Isso costuma levar alguns minutos — esta tela atualiza sozinha, nenhuma ação é necessária."}
           </p>
-          <p className="mt-2 font-mono text-sm" data-numeric>
-            Tempo decorrido: {formatElapsed(elapsedSeconds)}
-          </p>
+        </div>
+      )}
+
+      {scan.status === "COMPLETED" && scan.simulated && (
+        <Alert tom="atencao" className="mt-4" titulo="Estes achados são de demonstração, não do seu alvo">
+          {scan.warningMessage ??
+            "O OWASP ZAP não pôde ser executado, então exibimos um conjunto de achados de demonstração no lugar."}
         </Alert>
       )}
 

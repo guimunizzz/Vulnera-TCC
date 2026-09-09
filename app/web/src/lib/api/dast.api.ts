@@ -8,12 +8,21 @@
  */
 
 import { apiClient } from "./client";
-import type { CreateDastScanInput, DastFinding, DastReportData, DastScan } from "../../types/dast.types";
+import type {
+  CreateDastScanInput,
+  DastFinding,
+  DastModuleStatus,
+  DastReportData,
+  DastScan,
+} from "../../types/dast.types";
 
 export const dastApi = {
   create: (input: CreateDastScanInput) => apiClient.post<DastScan>("/dast/scans", input).then((res) => res.data),
 
   list: () => apiClient.get<DastScan[]>("/dast/scans").then((res) => res.data),
+
+  /** Estado do módulo: Docker disponível, execução/fila e avisos do watchdog. */
+  getStatus: () => apiClient.get<DastModuleStatus>("/dast/scans/status").then((res) => res.data),
 
   getById: (id: string) => apiClient.get<DastScan>(`/dast/scans/${id}`).then((res) => res.data),
 

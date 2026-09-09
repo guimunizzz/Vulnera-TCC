@@ -1,17 +1,34 @@
 /**
  * zap-runner.service.ts
  *
- * Motor de execução do scan DAST: sobe UM container do OWASP ZAP por scan via
- * `docker run --rm`, espera terminar (ou mata por timeout), e devolve onde os
- * relatórios (report.json/report.html) ficaram no disco do host.
+ * Motor de execução do scan DAST. Sobe UM container do OWASP ZAP por scan
+ * (`docker run -d`), em MODO DAEMON/PROXY, e conduz o scan falando com a API
+ * HTTP do próprio ZAP (spider -> passivo -> active scan -> relatórios).
+ *
+ * ⚠️ MUDANÇA DE 2026-09-09 — antes daqui o runner chamava `zap-full-scan.py`
+ * dentro do container e lia `report.json` de um volume compartilhado. Dois
+ * problemas mataram esse desenho:
+ *
+ *  1. PROGRESSO. `zap-full-scan.py` é uma caixa preta: só devolve texto no
+ *     stdout no final. Não dá pra saber que o spider está em 40%. A API do
+ *     ZAP em modo daemon devolve percentual REAL por fase
+ *     (/JSON/spider/view/status/ e /JSON/ascan/view/status/) — é isso que
+ *     alimenta a barra de progresso da UI.
+ *  2. VOLUME. Com a API rodando DENTRO de um container (docker compose), o
+ *     caminho passado em `-v` era interpretado pelo daemon do HOST, não pelo
+ *     filesystem do container da API: o ZAP escrevia o relatório num lugar
+ *     que a API nunca leria (diagnóstico completo em docs/DAST-DOCKER-GAP.md
+ *     §3, "Causa 3"). Buscando os relatórios pela API HTTP do ZAP
+ *     (/OTHER/core/other/jsonreport/) o bind mount some do desenho inteiro —
+ *     quem escreve no disco é o processo Node, no caminho que ele mesmo lê.
  *
  * Por que não é uma classe com injeção de dependência como os outros services
  * (CLAUDE.md §5.3): este módulo NÃO toca o Prisma — não sabe o que é um
  * DastScan, não marca status, não grava nada no banco. Só executa o processo
  * e devolve um resultado descritivo. Quem orquestra (cria o registro QUEUED,
  * decide RUNNING/COMPLETED/FAILED, aciona o pipeline de findings) é o
- * `dast-scan.service.ts` da Fase 4 — mesma separação que `push.util.ts` já
- * usa (utilitário "puro", sem acesso a banco, best-effort onde faz sentido).
+ * `dast-scan.service.ts`, e quem limita a concorrência é o
+ * `dast-watchdog.service.ts` — mesma separação que `push.util.ts` já usa.
  * Mantém a regra do CLAUDE.md de que só Repository importa `@prisma/client`.
  *
  * SEGURANÇA (ver docs/DAST.md §5 pra detalhe de cada item):
@@ -21,27 +38,60 @@
  *  - `validateTargetUrl` bloqueia protocolo != http/https e, por padrão,
  *    loopback/faixas privadas (SSRF) — liberável via DAST_ALLOW_PRIVATE_TARGETS.
  *  - `resolveReportPath` impede path traversal ao servir report.html/json.
+ *  - A API do ZAP sobe com uma `api.key` ALEATÓRIA por scan (nunca
+ *    `api.disablekey=true`): mesmo que alguém alcance a porta do daemon, sem
+ *    a chave não dispara scan nenhum. Quando a API roda no host, a porta é
+ *    publicada só em 127.0.0.1, nunca em 0.0.0.0.
  *
  * ⚠️ Limitação conhecida: a checagem de host privado é sobre o LITERAL da URL
  * (hostname/IP escrito), não sobre DNS resolvido. Um hostname público que só
  * resolve pra IP privado em tempo de requisição (DNS rebinding) não é pego
  * aqui — documentado em docs/DAST.md §10, fora de escopo desta entrega.
  *
- * Fallback simulado (`simulateScan`): se `docker info` falhar (Docker Desktop
- * fechado, ambiente de CI sem Docker), gera report.json/report.html estáticos
- * com ~8 alertas representativos depois de um pequeno delay — sem isso o CI
- * não roda um scan de verdade e nenhum teste do pipeline seria executável.
+ * Fallback simulado (`simulateScan`): gera report.json/report.html estáticos
+ * com ~8 alertas representativos. Aciona em DOIS casos — Docker indisponível
+ * (CI, Docker Desktop fechado) e scan real que FALHOU. No segundo caso o
+ * resultado simulado é mantido de propósito, com `warningMessage` amigável e
+ * `simulated: true` gravados no banco: a tela nunca fica vazia, e nunca
+ * finge que o dado é real (era exatamente o buraco de produto apontado em
+ * docs/DAST-DOCKER-GAP.md §5).
  */
 
 import { execFile } from "child_process";
+import { randomBytes } from "crypto";
+import * as http from "http";
+import * as net from "net";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { EnvVar } from "../config/EnvVar";
 import { EnvKeys } from "../config/enum/EnvKeys";
 
-const ZAP_IMAGE = EnvVar.getOptional(EnvKeys.DAST_ZAP_IMAGE, "ghcr.io/zaproxy/zaproxy:stable");
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000; // 30min — mesmo valor do default documentado no prompt da Fase 2
 const SIMULATE_DELAY_MS = 3000; // "alguns segundos", curto o bastante pra não travar a suíte de testes
+const ZAP_INTERNAL_PORT = 8080; // porta do daemon quando API e ZAP dividem a rede do compose (ver resolveZapEndpoint)
+const ZAP_POLL_INTERVAL_MS = 3000; // cadência de polling na API do ZAP — também é o "pulso" lido pelo watchdog
+
+// Lido em chamada, não no import: process.env pode mudar entre testes (a
+// suíte troca DAST_* em beforeAll/afterAll) e uma const de módulo congelaria
+// o valor da primeira importação.
+function getZapImage(): string {
+  return EnvVar.getOptional(EnvKeys.DAST_ZAP_IMAGE, "ghcr.io/zaproxy/zaproxy:stable");
+}
+
+/** Nome da rede Docker onde criar o container do ZAP. Vazio = API roda no host (publica porta em 127.0.0.1). */
+function getZapNetwork(): string {
+  return EnvVar.getOptional(EnvKeys.DAST_ZAP_NETWORK, "").trim();
+}
+
+function getStartupTimeoutMs(): number {
+  const parsed = Number(EnvVar.getOptional(EnvKeys.DAST_ZAP_STARTUP_TIMEOUT_MS, "180000"));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 180000;
+}
+
+function getSpiderMaxDurationMin(): number {
+  const parsed = Number(EnvVar.getOptional(EnvKeys.DAST_ZAP_SPIDER_MAX_DURATION_MIN, "5"));
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 5;
+}
 
 // path.resolve(process.cwd(), ...) — mesmo padrão de UPLOADS_ROOT em evidence.service.ts
 function getReportsDir(): string {
@@ -153,6 +203,23 @@ function runDocker(args: string[], opts: { timeout?: number } = {}): Promise<Exe
   });
 }
 
+/**
+ * Mesma checagem de `isDockerAvailable`, porém CACHEADA por 30s.
+ * `docker info` custa alguns segundos; o endpoint de status do módulo é
+ * consultado em polling pela UI, e sem cache cada tela aberta somaria um
+ * `docker info` a cada poucos segundos.
+ */
+let dockerStatusCache: { available: boolean; checkedAt: number } | null = null;
+const DOCKER_STATUS_TTL_MS = 30000;
+
+export async function getDockerStatus(): Promise<{ available: boolean; checkedAt: string }> {
+  const now = Date.now();
+  if (!dockerStatusCache || now - dockerStatusCache.checkedAt > DOCKER_STATUS_TTL_MS) {
+    dockerStatusCache = { available: await isDockerAvailable(), checkedAt: now };
+  }
+  return { available: dockerStatusCache.available, checkedAt: new Date(dockerStatusCache.checkedAt).toISOString() };
+}
+
 export async function isDockerAvailable(): Promise<boolean> {
   // 10s, não 5s: `docker info` no Docker Desktop (Windows, backend WSL2)
   // observado levando ~6s pra responder mesmo com o daemon saudável — um
@@ -162,97 +229,436 @@ export async function isDockerAvailable(): Promise<boolean> {
   return result.code === 0;
 }
 
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
+export type ScanPhase = "STARTING" | "SPIDER" | "PASSIVE" | "ACTIVE" | "REPORT" | "DONE" | "SIMULATED";
+
+/** Rótulos em PT-BR de cada fase — a UI mostra estes textos ao lado da barra. */
+export const SCAN_PHASE_LABELS: Record<ScanPhase, string> = {
+  STARTING: "Subindo o OWASP ZAP",
+  SPIDER: "Rastreando o alvo (spider)",
+  PASSIVE: "Analisando respostas (scan passivo)",
+  ACTIVE: "Testando vulnerabilidades (scan ativo)",
+  REPORT: "Gerando relatórios",
+  DONE: "Concluído",
+  SIMULATED: "Resultado simulado",
+};
+
+export interface ScanProgress {
+  percent: number; // 0..100 consolidado das fases
+  phase: ScanPhase;
+  message: string; // frase curta em PT-BR pra UI
 }
 
 export interface ScanOutcome {
   status: "COMPLETED" | "FAILED";
-  jsonReportPath?: string; // absoluto no disco do host
-  htmlReportPath?: string; // absoluto no disco do host
+  jsonReportPath?: string; // absoluto no disco de quem roda a API
+  htmlReportPath?: string; // absoluto no disco de quem roda a API
   errorMessage?: string;
+  /** Aviso amigável quando CONCLUIU com ressalva (tipicamente o fallback simulado). */
+  warningMessage?: string;
   durationMs: number;
   simulated: boolean;
 }
 
+export interface RunScanOptions {
+  scanId: string;
+  targetUrl: string;
+  timeoutMs?: number;
+  /** Chamado a cada tick de polling — alimenta a barra da UI e o pulso do watchdog. */
+  onProgress?: (progress: ScanProgress) => void;
+  /** Cancelamento cooperativo: o watchdog aborta, o runner para no próximo tick. */
+  signal?: AbortSignal;
+}
+
 // ============================================================================
-// Scan real
+// Cliente HTTP da API do ZAP
+//
+// `http.request` puro em vez de fetch/axios de propósito: é tráfego local
+// (loopback ou rede interna do compose), sempre http, e o módulo `http` já vem
+// no Node — não vale uma dependência nova, e o controle de timeout por
+// requisição aqui é mais direto do que via AbortController.
 // ============================================================================
 
-async function runRealScan(scanId: string, targetUrl: string, timeoutMs: number): Promise<ScanOutcome> {
-  const reportsDir = getReportsDir();
-  const scanDir = path.resolve(reportsDir, scanId);
-  await fs.mkdir(scanDir, { recursive: true });
+interface ZapHttpResponse {
+  status: number;
+  body: string;
+}
 
-  const containerName = containerNameFor(scanId);
-  const started = Date.now();
+function httpGet(url: string, timeoutMs: number): Promise<ZapHttpResponse> {
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, { timeout: timeoutMs }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (chunk: Buffer) => chunks.push(chunk));
+      res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf-8") }));
+      res.on("error", reject);
+    });
+    // "timeout" só avisa que o socket ficou ocioso — quem encerra a requisição
+    // é o destroy(); sem ele a promise ficaria pendurada pra sempre.
+    req.on("timeout", () => req.destroy(new Error("ZAP_HTTP_TIMEOUT")));
+    req.on("error", reject);
+  });
+}
 
-  // Caminho nativo do Windows (`C:\Users\...`) funciona direto no `-v` do
-  // Docker Desktop QUANDO quem chama `docker.exe` é o Node (execFile chama o
-  // binário direto, sem shell). O bug clássico só aparece se algo re-escreve
-  // o path antes (Git Bash/MSYS interpretam `/tmp/...` e mangling de `:`) —
-  // validado manualmente na Fase 0 via PowerShell puro. Nenhuma conversão de
-  // path é necessária aqui; ver docs/DAST.md "Solução de problemas".
-  const hostDir = scanDir;
+/** Monta a URL de um endpoint do ZAP com querystring — `URL` escapa os valores (targetUrl inclusive). */
+export function buildZapUrl(baseUrl: string, endpoint: string, params: Record<string, string>): string {
+  const url = new URL(endpoint, baseUrl);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  return url.toString();
+}
 
-  const args = [
-    "run",
-    "--rm",
-    "--name",
-    containerName,
-    "-v",
-    `${hostDir}:/zap/wrk/:rw`,
-    ZAP_IMAGE,
-    "zap-full-scan.py",
-    "-t",
-    targetUrl,
-    "-J",
-    "report.json",
-    "-r",
-    "report.html",
-  ];
+/**
+ * Chama um endpoint /JSON/ do ZAP e devolve o objeto já parseado.
+ * O ZAP responde erro de negócio com HTTP 200 + `{"code":"url_not_found",...}`,
+ * então checar só o status não basta — o `code` é conferido aqui.
+ */
+async function zapJson(
+  baseUrl: string,
+  endpoint: string,
+  params: Record<string, string>,
+  timeoutMs = 20000,
+): Promise<Record<string, unknown>> {
+  const response = await httpGet(buildZapUrl(baseUrl, endpoint, params), timeoutMs);
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(response.body) as Record<string, unknown>;
+  } catch {
+    throw new Error(`ZAP_BAD_RESPONSE:${endpoint}:${response.body.slice(0, 200)}`);
+  }
+  if (typeof parsed.code === "string") {
+    throw new Error(`ZAP_API_ERROR:${parsed.code}:${String(parsed.message ?? "").slice(0, 200)}`);
+  }
+  return parsed;
+}
 
-  const result = await runDocker(args, { timeout: timeoutMs });
-  const durationMs = Date.now() - started;
+// ============================================================================
+// Scan real — container do ZAP em modo daemon + API HTTP
+// ============================================================================
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+/**
+ * Pesos de cada fase no percentual consolidado. Empíricos, não medidos: o
+ * active scan é de longe a fase mais demorada num alvo real, por isso leva a
+ * maior fatia. O objetivo é a barra andar de forma plausível, não prever
+ * duração.
+ */
+const PHASE_WEIGHTS = {
+  startingFrom: 0,
+  startingTo: 8,
+  spiderTo: 45,
+  passiveTo: 55,
+  activeTo: 96,
+} as const;
+
+interface RealScanContext {
+  baseUrl: string;
+  apiKey: string;
+  deadline: number;
+  signal?: AbortSignal;
+  report: (percent: number, phase: ScanPhase, message: string) => void;
+}
+
+/** Lança se o watchdog/usuário abortou ou se o prazo global do scan estourou. */
+function assertStillRunning(ctx: RealScanContext): void {
+  if (ctx.signal?.aborted) throw new Error("SCAN_CANCELLED");
+  if (Date.now() > ctx.deadline) throw new Error("SCAN_TIMEOUT");
+}
+
+/** Espera o daemon responder /JSON/core/view/version/ — a JVM do ZAP leva ~20-40s pra subir. */
+async function waitForZapReady(ctx: RealScanContext, startupDeadline: number): Promise<void> {
+  const startedWaiting = Date.now();
+  // A rampa usa o tempo TÍPICO de boot (~60s), não o teto de startup: com o
+  // teto (180s) a barra andaria 3% em um minuto e pareceria travada. Se passar
+  // dos 60s a rampa satura no topo da fase e o polling continua até o teto.
+  const budget = Math.min(60000, Math.max(1, startupDeadline - startedWaiting));
+
+  for (;;) {
+    assertStillRunning(ctx);
+    try {
+      const version = await zapJson(ctx.baseUrl, "/JSON/core/view/version/", { apikey: ctx.apiKey }, 5000);
+      if (version.version) return;
+    } catch {
+      // Conexão recusada é o estado NORMAL enquanto a JVM sobe — só vira erro
+      // quando o orçamento de startup acaba, logo abaixo.
+    }
+    if (Date.now() > startupDeadline) throw new Error("ZAP_STARTUP_TIMEOUT");
+
+    const elapsedRatio = Math.min(1, (Date.now() - startedWaiting) / budget);
+    ctx.report(
+      PHASE_WEIGHTS.startingFrom + elapsedRatio * (PHASE_WEIGHTS.startingTo - PHASE_WEIGHTS.startingFrom),
+      "STARTING",
+      "Subindo o container do OWASP ZAP...",
+    );
+    await sleep(2000);
+  }
+}
+
+/** Dispara o spider e acompanha até 100%. Devolve quantas URLs entraram na árvore. */
+async function runSpiderPhase(ctx: RealScanContext, targetUrl: string): Promise<number> {
+  const maxDuration = getSpiderMaxDurationMin();
+  if (maxDuration > 0) {
+    await zapJson(ctx.baseUrl, "/JSON/spider/action/setOptionMaxDuration/", {
+      apikey: ctx.apiKey,
+      Integer: String(maxDuration),
+    });
+  }
+
+  const started = await zapJson(ctx.baseUrl, "/JSON/spider/action/scan/", {
+    apikey: ctx.apiKey,
+    url: targetUrl,
+    recurse: "true",
+  });
+  const spiderId = String(started.scan ?? "0");
+
+  for (;;) {
+    assertStillRunning(ctx);
+    const status = await zapJson(ctx.baseUrl, "/JSON/spider/view/status/", { apikey: ctx.apiKey, scanId: spiderId });
+    const percent = Number(status.status ?? "0");
+    ctx.report(
+      PHASE_WEIGHTS.startingTo + (percent / 100) * (PHASE_WEIGHTS.spiderTo - PHASE_WEIGHTS.startingTo),
+      "SPIDER",
+      `Rastreando o alvo (spider): ${clampPercent(percent)}%`,
+    );
+    if (percent >= 100) break;
+    await sleep(ZAP_POLL_INTERVAL_MS);
+  }
+
+  const results = await zapJson(ctx.baseUrl, "/JSON/spider/view/results/", { apikey: ctx.apiKey, scanId: spiderId });
+  const urls = results.results;
+  return Array.isArray(urls) ? urls.length : 0;
+}
+
+/**
+ * Espera a fila do scanner PASSIVO drenar. Sem isso, o relatório sai antes de
+ * os alertas passivos (headers ausentes, cookies sem flag) serem gravados —
+ * justamente a maior parte dos achados de um alvo bem-comportado.
+ */
+async function waitForPassiveScan(ctx: RealScanContext): Promise<void> {
+  const passiveDeadline = Math.min(ctx.deadline, Date.now() + 120000);
+  let initialQueue = 0;
+
+  for (;;) {
+    assertStillRunning(ctx);
+    const status = await zapJson(ctx.baseUrl, "/JSON/pscan/view/recordsToScan/", { apikey: ctx.apiKey });
+    const remaining = Number(status.recordsToScan ?? "0");
+    if (initialQueue === 0) initialQueue = remaining;
+
+    const done = initialQueue === 0 ? 1 : Math.max(0, (initialQueue - remaining) / initialQueue);
+    ctx.report(
+      PHASE_WEIGHTS.spiderTo + done * (PHASE_WEIGHTS.passiveTo - PHASE_WEIGHTS.spiderTo),
+      "PASSIVE",
+      `Analisando respostas (scan passivo): ${remaining} na fila`,
+    );
+
+    if (remaining <= 0) return;
+    // Estourar o orçamento passivo NÃO é falha: o active scan ainda produz
+    // resultado válido, só sai com menos alerta passivo. Segue o baile.
+    if (Date.now() > passiveDeadline) return;
+    await sleep(ZAP_POLL_INTERVAL_MS);
+  }
+}
+
+/** Dispara o active scan e acompanha até 100%. */
+async function runActiveScanPhase(ctx: RealScanContext, targetUrl: string): Promise<void> {
+  const started = await zapJson(ctx.baseUrl, "/JSON/ascan/action/scan/", {
+    apikey: ctx.apiKey,
+    url: targetUrl,
+    recurse: "true",
+    inScopeOnly: "false",
+  });
+  const ascanId = String(started.scan ?? "0");
+
+  for (;;) {
+    assertStillRunning(ctx);
+    const status = await zapJson(ctx.baseUrl, "/JSON/ascan/view/status/", { apikey: ctx.apiKey, scanId: ascanId });
+    const percent = Number(status.status ?? "0");
+    ctx.report(
+      PHASE_WEIGHTS.passiveTo + (percent / 100) * (PHASE_WEIGHTS.activeTo - PHASE_WEIGHTS.passiveTo),
+      "ACTIVE",
+      `Testando vulnerabilidades (scan ativo): ${clampPercent(percent)}%`,
+    );
+    if (percent >= 100) return;
+    await sleep(ZAP_POLL_INTERVAL_MS);
+  }
+}
+
+/**
+ * Baixa report.json/report.html pela API do ZAP e grava no disco de QUEM RODA
+ * A API. Nenhum volume compartilhado no meio — é este ponto que resolve a
+ * "Causa 3" do docs/DAST-DOCKER-GAP.md.
+ */
+async function downloadReports(ctx: RealScanContext, scanDir: string): Promise<{ jsonPath: string; htmlPath?: string }> {
+  ctx.report(PHASE_WEIGHTS.activeTo, "REPORT", "Gerando relatórios...");
 
   const jsonPath = path.join(scanDir, "report.json");
   const htmlPath = path.join(scanDir, "report.html");
 
-  // Timeout: `execFile` mata o PROCESSO CLIENTE docker, mas isso não garante
-  // que o CONTAINER pare — docker é cliente/servidor, o container é gerido
-  // pelo daemon, não é filho do processo `docker run`. `docker rm -f` é a
-  // única forma confiável de garantir que ele morreu de verdade.
-  if (result.killed) {
-    await runDocker(["rm", "-f", containerName], { timeout: 10000 });
-    return { status: "FAILED", errorMessage: "SCAN_TIMEOUT", durationMs, simulated: false };
+  const jsonResponse = await httpGet(buildZapUrl(ctx.baseUrl, "/OTHER/core/other/jsonreport/", { apikey: ctx.apiKey }), 120000);
+  if (jsonResponse.status !== 200) throw new Error(`ZAP_REPORT_HTTP_${jsonResponse.status}`);
+  try {
+    JSON.parse(jsonResponse.body);
+  } catch {
+    throw new Error("REPORT_JSON_INVALID");
+  }
+  await fs.writeFile(jsonPath, jsonResponse.body, "utf-8");
+
+  // HTML é conveniência (o PDF e a lista de findings saem do JSON): falhar
+  // aqui não derruba o scan.
+  let savedHtml: string | undefined;
+  try {
+    const htmlResponse = await httpGet(buildZapUrl(ctx.baseUrl, "/OTHER/core/other/htmlreport/", { apikey: ctx.apiKey }), 120000);
+    if (htmlResponse.status === 200 && htmlResponse.body.length > 0) {
+      await fs.writeFile(htmlPath, htmlResponse.body, "utf-8");
+      savedHtml = htmlPath;
+    }
+  } catch {
+    savedHtml = undefined;
   }
 
-  // Critério de sucesso: report.json existe E parseia — NUNCA o exit code.
-  // zap-full-scan.py retorna != 0 quando encontra alertas (WARN/FAIL), isso é
-  // o comportamento NORMAL de um scan bem-sucedido, não uma falha de execução.
-  if (!(await fileExists(jsonPath))) {
-    const detail = result.stderr.trim().slice(0, 2000) || `docker saiu com código ${result.code ?? "desconhecido"} sem gerar report.json`;
-    return { status: "FAILED", errorMessage: detail, durationMs, simulated: false };
+  return { jsonPath, htmlPath: savedHtml };
+}
+
+/** Porta livre no loopback do host — pergunta ao SO em vez de chutar um número. */
+function findFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      const port = typeof address === "object" && address !== null ? address.port : 0;
+      server.close(() => (port > 0 ? resolve(port) : reject(new Error("ZAP_PORT_UNRESOLVED"))));
+    });
+  });
+}
+
+/**
+ * Decide em que porta o ZAP escuta e em que endereço ESTE processo o alcança.
+ *
+ * ⚠️ ARMADILHA QUE CUSTOU UMA SESSÃO: o ZAP em modo daemon é um PROXY antes de
+ * ser um servidor de API. Ele só entende a requisição como "para mim" quando o
+ * header `Host` bate com o endereço E A PORTA em que ele mesmo escuta —
+ * qualquer outra coisa ele tenta encaminhar, e devolve `502 Bad Gateway`.
+ * Publicar `-p 127.0.0.1::8080` (porta efêmera no host) portanto NÃO funciona:
+ * a requisição chega com `Host: 127.0.0.1:50866` e o ZAP tenta proxiar pra si
+ * mesmo na 50866, onde não há ninguém.
+ *
+ * As duas saídas, uma por modo:
+ *  - Rede do compose: API e ZAP na mesma rede, endereço `http://<container>:8080`
+ *    — a porta 8080 é a mesma dos dois lados, então bate.
+ *  - Host: escolhe UMA porta livre e usa a MESMA dentro e fora
+ *    (`-p 127.0.0.1:P:P` + `zap.sh -port P`).
+ */
+async function resolveZapEndpoint(containerName: string, network: string): Promise<{ port: number; baseUrl: string }> {
+  if (network) return { port: ZAP_INTERNAL_PORT, baseUrl: `http://${containerName}:${ZAP_INTERNAL_PORT}` };
+  const port = await findFreePort();
+  return { port, baseUrl: `http://127.0.0.1:${port}` };
+}
+
+async function runRealScan(
+  scanId: string,
+  targetUrl: string,
+  timeoutMs: number,
+  onProgress?: (progress: ScanProgress) => void,
+  signal?: AbortSignal,
+): Promise<ScanOutcome> {
+  const scanDir = path.resolve(getReportsDir(), scanId);
+  await fs.mkdir(scanDir, { recursive: true });
+
+  const containerName = containerNameFor(scanId);
+  const network = getZapNetwork();
+  const { port: zapPort, baseUrl } = await resolveZapEndpoint(containerName, network);
+  // Chave por scan, nunca `api.disablekey=true`: quem alcançar a porta do
+  // daemon sem a chave não dispara nada.
+  const apiKey = randomBytes(16).toString("hex");
+  const started = Date.now();
+  const deadline = started + timeoutMs;
+
+  const report = (percent: number, phase: ScanPhase, message: string): void => {
+    onProgress?.({ percent: clampPercent(percent), phase, message });
+  };
+
+  report(1, "STARTING", "Preparando o container do OWASP ZAP...");
+
+  const runArgs = ["run", "-d", "--rm", "--name", containerName];
+  if (network) {
+    runArgs.push("--network", network);
+  } else {
+    // Presa ao loopback — nunca 0.0.0.0: o daemon do ZAP não pode ficar
+    // exposto na rede da máquina. Mesma porta dos dois lados (ver
+    // resolveZapEndpoint).
+    runArgs.push("-p", `127.0.0.1:${zapPort}:${zapPort}`);
   }
+  runArgs.push(
+    getZapImage(),
+    "zap.sh",
+    "-daemon",
+    "-host",
+    "0.0.0.0",
+    "-port",
+    String(zapPort),
+    // Sem isto o daemon só aceita chamada vinda do localhost DELE mesmo — e
+    // quem chama é outro container (ou o host, via porta publicada).
+    "-config",
+    "api.addrs.addr.name=.*",
+    "-config",
+    "api.addrs.addr.regex=true",
+    "-config",
+    `api.key=${apiKey}`,
+    // -silent corta telemetria e checagem de add-on na subida (mais rápido e
+    // sem depender de rede externa pra ficar pronto).
+    "-silent",
+  );
+
+  const runResult = await runDocker(runArgs, { timeout: 180000 });
+  if (runResult.code !== 0) {
+    const detail = runResult.stderr.trim().slice(0, 500) || `docker run saiu com código ${runResult.code ?? "desconhecido"}`;
+    return {
+      status: "FAILED",
+      errorMessage: `ZAP_CONTAINER_START_FAILED: ${detail}`,
+      durationMs: Date.now() - started,
+      simulated: false,
+    };
+  }
+
+  const ctx: RealScanContext = { baseUrl, apiKey, deadline, signal, report };
 
   try {
-    JSON.parse(await fs.readFile(jsonPath, "utf-8"));
-  } catch {
-    return { status: "FAILED", errorMessage: "REPORT_JSON_INVALID", durationMs, simulated: false };
-  }
+    await waitForZapReady(ctx, Math.min(deadline, started + getStartupTimeoutMs()));
 
-  return {
-    status: "COMPLETED",
-    jsonReportPath: jsonPath,
-    htmlReportPath: (await fileExists(htmlPath)) ? htmlPath : undefined,
-    durationMs,
-    simulated: false,
-  };
+    await runSpiderPhase(ctx, targetUrl);
+    await waitForPassiveScan(ctx);
+    await runActiveScanPhase(ctx, targetUrl);
+
+    const { jsonPath, htmlPath } = await downloadReports(ctx, scanDir);
+    report(100, "DONE", "Scan concluído.");
+
+    return {
+      status: "COMPLETED",
+      jsonReportPath: jsonPath,
+      htmlReportPath: htmlPath,
+      durationMs: Date.now() - started,
+      simulated: false,
+    };
+  } catch (error) {
+    return {
+      status: "FAILED",
+      errorMessage: (error as Error).message || "ZAP_UNKNOWN_ERROR",
+      durationMs: Date.now() - started,
+      simulated: false,
+    };
+  } finally {
+    // O container é cliente/servidor: matar o processo Node não mata o
+    // container. `docker rm -f` é a única forma confiável — `--rm` só limpa
+    // depois que ele PARA sozinho.
+    await killContainer(scanId);
+  }
 }
 
 /** `docker rm -f` no container determinístico do scan — cancelamento e limpeza de timeout usam a mesma função. */
@@ -498,21 +904,87 @@ ${rows}
 // Orquestração pública
 // ============================================================================
 
-export interface RunScanOptions {
-  scanId: string;
-  targetUrl: string;
-  timeoutMs?: number;
+/**
+ * Mensagens amigáveis do fallback. Ficam AQUI, e não na UI, porque a UI só
+ * recebe o texto já pronto pelo campo `warningMessage` do scan — assim o
+ * mesmo aviso vale pra web, pro mobile e pro PDF sem duplicar tradução.
+ */
+export const FALLBACK_MESSAGES = {
+  dockerUnavailable:
+    "O Docker não está acessível neste ambiente, então o OWASP ZAP não pôde ser executado. " +
+    "Os achados abaixo são um conjunto de demonstração — não representam o alvo informado.",
+  forced:
+    "Modo de demonstração ligado (DAST_FORCE_SIMULATE): o OWASP ZAP não foi executado. " +
+    "Os achados abaixo são um conjunto de demonstração — não representam o alvo informado.",
+  realScanFailed: (reason: string): string =>
+    "O scan real do OWASP ZAP não pôde ser concluído, então exibimos um resultado de demonstração no lugar. " +
+    `Motivo técnico: ${reason}`,
+} as const;
+
+/** Traduz o código técnico do runner numa frase curta que faz sentido pra quem só quer usar o produto. */
+export function friendlyFailureReason(errorMessage: string | undefined): string {
+  if (!errorMessage) return "falha desconhecida na execução do scan.";
+  if (errorMessage === "SCAN_TIMEOUT") return "o scan ultrapassou o tempo máximo configurado.";
+  if (errorMessage === "ZAP_STARTUP_TIMEOUT") return "o OWASP ZAP não terminou de subir dentro do tempo esperado.";
+  if (errorMessage === "ZAP_PORT_UNRESOLVED") return "não foi possível descobrir a porta do container do OWASP ZAP.";
+  if (errorMessage.startsWith("ZAP_CONTAINER_START_FAILED")) return "o container do OWASP ZAP não subiu (imagem ausente ou Docker sem permissão).";
+  if (errorMessage.startsWith("ZAP_API_ERROR:url_not_found")) return "o alvo informado não respondeu ao OWASP ZAP.";
+  if (errorMessage.startsWith("ZAP_API_ERROR")) return "o OWASP ZAP recusou o comando do scan.";
+  if (errorMessage.startsWith("ZAP_BAD_RESPONSE")) return "o OWASP ZAP devolveu uma resposta inesperada.";
+  if (errorMessage === "REPORT_JSON_INVALID") return "o relatório gerado pelo OWASP ZAP veio corrompido.";
+  return errorMessage.slice(0, 200);
 }
 
-/** Decide real vs simulado (via `docker info`, ou DAST_FORCE_SIMULATE) e roda o scan até concluir, timeoutar ou falhar. */
+/**
+ * Decide real vs simulado e roda o scan até concluir, timeoutar ou falhar.
+ *
+ * Três caminhos, nesta ordem:
+ *  1. DAST_FORCE_SIMULATE=true  -> simulado direto (CI e suíte de testes).
+ *  2. Docker indisponível        -> simulado, com aviso amigável.
+ *  3. Scan real                  -> se FALHAR, cai pro simulado MANTENDO o
+ *     resultado (nunca deixa a tela vazia) e carimbando `simulated: true` +
+ *     `warningMessage`. Cancelamento é a única falha que NÃO vira fallback:
+ *     quem cancelou não quer resultado nenhum.
+ */
 export async function runScan(options: RunScanOptions): Promise<ScanOutcome> {
   const forceSimulate = EnvVar.getOptional(EnvKeys.DAST_FORCE_SIMULATE, "false").toLowerCase() === "true";
-  const dockerOk = !forceSimulate && (await isDockerAvailable());
   const timeoutMs = options.timeoutMs ?? getTimeoutMs();
-  if (!dockerOk) {
-    return simulateScan(options.scanId, options.targetUrl, timeoutMs);
+
+  if (forceSimulate) {
+    const outcome = await simulateScan(options.scanId, options.targetUrl, timeoutMs);
+    return withWarning(outcome, FALLBACK_MESSAGES.forced, options.onProgress);
   }
-  return runRealScan(options.scanId, options.targetUrl, timeoutMs);
+
+  if (!(await isDockerAvailable())) {
+    console.warn(`[DAST] Docker indisponível — scan ${options.scanId} vai usar resultado simulado.`);
+    const outcome = await simulateScan(options.scanId, options.targetUrl, timeoutMs);
+    return withWarning(outcome, FALLBACK_MESSAGES.dockerUnavailable, options.onProgress);
+  }
+
+  const real = await runRealScan(options.scanId, options.targetUrl, timeoutMs, options.onProgress, options.signal);
+  if (real.status === "COMPLETED") return real;
+  if (real.errorMessage === "SCAN_CANCELLED") return real;
+
+  console.warn(`[DAST] Scan real ${options.scanId} falhou (${real.errorMessage}) — caindo pro resultado simulado.`);
+  // Sem timeoutMs de propósito: o orçamento de tempo já foi gasto pelo scan
+  // real, e o ponto do fallback é SEMPRE entregar um resultado.
+  const fallback = await simulateScan(options.scanId, options.targetUrl);
+  return withWarning(
+    { ...fallback, durationMs: real.durationMs + fallback.durationMs },
+    FALLBACK_MESSAGES.realScanFailed(friendlyFailureReason(real.errorMessage)),
+    options.onProgress,
+  );
+}
+
+/** Carimba o aviso no resultado simulado e empurra o último tick de progresso pra UI. */
+function withWarning(
+  outcome: ScanOutcome,
+  warningMessage: string,
+  onProgress?: (progress: ScanProgress) => void,
+): ScanOutcome {
+  if (outcome.status === "FAILED") return outcome;
+  onProgress?.({ percent: 100, phase: "SIMULATED", message: "Resultado simulado gerado." });
+  return { ...outcome, warningMessage };
 }
 
 // ============================================================================
@@ -542,4 +1014,4 @@ export async function readReportFile(scanId: string, fileName: string): Promise<
   }
 }
 
-export const __internal = { getReportsDir, getTimeoutMs, allowPrivateTargets };
+export const __internal = { getReportsDir, getTimeoutMs, allowPrivateTargets, getZapNetwork, getZapImage, getStartupTimeoutMs, getSpiderMaxDurationMin };

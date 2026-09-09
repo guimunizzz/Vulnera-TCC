@@ -47,6 +47,22 @@ export class DastScanController {
     }
   }
 
+  /**
+   * Estado do módulo (Docker disponível, quantos rodando/na fila, alertas do
+   * watchdog). Rota LITERAL — precisa estar registrada antes de `/:id`, senão
+   * "status" vira um id de scan (CLAUDE.md §5.6).
+   */
+  async getStatus(req: Request, res: Response): Promise<Response> {
+    try {
+      const actor = req.user!;
+      const status = await this.service.getStatus(actor);
+      return res.status(200).json(status);
+    } catch (error: any) {
+      console.error("DastScanController.getStatus", error);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
+    }
+  }
+
   async getById(req: Request, res: Response): Promise<Response> {
     try {
       const actor = req.user!;

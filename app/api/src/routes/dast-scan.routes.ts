@@ -18,6 +18,9 @@ router.use(authMiddleware, requireRole("PENTESTER", "ADMIN"));
 
 router.post("/", (req, res) => controller.create(req, res));
 router.get("/", (req, res) => controller.list(req, res));
+// ⚠️ Rota literal ANTES da paramétrica: sem isto, "/status" casaria com
+// "/:id" e a UI receberia SCAN_NOT_FOUND (CLAUDE.md §5.6).
+router.get("/status", (req, res) => controller.getStatus(req, res));
 router.get("/:id", (req, res) => controller.getById(req, res));
 router.post("/:id/cancel", (req, res) => controller.cancel(req, res));
 router.get("/:id/findings", (req, res) => controller.listFindings(req, res));

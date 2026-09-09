@@ -22,6 +22,13 @@
  * Sem isso, reiniciar a API no meio de um scan deixaria o registro em
  * RUNNING/QUEUED pra sempre — ninguém nunca mais cancela nem tenta de novo
  * sem intervenção manual no banco.
+ *
+ * Concorrência (2026-09-09): `create()` não dispara mais o scan direto — ele
+ * ENFILEIRA no `DastWatchdog`, que roda no máximo 2 (configurável) ao mesmo
+ * tempo e aborta scan travado. O registro fica em QUEUED até o watchdog dar a
+ * vaga; só então vira RUNNING. O progresso (0..100 + fase) é persistido a
+ * cada tick do runner, com throttle, porque é o banco — e não a memória —
+ * que a UI lê no polling.
  */
 
 import type { DastScan } from "@prisma/client";
@@ -31,13 +38,36 @@ import type { AuditLogRepository } from "../repositories/audit-log.repository";
 import type { UserRepository } from "../repositories/user.repository";
 import { DastScanEntity, type CreateDastScanDTO, type DastScanResponseDTO } from "../models/dast-scan.model";
 import { DastFindingEntity, RISK_ORDER, type DastFindingResponseDTO } from "../models/dast-finding.model";
-import { validateTargetUrl, containerNameFor, runScan, killContainer, readReportFile } from "./zap-runner.service";
+import {
+  validateTargetUrl,
+  containerNameFor,
+  runScan,
+  killContainer,
+  readReportFile,
+  getDockerStatus,
+  SCAN_PHASE_LABELS,
+  type ScanPhase,
+} from "./zap-runner.service";
+import type { DastWatchdog, WatchdogRunContext, WatchdogSnapshot } from "./dast-watchdog.service";
 import { extractFindingsFromReport, type RiskCounters } from "./dast-findings.service";
 import type { UserRole } from "../models/user.model";
 
 interface Actor {
   userId: string;
   role: UserRole;
+}
+
+/** Payload do GET /api/dast/status — alimenta o banner da tela de DAST. */
+export interface DastModuleStatus {
+  /** Se false, todo scan novo já sai simulado (o front avisa antes de o usuário clicar). */
+  dockerAvailable: boolean;
+  dockerCheckedAt: string;
+  maxConcurrent: number;
+  runningCount: number;
+  queuedCount: number;
+  running: WatchdogSnapshot["running"];
+  queued: WatchdogSnapshot["queued"];
+  alerts: WatchdogSnapshot["alerts"];
 }
 
 export interface DastReportData {
@@ -57,6 +87,7 @@ export class DastScanService {
     private readonly findingRepository: DastFindingRepository,
     private readonly auditLogRepository: AuditLogRepository,
     private readonly userRepository: UserRepository,
+    private readonly watchdog: DastWatchdog,
   ) {}
 
   async create(actor: Actor, dto: CreateDastScanDTO): Promise<DastScanEntity> {
@@ -84,12 +115,18 @@ export class DastScanService {
       diffJson: JSON.stringify({ targetUrl }),
     });
 
-    // Fire-and-forget — o `.catch` aqui é cinto-e-suspensório: runInBackground
-    // já se blinda por dentro, isso só existe pra nunca virar
-    // unhandledRejection caso algo escape mesmo assim.
-    this.runInBackground(scan.id).catch((err: unknown) => {
-      console.error("DastScanService.runInBackground (erro não tratado)", err);
+    // Enfileira no watchdog em vez de disparar direto: ele decide QUANDO
+    // começar (no máximo N simultâneos) e continua vigiando depois disso.
+    const position = this.watchdog.submit({
+      scanId: scan.id,
+      targetUrl: scan.targetUrl,
+      requestedById: scan.requestedById,
+      run: (ctx) => this.runInBackground(scan.id, ctx),
     });
+    if (position > 0) {
+      await this.repository.update(scan.id, { phase: "QUEUED", progress: 0 });
+      this.watchdog.raise("warn", scan.id, `Limite de ${this.watchdog.maxConcurrent} scans simultâneos atingido — este entrou na fila (posição ${position}).`);
+    }
 
     return new DastScanEntity(scan);
   }
@@ -108,8 +145,16 @@ export class DastScanService {
     const scan = await this.getOwnedScan(actor, id);
     if (!new DastScanEntity(scan).isActive()) throw new Error("INVALID_STATUS_TRANSITION");
 
+    // Ordem importa: abortar primeiro faz o runner parar no próximo tick e
+    // desistir do fallback simulado; o `docker rm -f` derruba o container que
+    // já estiver de pé (nenhum, se o scan ainda estava na fila).
+    this.watchdog.abort(scan.id, "Scan cancelado pelo usuário.");
     await killContainer(scan.id);
-    const updated = await this.repository.update(scan.id, { status: "CANCELLED", finishedAt: new Date() });
+    const updated = await this.repository.update(scan.id, {
+      status: "CANCELLED",
+      finishedAt: new Date(),
+      phase: "CANCELLED",
+    });
 
     await this.auditLogRepository.create({
       actorId: actor.userId,
@@ -155,6 +200,37 @@ export class DastScanService {
   }
 
   /**
+   * Estado do módulo pra UI: Docker disponível?, quantos rodando, quantos na
+   * fila, alertas recentes. PENTESTER só enxerga os PRÓPRIOS scans nas listas
+   * (mesma regra de ownership do resto do módulo), mas vê os CONTADORES
+   * agregados — sem eles, "seu scan está na fila" não faria sentido nenhum.
+   */
+  async getStatus(actor: Actor): Promise<DastModuleStatus> {
+    const docker = await getDockerStatus();
+    const snapshot = this.watchdog.snapshot();
+    const isAdmin = actor.role === "ADMIN";
+
+    return {
+      dockerAvailable: docker.available,
+      dockerCheckedAt: docker.checkedAt,
+      maxConcurrent: snapshot.maxConcurrent,
+      runningCount: snapshot.runningCount,
+      queuedCount: snapshot.queuedCount,
+      running: isAdmin ? snapshot.running : snapshot.running.filter((r) => r.requestedById === actor.userId),
+      queued: isAdmin ? snapshot.queued : snapshot.queued.filter((q) => q.requestedById === actor.userId),
+      alerts: isAdmin ? snapshot.alerts : snapshot.alerts.filter((a) => a.scanId === null || this.isOwnAlert(a.scanId, snapshot, actor.userId)),
+    };
+  }
+
+  /** Alerta só aparece pro PENTESTER se for de um scan dele que o watchdog ainda conhece. */
+  private isOwnAlert(scanId: string, snapshot: WatchdogSnapshot, userId: string): boolean {
+    return (
+      snapshot.running.some((r) => r.scanId === scanId && r.requestedById === userId) ||
+      snapshot.queued.some((q) => q.scanId === scanId && q.requestedById === userId)
+    );
+  }
+
+  /**
    * Watchdog de boot — chamado uma vez em server.ts antes do `app.listen`.
    * Todo scan QUEUED/RUNNING no momento do boot só pode existir porque o
    * processo anterior morreu no meio (crash, deploy, reinício manual): não
@@ -195,17 +271,37 @@ export class DastScanService {
     return scan;
   }
 
-  private async runInBackground(scanId: string): Promise<void> {
+  private async runInBackground(scanId: string, ctx: WatchdogRunContext): Promise<void> {
     const scan = await this.repository.findById(scanId);
     if (!scan) return; // registro sumiu entre o create e aqui — não há o que fazer
 
-    await this.repository.update(scanId, { status: "RUNNING", startedAt: new Date() });
+    await this.repository.update(scanId, {
+      status: "RUNNING",
+      startedAt: new Date(),
+      phase: "STARTING",
+      progress: 0,
+      simulated: false,
+      warningMessage: null,
+    });
 
     try {
-      const outcome = await runScan({ scanId, targetUrl: scan.targetUrl });
+      const outcome = await runScan({
+        scanId,
+        targetUrl: scan.targetUrl,
+        signal: ctx.signal,
+        onProgress: this.makeProgressSink(scanId, ctx),
+      });
 
       if (outcome.status === "FAILED" || !outcome.jsonReportPath) {
-        await this.markFinished(scan, "FAILED", outcome.durationMs, outcome.errorMessage ?? "Falha desconhecida na execução do scan");
+        // Abort do watchdog e cancelamento do usuário chegam aqui como
+        // SCAN_CANCELLED. Se o registro já é CANCELLED (usuário), markFinished
+        // descarta sozinho; se ainda é RUNNING, foi o watchdog — e aí a razão
+        // do abort é a mensagem que o usuário precisa ler.
+        const reason =
+          outcome.errorMessage === "SCAN_CANCELLED"
+            ? String(ctx.signal.reason ?? "Scan interrompido.")
+            : (outcome.errorMessage ?? "Falha desconhecida na execução do scan");
+        await this.markFinished(scan, "FAILED", outcome.durationMs, reason);
         return;
       }
 
@@ -234,7 +330,13 @@ export class DastScanService {
       }
 
       void counters; // já refletido no banco via persistFindingsAndUpdateCounters; aqui só pra deixar o fluxo explícito
-      await this.markFinished(scan, "COMPLETED", outcome.durationMs, null, outcome.htmlReportPath, outcome.jsonReportPath);
+      if (outcome.simulated) {
+        this.watchdog.raise("warn", scanId, outcome.warningMessage ?? "Scan concluído com resultado simulado.");
+      }
+      await this.markFinished(scan, "COMPLETED", outcome.durationMs, null, outcome.htmlReportPath, outcome.jsonReportPath, {
+        simulated: outcome.simulated,
+        warningMessage: outcome.warningMessage ?? null,
+      });
     } catch (err) {
       // Erro inesperado fora do contrato normal do runner (ex: falha de I/O
       // no host) — nunca deixa o scan pendurado em RUNNING pra sempre.
@@ -242,8 +344,47 @@ export class DastScanService {
       // simulado também falhar (ambiente sem disco gravável, por exemplo) —
       // em operação normal, Docker indisponível cai no simulado antes de
       // chegar nesse catch (ver zap-runner.service.ts).
+      this.watchdog.raise("error", scanId, `Erro inesperado na execução: ${(err as Error).message}`);
       await this.markFinished(scan, "FAILED", undefined, (err as Error).message || "DOCKER_UNAVAILABLE");
     }
+  }
+
+  /**
+   * Devolve o callback de progresso do runner. Duas coisas acontecem a cada
+   * tick: pulso no watchdog (barato, memória) e escrita no banco (cara).
+   *
+   * O throttle existe por causa da segunda: o runner pulsa a cada ~3s por
+   * scan, e uma escrita por tick multiplicada por N scans simultâneos é
+   * tráfego de banco puro desperdício quando o percentual nem mudou. Grava só
+   * quando a FASE muda ou quando o percentual andou pelo menos 1 ponto — e,
+   * ainda assim, no máximo uma vez por segundo.
+   */
+  private makeProgressSink(scanId: string, ctx: WatchdogRunContext): (progress: { percent: number; phase: ScanPhase; message: string }) => void {
+    let lastPersistedPercent = -1;
+    let lastPersistedPhase: string | null = null;
+    let lastWriteAt = 0;
+
+    return (progress) => {
+      ctx.heartbeat(progress.phase, progress.percent);
+
+      const phaseChanged = progress.phase !== lastPersistedPhase;
+      const percentChanged = progress.percent !== lastPersistedPercent;
+      const now = Date.now();
+      if (!phaseChanged && (!percentChanged || now - lastWriteAt < 1000)) return;
+
+      lastPersistedPercent = progress.percent;
+      lastPersistedPhase = progress.phase;
+      lastWriteAt = now;
+
+      // Sem await: o progresso é informativo, e travar o polling do ZAP
+      // esperando o MySQL não ajuda ninguém. Falha de escrita vira aviso, não
+      // interrompe o scan.
+      void this.repository
+        .update(scanId, { progress: progress.percent, phase: progress.phase })
+        .catch((err: unknown) => {
+          console.warn(`[DAST] falha ao gravar progresso do scan ${scanId} (${SCAN_PHASE_LABELS[progress.phase]})`, err);
+        });
+    };
   }
 
   private async markFinished(
@@ -253,6 +394,7 @@ export class DastScanService {
     errorMessage: string | null | undefined,
     htmlReportPath?: string,
     jsonReportPath?: string,
+    extra?: { simulated: boolean; warningMessage: string | null },
   ): Promise<void> {
     // Corrida real (não só de teste): o usuário pode cancelar enquanto o
     // scan roda em background. Se o registro já saiu de RUNNING (virou
@@ -268,6 +410,11 @@ export class DastScanService {
       errorMessage: errorMessage ?? null,
       ...(htmlReportPath ? { htmlReportPath } : {}),
       ...(jsonReportPath ? { jsonReportPath } : {}),
+      // 100% mesmo em FAILED: a barra para de andar, não volta pra trás.
+      progress: 100,
+      phase: status === "COMPLETED" ? (extra?.simulated ? "SIMULATED" : "DONE") : "FAILED",
+      simulated: extra?.simulated ?? false,
+      warningMessage: extra?.warningMessage ?? null,
     });
     await this.auditLogRepository.create({
       actorId: scan.requestedById,

@@ -59,11 +59,36 @@ services:
       # compara aqui.
       CORS_ORIGIN: http://localhost:8086
       UPLOADS_DIR: uploads
+      # ---------------------------------------------------------------------
+      # Módulo DAST (OWASP ZAP) — scan REAL dentro da stack, desde 2026-09-09.
+      # Ver docs/DAST-DOCKER-GAP.md (diagnóstico) e ADR-031 (decisão).
+      # ---------------------------------------------------------------------
+      # Rede onde o container do ZAP é criado. Precisa ser a MESMA da API: é
+      # assim que a API alcança o daemon do ZAP pelo NOME do container
+      # (http://vulnera-zap-<scanId>:8080), sem publicar porta nenhuma no host.
+      DAST_ZAP_NETWORK: vulnera-net
+      DAST_ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:stable
+      DAST_REPORTS_DIR: dast-reports
+      # Teto de scans simultâneos — o watchdog enfileira o excedente.
+      DAST_MAX_CONCURRENT_SCANS: "2"
+      DAST_SCAN_TIMEOUT_MS: "1800000"
+      # ⚠️ SSRF: "true" só pra escanear alvo local (Juice Shop na própria
+      # máquina) durante a demonstração. Padrão continua bloqueando.
+      DAST_ALLOW_PRIVATE_TARGETS: "false"
     ports:
       - "3001:3001"
     volumes:
       # evidências sobrevivem a `docker compose down` (sem -v)
       - vulnera-api-uploads:/app/uploads
+      # relatórios do ZAP idem — quem escreve aqui é o processo Node da API
+      # (baixa report.json/html pela API HTTP do ZAP), NÃO o container do ZAP:
+      # por isso este volume não precisa ser visível pro daemon do host.
+      - vulnera-api-dast-reports:/app/dast-reports
+      # ⚠️ DooD (Docker outside of Docker): dá à API acesso ao daemon do HOST
+      # pra ela subir o container do ZAP. Quem alcança este socket controla o
+      # Docker do host inteiro — risco aceito e registrado em ADR-031, válido
+      # pra máquina de desenvolvimento/demonstração, NÃO pra produção.
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       db:
         condition: service_healthy
@@ -101,3 +126,12 @@ services:
 volumes:
   vulnera-db-data:
   vulnera-api-uploads:
+  vulnera-api-dast-reports:
+
+# Rede com NOME FIXO (sem isso o compose geraria "vulnera-tcc_default", que
+# depende do nome da pasta do projeto). O nome precisa ser previsível porque a
+# API o repassa pro `docker run --network` do container do ZAP — ver
+# DAST_ZAP_NETWORK acima.
+networks:
+  default:
+    name: vulnera-net

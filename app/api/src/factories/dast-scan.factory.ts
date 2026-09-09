@@ -15,13 +15,18 @@ import { AuditLogRepository } from "../repositories/audit-log.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { DastScanService } from "../services/dast-scan.service";
 import { DastScanController } from "../controllers/dast-scan.controller";
+import { dastWatchdog } from "../services/dast-watchdog.service";
 
 export function makeDastScanService(): DastScanService {
   const repository = new DastScanRepository(prisma);
   const findingRepository = new DastFindingRepository(prisma);
   const auditLogRepository = new AuditLogRepository(prisma);
   const userRepository = new UserRepository(prisma);
-  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository);
+  // O watchdog é SINGLETON de propósito (não `new DastWatchdog()` aqui): a
+  // fila e o limite de concorrência só valem se todas as chamadas passarem
+  // pela mesma instância — uma por factory daria um limite de 2 por
+  // instância, que é o mesmo que não ter limite.
+  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog);
 }
 
 export function makeDastScanController(): DastScanController {

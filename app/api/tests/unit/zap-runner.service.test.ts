@@ -17,7 +17,9 @@
  */
 
 import { execFile } from "child_process";
+import * as http from "http";
 import * as path from "path";
+import { EventEmitter } from "events";
 
 jest.mock("child_process", () => ({
   execFile: jest.fn((_cmd: string, _args: string[], _opts: unknown, cb: (...a: unknown[]) => void) => {
@@ -25,8 +27,12 @@ jest.mock("child_process", () => ({
   }),
 }));
 
+// A conversa com o daemon do ZAP é HTTP — mockar `http.get` é o que permite
+// exercitar o fluxo inteiro (spider -> passivo -> ativo -> relatório) sem
+// subir container nenhum.
+jest.mock("http", () => ({ get: jest.fn() }));
+
 import * as fs from "fs/promises";
-import * as fsSync from "fs";
 import {
   validateTargetUrl,
   isPrivateOrLoopbackHost,
@@ -35,7 +41,33 @@ import {
   containerNameFor,
   isDockerAvailable,
   runScan,
+  buildZapUrl,
 } from "../../src/services/zap-runner.service";
+
+/** Menor report.json que o pipeline aceita — mesmo formato do ZAP de verdade. */
+const ZAP_REPORT_MINIMO = {
+  "@programName": "ZAP",
+  "@version": "2.17.0",
+  site: [
+    {
+      "@name": "https://example.com",
+      "@host": "example.com",
+      "@port": "443",
+      "@ssl": "true",
+      alerts: [
+        {
+          pluginid: "10038",
+          alert: "Content Security Policy (CSP) Header Not Set",
+          riskcode: "2",
+          confidence: "3",
+          riskdesc: "Medium (High)",
+          count: "1",
+          instances: [{ uri: "https://example.com/", method: "GET", param: "" }],
+        },
+      ],
+    },
+  ],
+};
 
 describe("zap-runner.service — validação de alvo (SSRF)", () => {
   // DAST-SEC-01
@@ -133,7 +165,7 @@ describe("zap-runner.service — execFile nunca vira shell (DAST-SEC-05)", () =>
   });
 });
 
-describe("zap-runner.service — runScan caminho real (docker mockado)", () => {
+describe("zap-runner.service — runScan caminho real (docker + API do ZAP mockados)", () => {
   const REPORTS_DIR = path.resolve(process.cwd(), "dast-reports-unit-test");
   let originalForceSimulate: string | undefined;
   let originalReportsDir: string | undefined;
@@ -157,88 +189,181 @@ describe("zap-runner.service — runScan caminho real (docker mockado)", () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  function mockExecFile(onRun: (args: string[]) => { code: number | null; killed?: boolean; signal?: string; stderr?: string }) {
+  /** Mock do `docker`: `info` sempre OK; o resto sai do mapa passado pelo teste. */
+  function mockDocker(onCommand: (args: string[]) => { code: number | null; stdout?: string; stderr?: string } = () => ({ code: 0 })) {
     (execFile as unknown as jest.Mock).mockImplementation(
       (_cmd: string, args: string[], _opts: unknown, cb: (err: unknown, stdout: string, stderr: string) => void) => {
-        if (args[0] === "info") {
-          cb(null, "", ""); // docker disponível
+        const outcome = args[0] === "info" ? { code: 0 } : onCommand(args);
+        if (outcome.code === 0) {
+          cb(null, outcome.stdout ?? "", outcome.stderr ?? "");
           return;
         }
-        const outcome = onRun(args);
-        if (outcome.code === 0) {
-          cb(null, "", outcome.stderr ?? "");
-        } else {
-          const err: any = new Error("Command failed");
-          err.code = outcome.code;
-          err.killed = outcome.killed ?? false;
-          err.signal = outcome.signal ?? null;
-          cb(err, "", outcome.stderr ?? "");
-        }
+        const err: any = new Error("Command failed");
+        err.code = outcome.code;
+        cb(err, outcome.stdout ?? "", outcome.stderr ?? "");
       },
     );
   }
 
-  it("exit code != 0 mas report.json existe -> COMPLETED (o bug clássico: exit code não é o critério)", async () => {
-    const scanId = "scan-exit2";
-    mockExecFile((args) => {
-      // simula o docker run escrevendo o report.json de verdade no volume
-      // Não usa .split(":") — no Windows o hostDir tem colon logo após a
-      // letra da unidade (C:\...), que quebraria um split ingênuo. Remove só
-      // o sufixo conhecido do volume.
-      const scanDir = args[args.indexOf("-v") + 1].replace(/:\/zap\/wrk\/:rw$/, "");
-      fsSync.mkdirSync(scanDir, { recursive: true });
-      fsSync.writeFileSync(path.join(scanDir, "report.json"), JSON.stringify({ site: [] }));
-      fsSync.writeFileSync(path.join(scanDir, "report.html"), "<html></html>");
-      return { code: 2 }; // WARN encontrado — exit != 0, não é falha
+  /**
+   * Mock da API HTTP do ZAP. O runner conversa com o daemon por `http.get`;
+   * aqui cada endpoint devolve a resposta REAL observada de um ZAP 2.17
+   * (formato conferido à mão contra um container de verdade nesta sessão).
+   */
+  function mockZapApi(overrides: Record<string, { status?: number; body: string }> = {}) {
+    const respostas: Record<string, { status?: number; body: string }> = {
+      "/JSON/core/view/version/": { body: JSON.stringify({ version: "2.17.0" }) },
+      "/JSON/spider/action/setOptionMaxDuration/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/scan/": { body: JSON.stringify({ scan: "0" }) },
+      "/JSON/spider/view/status/": { body: JSON.stringify({ status: "100" }) },
+      "/JSON/spider/view/results/": { body: JSON.stringify({ results: ["https://example.com/"] }) },
+      "/JSON/pscan/view/recordsToScan/": { body: JSON.stringify({ recordsToScan: "0" }) },
+      "/JSON/ascan/action/scan/": { body: JSON.stringify({ scan: "0" }) },
+      "/JSON/ascan/view/status/": { body: JSON.stringify({ status: "100" }) },
+      "/OTHER/core/other/jsonreport/": { body: JSON.stringify(ZAP_REPORT_MINIMO) },
+      "/OTHER/core/other/htmlreport/": { body: "<html><body>relatório</body></html>" },
+      ...overrides,
+    };
+
+    (http.get as unknown as jest.Mock).mockImplementation((url: string, _opts: unknown, cb: (res: any) => void) => {
+      const req: any = new EventEmitter();
+      req.destroy = jest.fn();
+      const pathname = new URL(url).pathname;
+      const resposta = respostas[pathname];
+
+      process.nextTick(() => {
+        if (!resposta) {
+          req.emit("error", new Error(`endpoint não mockado: ${pathname}`));
+          return;
+        }
+        const res: any = new EventEmitter();
+        res.statusCode = resposta.status ?? 200;
+        cb(res);
+        res.emit("data", Buffer.from(resposta.body));
+        res.emit("end");
+      });
+
+      return req;
+    });
+  }
+
+  it("fluxo completo (spider -> passivo -> ativo -> relatório) devolve COMPLETED e NÃO simulado", async () => {
+    mockDocker();
+    mockZapApi();
+
+    const fases: string[] = [];
+    const outcome = await runScan({
+      scanId: "scan-ok",
+      targetUrl: "https://example.com",
+      onProgress: (p) => fases.push(p.phase),
     });
 
-    const outcome = await runScan({ scanId, targetUrl: "https://example.com" });
     expect(outcome.status).toBe("COMPLETED");
     expect(outcome.simulated).toBe(false);
-    expect(outcome.jsonReportPath).toContain(scanId);
+    expect(outcome.jsonReportPath).toContain("scan-ok");
+    // A barra passa por todas as fases, em ordem, e termina em 100%.
+    expect(fases).toEqual(expect.arrayContaining(["STARTING", "SPIDER", "PASSIVE", "ACTIVE", "REPORT", "DONE"]));
+
+    const salvo = JSON.parse(await fs.readFile(path.join(REPORTS_DIR, "scan-ok", "report.json"), "utf-8"));
+    expect(salvo.site[0].alerts).toHaveLength(1);
   });
 
-  it("timeout (killed=true) -> FAILED com SCAN_TIMEOUT e chama docker rm -f", async () => {
-    const scanId = "scan-timeout";
-    let rmCalled = false;
-    mockExecFile((args) => {
-      if (args[0] === "rm") {
-        rmCalled = true;
-        return { code: 0 };
-      }
-      return { code: null, killed: true, signal: "SIGTERM" };
-    });
-
-    const outcome = await runScan({ scanId, targetUrl: "https://example.com", timeoutMs: 1000 });
-    expect(outcome.status).toBe("FAILED");
-    expect(outcome.errorMessage).toBe("SCAN_TIMEOUT");
-    expect(rmCalled).toBe(true);
-  });
-
-  it("docker roda mas NÃO gera report.json -> FAILED (falha de execução de verdade)", async () => {
-    const scanId = "scan-no-json";
-    mockExecFile(() => ({ code: 3, stderr: "erro fatal do zap" }));
-
-    const outcome = await runScan({ scanId, targetUrl: "https://example.com" });
-    expect(outcome.status).toBe("FAILED");
-    expect(outcome.errorMessage).toContain("erro fatal do zap");
-  });
-
-  it("report.json existe mas não parseia -> FAILED REPORT_JSON_INVALID", async () => {
-    const scanId = "scan-bad-json";
-    mockExecFile((args) => {
-      // Não usa .split(":") — no Windows o hostDir tem colon logo após a
-      // letra da unidade (C:\...), que quebraria um split ingênuo. Remove só
-      // o sufixo conhecido do volume.
-      const scanDir = args[args.indexOf("-v") + 1].replace(/:\/zap\/wrk\/:rw$/, "");
-      fsSync.mkdirSync(scanDir, { recursive: true });
-      fsSync.writeFileSync(path.join(scanDir, "report.json"), "{ isso não é json valido");
+  it("o container do ZAP sobe em modo daemon, com api.key própria, e é removido no fim", async () => {
+    const comandos: string[][] = [];
+    mockDocker((args) => {
+      comandos.push(args);
       return { code: 0 };
     });
+    mockZapApi();
 
-    const outcome = await runScan({ scanId, targetUrl: "https://example.com" });
+    await runScan({ scanId: "scan-args", targetUrl: "https://example.com" });
+
+    const run = comandos.find((c) => c[0] === "run");
+    expect(run).toBeDefined();
+    expect(run).toContain("-d");
+    expect(run).toContain("zap.sh");
+    expect(run).toContain("-daemon");
+    // Chave aleatória por scan — nunca api.disablekey=true.
+    expect(run!.some((a) => /^api\.key=[0-9a-f]{32}$/.test(a))).toBe(true);
+    expect(run!.some((a) => a.includes("disablekey"))).toBe(false);
+    // Porta publicada só no loopback (API rodando no host).
+    expect(run!.some((a) => /^127\.0\.0\.1:\d+:\d+$/.test(a))).toBe(true);
+    // E o container é derrubado explicitamente no fim.
+    expect(comandos.some((c) => c[0] === "rm" && c.includes("vulnera-zap-scan-args"))).toBe(true);
+  });
+
+  it("`docker run` falhando NÃO deixa o usuário sem resultado: cai no simulado com aviso amigável", async () => {
+    mockDocker((args) => (args[0] === "run" ? { code: 125, stderr: "no such image" } : { code: 0 }));
+    mockZapApi();
+
+    const outcome = await runScan({ scanId: "scan-sem-container", targetUrl: "https://example.com" });
+
+    expect(outcome.status).toBe("COMPLETED");
+    expect(outcome.simulated).toBe(true);
+    expect(outcome.warningMessage).toContain("resultado de demonstração");
+    expect(outcome.warningMessage).toContain("container do OWASP ZAP não subiu");
+  });
+
+  it("erro de negócio do ZAP (HTTP 200 + campo `code`) também vira fallback simulado", async () => {
+    mockDocker();
+    mockZapApi({
+      "/JSON/ascan/action/scan/": { body: JSON.stringify({ code: "url_not_found", message: "URL Not Found" }) },
+    });
+
+    const outcome = await runScan({ scanId: "scan-url-404", targetUrl: "https://example.com" });
+
+    expect(outcome.status).toBe("COMPLETED");
+    expect(outcome.simulated).toBe(true);
+    expect(outcome.warningMessage).toContain("não respondeu ao OWASP ZAP");
+  });
+
+  it("relatório corrompido vira fallback simulado (o pipeline nunca recebe JSON inválido)", async () => {
+    mockDocker();
+    mockZapApi({ "/OTHER/core/other/jsonreport/": { body: "{ isso não é json valido" } });
+
+    const outcome = await runScan({ scanId: "scan-json-ruim", targetUrl: "https://example.com" });
+
+    expect(outcome.status).toBe("COMPLETED");
+    expect(outcome.simulated).toBe(true);
+    expect(outcome.warningMessage).toContain("corrompido");
+  });
+
+  it("cancelamento NÃO cai no simulado — quem cancelou não quer resultado nenhum", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/spider/view/status/": { body: JSON.stringify({ status: "10" }) } }); // nunca chega a 100
+
+    const controller = new AbortController();
+    setTimeout(() => controller.abort("Scan cancelado pelo usuário."), 200);
+
+    const outcome = await runScan({ scanId: "scan-cancelado", targetUrl: "https://example.com", signal: controller.signal });
+
     expect(outcome.status).toBe("FAILED");
-    expect(outcome.errorMessage).toBe("REPORT_JSON_INVALID");
+    expect(outcome.errorMessage).toBe("SCAN_CANCELLED");
+    expect(outcome.simulated).toBe(false);
+  });
+
+  it("timeout global aborta o scan real e entrega o resultado simulado", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/spider/view/status/": { body: JSON.stringify({ status: "10" }) } }); // nunca chega a 100
+
+    const outcome = await runScan({ scanId: "scan-timeout", targetUrl: "https://example.com", timeoutMs: 500 });
+
+    expect(outcome.status).toBe("COMPLETED");
+    expect(outcome.simulated).toBe(true);
+    expect(outcome.warningMessage).toContain("tempo máximo");
+  });
+});
+
+describe("zap-runner.service — buildZapUrl", () => {
+  it("escapa a targetUrl na querystring (nunca concatenação crua)", () => {
+    const url = buildZapUrl("http://127.0.0.1:8080", "/JSON/ascan/action/scan/", {
+      apikey: "chave",
+      url: "https://example.com/busca?q=a&b=1",
+    });
+    // O `&` da URL do alvo tem que estar ESCAPADO, senão viraria um parâmetro
+    // extra do comando do ZAP.
+    expect(url).toContain("url=https%3A%2F%2Fexample.com%2Fbusca%3Fq%3Da%26b%3D1");
+    expect(url.split("&")).toHaveLength(2); // apikey + url, nada mais
   });
 });
 

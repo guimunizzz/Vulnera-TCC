@@ -32,6 +32,10 @@ export interface UpdateDastScanInput {
   errorMessage?: string | null;
   htmlReportPath?: string | null;
   jsonReportPath?: string | null;
+  progress?: number;
+  phase?: string | null;
+  simulated?: boolean;
+  warningMessage?: string | null;
 }
 
 export class DastScanRepository {

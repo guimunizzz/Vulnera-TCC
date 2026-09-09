@@ -50,15 +50,15 @@ flowchart TD
 
     subgraph API["Vulnera API (Express)"]
         Controller["DastScanController"]
-        Service["DastScanService\n(orquestração, ownership, watchdog)"]
-        Runner["zap-runner.service.ts\n(execFile, validação SSRF, timeout)"]
+        Service["DastScanService\n(orquestração, ownership)"]
+        Watchdog["dast-watchdog.service.ts\n(fila, máx. 2 simultâneos, travamento, alertas)"]
+        Runner["zap-runner.service.ts\n(spawn do container, API do ZAP, SSRF, timeout)"]
         Pipeline["dast-findings.service.ts\n(parse, normalização, fingerprint)"]
         Repo["DastScanRepository / DastFindingRepository\n(único ponto que toca Prisma)"]
     end
 
     subgraph Docker["Docker (host)"]
-        ZAP["Container ghcr.io/zaproxy/zaproxy:stable\nzap-full-scan.py"]
-        Vol[("Volume: dast-reports/&lt;scanId&gt;/\nreport.json + report.html")]
+        ZAP["Container vulnera-zap-&lt;scanId&gt;\nghcr.io/zaproxy/zaproxy:stable\nzap.sh -daemon"]
     end
 
     DB[(MySQL\nDastScan / DastFinding)]
@@ -66,15 +66,20 @@ flowchart TD
     UI -- "POST /api/dast/scans {targetUrl}" --> Controller
     Controller --> Service
     Service -- "cria QUEUED, responde já" --> Controller
-    Service -- "dispara em background (sem await)" --> Runner
-    Runner -- "docker run --rm --name vulnera-zap-&lt;id&gt;" --> ZAP
-    ZAP -- "spider + active scan" --> Vol
-    Runner -- "lê report.json (sucesso = arquivo existe e parseia)" --> Pipeline
+    Service -- "enfileira (não dispara direto)" --> Watchdog
+    Watchdog -- "quando há vaga (máx. 2)" --> Runner
+    Runner -- "docker run -d --rm --name vulnera-zap-&lt;id&gt;" --> ZAP
+    Runner -- "API HTTP: spider -> passivo -> ativo (% real)" --> ZAP
+    ZAP -- "/OTHER/core/other/jsonreport/ + htmlreport" --> Runner
+    Runner -- "grava report.json/html no disco DA API" --> Pipeline
+    Runner -- "onProgress a cada ~3s" --> Watchdog
+    Watchdog -- "progresso + fase (com throttle)" --> Repo
     Pipeline -- "candidatos deduplicados por fingerprint" --> Repo
     Repo -- "$transaction: insert + contadores" --> DB
-    Service -- "atualiza status COMPLETED/FAILED" --> Repo
+    Service -- "atualiza status COMPLETED/FAILED + simulated" --> Repo
 
-    UI -- "polling GET /api/dast/scans/:id a cada 5s" --> Controller
+    UI -- "polling GET /api/dast/scans/:id a cada 3s" --> Controller
+    UI -- "polling GET /api/dast/scans/status (banner)" --> Controller
     Controller --> Service
     Service --> Repo
     Repo --> DB
@@ -91,6 +96,7 @@ Routes (dast-scan.routes.ts)
    → Factory (dast-scan.factory.ts)
      → Controller (dast-scan.controller.ts)
        → Service (dast-scan.service.ts)
+         → dast-watchdog.service.ts (fila e vigia — só memória, não toca Prisma)
          → zap-runner.service.ts (execução do container — não toca Prisma)
          → dast-findings.service.ts (parsing puro — não toca Prisma)
          → Repository (dast-scan.repository.ts, dast-finding.repository.ts)
@@ -128,40 +134,69 @@ timeout configurável, §7).
 
 ### Comando exato do Docker
 
+> ⚠️ **Mudou em 2026-09-09** (ver ADR-031). Até então o runner chamava
+> `zap-full-scan.py` e lia o `report.json` de um volume compartilhado. Esse
+> desenho não expunha progresso nenhum e quebrava com a API dentro de um
+> container — ver `docs/DAST-DOCKER-GAP.md`.
+
 ```
-docker run --rm \
+docker run -d --rm \
   --name vulnera-zap-<scanId> \
-  -v <REPORTS_DIR>/<scanId>:/zap/wrk/:rw \
+  [--network vulnera-net | -p 127.0.0.1:<P>:<P>] \
   ghcr.io/zaproxy/zaproxy:stable \
-  zap-full-scan.py -t <targetUrl> -J report.json -r report.html
+  zap.sh -daemon -host 0.0.0.0 -port <P> \
+    -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true \
+    -config api.key=<32 hex aleatórios> -silent
 ```
 
 | Flag | Por quê |
 |---|---|
+| `-d` | o container fica de pé enquanto o runner conduz o scan pela API HTTP |
 | `--rm` | limpa o container sozinho ao terminar — sem lixo acumulando |
 | `--name vulnera-zap-<scanId>` | determinístico a partir do id do scan — é o que permite `docker rm -f` sem guardar mais nenhum estado |
-| `-v .../:zap/wrk/:rw` | único diretório com permissão de escrita — nunca a raiz do host |
-| `-t <targetUrl>` | alvo, já validado (protocolo + SSRF) antes de chegar aqui |
-| `-J report.json` | saída estruturada, é o que o pipeline consome |
-| `-r report.html` | saída visual, servida como está pro pentester |
+| `--network vulnera-net` | quando a API roda EM container: os dois na mesma rede, endereço `http://vulnera-zap-<id>:8080`, nenhuma porta publicada |
+| `-p 127.0.0.1:<P>:<P>` | quando a API roda no host: porta livre escolhida pelo runner, **a mesma dentro e fora**, presa ao loopback |
+| `api.addrs.addr.name=.*` + `regex=true` | sem isso o daemon só aceitaria chamada do próprio localhost dele |
+| `api.key=<aleatória>` | chave por scan; **nunca** `api.disablekey=true` |
+| `-silent` | corta telemetria e checagem de add-on na subida |
 
-Descoberto na Fase 0 (via `zap-full-scan.py --help`, que devolve exit 3 mas
-imprime o usage): **não existe flag de tempo máximo total de scan** — `-m`
-só limita o spider, `-T` só limita o boot do ZAP + passive scan. O timeout
-do active scan é sempre responsabilidade de quem chama.
+Nenhum `-v`: os relatórios chegam pela API HTTP do ZAP
+(`/OTHER/core/other/jsonreport/` e `htmlreport`) e quem grava em disco é o
+processo Node — foi assim que o problema de tradução de caminho host↔container
+deixou de existir.
 
-### Por que exit code não-zero não é falha
+**Sequência conduzida pelo runner** (é daqui que sai o percentual real):
 
-`zap-full-scan.py` retorna:
-- `0` — nenhum alerta em nenhum nível
-- `1` — só warnings de execução
-- `2` — pelo menos um alerta WARN/FAIL encontrado (**confirmado empiricamente**: um scan de calibração contra `https://example.com` voltou com exit `2` e `FAIL-NEW: 0` — ou seja, exit `2` aconteceu só com warnings, nenhum erro real)
-- `3` — falha de linha de comando (ex: `--help` sozinho)
+| Fase | Endpoint | Faixa na barra |
+|---|---|---|
+| STARTING | `/JSON/core/view/version/` até responder | 0–8% |
+| SPIDER | `/JSON/spider/action/scan/` → `/JSON/spider/view/status/` | 8–45% |
+| PASSIVE | `/JSON/pscan/view/recordsToScan/` até zerar | 45–55% |
+| ACTIVE | `/JSON/ascan/action/scan/` → `/JSON/ascan/view/status/` | 55–96% |
+| REPORT | `/OTHER/core/other/jsonreport/` + `htmlreport` | 96–100% |
 
-**O critério de sucesso do runner é a existência e parseabilidade do
-`report.json`, nunca o exit code.** Tratar exit ≠ 0 como falha faria todo
-scan bem-sucedido (que quase sempre encontra pelo menos um WARN de header
-ausente) virar `FAILED` — é o erro clássico de quem integra o ZAP pela
+O peso de cada fase é empírico (o active scan domina o tempo num alvo real).
+O percentual DENTRO de spider e active scan é o número que o próprio ZAP
+reporta — não é estimativa de tempo.
+
+### ⚠️ O ZAP é um proxy antes de ser um servidor de API
+
+O daemon só entende a requisição como "para mim" quando o header `Host` bate
+com o endereço **e a porta** em que ele mesmo escuta. Qualquer outra coisa ele
+tenta encaminhar, e devolve `502 Bad Gateway`. Consequência prática: publicar
+uma porta efêmera (`-p 127.0.0.1::8080`) **não funciona** — a requisição chega
+com `Host: 127.0.0.1:50866` e o ZAP tenta proxiar pra si mesmo na 50866.
+Por isso o runner usa a mesma porta dos dois lados no modo host, e o nome do
+container na porta 8080 no modo rede.
+
+### Critério de sucesso: o relatório, nunca o exit code
+
+O runner considera o scan bem-sucedido quando `report.json` chega da API do
+ZAP **e parseia**. Isso vale desde a primeira versão do módulo, e o motivo
+histórico continua valendo pra quem for mexer aqui: `zap-full-scan.py`
+retornava `2` sempre que encontrava qualquer alerta WARN/FAIL — ou seja, um
+scan bem-sucedido de um alvo com header ausente saía com exit ≠ 0.
+Tratar exit code como critério é o erro clássico de quem integra o ZAP pela
 primeira vez.
 
 ### Normalização de URL e fingerprint
@@ -232,6 +267,10 @@ Não existe `CRITICAL` na saída do ZAP — o enum não inventa esse nível.
 | `startedAt` / `finishedAt` / `durationMs` | | telemetria da execução |
 | `errorMessage` | `String? @db.Text` | populado em `FAILED`/`CANCELLED` |
 | `htmlReportPath` / `jsonReportPath` | `String?` | caminho absoluto no disco — NUNCA exposto em DTO de resposta |
+| `progress` | `Int @default(0)` | 0..100 consolidado das fases; escrito pelo runner com throttle (só quando a fase muda ou o percentual anda 1 ponto, no máx. 1x/s) |
+| `phase` | `String?` | rótulo curto da fase corrente (`QUEUED`, `STARTING`, `SPIDER`, `PASSIVE`, `ACTIVE`, `REPORT`, `DONE`, `SIMULATED`, `FAILED`, `CANCELLED`) — String e não enum: é rótulo de UI, `status` é a máquina de estados |
+| `simulated` | `Boolean @default(false)` | `true` = achados vieram do gerador de demonstração, não do ZAP |
+| `warningMessage` | `String? @db.Text` | aviso amigável de um scan que CONCLUIU com ressalva; distinto de `errorMessage`, que só existe em `FAILED` |
 | `alertsHigh/Medium/Low/Info` | `Int @default(0)` | contadores, sempre recalculados dos findings persistidos |
 
 Índices: `@@index([requestedById])`, `@@index([status])`,
@@ -271,6 +310,11 @@ precisar adicionar valor sem mexer em código de qualquer forma.
 | `DAST_SCAN_TIMEOUT_MS` | `1800000` (30min) | Tempo máximo de um scan antes do runner matar o container e marcar `FAILED`/`SCAN_TIMEOUT`. |
 | `DAST_ALLOW_PRIVATE_TARGETS` | `false` | `true` libera loopback/faixas privadas como alvo — **só em desenvolvimento**, necessário pra escanear alvos locais (Juice Shop). |
 | `DAST_FORCE_SIMULATE` | `false` | `true` força o fallback simulado mesmo com Docker disponível — usado em `.env.test` pra a suíte nunca depender de Docker/rede real. |
+| `DAST_ZAP_NETWORK` | *(vazio)* | Rede Docker onde criar o container do ZAP. **Vazio** = API no host (o runner publica uma porta livre em 127.0.0.1). **`vulnera-net`** = API em container (alcança o ZAP pelo nome, sem publicar porta). Preenchida pelo `docker-compose.yml`. |
+| `DAST_MAX_CONCURRENT_SCANS` | `2` | Teto de scans simultâneos; o watchdog enfileira o excedente. Cada scan é uma JVM de ~1GB. |
+| `DAST_ZAP_STARTUP_TIMEOUT_MS` | `180000` (3min) | Espera máxima pelo daemon do ZAP responder depois do `docker run`. |
+| `DAST_ZAP_SPIDER_MAX_DURATION_MIN` | `5` | Teto de minutos do spider (`0` desliga). Sem ele, um alvo grande rastreia até o timeout global. |
+| `DAST_HEARTBEAT_TIMEOUT_MS` | `120000` (2min) | Silêncio máximo tolerado num scan em execução antes de o watchdog abortar e avisar. |
 
 ---
 
@@ -293,7 +337,22 @@ imagem Docker + `-p <porta>:<porta interna>`.
 
 ## 9. Solução de problemas
 
-Erros REAIS encontrados construindo o módulo (Fases 0-8), não hipotéticos:
+Erros REAIS encontrados construindo o módulo (Fases 0-8 e a sessão de
+2026-09-09), não hipotéticos:
+
+**0. Todo scan sai marcado "simulado" mesmo com o Docker rodando.**
+Abra `GET /api/dast/scans/status` (ou o banner no topo de `/dast`): ele diz se
+o Docker está acessível **pra API**. Se `dockerAvailable: false` com a stack em
+container, a causa quase certa é permissão no socket — `docker compose exec api
+docker info` reproduz o erro na hora. Ver ADR-031 §2 (o usuário `vulnera`
+precisa do GID dono do socket; em Docker Desktop é o 0, em host Linux costuma
+ser o grupo `docker`).
+
+**0b. O scan real falha e a tela mostra achados mesmo assim.**
+É o comportamento pretendido desde 2026-09-09: falha do scan real cai no
+resultado simulado, com selo "simulado" e a explicação em PT-BR no campo
+`warningMessage`. O motivo técnico completo fica no log do servidor
+(`[DAST] Scan real <id> falhou (...) — caindo pro resultado simulado`).
 
 **1. Imagem do ZAP não baixada — primeiro scan trava minutos "silenciosamente".**
 `docker pull ghcr.io/zaproxy/zaproxy:stable` sozinho, ANTES do primeiro scan

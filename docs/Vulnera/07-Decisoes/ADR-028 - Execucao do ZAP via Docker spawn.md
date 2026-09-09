@@ -24,6 +24,10 @@ Três desenhos foram considerados:
 
 ### Por que não modo daemon
 
+> ⚠️ **Parcialmente substituída em 2026-09-09 por [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]].**
+> O que continua valendo: um daemon **persistente e compartilhado** entre scans segue recusado, pelas razões de vazamento de estado descritas abaixo.
+> O que mudou: o container por scan agora sobe **em modo daemon** e é conduzido pela API HTTP do próprio ZAP — é a única forma de obter percentual real de progresso, exigido pela UI. Como o daemon é dedicado a um scan e morre com ele, o isolamento entre execuções é idêntico ao descrito aqui, e o argumento de "mapear cancelamento pra uma sessão do ZAP" não se aplica (só existe uma).
+
 - **Isolamento de estado.** Um daemon compartilhado acumula sessão, contexto e histórico de spider entre scans de alvos diferentes — vazamento de estado entre execuções concorrentes de pentesters diferentes é inaceitável num produto multi-usuário.
 - **Cancelamento trivial.** `docker rm -f <containerName>` é atômico e determinístico porque o nome do container é derivado do `scanId`. Com um daemon, cancelar "este scan específico" exigiria a API de sessões do próprio ZAP, mais um adaptador a mais pra manter.
 - **Sem estado pra vazar entre tenants.** Cada scan nasce e morre com o container — não há necessidade de "limpar" nada entre execuções.

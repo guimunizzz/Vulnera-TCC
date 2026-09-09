@@ -515,6 +515,12 @@ enum DastRisk {
 // DastScan — uma execução de scan DAST contra uma targetUrl.
 // containerName é derivado de `id` (vulnera-zap-<id>) e persistido pra
 // permitir cancelamento (docker rm -f <containerName>) sem recalcular nada.
+//
+// progress/phase/simulated/warningMessage entraram em 2026-09-09 (scan real
+// dentro da stack Docker). O motivo de os quatro serem COLUNA e não estado em
+// memória: o scan roda em background e a UI acompanha por polling — quem
+// responde o GET /dast/scans/:id pode ser outro processo (ou o mesmo depois
+// de um restart), então o banco é o único lugar onde o progresso sobrevive.
 model DastScan {
   id             String         @id @default(cuid())
   targetUrl      String         @db.VarChar(2048)
@@ -527,6 +533,20 @@ model DastScan {
   errorMessage   String?        @db.Text
   htmlReportPath String?
   jsonReportPath String?
+  // 0..100 — percentual consolidado das fases (spider/passivo/ativo), escrito
+  // pelo runner a cada tick de polling da API do ZAP.
+  progress       Int            @default(0)
+  // Fase corrente em texto livre curto (QUEUED, STARTING, SPIDER, PASSIVE,
+  // ACTIVE, REPORT, DONE, SIMULATED). String e não enum nativo de propósito:
+  // é rótulo de UI, não máquina de estados — status já é a máquina.
+  phase          String?
+  // true quando o resultado veio do gerador simulado (Docker indisponível ou
+  // scan real falhou e caiu no fallback). Antes de 2026-09-09 essa informação
+  // existia só dentro do report.json e era invisível na aplicação inteira.
+  simulated      Boolean        @default(false)
+  // Aviso amigável quando o scan CONCLUIU mas com ressalva (tipicamente o
+  // fallback simulado). Distinto de errorMessage, que só existe em FAILED.
+  warningMessage String?        @db.Text
   alertsHigh     Int            @default(0)
   alertsMedium   Int            @default(0)
   alertsLow      Int            @default(0)

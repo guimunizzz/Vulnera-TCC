@@ -19,6 +19,7 @@
 | 7 Mobile           | Expo enxuto + Push                                 | ✅ concluída 2026-08-10 |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 🚧 CP1-3 + CP4(ZAP) + docs concluídos 2026-08-11; Sonar bloqueado em Rafael |
 | **9 DAST (OWASP ZAP)** | **Scans automatizados: runner Docker, pipeline de findings, API, UI, PDF** | ✅ concluída 2026-09-05 |
+| **9.1 DAST: scan real na stack** | **ZAP em modo daemon por scan, watchdog (máx. 2), % de progresso, simulado visível** | 🚧 código pronto 2026-09-09, em revisão |
 
 ✅ **Frontend web bootstrapado na Fase 3** (2026-08-04) — `app/web` tem Vite+React+TS+Tailwind+Radix+TanStack Query+Zustand+Axios, com Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions funcionando ponta a ponta (smoke E2E manual validado no navegador). Próximas fases só adicionam telas, não infraestrutura.
 
@@ -167,6 +168,32 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 > **Achado de infra (não específico do DAST):** `npm run check` do backend estava quebrado ANTES de qualquer código do módulo — Prisma Client desatualizado + `expo-server-sdk` ausente do `node_modules` + migration `add_expo_push_token` não aplicada no banco de teste. Resolvido como pré-requisito. Ver PRD_VIVO.md §7 (bloqueios).
 >
 > **Validação visual:** extensão do Chrome não conectou nesta sessão (mesmo bloqueio recorrente de sessões anteriores) — resolvido com o MESMO fallback já comprovado no projeto (Playwright ad-hoc, instalado no scratchpad): 26/26 checks contra a stack de dev real (`npm run dev` nos dois workspaces), cobrindo RBAC visual, responsivo (375/768/1440), polling ao vivo, expansão de linha, filtro/busca, download de PDF via clique real e abertura do relatório HTML do ZAP em nova aba — nenhum erro de console.
+
+## FASE 9.1 — DAST: scan real na stack Docker + watchdog + progresso — 🚧 código pronto, em revisão (2026-09-09)
+
+> Motivada pelo diagnóstico `docs/DAST-DOCKER-GAP.md` (2026-09-06: dentro do
+> `docker compose`, TODO scan caía silenciosamente no simulado) somada ao
+> requisito novo do Rafael: container do ZAP criado sob demanda, **máximo 2
+> scans por vez com aviso em caso de erro**, e **percentual de progresso na
+> UI** — mantendo o resultado simulado, com mensagem amigável, quando o real
+> falhar. Decisão: `ADR-031`.
+
+| #     | Task                                                        | Estado |
+| ----- | ----------------------------------------------------------- | ------ |
+| 9.1.1 | Runner em modo daemon conduzido pela API HTTP do ZAP        | ✅ único jeito de obter % real; `zap-full-scan.py` não expõe progresso. Continua 1 container por scan. O bind mount de relatório sumiu — a "Causa 3" do relatório deixou de existir |
+| 9.1.2 | DooD: `docker-cli` na imagem da API + socket do host montado | ✅ Causas 1 e 2. Usuário `vulnera` no GID 0 (socket do Docker Desktop é `root:root 0660`). Rede fixa `vulnera-net` |
+| 9.1.3 | Watchdog: fila FIFO, máx. 2 simultâneos, abort de travado, alertas | ✅ `dast-watchdog.service.ts`, singleton injetado pela factory |
+| 9.1.4 | Migration `progress`/`phase`/`simulated`/`warningMessage` + `GET /status` | ✅ escrita de progresso com throttle; rota literal registrada antes de `/:id` |
+| 9.1.5 | UI: barra de progresso, posição na fila, selo "simulado", banner do módulo | ✅ `dast-status-banner.tsx` novo; polling 5s → 3s |
+| 9.1.6 | Fallback amigável (falha do real mantém o simulado)          | ✅ exceto cancelamento |
+| 9.1.7 | Testes                                                       | ✅ 315 → **333** (runner reescrito, watchdog novo com DAST-WD-01..07, +4 de integração) |
+| 9.1.8 | Validação real na stack                                      | ✅ `example.com` em 47s com 7 alertas reais (ZAP 2.17.0); na stack, 3 scans disparados juntos → 2 rodando + 1 na fila, progresso real por fase |
+| 9.1.9 | ADR-031 + `DAST.md` + cabeçalho ✅ no `DAST-DOCKER-GAP.md` + docs vivos | ✅ |
+
+> **Achado de ambiente, corrigido como pré-requisito:** `.env.test` local não
+> tinha `DAST_FORCE_SIMULATE=true` (embora `dast.test.ts` afirmasse que sim) e
+> o banco `vulnera_test` estava sem as tabelas do DAST — a suíte inteira estava
+> vermelha por motivo alheio ao código. Ver PRD_VIVO §3 (FEAT-09.1).
 
 ---
 

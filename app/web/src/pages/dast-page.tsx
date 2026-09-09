@@ -7,8 +7,13 @@
  * — a rota em App.tsx e o item no Sidebar já restringem o acesso.
  *
  * Polling leve na própria listagem (não só no detalhe): enquanto existir
- * QUALQUER scan QUEUED/RUNNING, a lista se atualiza sozinha a cada 5s, pra
- * quem está de olho na fila ver status/contadores mudarem sem recarregar.
+ * QUALQUER scan QUEUED/RUNNING, a lista se atualiza sozinha a cada 3s, pra
+ * quem está de olho na fila ver progresso e contadores mudarem sem recarregar.
+ *
+ * Desde 2026-09-09 a tela também mostra o estado do MÓDULO (banner do topo:
+ * Docker disponível, vagas ocupadas, fila, avisos do watchdog) e marca com
+ * selo os scans cujo resultado é simulado — sem isso um resultado de
+ * demonstração era indistinguível de um scan real (docs/DAST-DOCKER-GAP.md §5).
  */
 
 import { useMemo, useState } from "react";
@@ -22,10 +27,12 @@ import { Field } from "../components/ui/field";
 import { Input } from "../components/ui/input";
 import { Alert } from "../components/ui/alert";
 import { Dialog, DialogDescription, DialogTitle } from "../components/ui/dialog";
-import { StatusBadge } from "../components/ui/badge";
+import { Badge, StatusBadge } from "../components/ui/badge";
 import { EmptyState, ErrorState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/card";
-import { ACTIVE_DAST_STATUSES } from "../types/dast.types";
+import { Progress } from "../components/ui/progress";
+import { DastStatusBanner, useDastStatus } from "../components/dast/dast-status-banner";
+import { ACTIVE_DAST_STATUSES, labelDaFase, type DastScan } from "../types/dast.types";
 
 function formatDuration(ms: number | null): string {
   if (ms == null) return "—";
@@ -33,6 +40,40 @@ function formatDuration(ms: number | null): string {
   const min = Math.floor(totalSeconds / 60);
   const sec = totalSeconds % 60;
   return min > 0 ? `${min}min ${sec}s` : `${sec}s`;
+}
+
+/**
+ * Célula de status: badge sempre; barra de progresso enquanto o scan está
+ * vivo; selo "simulado" quando o resultado veio do gerador de demonstração.
+ */
+function StatusCell({ scan, posicaoNaFila }: { scan: DastScan; posicaoNaFila: number | null }) {
+  const ativo = ACTIVE_DAST_STATUSES.includes(scan.status);
+
+  return (
+    <div className="flex min-w-52 flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge status={scan.status} />
+        {scan.simulated && (
+          <Badge tom="atencao" title="Resultado gerado sem executar o OWASP ZAP">
+            simulado
+          </Badge>
+        )}
+      </div>
+      {ativo && (
+        <>
+          <Progress
+            valor={scan.progress}
+            rotulo={`Progresso do scan de ${scan.targetUrl}`}
+            textoDoValor={`${scan.progress}% — ${labelDaFase(scan.phase)}`}
+            mostrarValor
+          />
+          <span className="text-xs text-fg-muted">
+            {posicaoNaFila && posicaoNaFila > 0 ? `Na fila — posição ${posicaoNaFila}` : labelDaFase(scan.phase)}
+          </span>
+        </>
+      )}
+    </div>
+  );
 }
 
 function isValidHttpUrl(value: string): boolean {
@@ -55,9 +96,18 @@ export function DastPage() {
   const scansQuery = useQuery({
     queryKey: ["dast", "scans"],
     queryFn: dastApi.list,
+    // 3s (era 5s): com barra de progresso na lista, 5s faz a barra andar aos
+    // saltos — o runner atualiza o percentual a cada ~3s.
     refetchInterval: (query) =>
-      query.state.data?.some((s) => ACTIVE_DAST_STATUSES.includes(s.status)) ? 5000 : false,
+      query.state.data?.some((s) => ACTIVE_DAST_STATUSES.includes(s.status)) ? 3000 : false,
   });
+
+  const statusQuery = useDastStatus();
+  const posicaoNaFilaPorScan = useMemo(() => {
+    const map = new Map<string, number>();
+    statusQuery.data?.queued.forEach((q) => map.set(q.scanId, q.position));
+    return map;
+  }, [statusQuery.data]);
 
   // GET /users já vem escopado pelo backend: PENTESTER só recebe a si mesmo
   // (que é exatamente quem aparece nos próprios scans), ADMIN recebe todos —
@@ -95,6 +145,8 @@ export function DastPage() {
         </div>
         <Button onClick={() => setIsCreateOpen(true)}>Novo scan</Button>
       </div>
+
+      <DastStatusBanner status={statusQuery.data} />
 
       {scansQuery.isLoading && (
         <div className="mt-6 flex flex-col gap-2" aria-busy="true">
@@ -148,7 +200,7 @@ export function DastPage() {
                     {scan.targetUrl}
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={scan.status} />
+                    <StatusCell scan={scan} posicaoNaFila={posicaoNaFilaPorScan.get(scan.id) ?? null} />
                   </td>
                   <td className="px-4 py-3 text-fg-muted">{nameById.get(scan.requestedById) ?? "—"}</td>
                   <td className="px-4 py-3 font-mono text-severity-high-ink" data-numeric>
@@ -187,7 +239,14 @@ export function DastPage() {
           <DialogTitle>Novo scan DAST</DialogTitle>
           <DialogDescription>
             Informe a URL do alvo. O ZAP faz spider e depois active scan sozinho — isso costuma levar alguns
-            minutos; você acompanha o andamento na tela de detalhe.
+            minutos; você acompanha o andamento pela barra de progresso.
+            {statusQuery.data && statusQuery.data.runningCount >= statusQuery.data.maxConcurrent && (
+              <>
+                {" "}
+                As {statusQuery.data.maxConcurrent} vagas de execução estão ocupadas agora, então este scan
+                entra na fila e começa assim que uma liberar.
+              </>
+            )}
           </DialogDescription>
 
           <form
