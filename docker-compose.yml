@@ -1,13 +1,19 @@
-# Stack completa (banco + API + web) sobe junta com um comando:
+# Stack completa (banco + API + web + Mailhog) sobe junta com um comando:
 #   docker compose up --build
-# Acesso: web http://localhost:3000 · API http://localhost:3001/api ·
+# Acesso: web http://localhost:8086 (ENTRADA DO APP) · API http://localhost:3001/api ·
 # MySQL localhost:3307 · Mailhog http://localhost:8025
+#
+# ⚠️ Porta de entrada é 8086, não 3000 (decisão de 2026-09-06, ver ADR-022 §
+# atualização). Só o mapeamento HOST do serviço `web` mudou — internamente o
+# container continua servindo em :3000 (Dockerfile/vite.config.ts não tocados),
+# e é por isso que CORS_ORIGIN abaixo também precisou mudar: é o Origin que o
+# NAVEGADOR envia (http://localhost:8086), não a porta interna do compose.
 #
 # ⚠️ A referência original apontava para um "ADR-021 - Stack completa no Docker
 # Compose" que nunca foi escrito (commit c131aef, "unificando docker — não
 # finalizado"). O número ADR-021 foi ocupado por outra decisão em 2026-08-07
-# (máquina de Vulnerability). Quando o trabalho do Docker for concluído, o ADR
-# dele deve ser criado como ADR-022.
+# (máquina de Vulnerability). O trabalho do Docker foi documentado como
+# ADR-022.
 
 services:
   db:
@@ -47,7 +53,11 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_troque_em_producao_9876543210}
       JWT_REFRESH_TTL: 7d
       BCRYPT_COST: "12"
-      CORS_ORIGIN: http://localhost:3000
+      # Precisa ser o endereço que o NAVEGADOR usa (a porta de entrada, 8086),
+      # não a porta interna do container `web` (3000) — é o header `Origin`
+      # que o browser envia em toda requisição à API que o middleware `cors`
+      # compara aqui.
+      CORS_ORIGIN: http://localhost:8086
       UPLOADS_DIR: uploads
     ports:
       - "3001:3001"
@@ -73,7 +83,10 @@ services:
         VITE_API_URL: http://localhost:3001/api
     container_name: vulnera-web
     ports:
-      - "3000:3000"
+      # host 8086 -> container 3000: 8086 é a PORTA DE ENTRADA do app inteiro
+      # (é a que o navegador acessa). Internamente o `vite preview` continua
+      # em 3000 (vite.config.ts, Dockerfile) — só o lado esquerdo do mapa muda.
+      - "8086:3000"
     depends_on:
       api:
         condition: service_healthy

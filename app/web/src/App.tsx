@@ -15,6 +15,9 @@ import { PendingSubscriptionsPage } from "./pages/admin/pending-subscriptions-pa
 import { StyleguidePage } from "./pages/styleguide-page";
 import { ApplicationDashboardPage } from "./pages/application-dashboard-page";
 import { MaturityAssessmentPage } from "./pages/maturity-assessment-page";
+import { DastPage } from "./pages/dast-page";
+import { DastScanDetailPage } from "./pages/dast-scan-detail-page";
+import { DastScanReportPage } from "./pages/dast-scan-report-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
 
@@ -66,6 +69,19 @@ export function App() {
           <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
             <Route path="/admin/subscriptions" element={<PendingSubscriptionsPage />} />
           </Route>
+
+          {/* Módulo DAST — não existe pro CLIENT: nem item de menu, nem rota
+              acessível (403 se forçar a URL, ver ProtectedRoute). */}
+          <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+            <Route path="/dast" element={<DastPage />} />
+            <Route path="/dast/scans/:id" element={<DastScanDetailPage />} />
+          </Route>
+        </Route>
+
+        {/* Relatório do ZAP fora do AppLayout — tela cheia, sem sidebar, é
+            aberta em nova aba a partir do detalhe do scan. */}
+        <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+          <Route path="/dast/scans/:id/report" element={<DastScanReportPage />} />
         </Route>
       </Route>
 

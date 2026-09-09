@@ -11,6 +11,7 @@ import { vulnerabilityRoutes } from "./vulnerability.routes";
 import { reportRoutes } from "./report.routes";
 import { notificationRoutes } from "./notification.routes";
 import { maturityRoutes } from "./maturity.routes";
+import { dastScanRoutes } from "./dast-scan.routes";
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use("/vulnerabilities", vulnerabilityRoutes);
 router.use("/reports", reportRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/maturity", maturityRoutes);
+router.use("/dast/scans", dastScanRoutes);
 
 export { router as apiRoutes };

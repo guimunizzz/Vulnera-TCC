@@ -739,3 +739,66 @@ camada de movimento, e dashboards analíticos por aplicação.
 | `metrics.service.ts` | lia `actor.companyId`, que **não existe no JWT** (`authMiddleware` popula só `{userId, role}`). Todo CLIENT recebia 403 |
 | `use-focus-trap.ts` | usava `offsetParent === null` para checar visibilidade — errado para todo elemento `position: fixed`, ou seja, todo overlay |
 | `tabs.tsx` | não funcionava sem controle externo nem `paramUrl`: os cliques chamavam um `aoMudar` inexistente |
+
+---
+
+# FASE 9 — DAST (OWASP ZAP) ✅ Concluída em 2026-09-05
+
+**Branch:** `feat/dast-zap` · **Depende de:** Fase 6 (design system), Fase 5 (padrão de camadas)
+
+Módulo novo fora da numeração original do BACKLOG v4 (Fases 3-8) — entrada
+posterior, prompt dado diretamente ao agente numa sessão dedicada. Resumo do
+escopo pedido (prompt completo na sessão que gerou este módulo, não
+reproduzido aqui por extensão): dar ao PENTESTER um fluxo de "um campo e um
+botão" que sobe um container OWASP ZAP por scan, roda spider + active scan
+contra uma URL, persiste os alertas normalizados, e serve três saídas —
+findings na interface, HTML original do ZAP, e PDF client-side. Nove fases
+internas (0-9): reconhecimento do ZAP, schema, runner Docker, pipeline de
+findings, API+RBAC, testes, UI, PDF, validação end-to-end, documentação.
+
+## Histórico
+
+**Branch:** `feat/dast-zap` (renomeada de `feat/scan-dast-OWASP`, sem commits — decisão reversível registrada no relatório da Fase 0) · **Data:** 2026-09-05 · **PR:** não aberta (instrução explícita do prompt: não commitar, não abrir PR)
+
+Todas as 9 fases internas concluídas numa sessão contínua, com checkpoints
+reportados ao final de cada uma. Nenhuma delas exigiu parar e perguntar pelas
+condições listadas no prompt (falha de verificação, schema além do previsto,
+Docker indisponível, contrato público quebrado) — a única pausa real foi a
+decisão do enum nativo (abaixo), resolvida com uma pergunta direta.
+
+Desvios do prompt original:
+
+- **Enum nativo em vez de String.** O prompt pedia `enum DastScanStatus`/`enum DastRisk` nativos do Prisma; o `schema.prisma` documenta como filosofia "sem enums nativos" (String + validação em TS). Divergência sinalizada explicitamente ao Rafael antes de aplicar a migration (pergunta direta, não decisão unilateral) — escolhida a via do prompt, registrada como exceção consciente em `schema.prisma` e no `ADR-028`.
+- **`DAST_FORCE_SIMULATE` (env var nova, não estava no prompt).** Sem ela, a suíte de testes ficaria refém de o Docker "por acaso" estar indisponível no ambiente de CI — um dia em que alguém rodasse os testes com Docker instalado, os testes de ciclo de vida passariam a tentar um scan real (lento, de rede). O flag força o fallback determinístico sempre, independente do ambiente.
+- **`simulateScan` ganhou suporte a `timeoutMs`** (não pedido explicitamente) — sem isso, `DAST-LIFE-03` (timeout marca FAILED) não seria testável sem Docker real, já que o fallback simulado sempre completava em ~3s fixos.
+- **`requestedByName` adicionado ao payload de `/report/data`** (não estava no prompt) — a capa do PDF pede "quem executou", e o endpoint original só devolvia `requestedById` (um cuid cru). Pequeno join a mais no service, sem migration.
+- **`StatusBadge` (componente compartilhado do design system) ganhou 4 entradas novas** (QUEUED/RUNNING/FAILED/CANCELLED) — extensão de um componente usado pelo resto do app, sinalizada aqui por afetar superfície compartilhada (mesma lógica de S3/R4 do CLAUDE.md, embora reversível e de baixo risco).
+- **Tabela HTML manual em vez do componente `<Table>` do design system**, tanto na lista de scans quanto na tabela de findings — decisão de consistência com o padrão real predominante no código (`applications-page.tsx`, `project-detail-page.tsx` já usam `<table>` manual), e porque `<Table>` não tem suporte nativo a linha expansível (necessária pro detalhe de finding), que teve que ser construída do zero de qualquer forma.
+- **Descrição/solução/reference do ZAP passam por `stripHtml()` antes de persistir** (não pedido) — o ZAP devolve esses campos em HTML (`<p>`); sem limpar, a tela e o PDF mostrariam tags cruas.
+
+Bugs reais encontrados e corrigidos durante a execução:
+
+| Onde | O quê |
+|---|---|
+| `dast-scan.service.ts` (`runInBackground`) | Corrida genuína: cancelar um scan simulado não interrompe de verdade o `setTimeout` interno (só o Docker real morre na hora via `killContainer`) — o scan cancelado ainda tentava, ~3s depois, persistir findings e marcar conclusão num registro que já não era mais `RUNNING`. Corrigido com checagem de estado antes de persistir findings E antes de marcar conclusão. Bug de produção real, não só de teste — a mesma corrida existiria com Docker real numa janela menor. |
+| `zap-runner.service.ts` (`isDockerAvailable`) | Timeout de 5s pro `docker info` classificava Docker como indisponível nesta máquina (Docker Desktop/WSL2 levou ~6s na primeira chamada "fria"), derrubando scans reais pro fallback simulado por engano. Subido pra 10s. |
+| Ambiente (pré-existente, não causado pelo módulo) | `npm run check` do backend já estava quebrado no branch antes de qualquer código do DAST: Prisma Client desatualizado (faltava `expoPushToken`) + `expo-server-sdk` ausente do `node_modules` + migration `add_expo_push_token` nunca aplicada no banco de teste. Resolvido como pré-requisito (`prisma generate`, `npm install` na raiz, `prisma migrate deploy` no banco de teste). |
+
+**Validação em navegador real:** a extensão do Chrome não conectou nesta
+sessão (mesmo bloqueio recorrente de todas as fases anteriores). Resolvido
+com o fallback já comprovado do projeto: Playwright instalado ad-hoc no
+scratchpad, Chromium baixado na hora, dois scripts cobrindo 26 checks contra
+a stack de dev real rodando de verdade (`npm run dev` nos dois workspaces,
+não headless/mock) — login real, RBAC visual (CLIENT sem item de menu e
+redirecionado ao forçar `/dast`), scan RUNNING com polling e cronômetro
+reais, scan COMPLETED com tabela/filtro/busca/expansão de linha, download de
+PDF via clique real na UI (arquivo validado depois com `pdf-lib`), abertura
+do relatório HTML do ZAP em nova aba com iframe sandboxed, responsivo em
+375/768/1440, console limpo em toda a navegação. Screenshots e o PDF real
+ficam com o Rafael.
+
+Testes: 269 → 315 no backend (42 novos: SEC-01..05, RBAC-01..09, PIPE-01..05,
+LIFE-01..04, mais o fluxo feliz completo), cobertura 89-96% nos 3 services
+novos, zero dependência de Docker na suíte. Frontend: build e lint limpos
+(nenhum teste automatizado novo — a validação foi via Playwright real, ver
+acima).

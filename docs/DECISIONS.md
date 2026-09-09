@@ -409,3 +409,74 @@ encontrá-lo). Agregação por período em UTC.
 **Alternativa descartada:** tabela `VulnerabilitySnapshot` com job diário.
 Exigiria migration e scheduler (que não existe), começaria o histórico do zero, e
 o custo medido da reconstrução foi de 9 a 17 ms.
+
+## Módulo DAST (OWASP ZAP) — 2026-09-05
+
+Três decisões arquiteturais, todas com ADR próprio em
+`docs/Vulnera/07-Decisoes/`. Módulo novo, fora da numeração de fases do
+BACKLOG v4 — entrada posterior.
+
+### ADR-028 — Execução do ZAP via Docker spawn
+
+**Contexto:** o scan precisa rodar o OWASP ZAP contra uma URL arbitrária, sem
+fila (Redis fora de escopo) e sem exigir instalação manual além do Docker que
+o projeto já usa.
+
+**Decisão:** um container novo por scan (`docker run --rm --name
+vulnera-zap-<scanId>`), nunca um daemon persistente — isolamento de estado
+entre scans de tenants diferentes e cancelamento trivial (`docker rm -f`
+determinístico pelo nome).
+
+**Risco assumido, não eliminado:** a API precisa de acesso ao socket Docker
+do host — comprometer o processo da API compromete o host. Mitigado por
+ausência de flags privilegiadas, volume restrito ao diretório do scan, e
+validação de alvo antes de qualquer `docker run`; não resolvido por completo
+(rodar a API sem acesso direto ao socket exigiria um sidecar dedicado, fora
+do escopo desta entrega).
+
+**Alternativa descartada:** daemon ZAP persistente com API de sessões —
+vazaria estado entre scans de tenants diferentes.
+
+### ADR-029 — DAST como silo (não importa para Vulnerability)
+
+**Contexto:** o Vulnera já tem `Vulnerability` maduro (CVSS calculado,
+override, auditoria). Fazia sentido os achados do ZAP virarem `Vulnerability`
+direto?
+
+**Decisão:** não, nesta entrega. Dois models novos (`DastScan`/
+`DastFinding`), sem FK pra `Vulnerability`/`Project`/`Application`/`Company`.
+
+**Por quê:** o ZAP não fornece vetor CVSS (só `riskcode` 0-3) — inventar um
+vetor a partir disso contaminaria o cálculo automático que hoje é 100%
+confiável (validado contra os vetores oficiais do FIRST). `Vulnerability`
+também exige `Project` desde a criação, o que quebraria o fluxo de "um campo
+e um botão" do DAST.
+
+**Caminho de integração futura registrado no ADR:** CVSS estimado e marcado
+como tal, ou triagem manual antes da promoção; escolha de Project/Application
+no momento da promoção; campo de proveniência (`sourceType`).
+
+**Alternativa descartada:** importar automaticamente com CVSS estimado por
+faixa de risco — um score "inventado" convincente demais é pior que a
+ausência dele, porque o resto do produto trata `cvssScore` como calculado
+com confiança.
+
+### ADR-030 — Execução assíncrona sem fila
+
+**Contexto:** um scan leva minutos; a resposta de `POST /dast/scans` não pode
+esperar. Sem Redis/BullMQ (fora de escopo), como garantir execução em
+background confiável?
+
+**Decisão:** fire-and-forget dentro do próprio processo Node (`create()` não
+dá `await` em `runInBackground`), estado inteiro no banco, e um watchdog no
+boot que marca `FAILED` qualquer scan `QUEUED`/`RUNNING` encontrado — por
+definição, órfão de um processo anterior que morreu no meio.
+
+**O que isso NÃO dá, ao contrário de uma fila de verdade:** sobrevivência de
+scans em andamento a um restart da API, e distribuição entre múltiplos
+processos/máquinas. Aceito conscientemente pelo volume real do produto (um
+punhado de scans concorrentes, não milhares/hora).
+
+**Alternativa descartada:** Redis + BullMQ — desproporcional ao volume e
+fora do escopo explícito da entrega; o contrato de `DastScanService` já é
+compatível com trocar por uma fila depois, se o produto crescer.

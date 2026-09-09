@@ -14,6 +14,15 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# npm 10.9.8 (o que vem junto do node:22-alpine) tem um bug conhecido no
+# resolvedor de dependências (Arborist) — `npm install` sem lockfile falha com
+# "Cannot read properties of null (reading 'edgesOut')" contra o grafo de
+# dependências deste projeto (confirmado: o MESMO package.json instala sem
+# erro nenhum com npm 11.x). É bug de versão do npm, não de dependência
+# quebrada — corrigir aqui, e não com `--legacy-peer-deps` (que mudaria COMO
+# as dependências são resolvidas, não é o problema real).
+RUN npm install -g npm@11
+
 COPY package.json ./
 RUN npm install
 
