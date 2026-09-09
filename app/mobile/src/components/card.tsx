@@ -1,8 +1,11 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { COLORS, RADIUS, SPACING } from "../theme/tokens";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { COLORS, MOTION, RADIUS, SHADOW, SPACING } from "../theme/tokens";
 
-/** Superfície elevada — mesmo papel do <Card> web (bg-surface + borda + raio de container). */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/** Superfície elevada — mesmo papel do <Card> web (bg-surface + borda + raio de container), com feedback de toque animado (escala + fundo). */
 export function Card({
   children,
   onPress,
@@ -15,18 +18,30 @@ export function Card({
   /** Lido pelo leitor de tela como uma frase só, em vez de cada Text filho separado — útil em cards que são um item de lista tocável. */
   accessibilityLabel?: string;
 }) {
+  const scale = useSharedValue(1);
+  const [pressed, setPressed] = useState(false);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
   if (onPress) {
     return (
-      <Pressable
+      <AnimatedPressable
         onPress={onPress}
+        onPressIn={() => {
+          scale.value = withTiming(0.97, { duration: MOTION.fast });
+          setPressed(true);
+        }}
+        onPressOut={() => {
+          scale.value = withTiming(1, { duration: MOTION.fast });
+          setPressed(false);
+        }}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [styles.card, style, pressed && styles.pressed]}
+        style={[styles.card, style, pressed && styles.pressed, animatedStyle]}
         // 44px mínimo de alvo de toque mesmo quando o card é mais baixo que isso
         hitSlop={4}
       >
         {children}
-      </Pressable>
+      </AnimatedPressable>
     );
   }
   return <View style={[styles.card, style]}>{children}</View>;
@@ -34,12 +49,14 @@ export function Card({
 
 const styles = StyleSheet.create({
   card: {
+    // Sem borda de propósito — a hierarquia vem do tom (canvas→surface, bem
+    // próximos) e da sombra, não de um contorno. Borda + sombra + salto de
+    // cor grande deixava o card parecendo uma caixa flutuando isolada.
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.container,
-    borderWidth: 1,
-    borderColor: COLORS.borderSubtle,
     padding: SPACING[4],
     gap: SPACING[2],
+    ...SHADOW.card,
   },
   pressed: {
     backgroundColor: COLORS.raised,

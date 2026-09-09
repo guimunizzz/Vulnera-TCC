@@ -9,11 +9,17 @@
  */
 
 import { StyleSheet, Text, View } from "react-native";
-import { COLORS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACING } from "../theme/tokens";
+import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
 
-export type Severidade = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
+type Severidade = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
 
-const ROTULO_SEVERIDADE: Record<Severidade, string> = {
+/**
+ * Exportado — é a única fonte da verdade pro vocabulário PT-BR de
+ * severidade. `finding-row.tsx` usa isso (em minúsculo) pro texto de
+ * accessibilityLabel em vez de manter uma cópia própria que pudesse
+ * divergir sem avisar.
+ */
+export const ROTULO_SEVERIDADE: Record<Severidade, string> = {
   CRITICAL: "Crítica",
   HIGH: "Alta",
   MEDIUM: "Média",
@@ -54,7 +60,10 @@ const TONS: Record<TomBadge, { fundo: string; texto: string }> = {
 
 // Mesmo mapa de app/web/src/components/ui/badge.tsx (ROTULO_ESTADO) — só os
 // estados que o finding/projeto realmente assume (máquinas de 4 estados).
-const ROTULO_ESTADO: Record<string, { texto: string; tom: TomBadge }> = {
+// Exportado pelo mesmo motivo de ROTULO_SEVERIDADE — fonte única pro
+// vocabulário de status (finding-row.tsx e project-card.tsx leem `.texto`
+// em minúsculo daqui em vez de manter cópias locais).
+export const ROTULO_ESTADO: Record<string, { texto: string; tom: TomBadge }> = {
   OPEN: { texto: "Aberto", tom: "perigo" },
   IN_PROGRESS: { texto: "Em andamento", tom: "atencao" },
   FIXED: { texto: "Corrigido", tom: "sucesso" },
@@ -79,8 +88,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING[1],
-    paddingHorizontal: SPACING[2],
-    paddingVertical: SPACING[1],
+    paddingHorizontal: SPACING[3],
+    paddingVertical: SPACING[1] + 2,
     borderRadius: RADIUS.full,
     alignSelf: "flex-start",
   },
@@ -91,11 +100,13 @@ const styles = StyleSheet.create({
   },
   texto: {
     fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.medium,
+    fontFamily: FONT_FAMILY.bold,
+    letterSpacing: 0.3,
     textTransform: "uppercase",
   },
   cvss: {
     fontSize: FONT_SIZE.xs,
+    fontFamily: FONT_FAMILY.mono,
     fontVariant: ["tabular-nums"],
     opacity: 0.85,
   },
