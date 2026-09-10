@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     gap: SPACING[2],
   },
   tint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.surface,
     opacity: 0.55,
   },

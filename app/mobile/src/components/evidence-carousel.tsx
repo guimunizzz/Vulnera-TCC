@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   fileBoxTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.inset,
     opacity: 0.7,
   },

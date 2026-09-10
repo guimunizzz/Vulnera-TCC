@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   blobTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.65,
   },
   title: {

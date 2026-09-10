@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   // Tint sólido por cima do blur — mesma razão da tab bar flutuante: vidro
   // fosco puro varia demais de legibilidade dependendo do que tem atrás.
   fieldTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.surface,
     opacity: 0.5,
   },

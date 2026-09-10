@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import Constants, { ExecutionEnvironment } from "expo-constants";
-import type * as NotificationsType from "expo-notifications";
+import * as Notifications from "expo-notifications";
 import { notificationsApi } from "../api/notifications.api";
 import { useAuthStore } from "../store/auth.store";
 
@@ -31,8 +31,6 @@ export function usePushRegistration(): PushStatus {
 
     async function register(): Promise<void> {
       try {
-        const Notifications: typeof NotificationsType = require("expo-notifications");
-
         if (!notificationHandlerConfigured) {
           Notifications.setNotificationHandler({
             handleNotification: async () => ({

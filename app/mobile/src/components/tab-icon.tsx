@@ -7,7 +7,7 @@
  */
 
 import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, type ColorValue } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { COLORS, RADIUS } from "../theme/tokens";
@@ -20,7 +20,7 @@ export function TabIcon({
 }: {
   name: keyof typeof Ionicons.glyphMap;
   focused: boolean;
-  color: string;
+  color: ColorValue;
   size: number;
 }) {
   const progress = useSharedValue(focused ? 1 : 0);

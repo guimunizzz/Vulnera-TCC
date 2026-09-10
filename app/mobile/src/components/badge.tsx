@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   // resto do app (nunca cor sozinha: texto sempre junto, ver comentário
   // do topo do arquivo).
   chipTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.75,
   },
   ponto: {

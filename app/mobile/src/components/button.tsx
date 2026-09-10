@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   // cinza qualquer e perde a identidade de "ação principal" que a cor
   // sólida dava.
   glassTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.accent,
     opacity: 0.38,
   },
