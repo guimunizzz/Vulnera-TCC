@@ -28,11 +28,17 @@ e persiste os alertas encontrados, e devolve três saídas:
 - **Não usa tags.**
 - **Não calcula nota A-E** nem qualquer scoring agregado do estilo
   maturidade.
-- **Não usa fila** (sem Redis/BullMQ) — ver [[ADR-030 - Execucao assincrona sem fila]].
-- **Não resolve findings por "misses consecutivos"** entre scans.
+- **Não usa fila** externa (sem Redis/BullMQ) — a fila é em memória, no
+  watchdog; ver [[ADR-030 - Execucao assincrona sem fila]].
+- **Não resolve findings por "misses consecutivos"** entre scans — a
+  comparação entre execuções existe (§11.3), mas é explícita, pedida pelo
+  usuário.
 - **Não escaneia múltiplos alvos num único scan.**
-- **Não importa os achados para o cadastro `Vulnerability`** — silo próprio,
-  ver [[ADR-029 - DAST como silo]].
+- **Não importa achados para `Vulnerability` automaticamente.** Desde
+  2026-09-09 existe **promoção**, e ela é sempre um ato humano: o backend
+  sugere um rascunho e o pentester revisa o vetor CVSS antes de salvar (§11.2).
+  Nada entra no cadastro sozinho — ver [[ADR-029 - DAST como silo]] e
+  [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]].
 
 Visível **só** para os papéis `PENTESTER` e `ADMIN`. `CLIENT` não tem item de
 menu, e qualquer rota `/dast/*` ou `/api/dast/*` forçada devolve
@@ -287,10 +293,25 @@ chars, mesmo problema já documentado no CLAUDE.md §2).
 | `url` | `String @db.Text` | não indexado — URL pode passar de 191 chars |
 | `normalizedUrl` | `String @db.Text` | idem |
 | `param`, `evidence`, `description`, `solution`, `reference` | `String?` (últimos 4 `@db.Text`) | `description`/`solution`/`reference` chegam do ZAP em HTML e são limpos (tags removidas) antes de persistir |
+| `triageStatus` | `DastTriageStatus @default(NEW)` | triagem dentro do silo (§11.1). Todo finding histórico nasceu `NEW` — a migration é aditiva |
+| `triageNote` | `String? @db.Text` | nota livre do pentester; ao contrário do status, exige commit explícito na UI |
+| `triagedById` / `triagedAt` | `String?` → `User` / `DateTime?` | quem triou e quando |
+| `promotedVulnerability` | relação `Vulnerability?` | lado inverso da promoção; a FK real mora em `Vulnerability.sourceDastFindingId` |
 
 Índices: `@@index([scanId])`, `@@index([risk])`,
+`@@index([scanId, triageStatus])` (filtro "só o que ainda não triei"),
 `@@unique([scanId, fingerprint])` — a unicidade é o que garante "reprocessar
 o mesmo scan não duplica" (`DAST-PIPE-03`).
+
+### A única ponte com o núcleo: proveniência em `Vulnerability`
+
+| Campo (em `Vulnerability`) | Tipo | Motivo |
+|---|---|---|
+| `sourceType` | `String @default("MANUAL")` | `MANUAL` = digitada por humano (todo o histórico até 2026-09-09); `DAST_IMPORT` = promovida de um finding. **Não** é enum nativo: aqui vale a filosofia padrão do schema, porque o vocabulário é do produto |
+| `sourceDastFindingId` | `String? @unique` → `DastFinding` | `@unique` = um finding vira no máximo uma `Vulnerability` (dedup garantida pelo banco). `onDelete: SetNull` = apagar o scan de origem não apaga o achado promovido: perde-se o ponteiro, nunca o registro |
+
+Nenhuma outra FK cruza o silo: `DastScan`/`DastFinding` continuam sem
+`companyId`, `projectId` ou `applicationId`.
 
 **⚠️ Enum nativo:** `DastScanStatus`/`DastRisk` usam `enum` nativo do Prisma,
 divergindo da filosofia documentada no cabeçalho do `schema.prisma`
@@ -429,13 +450,15 @@ declarada é maturidade (CLAUDE.md R5):
   daquele scan (watchdog evita que fique "fantasma" pra sempre, não o
   recupera). Ver [[ADR-030 - Execucao assincrona sem fila]].
 - **Sem agendamento/recorrência.** Todo scan é disparado manualmente.
-- **Sem deduplicação entre scans na interface.** O fingerprint é estável
-  entre execuções (mesma vulnerabilidade normalizada = mesmo hash), mas a
-  aplicação não compara automaticamente "isso já apareceu num scan
-  anterior" — cada scan é uma lista independente na tela.
-- **Sem importação para `Vulnerability`.** Achados do DAST vivem só dentro
-  do módulo. Ver [[ADR-029 - DAST como silo]] para o caminho de integração
-  futura.
+- **Sem deduplicação automática entre scans na listagem.** O fingerprint é
+  estável entre execuções (mesma vulnerabilidade normalizada = mesmo hash) e
+  a comparação de duas execuções existe desde 2026-09-09 (§11.3), mas a lista
+  de um scan continua sendo independente: ela não marca sozinha "isso já
+  apareceu antes".
+- **Importação para `Vulnerability` só por ação humana.** Desde 2026-09-09 há
+  promoção com revisão obrigatória do vetor CVSS (§11.2); não há importação
+  automática nem em lote. Ver [[ADR-029 - DAST como silo]] e
+  [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]].
 - **Sem antivírus/varredura de conteúdo malicioso** nos relatórios gerados
   pelo ZAP — a mitigação de XSS é o sandbox do iframe (§5), não uma
   varredura de conteúdo.
@@ -505,9 +528,10 @@ Duas assimetrias deliberadas no que é pré-preenchido:
 - **risco → vetor CVSS é suposição**, então vem com aviso explícito na tela.
 
 Outras garantias: um finding vira **no máximo uma** `Vulnerability` (índice
-`@unique` no banco, não checagem de aplicação); só dá pra promover pra um
-projeto em que o ator seja **membro** (promover não é porta lateral pra
-escrever em projeto alheio); e apagar o scan de origem **não apaga** a
+`@unique` no banco, não checagem de aplicação); o pentester só promove pra um
+projeto em que seja **membro** — `ADMIN` é exceção, como no `create` normal
+(promover não é porta lateral pra escrever em projeto alheio); e apagar o
+scan de origem **não apaga** a
 vulnerability promovida (`onDelete: SetNull` — perde-se o ponteiro pra origem,
 nunca o achado).
 
@@ -570,7 +594,10 @@ falharia na segunda.
 - [[ADR-028 - Execucao do ZAP via Docker spawn]]
 - [[ADR-029 - DAST como silo]]
 - [[ADR-030 - Execucao assincrona sem fila]]
+- [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]]
 - [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]
+- Vault: `docs/Vulnera/03-Produto/Modulos/DAST.md`, `Fluxo - Scan DAST`,
+  `02-Dominio/Entidades/DastScan.md` e `DastFinding.md`, `06-Dados/Enum - DAST.md`
 - `PRD_VIVO.md`, `docs/BACKLOG.md`, `docs/ROADMAP_PROMPTS.md`, `docs/DECISIONS.md`
 - `docs/evidencias/dast/README.md` — os dois relatórios reais da validação
   end-to-end (`example.com` como controle negativo, OWASP Juice Shop como

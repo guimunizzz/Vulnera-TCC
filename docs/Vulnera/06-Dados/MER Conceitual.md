@@ -42,6 +42,15 @@ User ──< Notification
 User ──< SupportTicket >── Company
 ```
 
+### DAST (silo, desde 2026-09-05)
+Execuções de varredura dinâmica e seus achados. Sem FK para `Company`/`Application`/`Project` — a única ponte com o núcleo é a promoção de um achado em `Vulnerability`.
+
+```
+User ──< DastScan ──< DastFinding
+                         │ 0..1 (promoção)
+                         └──── Vulnerability.sourceDastFindingId (UNIQUE, SetNull)
+```
+
 ### Rastreabilidade e sessão
 Entidades de segurança, auditoria e controle de acesso.
 
@@ -98,6 +107,7 @@ User ──< RefreshToken
 | Findings | Vulnerability, Evidence, VulnerabilityComment |
 | Comunicação | ChatMessage, SupportTicket, Notification |
 | Maturidade | MaturityAssessment, MaturityDomain, MaturityControl, MaturityScore |
+| DAST | DastScan, DastFinding |
 | Documentação | Report |
 | Rastreabilidade | AuditLog, PasswordResetToken, RefreshToken |
 
@@ -115,9 +125,15 @@ User ──< RefreshToken
 | Vulnerability → Evidence | 1:N | Múltiplas evidências por finding |
 | MaturityAssessment → MaturityScore | 1:N | Um score por controle por assessment |
 | MaturityDomain → MaturityControl | 1:N | Catálogo hierárquico |
+| User → DastScan | 1:N | Quem pediu o scan (ownership do módulo DAST) |
+| DastScan → DastFinding | 1:N | Cascade: apagar o scan apaga os achados dele |
+| DastFinding → Vulnerability | 0..1 | Promoção; `@unique` garante que um achado vira no máximo uma vulnerability, e `SetNull` preserva a vulnerability se o scan for apagado |
 
 ## Links relacionados
 [[Entidades e Relacionamentos]]
+[[DastScan]]
+[[DastFinding]]
+[[Enum - DAST]]
 [[ORM Prisma]]
 [[Banco de Dados MySQL]]
 [[MOC - Dominio]]

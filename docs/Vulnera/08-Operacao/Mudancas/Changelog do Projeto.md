@@ -9,6 +9,132 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-09-09 (sessão 30 — Fase 9.2: o que fazer com o resultado — triagem, promoção e comparação)
+
+### Objetivo
+
+Fechar o beco em que o módulo DAST terminava: o scan rodava, mostrava dezenas de alertas e a única saída era um PDF. O caminho passa a ser completo — **scan → triagem → promoção → remediação no fluxo normal → novo scan → comparação que prova a correção**. Antes disso, verificar (não supor) que os limites prometidos pela sessão anterior eram reais. Branch `feat/dast-zap`, commit `89e4a24`. Decisão completa em [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]].
+
+### Checkpoint 0 — a verificação achou o que a leitura não acharia
+
+O prompt pedia para **garantir** que o watchdog respeita os limites, não para confiar no código da sessão anterior. Medido na stack real: `which docker` responde dentro do container da API (DooD confirmado); três scans disparados juntos produziram **exatamente dois** containers do ZAP no `docker ps` e um na fila com alerta, e o terceiro entrou sozinho ao abrir vaga (FIFO de ponta a ponta); três scans reais concluíram com `simulated: false` em 39-52s.
+
+A medição revelou um buraco que nenhuma leitura de código revelaria: o watchdog limitava **quantos** scans rodam, mas nada limitava **quanto cada um consome**. Dois scans reais simultâneos ocupavam ~960% de 1200% de CPU e cresciam sem teto de RAM (`936MiB / 7.7GiB` e `1.39GiB / 7.7GiB` — "7.7GiB" é a VM inteira do Docker, ou seja, teto nenhum). Respeitar "no máximo 2 scans" e ainda assim travar a máquina não é respeitar limite nenhum — e o cenário em que isso dói é a apresentação para a banca.
+
+### Implementado
+
+1. **Limite de recurso por container** — `DAST_ZAP_MEMORY` (2g) e `DAST_ZAP_CPUS` (4) viram `--memory`/`--memory-swap`/`--cpus` no `docker run`. ⚠️ Os dois **precisam** andar junto com o `-Xmx`: o `zap.sh` calcula o heap como 1/4 da memória que lê em `/proc/meminfo`, e isso é a RAM do **host**, não o limite do cgroup — com `--memory` sozinho a JVM pediria ~1.9GB e morreria por OOM no meio do active scan. `heapArgForMemoryLimit()` deriva o `-Xmx` a 65% do teto. Depois da correção: `912MiB / 2GiB @ 64%`.
+2. **Dois buracos de heartbeat tapados** — o watchdog corta scan que fique 2 min sem pulsar, e duas operações ficavam fora de qualquer loop de polling: o `docker run` da primeira execução de uma máquina (pull da imagem de ~3.7GB antes de o container subir — sem correção, o watchdog abortaria justamente o primeiro scan de qualquer máquina nova; timeout do run subiu de 3 para 10 min) e o download dos relatórios (dois `httpGet` de 120s contra um silêncio máximo de 120s). `withKeepAlive()` mantém o pulso nas duas.
+3. **Triagem dentro do silo** — enum `DastTriageStatus` (`NEW`/`CONFIRMED`/`FALSE_POSITIVE`/`ACCEPTED_RISK`) + nota, autor e data em [[DastFinding]]. A UI salva **no clique**, sem botão "salvar": é a tarefa mais repetitiva da tela e dobrar os cliques dela é o atrito que faz a funcionalidade não ser usada; a nota é a exceção (texto livre precisa de commit explícito). A coluna "Triagem" substituiu "Confiança" na tabela, que foi para o detalhe expandido.
+4. **Promoção para [[Vulnerability]]** — `sourceType` (`MANUAL` | `DAST_IMPORT`) e `sourceDastFindingId` (`@unique`, FK `onDelete: SetNull`). O ponto central é o CVSS: o ZAP não fornece vetor, só `riskcode` de 0 a 3, e derivar um vetor completo disso seria **inventar** — um score inventado convincente é pior que score nenhum, porque o resto do produto trata `cvssScore` como calculado com confiança ([[RN10 - Severidade via CVSS com override justificado]]). A saída adotada é a que o próprio [[ADR-029 - DAST como silo]] apontava: o backend **sugere** (rascunho pré-preenchido, aviso visível de que é sugestão) e o pentester **revisa** antes de salvar. Consequência que vale defender na banca: **o produto continua sem uma única `Vulnerability` com CVSS estimado.** Duas assimetrias deliberadas — CWE → categoria OWASP é factual (o OWASP publica a composição do Top 10 2021) e é aplicado direto; risco → vetor CVSS é suposição e vem com aviso na tela.
+5. **Comparação entre execuções** — `GET /:id/comparable` e `GET /:id/compare?base=`, devolvendo `resolved`/`introduced`/`persisted`. O diff é por `fingerprint` = `sha256(pluginId | normalizedUrl | param)`, que **não inclui a evidência** — é isso que faz um problema não corrigido aparecer como "continua aberto" em vez de virar um par falso de "sumiu um / surgiu outro". Comparar alvos diferentes devolve `422 SCANS_TARGET_MISMATCH` em vez de um diff 100% "sumiu" + 100% "apareceu", correto e inútil.
+6. **Garantias de integridade** — um finding vira no máximo **uma** `Vulnerability` (`@unique` do banco, não checagem de aplicação; o 409 do service só existe para dar mensagem legível antes de o MySQL reclamar, com tratamento de `P2002` para duas promoções simultâneas); pentester só promove para `Project` em que seja **membro** — `ADMIN` é exceção, como no `create` normal (promover não pode virar porta lateral para escrever em projeto alheio); apagar o scan de origem **não apaga** a vulnerability promovida (`SetNull`, não `Cascade` — perde-se o ponteiro para a origem, nunca o achado).
+7. **Migration `20260909230000_add_dast_triage_and_vulnerability_provenance`**, 100% aditiva: nenhuma coluna existente alterada, todas as novas com default ou nulas. Todo finding histórico nasce `NEW` e toda vulnerability histórica nasce `MANUAL` — que é exatamente o que ela é.
+8. **Também** — criar um scan agora leva direto ao acompanhamento (antes a pessoa voltava para a lista e tinha de caçar a linha certa, com a URL truncada, perdendo o começo do progresso); falha por OOM do container passou a ser reconhecida por nome e traduzida em mensagem acionável ("aumente `DAST_ZAP_MEMORY`") em vez de virar erro de conexão genérico — só faz sentido porque o limite de RAM agora é nosso.
+
+### Testes
+
+Backend **333 → 353** (`dast-triage.test.ts` com os casos `DAST-TRI`/`DAST-PRO`/`DAST-CMP` e `RBAC-10`, incluindo `DAST-PRO-07` "apagar o scan não apaga a Vulnerability" e `DAST-PRO-03b` "duas promoções simultâneas", mais unitários de limite de recurso e tradução de erro). Frontend 34. **6 casos E2E (Playwright)** em ~8,7 min contra a stack real. `lint` verde nos dois workspaces.
+
+### Validação em navegador real
+
+Playwright agora **versionado no repositório** (`app/web/e2e/`), não mais ad-hoc no scratchpad — a extensão do Chrome segue sem conectar, como em todas as fases anteriores. Sem `webServer` na config **de propósito**: o alvo é a stack de verdade, a mesma da demonstração; por isso está deliberadamente **fora** do `npm run check`, que precisa continuar rodando sem Docker.
+
+O caso `E2E-01` é o que prova que a barra de progresso **mede em vez de estimar**: exige que o percentual suba **e** que as fases nomeadas do ZAP apareçam na tela — uma barra baseada em tempo decorrido passaria na primeira asserção e falharia na segunda. A suíte pegou um bug real que Vitest e Supertest não pegariam: link para `/vulnerabilities/:id`, rota que não existe (a do produto é `/findings/:id`) — cada metade funcionava isolada.
+
+Comparação validada com dois scans reais consecutivos do mesmo alvo: 11 persistentes, 0 resolvidos, 0 novos.
+
+### Limitações conhecidas / decisões autônomas
+
+- ⚠️ **A suíte E2E precisa rodar sozinha.** Cada caso dispara scans reais, e cada scan é uma JVM de até 2GB somada à VM do Docker, ao Chrome do Playwright e ao Node. Rodando junto com o `npm test` do backend numa máquina de 16GB, o SO matou o worker com `worker process exited unexpectedly (code=3221225794)` — que **parece** falha de teste e não é.
+- ⚠️ **Resíduo de dados conhecido:** a coluna `simulated` (migration da sessão anterior) nasceu com `DEFAULT false`, então scans simulados anteriores a 2026-09-09 aparecem como reais. São reconhecíveis pela duração de ~3s. Sem backfill — adivinhar retroativamente custa mais do que saber disto.
+- `npm install --save-dev @playwright/test` no `app/web` mexe em `package.json` e foi aprovado explicitamente pelo Rafael na abertura da sessão. O `tsconfig.json` do web passou a incluir `e2e` e `playwright.config.ts` — sem isso, erro de tipo em teste E2E não seria pego pelo `npm run build`.
+- Dois erros de lint pré-existentes corrigidos em `tests/integration/maturity.test.ts` (`token` desestruturado e nunca usado, commit `ebcae32`, Sprint 8). Fora do escopo pelo S6, mas bloqueavam o `npm run check` exigido antes de PR — a exceção que o próprio S6 prevê.
+
+### Pendente
+
+- PR da branch `feat/dast-zap` (as três sessões de DAST estão na mesma branch).
+- Fase 8 segue com o SonarQube bloqueado em Rafael.
+
+---
+
+## 2026-09-09 (sessão 29 — Fase 9.1: scan DAST real dentro da stack Docker)
+
+### Objetivo
+
+Fechar as três causas e a lacuna de produto diagnosticadas em `docs/DAST-DOCKER-GAP.md`: dentro do `docker compose`, **todo** scan caía silenciosamente no gerador simulado, sem nada na aplicação indicando isso. Branch `feat/dast-zap`, commit `7df1016`. Decisão completa em [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]].
+
+### A troca de modo de execução (e por que não contradiz o ADR-028)
+
+O ZAP passa a rodar em **modo daemon** — ainda **um container por scan** — conduzido pela API HTTP dele (spider → passivo → ativo → relatórios). Não é o daemon compartilhado que o [[ADR-028 - Execucao do ZAP via Docker spawn]] recusou: o isolamento e o `docker rm -f` por `scanId` continuam idênticos. A troca foi necessária porque o `zap-full-scan.py` é uma caixa preta sem progresso algum, e qualquer barra construída sobre ele seria estimativa de tempo fingindo ser medição.
+
+Efeito colateral relevante: como os relatórios chegam por `/OTHER/core/other/{json,html}report/` e quem grava em disco é o processo Node, o bind mount de relatório sumiu do desenho — a "Causa 3" (tradução de caminho host ↔ container) **deixou de existir** em vez de ser contornada.
+
+### Implementado
+
+1. **Backend** — `zap-runner.service.ts` com `runRealScan` reescrito (daemon + API HTTP), `api.key` aleatória por scan (nunca `api.disablekey`), fallback simulado com mensagem amigável e `getDockerStatus` com cache. Validação de SSRF, path traversal e `simulateScan` preservados sem alteração.
+2. **`dast-watchdog.service.ts` (novo)** — fila FIFO em memória, teto de 2 scans simultâneos (`DAST_MAX_CONCURRENT_SCANS`), abort de scan sem pulso por 2 min e anel dos últimos 20 alertas. **Singleton injetado pela factory** — uma instância por factory daria "2 por instância", que é o mesmo que não ter limite.
+3. **`dast-scan.service.ts`** — `create()` enfileira em vez de disparar; progresso persistido com throttle (só quando a fase muda ou o percentual anda 1 ponto, no máximo 1x/s); `getStatus()` alimenta o banner da UI.
+4. **`GET /api/dast/scans/status`** — rota literal registrada **antes** de `/:id` (CLAUDE.md §5.6).
+5. **Migration `add_dast_progress_and_simulated_flag`** — `progress`, `phase`, `simulated` e `warningMessage` em [[DastScan]], os quatro expostos no DTO. São coluna e não estado em memória porque o scan roda em background e a UI acompanha por polling: quem responde o `GET /dast/scans/:id` pode ser outro processo (ou o mesmo depois de um restart).
+6. **Infra** — `Dockerfile` da API com `apk add docker-cli` e usuário `vulnera` no GID 0 (o socket do Docker Desktop é `root:root 0660`; sem isso, `permission denied` e volta pro simulado — em host Linux o certo é `group_add` com o GID do grupo `docker`). `docker-compose.yml` com o socket do host montado, rede fixa `vulnera-net`, volume de relatórios e as variáveis do módulo.
+7. **Frontend** — `dast-status-banner.tsx` (novo) mostra estado do motor, vagas ocupadas, fila e avisos do watchdog **antes** de o usuário disparar o scan; barra de progresso com percentual real e nome da fase na listagem e no detalhe, posição na fila, selo "simulado" e alerta explicando o motivo. Polling de 5s → 3s (cadência com que o runner atualiza o percentual).
+
+### Armadilha registrada
+
+O ZAP em daemon é um **proxy** antes de ser servidor de API e devolve **502** se o header `Host` não bater com o endereço **e a porta** em que ele escuta. Publicar porta efêmera não funciona — por isso o runner usa a mesma porta dos dois lados no modo host, e o nome do container na 8080 no modo rede.
+
+### Testes
+
+Backend **315 → 333**. `zap-runner.service.test.ts` reescrito para o fluxo novo (mock de `child_process` e de `http`; `SEC-01..05` intactos), `dast-watchdog.service.test.ts` novo (`DAST-WD-01..07`), `dast.test.ts` +4 (`DAST-PROG-01`, `DAST-SIM-01`, `DAST-STAT-01` e a ordem da rota literal). RBAC passou a cobrir 8 rotas.
+
+### Validação
+
+`example.com` em 47s no modo host, com 7 alertas reais do ZAP 2.17.0. Na stack completa, 3 scans disparados juntos ficaram em "rodando=2/2 fila=1" por 134s e os três terminaram `COMPLETED`/100% com `simulated: false`.
+
+### Pendente
+
+- O que fazer com o resultado do scan — resolvido na sessão seguinte (9.2).
+
+---
+
+## 2026-09-05 (sessão 28 — Fase 9: módulo DAST com OWASP ZAP + stack Docker unificada na porta 8086)
+
+### Objetivo
+
+Dar ao `PENTESTER`/`ADMIN` um fluxo de **um campo e um botão**: informa uma URL, a API sobe um container OWASP ZAP, roda spider + active scan, normaliza os alertas e devolve três saídas — findings estruturados na interface, o HTML original do ZAP, e um PDF client-side no mesmo estilo dos relatórios Executivo/Técnico. Módulo novo, **fora da numeração de fases do BACKLOG v4** (entrada posterior, prompt dado numa sessão dedicada). Branch `feat/dast-zap`, commit `72af22e`. Ver [[DAST]] e `docs/DAST.md`.
+
+### Implementado — backend
+
+1. **Schema** — [[DastScan]] e [[DastFinding]] com enums nativos `DastScanStatus`/`DastRisk` (exceção consciente à filosofia #3 do `schema.prisma`, "sem enums nativos"; sinalizada ao Rafael **antes** da migration e registrada nos comentários do próprio schema, que são o registro efetivo da decisão). Fingerprint `sha256(pluginId | normalizedUrl | param)` evita duplicar o mesmo achado entre execuções — URLs com ID variável são normalizadas antes do hash (`/users/123` e `/users/999` colapsam no mesmo fingerprint).
+2. **`zap-runner.service.ts`** — `execFile("docker", [...])`, **nunca shell**, imune a command injection. Validação de SSRF antes de qualquer `docker run` (bloqueia loopback e faixas privadas por padrão; liberável só em dev via `DAST_ALLOW_PRIVATE_TARGETS`). Critério de sucesso é a existência e parseabilidade do `report.json`, **nunca o exit code** do `zap-full-scan.py`.
+3. **`dast-findings.service.ts`** — parsing e normalização dos alertas; `description`/`solution`/`reference` passam por `stripHtml()` antes de persistir (o ZAP devolve esses campos em HTML).
+4. **API com RBAC completo** — `requireRole("PENTESTER","ADMIN")` nas rotas e ownership fina no service (cada PENTESTER só vê os próprios scans); path traversal bloqueado em `resolveReportPath` (whitelist de extensão + prefixo de `REPORTS_DIR`).
+5. **Watchdog de boot** — scan `QUEUED`/`RUNNING` encontrado ao iniciar só pode ser órfão de um restart anterior; é marcado `FAILED` antes de a API aceitar tráfego (sem fila, execução é fire-and-forget dentro do próprio processo — [[ADR-030 - Execucao assincrona sem fila]]).
+6. **Silo próprio** — nenhuma FK para `Vulnerability`/`Project`/`Application`/`Company` ([[ADR-029 - DAST como silo]]). O ZAP não fornece vetor CVSS (só `riskcode` 0-3) e inventar um contaminaria o cálculo hoje 100% confiável do núcleo, validado contra os vetores oficiais do FIRST. *(Revisto na sessão 30: a promoção existe, mas o vetor é sugerido e revisado por humano — ver [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]].)*
+
+### Implementado — frontend e infra
+
+7. **Telas** com o design system da Fase 6.5 (zero Radix): `/dast` (lista com polling), `/dast/scans/:id` (detalhe com cronômetro e tabela expansível), `/dast/scans/:id/report` (HTML do ZAP em `<iframe sandbox>`, fora do `AppLayout`). Item "DAST" na sidebar visível só para ADMIN/PENTESTER; CLIENT recebe 403 ao forçar a URL. `StatusBadge` ganhou `QUEUED`/`RUNNING`/`FAILED`/`CANCELLED`.
+8. **PDF client-side** (`dast-report.ts`) reaproveitando o padrão de `pdf-lib` dos relatórios Executivo/Técnico.
+9. **Stack Docker unificada na porta 8086** — o serviço web passou de `3000:3000` para `8086:3000` (só o mapeamento do host muda) e o `CORS_ORIGIN` da API acompanhou, porque é o `Origin` que o navegador envia, não a porta interna. Ver [[ADR-022 - Stack completa no Docker Compose]].
+
+### Bugs reais encontrados e corrigidos
+
+| Onde | O quê |
+|---|---|
+| `dast-scan.service.ts` | Corrida genuína: cancelar um scan simulado não interrompia o `setTimeout` interno, e ele tentava persistir findings ~3s depois num registro que já não era mais `RUNNING`. A mesma corrida existiria com Docker real, numa janela menor. |
+| `zap-runner.service.ts` | `isDockerAvailable()` classificava Docker como indisponível com timeout de 5s (Docker Desktop/WSL2 "frio" leva ~6s na primeira chamada), derrubando scans reais pro fallback simulado por engano. Subido para 10s. |
+| `Dockerfile` (api e web) | `docker compose up --build` quebrava: os Dockerfiles rodam `npm install` sem lockfile (limitação do [[ADR-022 - Stack completa no Docker Compose]]) e o npm 10.9.8 da imagem `node:22-alpine` tem bug conhecido no Arborist (`Cannot read properties of null (reading 'edgesOut')`). Corrigido com `npm install -g npm@11` antes do install — sem tocar em lockfile nem usar `--legacy-peer-deps`. |
+
+### Testes
+
+Backend **269 → 315** (42 novos: `SEC-01..05`, `RBAC-01..09`, `PIPE-01..05`, `LIFE-01..04`, mais o fluxo feliz completo), cobertura 89-96% nos três services novos, **zero dependência de Docker na suíte** (`DAST_FORCE_SIMULATE=true` no `.env.test`).
+
+### Evidências
+
+`docs/evidencias/dast/` guarda dois relatórios ZAP reais com um contraste deliberado — controle negativo (`example.com`, 13 alertas só de cabeçalho ausente) e controle positivo (OWASP Juice Shop, 16 alertas incluindo *Backup File Disclosure* com 31 instâncias).
+
 ## 2026-08-18 (sessão 27 — Fix: landing pública em "/" + botão de login na navbar)
 
 ### Objetivo

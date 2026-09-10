@@ -897,3 +897,40 @@ tempo decorrido passaria na primeira asserção e falharia na segunda.
 Testes: 333 → **353** no backend (`dast-triage.test.ts` com 16 casos, mais 4
 unitários de limite de recurso), 34 no frontend, 6 E2E. `lint` verde nos dois
 workspaces.
+
+### Adendo — 2026-09-10: o vault entrou no dia (sessão de documentação)
+
+Sessão só de documentação, sem uma linha de código tocada. O módulo DAST
+estava documentado no repositório (`docs/DAST.md`, ADRs 028-032, PRD,
+BACKLOG, DECISIONS) mas **não no vault** (`docs/Vulnera/`), que o `CLAUDE.md`
+§0 define como fonte de verdade do domínio — o changelog do vault parava em
+2026-08-18 e nenhuma nota de entidade, módulo, fluxo ou enum conhecia o DAST.
+
+Criadas: `02-Dominio/Entidades/DastScan.md` e `DastFinding.md`,
+`03-Produto/Modulos/DAST.md`, `03-Produto/Fluxos/Fluxo - Scan DAST.md`,
+`06-Dados/Enum - DAST.md`.
+
+Atualizadas: `Changelog do Projeto` (sessões 28, 29 e 30),
+`Contexto Mestre v4`, `Vulnerability`, `MER Conceitual`,
+`Entidades e Relacionamentos`, `Matriz de Permissoes`, `Jornada - Pentester`,
+`OWASP ZAP`, `Docker Compose`, `Dockerfiles`, `Roadmap Fases`,
+`Decisoes Recentes`, `Status de Preenchimento do Vault`, `Testes`,
+`Evidencias para Banca` e os MOCs de Domínio, Produto e Vulnera.
+
+Correções por R5 (o código é a verdade), listadas para não passarem em branco:
+
+- `docs/DAST.md` §1 e §10 ainda afirmavam que o módulo **não** importa achados
+  para `Vulnerability` — falso desde o §11 do mesmo arquivo (Fase 9.2). §6
+  também não tinha as colunas de triagem nem a proveniência.
+- `09-TCC/Testes.md` dizia que Playwright estava fora do escopo — voltou em
+  2026-09-09.
+- `05-Infra-DevSecOps/OWASP ZAP.md` descrevia só o ZAP manual do
+  [[ADR-007 - Sonar informativo e ZAP manual]]; agora separa os **dois papéis**
+  (ferramenta de DevSecOps × motor do módulo DAST).
+- `05-Infra-DevSecOps/Docker Compose.md` listava MySQL/SonarQube/Mailhog e
+  "código roda local"; a stack inteira sobe no compose desde o ADR-022.
+- `08-Operacao/Backlog/Roadmap Fases.md` estava congelado em 2026-07-26 (Fases
+  3-8 como backlog) e tinha `\n` literais que impediam a tabela de renderizar.
+- `ADR-001` (plataforma **não** executa ataque real) ganhou um aviso de tensão
+  com o que o DAST faz. **Status não alterado** — rebaixar ADR é decisão do
+  Rafael (§0.2 S3).

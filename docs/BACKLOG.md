@@ -215,6 +215,7 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | 9.2.6 | Testes de integração e unidade                               | ✅ 333 → **353** (`dast-triage.test.ts`: 16 casos) |
 | 9.2.7 | Playwright E2E contra a stack real                           | ✅ 6 casos; **pegou um bug que Vitest/Supertest não pegariam** (rota `/vulnerabilities/:id` inexistente) |
 | 9.2.8 | ADR-032 + `DAST.md` §11 + docs vivos                         | ✅ |
+| 9.2.9 | **Sincronizar o vault (`docs/Vulnera/`) com o módulo DAST**   | ✅ 2026-09-10 — o vault era o único documento vivo que ainda não sabia da existência do DAST. Notas novas: `DastScan`, `DastFinding`, `DAST` (módulo), `Fluxo - Scan DAST`, `Enum - DAST`; changelog do vault com as sessões 28/29/30; `Vulnerability`, `MER`, `Matriz de Permissoes`, `Jornada - Pentester`, `OWASP ZAP`, `Docker Compose`, `Dockerfiles`, `Testes`, `Evidencias para Banca`, `Roadmap Fases` e `Contexto Mestre v4` atualizados. Contradições internas do `DAST.md` (§1 e §10 diziam "não importa para Vulnerability" depois do §11 existir) corrigidas |
 
 ---
 
@@ -227,7 +228,7 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | Tickets de suporte                                             | 2026-07-26 | Escopo administrativo sem valor de demo     |
 | E-mail transacional (Nodemailer/Mailhog)                       | 2026-07-26 | `AuditLog` cobre a rastreabilidade          |
 | Prometheus + Grafana                                           | 2026-07-26 | Observabilidade não é critério de avaliação |
-| Testes E2E (Playwright)                                        | 2026-07-26 | Integração + smoke manual cobrem            |
+| ~~Testes E2E (Playwright)~~ **revertido**                      | 2026-07-26 → **de volta em 2026-09-09** | Voltou ao escopo na Fase 9.2: `app/web/e2e/` roda contra a stack real; fora do `npm run check` |
 | Viewer de PDF no mobile                                        | 2026-08-03 | Corte do escopo mobile                      |
 | Maturidade completa estilo SAMM                                | 2026-08-03 | Vira checklist simples                      |
 | Varredura antivírus/malware no upload de Evidence               | 2026-08-05 | Validação é de tipo (magic number) e tamanho, não de conteúdo malicioso — limitação conhecida, documentar no README/DEMO |

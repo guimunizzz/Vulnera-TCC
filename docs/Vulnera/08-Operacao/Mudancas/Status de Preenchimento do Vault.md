@@ -21,6 +21,8 @@
 - [x] Fora do Escopo
 
 ## 02-Dominio/Entidades
+- [x] DastScan *(2026-09-10)*
+- [x] DastFinding *(2026-09-10)*
 - [x] Company
 - [x] User
 - [x] Subscription
@@ -92,6 +94,7 @@
 - [x] Regras de Ownership
 
 ## 03-Produto/Modulos
+- [x] DAST *(2026-09-10)*
 - [x] Autenticacao
 - [x] Aplicacoes
 - [x] Assinaturas
@@ -121,6 +124,7 @@
 - [x] Fluxo - Geracao de Relatorio
 - [x] Fluxo - Revalidacao
 - [x] Fluxo - Uso da IA
+- [x] Fluxo - Scan DAST *(2026-09-10)*
 
 ## 03-Produto/Jornadas
 - [x] Jornada - Cliente
@@ -191,6 +195,7 @@
 - [x] Enum - SubscriptionStatus
 - [x] Enum - TicketStatus
 - [x] Enum - AnalysisType e Level
+- [x] Enum - DAST *(2026-09-10)*
 
 ## 07-Decisoes
 - [x] ADR-001
@@ -237,6 +242,23 @@
 `09-TCC` concluído ✅
 
 **Próxima frente**: implementação do código seguindo o roadmap de fases.
+
+---
+
+## Atualização — 2026-09-10 (módulo DAST entra no vault)
+
+O vault estava completo para o escopo de abril/2026, mas o módulo [[DAST]] (Fases 9 / 9.1 / 9.2, setembro/2026) existia só no código e nos documentos do repositório (`docs/DAST.md`, ADRs 028-032). Notas criadas nesta passagem:
+
+| Nota | Pasta |
+|---|---|
+| [[DastScan]], [[DastFinding]] | `02-Dominio/Entidades` |
+| [[DAST]] | `03-Produto/Modulos` |
+| [[Fluxo - Scan DAST]] | `03-Produto/Fluxos` |
+| [[Enum - DAST]] | `06-Dados` |
+
+Notas existentes atualizadas: [[Contexto Mestre v4]], [[Vulnerability]] (proveniência), [[Entidades e Relacionamentos]], [[MER Conceitual]], [[Matriz de Permissoes]], [[Jornada - Pentester]], [[OWASP ZAP]] (os dois papéis), [[Docker Compose]], [[Dockerfiles]], [[Roadmap Fases]], [[Decisoes Recentes]], [[Changelog do Projeto]] (sessões 28-30), [[Testes]], [[Evidencias para Banca]], [[ADR-001 - Plataforma foca gestao e nao execucao real]] (tensão registrada) e os MOCs de Domínio e Produto.
+
+`07-Decisoes` tem **31 ADRs** (numeradas até a 032; a 016 não existe) — o texto acima que fala em "7 ADRs" é registro de abril/2026.
 
 ---
 
