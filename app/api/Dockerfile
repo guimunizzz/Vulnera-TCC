@@ -12,7 +12,14 @@ WORKDIR /app
 # bcrypt (hash de senha) tem binding nativo em C++ — precisa de toolchain
 # de compilação pra instalar em cima do Alpine (musl), senão o npm install
 # falha tentando compilar o addon.
-RUN apk add --no-cache python3 make g++
+#
+# docker-cli (adicionado em 2026-09-09): o módulo DAST sobe UM container do
+# OWASP ZAP por scan via `docker run`. Sem o binário aqui dentro, o
+# `execFile("docker", ...)` do zap-runner falha com ENOENT e TODO scan cai no
+# fallback simulado — a "Causa 1" de docs/DAST-DOCKER-GAP.md §3. É só o
+# CLIENTE: quem executa os containers é o daemon do HOST, alcançado pelo
+# socket montado no docker-compose.yml (padrão DooD, ADR-028).
+RUN apk add --no-cache python3 make g++ docker-cli
 
 # npm 10.9.8 (versão que vem junto do node:22-alpine) tem um bug conhecido no
 # resolvedor de dependências (Arborist) que quebra `npm install` sem lockfile
@@ -33,9 +40,20 @@ COPY src ./src
 RUN npx prisma generate
 RUN npm run build
 
-# Usuário não-root — boa prática de segurança em container
+# Usuário não-root — boa prática de segurança em container.
+#
+# ⚠️ O `vulnera` entra TAMBÉM no grupo root (GID 0). Motivo: no Docker Desktop
+# o socket montado (/var/run/docker.sock) é `srw-rw---- root root`, então sem
+# GID 0 o processo recebe "permission denied" ao falar com o daemon e todo
+# scan cai no simulado — a "Causa 2" de docs/DAST-DOCKER-GAP.md §3. É menos
+# invasivo que rodar o container inteiro como root, mas não é gratuito: quem
+# fala com o socket do Docker controla o daemon do host. Consequência aceita e
+# registrada em ADR-031. Em host Linux o socket costuma ser root:docker (GID
+# 999/998) — nesse caso use `group_add` no compose com o GID local, em vez
+# deste GID 0.
 RUN addgroup -S vulnera && adduser -S vulnera -G vulnera \
-  && mkdir -p uploads && chown -R vulnera:vulnera /app
+  && addgroup vulnera root \
+  && mkdir -p uploads dast-reports && chown -R vulnera:vulnera /app
 USER vulnera
 
 EXPOSE 3001

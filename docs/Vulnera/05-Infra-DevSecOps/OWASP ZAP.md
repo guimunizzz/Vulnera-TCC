@@ -9,6 +9,25 @@ status: ativo
 
 # OWASP ZAP
 
+> [!warning] Nota atualizada em 2026-09-10 — o ZAP tem **dois papéis** desde set/2026
+> Esta nota descrevia apenas o uso **manual** do ZAP como ferramenta de DevSecOps contra a própria aplicação ([[ADR-007 - Sonar informativo e ZAP manual]]), que continua válido e está documentado abaixo.
+> A partir da Fase 9 (2026-09-05), o ZAP também é o **motor de um módulo do produto**: o [[DAST]] sobe um container do ZAP por scan, conduzido pela API HTTP dele, contra a URL que o pentester informar. Ver a seção "Papel 2" e `docs/DAST.md`.
+
+## Os dois papéis, lado a lado
+
+| | **Papel 1 — ferramenta de DevSecOps** | **Papel 2 — motor do módulo DAST** |
+|---|---|---|
+| Alvo | A própria aplicação Vulnera | Qualquer URL que o pentester informar |
+| Quem dispara | A equipe, manualmente, no terminal | O `PENTESTER`/`ADMIN`, pela interface do produto |
+| Quando | Ao fim de fases e antes de marcos | Sob demanda, a qualquer momento |
+| Como roda | `zap-baseline.py` num container efêmero | `zap.sh -daemon` num container por scan, dirigido pela API HTTP |
+| Saída | Relatório HTML guardado como evidência do TCC | [[DastFinding]] persistidos + HTML do ZAP + PDF client-side |
+| Decisão | [[ADR-007 - Sonar informativo e ZAP manual]] | [[ADR-028 - Execucao do ZAP via Docker spawn]], [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]] |
+
+---
+
+# Papel 1 — ZAP como ferramenta de DevSecOps
+
 ## Objetivo
 Realizar testes dinâmicos de segurança (DAST) na API do Vulnera para identificar vulnerabilidades em tempo de execução — injeções, configurações incorretas, headers ausentes, endpoints expostos. No TCC, serve como evidência prática de teste de segurança aplicado ao próprio produto.
 
@@ -96,25 +115,74 @@ Exemplos de checks relevantes para o Vulnera:
    - corrigir o que for corrigível antes da próxima fase
 4. Guardar relatório como evidência — mencionar no capítulo de DevSecOps do TCC
 
-## Simplificações do TCC
+## Simplificações do TCC (papel 1)
 - apenas Baseline Scan (passivo) como padrão — Full Scan exigiria ambiente dedicado
 - sem autenticação configurada no ZAP para rotas protegidas — varredura das rotas públicas principalmente
 - frequência manual, não automatizada — viabilidade acadêmica
 - relatórios armazenados localmente, não em servidor de artefatos
 
-## Riscos e cuidados
+## Riscos e cuidados (papel 1)
 - rodar Full Scan em ambiente de desenvolvimento pode danificar dados de teste — usar apenas Baseline no ambiente padrão
 - o ZAP image pode demorar para baixar na primeira vez (~500 MB)
 - `host.docker.internal` funciona em Mac/Windows; em Linux pode ser necessário usar `--network host` ou o IP da máquina
 - relatórios antigos devem ser versionados com indicação da fase para rastreabilidade
 
-## Valor para a banca
+---
+
+# Papel 2 — ZAP como motor do módulo DAST
+
+> Visão de produto em [[DAST]]; passo a passo, troubleshooting e comandos exatos em `docs/DAST.md`.
+
+## Como o produto executa o ZAP
+
+- **Um container por scan**, nomeado `vulnera-zap-<scanId>` e destruído ao fim ou no cancelamento (`docker rm -f`). Nunca um daemon compartilhado entre scans — isolamento é o ponto ([[ADR-028 - Execucao do ZAP via Docker spawn]]).
+- **Modo daemon (`zap.sh -daemon`), conduzido pela API HTTP do ZAP**: spider → scan passivo → scan ativo → relatórios. A troca do `zap-full-scan.py` para o daemon aconteceu na Fase 9.1 porque o script empacotado é uma caixa preta sem progresso — qualquer barra construída sobre ele seria estimativa de tempo fingindo ser medição ([[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]]).
+- **`api.key` aleatória por scan** — nunca `api.disablekey`.
+- **DooD (Docker-out-of-Docker)**: a imagem da API traz `docker-cli` e o socket do host é montado no container. Risco assumido e documentado, não eliminado.
+- **`execFile("docker", [...])`, jamais shell** — imune a command injection.
+- **Fallback simulado** quando o Docker não está disponível; o registro nasce com `simulated = true` e a interface **declara isso** em vez de fingir um scan real.
+
+## Limites operacionais
+
+| Variável | Papel |
+|---|---|
+| `DAST_MAX_CONCURRENT_SCANS` | Teto de scans simultâneos (padrão 2); o excedente entra em fila FIFO no watchdog |
+| `DAST_ZAP_MEMORY` / `DAST_ZAP_CPUS` | `--memory`/`--memory-swap`/`--cpus` do container. ⚠️ Precisam andar junto com o `-Xmx` derivado: o `zap.sh` calcula o heap a partir da RAM do **host**, não do limite do cgroup — sozinho, o `--memory` só troca "sem teto" por "morre de OOM no meio do active scan" |
+| `DAST_HEARTBEAT_TIMEOUT_MS` | Silêncio máximo antes de o watchdog abortar um scan (2 min) |
+| `DAST_SCAN_TIMEOUT_MS`, `DAST_ZAP_STARTUP_TIMEOUT_MS`, `DAST_ZAP_SPIDER_MAX_DURATION_MIN` | Tempos-limite de execução, de subida do daemon e do spider |
+| `DAST_ALLOW_PRIVATE_TARGETS` | Libera loopback/faixas privadas — **só em desenvolvimento** |
+| `DAST_FORCE_SIMULATE` | Força o gerador simulado; é o que mantém a suíte de testes independente de Docker |
+| `DAST_ZAP_IMAGE`, `DAST_ZAP_NETWORK`, `DAST_REPORTS_DIR` | Imagem, rede e destino dos relatórios |
+
+Medição real que motivou os limites de recurso (Fase 9.2): **antes**, dois scans simultâneos ocupavam ~960% de 1200% de CPU e cresciam sem teto de RAM (`936MiB` e `1.39GiB` contra os `7.7GiB` da VM inteira do Docker); **depois**, `912MiB / 2GiB @ 64%`.
+
+## Segurança do papel 2
+
+- **SSRF**: a URL é validada antes de qualquer `docker run` — loopback e faixas privadas bloqueados por padrão. Limitação conhecida: a checagem é sobre o literal da URL, não sobre o DNS resolvido (DNS rebinding não é coberto).
+- **Path traversal**: leitura de relatório só por `resolveReportPath` (whitelist de extensão + prefixo obrigatório do diretório de relatórios).
+- **XSS do relatório de terceiro**: o HTML original do ZAP é servido em `<iframe sandbox>`, não injetado na página.
+- **Acesso ao socket Docker pela API**: o maior risco do módulo, aceito e registrado no [[ADR-028 - Execucao do ZAP via Docker spawn]].
+
+## ⚠️ Ética e escopo
+
+O papel 2 executa **ataque ativo contra o alvo informado**. Só se aponta para alvos próprios ou com autorização — em laboratório, o OWASP Juice Shop. Isso põe em tensão o [[ADR-001 - Plataforma foca gestao e nao execucao real]], que segue vigente e não foi revisado; a tensão está registrada na própria ADR-001.
+
+---
+
+## Valor para a banca (os dois papéis)
+- **papel 2:** o produto não só prega segurança, ele **executa** varredura dinâmica de verdade — é o módulo em que o Vulnera deixa de ser apenas gestão
 - demonstra teste dinâmico de segurança além da análise estática
 - relatório HTML é evidência visual direta de que segurança foi testada
 - alinha com o propósito do próprio produto (plataforma de gestão de segurança)
 - diferencia o TCC como projeto que pratica o que prega
 
 ## Links relacionados
+[[DAST]]
+[[DastScan]]
+[[DastFinding]]
+[[Fluxo - Scan DAST]]
+[[ADR-028 - Execucao do ZAP via Docker spawn]]
+[[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]]
 [[SonarQube]]
 [[GitHub Actions CI]]
 [[Seguranca da Aplicacao]]

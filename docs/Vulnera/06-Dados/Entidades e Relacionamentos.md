@@ -133,6 +133,8 @@ Catálogo completo das entidades do domínio Vulnera com seus campos principais,
 | `recommendation` | text | - |
 | `status` | VulnerabilityStatus | NOT NULL |
 | `ai_assisted` | boolean | DEFAULT false |
+| `source_type` | string | DEFAULT `MANUAL`; `MANUAL \| DAST_IMPORT` (proveniência, 2026-09-09) |
+| `source_dast_finding_id` | uuid? | FK → DastFinding, **UNIQUE**, `onDelete: SetNull` |
 | `created_by` | uuid | FK → User |
 | `assigned_to` | uuid? | FK → User |
 | `created_at` | datetime | DEFAULT now() |
@@ -243,6 +245,56 @@ Catálogo completo das entidades do domínio Vulnera com seus campos principais,
 
 ---
 
+## Entidades do módulo DAST
+
+> [!info] Adicionadas em 2026-09-05 (Fase 9), estendidas em 2026-09-09 (Fases 9.1 e 9.2)
+> Silo consciente: **nenhuma FK para Company, Application ou Project** ([[ADR-029 - DAST como silo]]) — a única ponte com o núcleo é `Vulnerability.source_dast_finding_id`, criada pela promoção ([[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]).
+> Os nomes abaixo seguem a convenção conceitual snake_case desta nota; no `schema.prisma` os campos são camelCase (`targetUrl`, `triageStatus`, …) e sem `@map`.
+
+### DastScan
+| Campo | Tipo | Restrição |
+|---|---|---|
+| `id` | cuid | PK |
+| `target_url` | string | `VarChar(2048)`, validado contra SSRF |
+| `status` | DastScanStatus | enum nativo — `QUEUED \| RUNNING \| COMPLETED \| FAILED \| CANCELLED` |
+| `requested_by_id` | cuid | FK → User |
+| `container_name` | string? | `vulnera-zap-<id>`, persistido para permitir `docker rm -f` |
+| `started_at` / `finished_at` / `duration_ms` | datetime? / int? | Medição da execução |
+| `error_message` | text? | Só em `FAILED` |
+| `warning_message` | text? | Concluiu **com ressalva** (tipicamente fallback simulado) |
+| `html_report_path` / `json_report_path` | string? | Leitura sempre via `resolveReportPath` (whitelist + prefixo) |
+| `progress` | int | 0-100, DEFAULT 0 — percentual real das fases |
+| `phase` | string? | Rótulo de UI (`SPIDER`, `PASSIVE`, `ACTIVE`, `REPORT`…) — de propósito não é enum |
+| `simulated` | boolean | DEFAULT false — resultado veio do gerador de fallback |
+| `alerts_high/medium/low/info` | int | DEFAULT 0 — contadores desnormalizados |
+| `created_at` / `updated_at` | datetime | DEFAULT now() / updatedAt |
+
+Índices: `[requested_by_id]`, `[status]` e o composto `[status, target_url(191)]` para o lock "um scan por alvo de cada vez" — o prefixo de 191 chars é obrigatório porque o índice completo de um `VarChar(2048)` estoura o teto de bytes por índice do MySQL.
+
+### DastFinding
+| Campo | Tipo | Restrição |
+|---|---|---|
+| `id` | cuid | PK |
+| `scan_id` | cuid | FK → DastScan, `onDelete: Cascade` |
+| `fingerprint` | string | `sha256(plugin_id \| normalized_url \| param)` — 64 chars hex. **UNIQUE junto com `scan_id`** |
+| `plugin_id` | string | Identificador do alerta no ZAP |
+| `title` | string | NOT NULL |
+| `risk` | DastRisk | enum nativo — `HIGH \| MEDIUM \| LOW \| INFO` |
+| `confidence` | string | Confiança declarada pelo ZAP |
+| `cwe_id` / `wasc_id` | string? | Taxonomias externas; o CWE alimenta a categoria OWASP sugerida na promoção |
+| `url` / `normalized_url` | text | Bruta e normalizada (a normalizada entra no fingerprint) |
+| `param` | string? | Parâmetro afetado |
+| `evidence` | text? | Trecho que o ZAP considerou prova — **fora do fingerprint de propósito** |
+| `description` / `solution` / `reference` | text? | Texto do ZAP, passado por `stripHtml()` antes de persistir |
+| `triage_status` | DastTriageStatus | enum nativo, DEFAULT `NEW` |
+| `triage_note` | text? | Nota livre do pentester |
+| `triaged_by_id` / `triaged_at` | cuid? / datetime? | Autor e data da triagem |
+| `created_at` | datetime | DEFAULT now() |
+
+Índices: `[scan_id]`, `[risk]` e `[scan_id, triage_status]` (filtro "só o que ainda não triei").
+
+---
+
 ## Entidades de rastreabilidade
 
 ### Report
@@ -292,6 +344,9 @@ Catálogo completo das entidades do domínio Vulnera com seus campos principais,
 
 ## Links relacionados
 [[MER Conceitual]]
+[[DastScan]]
+[[DastFinding]]
+[[Enum - DAST]]
 [[ORM Prisma]]
 [[Banco de Dados MySQL]]
 [[Campos Criticos]]

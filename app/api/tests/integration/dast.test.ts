@@ -6,7 +6,7 @@
  * depende de Docker — todo scan roda o fallback simulado (~3s, 8 alertas
  * representativos, ver zap-runner.service.ts).
  *
- *   DAST-RBAC-01..07  CLIENT recebe 403 em cada uma das 7 rotas
+ *   DAST-RBAC-01..08  CLIENT recebe 403 em cada uma das 8 rotas
  *   DAST-RBAC-08      PENTESTER não acessa scan de outro PENTESTER
  *   DAST-RBAC-09      ADMIN acessa todos
  *   DAST-LIFE-01      scan concorrente no mesmo alvo -> 409
@@ -15,6 +15,9 @@
  *   DAST-LIFE-04      watchdog marca órfãos no boot
  *   DAST-PIPE-03      reprocessar o mesmo scan não duplica
  *   DAST-PIPE-04      contadores batem com SELECT/groupBy
+ *   DAST-PROG-01      progresso/fase chegam a 100/terminal no DTO
+ *   DAST-SIM-01       resultado simulado é carimbado e explicado no DTO
+ *   DAST-STAT-01      GET /status expõe limite de concorrência e estado do Docker
  */
 
 import request from "supertest";
@@ -69,7 +72,7 @@ beforeEach(async () => {
 });
 
 describe("DAST — RBAC", () => {
-  it("DAST-RBAC-01..07 — CLIENT recebe 403 em todas as 7 rotas", async () => {
+  it("DAST-RBAC-01..08 — CLIENT recebe 403 em todas as 8 rotas", async () => {
     const { clientToken } = await seedActors();
     const auth = { Authorization: `Bearer ${clientToken}` };
     const fakeId = "id-que-nao-existe";
@@ -82,6 +85,7 @@ describe("DAST — RBAC", () => {
       request(app).get(`/api/dast/scans/${fakeId}/findings`).set(auth),
       request(app).get(`/api/dast/scans/${fakeId}/report/html`).set(auth),
       request(app).get(`/api/dast/scans/${fakeId}/report/data`).set(auth),
+      request(app).get("/api/dast/scans/status").set(auth),
     ];
 
     const results = await Promise.all(calls);
@@ -306,5 +310,69 @@ describe("DAST — fluxo feliz completo", () => {
     expect(reportHtmlRes.headers["content-type"]).toContain("text/html");
     expect(reportHtmlRes.headers["content-security-policy"]).toBe("sandbox");
     expect(reportHtmlRes.headers["x-content-type-options"]).toBe("nosniff");
+  });
+});
+
+describe("DAST — progresso, resultado simulado e status do módulo", () => {
+  it("DAST-PROG-01 — o DTO carrega progresso e fase, e termina em 100%", async () => {
+    const { pentesterAToken } = await seedActors();
+    const createRes = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${pentesterAToken}`)
+      .send({ targetUrl: "https://alvo-progresso.test" });
+
+    expect(createRes.status).toBe(201);
+    // Recém-criado: a barra existe e está zerada (não é undefined — a UI
+    // desenharia NaN%).
+    expect(createRes.body.progress).toBe(0);
+
+    const final = await waitForTerminalStatus(pentesterAToken, createRes.body.id);
+    expect(final.status).toBe("COMPLETED");
+    expect(final.progress).toBe(100);
+    // Simulado termina em SIMULATED; scan real termina em DONE.
+    expect(["DONE", "SIMULATED"]).toContain(final.phase);
+  });
+
+  it("DAST-SIM-01 — scan simulado é carimbado como tal e explica o motivo em PT-BR", async () => {
+    // .env.test liga DAST_FORCE_SIMULATE — todo scan da suíte é simulado, que
+    // é exatamente o caso que precisa ficar VISÍVEL na aplicação
+    // (docs/DAST-DOCKER-GAP.md §5: antes disso era indistinguível de um real).
+    const { pentesterAToken } = await seedActors();
+    const createRes = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${pentesterAToken}`)
+      .send({ targetUrl: "https://alvo-simulado.test" });
+
+    const final = await waitForTerminalStatus(pentesterAToken, createRes.body.id);
+    expect(final.status).toBe("COMPLETED");
+    expect(final.simulated).toBe(true);
+    expect(typeof final.warningMessage).toBe("string");
+    expect(final.warningMessage).toContain("demonstração");
+    // errorMessage continua reservado a FAILED — um scan concluído com
+    // ressalva não é um scan com erro.
+    expect(final.errorMessage).toBeNull();
+  });
+
+  it("DAST-STAT-01 — GET /status expõe o limite de concorrência e o estado do motor", async () => {
+    const { pentesterAToken } = await seedActors();
+    const res = await request(app).get("/api/dast/scans/status").set("Authorization", `Bearer ${pentesterAToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.maxConcurrent).toBeGreaterThanOrEqual(1);
+    expect(typeof res.body.dockerAvailable).toBe("boolean");
+    expect(typeof res.body.runningCount).toBe("number");
+    expect(typeof res.body.queuedCount).toBe("number");
+    expect(Array.isArray(res.body.running)).toBe(true);
+    expect(Array.isArray(res.body.queued)).toBe(true);
+    expect(Array.isArray(res.body.alerts)).toBe(true);
+  });
+
+  it("a rota literal /status não é engolida pela paramétrica /:id", async () => {
+    const { adminToken } = await seedActors();
+    const res = await request(app).get("/api/dast/scans/status").set("Authorization", `Bearer ${adminToken}`);
+    // Se a ordem das rotas estivesse errada, "status" viraria um id de scan e
+    // a resposta seria 404 SCAN_NOT_FOUND.
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("error");
   });
 });

@@ -10,6 +10,11 @@
  * host). O relatório é sempre servido pelos endpoints dedicados
  * (`/report/html`, `/report/data`), que resolvem o caminho a partir do
  * registro no banco, nunca de input do cliente.
+ *
+ * `progress`/`phase`/`simulated`/`warningMessage` (2026-09-09) VÃO pro DTO de
+ * propósito: são exatamente o que a UI precisa pra desenhar a barra de
+ * progresso e pra deixar visível quando um resultado é simulado — o buraco de
+ * produto descrito em docs/DAST-DOCKER-GAP.md §5.
  */
 
 import type { DastScan as PrismaDastScan, DastScanStatus } from "@prisma/client";
@@ -31,6 +36,10 @@ export type DastScanResponseDTO = {
   finishedAt: string | null;
   durationMs: number | null;
   errorMessage: string | null;
+  progress: number;
+  phase: string | null;
+  simulated: boolean;
+  warningMessage: string | null;
   alertsHigh: number;
   alertsMedium: number;
   alertsLow: number;
@@ -74,6 +83,10 @@ export class DastScanEntity {
       finishedAt: this.data.finishedAt ? this.data.finishedAt.toISOString() : null,
       durationMs: this.data.durationMs,
       errorMessage: this.data.errorMessage,
+      progress: this.data.progress,
+      phase: this.data.phase,
+      simulated: this.data.simulated,
+      warningMessage: this.data.warningMessage,
       alertsHigh: this.data.alertsHigh,
       alertsMedium: this.data.alertsMedium,
       alertsLow: this.data.alertsLow,

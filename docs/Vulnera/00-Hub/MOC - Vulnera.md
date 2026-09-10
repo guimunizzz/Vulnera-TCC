@@ -37,6 +37,8 @@ status: ativo
 [[Vulnerability]]
 [[Evidence]]
 [[VulnerabilityComment]]
+[[DastScan]]
+[[DastFinding]]
 [[MaturityAssessment]]
 [[MaturityDomain]]
 [[MaturityControl]]
@@ -55,6 +57,7 @@ status: ativo
 [[Assinaturas]]
 [[Projetos]]
 [[Findings]]
+[[DAST]]
 [[Evidencias]]
 [[Maturidade]]
 [[Relatorios]]
@@ -117,6 +120,22 @@ status: ativo
 [[ADR-013 - Dominios de maturidade em aberto]] 🚩
 [[ADR-014 - Escopo reduzido para prazo de 3 meses]]
 [[ADR-015 - MySQL definitivo]]
+[[Adr 017 ia cortada do escopo do mvp]]
+[[Adr 018 maturidade como checklist simplificado]]
+[[Adr 019 factory method confirmado]]
+[[ADR-020 - Stack final do frontend web e CORS]]
+[[ADR-021 - Maquina de Vulnerability com 4 estados]]
+[[ADR-022 - Stack completa no Docker Compose]]
+[[ADR-023 - Biblioteca de componentes propria em vez de Radix]]
+[[ADR-024 - Sistema de temas com tokens OKLCH]]
+[[ADR-025 - Metricas analiticas derivadas do AuditLog]]
+[[ADR-026 - Landing publica cyber-samurai e paleta exclusiva]]
+[[ADR-027 - Mobile fora do workspace npm da raiz]]
+[[ADR-028 - Execucao do ZAP via Docker spawn]]
+[[ADR-029 - DAST como silo]]
+[[ADR-030 - Execucao assincrona sem fila]]
+[[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]]
+[[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]
 
 ## Dados e modelagem
 [[MER Conceitual]]
@@ -130,6 +149,7 @@ status: ativo
 [[Enum - SubscriptionStatus]]
 [[Enum - TicketStatus]]
 [[Enum - AnalysisType e Level]]
+[[Enum - DAST]]
 
 ## Operação
 [[MOC - Operacao]]

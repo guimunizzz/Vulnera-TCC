@@ -228,7 +228,7 @@ describe("Maturity (assessments + scores)", () => {
 
   // MAT-03 — isolamento por company (RN16/RN19)
   it("GET .../latest: CLIENT de outra company recebe 403; CLIENT da própria company vê", async () => {
-    const { company, admin, token } = await setupAdminAndCompany();
+    const { company, admin } = await setupAdminAndCompany();
     await prisma.maturityAssessment.create({
       data: { companyId: company.id, evaluatedBy: admin.id, overallScore: 3, level: "INTERMEDIATE" },
     });
@@ -266,7 +266,7 @@ describe("Maturity (assessments + scores)", () => {
   });
 
   it("GET .../latest: PENTESTER atribuído a um projeto da company vê; não-atribuído recebe 403 (RN19)", async () => {
-    const { company, admin, token } = await setupAdminAndCompany();
+    const { company, admin } = await setupAdminAndCompany();
     await prisma.maturityAssessment.create({
       data: { companyId: company.id, evaluatedBy: admin.id, overallScore: 3, level: "INTERMEDIATE" },
     });

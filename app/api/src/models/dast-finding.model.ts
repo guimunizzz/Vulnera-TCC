@@ -7,10 +7,19 @@
  * entity, sem lógica de negócio (CLAUDE.md §5.1).
  */
 
-import type { DastFinding as PrismaDastFinding, DastRisk } from "@prisma/client";
+import type { DastFinding as PrismaDastFinding, DastRisk, DastTriageStatus } from "@prisma/client";
+import type { DastFindingWithPromotion } from "../repositories/dast-finding.repository";
 
 export type DastFinding = PrismaDastFinding;
-export type { DastRisk };
+export type { DastRisk, DastTriageStatus };
+
+/** O que a Vulnerability promovida expõe de volta pro finding de origem (ADR-032). */
+export type PromotedVulnerabilityDTO = {
+  id: string;
+  projectId: string;
+  severityFinal: string;
+  status: string;
+};
 
 export type DastFindingResponseDTO = {
   id: string;
@@ -29,6 +38,13 @@ export type DastFindingResponseDTO = {
   solution: string | null;
   reference: string | null;
   createdAt: string;
+  // --- Triagem (ADR-032) ---
+  triageStatus: DastTriageStatus;
+  triageNote: string | null;
+  triagedByName: string | null;
+  triagedAt: string | null;
+  /** Preenchido quando este finding já virou uma Vulnerability; null caso contrário. */
+  promotedVulnerability: PromotedVulnerabilityDTO | null;
 };
 
 // Ordem de severidade pra "lista completa ordenada por severidade" (§ Fase 4
@@ -41,10 +57,17 @@ export const RISK_ORDER: Record<DastRisk, number> = {
 };
 
 export class DastFindingEntity {
-  constructor(private readonly data: DastFinding) {}
+  // Aceita o finding COM as relações de triagem/promoção já carregadas (é o
+  // que o repository devolve desde o ADR-032). O tipo cru continua aceito
+  // porque nem todo caminho precisa das relações — as duas ficam null.
+  constructor(private readonly data: DastFinding | DastFindingWithPromotion) {}
 
   get risk(): DastRisk {
     return this.data.risk;
+  }
+
+  private get relacoes(): Partial<Pick<DastFindingWithPromotion, "promotedVulnerability" | "triagedBy">> {
+    return this.data as Partial<DastFindingWithPromotion>;
   }
 
   toResponse(): DastFindingResponseDTO {
@@ -65,6 +88,11 @@ export class DastFindingEntity {
       solution: this.data.solution,
       reference: this.data.reference,
       createdAt: this.data.createdAt.toISOString(),
+      triageStatus: this.data.triageStatus,
+      triageNote: this.data.triageNote,
+      triagedByName: this.relacoes.triagedBy?.name ?? null,
+      triagedAt: this.data.triagedAt?.toISOString() ?? null,
+      promotedVulnerability: this.relacoes.promotedVulnerability ?? null,
     };
   }
 }
