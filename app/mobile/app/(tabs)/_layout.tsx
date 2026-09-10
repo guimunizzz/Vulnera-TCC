@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   // nas pontas arredondadas do pill; se fosse no container de fora, também
   // cortaria a sombra no iOS.
   backgroundWrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: RADIUS.full,
     overflow: "hidden",
   },
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   // varia demais de legibilidade dependendo do que rola atrás; isso
   // garante contraste consistente do ícone/rótulo em qualquer conteúdo.
   tint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.surface,
     opacity: 0.55,
   },

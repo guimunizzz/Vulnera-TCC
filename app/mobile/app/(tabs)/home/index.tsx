@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   // botão "Entrar" do login, vidro com cor de destaque em vez de virar
   // cinza quando selecionado.
   chipTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.surface,
     opacity: 0.6,
   },

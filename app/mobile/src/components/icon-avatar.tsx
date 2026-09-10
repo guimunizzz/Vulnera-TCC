@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   tint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.6,
   },
 });
