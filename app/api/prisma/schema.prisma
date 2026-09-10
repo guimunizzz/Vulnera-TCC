@@ -78,6 +78,7 @@ model User {
   evidences           Evidence[]
   auditLogs           AuditLog[]
   dastScans           DastScan[]
+  dastTriagedFindings DastFinding[] @relation("DastFindingTriagedBy")
 
   @@index([companyId])
 }
@@ -292,6 +293,20 @@ model Vulnerability {
   status                 String  @default("OPEN")
   aiAssisted             Boolean @default(false) // true se Gemini participou da descrição
 
+  // Proveniência (ADR-032). "MANUAL" = pentester digitou depois de análise
+  // humana (todo o histórico até 2026-09-09); "DAST_IMPORT" = nasceu da
+  // promoção de um DastFinding. Sem isto, misturar as duas origens na mesma
+  // tabela degradaria a confiança em Vulnerability como "achado triado por
+  // humano" — a objeção nº 3 do ADR-029, agora respondida em vez de evitada.
+  //
+  // ⚠️ O vetor CVSS de uma promovida NÃO é inventado a partir do riskcode do
+  // ZAP: a UI de promoção pré-preenche uma SUGESTÃO e o pentester revisa
+  // antes de salvar. Por isso não existe flag de "score estimado" — todo
+  // cvssScore do produto continua sendo calculado de um vetor revisado por
+  // humano (RN10 intacta).
+  sourceType          String  @default("MANUAL")
+  sourceDastFindingId String? @unique
+
   // Foreign keys (cascata de isolamento)
   projectId     String
   applicationId String // desnormalizado de Project.applicationId
@@ -306,6 +321,12 @@ model Vulnerability {
   application Application @relation(fields: [applicationId], references: [id])
   company     Company     @relation(fields: [companyId], references: [id])
   assignee    User?       @relation("VulnerabilityAssignee", fields: [assignedTo], references: [id])
+
+  // SetNull, não Cascade: apagar um scan DAST antigo NÃO pode apagar a
+  // Vulnerability que nasceu dele — depois de promovida ela é um achado do
+  // projeto, com triagem, evidências e comentários próprios. Perde-se o
+  // ponteiro pra origem, nunca o achado.
+  sourceDastFinding DastFinding? @relation("VulnerabilityFromDastFinding", fields: [sourceDastFindingId], references: [id], onDelete: SetNull)
 
   evidences Evidence[]
   comments  VulnerabilityComment[]
@@ -512,6 +533,21 @@ enum DastRisk {
   INFO
 }
 
+// Triagem de um DastFinding pelo pentester, DENTRO do silo DAST (ADR-032).
+// Um scan devolve dezenas de alertas e o ZAP não sabe quais importam: sem
+// isso, quem revisa 40 achados não tem onde registrar o que já analisou e
+// recomeça do zero na próxima sessão.
+//   NEW            — ainda não olhado (padrão de todo finding recém-importado)
+//   CONFIRMED      — o pentester validou: é real
+//   FALSE_POSITIVE — o ZAP errou
+//   ACCEPTED_RISK  — é real, mas o risco foi aceito conscientemente
+enum DastTriageStatus {
+  NEW
+  CONFIRMED
+  FALSE_POSITIVE
+  ACCEPTED_RISK
+}
+
 // DastScan — uma execução de scan DAST contra uma targetUrl.
 // containerName é derivado de `id` (vulnera-zap-<id>) e persistido pra
 // permitir cancelamento (docker rm -f <containerName>) sem recalcular nada.
@@ -588,11 +624,30 @@ model DastFinding {
   reference     String?  @db.Text
   createdAt     DateTime @default(now())
 
-  scan DastScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  // ---------------------------------------------------------------------
+  // Triagem dentro do silo (ADR-032). Não substitui a promoção pra
+  // Vulnerability: é o passo ANTES dela — o pentester marca o que já
+  // analisou, e só o que virou CONFIRMED costuma merecer promoção.
+  // ---------------------------------------------------------------------
+  triageStatus DastTriageStatus @default(NEW)
+  triageNote   String?          @db.Text
+  triagedById  String?
+  triagedAt    DateTime?
+
+  scan      DastScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  triagedBy User?    @relation("DastFindingTriagedBy", fields: [triagedById], references: [id])
+
+  // Lado inverso da promoção — a FK real mora em Vulnerability.sourceDastFindingId.
+  // Sendo @unique lá, este lado é 0..1: um finding vira no máximo UMA
+  // Vulnerability (a deduplicação que o ADR-029 pedia, garantida pelo banco
+  // e não por checagem de aplicação).
+  promotedVulnerability Vulnerability? @relation("VulnerabilityFromDastFinding")
 
   @@unique([scanId, fingerprint])
   @@index([scanId])
   @@index([risk])
+  // Filtro "só o que ainda não triei" na tela de findings.
+  @@index([scanId, triageStatus])
 }
 
 // ============================================================================

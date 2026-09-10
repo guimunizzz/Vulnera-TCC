@@ -71,6 +71,16 @@ services:
       DAST_REPORTS_DIR: dast-reports
       # Teto de scans simultâneos — o watchdog enfileira o excedente.
       DAST_MAX_CONCURRENT_SCANS: "2"
+      # Teto de recurso de CADA container do ZAP. Os dois limites são de eixos
+      # diferentes e um NÃO cobre o outro: o de cima limita QUANTOS scans
+      # rodam, estes limitam QUANTO cada um consome. Sem eles (medido em
+      # 2026-09-09) 2 scans simultâneos ocupavam ~960% de 1200% de CPU e
+      # cresciam sem teto de RAM — respeitar o limite de 2 e ainda assim
+      # travar a máquina não é respeitar limite nenhum.
+      # 2 scans x 2g = 4g dos ~7.7g da VM do Docker, sobrando folga pro MySQL
+      # e pela API. Ajuste junto com DAST_MAX_CONCURRENT_SCANS.
+      DAST_ZAP_MEMORY: "2g"
+      DAST_ZAP_CPUS: "4"
       DAST_SCAN_TIMEOUT_MS: "1800000"
       # ⚠️ SSRF: "true" só pra escanear alvo local (Juice Shop na própria
       # máquina) durante a demonstração. Padrão continua bloqueando.

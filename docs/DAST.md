@@ -315,6 +315,30 @@ precisar adicionar valor sem mexer em código de qualquer forma.
 | `DAST_ZAP_STARTUP_TIMEOUT_MS` | `180000` (3min) | Espera máxima pelo daemon do ZAP responder depois do `docker run`. |
 | `DAST_ZAP_SPIDER_MAX_DURATION_MIN` | `5` | Teto de minutos do spider (`0` desliga). Sem ele, um alvo grande rastreia até o timeout global. |
 | `DAST_HEARTBEAT_TIMEOUT_MS` | `120000` (2min) | Silêncio máximo tolerado num scan em execução antes de o watchdog abortar e avisar. |
+| `DAST_ZAP_MEMORY` | `2g` | Teto de RAM de **cada** container do ZAP (`--memory` + `--memory-swap`). Deriva também o `-Xmx` da JVM (~65% do teto) — ver o aviso abaixo. |
+| `DAST_ZAP_CPUS` | `4` | Teto de CPUs de cada container (`--cpus`, aceita fração). |
+
+⚠️ **`DAST_MAX_CONCURRENT_SCANS` e `DAST_ZAP_MEMORY`/`DAST_ZAP_CPUS` são
+limites de eixos diferentes, e um não cobre o outro.** O primeiro limita
+QUANTOS scans rodam; os outros dois, QUANTO cada um consome. Medição de
+2026-09-09 com dois scans reais e **sem** os dois últimos:
+
+```
+vulnera-zap-...ib0007 | 936.8MiB / 7.7GiB | CPU 398%
+vulnera-zap-...g30003 |  1.39GiB / 7.7GiB | CPU 564%
+```
+
+"7.7GiB" ali é a RAM inteira da VM do Docker — teto nenhum — e os dois juntos
+ocupavam ~960% de 1200% de CPU. Ao ajustar, mantenha
+`DAST_MAX_CONCURRENT_SCANS × DAST_ZAP_MEMORY` abaixo da RAM disponível ao
+Docker, com folga pro MySQL e pela API.
+
+⚠️ **Nunca defina `DAST_ZAP_MEMORY` sem que o `-Xmx` acompanhe.** O `zap.sh`
+calcula o heap como 1/4 da memória que lê em `/proc/meminfo`, e isso é a RAM
+do **host**, não o limite do cgroup: com `--memory 2g` e sem `-Xmx`, a JVM
+acha que tem 7.7GB, pede ~1.9GB de heap e é morta por OOM no meio do active
+scan. O runner faz isso sozinho (`heapArgForMemoryLimit()`), então a única
+forma de errar é passar `-Xmx` à mão em outro lugar.
 
 ---
 
@@ -428,11 +452,125 @@ declarada é maturidade (CLAUDE.md R5):
 
 ---
 
+## 11. O que fazer com o resultado — triagem, promoção e comparação
+
+> Adicionado em 2026-09-09. Decisão completa em
+> [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]].
+
+Até esta data o módulo terminava num beco: o scan rodava, mostrava as dezenas
+de alertas e a única saída era um PDF. Três coisas passam a ser possíveis.
+
+### 11.1 Triar
+
+Cada finding tem um estado de triagem: **Por triar** (`NEW`, o padrão),
+**Confirmado**, **Falso-positivo** ou **Risco aceito**, com nota opcional,
+autor e data. Na tela de detalhe do scan, a coluna "Triagem" mostra o estado e
+o botão `N por triar` filtra direto o que ainda não foi olhado.
+
+O status salva **no clique**, sem botão "salvar" — é a tarefa mais repetitiva
+da tela e exigir dois cliques por achado é o tipo de atrito que faz a
+funcionalidade não ser usada. A nota é a exceção (texto livre precisa de um
+commit explícito).
+
+```
+PATCH /api/dast/scans/findings/:findingId/triage
+{ "triageStatus": "FALSE_POSITIVE", "note": "Header ausente por design." }
+```
+
+### 11.2 Promover para `Vulnerability`
+
+Leva o achado para um `Project` real, entrando no fluxo normal de triagem e
+remediação do produto (evidências, comentários, relatório, dashboards).
+
+**O vetor CVSS é sugerido, nunca inventado — e esta é a parte que importa.**
+O [[ADR-029 - DAST como silo]] tinha recusado a importação automática por uma
+razão correta: o ZAP **não fornece vetor CVSS**, só `riskcode` de 0 a 3.
+Derivar um vetor completo disso seria inventar, e um score inventado
+convincente é pior que score nenhum — o resto do produto trata `cvssScore`
+como calculado com confiança (RN10).
+
+O que existe hoje é a saída que o próprio ADR-029 apontava: o formulário abre
+pré-preenchido (título, descrição já com a proveniência do scan, categoria
+OWASP deduzida do CWE, vetor CVSS sugerido pela faixa de risco), **marca o
+vetor como sugestão num alerta visível**, e o pentester confirma antes de
+salvar. Só então `calculateCvss` roda — sobre o vetor revisado.
+
+Consequência que vale saber ao defender o trabalho: **o produto continua sem
+uma única `Vulnerability` com CVSS estimado.**
+
+Duas assimetrias deliberadas no que é pré-preenchido:
+
+- **CWE → categoria OWASP é factual** (o OWASP publica quais CWEs compõem cada
+  categoria do Top 10 2021), então é aplicado direto.
+- **risco → vetor CVSS é suposição**, então vem com aviso explícito na tela.
+
+Outras garantias: um finding vira **no máximo uma** `Vulnerability` (índice
+`@unique` no banco, não checagem de aplicação); só dá pra promover pra um
+projeto em que o ator seja **membro** (promover não é porta lateral pra
+escrever em projeto alheio); e apagar o scan de origem **não apaga** a
+vulnerability promovida (`onDelete: SetNull` — perde-se o ponteiro pra origem,
+nunca o achado).
+
+```
+GET  /api/dast/scans/findings/:findingId/promotion-draft
+POST /api/dast/scans/findings/:findingId/promote
+```
+
+### 11.3 Comparar duas execuções
+
+Responde a pergunta que fecha um pentest: *a correção funcionou?* Na aba
+"Comparar com execução anterior", escolha uma execução mais antiga **do mesmo
+alvo** e o resultado sai em três grupos: **Resolvidos**, **Novos** e
+**Continuam abertos**.
+
+O diff é por `fingerprint` — `sha256(pluginId | normalizedUrl | param)` — que
+**não inclui a evidência**, justamente porque ela muda entre execuções da
+mesma vulnerabilidade. É isso que faz um problema não corrigido aparecer como
+"continua aberto" em vez de virar um par falso de "sumiu um / surgiu outro".
+
+Comparar scans de **alvos diferentes** devolve `422 SCANS_TARGET_MISMATCH` em
+vez de um diff: seria 100% "sumiu" + 100% "apareceu", correto e inútil.
+
+```
+GET /api/dast/scans/:id/comparable          # execuções comparáveis
+GET /api/dast/scans/:id/compare?base=<id>   # :id é o mais NOVO, base o mais antigo
+```
+
+### 11.4 Testes de ponta a ponta (Playwright)
+
+`app/web/e2e/` dirige um Chrome real contra a stack real:
+
+```bash
+docker compose up -d                              # na raiz
+docker compose exec api npm run db:seed           # se o banco estiver vazio
+npm run test:e2e --workspace=app/web
+npm run test:e2e:ui --workspace=app/web           # modo interativo
+```
+
+Não há `webServer` na config **de propósito**: o alvo é a stack de verdade
+(mesmo banco, mesmo Docker que a demonstração usa). Por isso **não** entra no
+`npm run check`, que precisa continuar rodando sem Docker.
+
+⚠️ **Rode a suíte sozinha.** Cada caso dispara scans reais, e cada scan é uma
+JVM de até 2GB somada à VM do Docker, ao Chrome do Playwright e ao Node.
+Rodando junto com `npm test` do backend numa máquina de 16GB, o SO matou o
+worker com `worker process exited unexpectedly (code=3221225794)` — que
+**parece** falha de teste e não é. Ao ver essa mensagem, feche o que estiver
+aberto e rode de novo antes de suspeitar do produto.
+
+O caso `E2E-01` é o que prova que a barra de progresso mostra medição e não
+animação: ele exige que o percentual **suba** e que as fases nomeadas do ZAP
+apareçam na tela. Uma barra estimada por tempo passaria na primeira asserção e
+falharia na segunda.
+
+---
+
 ## Docs relacionados
 
 - [[ADR-028 - Execucao do ZAP via Docker spawn]]
 - [[ADR-029 - DAST como silo]]
 - [[ADR-030 - Execucao assincrona sem fila]]
+- [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]
 - `PRD_VIVO.md`, `docs/BACKLOG.md`, `docs/ROADMAP_PROMPTS.md`, `docs/DECISIONS.md`
 - `docs/evidencias/dast/README.md` — os dois relatórios reais da validação
   end-to-end (`example.com` como controle negativo, OWASP Juice Shop como

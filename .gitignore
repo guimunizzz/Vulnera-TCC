@@ -68,3 +68,11 @@ apps/web/.next/
 package-lock.json
 TECH_STATUS.md
 static-analysis.datadog.yml
+
+# Artefatos de execução do Playwright (traces, screenshots, relatório HTML).
+# Gerados a cada `npm run test:e2e --workspace=app/web`; só interessam na
+# máquina que rodou a suíte, e um trace.zip por falha engorda o repo rápido.
+test-results/
+playwright-report/
+blob-report/
+.playwright/

@@ -18,10 +18,10 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Sprint atual       | **Fase 9.1 — DAST: scan real na stack Docker + watchdog + progresso** 🚧 em revisão (código pronto e validado, docs fechadas); Fase 8 (Maturidade + TCC) segue com Sonar bloqueado em Rafael |
+| Sprint atual       | **Fase 9.2 — DAST: triagem, promoção para Vulnerability e comparação de scans** 🚧 em revisão (código pronto e validado na stack real, docs fechadas); Fase 8 (Maturidade + TCC) segue com Sonar bloqueado em Rafael |
 | Data início        | 2026-06-10 (Sprint 0)               |
 | Data alvo TCC      | 2026-10-25 (ver `docs/BACKLOG.md` v4) |
-| Última atualização | 2026-09-09 por Claude Code (Fase 9.1: scan REAL dentro da stack Docker — ZAP em modo daemon por scan, watchdog de 2 simultâneos, % de progresso na UI, fallback simulado visível. 315 → **333 testes backend** + 34 frontend, `lint` verde nos dois workspaces. Ver §6 "Ponto de parada" e `docs/DAST-DOCKER-GAP.md`) |
+| Última atualização | 2026-09-09 por Claude Code (Fase 9.2: o pentester passa a **fazer algo** com o resultado — triar, promover pra `Vulnerability` e comparar execuções. Antes disso, os limites da 9.1 foram **medidos** na stack real: watchdog respeitando 2 simultâneos ✅, mas **sem teto de RAM/CPU por container** — corrigido. 333 → **353 testes backend** + 34 frontend + **6 E2E Playwright** contra a stack real. Ver §6 "Ponto de parada" e ADR-032) |
 
 ---
 
@@ -43,6 +43,7 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 8 — Maturidade + Apresentação      | Polimento e entrega                        | 🚧     | 69% (9/13 ✅ — CP1-3 concluídos + CP4 ZAP; Sonar bloqueado em Rafael, README/DEMO prontos) |
 | **9 — DAST (OWASP ZAP)**           | **Scans automatizados: runner Docker, pipeline, API, UI, PDF** | ✅ | **100% — concluída em 2026-09-05.** Entrada fora da numeração original do BACKLOG v4 (prompt dado diretamente numa sessão dedicada) |
 | **9.1 — DAST: scan real na stack** | **ZAP em modo daemon por scan, watchdog (máx. 2), % de progresso, simulado visível** | 🚧 | **Código completo e validado em 2026-09-09; em revisão do Rafael.** Fecha as 3 causas + a lacuna de produto de `docs/DAST-DOCKER-GAP.md`. Ver ADR-031 |
+| **9.2 — DAST: o que fazer com o resultado** | **Triagem, promoção para `Vulnerability`, comparação entre execuções + limites de recurso** | 🚧 | **Código completo e validado na stack real em 2026-09-09; em revisão do Rafael.** Fecha os 4 pontos que o ADR-029 deixou em aberto e o buraco de recurso que a 9.1 não cobria. Ver ADR-032 |
 
 ---
 
@@ -304,6 +305,26 @@ simulado por engano — subido pra 10s.
 original da sessão, mesmo padrão de todas as fases anteriores deste projeto
 (Fase 6.5, fix/landing-publica, task 8.12): trabalho completo em working tree,
 Rafael decide quando commitar.
+
+#### FEAT-09.2 — O que o pentester faz com o resultado do scan (2026-09-09)
+
+> Pedido do Rafael na mesma sessão, depois de validado o scan real: *"garanta
+> que o watchdog está respeitando os limites, que o scan funciona de verdade,
+> e que o pentester tenha possibilidade com o resultado do Scan DAST"*. As três
+> frentes (triagem, promoção, comparação) foram escolhidas por ele.
+> Decisão completa em `docs/Vulnera/07-Decisoes/ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST.md`.
+
+| Task                                             | Status | Owner  | Notas |
+| ------------------------------------------------ | ------ | ------ | --- |
+| 9.2.0: Verificação do que a 9.1 entregou         | ✅     | Claude | Medido na stack real, não deduzido: DooD confirmado (`which docker` → `/usr/bin/docker` dentro do container, `docker info` → 29.4.3); **3 scans disparados juntos → exatamente 2 containers ZAP no `docker ps` + 1 na fila com alerta**, e o 3º entrou sozinho ao abrir vaga (FIFO end-to-end); 3 scans reais concluídos com `simulated: false` em 39-52s |
+| 9.2.1: ⚠️ Limites de recurso por container       | ✅     | Claude | **Lacuna achada ao medir**: o watchdog limitava *quantos* scans, nada limitava *quanto* cada um consome — 2 scans reais ocupavam ~960% de 1200% de CPU e cresciam sem teto de RAM (`936MiB/7.7GiB` + `1.39GiB/7.7GiB`, onde 7.7GiB é a VM inteira). `DAST_ZAP_MEMORY` (2g) e `DAST_ZAP_CPUS` (4) viram `--memory`/`--memory-swap`/`--cpus`. ⚠️ Os dois **têm** de andar juntos: o `zap.sh` calcula o heap de `/proc/meminfo` (RAM do **host**, não do cgroup) e sem `-Xmx` explícito a JVM pediria ~1.9GB e morreria por OOM — `heapArgForMemoryLimit()` deriva `-Xmx` a 65% do teto |
+| 9.2.2: ⚠️ Dois buracos de heartbeat              | ✅     | Claude | `withKeepAlive()`. (a) `docker run` na 1ª execução de uma máquina faz o pull de ~3.7GB antes de subir — passava dos 2min de silêncio e o watchdog abortaria justamente o primeiro scan de uma máquina nova (timeout do run: 3min → 10min); (b) download dos relatórios são dois `httpGet` de 120s em sequência contra um limite de silêncio de 120s |
+| 9.2.3: Triagem no silo                           | ✅     | Claude | Enum `DastTriageStatus` (NEW/CONFIRMED/FALSE_POSITIVE/ACCEPTED_RISK) + `triageNote`/`triagedById`/`triagedAt`. `PATCH /dast/scans/findings/:id/triage`. UI salva **no clique** (é a tarefa mais repetitiva da tela; exigir "salvar" dobraria os cliques) — a nota é a exceção. Coluna "Triagem" substituiu "Confiança" na tabela, que foi pro detalhe expandido |
+| 9.2.4: Promoção → `Vulnerability`                | ✅     | Claude | Responde os 4 pontos que o ADR-029 deixou em aberto. `sourceType`/`sourceDastFindingId` (`@unique`, FK `SetNull`). **O vetor CVSS é sugerido e revisado pelo humano, nunca inventado** — é o que mantém a RN10 intacta e evita criar uma segunda classe de score no produto. CWE→OWASP é factual (lista oficial do Top 10 2021); risco→vetor é suposição e vem com aviso na tela. Dedup garantida pelo `@unique` do banco, não por checagem de aplicação |
+| 9.2.5: Comparação entre execuções                | ✅     | Claude | `GET /:id/comparable` e `/:id/compare?base=`. Diff por `fingerprint` (que já existia e **não inclui evidência** — por isso um problema não corrigido aparece como "continua aberto", não como "sumiu um/surgiu outro"). Alvos diferentes → 422 em vez de um diff 100%/100% inútil. Validado com 2 scans reais consecutivos: **11 persistentes, 0 resolvidos, 0 novos** |
+| 9.2.6: Testes                                    | ✅     | Claude | 333 → **353** backend (`dast-triage.test.ts` novo: 16 casos DAST-TRI/PRO/CMP/RBAC-10, incluindo `DAST-PRO-07` — apagar o scan de origem não apaga a Vulnerability; +4 unitários de limite de recurso). Script E2E ad-hoc de 30 checks contra a stack real, todos verdes |
+| 9.2.7: Playwright                                | ✅     | Claude | `app/web/e2e/` + `playwright.config.ts`. Sem `webServer` **de propósito**: o alvo é a stack real, mesma que a demonstração usa. 6 casos, incluindo o E2E-01 que prova que **o percentual da barra sobe e as fases nomeadas do ZAP aparecem** (uma barra estimada por tempo passaria no primeiro teste, não no segundo). **Pegou um bug real que Vitest e Supertest não pegariam**: link apontando pra `/vulnerabilities/:id` quando a rota do produto é `/findings/:id` |
+| 9.2.8: Docs                                      | ✅     | Claude | ADR-032 novo; `docs/DAST.md` §11 nova; PRD/BACKLOG |
 
 ---
 

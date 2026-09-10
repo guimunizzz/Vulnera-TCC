@@ -93,6 +93,61 @@ function getSpiderMaxDurationMin(): number {
   return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 5;
 }
 
+/**
+ * Teto de RAM de CADA container do ZAP, no formato do Docker ("2g", "1536m").
+ *
+ * ⚠️ Por que isto existe, se o watchdog já limita a 2 scans: os dois limites
+ * são de eixos DIFERENTES e nenhum cobre o outro. O watchdog limita QUANTOS
+ * scans rodam; este limita QUANTO cada um consome. Medição de 2026-09-09 com
+ * 2 scans reais simultâneos e SEM estes limites:
+ *
+ *     vulnera-zap-...ib0007 | 936.8MiB / 7.7GiB | CPU 398%
+ *     vulnera-zap-...g30003 |  1.39GiB / 7.7GiB | CPU 564%
+ *
+ * "7.7GiB" ali é a RAM inteira da VM do Docker — ou seja, teto nenhum — e os
+ * dois juntos ocupavam ~960% de 1200% de CPU. Respeitar o limite de 2 scans e
+ * ainda assim travar a máquina não é respeitar limite nenhum, e o cenário em
+ * que isso dói é justamente o pior possível: a apresentação do TCC.
+ */
+function getZapMemory(): string {
+  return EnvVar.getOptional(EnvKeys.DAST_ZAP_MEMORY, "2g").trim();
+}
+
+function getZapCpus(): string {
+  return EnvVar.getOptional(EnvKeys.DAST_ZAP_CPUS, "4").trim();
+}
+
+/** "2g"/"1536m"/"2048" (bytes) -> MB. Devolve null pro que não entender, e aí o limite é omitido em vez de chutado. */
+export function parseMemoryToMb(raw: string): number | null {
+  const match = /^(\d+(?:\.\d+)?)\s*([bkmg])?b?$/i.exec(raw.trim());
+  if (!match) return null;
+  const value = Number(match[1]);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  const unitFactorMb: Record<string, number> = { b: 1 / (1024 * 1024), k: 1 / 1024, m: 1, g: 1024 };
+  const mb = value * (unitFactorMb[(match[2] ?? "b").toLowerCase()] ?? 1);
+  return mb >= 1 ? Math.floor(mb) : null;
+}
+
+/**
+ * Heap da JVM do ZAP, derivado do teto de RAM do container.
+ *
+ * ⚠️ ARMADILHA: sem `-Xmx` explícito o `zap.sh` calcula o heap como 1/4 da
+ * memória que ele LÊ — e o que ele lê (`/proc/meminfo`) é a RAM do HOST, não
+ * o limite do cgroup. Com `--memory 2g` e sem `-Xmx`, a JVM acharia que tem
+ * 7.7GB disponíveis, pediria ~1.9GB de heap e seria morta por OOM do cgroup
+ * no meio do active scan. Por isso os dois SEMPRE andam juntos, e o heap fica
+ * folgadamente abaixo do teto: ~65%, deixando o resto pra metaspace, stacks e
+ * buffers diretos, que não entram no -Xmx mas contam no cgroup.
+ */
+export function heapArgForMemoryLimit(memoryLimit: string): string | null {
+  const limitMb = parseMemoryToMb(memoryLimit);
+  if (limitMb === null) return null;
+  const heapMb = Math.floor(limitMb * 0.65);
+  // Abaixo de 256MB o ZAP não sobe de forma confiável — melhor não passar
+  // limite nenhum do que passar um que quebra o scan por dentro.
+  return heapMb >= 256 ? `-Xmx${heapMb}m` : null;
+}
+
 // path.resolve(process.cwd(), ...) — mesmo padrão de UPLOADS_ROOT em evidence.service.ts
 function getReportsDir(): string {
   return path.resolve(process.cwd(), EnvVar.getOptional(EnvKeys.DAST_REPORTS_DIR, "dast-reports"));
@@ -364,6 +419,37 @@ interface RealScanContext {
   report: (percent: number, phase: ScanPhase, message: string) => void;
 }
 
+/**
+ * Mantém o pulso do watchdog batendo durante uma operação longa que NÃO tem
+ * progresso pra reportar.
+ *
+ * ⚠️ Por que é necessário: o watchdog aborta um scan que fique
+ * DAST_HEARTBEAT_TIMEOUT_MS (2min por padrão) sem pulsar, e o runner só pulsa
+ * dentro dos loops de polling. Duas operações ficam FORA de qualquer loop e
+ * podem passar dos 2min legitimamente:
+ *
+ *  1. `docker run` na PRIMEIRA execução de uma máquina, quando a imagem do ZAP
+ *     (~3.7GB) ainda não está local: o run faz o pull antes de subir. Sem
+ *     keep-alive, o watchdog abortaria justamente o primeiro scan de uma
+ *     máquina nova — exatamente o cenário do dia da apresentação.
+ *  2. O download dos relatórios: cada `httpGet` tem timeout PRÓPRIO de 120s,
+ *     e são dois em sequência (JSON + HTML). O pior caso passa dos 2min de
+ *     silêncio, e o scan seria abortado depois de já ter feito todo o
+ *     trabalho pesado.
+ *
+ * O pulso repete o MESMO percentual de propósito: a barra não anda (não há
+ * medição real pra mostrar), mas o watchdog sabe que o processo está vivo.
+ */
+async function withKeepAlive<T>(operation: Promise<T>, tick: () => void, intervalMs = 15000): Promise<T> {
+  const timer = setInterval(tick, intervalMs);
+  timer.unref?.();
+  try {
+    return await operation;
+  } finally {
+    clearInterval(timer);
+  }
+}
+
 /** Lança se o watchdog/usuário abortou ou se o prazo global do scan estourou. */
 function assertStillRunning(ctx: RealScanContext): void {
   if (ctx.signal?.aborted) throw new Error("SCAN_CANCELLED");
@@ -499,7 +585,10 @@ async function downloadReports(ctx: RealScanContext, scanDir: string): Promise<{
   const jsonPath = path.join(scanDir, "report.json");
   const htmlPath = path.join(scanDir, "report.html");
 
-  const jsonResponse = await httpGet(buildZapUrl(ctx.baseUrl, "/OTHER/core/other/jsonreport/", { apikey: ctx.apiKey }), 120000);
+  const jsonResponse = await withKeepAlive(
+    httpGet(buildZapUrl(ctx.baseUrl, "/OTHER/core/other/jsonreport/", { apikey: ctx.apiKey }), 120000),
+    () => ctx.report(PHASE_WEIGHTS.activeTo, "REPORT", "Gerando relatórios (alvo grande, isso leva um tempo)..."),
+  );
   if (jsonResponse.status !== 200) throw new Error(`ZAP_REPORT_HTTP_${jsonResponse.status}`);
   try {
     JSON.parse(jsonResponse.body);
@@ -512,7 +601,10 @@ async function downloadReports(ctx: RealScanContext, scanDir: string): Promise<{
   // aqui não derruba o scan.
   let savedHtml: string | undefined;
   try {
-    const htmlResponse = await httpGet(buildZapUrl(ctx.baseUrl, "/OTHER/core/other/htmlreport/", { apikey: ctx.apiKey }), 120000);
+    const htmlResponse = await withKeepAlive(
+      httpGet(buildZapUrl(ctx.baseUrl, "/OTHER/core/other/htmlreport/", { apikey: ctx.apiKey }), 120000),
+      () => ctx.report(PHASE_WEIGHTS.activeTo, "REPORT", "Gerando o relatório HTML do ZAP..."),
+    );
     if (htmlResponse.status === 200 && htmlResponse.body.length > 0) {
       await fs.writeFile(htmlPath, htmlResponse.body, "utf-8");
       savedHtml = htmlPath;
@@ -587,6 +679,23 @@ async function runRealScan(
   report(1, "STARTING", "Preparando o container do OWASP ZAP...");
 
   const runArgs = ["run", "-d", "--rm", "--name", containerName];
+
+  // Teto de recurso POR CONTAINER — o watchdog limita quantos scans rodam,
+  // isto limita quanto cada um come. Ver getZapMemory() pro racional e pra
+  // medição que motivou os dois limites.
+  const memoryLimit = getZapMemory();
+  const heapArg = heapArgForMemoryLimit(memoryLimit);
+  if (heapArg) {
+    // --memory-swap igual a --memory desliga o swap: sem isso o container
+    // "cabe" no limite paginando pra disco e o scan fica absurdamente lento
+    // em vez de falhar rápido.
+    runArgs.push("--memory", memoryLimit, "--memory-swap", memoryLimit);
+  }
+  const cpus = getZapCpus();
+  if (cpus && Number.isFinite(Number(cpus)) && Number(cpus) > 0) {
+    runArgs.push("--cpus", cpus);
+  }
+
   if (network) {
     runArgs.push("--network", network);
   } else {
@@ -595,9 +704,13 @@ async function runRealScan(
     // resolveZapEndpoint).
     runArgs.push("-p", `127.0.0.1:${zapPort}:${zapPort}`);
   }
+  runArgs.push(getZapImage(), "zap.sh");
+  // -Xmx é consumido pelo PRÓPRIO zap.sh (ele o retira dos args antes de
+  // repassar pro ZAP) e sobrescreve o heap que ele calcularia sozinho — que
+  // seria errado aqui, porque o zap.sh lê a RAM do host, não o limite do
+  // cgroup. Ver heapArgForMemoryLimit().
+  if (heapArg) runArgs.push(heapArg);
   runArgs.push(
-    getZapImage(),
-    "zap.sh",
     "-daemon",
     "-host",
     "0.0.0.0",
@@ -616,7 +729,14 @@ async function runRealScan(
     "-silent",
   );
 
-  const runResult = await runDocker(runArgs, { timeout: 180000 });
+  // Timeout de 10min (não 3): quando a imagem do ZAP ainda não está local, o
+  // `docker run` faz o pull de ~3.7GB antes de subir o container. Em 3min uma
+  // conexão doméstica não termina esse download, e o scan falhava com
+  // ZAP_CONTAINER_START_FAILED sem explicar que o problema era só o primeiro
+  // uso da máquina. O keep-alive abaixo mantém o watchdog informado no meio.
+  const runResult = await withKeepAlive(runDocker(runArgs, { timeout: 600000 }), () =>
+    report(2, "STARTING", "Baixando/preparando a imagem do OWASP ZAP (pode demorar no primeiro uso)..."),
+  );
   if (runResult.code !== 0) {
     const detail = runResult.stderr.trim().slice(0, 500) || `docker run saiu com código ${runResult.code ?? "desconhecido"}`;
     return {
@@ -647,9 +767,15 @@ async function runRealScan(
       simulated: false,
     };
   } catch (error) {
+    const original = (error as Error).message || "ZAP_UNKNOWN_ERROR";
     return {
       status: "FAILED",
-      errorMessage: (error as Error).message || "ZAP_UNKNOWN_ERROR",
+      // Um container morto por estourar `--memory` derruba o daemon do ZAP, e
+      // o sintoma que chega aqui é uma falha de conexão genérica — que não diz
+      // nada a quem lê. Como o limite de RAM é NOSSO (ver getZapMemory()), a
+      // causa precisa aparecer com nome, senão vira um "erro estranho" sem
+      // pista de que a saída é aumentar DAST_ZAP_MEMORY.
+      errorMessage: original === "SCAN_CANCELLED" ? original : await describeContainerDeath(containerName, original),
       durationMs: Date.now() - started,
       simulated: false,
     };
@@ -658,6 +784,30 @@ async function runRealScan(
     // container. `docker rm -f` é a única forma confiável — `--rm` só limpa
     // depois que ele PARA sozinho.
     await killContainer(scanId);
+  }
+}
+
+/**
+ * Pergunta ao Docker COMO o container morreu, e troca o erro genérico por um
+ * que aponta a causa quando ela é conhecida.
+ *
+ * Só existe por causa do `--memory`: antes dele o container não morria por
+ * limite nenhum, e um erro de conexão só podia ser rede ou o ZAP travando.
+ * Agora "conexão recusada" pode ser OOM — e a saída (subir
+ * `DAST_ZAP_MEMORY`) é acionável, mas invisível sem esta checagem.
+ *
+ * Best-effort de propósito: se o `docker inspect` falhar (o container já foi
+ * removido, o daemon caiu), devolve o erro original em vez de mascará-lo.
+ */
+async function describeContainerDeath(containerName: string, originalError: string): Promise<string> {
+  try {
+    const inspect = await runDocker(["inspect", "--format", "{{.State.OOMKilled}}|{{.State.ExitCode}}", containerName], { timeout: 5000 });
+    if (inspect.code !== 0) return originalError;
+    const [oomKilled] = inspect.stdout.trim().split("|");
+    if (oomKilled === "true") return `ZAP_OOM_KILLED: ${originalError}`;
+    return originalError;
+  } catch {
+    return originalError;
   }
 }
 
@@ -932,6 +1082,12 @@ export function friendlyFailureReason(errorMessage: string | undefined): string 
   if (errorMessage.startsWith("ZAP_API_ERROR")) return "o OWASP ZAP recusou o comando do scan.";
   if (errorMessage.startsWith("ZAP_BAD_RESPONSE")) return "o OWASP ZAP devolveu uma resposta inesperada.";
   if (errorMessage === "REPORT_JSON_INVALID") return "o relatório gerado pelo OWASP ZAP veio corrompido.";
+  // Acionável de propósito: quem lê isto precisa saber que existe um botão a
+  // girar (DAST_ZAP_MEMORY), não só que "algo deu errado".
+  if (errorMessage.startsWith("ZAP_OOM_KILLED")) {
+    return "o OWASP ZAP ficou sem memória neste alvo — aumente DAST_ZAP_MEMORY ou escaneie um escopo menor.";
+  }
+  if (errorMessage === "ZAP_HTTP_TIMEOUT") return "o OWASP ZAP parou de responder durante o scan.";
   return errorMessage.slice(0, 200);
 }
 

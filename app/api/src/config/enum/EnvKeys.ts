@@ -33,4 +33,11 @@ export enum EnvKeys {
   // Silêncio máximo tolerado por scan em execução: o runner pulsa a cada
   // poll; sem pulso por esse tempo o watchdog aborta e avisa.
   DAST_HEARTBEAT_TIMEOUT_MS = "DAST_HEARTBEAT_TIMEOUT_MS",
+  // Teto de RAM de CADA container do ZAP (formato do Docker: "2g", "1536m").
+  // Complementa DAST_MAX_CONCURRENT_SCANS: aquele limita QUANTOS scans, este
+  // limita QUANTO cada um consome. Sem os dois, 2 scans ainda derrubam a
+  // máquina — medido em 2026-09-09, ver ADR-031 § "Limites de recurso".
+  DAST_ZAP_MEMORY = "DAST_ZAP_MEMORY",
+  // Teto de CPUs de cada container do ZAP (aceita fração: "2", "1.5").
+  DAST_ZAP_CPUS = "DAST_ZAP_CPUS",
 }

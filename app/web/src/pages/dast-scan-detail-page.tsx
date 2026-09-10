@@ -32,12 +32,18 @@ import { EmptyState, ErrorState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/card";
 import { downloadBlob } from "../lib/pdf/base";
 import { generateDastReportPdf } from "../lib/pdf/dast-report";
+import { DastTriageControls } from "../components/dast/dast-triage-controls";
+import { DastPromoteDialog } from "../components/dast/dast-promote-dialog";
+import { DastComparePanel } from "../components/dast/dast-compare-panel";
 import {
   ACTIVE_DAST_STATUSES,
   DAST_RISK_LABELS,
+  DAST_TRIAGE_LABELS,
+  DAST_TRIAGE_TONES,
   labelDaFase,
   type DastFinding,
   type DastRisk,
+  type DastTriageStatus,
 } from "../types/dast.types";
 
 function formatElapsed(totalSeconds: number): string {
@@ -79,8 +85,21 @@ function RiskCountCard({ risk, value }: { risk: DastRisk; value: number }) {
   );
 }
 
-function FindingRow({ finding, expanded, onToggle }: { finding: DastFinding; expanded: boolean; onToggle: () => void }) {
+function FindingRow({
+  finding,
+  expanded,
+  onToggle,
+  onPromote,
+  onError,
+}: {
+  finding: DastFinding;
+  expanded: boolean;
+  onToggle: () => void;
+  onPromote: () => void;
+  onError: (mensagem: string | null) => void;
+}) {
   const detailId = `finding-detalhe-${finding.id}`;
+  const promovido = finding.promotedVulnerability;
   return (
     <>
       <tr className="border-t border-subtle">
@@ -88,7 +107,18 @@ function FindingRow({ finding, expanded, onToggle }: { finding: DastFinding; exp
           <SeverityBadge severidade={finding.risk} />
         </td>
         <td className="px-4 py-3 text-fg">{finding.title}</td>
-        <td className="px-4 py-3 font-mono text-xs text-fg-muted">{finding.confidence}</td>
+        {/* Coluna de triagem: é o que o pentester varre com os olhos pra saber
+            o que ainda falta olhar, por isso vem antes da URL. */}
+        <td className="px-4 py-3">
+          <div className="flex flex-wrap items-center gap-1">
+            <Badge tom={DAST_TRIAGE_TONES[finding.triageStatus]}>{DAST_TRIAGE_LABELS[finding.triageStatus]}</Badge>
+            {promovido && (
+              <Badge tom="acento" title="Já virou uma vulnerabilidade de projeto">
+                promovido
+              </Badge>
+            )}
+          </div>
+        </td>
         <td className="max-w-xs truncate px-4 py-3 font-mono text-xs text-fg-muted" title={finding.url}>
           {finding.url}
         </td>
@@ -107,6 +137,33 @@ function FindingRow({ finding, expanded, onToggle }: { finding: DastFinding; exp
       {expanded && (
         <tr id={detailId} className="border-t border-subtle bg-inset">
           <td colSpan={5} className="px-4 py-4">
+            {/* Ações primeiro: quem expandiu a linha quer decidir o que fazer
+                com o achado, não reler a descrição. */}
+            <div className="mb-4 flex flex-col gap-3">
+              <DastTriageControls finding={finding} aoErro={onError} />
+              <div className="flex flex-wrap items-center gap-2">
+                {promovido ? (
+                  <>
+                    <LinkButton variant="secundario" size="sm" to={`/findings/${promovido.id}`}>
+                      Abrir vulnerabilidade
+                    </LinkButton>
+                    <span className="text-xs text-fg-muted">
+                      Promovido — severidade {promovido.severityFinal}, situação {promovido.status}.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" onClick={onPromote}>
+                      Promover para vulnerabilidade
+                    </Button>
+                    <span className="text-xs text-fg-muted">
+                      Leva este achado para um projeto, com evidências, comentários e relatório.
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+
             <dl className="grid gap-4 sm:grid-cols-2">
               <div>
                 <dt className="text-xs font-medium uppercase text-fg-muted">URL</dt>
@@ -124,6 +181,17 @@ function FindingRow({ finding, expanded, onToggle }: { finding: DastFinding; exp
                 <dt className="text-xs font-medium uppercase text-fg-muted">WASC</dt>
                 <dd className="mt-1 text-fg">{finding.wascId ?? "—"}</dd>
               </div>
+              <div>
+                {/* Veio da coluna da tabela, que virou "Triagem". */}
+                <dt className="text-xs font-medium uppercase text-fg-muted">Confiança do ZAP</dt>
+                <dd className="mt-1 font-mono text-xs text-fg">{finding.confidence}</dd>
+              </div>
+              {finding.triageNote && (
+                <div>
+                  <dt className="text-xs font-medium uppercase text-fg-muted">Nota da triagem</dt>
+                  <dd className="mt-1 whitespace-pre-wrap text-sm text-fg">{finding.triageNote}</dd>
+                </div>
+              )}
               {finding.evidence && (
                 <div className="sm:col-span-2">
                   <dt className="text-xs font-medium uppercase text-fg-muted">Evidência</dt>
@@ -159,10 +227,16 @@ export function DastScanDetailPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [riskFilter, setRiskFilter] = useState<DastRisk | "">("");
+  const [triageFilter, setTriageFilter] = useState<DastTriageStatus | "">("");
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  // Aba ativa da área de resultado: a lista de achados ou o diff com uma
+  // execução anterior. Comparação é uma pergunta diferente ("a correção
+  // funcionou?") e merece o próprio espaço em vez de disputar a mesma tabela.
+  const [aba, setAba] = useState<"findings" | "comparacao">("findings");
+  const [findingParaPromover, setFindingParaPromover] = useState<DastFinding | null>(null);
 
   const scanQuery = useQuery({
     queryKey: ["dast", "scans", id],
@@ -215,9 +289,28 @@ export function DastScanDetailPage() {
     if (!findingsQuery.data) return [];
     const term = search.trim().toLowerCase();
     return findingsQuery.data
-      .filter((f) => (!riskFilter || f.risk === riskFilter) && (!term || f.title.toLowerCase().includes(term)))
+      .filter(
+        (f) =>
+          (!riskFilter || f.risk === riskFilter) &&
+          (!triageFilter || f.triageStatus === triageFilter) &&
+          (!term || f.title.toLowerCase().includes(term)),
+      )
       .sort((a, b) => RISK_ORDER[a.risk] - RISK_ORDER[b.risk]);
-  }, [findingsQuery.data, riskFilter, search]);
+  }, [findingsQuery.data, riskFilter, triageFilter, search]);
+
+  // Quantos ainda não foram olhados — é o número que diz se a revisão acabou.
+  const porTriar = useMemo(
+    () => (findingsQuery.data ?? []).filter((f) => f.triageStatus === "NEW").length,
+    [findingsQuery.data],
+  );
+
+  // O diálogo lê o finding da lista viva (não da cópia congelada no clique):
+  // sem isso, promover deixaria o diálogo mostrando o estado anterior até
+  // fechar e reabrir.
+  const findingDoDialogo = useMemo(
+    () => findingsQuery.data?.find((f) => f.id === findingParaPromover?.id) ?? findingParaPromover,
+    [findingsQuery.data, findingParaPromover],
+  );
 
   async function handleDownloadPdf(): Promise<void> {
     if (!id) return;
@@ -365,7 +458,37 @@ export function DastScanDetailPage() {
             <RiskCountCard risk="INFO" value={scan.alertsInfo} />
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          {/* Abas: "achados" é a lista de sempre; "comparação" responde se a
+              correção funcionou. São perguntas diferentes — juntar as duas na
+              mesma tela deixaria as duas piores. */}
+          <div className="mt-6 flex gap-1 border-b border-subtle" role="tablist" aria-label="Resultado do scan">
+            {(
+              [
+                ["findings", `Achados (${findingsQuery.data?.length ?? 0})`],
+                ["comparacao", "Comparar com execução anterior"],
+              ] as const
+            ).map(([chave, rotulo]) => (
+              <button
+                key={chave}
+                type="button"
+                role="tab"
+                aria-selected={aba === chave}
+                onClick={() => setAba(chave)}
+                className={`alvo-estendido -mb-px border-b-2 px-4 py-2 text-sm font-medium ${
+                  aba === chave
+                    ? "border-accent text-accent-ink"
+                    : "border-transparent text-fg-muted hover:text-fg"
+                }`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+
+          {aba === "comparacao" && <DastComparePanel scanId={scan.id} />}
+
+          {aba === "findings" && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <select
               value={riskFilter}
               onChange={(e) => setRiskFilter(e.target.value as DastRisk | "")}
@@ -378,6 +501,18 @@ export function DastScanDetailPage() {
               <option value="LOW">{DAST_RISK_LABELS.LOW}</option>
               <option value="INFO">{DAST_RISK_LABELS.INFO}</option>
             </select>
+            <select
+              value={triageFilter}
+              onChange={(e) => setTriageFilter(e.target.value as DastTriageStatus | "")}
+              className="h-touch rounded-control border border-default bg-surface px-3 text-sm text-fg"
+              aria-label="Filtrar por situação da triagem"
+            >
+              <option value="">Toda a triagem</option>
+              <option value="NEW">{DAST_TRIAGE_LABELS.NEW}</option>
+              <option value="CONFIRMED">{DAST_TRIAGE_LABELS.CONFIRMED}</option>
+              <option value="FALSE_POSITIVE">{DAST_TRIAGE_LABELS.FALSE_POSITIVE}</option>
+              <option value="ACCEPTED_RISK">{DAST_TRIAGE_LABELS.ACCEPTED_RISK}</option>
+            </select>
             <Input
               placeholder="Buscar por título..."
               value={search}
@@ -385,9 +520,20 @@ export function DastScanDetailPage() {
               className="max-w-sm"
               aria-label="Buscar findings por título"
             />
+            {/* Atalho pro estado que o pentester mais quer ver: o que falta. */}
+            {porTriar > 0 && (
+              <Button
+                variant={triageFilter === "NEW" ? "primario" : "secundario"}
+                size="sm"
+                onClick={() => setTriageFilter(triageFilter === "NEW" ? "" : "NEW")}
+              >
+                {porTriar} por triar
+              </Button>
+            )}
           </div>
+          )}
 
-          {findingsQuery.isLoading && (
+          {aba === "findings" && findingsQuery.isLoading && (
             <div className="mt-4 flex flex-col gap-2" aria-busy="true">
               <span className="sr-only">Carregando findings</span>
               <Skeleton className="h-10 w-full bg-inset" />
@@ -395,30 +541,33 @@ export function DastScanDetailPage() {
             </div>
           )}
 
-          {findingsQuery.isError && (
+          {aba === "findings" && findingsQuery.isError && (
             <ErrorState className="mt-4" titulo="Não foi possível carregar os findings" aoTentarNovamente={() => findingsQuery.refetch()} />
           )}
 
-          {!findingsQuery.isLoading && !findingsQuery.isError && filteredFindings.length === 0 && (
+          {aba === "findings" && !findingsQuery.isLoading && !findingsQuery.isError && filteredFindings.length === 0 && (
             <EmptyState
               className="mt-4"
               titulo={(findingsQuery.data?.length ?? 0) === 0 ? "Nenhum achado neste scan" : "Nenhum achado com esse filtro"}
               descricao={
                 (findingsQuery.data?.length ?? 0) === 0
                   ? "O ZAP não encontrou nenhum alerta dentro do escopo do alvo."
-                  : "Ajuste a busca ou o filtro de risco."
+                  : "Ajuste a busca ou os filtros de risco e triagem."
               }
             />
           )}
 
-          {filteredFindings.length > 0 && (
+          {aba === "findings" && filteredFindings.length > 0 && (
             <div className="mt-4 overflow-x-auto rounded-container border border-subtle">
               <table className="w-full text-left text-sm">
                 <thead className="bg-surface text-fg-muted">
                   <tr>
                     <th className="px-4 py-3 font-medium">Risco</th>
                     <th className="px-4 py-3 font-medium">Título</th>
-                    <th className="px-4 py-3 font-medium">Confiança</th>
+                    {/* Substituiu "Confiança", que passou pro detalhe expandido:
+                        numa varredura da lista, saber o que já foi analisado
+                        vale mais do que o grau de confiança do ZAP. */}
+                    <th className="px-4 py-3 font-medium">Triagem</th>
                     <th className="px-4 py-3 font-medium">URL</th>
                     <th className="px-4 py-3 font-medium">
                       <span className="sr-only">Expandir</span>
@@ -432,6 +581,8 @@ export function DastScanDetailPage() {
                       finding={finding}
                       expanded={expandedId === finding.id}
                       onToggle={() => setExpandedId(expandedId === finding.id ? null : finding.id)}
+                      onPromote={() => setFindingParaPromover(finding)}
+                      onError={setError}
                     />
                   ))}
                 </tbody>
@@ -440,6 +591,12 @@ export function DastScanDetailPage() {
           )}
         </>
       )}
+
+      <DastPromoteDialog
+        finding={findingDoDialogo}
+        aberto={!!findingParaPromover}
+        aoFechar={() => setFindingParaPromover(null)}
+      />
     </div>
   );
 }

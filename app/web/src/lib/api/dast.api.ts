@@ -9,12 +9,18 @@
 
 import { apiClient } from "./client";
 import type {
+  ComparableScan,
   CreateDastScanInput,
   DastFinding,
   DastModuleStatus,
   DastReportData,
   DastScan,
+  DastTriageStatus,
+  PromoteInput,
+  PromotionDraft,
+  ScanComparison,
 } from "../../types/dast.types";
+import type { Vulnerability } from "../../types/vulnerability.types";
 
 export const dastApi = {
   create: (input: CreateDastScanInput) => apiClient.post<DastScan>("/dast/scans", input).then((res) => res.data),
@@ -34,4 +40,28 @@ export const dastApi = {
 
   getReportHtml: (id: string) =>
     apiClient.get<string>(`/dast/scans/${id}/report/html`, { responseType: "text" }).then((res) => res.data),
+
+  /* ---- Triagem e promoção (ADR-032) ----
+     Rotas sob /dast/scans/findings/... — o segmento literal "findings" vem
+     ANTES do "/:id" paramétrico no router do backend, por isso funciona. */
+
+  triage: (findingId: string, triageStatus: DastTriageStatus, note?: string | null) =>
+    apiClient
+      .patch<DastFinding>(`/dast/scans/findings/${findingId}/triage`, { triageStatus, note: note ?? null })
+      .then((res) => res.data),
+
+  getPromotionDraft: (findingId: string) =>
+    apiClient.get<PromotionDraft>(`/dast/scans/findings/${findingId}/promotion-draft`).then((res) => res.data),
+
+  promote: (findingId: string, input: PromoteInput) =>
+    apiClient.post<Vulnerability>(`/dast/scans/findings/${findingId}/promote`, input).then((res) => res.data),
+
+  /* ---- Comparação entre execuções ---- */
+
+  listComparableScans: (id: string) =>
+    apiClient.get<ComparableScan[]>(`/dast/scans/${id}/comparable`).then((res) => res.data),
+
+  /** `id` é o scan mais NOVO; `baseScanId`, o mais antigo com que comparar. */
+  compare: (id: string, baseScanId: string) =>
+    apiClient.get<ScanComparison>(`/dast/scans/${id}/compare`, { params: { base: baseScanId } }).then((res) => res.data),
 };

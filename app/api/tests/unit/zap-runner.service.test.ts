@@ -42,6 +42,9 @@ import {
   isDockerAvailable,
   runScan,
   buildZapUrl,
+  parseMemoryToMb,
+  heapArgForMemoryLimit,
+  friendlyFailureReason,
 } from "../../src/services/zap-runner.service";
 
 /** Menor report.json que o pipeline aceita — mesmo formato do ZAP de verdade. */
@@ -376,5 +379,64 @@ describe("zap-runner.service — utilidades", () => {
     const escaped = escapeHtml(`<script>alert('xss')</script>&"`);
     expect(escaped).not.toContain("<script>");
     expect(escaped).toContain("&lt;script&gt;");
+  });
+});
+
+/**
+ * Limites de recurso POR CONTAINER (2026-09-09). O watchdog limita quantos
+ * scans rodam; estes limitam quanto cada um consome — sem os dois, dois scans
+ * simultâneos ocupavam ~960% de CPU e cresciam sem teto de RAM.
+ */
+describe("zap-runner.service — limites de recurso do container", () => {
+  it("parseMemoryToMb entende os sufixos que o Docker aceita", () => {
+    expect(parseMemoryToMb("2g")).toBe(2048);
+    expect(parseMemoryToMb("1536m")).toBe(1536);
+    expect(parseMemoryToMb("1G")).toBe(1024);
+    expect(parseMemoryToMb("512M")).toBe(512);
+    expect(parseMemoryToMb("2gb")).toBe(2048); // forma "2gb" também é aceita pelo Docker
+    expect(parseMemoryToMb("1048576")).toBe(1); // sem sufixo = bytes
+  });
+
+  it("parseMemoryToMb devolve null pro que não entende, em vez de chutar", () => {
+    // Um valor não reconhecido tem que virar "sem limite", nunca um limite
+    // inventado: passar `--memory` errado quebraria o scan de forma opaca.
+    expect(parseMemoryToMb("muita")).toBeNull();
+    expect(parseMemoryToMb("")).toBeNull();
+    expect(parseMemoryToMb("-2g")).toBeNull();
+    expect(parseMemoryToMb("0")).toBeNull();
+  });
+
+  it("heapArgForMemoryLimit deixa o heap FOLGADAMENTE abaixo do teto do container", () => {
+    // A folga não é estética: metaspace, stacks de thread e buffers diretos
+    // ficam FORA do -Xmx mas contam no cgroup. Heap == limite = OOM certo.
+    expect(heapArgForMemoryLimit("2g")).toBe("-Xmx1331m"); // 65% de 2048
+    expect(heapArgForMemoryLimit("1g")).toBe("-Xmx665m");
+
+    const heapMb = Number(/-Xmx(\d+)m/.exec(heapArgForMemoryLimit("2g")!)![1]);
+    expect(heapMb).toBeLessThan(parseMemoryToMb("2g")!);
+  });
+
+  it("heapArgForMemoryLimit não passa limite quando ele quebraria o ZAP", () => {
+    // Abaixo de 256MB de heap o ZAP não sobe de forma confiável — melhor
+    // rodar sem limite do que entregar um scan que morre por dentro.
+    expect(heapArgForMemoryLimit("128m")).toBeNull();
+    expect(heapArgForMemoryLimit("valor-invalido")).toBeNull();
+  });
+
+  it("a falha por falta de memória vira uma mensagem ACIONÁVEL, não genérica", () => {
+    // O limite de RAM é nosso, então a saída (aumentar DAST_ZAP_MEMORY) é uma
+    // ação que o usuário pode tomar — a mensagem precisa dizer isso, senão o
+    // OOM vira um "erro estranho" sem pista nenhuma.
+    const msg = friendlyFailureReason("ZAP_OOM_KILLED: connect ECONNREFUSED");
+    expect(msg).toContain("sem memória");
+    expect(msg).toContain("DAST_ZAP_MEMORY");
+  });
+
+  it("friendlyFailureReason traduz os erros conhecidos e não vaza stack no desconhecido", () => {
+    expect(friendlyFailureReason("SCAN_TIMEOUT")).toContain("tempo máximo");
+    expect(friendlyFailureReason("ZAP_STARTUP_TIMEOUT")).toContain("subir");
+    expect(friendlyFailureReason(undefined)).toContain("desconhecida");
+    // Erro não mapeado é truncado — nunca despeja um stack inteiro na tela.
+    expect(friendlyFailureReason("x".repeat(500))).toHaveLength(200);
   });
 });

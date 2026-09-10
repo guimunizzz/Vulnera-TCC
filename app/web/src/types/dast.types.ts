@@ -73,6 +73,37 @@ export interface DastScan {
   updatedAt: string;
 }
 
+/* ==========================================================================
+   Triagem e promoção (ADR-032)
+
+   O que o pentester faz DEPOIS do scan: marcar o que já analisou e levar o
+   que é real pro fluxo de remediação do produto (Vulnerability).
+   ========================================================================== */
+
+export type DastTriageStatus = "NEW" | "CONFIRMED" | "FALSE_POSITIVE" | "ACCEPTED_RISK";
+
+export const DAST_TRIAGE_LABELS: Record<DastTriageStatus, string> = {
+  NEW: "Por triar",
+  CONFIRMED: "Confirmado",
+  FALSE_POSITIVE: "Falso-positivo",
+  ACCEPTED_RISK: "Risco aceito",
+};
+
+/** Tom do Badge por status — NEW é neutro de propósito: "ainda não olhei" não é alerta. */
+export const DAST_TRIAGE_TONES: Record<DastTriageStatus, "neutro" | "sucesso" | "atencao" | "perigo"> = {
+  NEW: "neutro",
+  CONFIRMED: "perigo",
+  FALSE_POSITIVE: "neutro",
+  ACCEPTED_RISK: "atencao",
+};
+
+export interface PromotedVulnerability {
+  id: string;
+  projectId: string;
+  severityFinal: string;
+  status: string;
+}
+
 export interface DastFinding {
   id: string;
   scanId: string;
@@ -90,6 +121,69 @@ export interface DastFinding {
   solution: string | null;
   reference: string | null;
   createdAt: string;
+  triageStatus: DastTriageStatus;
+  triageNote: string | null;
+  triagedByName: string | null;
+  triagedAt: string | null;
+  /** Preenchido depois que o finding vira uma Vulnerability. */
+  promotedVulnerability: PromotedVulnerability | null;
+}
+
+/**
+ * Rascunho pré-preenchido do formulário de promoção.
+ *
+ * ⚠️ `cvssVector` é SUGESTÃO, não medição: o ZAP não fornece vetor CVSS, só
+ * riskcode. O pentester revisa antes de salvar — é isso que mantém a RN10
+ * (score sempre calculado de um vetor revisado por humano) intacta mesmo com
+ * achados de origem automatizada. Ver ADR-029/ADR-032.
+ */
+export interface PromotionDraft {
+  title: string;
+  description: string;
+  owaspCategory: string;
+  cvssVector: string;
+  recommendation: string | null;
+  impact: string | null;
+  alreadyPromotedTo: string | null;
+}
+
+export interface PromoteInput {
+  projectId: string;
+  title: string;
+  description: string;
+  owaspCategory: string;
+  cvssVector: string;
+  impact?: string;
+  recommendation?: string;
+}
+
+/* ==========================================================================
+   Comparação entre duas execuções contra o mesmo alvo
+   ========================================================================== */
+
+export interface ScanComparisonEntry {
+  fingerprint: string;
+  title: string;
+  risk: DastRisk;
+  url: string;
+  param: string | null;
+}
+
+export interface ScanComparison {
+  baseScan: { id: string; targetUrl: string; finishedAt: string | null; total: number };
+  headScan: { id: string; targetUrl: string; finishedAt: string | null; total: number };
+  /** Estava no scan antigo e sumiu no novo — o que a correção resolveu. */
+  resolved: ScanComparisonEntry[];
+  /** Apareceu só no scan novo — regressão ou área nova. */
+  introduced: ScanComparisonEntry[];
+  /** Está nos dois — continua aberto. */
+  persisted: ScanComparisonEntry[];
+}
+
+export interface ComparableScan {
+  id: string;
+  finishedAt: string | null;
+  total: number;
 }
 
 export interface DastReportData {

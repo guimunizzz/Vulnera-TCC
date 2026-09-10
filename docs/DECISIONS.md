@@ -480,3 +480,57 @@ punhado de scans concorrentes, não milhares/hora).
 **Alternativa descartada:** Redis + BullMQ — desproporcional ao volume e
 fora do escopo explícito da entrega; o contrato de `DastScanService` já é
 compatível com trocar por uma fila depois, se o produto crescer.
+
+### ADR-031 — ZAP em modo daemon por scan, DooD na stack e simulado visível
+
+> Registrado retroativamente em 2026-09-09 (a sessão que tomou a decisão criou
+> o ADR completo mas não indexou aqui — R5: o doc se ajusta ao que existe).
+
+**Contexto:** com a stack inteira em `docker compose`, todo scan caía
+silenciosamente no gerador simulado (diagnóstico em `docs/DAST-DOCKER-GAP.md`),
+e o Rafael pediu percentual de progresso real na UI — impossível com
+`zap-full-scan.py`, que é uma caixa preta sem progresso.
+
+**Decisão:** o ZAP passa a rodar em **modo daemon**, ainda **um container por
+scan**, conduzido pela API HTTP dele (spider → passivo → ativo → relatórios).
+Isso dá percentual real e faz o bind mount de relatório **sumir do desenho** —
+a "Causa 3" do diagnóstico deixa de existir em vez de ser contornada. Mais:
+`docker-cli` na imagem da API + socket do host montado (DooD), watchdog de 2
+scans simultâneos, e as colunas `simulated`/`warningMessage`/`progress`/`phase`
+que tornam um resultado de demonstração distinguível de um real.
+
+**Alternativa descartada:** estimar o progresso pelo tempo decorrido —
+seria uma barra que mente, andando igual num alvo de 30s e num de 20min.
+
+### ADR-032 — Triagem, promoção para Vulnerability e comparação de scans
+
+**Contexto:** com o scan real funcionando, o módulo ainda terminava num beco —
+o pentester via 40 achados e a única saída era um PDF. Sem onde registrar o que
+já analisou, sem caminho para o fluxo de remediação do produto, e sem como
+provar que uma correção funcionou.
+
+**Decisão:** três frentes. (1) **Triagem** no silo (NEW/CONFIRMED/
+FALSE_POSITIVE/ACCEPTED_RISK + nota, autor, data). (2) **Promoção** de finding
+para `Vulnerability`, com `sourceType`/`sourceDastFindingId` — respondendo os
+quatro pontos que o ADR-029 tinha deixado em aberto. (3) **Comparação** entre
+duas execuções do mesmo alvo, por `fingerprint`.
+
+**O ponto central é como o CVSS foi resolvido.** O ADR-029 recusou a
+importação porque o ZAP não fornece vetor CVSS, e inventar um contaminaria o
+cálculo 100%-confiável do produto (RN10). A saída adotada é a que o próprio
+ADR-029 apontava: o backend **sugere** um vetor no formulário, marcado como
+sugestão num aviso visível, e o **pentester revisa** antes de salvar.
+Consequência: o produto continua sem uma única `Vulnerability` com CVSS
+estimado, e não foi preciso criar flag de "score aproximado".
+
+**Achado que veio de medir, não de ler:** o watchdog do ADR-031 limitava
+*quantos* scans rodam, mas nada limitava *quanto* cada um consome — dois scans
+reais ocupavam ~960% de 1200% de CPU sem teto de RAM. Corrigido com
+`DAST_ZAP_MEMORY`/`DAST_ZAP_CPUS`, que **precisam** andar junto de um `-Xmx`
+derivado (o `zap.sh` lê a RAM do host, não o limite do cgroup, e sem `-Xmx` a
+JVM morre por OOM).
+
+**Alternativa descartada:** um campo `cvssEstimated: boolean` permitindo
+promover sem revisão — criaria duas classes de score na mesma coluna e
+obrigaria toda tela, relatório e gráfico do produto a saber da distinção pra
+não mentir; custo espalhado por tudo pra economizar dez segundos numa tela só.

@@ -17,6 +17,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dastApi } from "../lib/api/dast.api";
 import { usersApi } from "../lib/api/users.api";
@@ -91,6 +92,7 @@ export function DastPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const getErrorMessage = useApiError();
 
   const scansQuery = useQuery({
@@ -121,11 +123,16 @@ export function DastPage() {
 
   const createMutation = useMutation({
     mutationFn: () => dastApi.create({ targetUrl: targetUrl.trim() }),
-    onSuccess: () => {
+    onSuccess: (scan) => {
       queryClient.invalidateQueries({ queryKey: ["dast", "scans"] });
+      queryClient.invalidateQueries({ queryKey: ["dast", "status"] });
       setIsCreateOpen(false);
       setTargetUrl("");
       setFormError(null);
+      // Leva direto pro acompanhamento. Quem acabou de disparar um scan quer
+      // ver ele andar — antes, a pessoa voltava pra lista e tinha de caçar a
+      // linha certa (a URL aparece truncada ali) pra clicar em "Ver".
+      navigate(`/dast/scans/${scan.id}`);
     },
     onError: (err: unknown) => setFormError(getErrorMessage(err)),
   });

@@ -111,3 +111,61 @@ saída estruturada que `dast-findings.service.ts` consome para persistir os
 - `docs/Vulnera/07-Decisoes/ADR-028 - Execucao do ZAP via Docker spawn.md`
 - `docs/Vulnera/07-Decisoes/ADR-029 - DAST como silo.md`
 - `docs/evidencias/zap/README.md` — baseline de segurança da própria stack Vulnera (não confundir, ver aviso no topo)
+
+---
+
+## Medição de recursos — 2026-09-09 (Fase 9.2)
+
+Evidência do que motivou os limites por container documentados em
+[[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]] §4.
+Coletada com `docker stats --no-stream` durante **dois scans reais
+simultâneos**, na stack completa (`docker compose up`, entrada em :8086),
+numa máquina com 12 CPUs lógicas e ~7.7GiB alocados à VM do Docker.
+
+**Antes** (watchdog limitando 2 scans, sem limite de recurso por container):
+
+```
+NAME                                    MEM USAGE / LIMIT     CPU %
+vulnera-zap-cmtumyyib0007rq01sq6wk8e0   936.8MiB / 7.7GiB     398.83%
+vulnera-zap-cmtumyyg30003rq01zxtp8189   1.39GiB  / 7.7GiB     564.60%
+```
+
+O `LIMIT` de 7.7GiB é a RAM inteira da VM — ou seja, **nenhum teto**: o
+número que aparece ali é o total disponível, não um limite aplicado. Somados,
+os dois containers ocupavam ~960% de 1200% de CPU.
+
+**Depois** (`DAST_ZAP_MEMORY=2g`, `DAST_ZAP_CPUS=4`, `-Xmx` derivado):
+
+```
+NAME                                    MEM USAGE / LIMIT     CPU %
+vulnera-zap-cmtuowzka0045lp01tlvgsddr   912.3MiB / 2GiB       64.22%
+vulnera-zap-cmtuovyjj003mlp01hh4b2bn0   599.6MiB / 2GiB        4.27%
+```
+
+Confirmação de que os limites chegam ao container (`docker inspect`):
+
+```
+Memory=2147483648  MemorySwap=2147483648  NanoCpus=4000000000
+Cmd=["zap.sh","-Xmx1331m","-daemon","-host","0.0.0.0","-port","8080", ...]
+```
+
+O `-Xmx1331m` (65% de 2048MB) é o que impede a JVM de pedir heap com base na
+RAM do **host** e morrer por OOM do cgroup — ver o aviso em `docs/DAST.md` §7.
+
+### Verificação do limite de concorrência
+
+Três scans disparados na mesma janela, com `DAST_MAX_CONCURRENT_SCANS=2`:
+
+```
+$ docker ps --filter "name=vulnera-zap" --format "{{.Names}}"
+vulnera-zap-cmtumyyib0007rq01sq6wk8e0
+vulnera-zap-cmtumyyg30003rq01zxtp8189      <- exatamente 2, nunca 3
+
+$ GET /api/dast/scans/status
+running: 2 / 2 | queued: 1
+NA FILA: 1º https://example.net/
+ALERTAS: "Limite de 2 scans simultâneos atingido — este entrou na fila (posição 1)."
+```
+
+O terceiro entrou em execução sozinho quando a primeira vaga liberou (FIFO),
+sem intervenção. Os três concluíram com `simulated: false` em 39-52s.

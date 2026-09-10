@@ -802,3 +802,98 @@ LIFE-01..04, mais o fluxo feliz completo), cobertura 89-96% nos 3 services
 novos, zero dependência de Docker na suíte. Frontend: build e lint limpos
 (nenhum teste automatizado novo — a validação foi via Playwright real, ver
 acima).
+
+---
+
+# FASE 9.1 + 9.2 — DAST: scan real na stack, e o que fazer com o resultado
+
+Duas sessões consecutivas em 2026-09-09, na mesma branch `feat/dast-zap`.
+A 9.1 fez o scan real funcionar dentro do `docker compose` (ADR-031); a 9.2
+verificou se aquilo era mesmo verdade e deu ao pentester o que fazer com o
+resultado (ADR-032).
+
+## Histórico
+
+**Branch:** `feat/dast-zap` (sem commits — mesma decisão de todas as fases
+anteriores: trabalho completo em working tree, o Rafael decide quando
+commitar) · **Data:** 2026-09-09 · **PR:** não aberta
+
+### 9.1 — o que foi entregue
+
+ZAP em **modo daemon por scan** conduzido pela API HTTP dele (spider →
+passivo → ativo → relatórios), DooD na stack (`docker-cli` na imagem +
+socket do host montado), watchdog de concorrência com fila FIFO, e as
+colunas que tornam um resultado simulado distinguível de um real. Fecha as
+três causas e a lacuna de produto de `docs/DAST-DOCKER-GAP.md`.
+
+### 9.2 — o que foi entregue
+
+**Primeiro, verificação.** O prompt pedia para *garantir* que o watchdog
+respeita os limites e que o scan funciona de verdade — então nada foi aceito
+no papel. Medido na stack real: `which docker` dentro do container da API
+responde; três scans disparados juntos produziram **exatamente dois
+containers do ZAP** no `docker ps` e um na fila com alerta; o terceiro entrou
+sozinho ao abrir vaga; três scans reais concluíram com `simulated: false` em
+39-52s.
+
+**A verificação achou o que a leitura não acharia.** O watchdog limitava
+*quantos* scans rodam, mas **nada limitava quanto cada um consome**: dois
+scans reais ocupavam ~960% de 1200% de CPU e cresciam sem teto de RAM
+(`936MiB / 7.7GiB` e `1.39GiB / 7.7GiB` — 7.7GiB é a VM inteira do Docker).
+Respeitar "no máximo 2 scans" e ainda assim travar a máquina não é respeitar
+limite nenhum, e o cenário em que isso dói é a apresentação. Corrigido com
+`DAST_ZAP_MEMORY`/`DAST_ZAP_CPUS` e um `-Xmx` derivado — os dois **têm** de
+andar juntos, porque o `zap.sh` calcula o heap a partir da RAM do *host*, não
+do limite do cgroup, e sozinho o `--memory` só transformaria "sem teto" em
+"morre por OOM no meio do active scan". Depois: `912MiB / 2GiB | 64%`.
+
+Também foram tapados dois buracos de heartbeat que abortariam scans
+legítimos: o `docker run` na primeira execução de uma máquina (pull de
+~3.7GB, sem pulso, e o watchdog corta em 2min — justamente o primeiro scan de
+uma máquina nova) e o download dos relatórios (dois `httpGet` de 120s contra
+um limite de silêncio de 120s).
+
+**Depois, as três frentes escolhidas pelo Rafael:** triagem no silo, promoção
+para `Vulnerability` e comparação entre execuções. Detalhe e racional no
+ADR-032; o ponto que mais importa é que a promoção **não inventa vetor
+CVSS** — ela sugere e o humano revisa, que é o que mantém a RN10 intacta e
+responde a objeção que tinha feito o ADR-029 recusar a integração.
+
+### Desvios do plano
+
+- **`npm install --save-dev @playwright/test` no `app/web`** (mexe no
+  `package.json`, aprovado explicitamente pelo Rafael na abertura da sessão,
+  entre três opções oferecidas). Playwright deliberadamente **fora** do
+  `npm run check`: os E2E exigem a stack de pé, e o `check` precisa continuar
+  rodando sem Docker.
+- **`tsconfig.json` do web passou a incluir `e2e` e `playwright.config.ts`** —
+  sem isso, erro de tipo em teste E2E não seria pego por `npm run build`.
+- **Dois erros de lint pré-existentes corrigidos** em
+  `tests/integration/maturity.test.ts` (`token` desestruturado e nunca usado,
+  do commit `ebcae32`, Sprint 8). Fora do escopo pelo S6, mas **bloqueavam o
+  `npm run check`**, que o §11 exige antes de PR — é a exceção que o próprio
+  S6 prevê. Correção trivial de duas linhas, sem mudança de comportamento.
+- **ADR-031 e ADR-032 indexados em `docs/DECISIONS.md`.** O ADR-031 tinha
+  ficado só como arquivo, sem entrada no índice — corrigido por R5 (o doc se
+  ajusta ao que existe), sem reescrever nada do passado.
+
+### Bugs encontrados e corrigidos durante a execução
+
+| Onde | O quê |
+|---|---|
+| `zap-runner.service.ts` | Sem `--memory`/`--cpus`, dois scans simultâneos consumiam quase toda a CPU da máquina e RAM sem teto. Achado ao **medir** a stack, não ao ler o código. |
+| `zap-runner.service.ts` | `docker run` e download de relatórios ficavam fora de qualquer loop de polling e podiam passar dos 2min de silêncio — o watchdog abortaria scans legítimos, inclusive o primeiro scan de qualquer máquina nova. |
+| `dast-scan-detail-page.tsx` / `dast-promote-dialog.tsx` | Link para `/vulnerabilities/:id`, rota que **não existe** (a do produto é `/findings/:id`). **Pego pelo Playwright** — é exatamente a classe de bug que passa por teste de componente e por teste de endpoint, porque cada metade funciona isolada. |
+
+### Validação em navegador real
+
+Desta vez com Playwright versionado no repositório em vez de ad-hoc no
+scratchpad (a extensão do Chrome segue sem conectar, como em todas as fases
+anteriores). Seis casos E2E contra a stack real, incluindo um que prova que
+**a barra de progresso mede em vez de estimar**: ele exige que o percentual
+suba *e* que as fases nomeadas do ZAP apareçam na tela — uma barra baseada em
+tempo decorrido passaria na primeira asserção e falharia na segunda.
+
+Testes: 333 → **353** no backend (`dast-triage.test.ts` com 16 casos, mais 4
+unitários de limite de recurso), 34 no frontend, 6 E2E. `lint` verde nos dois
+workspaces.

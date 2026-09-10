@@ -20,6 +20,29 @@
 > daemon é um *proxy* antes de ser servidor de API, e devolve `502` se o header
 > `Host` não bater com o endereço **e a porta** em que ele escuta. Detalhes no
 > ADR-031 e no cabeçalho de `zap-runner.service.ts`.
+>
+> ### Verificação independente em 2026-09-09 (sessão seguinte)
+>
+> As correções acima foram **medidas na stack real**, não aceitas no papel:
+> `docker compose exec api which docker` responde `/usr/bin/docker`; três
+> scans disparados juntos produziram **exatamente dois containers do ZAP** no
+> `docker ps` e um na fila com alerta; três scans reais concluíram em 39-52s
+> com `simulated: false`.
+>
+> **Um buraco novo apareceu nessa medição, e não era visível no papel:** o
+> watchdog limitava *quantos* scans rodam, mas **nada limitava quanto cada um
+> consome** — dois scans reais ocupavam ~960% de 1200% de CPU e cresciam sem
+> teto de RAM (`936MiB / 7.7GiB` e `1.39GiB / 7.7GiB`, onde 7.7GiB é a VM
+> inteira do Docker). Corrigido com `DAST_ZAP_MEMORY`/`DAST_ZAP_CPUS` +
+> `-Xmx` derivado. Ver [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]] §4.
+>
+> ⚠️ **Resíduo do §5 que vale saber ao demonstrar:** a coluna `simulated` foi
+> criada com `DEFAULT false`, então **todo scan anterior a 2026-09-09 aparece
+> como real**, inclusive os que de fato foram simulados. Dá pra reconhecê-los
+> pela duração de ~3s (o `SIMULATE_DELAY_MS`) e pelos 8 alertas fixos do
+> gerador. Não foi feito backfill: o custo de adivinhar retroativamente é
+> maior que o de saber disto. Se atrapalhar a demonstração, o caminho limpo é
+> apagar os scans antigos em vez de tentar reclassificá-los.
 
 > Relatório de diagnóstico, não um ADR de decisão já tomada. Escrito em
 > 2026-09-06, depois de subir a stack completa (`docker compose up --build`,
