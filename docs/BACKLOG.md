@@ -193,20 +193,6 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 
 ---
 
-## Limitações conhecidas — Build / Docker
-
-> Levantadas em **2026-09-14**, ao destravar o `docker compose up --build` na
-> branch `feat/nova-landing`. Mesmo critério das demais: encontradas,
-> avaliadas e conscientemente não corrigidas agora.
-
-| # | Limitação | Por que não foi corrigida | Mitigação existente |
-| --- | --- | --- | --- |
-| L-12 | **Build da imagem não é reproduzível.** `package-lock.json` está no `.gitignore` (linhas 5 e 68), então nenhum lock chega ao contexto de build — cada `docker build` re-resolve as versões dentro das faixas de semver e pode trazer uma transitiva diferente da que o dev testou. | Passar a versionar o lock é decisão de projeto (afeta API, web e mobile) e exige validar o `npm ci` nos três Dockerfiles — grande demais pra entrar junto de um fix de branch alheia. **Decisão do Rafael.** | Versões diretas estão pinadas por `^` em `package.json`; a stack é validada à mão antes da demo |
-| L-13 | **`npm install --legacy-peer-deps` é obrigatório no `app/web`.** Sem a flag, o npm 10.9 do `node:22-alpine` aborta com `Cannot read properties of null (reading 'edgesOut')` (bug do Arborist ao montar o grafo de peers sem lock). | O bug é do npm, não do projeto; contornar de verdade exigiria subir a versão do npm na imagem ou versionar o lock (ver L-12). | Flag aplicada e **documentada no `app/web/Dockerfile`**, junto do efeito colateral: peers não são mais auto-instaladas, toda peer usada precisa estar declarada à mão (foi o que causou o build quebrado de 2026-09-14) |
-| L-14 | **O `tsc --noEmit` do build da imagem type-checka os arquivos de teste.** `npm run build` roda `tsc --noEmit && vite build`, e o `tsconfig.json` inclui `src` inteiro — um erro de tipo em `*.test.tsx` derruba o build de produção. | É também a única checagem de tipos automatizada do projeto: o CI (`.github/workflows/build.yml`) só roda SonarQube, e `npm run check` é lint + contraste + testes, sem `tsc`. Remover do Dockerfile deixaria o `tsc` sem nenhum gatilho automático. | Aceito de propósito enquanto o CI não rodar `tsc`; o efeito é conservador (falha a mais, nunca a menos) |
-
----
-
 ## Regras
 
 - ✅ marcado pelo agente ao concluir (CLAUDE.md §0.1 R2)
