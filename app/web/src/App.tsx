@@ -11,6 +11,7 @@ import { ProjectsPage } from "./pages/projects-page";
 import { ProjectDetailPage } from "./pages/project-detail-page";
 import { FindingEditorPage } from "./pages/finding-editor-page";
 import { FindingDetailPage } from "./pages/finding-detail-page";
+import { FindingsPage } from "./pages/findings-page";
 import { PendingSubscriptionsPage } from "./pages/admin/pending-subscriptions-page";
 import { StyleguidePage } from "./pages/styleguide-page";
 import { ApplicationDashboardPage } from "./pages/application-dashboard-page";
@@ -49,6 +50,14 @@ export function App() {
               company/PENTESTER atribuído); a distinção ESCREVE-vs-LÊ é feita
               dentro da própria página (canEdit) e reforçada pelo backend. */}
           <Route path="/companies/:companyId/maturity" element={<MaturityAssessmentPage />} />
+
+          {/* Varredura global de findings — ferramenta de quem analisa.
+              O CLIENT é barrado aqui e não vê o item na Sidebar; o backend
+              continua servindo os findings da própria empresa a ele (RN16),
+              que é o que o dashboard e o app mobile consomem. */}
+          <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+            <Route path="/findings" element={<FindingsPage />} />
+          </Route>
 
           <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
             <Route path="/applications" element={<ApplicationsPage />} />
