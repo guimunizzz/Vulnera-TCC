@@ -9,6 +9,76 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-09-14 (sessão 29 — Fase 9: Findings Globais + Query Wizard)
+
+### Objetivo
+
+Página global de findings para PENTESTER e ADMIN, com filtros no estilo query wizard, e **unificação das duas listagens que existiam em paralelo**. Fecha o finding `BACKEND-002` da auditoria consolidada. Branch `feat/findings-globais`, **não commitada** (o prompt pediu explicitamente para não commitar nem abrir PR).
+
+### Checkpoint 0 — o que a auditoria mudou
+
+Três divergências entre o enunciado e o código real, todas com consequência:
+
+1. **`GET /api/vulnerabilities` já existia.** O prompt afirmava que não. Ele aceitava só `projectId` e devolvia array cru — exatamente o que `BACKEND-002` descreve. Ou seja, não era criar endpoint, era reescrever um existente, com contrato público em jogo.
+2. **`/findings/:id` já era rota de topo.** O CP6 pedia "promover"; na verdade era enriquecer.
+3. **`BACKEND-002` não existe em lugar nenhum do repositório**, e `docs/FINDINGS_REMEDIATION.md` também não. O conteúdo do finding bate com o código, mas o registro nunca foi escrito — passou a existir em `docs/BACKLOG.md § Findings de auditoria`.
+
+**Decisão que precisou do Rafael:** o prompt pedia **403 para CLIENT** neste endpoint. Mas ele já servia CLIENT (RN16) e tinha quatro consumidores vivos — os três dashboards e o app mobile, que é justamente o app do CLIENT. 403 quebraria os dois sem substituto. Decidido: CLIENT mantém o acesso ao endpoint (escopado à própria empresa) e o bloqueio vira **guarda de página** em `/findings`. `TEN-21` passou a provar o confinamento no backend; `FIND-ACC-01..04` provam a guarda no frontend.
+
+### Implementado — backend
+
+- **`GET /api/vulnerabilities`** com 12 parâmetros de filtro (repetíveis **e** separados por vírgula, porque cada cliente serializa de um jeito), busca textual, intervalo de datas, paginação e ordenação. **AND entre campos, OR dentro do campo.**
+- **Facetas por `groupBy`**, uma por severidade/status/OWASP/empresa. Cada uma **ignora o próprio filtro** e respeita os demais — sem isso, marcar "Alta" zeraria as outras opções e seria impossível marcar "Crítica" também.
+- **Ordenar por severidade exigiu SQL cru.** `severityFinal` é String (o schema não usa enums nativos, por portabilidade), então `orderBy` do Prisma dá ordem **alfabética**: CRITICAL, HIGH, **LOW, MEDIUM** — com MEDIUM depois de LOW. Resolvido com `FIELD()` do MySQL em `$queryRaw` parametrizado. Isso criou um segundo construtor de filtro, gêmeo do do Prisma; o canário `VULN-LIST-07b` aplica o mesmo recorte pelos dois caminhos e compara os conjuntos de ids, então divergência quebra na hora.
+- **Descoberta no caminho: o `AuditLog` era append-only E write-only.** Gravado desde a Fase 5, nunca lido por ninguém — a única forma de auditar um finding era abrir o MySQL. Ganhou caminho de leitura (`GET /vulnerabilities/:id/audit-log`), com a mesma regra de visibilidade do finding. Sem migration.
+- **Duas adições não pedidas, feitas para não quebrar funcionalidade existente:** a faceta `company` (substitui o dashboard do ADMIN baixar todos os findings do sistema para agrupar no navegador) e o filtro `createdBy` (preserva o KPI "registrados por mim" do PENTESTER com o mesmo significado, em vez de mudá-lo para caber).
+
+### Implementado — frontend
+
+- **`lib/finding-query.ts`** — parser puro, zero React, e que **nunca lança**: a barra é reparsada a cada tecla, e `severidade =` é estado normal de digitação, não erro de quem usa. 108 testes, incluindo digitar a frase inteira caractere a caractere. `!=` vira o complemento do conjunto no cliente, para o backend ficar com um vocabulário só.
+- **`components/findings/findings-table.tsx`** — a implementação de listagem do sistema, configurada por contexto. `Table` do design system estendida de forma aditiva com ordenação controlada (obrigatória com paginação no servidor: ordenar no cliente reordenaria só as 25 linhas da página) e linha operável por teclado.
+- **Três representações do filtro, com papéis distintos:** rascunho (buffer de edição), tokens (forma de trabalho) e URL (a verdade). Com `syncToUrl`, não existe `useState` espelhando filtro.
+- **Removido:** ~120 linhas da aba do ProjectDetail (3 `<select>` nativos, `<table>` crua, filtro e paginação em memória). **Migrados:** os 3 dashboards e o `app/mobile`.
+
+### Validação em navegador real
+
+**A extensão do Chrome conectou** — a primeira vez desde a Fase 6. Os 12 itens do CP8 conferidos com o app rodando, console com **0 erros**. Playwright ad-hoc usado só onde a extensão não alcança: emular `prefers-reduced-motion` e contar requisições de rede.
+
+**Quatro bugs meus, achados só ali, corrigidos na mesma sessão** — nenhum deles apareceria em teste automatizado:
+
+1. **O cabeçalho não fechava a conta.** "9 findings" com "Crítica 4 · Alta 5 · Média 4" ao lado: 4+5+4 = 13 ≠ 9. A semântica drill-down das facetas está certa nos filtros e errada num resumo que diz "recorte atual".
+2. **O chip inválido sumia.** Depois do debounce, a URL reescrevia o rascunho e apagava o chip vermelho antes de a pessoa ler o motivo — justamente o contrário do que ele existe para fazer.
+3. **O estado VAZIO aparecia no lugar do de ERRO.** Com a API fora, a tela dizia "Nenhum finding com esses filtros"; a pessoa mexeria no filtro achando que o recorte é que está vazio. "Terminei de carregar e não tenho nada" agora é sempre erro.
+4. **"Tentar novamente" não tentava nada.** O `networkMode: "online"` padrão do TanStack Query **não transforma falha de rede em erro**: pausa a consulta (`status: pending`, `error: null`), e `refetch()` numa consulta pausada também pausa. Nenhuma requisição saía — só recarregar a página inteira saía do estado. Diagnosticado contando requisições com `navigator.onLine === true`. Corrigido com `networkMode: "always"`; marcado `[FUTURO]` porque o mesmo silêncio vale para o app inteiro.
+
+### Testes
+
+**269 → 293** no backend (`vulnerability-search.test.ts`: VULN-LIST-01..14, TEN-19..22, AUD-01..03; cobertura do service **96,3% stmts / 99,1% linhas**). **34 → 146** no frontend (108 do parser, 4 da guarda de acesso). Lint, `check:contrast` 66/66, `tsc --noEmit` nos três workspaces e `vite build` verdes.
+
+
+### Segunda rodada (mesma sessão) — pedidos do Rafael depois de ver a tela
+
+1. **Caixa de sugestões na barra.** Clicar abre a lista dos 7 campos com descrição e exemplo; escolher um emenda o `=` e passa a mostrar os valores daquele campo com a contagem da faceta. Padrão APG combobox+listbox — o foco nunca sai do input, a opção ativa é apontada por `aria-activedescendant`, e ↑↓/Enter/Esc funcionam. ⚠️ **A caixa só oferece campo que ela consegue completar**: `empresa` some para quem não é ADMIN e `aplicacao` some para o PENTESTER, porque esses papéis recebem 403 nos endpoints de nome correspondentes — oferecer o campo levaria a digitar um nome que nunca resolve para id, ou seja, a um chip inválido e a um beco sem saída. Verificado no navegador: como Camila (PENTESTER) saem exatamente `/api/projects` e `/api/vulnerabilities`, sem nenhum 403.
+
+2. **Exportação CSV.** Exporta o RECORTE, não a página visível — com filtro leva o recorte inteiro (paginando de 100 em 100), sem filtro leva tudo que o ator pode ver. Montado no navegador, como os PDFs (ADR-003). Formato escolhido para abrir direto no Excel pt-BR: separador `;`, BOM UTF-8 e vírgula decimal. **Neutraliza injeção de fórmula**: célula que começaria com `=`, `+`, `-` ou `@` recebe aspa simples antes — sem isso, um finding intitulado `=cmd|'/c calc'!A0` viraria execução na máquina de quem abrisse a planilha, o que num produto de segurança seria constrangedor.
+
+3. **O espaçamento "colado" era classe morta.** O Rafael apontou que a severidade e o número estavam grudados no cabeçalho. A causa não era estética: `gap-1.5` **não existe** na escala CUSTOM deste projeto (`tailwind.config.ts` substitui `theme.spacing` por inteiro, com os passos 0,1,2,3,4,5,6,8,10,12,16,20,24) e portanto **não emitia CSS nenhum** — é a mesma armadilha documentada na task 8.12 da landing. Uma varredura das classes numéricas nos arquivos da entrega achou **9 casos** (`gap-1.5`, `mt-1.5`, `w-64`, `w-96`, `w-48`, `h-32`, `h-40`, `h-64`), todos corrigidos e conferidos contra o CSS gerado de verdade, não por leitura. O resumo de severidade virou `<dl>` com espaçamento assimétrico de propósito: `gap-2` cola o número na severidade a que ele pertence, `gap-x-6` separa os pares — com o mesmo gap nos dois, "5 Alta" se lê como um par e a leitura sai trocada.
+
+   ⚠️ **Duas classes mortas PRÉ-EXISTENTES encontradas na varredura e não corrigidas** (§0.2 S6): `w-56` no `sidebar.tsx` (largura da barra lateral) e `px-2.5` no `project-detail-page.tsx` (chip de críticos abertos).
+
+**Testes: 185 no frontend** (+39: 16 do contexto de sugestão e da aplicação, 23 do CSV, incluindo seis payloads de injeção de fórmula). Backend inalterado em 293. Lint, contraste, `tsc` e build verdes.
+
+### Bugs pré-existentes encontrados e NÃO corrigidos (§0.2 S6)
+
+- **Donut de severidade não renderiza** — só a legenda. Atinge o dashboard do CLIENT e o de aplicação, que a entrega não tocou; provável efeito do upgrade para `recharts@^3.10.1` (major). `L-15` no BACKLOG.
+- **Queda da API desloga o usuário** — o interceptor não distingue "refresh recusado" de "refresh não chegou ao servidor". `L-17`.
+
+### Documentação
+
+`docs/FINDINGS_QUERY.md` (novo, guia de uso da busca), **ADR-028** (tabela como componente canônico), `PRD_VIVO.md` §1/§2/§3/§6/§7, `docs/BACKLOG.md` (Fase 9, seção Findings de auditoria com `BACKEND-002` fechado, limitações L-15..L-17), nota de módulo [[Findings Globais]] no vault.
+
+---
+
 ## 2026-09-09 (sessão 30 — Fase 9.2: o que fazer com o resultado — triagem, promoção e comparação)
 
 ### Objetivo

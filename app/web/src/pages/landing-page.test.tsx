@@ -1,204 +1,146 @@
 /**
  * landing-page.test.tsx
  *
- * Cobre o Checkpoint 2 do fix/landing-publica (estado condicional da navbar
- * lendo o Zustand) e a task 8.12 (cena Three.js do hero + seções novas).
+ * A landing pública é uma tela de apresentação (ADR-026) que carrega `three`,
+ * `@react-three/*` e `gsap` — nenhum roda em jsdom. Aqui esses módulos são
+ * mockados: o que se testa é a ESTRUTURA da página (navbar, seções, para onde
+ * os CTAs levam, integração com o tema do app), não a cena 3D nem as animações
+ * de scroll (isso é responsabilidade das libs).
  *
- *   LAND-01  sem sessão — "Entrar" (secundário, -> /login) e "Iniciar Análise"
- *            (primário, -> /register) aparecem; "Ir para o Dashboard" não
- *   LAND-02  com sessão — só "Ir para o Dashboard" (-> /dashboard) aparece
- *   LAND-03  as três seções novas (Recursos, Metodologia, Planos) renderizam
- *   LAND-04  o `<canvas>` do hero degrada graciosamente sem WebGL2 (jsdom não
- *            implementa a API) — nenhuma exceção, `data-ready` fica "false"
- *   LAND-05  o preview de risk score usa a MESMA fórmula de
- *            `metrics.model.ts` sobre a amostra fixa (24,04)
- *   LAND-06  planos vindos da API aparecem, ordenados por capacidade, com
- *            "Sob consulta" para o plano de preço 0 (Enterprise)
+ *   LAND-01  a navbar da landing renderiza (marca "VULNERA")
+ *   LAND-02  o CTA principal do hero leva pra /register
+ *   LAND-03  as seções-âncora renderizam (como funciona, recursos, planos, time)
+ *   LAND-04  o toggle de tema usa o ThemeProvider do app (estampa data-theme)
+ *   LAND-05  os CTAs de plano levam pra /register
+ *   LAND-06  os links de LinkedIn do time abrem em nova aba com rel seguro
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "../design/theme-provider";
 import { LandingPage } from "./landing-page";
-import { useAuthStore } from "../store/auth.store";
-import { plansApi } from "../lib/api/plans.api";
-import type { Plan } from "../types/plan.types";
 
-vi.mock("../lib/api/plans.api", () => ({
-  plansApi: { list: vi.fn() },
+// A landing inteira entra por um único `lazy()`; a primeira resolução paga a
+// transformação de `three` + `gsap` + `motion` + as 11 seções. Fora do orçamento
+// de 5s padrão quando a suíte roda inteira e em paralelo.
+vi.setConfig({ testTimeout: 20000 });
+
+vi.mock("@react-three/fiber", () => ({
+  Canvas: () => null,
+  useFrame: () => undefined,
 }));
-
-const PLANOS_FIXTURE: Plan[] = [
-  {
-    id: "p-pro",
-    name: "PRO",
-    maxApplications: 10,
-    maxProjects: 5,
-    includesRemediation: true,
-    price: 599,
-    isActive: true,
-    createdAt: new Date().toISOString(),
+vi.mock("@react-three/drei", () => ({
+  Points: () => null,
+  PointMaterial: () => null,
+}));
+vi.mock("gsap", () => ({
+  default: {
+    registerPlugin: () => undefined,
+    from: () => undefined,
+    to: () => undefined,
+    fromTo: () => undefined,
+    set: () => undefined,
+    utils: { toArray: () => [] },
   },
-  {
-    id: "p-basic",
-    name: "BASIC",
-    maxApplications: 2,
-    maxProjects: 1,
-    includesRemediation: false,
-    price: 199,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "p-enterprise",
-    name: "ENTERPRISE",
-    maxApplications: 50,
-    maxProjects: 20,
-    includesRemediation: true,
-    price: 0,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-];
+}));
+vi.mock("gsap/ScrollTrigger", () => ({ ScrollTrigger: { create: () => undefined } }));
+vi.mock("@gsap/react", () => ({ useGSAP: () => undefined }));
 
-function limparAuth(): void {
-  useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
-}
+beforeEach(() => {
+  // Pula a intro 3D (só aparece uma vez por sessão). Se o ambiente não tiver
+  // sessionStorage utilizável, instala um mínimo.
+  try {
+    window.sessionStorage.setItem("vx-intro-seen", "1");
+  } catch {
+    const mapa = new Map<string, string>();
+    Object.defineProperty(window, "sessionStorage", {
+      value: {
+        getItem: (k: string) => mapa.get(k) ?? null,
+        setItem: (k: string, v: string) => void mapa.set(k, v),
+        removeItem: (k: string) => void mapa.delete(k),
+        clear: () => mapa.clear(),
+        key: () => null,
+        length: 0,
+      },
+      writable: true,
+      configurable: true,
+    });
+    window.sessionStorage.setItem("vx-intro-seen", "1");
+  }
+  document.documentElement.removeAttribute("data-theme");
+});
 
-/** Um `QueryClient` NOVO por render — reusar um só vazaria cache de plano
- * entre testes (a queryKey `["plans"]` é a mesma da `plans-page.tsx`, de
- * propósito) e um teste que espera o skeleton veria dado já resolvido. */
 function renderLanding() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
       <MemoryRouter>
         <LandingPage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </ThemeProvider>,
   );
 }
 
-beforeEach(() => {
-  limparAuth();
-  vi.mocked(plansApi.list).mockResolvedValue([]);
-});
+const ESPERA = { timeout: 10000 } as const;
 
-afterEach(() => {
-  limparAuth();
+// Aquece o `lazy()` uma vez: transforma e cacheia o grafo da landing antes de
+// qualquer asserção com timeout.
+beforeAll(async () => {
+  await import("../components/landing/landing-root");
 });
 
 describe("LandingPage", () => {
-  it("LAND-01 — sem sessão mostra Entrar e Iniciar Análise, não o atalho do Dashboard", async () => {
+  it("LAND-01 — a navbar da landing renderiza", async () => {
     renderLanding();
-
-    expect(screen.getByRole("link", { name: "Entrar" })).toHaveAttribute("href", "/login");
-
-    // Aparece na navbar (sm) e no hero (lg) — os dois apontam pro cadastro.
-    const iniciar = screen.getAllByRole("link", { name: "Iniciar Análise" });
-    expect(iniciar.length).toBeGreaterThan(0);
-    for (const link of iniciar) {
-      expect(link).toHaveAttribute("href", "/register");
-    }
-
-    expect(screen.queryByRole("link", { name: "Ir para o Dashboard" })).not.toBeInTheDocument();
-
-    // Deixa a query de planos assentar antes do teste terminar — evita
-    // atualização de estado fora de `act()` vazando pro próximo teste.
-    await waitFor(() => expect(plansApi.list).toHaveBeenCalled());
+    // `lazy()` — o conteúdo só entra depois que o chunk resolve.
+    const marcas = await screen.findAllByText(/VULNERA/, undefined, ESPERA);
+    expect(marcas.length).toBeGreaterThan(0);
   });
 
-  it("LAND-02 — com sessão mostra só o atalho pro Dashboard, sem Entrar nem Iniciar Análise", async () => {
-    useAuthStore.setState({
-      accessToken: "token-fake",
-      refreshToken: "refresh-fake",
-      user: {
-        id: "u1",
-        name: "Rafael",
-        email: "rafael@technova.com",
-        role: "CLIENT",
-        companyId: "c1",
-        createdAt: new Date().toISOString(),
-      },
-    });
-
+  it("LAND-02 — o CTA principal do hero leva pra /register", async () => {
     renderLanding();
-
-    // Navbar (sm) e hero (lg) — os dois apontam pro dashboard.
-    const dashboard = screen.getAllByRole("link", { name: "Ir para o Dashboard" });
-    expect(dashboard.length).toBeGreaterThan(0);
-    for (const link of dashboard) {
-      expect(link).toHaveAttribute("href", "/dashboard");
-    }
-
-    expect(screen.queryByRole("link", { name: "Entrar" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Iniciar Análise" })).not.toBeInTheDocument();
-    // "Explorar Demonstração" é a variante autenticada de "Entrar" — some
-    // pelo mesmo motivo (não competir com o único CTA que faz sentido aqui).
-    expect(screen.queryByRole("link", { name: "Explorar Demonstração" })).not.toBeInTheDocument();
-
-    await waitFor(() => expect(plansApi.list).toHaveBeenCalled());
+    const cta = await screen.findByRole("link", { name: /INICIAR ANÁLISE/ }, ESPERA);
+    expect(cta).toHaveAttribute("href", "/register");
   });
 
-  it("LAND-03 — Recursos, Metodologia e Planos renderizam", async () => {
+  it("LAND-03 — as seções renderizam", async () => {
     renderLanding();
-
-    expect(screen.getByRole("heading", { name: "Uma suíte, do achado ao relatório" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "SAST & DAST estruturados" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Matriz de maturidade" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Relatórios executivos e técnicos" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Auditoria & MTTR em tempo real" })).toBeInTheDocument();
-
-    expect(screen.getByRole("heading", { name: "Postura de risco, calculada — não estimada" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Planos" })).toBeInTheDocument();
-
-    await waitFor(() => expect(plansApi.list).toHaveBeenCalled());
+    expect(await screen.findByRole("heading", { name: "Como funciona" }, ESPERA)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Killer features" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Planos que cabem na sua empresa." }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "O time por trás do Vulnera." })).toBeInTheDocument();
   });
 
-  it("LAND-04 — o canvas do hero degrada sem WebGL2 (jsdom), sem lançar exceção", async () => {
-    // jsdom não define `WebGL2RenderingContext` no `window` — é exatamente o
-    // sinal que `supportsWebGL2()` (use-hero-scene.ts) usa pra nunca tentar
-    // montar a cena. Nenhum mock extra é necessário: o comportamento real de
-    // "sem WebGL2" e o de "ambiente de teste" são o MESMO caminho de código
-    // (ver ADR-026 §4).
-    expect("WebGL2RenderingContext" in window).toBe(false);
-
+  it("LAND-04 — o toggle de tema estampa data-theme via ThemeProvider", async () => {
+    const user = userEvent.setup();
     renderLanding();
 
-    // `CyberCanvas` é carregado via `lazy()` (ver landing-page.tsx) — o
-    // `<canvas>` só entra no DOM depois que o chunk resolve, daí o `waitFor`.
-    await waitFor(() => {
-      const canvas = document.querySelector("canvas");
-      expect(canvas).toBeInTheDocument();
-      expect(canvas).toHaveAttribute("data-ready", "false");
-    });
+    const toggle = await screen.findByRole("button", { name: /tema/ }, ESPERA);
+    await user.click(toggle);
+    expect(["dark", "light"]).toContain(document.documentElement.getAttribute("data-theme"));
 
-    await waitFor(() => expect(plansApi.list).toHaveBeenCalled());
+    const antes = document.documentElement.getAttribute("data-theme");
+    await user.click(await screen.findByRole("button", { name: /tema/ }));
+    expect(document.documentElement.getAttribute("data-theme")).not.toBe(antes);
   });
 
-  it("LAND-05 — o preview de risk score soma CVSS²/10 da amostra fixa (24,04)", async () => {
+  it("LAND-05 — os CTAs de plano levam pra /register", async () => {
     renderLanding();
-
-    // O `NumeroAnimado` sempre renderiza um `.sr-only` com o valor final,
-    // independente do estado da animação de mola — é o nó estável pra
-    // afirmar sobre o VALOR, sem acoplar o teste ao timing da spring.
-    await waitFor(() => {
-      expect(screen.getAllByText("24,04").length).toBeGreaterThan(0);
-    });
-
-    await waitFor(() => expect(plansApi.list).toHaveBeenCalled());
+    const pro = await screen.findByRole("link", { name: "Começar com Pro" }, ESPERA);
+    expect(pro).toHaveAttribute("href", "/register");
+    expect(screen.getByRole("link", { name: "Começar com Basic" })).toHaveAttribute(
+      "href",
+      "/register",
+    );
   });
 
-  it("LAND-06 — planos da API aparecem, com 'Sob consulta' pro plano de preço 0", async () => {
-    vi.mocked(plansApi.list).mockResolvedValue(PLANOS_FIXTURE);
+  it("LAND-06 — os links de LinkedIn do time abrem em nova aba com rel seguro", async () => {
     renderLanding();
-
-    const linkPro = await screen.findByRole("link", { name: "Começar com PRO" });
-    expect(linkPro).toHaveAttribute("href", "/register");
-    expect(screen.getByRole("link", { name: "Começar com BASIC" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Começar com ENTERPRISE" })).toBeInTheDocument();
-
-    expect(screen.getByText("Sob consulta")).toBeInTheDocument();
+    const rafael = await screen.findByRole("link", { name: /Rafael no LinkedIn/ }, ESPERA);
+    expect(rafael).toHaveAttribute("target", "_blank");
+    expect(rafael).toHaveAttribute("rel", expect.stringContaining("noopener"));
   });
 });

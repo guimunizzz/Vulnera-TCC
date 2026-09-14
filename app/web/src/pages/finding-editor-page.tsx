@@ -31,21 +31,13 @@ import { StatusBadge } from "../components/ui/badge";
 import { OverrideSeverityDialog } from "../components/findings/override-severity-dialog";
 import { EvidenceUploader } from "../components/findings/evidence-uploader";
 import { CommentTimeline } from "../components/findings/comment-timeline";
-import { OWASP_CATEGORIES, OWASP_LABELS, type VulnerabilityStatus } from "../types/vulnerability.types";
-
-const ALLOWED_TRANSITIONS: Record<VulnerabilityStatus, VulnerabilityStatus[]> = {
-  OPEN: ["IN_PROGRESS"],
-  IN_PROGRESS: ["FIXED"],
-  FIXED: ["CLOSED"],
-  CLOSED: [],
-};
-
-const TRANSITION_LABELS: Record<VulnerabilityStatus, string> = {
-  OPEN: "Reabrir",
-  IN_PROGRESS: "Iniciar correção",
-  FIXED: "Marcar como corrigido",
-  CLOSED: "Fechar finding",
-};
+import {
+  ALLOWED_TRANSITIONS,
+  OWASP_CATEGORIES,
+  OWASP_LABELS,
+  TRANSITION_LABELS,
+  type VulnerabilityStatus,
+} from "../types/vulnerability.types";
 
 // Espelham FIELD_LIMITS do backend (app/api/src/models/vulnerability.model.ts).
 // O backend é a validação de verdade; aqui é UX — o usuário vê o limite

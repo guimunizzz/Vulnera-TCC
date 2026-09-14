@@ -69,6 +69,22 @@ class ResizeObserverFalso {
 }
 window.ResizeObserver = ResizeObserverFalso as unknown as typeof ResizeObserver;
 
+// `IntersectionObserver` — o jsdom não tem. O `whileInView` do `motion` (usado
+// nos `Reveal` da landing) o instancia na montagem e lança sem ele. O falso não
+// dispara callback: em teste, "entrou na viewport" não é o que se afirma.
+class IntersectionObserverFalso {
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly thresholds: ReadonlyArray<number> = [];
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+}
+window.IntersectionObserver = IntersectionObserverFalso as unknown as typeof IntersectionObserver;
+
 Element.prototype.scrollIntoView = vi.fn();
 
 // `inert` ainda não é implementado pelo jsdom como propriedade — os overlays o

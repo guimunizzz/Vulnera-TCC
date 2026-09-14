@@ -18,6 +18,7 @@
 | **6.5 Design System** | **Tokens OKLCH, componentes próprios, temas, métricas, dashboards** | ✅ concluída 2026-08-09 |
 | 7 Mobile           | Expo enxuto + Push                                 | ✅ concluída 2026-08-10 |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 🚧 CP1-3 + CP4(ZAP) + docs concluídos 2026-08-11; Sonar bloqueado em Rafael |
+| **9 Findings Globais** | **Busca global + query wizard + tabela canônica** | ✅ concluída 2026-09-14 |
 | **9 DAST (OWASP ZAP)** | **Scans automatizados: runner Docker, pipeline de findings, API, UI, PDF** | ✅ concluída 2026-09-05 |
 | **9.1 DAST: scan real na stack** | **ZAP em modo daemon por scan, watchdog (máx. 2), % de progresso, simulado visível** | 🚧 código pronto 2026-09-09, em revisão |
 | **9.2 DAST: o que fazer com o resultado** | **Triagem, promoção para `Vulnerability`, comparação entre execuções + limites de recurso por container** | 🚧 código pronto 2026-09-09, em revisão |
@@ -219,6 +220,44 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 
 ---
 
+## FASE 9 — Findings Globais + Query Wizard (~28h) — ✅ concluída em 2026-09-14
+
+> Fecha o finding de auditoria **`BACKEND-002`**. Decisão em **ADR-028**;
+> guia de uso em `docs/FINDINGS_QUERY.md`.
+
+| #    | Task                                                              | h   | Estado |
+| ---- | ----------------------------------------------------------------- | --- | ------ |
+| 9.0  | Auditoria: schema, endpoint atual, listagens existentes, baseline | 2   | ✅     |
+| 9.1  | `GET /api/vulnerabilities` com filtros, paginação e facetas       | 6   | ✅     |
+| 9.2  | Ordenação por ranking de severidade (`FIELD()` do MySQL)          | 2   | ✅     |
+| 9.3  | Leitura do `AuditLog` (era append-only **e** write-only)          | 2   | ✅ (descoberta) |
+| 9.4  | Testes: VULN-LIST-01..14, TEN-19..22, AUD-01..03                  | 4   | ✅     |
+| 9.5  | Parser do query wizard (`lib/finding-query.ts`)                   | 4   | ✅     |
+| 9.6  | Componente canônico `findings-table.tsx` + hooks                  | 5   | ✅     |
+| 9.7  | Página `/findings` + detalhe enriquecido                          | 4   | ✅     |
+| 9.8  | Remover a listagem antiga e migrar os consumidores                | 3   | ✅     |
+| 9.9  | Validação no navegador (extensão conectou) + correção de 4 bugs   | 3   | ✅     |
+| 9.10 | Documentação: ADR-028, `FINDINGS_QUERY.md`, PRD, vault            | 2   | ✅     |
+
+---
+
+## Findings de auditoria
+
+> Os achados da auditoria consolidada, com o estado de cada um. Antes desta
+> entrega os finding IDs (`BACKEND-00x`) eram citados em prompts mas não tinham
+> registro no repositório — esta seção passa a ser o registro.
+
+| # | Finding | Estado | Fechado por |
+| --- | --- | --- | --- |
+| `BACKEND-002` | **A listagem de findings não filtra no servidor** — *"controller aceita apenas `projectId`; queries não têm severity/status/OWASP/skip/take"*. Era a causa raiz das duas implementações de listagem no frontend: sem filtro no backend, filtrar em memória era a única saída. | ✅ **Fechado em 2026-09-14** | Fase 9. `GET /api/vulnerabilities` passou a aceitar `projectId`, `applicationId`, `companyId`, `createdBy`, `severity`, `status`, `owaspCategory`, `search`, `createdFrom`/`createdTo`, `page`/`pageSize` e `sortBy`/`sortOrder`, com facetas por `groupBy`. **Canários que provam:** `VULN-LIST-01` (paginação), `VULN-LIST-02/03` (severidade, OR dentro do campo), `VULN-LIST-04` (AND entre campos), `VULN-LIST-05` (busca em título e descrição), `VULN-LIST-06` (intervalo de datas), `VULN-LIST-07` (ordenação por ranking de severidade) e `07b` (os dois construtores de filtro concordam), `VULN-LIST-08` (página 2 não repete a 1), `VULN-LIST-09` (facetas refletem os outros filtros), `VULN-LIST-10` (enum inválido → 400), `VULN-LIST-11` (`pageSize` clampado), `VULN-LIST-12/14` (projeto, aplicação, OWASP, autor). Isolamento preservado por `TEN-19..22` |
+
+⚠️ `docs/FINDINGS_REMEDIATION.md` **não existe** neste repositório, e nenhum
+outro `BACKEND-00x` está registrado em lugar nenhum. Se a auditoria consolidada
+tiver outros achados, eles precisam ser trazidos para cá — hoje vivem só nos
+prompts.
+
+---
+
 ## Removido do escopo
 
 | Removido                                                       | Quando     | Motivo                                      |
@@ -259,6 +298,23 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 | L-10 | **A validação visual no navegador real não foi feita na Fase 6.5.** Aparência, responsividade em 375/768/1440 e console limpo não foram conferidos. | A extensão do Chrome não conectou na sessão (mesmo bloqueio da Fase 6). | Build e tipos limpos; 24 testes de frontend em jsdom; contraste medido matematicamente. **Pendente para o Rafael** — os 10 itens estão no bloqueio de 2026-08-09 do `PRD_VIVO.md`. |
 | L-11 | **O risk score da SÉRIE TEMPORAL é aproximado**, diferente do valor exato do `summary`. | Reconstruir o CVSS de cada finding aberto em cada período passado exigiria tabela de snapshot, que o ADR-025 evitou de propósito. | Serve para ver TENDÊNCIA, que é a função da linha. Está comentado no código, dito no ADR-025 e visível na interface. O `summary` — o número que a pessoa lê — é exato. |
 | L-08 | **Uploads ficam em disco local**, não em storage externo com versionamento. | Decisão de infraestrutura do MVP (`UPLOADS_DIR` + volume Docker). | Volume nomeado sobrevive a `docker compose down`; caminho sempre contido sob `UPLOADS_ROOT`. |
+| L-15 | **O donut de severidade não renderiza** — só a legenda aparece, no dashboard do CLIENT e no de aplicação. Recharts avisa `width(0) and height(0)` dentro de um contêiner `h-48 w-48` legítimo. | Pré-existente (provável efeito do upgrade para `recharts@^3.10.1`, major). Encontrado na validação da Fase 9, em componente que a entrega não tocou — §0.2 S6. | A informação não se perde: a legenda lista severidade e contagem em texto, e os KPIs numéricos acima estão corretos. O gráfico é reforço, não portador. |
+| L-16 | **Falha de rede silenciosa em todas as telas fora da Fase 9.** O `networkMode: "online"` padrão do TanStack Query pausa a consulta em vez de errar (`status: pending`, `error: null`), então a tela não mostra erro nem oferece recuperação — e `refetch()` numa consulta pausada também pausa. | Corrigir de vez é trocar o padrão do `queryClient` global, que afeta toda tela do app — grande demais para entrar junto de uma entrega de findings. Marcado `[FUTURO]` em `use-findings.ts`. | As buscas de finding já usam `networkMode: "always"` e mostram erro de verdade com botão de recuperação. As demais telas continuam com o comportamento antigo. |
+| L-17 | **Uma queda da API desloga o usuário.** O refresh falha, e o interceptor de `lib/api/client.ts` não distingue "refresh recusado" (401 legítimo) de "refresh não chegou ao servidor" (rede), chamando `clearAuth()` nos dois casos. | Pré-existente; mexer no interceptor de autenticação é risco desproporcional numa entrega de listagem. | A sessão volta com um login; nenhum dado se perde. |
+
+---
+
+## Limitações conhecidas — Build / Docker
+
+> Levantadas em **2026-09-14**, ao destravar o `docker compose up --build` na
+> branch `feat/nova-landing`. Mesmo critério das demais: encontradas,
+> avaliadas e conscientemente não corrigidas agora.
+
+| # | Limitação | Por que não foi corrigida | Mitigação existente |
+| --- | --- | --- | --- |
+| L-12 | **Build da imagem não é reproduzível.** `package-lock.json` está no `.gitignore` (linhas 5 e 68), então nenhum lock chega ao contexto de build — cada `docker build` re-resolve as versões dentro das faixas de semver e pode trazer uma transitiva diferente da que o dev testou. | Passar a versionar o lock é decisão de projeto (afeta API, web e mobile) e exige validar o `npm ci` nos três Dockerfiles — grande demais pra entrar junto de um fix de branch alheia. **Decisão do Rafael.** | Versões diretas estão pinadas por `^` em `package.json`; a stack é validada à mão antes da demo |
+| L-13 | **`npm install --legacy-peer-deps` é obrigatório no `app/web`.** Sem a flag, o npm 10.9 do `node:22-alpine` aborta com `Cannot read properties of null (reading 'edgesOut')` (bug do Arborist ao montar o grafo de peers sem lock). | O bug é do npm, não do projeto; contornar de verdade exigiria subir a versão do npm na imagem ou versionar o lock (ver L-12). | Flag aplicada e **documentada no `app/web/Dockerfile`**, junto do efeito colateral: peers não são mais auto-instaladas, toda peer usada precisa estar declarada à mão (foi o que causou o build quebrado de 2026-09-14) |
+| L-14 | **O `tsc --noEmit` do build da imagem type-checka os arquivos de teste.** `npm run build` roda `tsc --noEmit && vite build`, e o `tsconfig.json` inclui `src` inteiro — um erro de tipo em `*.test.tsx` derruba o build de produção. | É também a única checagem de tipos automatizada do projeto: o CI (`.github/workflows/build.yml`) só roda SonarQube, e `npm run check` é lint + contraste + testes, sem `tsc`. Remover do Dockerfile deixaria o `tsc` sem nenhum gatilho automático. | Aceito de propósito enquanto o CI não rodar `tsc`; o efeito é conservador (falha a mais, nunca a menos) |
 
 ---
 

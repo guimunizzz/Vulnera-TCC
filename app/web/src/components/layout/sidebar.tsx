@@ -47,6 +47,14 @@ const ITENS: ItemNav[] = [
     icone: <path d="M2 4h4l1 1.5h7V13H2V4Z" />,
   },
   {
+    // Varredura entre projetos — ferramenta de quem analisa. O CLIENT não vê
+    // o item e é barrado na rota; ver o comentário em `App.tsx`.
+    para: "/findings",
+    rotulo: "Findings",
+    papeis: ["ADMIN", "PENTESTER"],
+    icone: <path d="M7 2a5 5 0 1 0 3.1 8.9l3 3 1.4-1.4-3-3A5 5 0 0 0 7 2Zm0 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4Z" />,
+  },
+  {
     para: "/admin/subscriptions",
     rotulo: "Aprovações",
     papeis: ["ADMIN"],
