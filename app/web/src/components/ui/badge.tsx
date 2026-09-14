@@ -149,6 +149,11 @@ const ROTULO_ESTADO: Record<string, { texto: string; tom: TomBadge }> = {
   PENDING_APPROVAL: { texto: "Aguardando aprovação", tom: "atencao" },
   ACTIVE: { texto: "Ativa", tom: "sucesso" },
   REJECTED: { texto: "Rejeitada", tom: "perigo" },
+  // DastScan (COMPLETED reaproveita a entrada de Project acima)
+  QUEUED: { texto: "Na fila", tom: "neutro" },
+  RUNNING: { texto: "Em execução", tom: "acento" },
+  FAILED: { texto: "Falhou", tom: "perigo" },
+  CANCELLED: { texto: "Cancelado", tom: "neutro" },
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {

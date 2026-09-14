@@ -42,6 +42,9 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 | 7 — Mobile enxuto + Push           | App mobile read-only (CLIENT) + Expo Push  | ✅     | 100% — concluída em 2026-08-10 |
 | 8 — Maturidade + Apresentação      | Polimento e entrega                        | 🚧     | 69% (9/13 ✅ — CP1-3 concluídos + CP4 ZAP; Sonar bloqueado em Rafael, README/DEMO prontos) |
 | **9 — Findings Globais**           | **Busca global, query wizard, tabela canônica** | ✅ | **100% — concluída em 2026-09-14** (10/10 ✅). Fecha o finding `BACKEND-002` da auditoria; ADR-028 |
+| **9.0 — DAST (OWASP ZAP)**           | **Scans automatizados: runner Docker, pipeline, API, UI, PDF** | ✅ | **100% — concluída em 2026-09-05.** Entrada fora da numeração original do BACKLOG v4 (prompt dado diretamente numa sessão dedicada) |
+| **9.1 — DAST: scan real na stack** | **ZAP em modo daemon por scan, watchdog (máx. 2), % de progresso, simulado visível** | 🚧 | **Código completo e validado em 2026-09-09; em revisão do Rafael.** Fecha as 3 causas + a lacuna de produto de `docs/DAST-DOCKER-GAP.md`. Ver ADR-031 |
+| **9.2 — DAST: o que fazer com o resultado** | **Triagem, promoção para `Vulnerability`, comparação entre execuções + limites de recurso** | 🚧 | **Código completo e validado na stack real em 2026-09-09; em revisão do Rafael.** Fecha os 4 pontos que o ADR-029 deixou em aberto e o buraco de recurso que a 9.1 não cobria. Ver ADR-032 |
 
 ---
 
@@ -276,6 +279,90 @@ CLIENT. Decidido manter o acesso do CLIENT ao endpoint (escopado à própria
 empresa) e mover o bloqueio para a **página** `/findings` (guarda de rota + item
 de menu). `TEN-21` passou a provar o confinamento do CLIENT no backend, e
 `FIND-ACC-01..04` provam a guarda no frontend.
+### FEAT-09 — DAST via OWASP ZAP (módulo novo, fora da numeração original)
+
+> Prompt dado diretamente ao agente numa sessão dedicada (branch `feat/dast-zap`,
+> renomeada de `feat/scan-dast-OWASP`) — não fazia parte do BACKLOG v4 original.
+> Depende da Fase 6 (design system) e do padrão de camadas da Fase 5.
+> Ver `docs/DAST.md` para a documentação técnica completa e
+> `docs/ROADMAP_PROMPTS.md` (Fase 9) para o histórico detalhado de execução.
+
+| Task                                         | Status | Owner  | Notas |
+| --------------------------------------------- | ------ | ------ | --- |
+| 9.0: Reconhecimento do ZAP + pré-requisitos  | ✅     | Claude | `zap-full-scan.py --help` revelou que não há flag de tempo máximo total (timeout é responsabilidade de quem chama); achado de ambiente pré-existente (Prisma Client sem `expoPushToken`, `expo-server-sdk` ausente, migration de push não aplicada no banco de teste) resolvido como pré-requisito |
+| 9.1: Schema (`DastScan`/`DastFinding`)       | ✅     | Claude | Enum nativo (`DastScanStatus`/`DastRisk`), exceção consciente à filosofia "sem enums" do `schema.prisma` — confirmada com o Rafael antes da migration. Índices: `[requestedById]`, `[status]`, `[status, targetUrl(191)]` em `DastScan`; `[scanId]`, `[risk]`, único `[scanId, fingerprint]` em `DastFinding` |
+| 9.2: Runner Docker (`zap-runner.service.ts`) | ✅     | Claude | `execFile("docker", [...])` — nunca shell, imune a command injection; `validateTargetUrl` bloqueia SSRF (loopback + faixas privadas, liberável só em dev via `DAST_ALLOW_PRIVATE_TARGETS`); critério de sucesso é a existência/parseabilidade de `report.json`, nunca o exit code (confirmado empiricamente: exit 2 pode ser só warning) |
+| 9.3: Pipeline de findings (`dast-findings.service.ts`) | ✅ | Claude | Fingerprint `sha256(pluginId\|normalizedUrl\|param)` com normalização de URL (IDs/UUIDs viram `{id}`/`{uuid}`, tokens >16 chars descartados) — o que faz o mesmo bug em 50 URLs virar 1 achado, não 50; `description`/`solution`/`reference` passam por `stripHtml()` antes de persistir |
+| 9.4: API + RBAC (7 rotas)                    | ✅     | Claude | `requireRole("PENTESTER","ADMIN")` em todas; ownership fina no service (`getOwnedScan` — PENTESTER só vê os próprios, ADMIN vê tudo); path traversal bloqueado em `resolveReportPath` (whitelist de extensão + confere prefixo de `REPORTS_DIR` resolvido) |
+| 9.5: Testes SEC/RBAC/PIPE/LIFE               | ✅     | Claude | 42 testes novos (269 → **315**), cobertura 89-96% nos 3 services novos, **zero dependência de Docker** (`DAST_FORCE_SIMULATE=true` no `.env.test`) |
+| 9.6: Frontend (`/dast`, `/dast/scans/:id`, `/dast/scans/:id/report`) | ✅ | Claude | Design system da Fase 6.5 (zero Radix); polling a cada 5s com cronômetro; tabela HTML manual com linha expansível (decisão de consistência com `applications-page.tsx`/`project-detail-page.tsx`, que já usam `<table>` manual — `<Table>` do design system não suporta linha expansível nativamente); relatório do ZAP em `<iframe sandbox>` |
+| 9.7: PDF client-side                         | ✅     | Claude | Mesmo estilo visual dos relatórios Executivo/Técnico (`pdf-lib`); `requestedByName` adicionado ao payload de `report/data` (join a mais, sem migration) pra capa mostrar "quem executou" em vez de um `cuid` cru |
+| 9.8: Validação end-to-end (Juice Shop + example.com) | ✅ | Claude | **Dois scans reais** persistidos em `app/api/dast-reports/`: contra `http://example.com` (13 alertas) e contra `https://host.docker.internal:3500` — Juice Shop (16 alertas). Playwright ad-hoc cobriu 26 checks visuais contra a stack de dev real (RBAC visual, polling real, download de PDF validado com `pdf-lib`, responsivo 375/768/1440, console limpo) — extensão do Chrome não conectou (mesmo bloqueio recorrente de todas as fases). Screenshots e o PDF real ficam com o Rafael |
+| 9.9: `docs/DAST.md` + ADRs 028-030 + docs vivos | ✅   | Claude | `docs/DAST.md` (arquitetura, segurança, modelo de dados, config, alvos de laboratório, troubleshooting, limitações — 10 seções); ADR-028 (Docker spawn — risco do socket assumido e documentado), ADR-029 (silo, sem importar pra `Vulnerability` — CVSS ausente do ZAP contaminaria o cálculo 100%-confiável), ADR-030 (fire-and-forget + watchdog, sem fila) |
+
+#### FEAT-09.1 — Scan real dentro da stack Docker (2026-09-09)
+
+> Motivada por `docs/DAST-DOCKER-GAP.md` (diagnóstico de 2026-09-06: todo scan
+> dentro do `docker compose` caía silenciosamente no simulado) + requisito novo
+> do Rafael: **container do ZAP criado sob demanda, no máximo 2 scans por vez
+> com aviso em caso de erro, e percentual de progresso na UI** — com queda
+> para o resultado simulado, com mensagem amigável, quando o real falhar.
+> Decisão completa em `docs/Vulnera/07-Decisoes/ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker.md`.
+
+| Task                                             | Status | Owner  | Notas |
+| ------------------------------------------------ | ------ | ------ | --- |
+| 9.1.1: Runner em modo daemon + API HTTP do ZAP   | ✅     | Claude | `zap-full-scan.py` (caixa preta, sem progresso) trocado por `zap.sh -daemon` conduzido pelos endpoints `/JSON/spider/*`, `/JSON/pscan/*`, `/JSON/ascan/*` e `/OTHER/core/other/{json,html}report/`. **Continua UM container por scan** (o ADR-028 recusava daemon *compartilhado*, não este). Relatórios chegam por HTTP e são gravados pelo Node — **o bind mount sumiu do desenho, então a "Causa 3" deixou de existir**. Chave `api.key` aleatória por scan, nunca `api.disablekey=true` |
+| 9.1.2: DooD — `docker-cli` na imagem + socket    | ✅     | Claude | Causas 1 e 2 do relatório. `apk add docker-cli`; `-v /var/run/docker.sock` no compose; usuário `vulnera` no GID 0 (socket do Docker Desktop é `root:root 0660` — sem isso, `permission denied` e volta tudo pro simulado). Rede fixa `vulnera-net` pra API alcançar o ZAP pelo nome do container. ⚠️ Aumento de superfície de risco aceito e registrado no ADR-031 |
+| 9.1.3: Watchdog de concorrência                  | ✅     | Claude | `dast-watchdog.service.ts` (novo): fila FIFO em memória, `DAST_MAX_CONCURRENT_SCANS` (default **2**), abort de scan sem pulso por 2min, anel dos últimos 20 alertas. Singleton injetado pela factory — uma instância por factory daria "2 por instância", que é o mesmo que não ter limite |
+| 9.1.4: Progresso persistido + status do módulo   | ✅     | Claude | Migration `20260909131426_add_dast_progress_and_simulated_flag`: `progress`, `phase`, `simulated`, `warningMessage`. Escrita com throttle (só quando a fase muda ou o % anda 1 ponto, no máx. 1x/s). Rota nova `GET /api/dast/scans/status` (literal ANTES de `/:id`) com estado do Docker, vagas, fila e alertas |
+| 9.1.5: UI — barra, fila e selo de simulado       | ✅     | Claude | `dast-status-banner.tsx` (novo, com o hook `useDastStatus`); barra de progresso na listagem e no detalhe (componente `Progress` já existente do design system); posição na fila; selo "simulado" + alerta explicando em PT-BR. Polling 5s → **3s** (cadência com que o runner atualiza o %) |
+| 9.1.6: Fallback amigável                         | ✅     | Claude | Scan real que falha **mantém o resultado simulado** em vez de morrer, com `simulated: true` e `warningMessage` traduzida por `friendlyFailureReason()`. Única exceção: cancelamento — quem cancelou não quer resultado |
+| 9.1.7: Testes                                    | ✅     | Claude | 315 → **333**. `zap-runner.service.test.ts` reescrito pro fluxo novo (mock de `child_process` **e** de `http`); `dast-watchdog.service.test.ts` novo (10 casos: DAST-WD-01..07); `dast.test.ts` +4 (DAST-PROG-01, DAST-SIM-01, DAST-STAT-01, ordem de rota literal). RBAC agora cobre 8 rotas |
+| 9.1.8: Validação real                            | ✅     | Claude | Scan real contra `https://example.com`: **47s, 7 alertas reais do ZAP 2.17.0, `simulated: false`**, progresso percorrendo STARTING→SPIDER→PASSIVE→ACTIVE→REPORT→DONE. Na stack: `docker compose exec api docker info` responde `29.5.2` e `GET /status` devolve `dockerAvailable: true` |
+| 9.1.9: Docs (ADR-031 + DAST.md + gap + vivos)    | ✅     | Claude | ADR-031 novo; nota de "parcialmente substituída" no ADR-028 §"Por que não modo daemon" (R6); `docs/DAST.md` §2/§4/§6/§7/§9 reescritas; `docs/DAST-DOCKER-GAP.md` com cabeçalho ✅ RESOLVIDO + relatório de ponto de parada |
+
+⚠️ **Achado de ambiente, corrigido como pré-requisito:** o `.env.test` local
+**não tinha** `DAST_FORCE_SIMULATE=true`, apesar de `dast.test.ts` afirmar no
+próprio cabeçalho que tinha — e o banco `vulnera_test` estava sem as tabelas do
+DAST (migrations nunca aplicadas nele). Isso deixava a suíte inteira vermelha
+(221 falhas) por motivo não relacionado a código. Resolvido: `.env.test`
+atualizado e `prisma migrate deploy` rodado no banco de teste.
+
+**Bugs reais encontrados e corrigidos durante a execução** (não hipotéticos):
+corrida genuína em `dast-scan.service.ts` — cancelar um scan simulado não
+interrompia de fato o `setTimeout` interno, e ele tentava persistir findings
+~3s depois num registro que já não era mais `RUNNING` (corrigido com checagem
+de estado antes de persistir e antes de marcar conclusão — o mesmo bug
+existiria com Docker real numa janela menor); timeout de 5s em
+`isDockerAvailable()` classificava Docker como indisponível nesta máquina
+(Docker Desktop/WSL2 "frio" levou ~6s), derrubando scans reais pro fallback
+simulado por engano — subido pra 10s.
+
+⚠️ **Nenhum commit feito nesta branch** (`feat/dast-zap`) — decisão do prompt
+original da sessão, mesmo padrão de todas as fases anteriores deste projeto
+(Fase 6.5, fix/landing-publica, task 8.12): trabalho completo em working tree,
+Rafael decide quando commitar.
+
+#### FEAT-09.2 — O que o pentester faz com o resultado do scan (2026-09-09)
+
+> Pedido do Rafael na mesma sessão, depois de validado o scan real: *"garanta
+> que o watchdog está respeitando os limites, que o scan funciona de verdade,
+> e que o pentester tenha possibilidade com o resultado do Scan DAST"*. As três
+> frentes (triagem, promoção, comparação) foram escolhidas por ele.
+> Decisão completa em `docs/Vulnera/07-Decisoes/ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST.md`.
+
+| Task                                             | Status | Owner  | Notas |
+| ------------------------------------------------ | ------ | ------ | --- |
+| 9.2.0: Verificação do que a 9.1 entregou         | ✅     | Claude | Medido na stack real, não deduzido: DooD confirmado (`which docker` → `/usr/bin/docker` dentro do container, `docker info` → 29.4.3); **3 scans disparados juntos → exatamente 2 containers ZAP no `docker ps` + 1 na fila com alerta**, e o 3º entrou sozinho ao abrir vaga (FIFO end-to-end); 3 scans reais concluídos com `simulated: false` em 39-52s |
+| 9.2.1: ⚠️ Limites de recurso por container       | ✅     | Claude | **Lacuna achada ao medir**: o watchdog limitava *quantos* scans, nada limitava *quanto* cada um consome — 2 scans reais ocupavam ~960% de 1200% de CPU e cresciam sem teto de RAM (`936MiB/7.7GiB` + `1.39GiB/7.7GiB`, onde 7.7GiB é a VM inteira). `DAST_ZAP_MEMORY` (2g) e `DAST_ZAP_CPUS` (4) viram `--memory`/`--memory-swap`/`--cpus`. ⚠️ Os dois **têm** de andar juntos: o `zap.sh` calcula o heap de `/proc/meminfo` (RAM do **host**, não do cgroup) e sem `-Xmx` explícito a JVM pediria ~1.9GB e morreria por OOM — `heapArgForMemoryLimit()` deriva `-Xmx` a 65% do teto |
+| 9.2.2: ⚠️ Dois buracos de heartbeat              | ✅     | Claude | `withKeepAlive()`. (a) `docker run` na 1ª execução de uma máquina faz o pull de ~3.7GB antes de subir — passava dos 2min de silêncio e o watchdog abortaria justamente o primeiro scan de uma máquina nova (timeout do run: 3min → 10min); (b) download dos relatórios são dois `httpGet` de 120s em sequência contra um limite de silêncio de 120s |
+| 9.2.3: Triagem no silo                           | ✅     | Claude | Enum `DastTriageStatus` (NEW/CONFIRMED/FALSE_POSITIVE/ACCEPTED_RISK) + `triageNote`/`triagedById`/`triagedAt`. `PATCH /dast/scans/findings/:id/triage`. UI salva **no clique** (é a tarefa mais repetitiva da tela; exigir "salvar" dobraria os cliques) — a nota é a exceção. Coluna "Triagem" substituiu "Confiança" na tabela, que foi pro detalhe expandido |
+| 9.2.4: Promoção → `Vulnerability`                | ✅     | Claude | Responde os 4 pontos que o ADR-029 deixou em aberto. `sourceType`/`sourceDastFindingId` (`@unique`, FK `SetNull`). **O vetor CVSS é sugerido e revisado pelo humano, nunca inventado** — é o que mantém a RN10 intacta e evita criar uma segunda classe de score no produto. CWE→OWASP é factual (lista oficial do Top 10 2021); risco→vetor é suposição e vem com aviso na tela. Dedup garantida pelo `@unique` do banco, não por checagem de aplicação |
+| 9.2.5: Comparação entre execuções                | ✅     | Claude | `GET /:id/comparable` e `/:id/compare?base=`. Diff por `fingerprint` (que já existia e **não inclui evidência** — por isso um problema não corrigido aparece como "continua aberto", não como "sumiu um/surgiu outro"). Alvos diferentes → 422 em vez de um diff 100%/100% inútil. Validado com 2 scans reais consecutivos: **11 persistentes, 0 resolvidos, 0 novos** |
+| 9.2.6: Testes                                    | ✅     | Claude | 333 → **353** backend (`dast-triage.test.ts` novo: 16 casos DAST-TRI/PRO/CMP/RBAC-10, incluindo `DAST-PRO-07` — apagar o scan de origem não apaga a Vulnerability; +4 unitários de limite de recurso). Script E2E ad-hoc de 30 checks contra a stack real, todos verdes |
+| 9.2.7: Playwright                                | ✅     | Claude | `app/web/e2e/` + `playwright.config.ts`. Sem `webServer` **de propósito**: o alvo é a stack real, mesma que a demonstração usa. 6 casos, incluindo o E2E-01 que prova que **o percentual da barra sobe e as fases nomeadas do ZAP aparecem** (uma barra estimada por tempo passaria no primeiro teste, não no segundo). **Pegou um bug real que Vitest e Supertest não pegariam**: link apontando pra `/vulnerabilities/:id` quando a rota do produto é `/findings/:id` |
+| 9.2.8: Docs                                      | ✅     | Claude | ADR-032 novo; `docs/DAST.md` §11 nova; PRD/BACKLOG |
+| 9.2.9: Vault (`docs/Vulnera/`)                   | ✅     | Claude | 2026-09-10. O vault documenta o domínio e não sabia do DAST: criadas as notas `DastScan`, `DastFinding`, `DAST` (módulo), `Fluxo - Scan DAST` e `Enum - DAST`; changelog do vault com as sessões 28/29/30; `Contexto Mestre v4`, `Vulnerability`, `MER Conceitual`, `Entidades e Relacionamentos`, `Matriz de Permissoes`, `Jornada - Pentester`, `OWASP ZAP` (agora com os **dois papéis** do ZAP), `Docker Compose`, `Dockerfiles`, `Roadmap Fases`, `Testes`, `Evidencias para Banca`, `Decisoes Recentes`, `Status de Preenchimento` e os MOCs atualizados. Registrada em `ADR-001` a **tensão** entre "plataforma não executa ataque real" e o que o DAST faz — status da ADR **não** alterado (decisão do Rafael) |
 
 ---
 
@@ -385,6 +472,8 @@ de menu). `TEN-21` passou a provar o confinamento do CLIENT no backend, e
 | 2026-08-19 | Extensão do Chrome não conectou nesta sessão (mesmo bloqueio recorrente) — a cena Three.js da task 8.12 precisava ser vista rodando de verdade, não só passar em `jsdom` (que não implementa WebGL) | Confiança visual da task 8.12 | R | ✅ **Resolvido na mesma sessão, e valeu a pena de verdade** — Playwright ad-hoc (`npx playwright install chromium`) contra `vite build`+`vite preview`: achou e permitiu corrigir 3 bugs reais que só apareciam com WebGL de verdade (contexto perdido sem exceção, escala de partícula, e o `ShaderPass` clonando uniforms e congelando o efeito ASCII inteiro) — ver §6, entrada de 2026-08-19. Sem essa validação, a landing teria sido entregue com o hero quebrado ou com a cena 3D nunca de fato animando |
 | 2026-08-18 | Extensão do Chrome não conectou nesta sessão — validação visual do fix de landing feita via Playwright ad-hoc (mesmo fallback da Fase 8 CP5) | Confiança visual do fix `fix/landing-publica` | R | ✅ **Resolvido na mesma sessão** — 21/21 checks headless contra `docker compose up --build` real (não dev server): login real com seed, redirects, navbar condicional, 375/768/1440, `prefers-reduced-motion`, console limpo; screenshots conferidos |
 | 2026-08-20 | `app/mobile/src/hooks/use-push-registration.ts:34` viola `@typescript-eslint/no-var-requires` (`require("expo-notifications")` em vez de import) — encontrado ao rodar `npm run lint` depois do bump de dependências do Expo, código não tocado nesta task | `npm run lint` do mobile fica vermelho | R | Aberto — bug fora do escopo desta task (§0.2 S6); relacionado ao commit `67f814f` ("fix: bug use-push-registration, inacabado") |
+| 2026-09-05 | Branch `feat/dast-zap` completa (315 testes, docs, 3 ADRs) não commitada — instrução do prompt original | Integração da Fase 9 | R | Aberto — Rafael decide quando commitar. Confirmado nesta sessão (2026-09-06): `npm run check` verde nos dois workspaces (315 backend + 34 frontend), build de produção limpo, migration MySQL aplicada, RBAC de rotas e menu conferidos no código |
+| 2026-09-05 | Smoke visual real do módulo DAST (screenshots Playwright + PDF baixado) não anexado ao repositório — ficou só descrito no relatório da sessão que fez o trabalho | Confiança visual do módulo DAST pro Rafael | R | Parcialmente resolvido em 2026-09-06 — os dois relatórios ZAP reais (`example.com` e Juice Shop) foram copiados de `app/api/dast-reports/` para `docs/evidencias/dast/` com README explicando o contraste entre os dois (controle negativo/positivo — Backup File Disclosure com 31 instâncias no Juice Shop). **Ainda falta**: os screenshots Playwright em si (login, RBAC visual, polling, tabela expansível) e o PDF baixado pela UI não foram gerados/anexados — os 26 checks *rodaram e passaram* na sessão original, mas não deixaram artefato. Se quiser esses screenshots no repo, é preciso rodar o smoke de novo |
 | 2026-08-11 | PR `feat/fase-8-maturidade-tcc` → `dev` não aberta — necessária pra disparar o SonarQube (evento `pull_request`) | Evidência de qualidade do Checkpoint 4 (Sonar) | R | **Aberto** — agente não tem `gh` CLI nem token do GitHub neste ambiente. Link pronto: https://github.com/guimunizzz/Vulnera-TCC/compare/dev...feat/fase-8-maturidade-tcc (trocar base pra `dev` se o GitHub sugerir `main`). Repo é público — assim que a PR abrir, o agente consegue acompanhar o resultado sozinho via API pública do GitHub, sem precisar de token |
 | 2026-09-14 | Branch `feat/findings-globais` completa (backend + web + mobile) **não commitada** — o prompt pediu explicitamente para não commitar nem abrir PR | Integração da Fase 9 | R | Aberto — Rafael decide quando commitar |
 | 2026-09-14 | **O donut de severidade não renderiza** — só a legenda aparece. Atinge o dashboard do CLIENT **e** o dashboard de aplicação (`components/metrics/`), que não foi tocado nesta entrega. Console acusa `The width(0) and height(0) of chart should be greater than 0` do Recharts, dentro de um contêiner `h-48 w-48` legítimo | Aparência dos dashboards na demo | R | Aberto — **pré-existente**, provavelmente do upgrade para `recharts@^3.10.1` (major). Fora do escopo da Fase 9 (§0.2 S6); confirmado comparando com um gráfico que a entrega não tocou |

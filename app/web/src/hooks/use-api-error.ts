@@ -94,6 +94,14 @@ const MESSAGES: Record<string, string> = {
   INVALID_TYPE: "Tipo de relatório inválido.",
   PROJECT_NOT_READY_FOR_REPORT: "O projeto precisa estar em revisão ou concluído para gerar relatório.",
 
+  // DAST (scans via OWASP ZAP)
+  MISSING_TARGET_URL: "Informe a URL do alvo.",
+  INVALID_TARGET_URL: "URL inválida. Use o formato http(s)://exemplo.com.",
+  TARGET_NOT_ALLOWED: "Esse alvo não é permitido (endereço local ou de rede privada).",
+  SCAN_ALREADY_RUNNING_FOR_TARGET: "Já existe um scan em andamento para esse alvo.",
+  SCAN_NOT_FOUND: "Scan não encontrado.",
+  REPORT_NOT_FOUND: "Relatório ainda não disponível para este scan.",
+
   // genérico
   INTERNAL_ERROR: "Algo deu errado no servidor. Tente novamente.",
 };

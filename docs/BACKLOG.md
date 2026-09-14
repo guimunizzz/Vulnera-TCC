@@ -19,6 +19,9 @@
 | 7 Mobile           | Expo enxuto + Push                                 | ✅ concluída 2026-08-10 |
 | 8 Maturidade + TCC | Checklist + demo + Sonar/ZAP + docs                | 🚧 CP1-3 + CP4(ZAP) + docs concluídos 2026-08-11; Sonar bloqueado em Rafael |
 | **9 Findings Globais** | **Busca global + query wizard + tabela canônica** | ✅ concluída 2026-09-14 |
+| **9 DAST (OWASP ZAP)** | **Scans automatizados: runner Docker, pipeline de findings, API, UI, PDF** | ✅ concluída 2026-09-05 |
+| **9.1 DAST: scan real na stack** | **ZAP em modo daemon por scan, watchdog (máx. 2), % de progresso, simulado visível** | 🚧 código pronto 2026-09-09, em revisão |
+| **9.2 DAST: o que fazer com o resultado** | **Triagem, promoção para `Vulnerability`, comparação entre execuções + limites de recurso por container** | 🚧 código pronto 2026-09-09, em revisão |
 
 ✅ **Frontend web bootstrapado na Fase 3** (2026-08-04) — `app/web` tem Vite+React+TS+Tailwind+Radix+TanStack Query+Zustand+Axios, com Login/Register/Dashboard/Plans/Onboarding/PendingSubscriptions funcionando ponta a ponta (smoke E2E manual validado no navegador). Próximas fases só adicionam telas, não infraestrutura.
 
@@ -149,6 +152,72 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 > Slides e ensaios ficam com o Rafael, fora da contagem.
 > **Maturidade simplificada:** checklist de perguntas por domínio, escala 1–5, média simples. Sem scoring ponderado, sem níveis por domínio, sem comparativo histórico.
 
+## FASE 9 — DAST (OWASP ZAP) — ✅ concluída em 2026-09-05
+
+| #    | Task                                                             | Estado |
+| ---- | ----------------------------------------------------------------- | ------ |
+| 9.0  | Reconhecimento: flags do `zap-full-scan.py`, exit codes, estrutura do JSON | ✅ exit code ≠ 0 confirmado como normal (WARN sem FAIL); JSON real capturado virou fixture de teste |
+| 9.1  | Schema `DastScan`/`DastFinding` + migration                       | ✅ enum nativo (exceção à filosofia do schema, confirmada com o Rafael) |
+| 9.2  | `zap-runner.service.ts` — execFile, SSRF, timeout, cancelamento, fallback simulado | ✅ achado real: timeout de `isDockerAvailable()` (5s) baixo demais nesta máquina, subido pra 10s |
+| 9.3  | `dast-findings.service.ts` — parse, normalização, fingerprint, escopo | ✅ validado contra JSON real (24 findings, contadores batendo) |
+| 9.4  | API REST (model/repo/service/controller/factory/routes) + RBAC   | ✅ 7 rotas, ownership fina no service, `requestedByName` resolvido pro PDF |
+| 9.5  | Testes SEC/RBAC/PIPE/LIFE                                        | ✅ 42 testes novos (315/315 total), cobertura 89-96% nos 3 services novos, sem depender de Docker (`DAST_FORCE_SIMULATE`) |
+| 9.6  | Interface `/dast` (lista) + `/dast/scans/:id` (detalhe + polling) + `/dast/scans/:id/report` (iframe ZAP) | ✅ tabela HTML manual (mesmo padrão de `applications-page.tsx`), linha expansível construída do zero (não existia no design system) |
+| 9.7  | PDF client-side (`lib/pdf/dast-report.ts`)                       | ✅ reaproveita 100% `lib/pdf/base.ts`; validado com dado real + emoji + texto longo (13 páginas, PDF válido) |
+| 9.8  | Validação end-to-end (Juice Shop + testasp.vulnweb.com)          | ✅ ver `docs/DAST.md` §9 e PRD_VIVO.md §6 |
+| 9.9  | `docs/DAST.md` + 3 ADRs (028-030) + docs vivos                   | ✅ |
+
+> **Achado de infra (não específico do DAST):** `npm run check` do backend estava quebrado ANTES de qualquer código do módulo — Prisma Client desatualizado + `expo-server-sdk` ausente do `node_modules` + migration `add_expo_push_token` não aplicada no banco de teste. Resolvido como pré-requisito. Ver PRD_VIVO.md §7 (bloqueios).
+>
+> **Validação visual:** extensão do Chrome não conectou nesta sessão (mesmo bloqueio recorrente de sessões anteriores) — resolvido com o MESMO fallback já comprovado no projeto (Playwright ad-hoc, instalado no scratchpad): 26/26 checks contra a stack de dev real (`npm run dev` nos dois workspaces), cobrindo RBAC visual, responsivo (375/768/1440), polling ao vivo, expansão de linha, filtro/busca, download de PDF via clique real e abertura do relatório HTML do ZAP em nova aba — nenhum erro de console.
+
+## FASE 9.1 — DAST: scan real na stack Docker + watchdog + progresso — 🚧 código pronto, em revisão (2026-09-09)
+
+> Motivada pelo diagnóstico `docs/DAST-DOCKER-GAP.md` (2026-09-06: dentro do
+> `docker compose`, TODO scan caía silenciosamente no simulado) somada ao
+> requisito novo do Rafael: container do ZAP criado sob demanda, **máximo 2
+> scans por vez com aviso em caso de erro**, e **percentual de progresso na
+> UI** — mantendo o resultado simulado, com mensagem amigável, quando o real
+> falhar. Decisão: `ADR-031`.
+
+| #     | Task                                                        | Estado |
+| ----- | ----------------------------------------------------------- | ------ |
+| 9.1.1 | Runner em modo daemon conduzido pela API HTTP do ZAP        | ✅ único jeito de obter % real; `zap-full-scan.py` não expõe progresso. Continua 1 container por scan. O bind mount de relatório sumiu — a "Causa 3" do relatório deixou de existir |
+| 9.1.2 | DooD: `docker-cli` na imagem da API + socket do host montado | ✅ Causas 1 e 2. Usuário `vulnera` no GID 0 (socket do Docker Desktop é `root:root 0660`). Rede fixa `vulnera-net` |
+| 9.1.3 | Watchdog: fila FIFO, máx. 2 simultâneos, abort de travado, alertas | ✅ `dast-watchdog.service.ts`, singleton injetado pela factory |
+| 9.1.4 | Migration `progress`/`phase`/`simulated`/`warningMessage` + `GET /status` | ✅ escrita de progresso com throttle; rota literal registrada antes de `/:id` |
+| 9.1.5 | UI: barra de progresso, posição na fila, selo "simulado", banner do módulo | ✅ `dast-status-banner.tsx` novo; polling 5s → 3s |
+| 9.1.6 | Fallback amigável (falha do real mantém o simulado)          | ✅ exceto cancelamento |
+| 9.1.7 | Testes                                                       | ✅ 315 → **333** (runner reescrito, watchdog novo com DAST-WD-01..07, +4 de integração) |
+| 9.1.8 | Validação real na stack                                      | ✅ `example.com` em 47s com 7 alertas reais (ZAP 2.17.0); na stack, 3 scans disparados juntos → 2 rodando + 1 na fila, progresso real por fase |
+| 9.1.9 | ADR-031 + `DAST.md` + cabeçalho ✅ no `DAST-DOCKER-GAP.md` + docs vivos | ✅ |
+
+> **Achado de ambiente, corrigido como pré-requisito:** `.env.test` local não
+> tinha `DAST_FORCE_SIMULATE=true` (embora `dast.test.ts` afirmasse que sim) e
+> o banco `vulnera_test` estava sem as tabelas do DAST — a suíte inteira estava
+> vermelha por motivo alheio ao código. Ver PRD_VIVO §3 (FEAT-09.1).
+
+---
+
+## FASE 9.2 — DAST: o que o pentester faz com o resultado — 🚧 código pronto, em revisão (2026-09-09)
+
+> Pedido do Rafael: garantir que o watchdog respeita os limites, que o scan
+> funciona de verdade, e dar ao pentester o que fazer com o resultado. As três
+> frentes foram escolhidas por ele. Decisão em **ADR-032**.
+
+| #     | Task                                                         | Status / notas |
+| ----- | ------------------------------------------------------------ | -------------- |
+| 9.2.0 | Verificar na stack real o que a 9.1 entregou                 | ✅ DooD confirmado dentro do container; **3 scans juntos → exatamente 2 containers ZAP + 1 na fila**, FIFO end-to-end; 3 scans reais com `simulated: false` em 39-52s |
+| 9.2.1 | Limites de RAM/CPU por container do ZAP **(descoberta)**     | ✅ o watchdog limitava *quantos*, nada limitava *quanto*: 2 scans ocupavam ~960% de 1200% de CPU sem teto de RAM. `DAST_ZAP_MEMORY`/`DAST_ZAP_CPUS` + `-Xmx` derivado (o `zap.sh` lê a RAM do host, não do cgroup — sem `-Xmx` a JVM morre por OOM) |
+| 9.2.2 | Dois buracos de heartbeat do watchdog **(descoberta)**       | ✅ `withKeepAlive()`: pull da imagem no 1º scan de uma máquina (~3.7GB) e download dos relatórios (2×120s) passavam dos 2min de silêncio e seriam abortados |
+| 9.2.3 | Triagem de finding no silo (enum + nota + autor + data)      | ✅ `PATCH /dast/scans/findings/:id/triage`; UI salva no clique; coluna "Triagem" na tabela |
+| 9.2.4 | Promoção de finding → `Vulnerability`                        | ✅ fecha os 4 pontos abertos do ADR-029. Vetor CVSS **sugerido e revisado por humano**, nunca inventado — RN10 intacta. Dedup pelo `@unique` do banco; FK `SetNull` pra vulnerability sobreviver ao scan |
+| 9.2.5 | Comparação entre duas execuções do mesmo alvo                | ✅ diff por `fingerprint`; validado com 2 scans reais: 11 persistentes, 0 resolvidos, 0 novos |
+| 9.2.6 | Testes de integração e unidade                               | ✅ 333 → **353** (`dast-triage.test.ts`: 16 casos) |
+| 9.2.7 | Playwright E2E contra a stack real                           | ✅ 6 casos; **pegou um bug que Vitest/Supertest não pegariam** (rota `/vulnerabilities/:id` inexistente) |
+| 9.2.8 | ADR-032 + `DAST.md` §11 + docs vivos                         | ✅ |
+| 9.2.9 | **Sincronizar o vault (`docs/Vulnera/`) com o módulo DAST**   | ✅ 2026-09-10 — o vault era o único documento vivo que ainda não sabia da existência do DAST. Notas novas: `DastScan`, `DastFinding`, `DAST` (módulo), `Fluxo - Scan DAST`, `Enum - DAST`; changelog do vault com as sessões 28/29/30; `Vulnerability`, `MER`, `Matriz de Permissoes`, `Jornada - Pentester`, `OWASP ZAP`, `Docker Compose`, `Dockerfiles`, `Testes`, `Evidencias para Banca`, `Roadmap Fases` e `Contexto Mestre v4` atualizados. Contradições internas do `DAST.md` (§1 e §10 diziam "não importa para Vulnerability" depois do §11 existir) corrigidas |
+
 ---
 
 ## FASE 9 — Findings Globais + Query Wizard (~28h) — ✅ concluída em 2026-09-14
@@ -198,7 +267,7 @@ prompts.
 | Tickets de suporte                                             | 2026-07-26 | Escopo administrativo sem valor de demo     |
 | E-mail transacional (Nodemailer/Mailhog)                       | 2026-07-26 | `AuditLog` cobre a rastreabilidade          |
 | Prometheus + Grafana                                           | 2026-07-26 | Observabilidade não é critério de avaliação |
-| Testes E2E (Playwright)                                        | 2026-07-26 | Integração + smoke manual cobrem            |
+| ~~Testes E2E (Playwright)~~ **revertido**                      | 2026-07-26 → **de volta em 2026-09-09** | Voltou ao escopo na Fase 9.2: `app/web/e2e/` roda contra a stack real; fora do `npm run check` |
 | Viewer de PDF no mobile                                        | 2026-08-03 | Corte do escopo mobile                      |
 | Maturidade completa estilo SAMM                                | 2026-08-03 | Vira checklist simples                      |
 | Varredura antivírus/malware no upload de Evidence               | 2026-08-05 | Validação é de tipo (magic number) e tamanho, não de conteúdo malicioso — limitação conhecida, documentar no README/DEMO |
