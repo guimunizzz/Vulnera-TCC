@@ -14,8 +14,25 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# Manifesto primeiro pra aproveitar cache de layer (mesma ordem do
+# app/api/Dockerfile). Copiar `package*.json` não adianta: o projeto ignora
+# package-lock.json no .gitignore, então NUNCA existe lock no contexto de
+# build. Toda imagem resolve as versões do zero dentro das faixas do
+# semver — é por isso que o npm tem que refazer o grafo de peers aqui.
 COPY package.json ./
-RUN npm install
+
+# ⚠️ --legacy-peer-deps é OBRIGATÓRIO, não é preferência: sem ele o npm
+# 10.9 do node:22-alpine estoura resolvendo o grafo de peers deste projeto
+# ("Cannot read properties of null (reading 'edgesOut')" — bug do Arborist).
+#
+# O preço é que a flag também DESLIGA a instalação automática de peer
+# dependencies. Toda peer que o código realmente usa precisa estar
+# declarada à mão no package.json — foi o que aconteceu com
+# @testing-library/dom, que o `tsc` do build exige (é de lá que vêm
+# `screen`, `waitFor` e `within`, só reexportados por
+# @testing-library/react). Na máquina do dev o npm instalava a peer
+# sozinho e o problema ficava invisível até o build do container.
+RUN npm install --legacy-peer-deps
 
 ARG VITE_API_URL=http://localhost:3001/api
 ENV VITE_API_URL=$VITE_API_URL

@@ -1,0 +1,338 @@
+{
+  "@programName": "ZAP (simulado — Docker indisponível)",
+  "@version": "simulated",
+  "@generated": "Wed, 09 Sep 2026 13:59:36 GMT",
+  "created": "2026-09-09T13:59:36.166Z",
+  "insights": [],
+  "site": [
+    {
+      "@name": "https://alvo-rbac-08.test",
+      "@host": "alvo-rbac-08.test",
+      "@port": "443",
+      "@ssl": "true",
+      "alerts": [
+        {
+          "alertRef": "40018-1",
+          "name": "SQL Injection",
+          "confidence": "3",
+          "systemic": false,
+          "otherinfo": "",
+          "sourceid": "1",
+          "pluginid": "40018",
+          "alert": "SQL Injection",
+          "riskcode": "3",
+          "riskdesc": "High (High)",
+          "desc": "<p>SQL injection pode permitir ao atacante ler/alterar dados do banco.</p>",
+          "solution": "<p>Use queries parametrizadas/prepared statements.</p>",
+          "reference": "<p>https://owasp.org/www-community/attacks/SQL_Injection</p>",
+          "cweid": "89",
+          "wascid": "19",
+          "count": "2",
+          "instances": [
+            {
+              "id": "922",
+              "uri": "https://alvo-rbac-08.test/search",
+              "nodeName": "https://alvo-rbac-08.test/search",
+              "method": "GET",
+              "param": "q",
+              "attack": "' OR '1'='1",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "539",
+              "uri": "https://alvo-rbac-08.test/login",
+              "nodeName": "https://alvo-rbac-08.test/login",
+              "method": "GET",
+              "param": "user",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ]
+        },
+        {
+          "alertRef": "90020-1",
+          "name": "Remote OS Command Injection",
+          "confidence": "2",
+          "systemic": false,
+          "otherinfo": "",
+          "sourceid": "1",
+          "pluginid": "90020",
+          "alert": "Remote OS Command Injection",
+          "riskcode": "3",
+          "riskdesc": "High (Medium)",
+          "desc": "<p>Permite executar comandos arbitrários no servidor.</p>",
+          "solution": "<p>Nunca repasse input do usuário pra shell; use APIs seguras.</p>",
+          "reference": "<p>https://owasp.org/www-community/attacks/Command_Injection</p>",
+          "cweid": "78",
+          "wascid": "31",
+          "count": "1",
+          "instances": [
+            {
+              "id": "101",
+              "uri": "https://alvo-rbac-08.test/api/ping",
+              "nodeName": "https://alvo-rbac-08.test/api/ping",
+              "method": "GET",
+              "param": "host",
+              "attack": "127.0.0.1; id",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ]
+        },
+        {
+          "alertRef": "40012-1",
+          "name": "Cross Site Scripting (Reflected)",
+          "confidence": "3",
+          "systemic": false,
+          "otherinfo": "",
+          "sourceid": "1",
+          "pluginid": "40012",
+          "alert": "Cross Site Scripting (Reflected)",
+          "riskcode": "3",
+          "riskdesc": "High (High)",
+          "desc": "<p>Entrada refletida sem sanitização permite injeção de script no navegador da vítima.</p>",
+          "solution": "<p>Codifique a saída conforme o contexto (HTML/JS/URL).</p>",
+          "reference": "<p>https://owasp.org/www-community/attacks/xss/</p>",
+          "cweid": "79",
+          "wascid": "8",
+          "count": "2",
+          "instances": [
+            {
+              "id": "915",
+              "uri": "https://alvo-rbac-08.test/search",
+              "nodeName": "https://alvo-rbac-08.test/search",
+              "method": "GET",
+              "param": "q",
+              "attack": "<script>alert(1)</script>",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "844",
+              "uri": "https://alvo-rbac-08.test/comment",
+              "nodeName": "https://alvo-rbac-08.test/comment",
+              "method": "GET",
+              "param": "text",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ]
+        },
+        {
+          "alertRef": "10038-1",
+          "name": "Content Security Policy (CSP) Header Not Set",
+          "confidence": "3",
+          "systemic": false,
+          "otherinfo": "",
+          "sourceid": "1",
+          "pluginid": "10038",
+          "alert": "Content Security Policy (CSP) Header Not Set",
+          "riskcode": "2",
+          "riskdesc": "Medium (High)",
+          "desc": "<p>Sem CSP, o navegador não tem uma camada extra de defesa contra XSS/injeção de dados.</p>",
+          "solution": "<p>Configure o header Content-Security-Policy.</p>",
+          "reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP</p>",
+          "cweid": "693",
+          "wascid": "15",
+          "count": "3",
+          "instances": [
+            {
+              "id": "134",
+              "uri": "https://alvo-rbac-08.test/",
+              "nodeName": "https://alvo-rbac-08.test/",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "895",
+              "uri": "https://alvo-rbac-08.test/login",
+              "nodeName": "https://alvo-rbac-08.test/login",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "142",
+              "uri": "https://alvo-rbac-08.test/api",
+              "nodeName": "https://alvo-rbac-08.test/api",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ]
+        },
+        {
+          "alertRef": "10020-1",
+          "name": "Missing Anti-clickjacking Header",
+          "confidence": "2",
+          "systemic": false,
+          "otherinfo": "",
+          "sourceid": "1",
+          "pluginid": "10020",
+          "alert": "Missing Anti-clickjacking Header",
+          "riskcode": "2",
+          "riskdesc": "Medium (Medium)",
+          "desc": "<p>Sem X-Frame-Options/CSP frame-ancestors, a página pode ser embutida em iframe de terceiros (clickjacking).</p>",
+          "solution": "<p>Configure X-Frame-Options: DENY ou CSP frame-ancestors.</p>",
+          "reference": "<p>https://owasp.org/www-community/attacks/Clickjacking</p>",
+          "cweid": "1021",
+          "wascid": "15",
+          "count": "2",
+          "instances": [
+            {
+              "id": "901",
+              "uri": "https://alvo-rbac-08.test/",
+              "nodeName": "https://alvo-rbac-08.test/",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "305",
+              "uri": "https://alvo-rbac-08.test/login",
+              "nodeName": "https://alvo-rbac-08.test/login",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ]
+        },
+        {
+          "alertRef": "10010-1",
+          "name": "Cookie No HttpOnly Flag",
+          "confidence": "3",
+          "systemic": false,
+          "otherinfo": "",
+          "sourceid": "1",
+          "pluginid": "10010",
+          "alert": "Cookie No HttpOnly Flag",
+          "riskcode": "1",
+          "riskdesc": "Low (High)",
+          "desc": "<p>Cookie sem HttpOnly pode ser lido via JavaScript — risco em caso de XSS.</p>",
+          "solution": "<p>Marque o cookie de sessão como HttpOnly.</p>",
+          "reference": "<p>https://owasp.org/www-community/HttpOnly</p>",
+          "cweid": "1004",
+          "wascid": "13",
+          "count": "2",
+          "instances": [
+            {
+              "id": "774",
+              "uri": "https://alvo-rbac-08.test/",
+              "nodeName": "https://alvo-rbac-08.test/",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "257",
+              "uri": "https://alvo-rbac-08.test/login",
+              "nodeName": "https://alvo-rbac-08.test/login",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ]
+        },
+        {
+          "alertRef": "10021-1",
+          "name": "X-Content-Type-Options Header Missing",
+          "confidence": "2",
+          "systemic": false,
+          "otherinfo": "",
+          "sourceid": "1",
+          "pluginid": "10021",
+          "alert": "X-Content-Type-Options Header Missing",
+          "riskcode": "1",
+          "riskdesc": "Low (Medium)",
+          "desc": "<p>Sem nosniff, o navegador pode reinterpretar o tipo de conteúdo por heurística.</p>",
+          "solution": "<p>Configure X-Content-Type-Options: nosniff.</p>",
+          "reference": "<p>https://owasp.org/www-project-secure-headers/</p>",
+          "cweid": "693",
+          "wascid": "15",
+          "count": "2",
+          "instances": [
+            {
+              "id": "640",
+              "uri": "https://alvo-rbac-08.test/",
+              "nodeName": "https://alvo-rbac-08.test/",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "478",
+              "uri": "https://alvo-rbac-08.test/api",
+              "nodeName": "https://alvo-rbac-08.test/api",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ]
+        },
+        {
+          "alertRef": "10096-1",
+          "name": "Timestamp Disclosure",
+          "confidence": "2",
+          "systemic": false,
+          "otherinfo": "",
+          "sourceid": "1",
+          "pluginid": "10096",
+          "alert": "Timestamp Disclosure",
+          "riskcode": "0",
+          "riskdesc": "Informational (Medium)",
+          "desc": "<p>Um timestamp Unix foi identificado na resposta.</p>",
+          "solution": "<p>Avalie se a informação exposta é sensível ao contexto.</p>",
+          "reference": "<p>https://owasp.org/</p>",
+          "cweid": "200",
+          "wascid": "13",
+          "count": "2",
+          "instances": [
+            {
+              "id": "547",
+              "uri": "https://alvo-rbac-08.test/api/status",
+              "nodeName": "https://alvo-rbac-08.test/api/status",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "999",
+              "uri": "https://cdn.external-example.test/lib.js",
+              "nodeName": "https://cdn.external-example.test/lib.js",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sequences": []
+}
