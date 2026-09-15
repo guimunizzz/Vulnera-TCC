@@ -739,3 +739,198 @@ camada de movimento, e dashboards analíticos por aplicação.
 | `metrics.service.ts` | lia `actor.companyId`, que **não existe no JWT** (`authMiddleware` popula só `{userId, role}`). Todo CLIENT recebia 403 |
 | `use-focus-trap.ts` | usava `offsetParent === null` para checar visibilidade — errado para todo elemento `position: fixed`, ou seja, todo overlay |
 | `tabs.tsx` | não funcionava sem controle externo nem `paramUrl`: os cliques chamavam um `aoMudar` inexistente |
+
+---
+
+# FASE 9 — DAST (OWASP ZAP) ✅ Concluída em 2026-09-05
+
+**Branch:** `feat/dast-zap` · **Depende de:** Fase 6 (design system), Fase 5 (padrão de camadas)
+
+Módulo novo fora da numeração original do BACKLOG v4 (Fases 3-8) — entrada
+posterior, prompt dado diretamente ao agente numa sessão dedicada. Resumo do
+escopo pedido (prompt completo na sessão que gerou este módulo, não
+reproduzido aqui por extensão): dar ao PENTESTER um fluxo de "um campo e um
+botão" que sobe um container OWASP ZAP por scan, roda spider + active scan
+contra uma URL, persiste os alertas normalizados, e serve três saídas —
+findings na interface, HTML original do ZAP, e PDF client-side. Nove fases
+internas (0-9): reconhecimento do ZAP, schema, runner Docker, pipeline de
+findings, API+RBAC, testes, UI, PDF, validação end-to-end, documentação.
+
+## Histórico
+
+**Branch:** `feat/dast-zap` (renomeada de `feat/scan-dast-OWASP`, sem commits — decisão reversível registrada no relatório da Fase 0) · **Data:** 2026-09-05 · **PR:** não aberta (instrução explícita do prompt: não commitar, não abrir PR)
+
+Todas as 9 fases internas concluídas numa sessão contínua, com checkpoints
+reportados ao final de cada uma. Nenhuma delas exigiu parar e perguntar pelas
+condições listadas no prompt (falha de verificação, schema além do previsto,
+Docker indisponível, contrato público quebrado) — a única pausa real foi a
+decisão do enum nativo (abaixo), resolvida com uma pergunta direta.
+
+Desvios do prompt original:
+
+- **Enum nativo em vez de String.** O prompt pedia `enum DastScanStatus`/`enum DastRisk` nativos do Prisma; o `schema.prisma` documenta como filosofia "sem enums nativos" (String + validação em TS). Divergência sinalizada explicitamente ao Rafael antes de aplicar a migration (pergunta direta, não decisão unilateral) — escolhida a via do prompt, registrada como exceção consciente em `schema.prisma` e no `ADR-028`.
+- **`DAST_FORCE_SIMULATE` (env var nova, não estava no prompt).** Sem ela, a suíte de testes ficaria refém de o Docker "por acaso" estar indisponível no ambiente de CI — um dia em que alguém rodasse os testes com Docker instalado, os testes de ciclo de vida passariam a tentar um scan real (lento, de rede). O flag força o fallback determinístico sempre, independente do ambiente.
+- **`simulateScan` ganhou suporte a `timeoutMs`** (não pedido explicitamente) — sem isso, `DAST-LIFE-03` (timeout marca FAILED) não seria testável sem Docker real, já que o fallback simulado sempre completava em ~3s fixos.
+- **`requestedByName` adicionado ao payload de `/report/data`** (não estava no prompt) — a capa do PDF pede "quem executou", e o endpoint original só devolvia `requestedById` (um cuid cru). Pequeno join a mais no service, sem migration.
+- **`StatusBadge` (componente compartilhado do design system) ganhou 4 entradas novas** (QUEUED/RUNNING/FAILED/CANCELLED) — extensão de um componente usado pelo resto do app, sinalizada aqui por afetar superfície compartilhada (mesma lógica de S3/R4 do CLAUDE.md, embora reversível e de baixo risco).
+- **Tabela HTML manual em vez do componente `<Table>` do design system**, tanto na lista de scans quanto na tabela de findings — decisão de consistência com o padrão real predominante no código (`applications-page.tsx`, `project-detail-page.tsx` já usam `<table>` manual), e porque `<Table>` não tem suporte nativo a linha expansível (necessária pro detalhe de finding), que teve que ser construída do zero de qualquer forma.
+- **Descrição/solução/reference do ZAP passam por `stripHtml()` antes de persistir** (não pedido) — o ZAP devolve esses campos em HTML (`<p>`); sem limpar, a tela e o PDF mostrariam tags cruas.
+
+Bugs reais encontrados e corrigidos durante a execução:
+
+| Onde | O quê |
+|---|---|
+| `dast-scan.service.ts` (`runInBackground`) | Corrida genuína: cancelar um scan simulado não interrompe de verdade o `setTimeout` interno (só o Docker real morre na hora via `killContainer`) — o scan cancelado ainda tentava, ~3s depois, persistir findings e marcar conclusão num registro que já não era mais `RUNNING`. Corrigido com checagem de estado antes de persistir findings E antes de marcar conclusão. Bug de produção real, não só de teste — a mesma corrida existiria com Docker real numa janela menor. |
+| `zap-runner.service.ts` (`isDockerAvailable`) | Timeout de 5s pro `docker info` classificava Docker como indisponível nesta máquina (Docker Desktop/WSL2 levou ~6s na primeira chamada "fria"), derrubando scans reais pro fallback simulado por engano. Subido pra 10s. |
+| Ambiente (pré-existente, não causado pelo módulo) | `npm run check` do backend já estava quebrado no branch antes de qualquer código do DAST: Prisma Client desatualizado (faltava `expoPushToken`) + `expo-server-sdk` ausente do `node_modules` + migration `add_expo_push_token` nunca aplicada no banco de teste. Resolvido como pré-requisito (`prisma generate`, `npm install` na raiz, `prisma migrate deploy` no banco de teste). |
+
+**Validação em navegador real:** a extensão do Chrome não conectou nesta
+sessão (mesmo bloqueio recorrente de todas as fases anteriores). Resolvido
+com o fallback já comprovado do projeto: Playwright instalado ad-hoc no
+scratchpad, Chromium baixado na hora, dois scripts cobrindo 26 checks contra
+a stack de dev real rodando de verdade (`npm run dev` nos dois workspaces,
+não headless/mock) — login real, RBAC visual (CLIENT sem item de menu e
+redirecionado ao forçar `/dast`), scan RUNNING com polling e cronômetro
+reais, scan COMPLETED com tabela/filtro/busca/expansão de linha, download de
+PDF via clique real na UI (arquivo validado depois com `pdf-lib`), abertura
+do relatório HTML do ZAP em nova aba com iframe sandboxed, responsivo em
+375/768/1440, console limpo em toda a navegação. Screenshots e o PDF real
+ficam com o Rafael.
+
+Testes: 269 → 315 no backend (42 novos: SEC-01..05, RBAC-01..09, PIPE-01..05,
+LIFE-01..04, mais o fluxo feliz completo), cobertura 89-96% nos 3 services
+novos, zero dependência de Docker na suíte. Frontend: build e lint limpos
+(nenhum teste automatizado novo — a validação foi via Playwright real, ver
+acima).
+
+---
+
+# FASE 9.1 + 9.2 — DAST: scan real na stack, e o que fazer com o resultado
+
+Duas sessões consecutivas em 2026-09-09, na mesma branch `feat/dast-zap`.
+A 9.1 fez o scan real funcionar dentro do `docker compose` (ADR-031); a 9.2
+verificou se aquilo era mesmo verdade e deu ao pentester o que fazer com o
+resultado (ADR-032).
+
+## Histórico
+
+**Branch:** `feat/dast-zap` (sem commits — mesma decisão de todas as fases
+anteriores: trabalho completo em working tree, o Rafael decide quando
+commitar) · **Data:** 2026-09-09 · **PR:** não aberta
+
+### 9.1 — o que foi entregue
+
+ZAP em **modo daemon por scan** conduzido pela API HTTP dele (spider →
+passivo → ativo → relatórios), DooD na stack (`docker-cli` na imagem +
+socket do host montado), watchdog de concorrência com fila FIFO, e as
+colunas que tornam um resultado simulado distinguível de um real. Fecha as
+três causas e a lacuna de produto de `docs/DAST-DOCKER-GAP.md`.
+
+### 9.2 — o que foi entregue
+
+**Primeiro, verificação.** O prompt pedia para *garantir* que o watchdog
+respeita os limites e que o scan funciona de verdade — então nada foi aceito
+no papel. Medido na stack real: `which docker` dentro do container da API
+responde; três scans disparados juntos produziram **exatamente dois
+containers do ZAP** no `docker ps` e um na fila com alerta; o terceiro entrou
+sozinho ao abrir vaga; três scans reais concluíram com `simulated: false` em
+39-52s.
+
+**A verificação achou o que a leitura não acharia.** O watchdog limitava
+*quantos* scans rodam, mas **nada limitava quanto cada um consome**: dois
+scans reais ocupavam ~960% de 1200% de CPU e cresciam sem teto de RAM
+(`936MiB / 7.7GiB` e `1.39GiB / 7.7GiB` — 7.7GiB é a VM inteira do Docker).
+Respeitar "no máximo 2 scans" e ainda assim travar a máquina não é respeitar
+limite nenhum, e o cenário em que isso dói é a apresentação. Corrigido com
+`DAST_ZAP_MEMORY`/`DAST_ZAP_CPUS` e um `-Xmx` derivado — os dois **têm** de
+andar juntos, porque o `zap.sh` calcula o heap a partir da RAM do *host*, não
+do limite do cgroup, e sozinho o `--memory` só transformaria "sem teto" em
+"morre por OOM no meio do active scan". Depois: `912MiB / 2GiB | 64%`.
+
+Também foram tapados dois buracos de heartbeat que abortariam scans
+legítimos: o `docker run` na primeira execução de uma máquina (pull de
+~3.7GB, sem pulso, e o watchdog corta em 2min — justamente o primeiro scan de
+uma máquina nova) e o download dos relatórios (dois `httpGet` de 120s contra
+um limite de silêncio de 120s).
+
+**Depois, as três frentes escolhidas pelo Rafael:** triagem no silo, promoção
+para `Vulnerability` e comparação entre execuções. Detalhe e racional no
+ADR-032; o ponto que mais importa é que a promoção **não inventa vetor
+CVSS** — ela sugere e o humano revisa, que é o que mantém a RN10 intacta e
+responde a objeção que tinha feito o ADR-029 recusar a integração.
+
+### Desvios do plano
+
+- **`npm install --save-dev @playwright/test` no `app/web`** (mexe no
+  `package.json`, aprovado explicitamente pelo Rafael na abertura da sessão,
+  entre três opções oferecidas). Playwright deliberadamente **fora** do
+  `npm run check`: os E2E exigem a stack de pé, e o `check` precisa continuar
+  rodando sem Docker.
+- **`tsconfig.json` do web passou a incluir `e2e` e `playwright.config.ts`** —
+  sem isso, erro de tipo em teste E2E não seria pego por `npm run build`.
+- **Dois erros de lint pré-existentes corrigidos** em
+  `tests/integration/maturity.test.ts` (`token` desestruturado e nunca usado,
+  do commit `ebcae32`, Sprint 8). Fora do escopo pelo S6, mas **bloqueavam o
+  `npm run check`**, que o §11 exige antes de PR — é a exceção que o próprio
+  S6 prevê. Correção trivial de duas linhas, sem mudança de comportamento.
+- **ADR-031 e ADR-032 indexados em `docs/DECISIONS.md`.** O ADR-031 tinha
+  ficado só como arquivo, sem entrada no índice — corrigido por R5 (o doc se
+  ajusta ao que existe), sem reescrever nada do passado.
+
+### Bugs encontrados e corrigidos durante a execução
+
+| Onde | O quê |
+|---|---|
+| `zap-runner.service.ts` | Sem `--memory`/`--cpus`, dois scans simultâneos consumiam quase toda a CPU da máquina e RAM sem teto. Achado ao **medir** a stack, não ao ler o código. |
+| `zap-runner.service.ts` | `docker run` e download de relatórios ficavam fora de qualquer loop de polling e podiam passar dos 2min de silêncio — o watchdog abortaria scans legítimos, inclusive o primeiro scan de qualquer máquina nova. |
+| `dast-scan-detail-page.tsx` / `dast-promote-dialog.tsx` | Link para `/vulnerabilities/:id`, rota que **não existe** (a do produto é `/findings/:id`). **Pego pelo Playwright** — é exatamente a classe de bug que passa por teste de componente e por teste de endpoint, porque cada metade funciona isolada. |
+
+### Validação em navegador real
+
+Desta vez com Playwright versionado no repositório em vez de ad-hoc no
+scratchpad (a extensão do Chrome segue sem conectar, como em todas as fases
+anteriores). Seis casos E2E contra a stack real, incluindo um que prova que
+**a barra de progresso mede em vez de estimar**: ele exige que o percentual
+suba *e* que as fases nomeadas do ZAP apareçam na tela — uma barra baseada em
+tempo decorrido passaria na primeira asserção e falharia na segunda.
+
+Testes: 333 → **353** no backend (`dast-triage.test.ts` com 16 casos, mais 4
+unitários de limite de recurso), 34 no frontend, 6 E2E. `lint` verde nos dois
+workspaces.
+
+### Adendo — 2026-09-10: o vault entrou no dia (sessão de documentação)
+
+Sessão só de documentação, sem uma linha de código tocada. O módulo DAST
+estava documentado no repositório (`docs/DAST.md`, ADRs 028-032, PRD,
+BACKLOG, DECISIONS) mas **não no vault** (`docs/Vulnera/`), que o `CLAUDE.md`
+§0 define como fonte de verdade do domínio — o changelog do vault parava em
+2026-08-18 e nenhuma nota de entidade, módulo, fluxo ou enum conhecia o DAST.
+
+Criadas: `02-Dominio/Entidades/DastScan.md` e `DastFinding.md`,
+`03-Produto/Modulos/DAST.md`, `03-Produto/Fluxos/Fluxo - Scan DAST.md`,
+`06-Dados/Enum - DAST.md`.
+
+Atualizadas: `Changelog do Projeto` (sessões 28, 29 e 30),
+`Contexto Mestre v4`, `Vulnerability`, `MER Conceitual`,
+`Entidades e Relacionamentos`, `Matriz de Permissoes`, `Jornada - Pentester`,
+`OWASP ZAP`, `Docker Compose`, `Dockerfiles`, `Roadmap Fases`,
+`Decisoes Recentes`, `Status de Preenchimento do Vault`, `Testes`,
+`Evidencias para Banca` e os MOCs de Domínio, Produto e Vulnera.
+
+Correções por R5 (o código é a verdade), listadas para não passarem em branco:
+
+- `docs/DAST.md` §1 e §10 ainda afirmavam que o módulo **não** importa achados
+  para `Vulnerability` — falso desde o §11 do mesmo arquivo (Fase 9.2). §6
+  também não tinha as colunas de triagem nem a proveniência.
+- `09-TCC/Testes.md` dizia que Playwright estava fora do escopo — voltou em
+  2026-09-09.
+- `05-Infra-DevSecOps/OWASP ZAP.md` descrevia só o ZAP manual do
+  [[ADR-007 - Sonar informativo e ZAP manual]]; agora separa os **dois papéis**
+  (ferramenta de DevSecOps × motor do módulo DAST).
+- `05-Infra-DevSecOps/Docker Compose.md` listava MySQL/SonarQube/Mailhog e
+  "código roda local"; a stack inteira sobe no compose desde o ADR-022.
+- `08-Operacao/Backlog/Roadmap Fases.md` estava congelado em 2026-07-26 (Fases
+  3-8 como backlog) e tinha `\n` literais que impediam a tabela de renderizar.
+- `ADR-001` (plataforma **não** executa ataque real) ganhou um aviso de tensão
+  com o que o DAST faz. **Status não alterado** — rebaixar ADR é decisão do
+  Rafael (§0.2 S3).

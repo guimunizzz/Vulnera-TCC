@@ -77,6 +77,8 @@ model User {
   vulnComments        VulnerabilityComment[]
   evidences           Evidence[]
   auditLogs           AuditLog[]
+  dastScans           DastScan[]
+  dastTriagedFindings DastFinding[] @relation("DastFindingTriagedBy")
 
   @@index([companyId])
 }
@@ -291,6 +293,20 @@ model Vulnerability {
   status                 String  @default("OPEN")
   aiAssisted             Boolean @default(false) // true se Gemini participou da descrição
 
+  // Proveniência (ADR-032). "MANUAL" = pentester digitou depois de análise
+  // humana (todo o histórico até 2026-09-09); "DAST_IMPORT" = nasceu da
+  // promoção de um DastFinding. Sem isto, misturar as duas origens na mesma
+  // tabela degradaria a confiança em Vulnerability como "achado triado por
+  // humano" — a objeção nº 3 do ADR-029, agora respondida em vez de evitada.
+  //
+  // ⚠️ O vetor CVSS de uma promovida NÃO é inventado a partir do riskcode do
+  // ZAP: a UI de promoção pré-preenche uma SUGESTÃO e o pentester revisa
+  // antes de salvar. Por isso não existe flag de "score estimado" — todo
+  // cvssScore do produto continua sendo calculado de um vetor revisado por
+  // humano (RN10 intacta).
+  sourceType          String  @default("MANUAL")
+  sourceDastFindingId String? @unique
+
   // Foreign keys (cascata de isolamento)
   projectId     String
   applicationId String // desnormalizado de Project.applicationId
@@ -305,6 +321,12 @@ model Vulnerability {
   application Application @relation(fields: [applicationId], references: [id])
   company     Company     @relation(fields: [companyId], references: [id])
   assignee    User?       @relation("VulnerabilityAssignee", fields: [assignedTo], references: [id])
+
+  // SetNull, não Cascade: apagar um scan DAST antigo NÃO pode apagar a
+  // Vulnerability que nasceu dele — depois de promovida ela é um achado do
+  // projeto, com triagem, evidências e comentários próprios. Perde-se o
+  // ponteiro pra origem, nunca o achado.
+  sourceDastFinding DastFinding? @relation("VulnerabilityFromDastFinding", fields: [sourceDastFindingId], references: [id], onDelete: SetNull)
 
   evidences Evidence[]
   comments  VulnerabilityComment[]
@@ -472,6 +494,160 @@ model Report {
   createdAt   DateTime @default(now())
 
   @@index([projectId])
+}
+
+// ============================================================================
+// DAST (módulo de scans automatizados via OWASP ZAP)
+// ============================================================================
+//
+// Silo próprio: os findings do ZAP NÃO viram Vulnerability (ver ADR em
+// docs/Vulnera/07-Decisoes/ - "DAST como silo"). Motivo principal: o ZAP não
+// fornece vetor CVSS, só riskcode (HIGH/MEDIUM/LOW/INFO) — importar exigiria
+// inventar um vetor, o que contamina o cálculo automático que o resto do
+// schema depende (severityCalculated derivado de cvssScore).
+//
+// ⚠️ EXCEÇÃO à filosofia #3 do cabeçalho ("Sem enums nativos"): DastScanStatus
+// e DastRisk usam enum nativo do Prisma, não String. Os dois conjuntos de
+// valores são fechados por contrato externo (DastRisk é a taxonomia fixa do
+// ZAP; DastScanStatus é uma máquina de estados interna de 5 valores) e não se
+// espera adicionar valor sem tocar código de qualquer forma. Decisão
+// registrada em docs/Vulnera/07-Decisoes/ (ADR "DAST como silo") — sinalizada
+// ao Rafael por divergir da regra geral do schema.
+//
+// MaturityAssessment.companyId não tem FK à Company (deploy pré-Fase 5); aqui
+// requestedById TEM FK a User desde o início, seguindo o padrão já
+// consolidado no restante do schema (Vulnerability.assignee, etc.).
+
+enum DastScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum DastRisk {
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+// Triagem de um DastFinding pelo pentester, DENTRO do silo DAST (ADR-032).
+// Um scan devolve dezenas de alertas e o ZAP não sabe quais importam: sem
+// isso, quem revisa 40 achados não tem onde registrar o que já analisou e
+// recomeça do zero na próxima sessão.
+//   NEW            — ainda não olhado (padrão de todo finding recém-importado)
+//   CONFIRMED      — o pentester validou: é real
+//   FALSE_POSITIVE — o ZAP errou
+//   ACCEPTED_RISK  — é real, mas o risco foi aceito conscientemente
+enum DastTriageStatus {
+  NEW
+  CONFIRMED
+  FALSE_POSITIVE
+  ACCEPTED_RISK
+}
+
+// DastScan — uma execução de scan DAST contra uma targetUrl.
+// containerName é derivado de `id` (vulnera-zap-<id>) e persistido pra
+// permitir cancelamento (docker rm -f <containerName>) sem recalcular nada.
+//
+// progress/phase/simulated/warningMessage entraram em 2026-09-09 (scan real
+// dentro da stack Docker). O motivo de os quatro serem COLUNA e não estado em
+// memória: o scan roda em background e a UI acompanha por polling — quem
+// responde o GET /dast/scans/:id pode ser outro processo (ou o mesmo depois
+// de um restart), então o banco é o único lugar onde o progresso sobrevive.
+model DastScan {
+  id             String         @id @default(cuid())
+  targetUrl      String         @db.VarChar(2048)
+  status         DastScanStatus @default(QUEUED)
+  requestedById  String
+  containerName  String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  durationMs     Int?
+  errorMessage   String?        @db.Text
+  htmlReportPath String?
+  jsonReportPath String?
+  // 0..100 — percentual consolidado das fases (spider/passivo/ativo), escrito
+  // pelo runner a cada tick de polling da API do ZAP.
+  progress       Int            @default(0)
+  // Fase corrente em texto livre curto (QUEUED, STARTING, SPIDER, PASSIVE,
+  // ACTIVE, REPORT, DONE, SIMULATED). String e não enum nativo de propósito:
+  // é rótulo de UI, não máquina de estados — status já é a máquina.
+  phase          String?
+  // true quando o resultado veio do gerador simulado (Docker indisponível ou
+  // scan real falhou e caiu no fallback). Antes de 2026-09-09 essa informação
+  // existia só dentro do report.json e era invisível na aplicação inteira.
+  simulated      Boolean        @default(false)
+  // Aviso amigável quando o scan CONCLUIU mas com ressalva (tipicamente o
+  // fallback simulado). Distinto de errorMessage, que só existe em FAILED.
+  warningMessage String?        @db.Text
+  alertsHigh     Int            @default(0)
+  alertsMedium   Int            @default(0)
+  alertsLow      Int            @default(0)
+  alertsInfo     Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  requestedBy User          @relation(fields: [requestedById], references: [id])
+  findings    DastFinding[]
+
+  @@index([requestedById])
+  @@index([status])
+  // Índice composto pro lock "1 scan por alvo de cada vez": WHERE status IN
+  // (QUEUED,RUNNING) AND targetUrl = ?. Prefixo de 191 chars — targetUrl é
+  // VarChar(2048), índice completo estouraria o teto de bytes por índice do
+  // MySQL (o projeto já foi mordido nisso duas vezes, ver §2 do CLAUDE.md).
+  @@index([status, targetUrl(length: 191)])
+}
+
+// DastFinding — um alerta do ZAP já normalizado (1 instance = 1 finding).
+// fingerprint = sha256(pluginId + "|" + normalizedUrl + "|" + (param ?? ""))
+// — NUNCA inclui evidence (ela muda entre scans da mesma vulnerabilidade).
+model DastFinding {
+  id            String   @id @default(cuid())
+  scanId        String
+  fingerprint   String // sha256 hex, 64 chars — seguro pro índice único
+  pluginId      String
+  title         String
+  risk          DastRisk
+  confidence    String
+  cweId         String?
+  wascId        String?
+  url           String   @db.Text
+  normalizedUrl String   @db.Text
+  param         String?
+  evidence      String?  @db.Text
+  description   String?  @db.Text
+  solution      String?  @db.Text
+  reference     String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  // ---------------------------------------------------------------------
+  // Triagem dentro do silo (ADR-032). Não substitui a promoção pra
+  // Vulnerability: é o passo ANTES dela — o pentester marca o que já
+  // analisou, e só o que virou CONFIRMED costuma merecer promoção.
+  // ---------------------------------------------------------------------
+  triageStatus DastTriageStatus @default(NEW)
+  triageNote   String?          @db.Text
+  triagedById  String?
+  triagedAt    DateTime?
+
+  scan      DastScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  triagedBy User?    @relation("DastFindingTriagedBy", fields: [triagedById], references: [id])
+
+  // Lado inverso da promoção — a FK real mora em Vulnerability.sourceDastFindingId.
+  // Sendo @unique lá, este lado é 0..1: um finding vira no máximo UMA
+  // Vulnerability (a deduplicação que o ADR-029 pedia, garantida pelo banco
+  // e não por checagem de aplicação).
+  promotedVulnerability Vulnerability? @relation("VulnerabilityFromDastFinding")
+
+  @@unique([scanId, fingerprint])
+  @@index([scanId])
+  @@index([risk])
+  // Filtro "só o que ainda não triei" na tela de findings.
+  @@index([scanId, triageStatus])
 }
 
 // ============================================================================

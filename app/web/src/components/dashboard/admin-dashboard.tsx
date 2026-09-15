@@ -6,6 +6,11 @@
  * plataforma (top companies por volume de findings). "Empresas ativas" é
  * derivado de Subscription.status === ACTIVE (Company não tem campo
  * isActive — ver schema.prisma) via GET /subscriptions/active (Fase 6).
+ *
+ * "Top empresas por volume" vem da faceta `company` da busca de findings
+ * (FEAT-09), contada por `groupBy` no banco. Antes este componente baixava
+ * TODOS os findings de TODAS as empresas para agrupar no navegador — ver o
+ * cabeçalho de `use-findings.ts`.
  */
 
 import { useMemo } from "react";
@@ -13,7 +18,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { companiesApi } from "../../lib/api/companies.api";
 import { subscriptionsApi } from "../../lib/api/subscriptions.api";
-import { vulnerabilitiesApi } from "../../lib/api/vulnerabilities.api";
+import { useFindingsResumo } from "../../hooks/use-findings";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { LinkButton } from "../ui/button";
 import { Alert } from "../ui/alert";
@@ -34,32 +39,22 @@ export function AdminDashboard() {
     queryKey: ["subscriptions", "pending"],
     queryFn: subscriptionsApi.listPending,
   });
-  const { data: findings, isLoading: loadingFindings } = useQuery({
-    queryKey: ["vulnerabilities", "all"],
-    queryFn: vulnerabilitiesApi.list, // ADMIN — vem tudo, de todas as companies
-  });
+  const resumo = useFindingsResumo();
 
-  const stats = useMemo(() => {
-    const list = findings ?? [];
-    const criticalOpenGlobal = list.filter((f) => f.severityFinal === "CRITICAL" && f.status !== "CLOSED").length;
+  const topCompanies = useMemo(
+    () =>
+      Object.entries(resumo.porEmpresa)
+        .map(([companyId, count]) => ({
+          companyId,
+          count,
+          name: companies?.find((c) => c.id === companyId)?.name ?? companyId,
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, TOP_COMPANIES_LIMIT),
+    [resumo.porEmpresa, companies],
+  );
 
-    const countByCompany = list.reduce<Record<string, number>>((acc, f) => {
-      acc[f.companyId] = (acc[f.companyId] ?? 0) + 1;
-      return acc;
-    }, {});
-    const topCompanies = Object.entries(countByCompany)
-      .map(([companyId, count]) => ({
-        companyId,
-        count,
-        name: companies?.find((c) => c.id === companyId)?.name ?? companyId,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, TOP_COMPANIES_LIMIT);
-
-    return { criticalOpenGlobal, topCompanies };
-  }, [findings, companies]);
-
-  if (loadingCompanies || loadingActive || loadingPending || loadingFindings) {
+  if (loadingCompanies || loadingActive || loadingPending || resumo.carregando) {
     return <p className="text-fg-muted">Carregando...</p>;
   }
 
@@ -70,8 +65,8 @@ export function AdminDashboard() {
         <KpiCard label="Assinaturas pendentes" value={pendingSubs?.length ?? 0} />
         <KpiCard
           label="Críticos em aberto (global)"
-          value={stats.criticalOpenGlobal}
-          accentClassName={stats.criticalOpenGlobal > 0 ? "text-severity-critical-ink" : undefined}
+          value={resumo.criticosAbertos}
+          accentClassName={resumo.criticosAbertos > 0 ? "text-severity-critical-ink" : undefined}
         />
       </div>
 
@@ -89,9 +84,9 @@ export function AdminDashboard() {
         <CardHeader>
           <CardTitle>Top empresas por volume de findings</CardTitle>
         </CardHeader>
-        {stats.topCompanies.length === 0 && <p className="text-sm text-fg-muted">Nenhum finding registrado ainda.</p>}
+        {topCompanies.length === 0 && <p className="text-sm text-fg-muted">Nenhum finding registrado ainda.</p>}
         <ul className="flex flex-col gap-2">
-          {stats.topCompanies.map((c) => (
+          {topCompanies.map((c) => (
             <li key={c.companyId} className="flex items-center justify-between rounded-control bg-canvas px-3 py-2 text-sm">
               <span className="text-fg">{c.name}</span>
               <div className="flex items-center gap-3">

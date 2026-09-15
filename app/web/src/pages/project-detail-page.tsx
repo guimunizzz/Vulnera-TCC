@@ -1,17 +1,18 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectsApi } from "../lib/api/projects.api";
 import { applicationsApi } from "../lib/api/applications.api";
 import { projectMembersApi } from "../lib/api/project-members.api";
 import { usersApi } from "../lib/api/users.api";
-import { vulnerabilitiesApi } from "../lib/api/vulnerabilities.api";
 import { reportsApi } from "../lib/api/reports.api";
 import { useApiError } from "../hooks/use-api-error";
+import { useFindings } from "../hooks/use-findings";
 import { useAuthStore } from "../store/auth.store";
 import { useCompanyName } from "../hooks/use-company-name";
+import { FindingsTable } from "../components/findings/findings-table";
 import { Breadcrumb } from "../components/ui/navigation";
-import { SeverityBadge, StatusBadge } from "../components/ui/badge";
+import { StatusBadge } from "../components/ui/badge";
 import { Button, LinkButton } from "../components/ui/button";
 import { Alert } from "../components/ui/alert";
 import { cn } from "../lib/cn";
@@ -19,7 +20,6 @@ import { downloadBlob } from "../lib/pdf/base";
 import { generateExecutivePdf } from "../lib/pdf/executive";
 import { generateTechnicalPdf } from "../lib/pdf/technical";
 import type { ProjectStatus } from "../types/project.types";
-import { OWASP_CATEGORIES, OWASP_LABELS, type VulnerabilitySeverity, type VulnerabilityStatus } from "../types/vulnerability.types";
 import type { ReportType } from "../types/report.types";
 
 const REPORT_TYPE_LABELS: Record<ReportType, string> = { EXECUTIVE: "Executivo", TECHNICAL: "Técnico" };
@@ -61,16 +61,12 @@ export function ProjectDetailPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [error, setError] = useState<string | null>(null);
   const [selectedPentesterId, setSelectedPentesterId] = useState("");
-  const [severityFilter, setSeverityFilter] = useState<VulnerabilitySeverity | "">("");
-  const [statusFilter, setStatusFilter] = useState<VulnerabilityStatus | "">("");
-  const [owaspFilter, setOwaspFilter] = useState("");
-  const [findingsPage, setFindingsPage] = useState(1);
   const [generatingType, setGeneratingType] = useState<ReportType | null>(null);
-  const FINDINGS_PAGE_SIZE = 10;
 
   const role = useAuthStore((s) => s.user?.role);
   const getErrorMessage = useApiError();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["projects", id],
@@ -96,34 +92,17 @@ export function ProjectDetailPage() {
     enabled: role === "ADMIN",
   });
 
-  // busca sempre (não só na aba Findings) — o header precisa do contador de
-  // críticos abertos independente de qual aba está ativa.
-  const { data: findings } = useQuery({
-    queryKey: ["vulnerabilities", "byProject", id],
-    queryFn: () => vulnerabilitiesApi.listByProject(id!),
-    enabled: !!id,
-  });
-
-  const criticalOpenCount = useMemo(
-    () => findings?.filter((f) => f.severityFinal === "CRITICAL" && f.status !== "CLOSED").length ?? 0,
-    [findings],
-  );
-
-  const filteredFindings = useMemo(() => {
-    if (!findings) return [];
-    return findings.filter(
-      (f) =>
-        (!severityFilter || f.severityFinal === severityFilter) &&
-        (!statusFilter || f.status === statusFilter) &&
-        (!owaspFilter || f.owaspCategory === owaspFilter),
-    );
-  }, [findings, severityFilter, statusFilter, owaspFilter]);
-
-  const findingsTotalPages = Math.max(1, Math.ceil(filteredFindings.length / FINDINGS_PAGE_SIZE));
-  const paginatedFindings = filteredFindings.slice(
-    (findingsPage - 1) * FINDINGS_PAGE_SIZE,
-    findingsPage * FINDINGS_PAGE_SIZE,
-  );
+  // O contador de críticos em aberto no cabeçalho aparece em TODAS as abas,
+  // então não pode depender da tabela de findings estar montada. É uma busca
+  // própria de `pageSize=1` — só o `total` interessa, e a contagem é feita no
+  // banco (antes, a página baixava todos os findings do projeto pra isto).
+  const paramsCriticos = useMemo(() => {
+    const params = new URLSearchParams({ severity: "CRITICAL", status: "OPEN,IN_PROGRESS,FIXED", pageSize: "1" });
+    if (id) params.set("projectId", id);
+    return params;
+  }, [id]);
+  const criticos = useFindings(paramsCriticos, Boolean(id));
+  const criticalOpenCount = criticos.dados?.pagination.total ?? 0;
 
   const companyName = useCompanyName(project?.companyId);
 
@@ -339,128 +318,23 @@ export function ProjectDetailPage() {
         </div>
       )}
 
+      {/* A aba não tem mais implementação própria de listagem: usa o
+          componente canônico com o projeto travado. Ver ADR-028 — a tabela
+          antiga daqui era a segunda implementação que esta entrega removeu. */}
       {tab === "findings" && (
         <div className="mt-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
-              <select
-                value={severityFilter}
-                onChange={(e) => {
-                  setSeverityFilter(e.target.value as VulnerabilitySeverity | "");
-                  setFindingsPage(1);
-                }}
-                className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg"
-              >
-                <option value="">Todas as severidades</option>
-                {(["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"] as VulnerabilitySeverity[]).map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as VulnerabilityStatus | "");
-                  setFindingsPage(1);
-                }}
-                className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg"
-              >
-                <option value="">Todos os status</option>
-                {(["OPEN", "IN_PROGRESS", "FIXED", "CLOSED"] as VulnerabilityStatus[]).map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={owaspFilter}
-                onChange={(e) => {
-                  setOwaspFilter(e.target.value);
-                  setFindingsPage(1);
-                }}
-                className="rounded-control border border-subtle bg-surface px-3 py-2 text-sm text-fg"
-              >
-                <option value="">Todas as categorias OWASP</option>
-                {OWASP_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {OWASP_LABELS[cat]}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {role !== "CLIENT" && (
-              <LinkButton to={`/projects/${project.id}/findings/new`}>Novo finding</LinkButton>
-            )}
-          </div>
-
-          {filteredFindings.length === 0 && (
-            <p className="mt-6 text-fg-muted">Nenhum finding encontrado com esses filtros.</p>
-          )}
-
-          {filteredFindings.length > 0 && (
-            <>
-              <div className="mt-4 overflow-hidden rounded-container border border-subtle">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-surface text-fg-muted">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Título</th>
-                      <th className="px-4 py-3 font-medium">Severidade</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium">OWASP</th>
-                      <th className="px-4 py-3 font-medium">Criado em</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedFindings.map((finding) => (
-                      <tr key={finding.id} className="border-t border-subtle hover:bg-surface">
-                        <td className="px-4 py-3">
-                          <Link to={`/findings/${finding.id}`} className="text-fg hover:text-accent-ink hover:underline">
-                            {finding.title}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3">
-                          <SeverityBadge severidade={finding.severityFinal} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={finding.status} />
-                        </td>
-                        <td className="px-4 py-3 text-fg-muted">{finding.owaspCategory}</td>
-                        <td className="px-4 py-3 text-fg-muted">
-                          {new Date(finding.createdAt).toLocaleDateString("pt-BR")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {findingsTotalPages > 1 && (
-                <div className="mt-4 flex items-center justify-center gap-2 text-sm">
-                  <Button
-                    variant="secundario"
-                    disabled={findingsPage <= 1}
-                    onClick={() => setFindingsPage((p) => p - 1)}
-                  >
-                    Anterior
-                  </Button>
-                  <span className="text-fg-muted">
-                    {findingsPage} / {findingsTotalPages}
-                  </span>
-                  <Button
-                    variant="secundario"
-                    disabled={findingsPage >= findingsTotalPages}
-                    onClick={() => setFindingsPage((p) => p + 1)}
-                  >
-                    Próxima
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
+          <FindingsTable
+            lockedFilters={{ projectId: id! }}
+            hiddenFields={["projeto", "empresa", "aplicacao"]}
+            hiddenColumns={["project", "company", "application"]}
+            syncToUrl={false}
+            onSelect={(findingId) => navigate(`/findings/${findingId}`)}
+            acoes={
+              role !== "CLIENT" ? (
+                <LinkButton to={`/projects/${project.id}/findings/new`}>Novo finding</LinkButton>
+              ) : undefined
+            }
+          />
         </div>
       )}
 

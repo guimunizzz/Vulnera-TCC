@@ -1,84 +1,195 @@
 /**
  * finding-detail-page.tsx
  *
- * Visão de LEITURA do finding — é a tela que o CLIENT usa (read-only: sem
- * upload, sem transição, sem override). ADMIN/PENTESTER também passam por
- * aqui ao clicar num finding na lista; o botão "Editar" só aparece pra eles
- * e leva pro FindingEditorPage (/findings/:id/edit).
+ * O QUE FAZ
+ * A tela de UM finding: contexto, severidade (calculada e aplicada), CVSS
+ * decomposto, descrição, evidências, comentários, trilha de auditoria e as
+ * ações permitidas ao ator.
  *
- * Se um PENTESTER conseguiu carregar esta página, ele necessariamente é
- * membro do Project — RN17 já bloqueia o GET no backend pra quem não é,
- * então o botão "Editar" pode confiar só em `role !== "CLIENT"` aqui.
+ * ACESSO
+ * A rota resolve o acesso pelo PRÓPRIO finding — não há guarda de papel aqui,
+ * de propósito. Quem carrega esta página necessariamente passou pelo
+ * `assertCanView` do backend: CLIENT de outra empresa e PENTESTER não-membro
+ * recebem **403 FORBIDDEN** no `GET /vulnerabilities/:id` (mesmo status que as
+ * demais rotas do recurso usam — ver a limitação L-04 no `docs/BACKLOG.md`
+ * sobre 403-vs-404). Por isso o botão "Editar" pode confiar em
+ * `role !== "CLIENT"`: se o PENTESTER chegou aqui, ele é membro do projeto.
+ *
+ * VOLTAR
+ * O botão de voltar usa o histórico do navegador (`navigate(-1)`), não um link
+ * fixo para a listagem. É o que preserva os filtros de onde a pessoa veio:
+ * um link fixo para `/findings` jogaria fora o recorte que ela montou.
+ *
+ * QUEM USA
+ * Rota `/findings/:id` (App.tsx), aberta pela listagem global e pela aba do
+ * projeto.
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useParams } from "react-router-dom";
 import { vulnerabilitiesApi } from "../lib/api/vulnerabilities.api";
-import { projectsApi } from "../lib/api/projects.api";
+import { useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
-import { useCompanyName } from "../hooks/use-company-name";
+import { decomporVetor } from "../lib/cvss";
 import { Breadcrumb } from "../components/ui/navigation";
-import { LinkButton } from "../components/ui/button";
+import { Button, LinkButton } from "../components/ui/button";
 import { Card } from "../components/ui/card";
-import { SeverityBadge } from "../components/ui/badge";
-import { StatusBadge } from "../components/ui/badge";
+import { Alert } from "../components/ui/alert";
+import { ErrorState } from "../components/ui/empty-state";
+import { Skeleton } from "../components/ui/card";
+import { SeverityBadge, StatusBadge } from "../components/ui/badge";
 import { EvidenceUploader } from "../components/findings/evidence-uploader";
 import { CommentTimeline } from "../components/findings/comment-timeline";
-import { OWASP_LABELS, type OwaspCategory } from "../types/vulnerability.types";
+import { AuditTrail } from "../components/findings/audit-trail";
+import { OverrideSeverityDialog } from "../components/findings/override-severity-dialog";
+import {
+  ALLOWED_TRANSITIONS,
+  OWASP_LABELS,
+  TRANSITION_LABELS,
+  type OwaspCategory,
+  type VulnerabilityStatus,
+} from "../types/vulnerability.types";
 
 export function FindingDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const role = useAuthStore((s) => s.user?.role);
+  const queryClient = useQueryClient();
+  const getErrorMessage = useApiError();
 
-  const { data: finding, isLoading } = useQuery({
+  const [erro, setErro] = useState<string | null>(null);
+  const [overrideAberto, setOverrideAberto] = useState(false);
+
+  const {
+    data: finding,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["vulnerabilities", id],
     queryFn: () => vulnerabilitiesApi.getById(id!),
     enabled: !!id,
   });
 
-  const { data: project } = useQuery({
-    queryKey: ["projects", finding?.projectId],
-    queryFn: () => projectsApi.getById(finding!.projectId),
-    enabled: !!finding?.projectId,
+  const transicao = useMutation({
+    mutationFn: (toStatus: VulnerabilityStatus) => vulnerabilitiesApi.transition(id!, toStatus),
+    onSuccess: () => {
+      // A trilha ganhou um evento novo e a listagem tem um status diferente —
+      // invalidar as duas evita a tela mostrar o status novo com a história velha.
+      queryClient.invalidateQueries({ queryKey: ["vulnerabilities", id] });
+      queryClient.invalidateQueries({ queryKey: ["vulnerabilities", "search"] });
+      setErro(null);
+    },
+    onError: (err: unknown) => setErro(getErrorMessage(err)),
   });
-  const companyName = useCompanyName(project?.companyId);
 
-  if (isLoading || !finding) return <p className="text-fg-muted">Carregando...</p>;
+  if (isLoading) return <EsqueletoDaPagina />;
+
+  if (error || !finding) {
+    return (
+      <ErrorState
+        titulo="Não foi possível abrir este finding"
+        descricao="Ele pode ter sido removido, ou você não tem acesso a ele."
+        aoTentarNovamente={() => navigate(-1)}
+      />
+    );
+  }
 
   const owaspLabel = OWASP_LABELS[finding.owaspCategory as OwaspCategory] ?? finding.owaspCategory;
+  const metricas = decomporVetor(finding.cvssVector);
+  const temOverride = finding.severityFinal !== finding.severityCalculated;
+  const transicoes = ALLOWED_TRANSITIONS[finding.status] ?? [];
+  const podeEscrever = role !== "CLIENT";
 
   return (
     <div>
       <Breadcrumb
         itens={[
-          { rotulo: companyName ?? "Organização" },
-          { rotulo: project?.name ?? "Projeto", para: project ? `/projects/${project.id}` : undefined },
+          { rotulo: finding.companyName ?? "Empresa" },
+          {
+            rotulo: finding.applicationName ?? "Aplicação",
+            para: finding.applicationId ? `/applications/${finding.applicationId}/dashboard` : undefined,
+          },
+          { rotulo: finding.projectName ?? "Projeto", para: `/projects/${finding.projectId}` },
           { rotulo: finding.title },
         ]}
       />
 
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mb-2 inline-flex items-center gap-1 rounded-control text-sm text-fg-muted transition-colors duration-fast hover:text-fg"
+          >
+            <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" aria-hidden="true">
+              <path d="m10 3-5 5 5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Voltar
+          </button>
+
           <h1 className="text-2xl font-bold text-fg">{finding.title}</h1>
+
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={finding.status} />
-            <SeverityBadge severidade={finding.severityFinal} />
-            {finding.severityFinal !== finding.severityCalculated && (
-              <span className="text-xs text-fg-muted">
-                (calculada pelo CVSS: {finding.severityCalculated} — override justificado abaixo)
-              </span>
-            )}
+            <SeverityBadge severidade={finding.severityFinal} cvss={finding.cvssScore} />
             <span className="text-xs text-fg-muted">{owaspLabel}</span>
           </div>
         </div>
 
-        {role !== "CLIENT" && (
-          <LinkButton to={`/findings/${finding.id}/edit`}>Editar</LinkButton>
+        {podeEscrever && (
+          <div className="flex flex-wrap gap-2">
+            {transicoes.map((destino) => (
+              <Button
+                key={destino}
+                variant="secundario"
+                disabled={transicao.isPending}
+                onClick={() => transicao.mutate(destino)}
+              >
+                {TRANSITION_LABELS[destino]}
+              </Button>
+            ))}
+            <Button variant="sutil" onClick={() => setOverrideAberto(true)}>
+              Sobrescrever severidade
+            </Button>
+            <LinkButton to={`/findings/${finding.id}/edit`}>Editar</LinkButton>
+          </div>
         )}
       </div>
 
+      {erro && <Alert className="mt-4">{erro}</Alert>}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-2">
+          {/* A sobrescrita vem ANTES da descrição de propósito: quem abre um
+              finding cuja severidade foi alterada à mão precisa saber disso
+              antes de ler qualquer outra coisa. */}
+          {temOverride && (
+            <Card className="border-warning">
+              <h2 className="mb-3 font-semibold text-fg">Severidade sobrescrita manualmente</h2>
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs uppercase text-fg-muted">Calculada pelo CVSS</dt>
+                  <dd className="mt-1">
+                    <SeverityBadge severidade={finding.severityCalculated} cvss={finding.cvssScore} />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase text-fg-muted">Aplicada</dt>
+                  <dd className="mt-1">
+                    <SeverityBadge severidade={finding.severityFinal} />
+                  </dd>
+                </div>
+              </dl>
+              {finding.severityOverrideReason && (
+                <div className="mt-3">
+                  <p className="text-xs uppercase text-fg-muted">Justificativa registrada</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-fg">{finding.severityOverrideReason}</p>
+                </div>
+              )}
+            </Card>
+          )}
+
           <Card>
             <h2 className="mb-2 font-semibold text-fg">Descrição</h2>
             <p className="whitespace-pre-wrap text-sm text-fg">{finding.description}</p>
@@ -87,8 +198,31 @@ export function FindingDetailPage() {
           {finding.cvssVector && (
             <Card>
               <h2 className="mb-2 font-semibold text-fg">CVSS 3.1</h2>
-              <p className="font-mono text-sm text-fg">{finding.cvssVector}</p>
-              <p className="mt-1 text-sm text-fg-muted">Score: {finding.cvssScore?.toFixed(1) ?? "—"}</p>
+              <p className="break-all font-mono text-sm text-fg">{finding.cvssVector}</p>
+              <p className="mt-1 text-sm text-fg-muted">
+                Score:{" "}
+                <span data-numeric className="tabular-nums">
+                  {finding.cvssScore?.toFixed(1) ?? "—"}
+                </span>{" "}
+                · Severidade calculada: {finding.severityCalculated}
+              </p>
+
+              {metricas ? (
+                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+                  {metricas.map((m) => (
+                    <div key={m.sigla}>
+                      <dt className="text-xs text-fg-muted" title={m.nome}>
+                        {m.sigla} · {m.nome}
+                      </dt>
+                      <dd className="text-sm font-medium text-fg">{m.rotulo}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="mt-3 text-sm text-fg-muted">
+                  O vetor registrado não pôde ser decomposto — pode estar incompleto ou em outra versão do CVSS.
+                </p>
+              )}
             </Card>
           )}
 
@@ -106,12 +240,10 @@ export function FindingDetailPage() {
             </Card>
           )}
 
-          {finding.severityOverrideReason && (
-            <Card>
-              <h2 className="mb-2 font-semibold text-fg">Justificativa do override de severidade</h2>
-              <p className="whitespace-pre-wrap text-sm text-fg">{finding.severityOverrideReason}</p>
-            </Card>
-          )}
+          <Card>
+            <h2 className="mb-3 font-semibold text-fg">Trilha de auditoria</h2>
+            <AuditTrail vulnerabilityId={finding.id} />
+          </Card>
         </div>
 
         <div className="flex flex-col gap-6">
@@ -124,6 +256,33 @@ export function FindingDetailPage() {
             <CommentTimeline vulnerabilityId={finding.id} />
           </div>
         </div>
+      </div>
+
+      {podeEscrever && (
+        <OverrideSeverityDialog
+          vulnerabilityId={finding.id}
+          currentSeverity={finding.severityFinal}
+          open={overrideAberto}
+          onOpenChange={setOverrideAberto}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Esqueleto com a forma da página — reserva a altura e evita o salto de layout. */
+function EsqueletoDaPagina() {
+  return (
+    <div aria-hidden="true">
+      <Skeleton className="h-4 w-[16rem]" />
+      <Skeleton className="mt-4 h-8 w-[24rem] max-w-full" />
+      <Skeleton className="mt-3 h-6 w-[12rem]" />
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          <Skeleton className="h-[8rem] w-full" />
+          <Skeleton className="h-[10rem] w-full" />
+        </div>
+        <Skeleton className="h-[16rem] w-full" />
       </div>
     </div>
   );

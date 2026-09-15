@@ -13,6 +13,52 @@ Registro cronológico das decisões relevantes tomadas durante o projeto. Serve 
 
 ---
 
+## 2026-09-09 — DAST: triagem, promoção para Vulnerability e comparação entre scans
+
+**Contexto**: o módulo DAST terminava num beco — o scan rodava, mostrava dezenas de alertas e a única saída era um PDF. Além disso, o watchdog limitava *quantos* scans rodam, mas nada limitava *quanto cada um consome* (medido: ~960% de 1200% de CPU e RAM sem teto).
+
+**O que foi decidido**:
+- triagem por finding dentro do silo (`NEW`/`CONFIRMED`/`FALSE_POSITIVE`/`ACCEPTED_RISK`), salvando no clique;
+- promoção do achado para [[Vulnerability]] com proveniência (`sourceType`/`sourceDastFindingId`), **CVSS sugerido pelo backend e revisado pelo humano** — nunca derivado sozinho do `riskcode`;
+- comparação entre duas execuções do mesmo alvo por `fingerprint` (resolvidos / novos / continuam abertos);
+- limites de RAM e CPU por container, com `-Xmx` derivado do teto.
+
+**Alternativa descartada**: importar findings automaticamente com CVSS estimado — um score inventado convincente é pior que score nenhum, e contaminaria a confiança do produto no `cvssScore` ([[RN10 - Severidade via CVSS com override justificado]]).
+
+**Consequência**: o ciclo scan → triagem → promoção → remediação → novo scan → prova da correção fecha, e o produto continua **sem nenhuma `Vulnerability` com CVSS estimado**.
+
+**Nota relacionada**: [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]] · [[Fluxo - Scan DAST]]
+
+---
+
+## 2026-09-09 — ZAP em modo daemon por scan e DooD na stack Docker
+
+**Contexto**: dentro do `docker compose`, **todo** scan caía silenciosamente no gerador simulado, e nada na interface indicava isso.
+
+**O que foi decidido**: rodar o ZAP em modo daemon (um container por scan, ainda isolado), conduzido pela API HTTP dele; montar o socket do Docker do host na API (DooD); criar watchdog com fila FIFO e teto de 2 scans simultâneos; persistir `progress`/`phase`/`simulated`/`warningMessage`.
+
+**Alternativa descartada**: manter o `zap-full-scan.py` — é caixa preta sem progresso, e qualquer barra construída sobre ele seria estimativa de tempo fingindo ser medição.
+
+**Consequência**: scan real na stack, progresso medido de verdade, e resultado simulado passa a ser declarado na tela.
+
+**Nota relacionada**: [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]]
+
+---
+
+## 2026-09-05 — Módulo DAST: ZAP via Docker spawn, em silo, sem fila
+
+**Contexto**: dar ao pentester varredura dinâmica automatizada dentro do produto, sem comprometer o núcleo já validado de findings.
+
+**O que foi decidido**: um container efêmero do ZAP por scan via `execFile` (nunca shell), com bloqueio de SSRF; findings do ZAP num **silo** sem FK para o núcleo multi-tenant; execução assíncrona fire-and-forget, sem Redis/BullMQ.
+
+**Alternativa descartada**: importar direto para `Vulnerability` (o ZAP não fornece vetor CVSS) e adotar fila externa (peso desproporcional para o TCC).
+
+**Consequência**: módulo isolado, testável sem Docker (`DAST_FORCE_SIMULATE`), com o risco do socket Docker assumido e documentado. O silo foi parcialmente revisto em 2026-09-09 pela promoção com revisão humana.
+
+**Nota relacionada**: [[ADR-028 - Execucao do ZAP via Docker spawn]] · [[ADR-029 - DAST como silo]] · [[ADR-030 - Execucao assincrona sem fila]] · [[DAST]]
+
+---
+
 ## 2026-04-24 — Vault de documentação concluído
 
 **Contexto**: após 9 sessões de trabalho, o vault do Vulnera está completamente documentado.
@@ -45,7 +91,10 @@ Registro cronológico das decisões relevantes tomadas durante o projeto. Serve 
 
 ## Decisões estruturais formalizadas (ADRs)
 
-Sumário das 7 decisões arquiteturais documentadas:
+> [!warning] Este sumário parou nas 7 primeiras ADRs
+> Existem **31 ADRs** em `07-Decisoes/` (2026-09-10), numeradas até a 032 — a 016 não existe. A tabela abaixo é registro de abril/2026 e não foi mantida; a lista completa e atualizada está na pasta e em `docs/DECISIONS.md` do repositório. As ADRs do módulo DAST são a 028, 029, 030, 031 e 032.
+
+Sumário das 7 primeiras decisões arquiteturais documentadas:
 
 | ADR | Decisão | Data |
 |---|---|---|

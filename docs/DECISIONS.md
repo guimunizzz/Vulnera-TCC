@@ -409,3 +409,128 @@ encontrá-lo). Agregação por período em UTC.
 **Alternativa descartada:** tabela `VulnerabilitySnapshot` com job diário.
 Exigiria migration e scheduler (que não existe), começaria o histórico do zero, e
 o custo medido da reconstrução foi de 9 a 17 ms.
+
+## Módulo DAST (OWASP ZAP) — 2026-09-05
+
+Três decisões arquiteturais, todas com ADR próprio em
+`docs/Vulnera/07-Decisoes/`. Módulo novo, fora da numeração de fases do
+BACKLOG v4 — entrada posterior.
+
+### ADR-028 — Execução do ZAP via Docker spawn
+
+**Contexto:** o scan precisa rodar o OWASP ZAP contra uma URL arbitrária, sem
+fila (Redis fora de escopo) e sem exigir instalação manual além do Docker que
+o projeto já usa.
+
+**Decisão:** um container novo por scan (`docker run --rm --name
+vulnera-zap-<scanId>`), nunca um daemon persistente — isolamento de estado
+entre scans de tenants diferentes e cancelamento trivial (`docker rm -f`
+determinístico pelo nome).
+
+**Risco assumido, não eliminado:** a API precisa de acesso ao socket Docker
+do host — comprometer o processo da API compromete o host. Mitigado por
+ausência de flags privilegiadas, volume restrito ao diretório do scan, e
+validação de alvo antes de qualquer `docker run`; não resolvido por completo
+(rodar a API sem acesso direto ao socket exigiria um sidecar dedicado, fora
+do escopo desta entrega).
+
+**Alternativa descartada:** daemon ZAP persistente com API de sessões —
+vazaria estado entre scans de tenants diferentes.
+
+### ADR-029 — DAST como silo (não importa para Vulnerability)
+
+**Contexto:** o Vulnera já tem `Vulnerability` maduro (CVSS calculado,
+override, auditoria). Fazia sentido os achados do ZAP virarem `Vulnerability`
+direto?
+
+**Decisão:** não, nesta entrega. Dois models novos (`DastScan`/
+`DastFinding`), sem FK pra `Vulnerability`/`Project`/`Application`/`Company`.
+
+**Por quê:** o ZAP não fornece vetor CVSS (só `riskcode` 0-3) — inventar um
+vetor a partir disso contaminaria o cálculo automático que hoje é 100%
+confiável (validado contra os vetores oficiais do FIRST). `Vulnerability`
+também exige `Project` desde a criação, o que quebraria o fluxo de "um campo
+e um botão" do DAST.
+
+**Caminho de integração futura registrado no ADR:** CVSS estimado e marcado
+como tal, ou triagem manual antes da promoção; escolha de Project/Application
+no momento da promoção; campo de proveniência (`sourceType`).
+
+**Alternativa descartada:** importar automaticamente com CVSS estimado por
+faixa de risco — um score "inventado" convincente demais é pior que a
+ausência dele, porque o resto do produto trata `cvssScore` como calculado
+com confiança.
+
+### ADR-030 — Execução assíncrona sem fila
+
+**Contexto:** um scan leva minutos; a resposta de `POST /dast/scans` não pode
+esperar. Sem Redis/BullMQ (fora de escopo), como garantir execução em
+background confiável?
+
+**Decisão:** fire-and-forget dentro do próprio processo Node (`create()` não
+dá `await` em `runInBackground`), estado inteiro no banco, e um watchdog no
+boot que marca `FAILED` qualquer scan `QUEUED`/`RUNNING` encontrado — por
+definição, órfão de um processo anterior que morreu no meio.
+
+**O que isso NÃO dá, ao contrário de uma fila de verdade:** sobrevivência de
+scans em andamento a um restart da API, e distribuição entre múltiplos
+processos/máquinas. Aceito conscientemente pelo volume real do produto (um
+punhado de scans concorrentes, não milhares/hora).
+
+**Alternativa descartada:** Redis + BullMQ — desproporcional ao volume e
+fora do escopo explícito da entrega; o contrato de `DastScanService` já é
+compatível com trocar por uma fila depois, se o produto crescer.
+
+### ADR-031 — ZAP em modo daemon por scan, DooD na stack e simulado visível
+
+> Registrado retroativamente em 2026-09-09 (a sessão que tomou a decisão criou
+> o ADR completo mas não indexou aqui — R5: o doc se ajusta ao que existe).
+
+**Contexto:** com a stack inteira em `docker compose`, todo scan caía
+silenciosamente no gerador simulado (diagnóstico em `docs/DAST-DOCKER-GAP.md`),
+e o Rafael pediu percentual de progresso real na UI — impossível com
+`zap-full-scan.py`, que é uma caixa preta sem progresso.
+
+**Decisão:** o ZAP passa a rodar em **modo daemon**, ainda **um container por
+scan**, conduzido pela API HTTP dele (spider → passivo → ativo → relatórios).
+Isso dá percentual real e faz o bind mount de relatório **sumir do desenho** —
+a "Causa 3" do diagnóstico deixa de existir em vez de ser contornada. Mais:
+`docker-cli` na imagem da API + socket do host montado (DooD), watchdog de 2
+scans simultâneos, e as colunas `simulated`/`warningMessage`/`progress`/`phase`
+que tornam um resultado de demonstração distinguível de um real.
+
+**Alternativa descartada:** estimar o progresso pelo tempo decorrido —
+seria uma barra que mente, andando igual num alvo de 30s e num de 20min.
+
+### ADR-032 — Triagem, promoção para Vulnerability e comparação de scans
+
+**Contexto:** com o scan real funcionando, o módulo ainda terminava num beco —
+o pentester via 40 achados e a única saída era um PDF. Sem onde registrar o que
+já analisou, sem caminho para o fluxo de remediação do produto, e sem como
+provar que uma correção funcionou.
+
+**Decisão:** três frentes. (1) **Triagem** no silo (NEW/CONFIRMED/
+FALSE_POSITIVE/ACCEPTED_RISK + nota, autor, data). (2) **Promoção** de finding
+para `Vulnerability`, com `sourceType`/`sourceDastFindingId` — respondendo os
+quatro pontos que o ADR-029 tinha deixado em aberto. (3) **Comparação** entre
+duas execuções do mesmo alvo, por `fingerprint`.
+
+**O ponto central é como o CVSS foi resolvido.** O ADR-029 recusou a
+importação porque o ZAP não fornece vetor CVSS, e inventar um contaminaria o
+cálculo 100%-confiável do produto (RN10). A saída adotada é a que o próprio
+ADR-029 apontava: o backend **sugere** um vetor no formulário, marcado como
+sugestão num aviso visível, e o **pentester revisa** antes de salvar.
+Consequência: o produto continua sem uma única `Vulnerability` com CVSS
+estimado, e não foi preciso criar flag de "score aproximado".
+
+**Achado que veio de medir, não de ler:** o watchdog do ADR-031 limitava
+*quantos* scans rodam, mas nada limitava *quanto* cada um consome — dois scans
+reais ocupavam ~960% de 1200% de CPU sem teto de RAM. Corrigido com
+`DAST_ZAP_MEMORY`/`DAST_ZAP_CPUS`, que **precisam** andar junto de um `-Xmx`
+derivado (o `zap.sh` lê a RAM do host, não o limite do cgroup, e sem `-Xmx` a
+JVM morre por OOM).
+
+**Alternativa descartada:** um campo `cvssEstimated: boolean` permitindo
+promover sem revisão — criaria duas classes de score na mesma coluna e
+obrigaria toda tela, relatório e gráfico do produto a saber da distinção pra
+não mentir; custo espalhado por tudo pra economizar dez segundos numa tela só.

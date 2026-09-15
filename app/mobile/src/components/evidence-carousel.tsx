@@ -15,9 +15,10 @@
 import { useState } from "react";
 import { Dimensions, FlatList, Image, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { evidencesApi } from "../api/evidences.api";
 import { useAuthStore } from "../store/auth.store";
-import { COLORS, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
+import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
 import type { Evidence } from "../types/evidence.types";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -50,6 +51,12 @@ export function EvidenceCarousel({
         onMomentumScrollEnd={(e) => {
           setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / SLIDE_WIDTH));
         }}
+        // Alguns swipes de paginação (sobretudo no Android) terminam sem
+        // velocidade residual e nunca disparam onMomentumScrollEnd — sem
+        // isso, o ponto ativo podia ficar preso na página anterior.
+        onScrollEndDrag={(e) => {
+          setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / SLIDE_WIDTH));
+        }}
         renderItem={({ item }) => (
           <View style={[styles.slide, { width: SLIDE_WIDTH }]}>
             {isImage(item.mimeType) ? (
@@ -63,6 +70,8 @@ export function EvidenceCarousel({
               />
             ) : (
               <View style={styles.fileBox}>
+                <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+                <View style={styles.fileBoxTint} />
                 <Ionicons name="document-text-outline" size={40} color={COLORS.textMuted} />
                 <Text style={styles.fileName} numberOfLines={1}>
                   {item.originalName}
@@ -101,15 +110,20 @@ const styles = StyleSheet.create({
   fileBox: {
     height: 220,
     borderRadius: RADIUS.container,
-    backgroundColor: COLORS.inset,
     alignItems: "center",
     justifyContent: "center",
     gap: SPACING[2],
     paddingHorizontal: SPACING[4],
+    overflow: "hidden",
   },
-  fileName: { color: COLORS.textPrimary, fontSize: FONT_SIZE.sm },
-  fileHint: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, textAlign: "center" },
-  caption: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
+  fileBoxTint: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: COLORS.inset,
+    opacity: 0.7,
+  },
+  fileName: { color: COLORS.textPrimary, fontSize: FONT_SIZE.sm, fontFamily: FONT_FAMILY.medium },
+  fileHint: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, fontFamily: FONT_FAMILY.regular, textAlign: "center" },
+  caption: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, fontFamily: FONT_FAMILY.regular },
   dots: { flexDirection: "row", justifyContent: "center", gap: SPACING[1] },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.borderStrong },
   dotActive: { backgroundColor: COLORS.accentInk, width: 16 },

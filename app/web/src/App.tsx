@@ -11,10 +11,14 @@ import { ProjectsPage } from "./pages/projects-page";
 import { ProjectDetailPage } from "./pages/project-detail-page";
 import { FindingEditorPage } from "./pages/finding-editor-page";
 import { FindingDetailPage } from "./pages/finding-detail-page";
+import { FindingsPage } from "./pages/findings-page";
 import { PendingSubscriptionsPage } from "./pages/admin/pending-subscriptions-page";
 import { StyleguidePage } from "./pages/styleguide-page";
 import { ApplicationDashboardPage } from "./pages/application-dashboard-page";
 import { MaturityAssessmentPage } from "./pages/maturity-assessment-page";
+import { DastPage } from "./pages/dast-page";
+import { DastScanDetailPage } from "./pages/dast-scan-detail-page";
+import { DastScanReportPage } from "./pages/dast-scan-report-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
 
@@ -50,6 +54,14 @@ export function App() {
               dentro da própria página (canEdit) e reforçada pelo backend. */}
           <Route path="/companies/:companyId/maturity" element={<MaturityAssessmentPage />} />
 
+          {/* Varredura global de findings — ferramenta de quem analisa.
+              O CLIENT é barrado aqui e não vê o item na Sidebar; o backend
+              continua servindo os findings da própria empresa a ele (RN16),
+              que é o que o dashboard e o app mobile consomem. */}
+          <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+            <Route path="/findings" element={<FindingsPage />} />
+          </Route>
+
           <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:id/dashboard" element={<ApplicationDashboardPage />} />
@@ -66,6 +78,19 @@ export function App() {
           <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
             <Route path="/admin/subscriptions" element={<PendingSubscriptionsPage />} />
           </Route>
+
+          {/* Módulo DAST — não existe pro CLIENT: nem item de menu, nem rota
+              acessível (403 se forçar a URL, ver ProtectedRoute). */}
+          <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+            <Route path="/dast" element={<DastPage />} />
+            <Route path="/dast/scans/:id" element={<DastScanDetailPage />} />
+          </Route>
+        </Route>
+
+        {/* Relatório do ZAP fora do AppLayout — tela cheia, sem sidebar, é
+            aberta em nova aba a partir do detalhe do scan. */}
+        <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+          <Route path="/dast/scans/:id/report" element={<DastScanReportPage />} />
         </Route>
       </Route>
 
