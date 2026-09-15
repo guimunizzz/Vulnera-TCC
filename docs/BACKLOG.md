@@ -304,6 +304,26 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 
 ---
 
+## Limitações conhecidas — Build / Docker
+
+> Levantadas em **2026-09-14** ao destravar o `docker compose up --build`, e
+> **restauradas em 2026-09-15** no CP-0 da iniciativa Exposure & Remediation.
+>
+> ⚠️ **Por que sumiram e voltaram:** esta seção entrou junto do fix `74cb60e` e
+> foi removida pelo revert da landing (`31988ba`), que levou o fix junto por
+> estar na mesma árvore. O build ficou quebrado em `dev` e `main` de 2026-09-14
+> a 2026-09-15 sem nenhuma limitação registrada explicando por quê. Mesmo
+> critério das demais: encontradas, avaliadas e conscientemente não corrigidas.
+
+| # | Limitação | Por que não foi corrigida | Mitigação existente |
+| --- | --- | --- | --- |
+| L-12 | **Build da imagem não é reproduzível.** `package-lock.json` está no `.gitignore`, então nenhum lock chega ao contexto de build — cada `docker build` re-resolve as versões dentro das faixas de semver e pode trazer uma transitiva diferente da que o dev testou. | Passar a versionar o lock é decisão de projeto (afeta API, web e mobile) e exige validar `npm ci` nos três Dockerfiles. **Decisão do Rafael.** É também a causa-raiz de L-13. | Versões diretas pinadas por `^` em `package.json`; a stack é validada à mão antes da demo. `npm install -g npm@11` (L-13) neutraliza o sintoma mais grave |
+| L-13 | **`npm install -g npm@11` é obrigatório nas imagens de API e Web.** O npm 10.9.8 que vem no `node:22-alpine` aborta com `Cannot read properties of null (reading 'edgesOut')` ao montar o grafo de peers sem lock (bug do Arborist). | O bug é do npm, não do projeto; resolver de verdade exigiria versionar o lock (L-12). **Reproduzido de novo em 2026-09-15** no CP-0, com npm 10.9.8, estágio `[web 4/8] RUN npm install`. | Linha presente e **documentada nos dois Dockerfiles**, com aviso de que já foi perdida uma vez. O comentário do `app/api/Dockerfile` referencia o do web e vice-versa |
+| L-14 | **O `tsc --noEmit` do build da imagem type-checka os arquivos de teste.** `npm run build` roda `tsc --noEmit && vite build`, e o `tsconfig.json` inclui `src` inteiro — um erro de tipo em `*.test.tsx` derruba o build de produção. | É também a única checagem de tipos automatizada com gatilho: o CI só roda SonarQube, e `npm run check` é lint + contraste + testes, sem `tsc`. Removê-la do Dockerfile deixaria o `tsc` sem nenhum gatilho automático. | Aceito de propósito enquanto o CI não rodar `tsc`; o efeito é conservador (falha a mais, nunca a menos). Foi o que expôs a peer `@testing-library/dom` faltante |
+| L-18 | **Peers usadas pelo código precisam estar declaradas à mão.** `@testing-library/react@16` não implementa `screen`/`waitFor`/`within` — só reexporta de `@testing-library/dom`, declarada como peer. Na máquina do dev o npm instala a peer sozinho, então a ausência da declaração fica invisível até o container. | Não é bug: é o comportamento correto de peer dependency. Auditar todas as peers do projeto é trabalho próprio. | `@testing-library/dom@^10.4.1` declarado explicitamente em `app/web/package.json` desde 2026-09-15 — o código usa aqueles símbolos, então a dependência é real e deve ser declarada, não herdada por acaso do resolvedor |
+
+---
+
 ## Regras
 
 - ✅ marcado pelo agente ao concluir (CLAUDE.md §0.1 R2)

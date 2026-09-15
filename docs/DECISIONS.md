@@ -534,3 +534,261 @@ JVM morre por OOM).
 promover sem revisão — criaria duas classes de score na mesma coluna e
 obrigaria toda tela, relatório e gráfico do produto a saber da distinção pra
 não mentir; custo espalhado por tudo pra economizar dez segundos numa tela só.
+
+
+## Exposure & Remediation Management — decisões consolidadas (CP-0, 2026-09-15)
+
+> **Contexto.** Uma sessão de mapeamento (2026-09-15) analisou a viabilidade de
+> sete features candidatas como uma iniciativa única — Application Context, SLA
+> Engine, Vulnera Risk Score, Risk Acceptance, Remediation Playbooks, Saved
+> Queries/Watchlists, Remediation Kanban e Exposure Graph. O relatório produzido
+> ali fez **recomendações**; o que segue são as decisões **aprovadas pelo
+> Rafael** no CP-0, depois de revisar aquele relatório.
+>
+> 🎯 **Onde esta seção e o relatório de mapeamento divergirem, ESTA SEÇÃO VENCE.**
+> Isso vale especialmente para a **D3 (VRS)**, cuja fórmula aprovada é
+> **diferente** da que o relatório recomendou. O próximo agente não deve seguir
+> cegamente o relatório.
+>
+> ⚠️ Nada disto foi implementado no CP-0. O CP-0 só destravou o build, corrigiu
+> documentação e registrou decisões. A implementação começa no CP-1.
+
+### ADR-033 — Transições de retorno na máquina de Vulnerability
+
+**Contexto:** o Remediation Kanban reutiliza `Vulnerability.status` como fonte
+única (sem entidade de board). A máquina do ADR-021 é estritamente linear e sem
+retorno, o que torna todo movimento de card irreversível e deixa o caso
+"validação da correção reprovada" sem representação no domínio.
+
+**Decisão:** acrescentar `IN_PROGRESS → OPEN` e `FIXED → IN_PROGRESS`, mantendo
+`CLOSED` **terminal**. Nenhum estado novo. ADR completo em
+`docs/Vulnera/07-Decisoes/ADR-033 - Transicoes de retorno na maquina de Vulnerability.md`;
+**supersede parcialmente** o ADR-021 (que segue vigente quanto ao conjunto de
+estados e permanece preservado na íntegra).
+
+**Semântica:** `IN_PROGRESS → OPEN` é trabalho devolvido à fila e **não** inicia
+novo ciclo de SLA; `FIXED → IN_PROGRESS` é reprovação de validação e **inicia**
+novo ciclo quando o SLA Engine existir.
+
+**Alternativa descartada:** permitir também `CLOSED → IN_PROGRESS` (reabertura) —
+tornaria `CLOSED` não-terminal e obrigaria todas as métricas de remediação a
+tratar N fechamentos por finding, com ganho menor que o do `FIXED → IN_PROGRESS`.
+
+⚠️ **Não implementado no CP-0.** `ALLOWED_TRANSITIONS` não foi alterado; a
+mudança entra junto do Kanban.
+
+### D1 — Backfill de SLA
+
+Quando o SLA Engine for implementado, o backfill retroativo se aplica
+**somente** às vulnerabilities atualmente em `OPEN` e `IN_PROGRESS`, com
+`slaStartedAt = createdAt` e prazo calculado pela política vigente.
+
+Findings já `FIXED` ou `CLOSED` **não recebem SLA retroativo** e não entram nas
+métricas de cumprimento histórico.
+
+**Por quê:** aplicar uma política que não existia na época a findings já
+encerrados inventaria conformidade (ou descumprimento) histórica que ninguém
+mediu. O relógio só vale para quem ainda pode ser remediado.
+
+**Efeito colateral aceito:** os ~40 findings `OPEN` do banco de demonstração
+nascerão em estados de SLA variados, vários já `BREACHED` — o que é verdade, e é
+o que faz a feature aparecer na demonstração.
+
+### D2 — Application Context: quem preenche, quem reduz
+
+`CLIENT` com `companyRole = OWNER` poderá preencher o contexto de risco da
+aplicação e **aumentar** exposição/criticidade livremente.
+
+**Reduções relevantes exigirão ADMIN.**
+
+| Movimento | Quem pode |
+|---|---|
+| `criticality` MEDIUM → HIGH, HIGH → CRITICAL | CLIENT OWNER |
+| `internetFacing` false → true | CLIENT OWNER |
+| `dataSensitivity` para faixa mais sensível | CLIENT OWNER |
+| `criticality` CRITICAL → LOW, HIGH → MEDIUM | **ADMIN** |
+| `internetFacing` true → false | **ADMIN** |
+| `dataSensitivity` para faixa menos sensível | **ADMIN** |
+
+Toda mudança — em qualquer direção — é auditada com valor anterior, valor novo e
+quantidade de findings cujo VRS foi recalculado.
+
+**Por quê:** é a mitigação direta do vetor de manipulação identificado no threat
+model (rebaixar o contexto para esvaziar o VRS e limpar o dashboard). Subir
+risco é conservador e não precisa de trava; descer risco é a ação que esconde
+problema, e passa a exigir alçada.
+
+### D3 — Vulnera Risk Score: modelo ADITIVO ponderado
+
+> 🎯 **Esta decisão SUBSTITUI a recomendação do relatório de mapeamento**, que
+> propunha um modelo multiplicativo (`CVSS × fCrit × fEnv × fNet × fData`).
+
+**Modelo aprovado: aditivo ponderado, teto 100.**
+
+Referência conceitual de distribuição dos pontos:
+
+```
+CVSS técnico          até ~60 pontos
+Criticality           até ~15
+Environment           até ~7
+Internet Facing       até ~8
+Data Sensitivity      até ~10
+```
+
+Os valores exatos podem ser refinados durante a implementação, desde que o
+resultado:
+
+- mantenha o **CVSS como maior componente isolado**;
+- **preserve discriminação** entre findings (nada de metade da base em 100);
+- seja **determinístico**;
+- seja **explicável** — cada parcela visível na UI, somando o total;
+- **não sature trivialmente**.
+
+**Por que não o multiplicativo:** com fatores de até 1,30 se multiplicando, o
+teto do produto chega a ~2,2× — qualquer CVSS acima de 4,5 num contexto ruim
+bate no limite de 100 e todos os findings graves viram o mesmo número. Um score
+de prioridade que empata tudo no topo não prioriza nada. O aditivo mantém a
+ordenação útil em toda a faixa.
+
+**`sourceType` NÃO entra no VRS.** `MANUAL` e `DAST_IMPORT` são **procedência**,
+não severidade. Um finding promovido do DAST passou por triagem e teve o vetor
+CVSS revisado por humano (ADR-032) — não é menos importante por ter nascido de
+ferramenta. O relatório sugeria um redutor de 0,95; **está descartado**.
+
+**SLA NÃO entra no VRS.** Os três eixos ficam separados e nomeados:
+
+```
+CVSS = severidade técnica padronizada
+VRS  = risco/prioridade contextual
+SLA  = urgência temporal
+```
+
+**Por quê:** somar SLA ao VRS faria o score persistido divergir do exibido só
+pela passagem do tempo — a coluna ordenaria por um número e a tela mostraria
+outro, sem ninguém ter escrito nada. Mantendo separado, o VRS só muda quando um
+fato muda, e a urgência aparece no próprio badge de SLA.
+
+**Pesos são constantes de código na v1**, iguais para todos os tenants. Não
+configuráveis. Score configurável por empresa torna a métrica incomparável entre
+empresas, multiplica os casos de teste e abre um segundo vetor de manipulação.
+
+### D4 — Custom Playbooks: quem escreve
+
+Na primeira versão, **`ADMIN` e `PENTESTER`** criam e editam playbooks
+customizados. `CLIENT` **não escreve** — lê, quando o escopo permitir.
+
+Nenhum papel edita System Playbook (conteúdo OWASP). Adaptação é sempre por
+clone.
+
+**Por quê:** playbook é conhecimento técnico de remediação, território de quem
+presta o serviço. Abrir escrita ao CLIENT ampliaria a superfície de XSS
+armazenado para o papel com mais usuários e menos treino em segurança.
+
+### D5 — OWASP Playbooks: idioma, fontes e sincronização
+
+**Idioma principal: `pt-BR`.** A OWASP publica a tradução completa das dez
+categorias, e o produto é PT-BR-only. `sourceUrl` guarda a referência oficial.
+
+**Escopo da v1:**
+
+- OWASP Top 10 2021 em pt-BR (as 10 categorias);
+- o mapeamento oficial `IndexTopTen.md` (categoria → cheat sheets);
+- **links** para as Cheat Sheets.
+
+**Não é necessário importar o conteúdo integral das ~122 Cheat Sheets nesta
+primeira implementação** — o link resolve, e baixar tudo multiplicaria o custo
+do sync e o volume de conteúdo a sanitizar sem ganho proporcional.
+
+**Sincronização:** script explícito
+
+```bash
+npm run sync:owasp-playbooks
+```
+
+mais **seed versionado/offline** das 10 categorias. **Não criar endpoint HTTP de
+sync na v1** — o relatório sugeria `POST /api/playbooks/sync-owasp`; está fora.
+Sync é operação de manutenção, não de request.
+
+**Licença:** as fontes são CC BY-SA 4.0. Atribuição e licença devem aparecer na
+tela do playbook, não só no banco.
+
+### D6 — Saved Queries e Watchlists
+
+Mantidas no escopo. Persistir a **query string canônica da API**, nunca o texto
+da DSL do query wizard (que existe só no frontend e é lossy na ida e volta).
+
+**Watchlist v1 sem snapshots.** "Novos desde a última visita" é uma segunda
+contagem com `createdFrom = lastViewedAt`, não uma tabela de histórico.
+
+### D7 — Remediation Kanban
+
+Continua no escopo principal. Reutiliza **`Vulnerability.status`** como fonte
+única.
+
+**Nunca criar entidade concorrente** — `Board`, `Column`, `Card` estão
+explicitamente descartados. Colunas são constantes de código.
+
+`assignedTo` deverá ser corrigido **ponta a ponta** durante a implementação do
+Kanban: validação de quem pode ser atribuído, índice, filtro na busca (nos dois
+construtores de `WHERE`), termo na DSL, UI de atribuição e evento de auditoria.
+Hoje o campo é aceito sem validação nenhuma e não tem um único registro
+preenchido.
+
+As transições de retorno que o Kanban exige estão aprovadas em
+**[[ADR-033 - Transicoes de retorno na maquina de Vulnerability]]** e **ainda
+não foram implementadas**.
+
+### D8 — Exposure Graph: checkpoint condicional
+
+Continua planejado, mas como **checkpoint condicional**: só começa se os
+checkpoints anteriores estiverem verdes.
+
+**Nomes oficiais do produto:**
+
+```
+Exposure Graph
+Cadeias de Exposição
+```
+
+**Não usar "Attack Path" como afirmação do produto** — em UI, PDF ou defesa. O
+Vulnera não coleta topologia de rede, identidades nem permissões efetivas, então
+não tem como provar alcançabilidade. Afirmar caminho de ataque sem esse dado é a
+mesma categoria de erro que o ADR-029 recusou ao falar de CVSS estimado.
+
+**Sem graph database na v1.** Projeção dos dados do MySQL.
+
+### D9 — Cadeias de Exposição: regra removida da v1
+
+**Removida** da primeira versão a cadeia proposta no relatório envolvendo
+`DastFinding` com `triageStatus = NEW` cruzado com `Application.criticality`.
+
+**Por quê:** `DastScan`/`DastFinding` **não têm relação direta com
+`Application`** antes da promoção — o silo DAST não carrega `companyId`,
+`applicationId` nem `projectId` (ADR-029). A única ponte é
+`Vulnerability.sourceDastFindingId`, que só existe depois de promovido. A regra
+proposta pressupunha um vínculo que o modelo não tem.
+
+As cadeias iniciais usarão **somente relações comprovadas** no modelo atual ou no
+modelo enriquecido pelo Application Context.
+
+### D10 — Risk Acceptance
+
+Entidade **separada** de `Vulnerability`. A vulnerabilidade **continua aberta**
+durante o aceite — não vira status.
+
+**Segregação de função obrigatória:**
+
+```
+requestedById != reviewedById
+```
+
+sem exceção, inclusive para ADMIN.
+
+**`PENTESTER` nunca aprova risco.** Pode solicitar; quem assina é o dono do
+risco.
+
+**`ADMIN` e `CLIENT OWNER`** aprovam, conforme tenancy e alçada. `companyRole` é
+lido **do banco**, nunca do JWT — o token carrega só `{userId, role}`, e um
+refresh desatualizado não pode conceder alçada.
+
+---

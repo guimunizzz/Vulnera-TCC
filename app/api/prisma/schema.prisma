@@ -270,12 +270,25 @@ model ProjectMember {
 //   severityFinal: pode ser igual à calculated OU override manual
 //   Se override, severityOverrideReason é obrigatório (≥ 20 chars)
 //
-// Status:
-//   OPEN | IN_PROGRESS | FIXED | REVALIDATION | CLOSED | RISK_ACCEPTED
+// Status (máquina IMPLEMENTADA — 4 estados, ADR-021):
+//   OPEN | IN_PROGRESS | FIXED | CLOSED
 //
-// Quem pode mudar status: depende de project.hasRemediation
-//   true  → analista pode mover OPEN→IN_PROGRESS→FIXED
-//   false → cliente quem move FIXED (analista só revalida)
+// ⚠️ Este comentário listava 6 estados (REVALIDATION e RISK_ACCEPTED) e uma
+// regra de transição dependente de `project.hasRemediation` (RN13/RN14).
+// Nada disso existe no código: o tipo em models/vulnerability.model.ts tem 4
+// valores, e `hasRemediation` é gravado e devolvido em DTO mas NUNCA consultado
+// por nenhuma regra. Era a máquina CONCEITUAL do vault sendo lida como se fosse
+// a implementada. Corrigido em 2026-09-15 (CP-0), conforme a R5 do CLAUDE.md
+// §0.1 — o código é a verdade, o doc se ajusta.
+//
+// Quem pode mudar status: ADMIN, ou PENTESTER membro do Project.
+// CLIENT é read-only em Vulnerability.
+//
+// 🚧 [FUTURO] As transições de RETORNO (IN_PROGRESS→OPEN e FIXED→IN_PROGRESS)
+// já foram aprovadas em ADR-033, mas ainda NÃO estão em ALLOWED_TRANSITIONS —
+// entram junto do Remediation Kanban. CLOSED segue terminal.
+// "Risco aceito" não será status: vira entidade própria (RiskAcceptance),
+// com a Vulnerability permanecendo OPEN. Ver docs/DECISIONS.md.
 // ============================================================================
 
 model Vulnerability {
