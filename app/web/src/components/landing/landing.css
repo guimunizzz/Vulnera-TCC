@@ -1,191 +1,209 @@
-/**
- * landing.css — paleta e animações EXCLUSIVAS da landing pública.
- *
- * POR QUE ESTE ARQUIVO EXISTE FORA DE tokens.css
- * A landing "foge" do design system de propósito (ADR-026): é material de
- * apresentação da banca, 30s de primeira impressão, não instrumento de uso
- * prolongado. A paleta "cyber" (`--vx-*`) vive aqui, escopada em `.vx-landing`,
- * do mesmo jeito que `severity-colors.ts` já vive fora de tokens.css para o
- * Recharts. NENHUMA outra tela do produto enxerga estas variáveis.
- *
- * TEMA
- * O `ThemeProvider` do app estampa `data-theme="dark" | "light"` (sempre um
- * valor concreto, ver design/theme.ts) em `<html>`. Por isso o modo claro é só
- * `:root[data-theme='light'] .vx-landing` — dois casos, nunca `@media`.
- *
- * Portado de `vulnera-landing/src/index.css` (projeto Vite standalone).
- */
+/* ============================================================================
+   landing.css — VFX exclusivo da landing pública
+   ----------------------------------------------------------------------------
+   O QUE FAZ
+   Keyframes e classes utilitárias do glitch (texto e elemento genérico) e do
+   scanline/ruído estático que cobre o `<CyberCanvas>` quando a cena 3D não
+   monta. Importado só por `landing-page.tsx` — nenhuma outra tela carrega
+   este arquivo.
 
-.vx-landing {
-  --vx-bg: #05010b;
-  --vx-bg-2: #0d041a;
-  --vx-bg-3: #030007;
-  --vx-bg-2-rgb: 13, 4, 26;
-  --vx-accent: #8b5cf6;
-  --vx-accent-rgb: 139, 92, 246;
-  --vx-on-accent: #000000;
-  --vx-cyan: #00d4ff;
-  --vx-cyan-rgb: 0, 212, 255;
-  --vx-magenta: #ff2ec4;
-  --vx-danger: #ff2e63;
-  --vx-danger-rgb: 255, 46, 99;
-  --vx-orange: #ff8c42;
-  --vx-yellow: #ffd166;
-  --vx-success: #00e08a;
-  --vx-text: #e5e7eb;
-  --vx-text-2: #9ca3af;
-  --vx-text-3: #756c88;
-  --vx-neutral-rgb: 156, 163, 175;
-  --vx-elevated-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+   POR QUE NÃO ESTÁ EM `base.css`
+   `base.css` documenta a própria regra: "aqui só entra o que vale para o
+   documento inteiro [...] se você está prestes a escrever .card aqui, pare".
+   Este é VFX de UMA tela, então vive junto dos componentes que o usam
+   (`components/landing/`), não no global.
 
-  background-color: var(--vx-bg);
-  color: var(--vx-text);
-  overflow-x: hidden;
-}
+   MOVIMENTO REDUZIDO
+   O bloco `@media (prefers-reduced-motion: reduce)` global de `base.css` já
+   zera durações — mas zerar a duração de um keyframe com `steps()` ainda
+   deixa o elemento "pular" para o último frame do burst (opacidade/deslocado)
+   em vez de voltar ao repouso. Por isso este arquivo também desliga a
+   animação por completo (`animation: none`) para os casos de glitch: um
+   headline preso no frame deslocado é pior do que um headline parado.
+   ============================================================================ */
 
-:root[data-theme='light'] .vx-landing {
-  --vx-bg: #f7f5fa;
-  --vx-bg-2: #ffffff;
-  --vx-bg-3: #ece7f3;
-  --vx-bg-2-rgb: 255, 255, 255;
-  --vx-accent: #6d28d9;
-  --vx-accent-rgb: 109, 40, 217;
-  --vx-on-accent: #ffffff;
-  --vx-cyan: #0891b2;
-  --vx-cyan-rgb: 8, 145, 178;
-  --vx-magenta: #c026d3;
-  --vx-danger: #dc2626;
-  --vx-danger-rgb: 220, 38, 38;
-  --vx-orange: #c2650c;
-  --vx-yellow: #a16207;
-  --vx-success: #15803d;
-  --vx-text: #1c1626;
-  --vx-text-2: #5b5468;
-  --vx-text-3: #857c94;
-  --vx-neutral-rgb: 113, 113, 122;
-  --vx-elevated-shadow: 0 12px 32px rgba(28, 22, 38, 0.12);
-}
+/* ----------------------------------------------------------------------------
+   GlitchText — headline do hero, títulos de card no hover
+   ---------------------------------------------------------------------------- */
 
-/* Offset de âncora para a navbar fixa (76px + folga). `scroll-padding` só
-   funciona no container de rolagem — o <html> — então precisa ser global,
-   mas só entra quando a landing está montada. */
-:root:has(.vx-landing) {
-  scroll-behavior: smooth;
-  scroll-padding-top: 80px;
-}
-
-/* Grid sutil de fundo, presente em todas as seções */
-.vx-grid-bg {
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      rgba(var(--vx-accent-rgb), 0.05) 0px,
-      rgba(var(--vx-accent-rgb), 0.05) 1px,
-      transparent 1px,
-      transparent 50px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(var(--vx-accent-rgb), 0.05) 0px,
-      rgba(var(--vx-accent-rgb), 0.05) 1px,
-      transparent 1px,
-      transparent 50px
-    );
-}
-
-/* Grid um pouco mais visível (hero) */
-.vx-grid-bg-strong {
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      rgba(var(--vx-accent-rgb), 0.08) 0px,
-      rgba(var(--vx-accent-rgb), 0.08) 1px,
-      transparent 1px,
-      transparent 50px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(var(--vx-accent-rgb), 0.08) 0px,
-      rgba(var(--vx-accent-rgb), 0.08) 1px,
-      transparent 1px,
-      transparent 50px
-    );
-}
-
-/* Glitch em headings (hover) */
-.vx-glitch {
+.glitch-text {
   position: relative;
   display: inline-block;
+  isolation: isolate;
 }
-.vx-glitch .vx-glitch-layer {
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
   position: absolute;
   inset: 0;
-  opacity: 0;
   pointer-events: none;
-}
-.vx-glitch:hover .vx-glitch-base {
-  animation: vx-glitch-base 200ms steps(2, end) 1;
-}
-.vx-glitch:hover .vx-glitch-r {
-  opacity: 0.8;
-  color: var(--vx-magenta);
-  animation: vx-glitch-left 200ms steps(2, end) 1;
-}
-.vx-glitch:hover .vx-glitch-c {
-  opacity: 0.8;
-  color: var(--vx-cyan);
-  animation: vx-glitch-right 200ms steps(2, end) 1;
-}
-@keyframes vx-glitch-base {
-  0% { transform: translateX(0); }
-  50% { transform: translateX(1px); }
-  100% { transform: translateX(0); }
-}
-@keyframes vx-glitch-left {
-  0% { transform: translateX(-2px); opacity: 0.9; }
-  100% { transform: translateX(0); opacity: 0; }
-}
-@keyframes vx-glitch-right {
-  0% { transform: translateX(2px); opacity: 0.9; }
-  100% { transform: translateX(0); opacity: 0; }
+  opacity: 0;
+  color: inherit;
 }
 
-/* Pulsação leve do mockup (seção demo) */
-@keyframes vx-breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.005); }
-}
-.vx-breathe {
-  animation: vx-breathe 4s ease-in-out infinite;
+@media (prefers-reduced-motion: no-preference) {
+  /* Auto: dispara sozinho a cada ciclo — usado no headline do hero e nos
+     badges CRITICAL/HIGH do mockup de risk score. A maior parte do ciclo
+     (0–92%) fica em repouso; o "burst" ocupa só a cauda. */
+  /* Cyan/magenta hardcoded de propósito — a mesma dupla de
+     `landing-palette.ts` (`LANDING_GLITCH`), fonte única do valor. Este CSS
+     não lê `tokens.css`: ver ADR-026 §2 sobre por que a paleta cyber fica
+     fora do sistema de tokens do produto. */
+  .glitch-text--auto::before {
+    color: #3ff3ff;
+    animation: landing-glitch-cycle 6.4s steps(1, end) infinite;
+  }
+  .glitch-text--auto::after {
+    color: #ff3fd8;
+    animation: landing-glitch-cycle 6.4s steps(1, end) infinite reverse;
+    animation-delay: 0.12s;
+  }
+
+  /* Hover: só corre em resposta a interação — cards de feature, CTAs. */
+  .glitch-text--hover::before,
+  .glitch-text--hover::after {
+    animation: none;
+  }
+  .glitch-text--hover:hover::before,
+  .glitch-text--hover:focus-visible::before {
+    color: #3ff3ff;
+    animation: landing-glitch-burst 0.42s steps(1, end) 1;
+  }
+  .glitch-text--hover:hover::after,
+  .glitch-text--hover:focus-visible::after {
+    color: #ff3fd8;
+    animation: landing-glitch-burst 0.42s steps(1, end) 1 reverse;
+  }
 }
 
-/* Pixels de atividade piscando */
-@keyframes vx-blink {
-  0%, 100% { opacity: 0.15; }
-  50% { opacity: 1; }
-}
-.vx-blink {
-  animation: vx-blink 1.2s ease-in-out infinite;
-}
-
-/* Células em pânico da planilha caótica */
-@keyframes vx-cell-pulse {
-  0%, 100% { background-color: rgba(var(--vx-danger-rgb), 0.12); box-shadow: none; }
-  50% { background-color: rgba(var(--vx-danger-rgb), 0.45); box-shadow: 0 0 12px rgba(var(--vx-danger-rgb), 0.5); }
-}
-.vx-cell-alert {
-  animation: vx-cell-pulse 1.6s ease-in-out infinite;
-}
-
-/* Chevron de scroll */
-@keyframes vx-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(8px); }
-}
-.vx-bounce {
-  animation: vx-bounce 1.6s ease-in-out infinite;
+@keyframes landing-glitch-cycle {
+  0%,
+  92%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  93% {
+    transform: translate3d(-3px, 1px, 0);
+    opacity: 0.75;
+    clip-path: inset(10% 0 62% 0);
+  }
+  95% {
+    transform: translate3d(3px, -1px, 0);
+    opacity: 0.7;
+    clip-path: inset(58% 0 12% 0);
+  }
+  97% {
+    transform: translate3d(-2px, 0, 0);
+    opacity: 0.45;
+    clip-path: inset(32% 0 42% 0);
+  }
 }
 
-/* Movimento reduzido: a rede global em styles/base.css já zera durações e
-   iterações de animação para *, *::before, *::after — não é preciso repetir
-   aqui. `scroll-behavior` volta a auto pela mesma regra global. */
+@keyframes landing-glitch-burst {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  20% {
+    transform: translate3d(-4px, 1px, 0);
+    opacity: 0.85;
+    clip-path: inset(8% 0 64% 0);
+  }
+  55% {
+    transform: translate3d(4px, -1px, 0);
+    opacity: 0.75;
+    clip-path: inset(60% 0 10% 0);
+  }
+  80% {
+    transform: translate3d(-2px, 0, 0);
+    opacity: 0.5;
+    clip-path: inset(30% 0 45% 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glitch-text::before,
+  .glitch-text::after {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   glitch-hover — elemento genérico (badge, card, botão) sem duplicar texto
+   ---------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .glitch-hover {
+    transition: filter var(--duration-fast, 140ms) var(--ease-out, ease-out);
+  }
+  .glitch-hover:hover,
+  .glitch-hover:focus-visible {
+    animation: landing-glitch-jitter 0.32s steps(1, end) 1;
+  }
+}
+
+@keyframes landing-glitch-jitter {
+  0% {
+    transform: translate3d(0, 0, 0);
+    filter: hue-rotate(0deg) saturate(1);
+  }
+  25% {
+    transform: translate3d(-1.5px, 0.5px, 0);
+    filter: hue-rotate(18deg) saturate(1.6);
+  }
+  50% {
+    transform: translate3d(1.5px, -0.5px, 0);
+    filter: hue-rotate(-14deg) saturate(1.4);
+  }
+  75% {
+    transform: translate3d(-1px, 0, 0);
+    filter: hue-rotate(8deg) saturate(1.2);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    filter: hue-rotate(0deg) saturate(1);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Fallback do CyberCanvas — scanlines estáticas sobre o gradiente
+   ---------------------------------------------------------------------------- */
+
+.landing-fallback-scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    oklch(1 0 0 / 0.03) 0px,
+    oklch(1 0 0 / 0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+/* ----------------------------------------------------------------------------
+   Cross-fade do canvas sobre o fallback (ver cyber-canvas.tsx)
+   ---------------------------------------------------------------------------- */
+
+.landing-canvas {
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out, ease-out);
+}
+
+.landing-canvas[data-ready="true"] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-canvas {
+    transition: none;
+  }
+}
