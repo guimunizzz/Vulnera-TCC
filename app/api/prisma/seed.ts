@@ -25,6 +25,7 @@
  *   11.  1 avaliação de maturidade respondida                   (Fase 8)
  */
 
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import * as fs from "fs";
