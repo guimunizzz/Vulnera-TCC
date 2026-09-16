@@ -3,8 +3,15 @@ on:
   push:
     branches:
       - main
+      - fix/sonarqube-coverage
+
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
 jobs:
   sonarqube:
     name: SonarQube
