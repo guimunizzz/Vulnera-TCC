@@ -52,6 +52,20 @@ const MESSAGES: Record<string, string> = {
   INVALID_ENVIRONMENT: "Ambiente inválido.",
   NO_ACTIVE_SUBSCRIPTION: "Sua empresa ainda não tem uma assinatura ativa. Aguarde a aprovação do admin.",
   PLAN_LIMIT_REACHED: "Limite de aplicações do plano atual atingido.",
+  // contexto de risco (CP-1)
+  INVALID_CRITICALITY: "Criticidade inválida.",
+  INVALID_DATA_SENSITIVITY: "Sensibilidade do dado inválida.",
+  INVALID_INTERNET_FACING: "Exposição à internet precisa ser sim ou não.",
+  INVALID_BUSINESS_OWNER: "Dono de negócio: use até 180 caracteres.",
+  INVALID_TECHNICAL_OWNER: "Dono técnico: use até 180 caracteres.",
+  RISK_CONTEXT_REDUCTION_REQUIRES_ADMIN:
+    "Reduzir criticidade, exposição, ambiente ou sensibilidade exige um administrador. Você pode aumentar; para diminuir, peça a um admin.",
+
+  // SLA (CP-2)
+  INVALID_SLA_DAYS: "Cada prazo precisa ser um número inteiro entre 1 e 365 dias.",
+  INVALID_SLA_STATE: "Estado de SLA inválido.",
+  // VRS (CP-3)
+  INVALID_VRS_RANGE: "Faixa de prioridade inválida — use inteiros entre 0 e 100, com o mínimo abaixo do máximo.",
 
   // project
   PROJECT_NOT_FOUND: "Projeto não encontrado.",

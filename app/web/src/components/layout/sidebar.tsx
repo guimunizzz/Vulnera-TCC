@@ -55,6 +55,14 @@ const ITENS: ItemNav[] = [
     icone: <path d="M7 2a5 5 0 1 0 3.1 8.9l3 3 1.4-1.4-3-3A5 5 0 0 0 7 2Zm0 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4Z" />,
   },
   {
+    // SLA de remediação (CP-2) — governança da empresa. PENTESTER não define
+    // prazo de ninguém; CLIENT OWNER define o da sua; ADMIN, de qualquer uma.
+    para: "/settings/sla",
+    rotulo: "SLA",
+    papeis: ["ADMIN", "CLIENT"],
+    icone: <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 1.5a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm-.75 2v3.6l2.6 1.55.75-1.3-1.85-1.1V5h-1.5Z" />,
+  },
+  {
     para: "/admin/subscriptions",
     rotulo: "Aprovações",
     papeis: ["ADMIN"],

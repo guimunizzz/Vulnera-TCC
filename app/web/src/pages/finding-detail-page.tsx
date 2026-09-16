@@ -39,6 +39,10 @@ import { Alert } from "../components/ui/alert";
 import { ErrorState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/card";
 import { SeverityBadge, StatusBadge } from "../components/ui/badge";
+import { RiskContextChips } from "../components/applications/risk-context-chips";
+import { SlaBadge } from "../components/findings/sla-badge";
+import { VrsBadge } from "../components/findings/vrs-badge";
+import { transitionLabel } from "../types/vulnerability.types";
 import { EvidenceUploader } from "../components/findings/evidence-uploader";
 import { CommentTimeline } from "../components/findings/comment-timeline";
 import { AuditTrail } from "../components/findings/audit-trail";
@@ -46,7 +50,6 @@ import { OverrideSeverityDialog } from "../components/findings/override-severity
 import {
   ALLOWED_TRANSITIONS,
   OWASP_LABELS,
-  TRANSITION_LABELS,
   type OwaspCategory,
   type VulnerabilityStatus,
 } from "../types/vulnerability.types";
@@ -135,6 +138,44 @@ export function FindingDetailPage() {
             <SeverityBadge severidade={finding.severityFinal} cvss={finding.cvssScore} />
             <span className="text-xs text-fg-muted">{owaspLabel}</span>
           </div>
+
+          {/* Onde o finding ESTÁ (CP-1). Vem embutido no DTO — o PENTESTER não
+              lê /applications, e é justamente ele quem mais precisa saber se
+              isto é uma app crítica exposta ou um ambiente de dev interno. */}
+          {finding.applicationContext && (
+            <RiskContextChips contexto={finding.applicationContext} className="mt-2" />
+          )}
+
+          {/* VRS (CP-3): prioridade contextual ao lado do CVSS — nunca no lugar
+              dele. O número vem do banco; a explicação parcela a parcela vem
+              junto (`vrs.factors`) e é desenhada como lista, não escondida. */}
+          {finding.vrs && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
+              <span>Prioridade (VRS):</span>
+              <VrsBadge score={finding.vrs.score} band={finding.vrs.band} factors={finding.vrs.factors} />
+              {finding.vrs.factors && (
+                <span className="font-mono" data-numeric>
+                  = CVSS {finding.vrs.factors.cvss.toFixed(1)}×6 → {finding.vrs.factors.basePoints}
+                  {finding.vrs.factors.factors.map((f) => ` + ${f.points}`).join("")}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* SLA (CP-2): frase, não só cor — "vence em 2 dias" / "vencido há 4 dias".
+              O estado vem derivado do servidor; aqui só se desenha. */}
+          {finding.sla && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
+              <span>SLA de remediação:</span>
+              <SlaBadge state={finding.sla.state} remainingMs={finding.sla.remainingMs} dueAt={finding.sla.dueAt} />
+              {finding.sla.dueAt && (
+                <span>
+                  prazo {new Date(finding.sla.dueAt).toLocaleDateString("pt-BR")}
+                  {finding.sla.pausedMs > 0 && " (inclui pausa por risco aceito)"}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {podeEscrever && (
@@ -146,7 +187,7 @@ export function FindingDetailPage() {
                 disabled={transicao.isPending}
                 onClick={() => transicao.mutate(destino)}
               >
-                {TRANSITION_LABELS[destino]}
+                {transitionLabel(finding.status, destino)}
               </Button>
             ))}
             <Button variant="sutil" onClick={() => setOverrideAberto(true)}>

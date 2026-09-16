@@ -17,7 +17,9 @@
     "db:reset": "prisma migrate reset --force",
     "db:seed": "tsx prisma/seed.ts",
     "check": "npm run lint && npm run test",
-    "db:seed:demo": "tsx prisma/seed-demo.ts"
+    "db:seed:demo": "tsx prisma/seed-demo.ts",
+    "sla:backfill": "tsx prisma/backfill-sla.ts",
+    "vrs:backfill": "tsx prisma/backfill-vrs.ts"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

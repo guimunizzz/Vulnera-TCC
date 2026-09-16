@@ -35,13 +35,13 @@
  * `components/findings/findings-table.tsx` e `hooks/use-findings.ts`.
  */
 
-import { OWASP_CATEGORIES } from "../types/vulnerability.types";
+import { OWASP_CATEGORIES, SLA_FILTER_VALUES } from "../types/vulnerability.types";
 
 /* ==========================================================================
    Campos
    ========================================================================== */
 
-export type FilterField = "projeto" | "aplicacao" | "empresa" | "severidade" | "status" | "owasp" | "titulo";
+export type FilterField = "projeto" | "aplicacao" | "empresa" | "severidade" | "status" | "owasp" | "sla" | "titulo";
 
 export type OperadorFiltro = "=" | "!=" | "~";
 
@@ -58,6 +58,8 @@ interface DefinicaoDeCampo {
 
 export const SEVERIDADES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"] as const;
 export const STATUS = ["OPEN", "IN_PROGRESS", "FIXED", "CLOSED"] as const;
+/** O vocabulário da BUSCA (CP-2) — `RESOLVED` junta "no prazo" e "com atraso"; ver `SLA_FILTER_VALUES`. */
+export const SLA = SLA_FILTER_VALUES;
 
 export const CAMPOS: Record<FilterField, DefinicaoDeCampo> = {
   projeto: { param: "projectId", tipo: "entidade", rotulo: "projeto" },
@@ -66,6 +68,7 @@ export const CAMPOS: Record<FilterField, DefinicaoDeCampo> = {
   severidade: { param: "severity", tipo: "enum", valores: SEVERIDADES, rotulo: "severidade" },
   status: { param: "status", tipo: "enum", valores: STATUS, rotulo: "status" },
   owasp: { param: "owaspCategory", tipo: "enum", valores: OWASP_CATEGORIES, rotulo: "categoria OWASP" },
+  sla: { param: "slaState", tipo: "enum", valores: SLA, rotulo: "SLA" },
   titulo: { param: "search", tipo: "texto", rotulo: "título" },
 };
 
@@ -96,6 +99,8 @@ const APELIDOS: Record<string, FilterField> = {
   titulo: "titulo",
   title: "titulo",
   busca: "titulo",
+  sla: "sla",
+  prazo: "sla",
 };
 
 /**
@@ -110,6 +115,7 @@ export const DESCRICAO_DOS_CAMPOS: Record<FilterField, { descricao: string; exem
   severidade: { descricao: "Gravidade do achado", exemplo: "severidade = HIGH, CRITICAL" },
   status: { descricao: "Em que ponto do ciclo está", exemplo: "status != CLOSED" },
   owasp: { descricao: "Categoria do OWASP Top 10", exemplo: "owasp = A03" },
+  sla: { descricao: "Prazo de remediação", exemplo: "sla = BREACHED, DUE_SOON" },
   projeto: { descricao: "Projeto de análise", exemplo: "projeto = Pentest Web" },
   aplicacao: { descricao: "Aplicação analisada", exemplo: "aplicacao = Portal" },
   empresa: { descricao: "Empresa dona do finding", exemplo: "empresa = TechNova" },

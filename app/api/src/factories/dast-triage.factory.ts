@@ -21,6 +21,8 @@ import { ProjectMemberRepository } from "../repositories/project-member.reposito
 import { AuditLogRepository } from "../repositories/audit-log.repository";
 import { DastTriageService } from "../services/dast-triage.service";
 import { DastTriageController } from "../controllers/dast-triage.controller";
+import { ApplicationRepository } from "../repositories/application.repository";
+import { makeSlaPolicyService } from "./sla-policy.factory";
 
 export function makeDastTriageService(): DastTriageService {
   return new DastTriageService(
@@ -30,6 +32,11 @@ export function makeDastTriageService(): DastTriageService {
     new ProjectRepository(prisma),
     new ProjectMemberRepository(prisma),
     new AuditLogRepository(prisma),
+    // SLA (CP-2): a Vulnerability promovida nasce com relógio — contado da
+    // PROMOÇÃO, não do scan (antes da triagem humana não era finding do produto).
+    makeSlaPolicyService(),
+    // VRS (CP-3): lê o contexto de risco da app para pontuar a promovida.
+    new ApplicationRepository(prisma),
   );
 }
 

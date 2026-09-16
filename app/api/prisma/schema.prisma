@@ -79,6 +79,8 @@ model User {
   auditLogs           AuditLog[]
   dastScans           DastScan[]
   dastTriagedFindings DastFinding[] @relation("DastFindingTriagedBy")
+  riskAcceptancesRequested RiskAcceptance[] @relation("RiskAcceptanceRequester") // CP-4
+  riskAcceptancesReviewed  RiskAcceptance[] @relation("RiskAcceptanceReviewer") // CP-4
 
   @@index([companyId])
 }
@@ -133,6 +135,8 @@ model Company {
   projects        Project[]
   vulnerabilities Vulnerability[]
   auditLogs       AuditLog[]
+  slaPolicies     SlaPolicy[] // CP-2 — histórico de políticas de SLA da empresa
+  riskAcceptances RiskAcceptance[] // CP-4 — aceites formais de risco da empresa
 
   @@index([planId])
 }
@@ -191,6 +195,34 @@ model Application {
   description String?  @db.Text
   companyId   String
   isActive    Boolean  @default(true)
+
+  // ---------------------------------------------------------------------
+  // Contexto de risco (Exposure & Remediation, CP-1 — 2026-09-15).
+  //
+  // Quatro fatos sobre o ALVO que o CVSS não sabe: o CVSS mede a falha, isto
+  // mede onde ela está. É o que alimenta o Vulnera Risk Score (CP-3) e as
+  // Cadeias de Exposição (CP-8). `environment` já existia e entra no mesmo
+  // conjunto — é o quinto fator, não foi duplicado.
+  //
+  // Defaults CONSERVADORES de propósito: uma app nova nasce "média, interna,
+  // não exposta". Assumir exposta sem alguém afirmar inflaria o risco de
+  // todo mundo; assumir pública sem alguém afirmar esconderia risco real.
+  // Meio-termo neutro, e quem sabe preenche.
+  //
+  // Quem pode SUBIR o risco (CLIENT OWNER) é mais amplo do que quem pode
+  // DESCER (só ADMIN) — a regra fina mora em application.service.ts e está
+  // registrada em docs/DECISIONS.md D2. Toda mudança gera AuditLog
+  // RISK_CONTEXT_CHANGED com antes/depois.
+  //
+  // Sem tags nesta versão (decisão explícita: seria o primeiro passo rumo a
+  // CMDB, e nenhuma feature da iniciativa precisa delas).
+  // ---------------------------------------------------------------------
+  criticality     String  @default("MEDIUM") // LOW | MEDIUM | HIGH | CRITICAL
+  internetFacing  Boolean @default(false)
+  dataSensitivity String  @default("INTERNAL") // PUBLIC | INTERNAL | CONFIDENTIAL | RESTRICTED
+  businessOwner   String? // texto livre — o dono de negócio quase nunca tem conta no Vulnera
+  technicalOwner  String?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -200,6 +232,8 @@ model Application {
 
   @@index([companyId])
   @@index([companyId, isActive])
+  // "aplicações críticas da empresa" — recorte do dashboard e do grafo
+  @@index([companyId, criticality])
 }
 
 // ============================================================================
@@ -327,6 +361,49 @@ model Vulnerability {
   createdBy     String // userId do pentester que criou
   assignedTo    String? // userId do responsável (cliente ou pentester)
 
+  // ---------------------------------------------------------------------
+  // SLA de remediação (Exposure & Remediation, CP-2 — 2026-09-15).
+  //
+  // 🎯 PERSISTE-SE O PRAZO, DERIVA-SE O ESTADO. `slaDueAt` é congelado no
+  // momento do cálculo — mudar a política amanhã NÃO reescreve o prazo de
+  // quem já tem um (só ação explícita de ADMIN faz isso, auditada). Já o
+  // estado (ON_TRACK / DUE_SOON / BREACHED / RESOLVED_*) é função de
+  // (dueAt, pausa, status, agora) e nunca vira coluna: um finding estoura
+  // pela passagem do tempo sem ninguém escrever nada. Ver utils/sla.util.ts.
+  //
+  // slaStartedAt ≠ createdAt de propósito: reabertura (FIXED → IN_PROGRESS,
+  // ADR-033) inicia um NOVO ciclo com começo próprio, e o ciclo anterior
+  // fica só no AuditLog. slaPausedMs acumula o tempo sob Risk Acceptance
+  // aprovado (CP-4) — o prazo efetivo é dueAt + pausa.
+  //
+  // NULL em todos = finding sem SLA (anterior ao backfill, ou severidade
+  // NONE). Backfill aprovado (D1) só toca OPEN/IN_PROGRESS.
+  // ---------------------------------------------------------------------
+  slaStartedAt DateTime?
+  slaDueAt     DateTime? // prazo EFETIVO — empurrado quando uma pausa termina
+  slaDueSoonAt DateTime? // instante dos 20% restantes — calculado junto, empurrado junto (ver utils/sla.util.ts)
+  slaPausedMs  Int       @default(0) // quanto do prazo veio de pausa (explicabilidade)
+  slaPolicyId  String? // qual política gerou o prazo — explicabilidade, sem FK (perder o ponteiro é ok; perder o prazo não)
+
+  // ---------------------------------------------------------------------
+  // Vulnera Risk Score (Exposure & Remediation, CP-3 — 2026-09-15).
+  //
+  // Prioridade CONTEXTUAL, 0–100, ADITIVA (docs/DECISIONS.md D3):
+  //   round(cvss × 6) + criticidade + ambiente + exposição + sensibilidade
+  // O CVSS continua intacto e continua sendo a base de severityCalculated
+  // (RN10); o VRS é uma coluna A MAIS. Persistido porque a busca ordena e
+  // filtra por ele no banco — calcular em memória seria o anti-pattern que a
+  // FEAT-09 eliminou. `vrsFactors` guarda cada parcela: um score que não se
+  // explica não sobrevive à primeira discordância.
+  //
+  // NADA temporal entra aqui (SLA fica fora): o score gravado e o exibido são
+  // idênticos até uma mudança REAL de input (vetor CVSS ou contexto da app).
+  // NULL = cvssScore nulo (não zero: sem vetor não há como priorizar).
+  // ---------------------------------------------------------------------
+  vrsScore      Int?
+  vrsFactors    String?   @db.Text
+  vrsComputedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -341,8 +418,9 @@ model Vulnerability {
   // ponteiro pra origem, nunca o achado.
   sourceDastFinding DastFinding? @relation("VulnerabilityFromDastFinding", fields: [sourceDastFindingId], references: [id], onDelete: SetNull)
 
-  evidences Evidence[]
-  comments  VulnerabilityComment[]
+  evidences       Evidence[]
+  comments        VulnerabilityComment[]
+  riskAcceptances RiskAcceptance[] // CP-4 — histórico de aceites formais deste finding
 
   @@index([projectId])
   @@index([applicationId])
@@ -351,6 +429,108 @@ model Vulnerability {
   @@index([companyId, status])
   @@index([companyId, severityFinal])
   @@index([projectId, status])
+  // SLA (CP-2): "vencidos da empresa" e ordenação por prazo
+  @@index([companyId, slaDueAt])
+  // VRS (CP-3): "abertos da empresa por prioridade" — o recorte do Kanban e do dashboard
+  @@index([companyId, status, vrsScore])
+}
+
+// ============================================================================
+// SLA DE REMEDIAÇÃO (Exposure & Remediation, CP-2)
+// ============================================================================
+//
+// Política de prazos por severidade. Uma por tenant (companyId), mais UMA
+// política padrão do produto com companyId = null — o fallback de quem nunca
+// configurou a sua.
+//
+// VERSIONADA, NÃO EDITADA: alterar a política cria uma linha nova e desativa
+// a anterior. O prazo já gravado em cada Vulnerability (`slaDueAt`) aponta
+// para a política que o gerou (`slaPolicyId`) e NÃO muda sozinho — é o que
+// impede "consertar" um estouro afrouxando a regra. Reaplicar aos findings
+// abertos é ação explícita de ADMIN, auditada (SLA_POLICY_APPLIED).
+//
+// "No máximo uma ativa por company" é regra de service: o MySQL não tem
+// unique parcial, e as inativas precisam poder coexistir (são o histórico).
+model SlaPolicy {
+  id           String   @id @default(cuid())
+  companyId    String? // null = política PADRÃO do produto
+  name         String
+  criticalDays Int      @default(2)
+  highDays     Int      @default(7)
+  mediumDays   Int      @default(30)
+  lowDays      Int      @default(90)
+  isActive     Boolean  @default(true)
+  createdBy    String // userId (ou "system" na política padrão do seed)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, isActive])
+}
+
+// ============================================================================
+// RISK ACCEPTANCE (Exposure & Remediation, CP-4)
+// ============================================================================
+//
+// Aceite FORMAL de risco — entidade própria, NUNCA um status de Vulnerability
+// (D10). A vulnerabilidade continua OPEN/IN_PROGRESS enquanto o aceite vale:
+// "risco aceito" e "finding fechado" são coisas diferentes, e colapsá-los no
+// mesmo campo destruiria exatamente a informação que torna o aceite
+// defensável numa auditoria — quem pediu, quem assinou, até quando, por quê.
+//
+// status: REQUESTED → APPROVED | REJECTED
+//         APPROVED  → REVOKED | EXPIRED
+//         (REJECTED, REVOKED, EXPIRED são terminais)
+//
+// IMUTÁVEL DEPOIS DA DECISÃO: não existe UPDATE de reason/expiresAt. Estender
+// = novo REQUESTED. É o que fecha o vetor "expiração manipulável".
+//
+// Segregação de função: requestedById ≠ reviewedById, sempre, inclusive
+// ADMIN. PENTESTER nunca aprova (pode pedir). Regra no service.
+//
+// EXPIRAÇÃO PREGUIÇOSA (sem scheduler, ADR-030): APPROVED com expiresAt no
+// passado é lido como EXPIRED; a primeira leitura que perceber consolida a
+// transição com UM updateMany condicional (status='APPROVED') — o count
+// devolvido diz quem "ganhou" e audita uma vez só, sem condição de corrida.
+//
+// companyId desnormalizado da Vulnerability — mesmo padrão RN09, nunca vem
+// do cliente. "Um aceite ativo por vez" é regra de service (unique parcial
+// não existe no MySQL; os terminais precisam coexistir — são o histórico).
+model RiskAcceptance {
+  id                    String    @id @default(cuid())
+  vulnerabilityId       String
+  companyId             String
+  status                String    @default("REQUESTED")
+  reason                String    @db.Text
+  businessJustification String    @db.Text
+  compensatingControls  String?   @db.Text
+  requestedById         String
+  requestedAt           DateTime  @default(now())
+  /** Prazo pedido pelo solicitante; o aprovador pode encurtar (nunca alongar além do teto). */
+  requestedExpiresAt    DateTime?
+  reviewedById          String?
+  reviewedAt            DateTime?
+  reviewNote            String?   @db.Text
+  /** Obrigatório em APPROVED. Teto de 365 dias a partir da aprovação. */
+  expiresAt             DateTime?
+  revokedAt             DateTime?
+  revokedById           String?
+  revokeReason          String?   @db.Text
+  /** Quando o aceite deixou de valer (revogado ou expirado) — o fim do intervalo que pausa o SLA. */
+  endedAt               DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  vulnerability Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  company       Company       @relation(fields: [companyId], references: [id])
+  requestedBy   User          @relation("RiskAcceptanceRequester", fields: [requestedById], references: [id])
+  reviewedBy    User?         @relation("RiskAcceptanceReviewer", fields: [reviewedById], references: [id])
+
+  @@index([vulnerabilityId])
+  @@index([companyId, status])
+  // varredura de expiração e "aceite ativo?" na busca
+  @@index([status, expiresAt])
 }
 
 // Evidence — anexo de prova (imagem ou log)

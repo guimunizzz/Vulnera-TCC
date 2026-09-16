@@ -41,6 +41,10 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.refreshToken.deleteMany();
   await prisma.passwordResetToken.deleteMany();
   await prisma.subscription.deleteMany();
+  // SlaPolicy (CP-2) tem FK Cascade pra Company — o cascade limparia, mas
+  // explícito é mais seguro, e a política PADRÃO (companyId = null) não é
+  // alcançada por cascade nenhum: sem esta linha ela sobreviveria entre testes.
+  await prisma.slaPolicy.deleteMany();
   await prisma.user.deleteMany();
   await prisma.company.deleteMany();
   await prisma.plan.deleteMany();

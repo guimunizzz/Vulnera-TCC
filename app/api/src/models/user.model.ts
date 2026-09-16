@@ -49,6 +49,14 @@ export interface UserResponseDTO {
   email: string;
   role: UserRole;
   companyId: string | null;
+  /**
+   * OWNER | MEMBER | null (CP-2). Existia no banco desde a Fase 3 e nunca
+   * saía pela API — o frontend precisa dele para saber se mostra "Salvar
+   * política de SLA" (só OWNER). A AUTORIZAÇÃO continua sendo do backend, que
+   * lê o valor do banco em cada request; aqui é só para a tela não oferecer
+   * um botão que vai dar 403.
+   */
+  companyRole: string | null;
   createdAt: Date;
 }
 
@@ -66,6 +74,7 @@ export class UserEntity {
       email: u.email,
       role: u.role as UserRole,
       companyId: u.companyId,
+      companyRole: u.companyRole,
       createdAt: u.createdAt,
     };
   }

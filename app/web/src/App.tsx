@@ -19,6 +19,7 @@ import { MaturityAssessmentPage } from "./pages/maturity-assessment-page";
 import { DastPage } from "./pages/dast-page";
 import { DastScanDetailPage } from "./pages/dast-scan-detail-page";
 import { DastScanReportPage } from "./pages/dast-scan-report-page";
+import { SlaSettingsPage } from "./pages/settings/sla-settings-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
 
@@ -66,6 +67,9 @@ export function App() {
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:id/dashboard" element={<ApplicationDashboardPage />} />
             <Route path="/new-analysis" element={<NewAnalysisPage />} />
+            {/* SLA (CP-2): governança da empresa — ADMIN e CLIENT (OWNER edita,
+                MEMBER lê; o backend reforça). PENTESTER não chega aqui. */}
+            <Route path="/settings/sla" element={<SlaSettingsPage />} />
           </Route>
 
           {/* Escrita de finding (create/update/transition/override) é ADMIN

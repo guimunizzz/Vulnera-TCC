@@ -12,11 +12,15 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/card";
 import { Alert } from "../components/ui/alert";
 import { Dialog, DialogDescription, DialogTitle } from "../components/ui/dialog";
+import { RiskContextChips } from "../components/applications/risk-context-chips";
+import { ApplicationRiskForm } from "../components/applications/application-risk-form";
 import type { Application } from "../types/application.types";
 
 export function ApplicationsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Application | null>(null);
+  // Contexto de risco (CP-1): qual app está com o formulário aberto.
+  const [contextTarget, setContextTarget] = useState<Application | null>(null);
   const [filter, setFilter] = useState("");
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
@@ -118,7 +122,7 @@ export function ApplicationsPage() {
               <tr>
                 <th className="px-4 py-3 font-medium">Nome</th>
                 <th className="px-4 py-3 font-medium">URL</th>
-                <th className="px-4 py-3 font-medium">Ambiente</th>
+                <th className="px-4 py-3 font-medium">Contexto de risco</th>
                 <th className="px-4 py-3 font-medium">Ações</th>
               </tr>
             </thead>
@@ -127,12 +131,19 @@ export function ApplicationsPage() {
                 <tr key={application.id} className="border-t border-subtle">
                   <td className="px-4 py-3 text-fg">{application.name}</td>
                   <td className="px-4 py-3 text-fg-muted">{application.url ?? "—"}</td>
-                  <td className="px-4 py-3 text-fg-muted">{application.environment}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
+                    <RiskContextChips contexto={application} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
                       <LinkButton variant="secundario" size="sm" to={`/applications/${application.id}/dashboard`}>
                         Painel
                       </LinkButton>
+                      {role !== "PENTESTER" && (
+                        <Button variant="secundario" size="sm" onClick={() => setContextTarget(application)}>
+                          Contexto
+                        </Button>
+                      )}
                       <LinkButton variant="secundario" size="sm" to={`/new-analysis?applicationId=${application.id}`}>
                         Nova análise
                       </LinkButton>
@@ -194,6 +205,26 @@ export function ApplicationsPage() {
               </Button>
             </div>
           </form>
+        </>
+      </Dialog>
+
+      {/* Contexto de risco (CP-1). O Dialog só monta o formulário com um alvo:
+          o form usa o `application` como estado inicial e não deve nascer
+          vazio para depois "trocar" de app — cada abertura é uma instância. */}
+      <Dialog aberto={contextTarget !== null} aoFechar={() => setContextTarget(null)}>
+        <>
+          <DialogTitle>Contexto de risco — {contextTarget?.name}</DialogTitle>
+          <DialogDescription>
+            Onde esta aplicação está e o que ela guarda. Define a prioridade (VRS) de todos os findings dela.
+          </DialogDescription>
+          {contextTarget && (
+            <ApplicationRiskForm
+              key={contextTarget.id}
+              application={contextTarget}
+              aoSalvar={() => setContextTarget(null)}
+              aoCancelar={() => setContextTarget(null)}
+            />
+          )}
         </>
       </Dialog>
 
