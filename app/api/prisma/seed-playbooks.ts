@@ -22,6 +22,7 @@
  * Conteúdo da OWASP sob CC BY-SA 4.0 (ver prisma/seeds/owasp/MANIFEST.json).
  */
 
+import "dotenv/config";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { prisma } from "../src/database/prisma.database";
