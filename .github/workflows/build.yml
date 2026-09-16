@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - fix/sonarqube-coverage
 
   pull_request:
     branches:
@@ -22,16 +21,13 @@ jobs:
     services:
       mysql:
         image: mysql:8
-
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: vulnera_test
           MYSQL_USER: vulnera
           MYSQL_PASSWORD: vulnera
-
         ports:
           - 3306:3306
-
         options: >-
           --health-cmd="mysqladmin ping -h localhost -proot"
           --health-interval=10s
@@ -40,6 +36,7 @@ jobs:
 
     env:
       NODE_ENV: test
+
       DATABASE_URL: mysql://vulnera:vulnera@127.0.0.1:3306/vulnera_test
 
       JWT_ACCESS_SECRET: test_access_secret_012345678901234567890123
