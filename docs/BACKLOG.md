@@ -241,6 +241,33 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 
 ---
 
+## INICIATIVA — Exposure & Remediation Management (CP-0 a CP-7) — ✅ CP-0 a CP-7 concluídos em 2026-09-16
+
+> Branch `feat/exposure-remediation-management`. Documento técnico:
+> `docs/EXPOSURE_REMEDIATION.md`. Decisões: **ADR-033 a ADR-039** e a seção de
+> decisões de implementação em `docs/DECISIONS.md`.
+
+| #    | Task                                                                    | Estado |
+| ---- | ----------------------------------------------------------------------- | ------ |
+| CP-0 | Baseline: branch, build do web destravado, ADR-033, decisões D1–D10      | ✅ |
+| CP-1 | Application Context (ambiente, criticidade, exposição, sensibilidade)    | ✅ |
+| CP-1b| Contexto embutido no DTO do finding (PENTESTER não lê `/applications`)   | ✅ |
+| CP-2 | SLA Engine: `SlaPolicy`, ciclo por finding, estados derivados           | ✅ |
+| CP-2b| Filtro `slaState` nos DOIS construtores + `slaDueSoonAt` persistido     | ✅ |
+| CP-3 | Vulnera Risk Score aditivo + faixas + `vrsFactors` auditável            | ✅ |
+| CP-4 | Risk Acceptance: entidade, alçada, pausa de SLA, expiração preguiçosa   | ✅ |
+| CP-4b| FK de `revokedById` por migration ADITIVA (a aplicada não foi editada)  | ✅ (descoberta) |
+| CP-5 | Playbooks + importação OWASP por CLI + snapshot offline com sha256      | ✅ |
+| CP-5b| Três camadas contra XSS (escrita, renderização, CSP real no preview)    | ✅ |
+| CP-5c| Parser tolerante à tradução pt-BR divergente do A10                     | ✅ (descoberta) |
+| CP-6 | Saved Queries / Watchlists com canonização da query                     | ✅ |
+| CP-7 | Quadro de remediação por menu (sem arrastar) + `assignedTo` ponta a ponta| ✅ |
+| CP-7b| Correção do `where()`: chaves `AND` concorrentes apagavam filtros        | ✅ (descoberta) |
+| CP-7c| `config/` faltando no `COPY` do Dockerfile do web                       | ✅ (descoberta) |
+| CP-8 | Exposure Graph / Cadeias de Exposição                                   | ⛔ **não implementado** — era condicional; ver `docs/EXPOSURE_REMEDIATION.md` §9 |
+
+---
+
 ## Findings de auditoria
 
 > Os achados da auditoria consolidada, com o estado de cada um. Antes desta
@@ -301,6 +328,26 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 | L-15 | **O donut de severidade não renderiza** — só a legenda aparece, no dashboard do CLIENT e no de aplicação. Recharts avisa `width(0) and height(0)` dentro de um contêiner `h-48 w-48` legítimo. | Pré-existente (provável efeito do upgrade para `recharts@^3.10.1`, major). Encontrado na validação da Fase 9, em componente que a entrega não tocou — §0.2 S6. | A informação não se perde: a legenda lista severidade e contagem em texto, e os KPIs numéricos acima estão corretos. O gráfico é reforço, não portador. |
 | L-16 | **Falha de rede silenciosa em todas as telas fora da Fase 9.** O `networkMode: "online"` padrão do TanStack Query pausa a consulta em vez de errar (`status: pending`, `error: null`), então a tela não mostra erro nem oferece recuperação — e `refetch()` numa consulta pausada também pausa. | Corrigir de vez é trocar o padrão do `queryClient` global, que afeta toda tela do app — grande demais para entrar junto de uma entrega de findings. Marcado `[FUTURO]` em `use-findings.ts`. | As buscas de finding já usam `networkMode: "always"` e mostram erro de verdade com botão de recuperação. As demais telas continuam com o comportamento antigo. |
 | L-17 | **Uma queda da API desloga o usuário.** O refresh falha, e o interceptor de `lib/api/client.ts` não distingue "refresh recusado" (401 legítimo) de "refresh não chegou ao servidor" (rede), chamando `clearAuth()` nos dois casos. | Pré-existente; mexer no interceptor de autenticação é risco desproporcional numa entrega de listagem. | A sessão volta com um login; nenhum dado se perde. |
+
+---
+
+## Limitações conhecidas — Build / Docker
+
+> Levantadas em **2026-09-14** ao destravar o `docker compose up --build`, e
+> **restauradas em 2026-09-15** no CP-0 da iniciativa Exposure & Remediation.
+>
+> ⚠️ **Por que sumiram e voltaram:** esta seção entrou junto do fix `74cb60e` e
+> foi removida pelo revert da landing (`31988ba`), que levou o fix junto por
+> estar na mesma árvore. O build ficou quebrado em `dev` e `main` de 2026-09-14
+> a 2026-09-15 sem nenhuma limitação registrada explicando por quê. Mesmo
+> critério das demais: encontradas, avaliadas e conscientemente não corrigidas.
+
+| # | Limitação | Por que não foi corrigida | Mitigação existente |
+| --- | --- | --- | --- |
+| L-12 | **Build da imagem não é reproduzível.** `package-lock.json` está no `.gitignore`, então nenhum lock chega ao contexto de build — cada `docker build` re-resolve as versões dentro das faixas de semver e pode trazer uma transitiva diferente da que o dev testou. | Passar a versionar o lock é decisão de projeto (afeta API, web e mobile) e exige validar `npm ci` nos três Dockerfiles. **Decisão do Rafael.** É também a causa-raiz de L-13. | Versões diretas pinadas por `^` em `package.json`; a stack é validada à mão antes da demo. `npm install -g npm@11` (L-13) neutraliza o sintoma mais grave |
+| L-13 | **`npm install -g npm@11` é obrigatório nas imagens de API e Web.** O npm 10.9.8 que vem no `node:22-alpine` aborta com `Cannot read properties of null (reading 'edgesOut')` ao montar o grafo de peers sem lock (bug do Arborist). | O bug é do npm, não do projeto; resolver de verdade exigiria versionar o lock (L-12). **Reproduzido de novo em 2026-09-15** no CP-0, com npm 10.9.8, estágio `[web 4/8] RUN npm install`. | Linha presente e **documentada nos dois Dockerfiles**, com aviso de que já foi perdida uma vez. O comentário do `app/api/Dockerfile` referencia o do web e vice-versa |
+| L-14 | **O `tsc --noEmit` do build da imagem type-checka os arquivos de teste.** `npm run build` roda `tsc --noEmit && vite build`, e o `tsconfig.json` inclui `src` inteiro — um erro de tipo em `*.test.tsx` derruba o build de produção. | É também a única checagem de tipos automatizada com gatilho: o CI só roda SonarQube, e `npm run check` é lint + contraste + testes, sem `tsc`. Removê-la do Dockerfile deixaria o `tsc` sem nenhum gatilho automático. | Aceito de propósito enquanto o CI não rodar `tsc`; o efeito é conservador (falha a mais, nunca a menos). Foi o que expôs a peer `@testing-library/dom` faltante |
+| L-18 | **Peers usadas pelo código precisam estar declaradas à mão.** `@testing-library/react@16` não implementa `screen`/`waitFor`/`within` — só reexporta de `@testing-library/dom`, declarada como peer. Na máquina do dev o npm instala a peer sozinho, então a ausência da declaração fica invisível até o container. | Não é bug: é o comportamento correto de peer dependency. Auditar todas as peers do projeto é trabalho próprio. | `@testing-library/dom@^10.4.1` declarado explicitamente em `app/web/package.json` desde 2026-09-15 — o código usa aqueles símbolos, então a dependência é real e deve ser declarada, não herdada por acaso do resolvedor |
 
 ---
 

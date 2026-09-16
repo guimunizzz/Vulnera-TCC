@@ -37,6 +37,14 @@ export const vulnerabilitiesApi = {
     apiClient.put<Vulnerability>(`/vulnerabilities/${id}`, input).then((res) => res.data),
   transition: (id: string, toStatus: VulnerabilityStatus) =>
     apiClient.post<Vulnerability>(`/vulnerabilities/${id}/transition`, { toStatus }).then((res) => res.data),
+
+  /**
+   * Responsável pela remediação (CP-7). Operação própria, não um PUT do
+   * finding inteiro: o quadro muda só este campo, e reenviar o resto arriscaria
+   * sobrescrever com o que a tela tinha em memória. `null` desatribui.
+   */
+  assign: (id: string, assignedTo: string | null) =>
+    apiClient.post<Vulnerability>(`/vulnerabilities/${id}/assign`, { assignedTo }).then((res) => res.data),
   overrideSeverity: (id: string, newSeverity: VulnerabilitySeverity, justification: string) =>
     apiClient
       .post<Vulnerability>(`/vulnerabilities/${id}/override-severity`, { newSeverity, justification })

@@ -1,0 +1,76 @@
+{
+  "sourceVersion": "2021@2026-09-16",
+  "generatedAt": "2026-09-16T02:13:30.707Z",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "attribution": "OWASP Foundation — OWASP Top 10:2021 e OWASP Cheat Sheet Series",
+  "note": "Conteúdo baixado das fontes oficiais por 'npm run sync:owasp-playbooks -- --snapshot'. Não editar à mão.",
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/IndexTopTen.md",
+      "file": "IndexTopTen.md",
+      "sha256": "3a6e497600553a11ca48613e774030fc4198df0721bef4e0d53c63c2779870a2",
+      "bytes": 5800
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A01_2021-Broken_Access_Control.md",
+      "file": "A01_2021-Broken_Access_Control.md",
+      "sha256": "e55c28466b67fb20b65dd970c79525398852601baf123fd235a8e687bc91f7ab",
+      "bytes": 10173
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A02_2021-Cryptographic_Failures.md",
+      "file": "A02_2021-Cryptographic_Failures.md",
+      "sha256": "f61c5938a943bf7f43007a14b0e16c2f9356e32ffec738f2111167024a7ab0eb",
+      "bytes": 12189
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A03_2021-Injection.md",
+      "file": "A03_2021-Injection.md",
+      "sha256": "f37d10b0a9796ad516e0e00d48c19e34e4d53ee4c325eb9b7efb704e87f7c6cc",
+      "bytes": 10807
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A04_2021-Insecure_Design.md",
+      "file": "A04_2021-Insecure_Design.md",
+      "sha256": "8670927bdd720f3d687a8c6950f8171979ff654d817e5418a76c2bc8c8229653",
+      "bytes": 12353
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A05_2021-Security_Misconfiguration.md",
+      "file": "A05_2021-Security_Misconfiguration.md",
+      "sha256": "842f55e215ee0c9ab2f0c7eb38c11dff37e997ec1ecdfff750f6a9c41efd3558",
+      "bytes": 8601
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A06_2021-Vulnerable_and_Outdated_Components.md",
+      "file": "A06_2021-Vulnerable_and_Outdated_Components.md",
+      "sha256": "30fcdf41d98b580c32265b841f9d2a49989d91800e0461c2c9491c87e18a87e8",
+      "bytes": 6448
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A07_2021-Identification_and_Authentication_Failures.md",
+      "file": "A07_2021-Identification_and_Authentication_Failures.md",
+      "sha256": "4f4565b7d7dfc1fcffd1f84086378ac7ec4759a1e60899df70809efc1c4cc1ec",
+      "bytes": 8623
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A08_2021-Software_and_Data_Integrity_Failures.md",
+      "file": "A08_2021-Software_and_Data_Integrity_Failures.md",
+      "sha256": "505def6dc3fb92429f0be4cc412152a77e9be34f292975d99fc3c68924d16d93",
+      "bytes": 7322
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A09_2021-Security_Logging_and_Monitoring_Failures.md",
+      "file": "A09_2021-Security_Logging_and_Monitoring_Failures.md",
+      "sha256": "54689a85aff1b6a53d42052e256ec75d36fd34fca01da3c9a2ebadb766fa7b50",
+      "bytes": 7349
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/pt-BR/A10_2021-Server-Side_Request_Forgery_(SSRF).md",
+      "file": "A10_2021-Server-Side_Request_Forgery_(SSRF).md",
+      "sha256": "f8d6aeea21f84c95483eb1a79096d1d6b42e0ee59008a5a190027f82b3fb582a",
+      "bytes": 5919
+    }
+  ]
+}

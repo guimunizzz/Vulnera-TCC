@@ -13,6 +13,38 @@ Registro cronológico das decisões relevantes tomadas durante o projeto. Serve 
 
 ---
 
+## 2026-09-16 — Exposure & Remediation Management: CP-1 a CP-7 implementados
+
+**Contexto**: o produto registrava vulnerabilidades muito bem e não dizia nada
+sobre o que acontece **depois** do achado — prazo, prioridade, quem corrige,
+como corrigir, e o que fazer com o que não será corrigido.
+
+**O que foi decidido** (cada uma com ADR próprio, 034 a 039):
+
+- **SLA persiste o PRAZO e deriva o ESTADO.** Sem coluna de estado e sem job:
+  o estado muda com o relógio, e um job deixaria janelas em que a tela mente.
+- **VRS é ADITIVO**, não multiplicativo — muda em relação ao relatório de
+  mapeamento. Motivo: explicabilidade parcela a parcela.
+- **Aceite de risco é entidade, não status.** O finding continua aberto;
+  segregação de função sem exceção; expiração preguiçosa e atômica.
+- **Catálogo OWASP entra por CLI, com snapshot versionado.** Sem endpoint de
+  sync: indisponibilidade do GitHub não pode virar indisponibilidade do produto.
+  E a demo precisa funcionar sem Internet.
+- **CSP real**, aplicada no `vite preview` (o que o Docker serve e o ZAP
+  escaneia), com `script-src` sem `'unsafe-inline'`.
+- **Busca salva guarda a pergunta, nunca a resposta.**
+- **O quadro de remediação não tem arrastar-e-soltar** — mover é menu, operável
+  por teclado.
+
+**Consequência**: sete entregas, quatro entidades novas
+([[SlaPolicy]], [[RiskAcceptance]], [[RemediationPlaybook]], [[SavedQuery]]) e
+um bug de busca corrigido no caminho (filtros compostos se apagavam no `where()`
+do Prisma). **CP-8 (Exposure Graph) não foi implementado** — era condicional.
+
+**Nota relacionada**: [[ADR-034 - SLA de remediacao persiste o prazo e deriva o estado]]
+
+---
+
 ## 2026-09-09 — DAST: triagem, promoção para Vulnerability e comparação entre scans
 
 **Contexto**: o módulo DAST terminava num beco — o scan rodava, mostrava dezenas de alertas e a única saída era um PDF. Além disso, o watchdog limitava *quantos* scans rodam, mas nada limitava *quanto cada um consome* (medido: ~960% de 1200% de CPU e RAM sem teto).

@@ -31,6 +31,7 @@ import { useQuery } from "@tanstack/react-query";
 import { projectsApi } from "../lib/api/projects.api";
 import { applicationsApi } from "../lib/api/applications.api";
 import { companiesApi } from "../lib/api/companies.api";
+import { usersApi } from "../lib/api/users.api";
 import { useAuthStore } from "../store/auth.store";
 import type { EntidadesSugeriveis } from "../components/findings/query-suggestions";
 
@@ -43,6 +44,14 @@ export function useEntidadesSugeriveis(camposOcultos: string[] = []): EntidadesS
   const querProjeto = !camposOcultos.includes("projeto");
   const querAplicacao = !camposOcultos.includes("aplicacao") && (papel === "ADMIN" || papel === "CLIENT");
   const querEmpresa = !camposOcultos.includes("empresa") && papel === "ADMIN";
+  /**
+   * Responsável (CP-7). `GET /users` não dá 403 para ninguém — ele RECORTA:
+   * ADMIN recebe todos, CLIENT os da própria empresa e PENTESTER apenas ele
+   * mesmo. Para o pentester isso é exatamente o caso de uso comum
+   * ("responsavel = eu"); atribuir a um colega continua possível pela tela do
+   * finding, onde a API valida a regra completa.
+   */
+  const querResponsavel = !camposOcultos.includes("responsavel");
 
   const projetos = useQuery({
     queryKey: ["projects"],
@@ -65,6 +74,13 @@ export function useEntidadesSugeriveis(camposOcultos: string[] = []): EntidadesS
     staleTime: TEMPO_FRESCO,
   });
 
+  const usuarios = useQuery({
+    queryKey: ["users"],
+    queryFn: usersApi.list,
+    enabled: querResponsavel,
+    staleTime: TEMPO_FRESCO,
+  });
+
   return useMemo(
     () => ({
       // `undefined` (e não lista vazia) quando o papel não pode buscar: é o que
@@ -73,7 +89,17 @@ export function useEntidadesSugeriveis(camposOcultos: string[] = []): EntidadesS
       projeto: querProjeto ? (projetos.data ?? []).map((p) => ({ id: p.id, nome: p.name })) : undefined,
       aplicacao: querAplicacao ? (aplicacoes.data ?? []).map((a) => ({ id: a.id, nome: a.name })) : undefined,
       empresa: querEmpresa ? (empresas.data ?? []).map((c) => ({ id: c.id, nome: c.name })) : undefined,
+      responsavel: querResponsavel ? (usuarios.data ?? []).map((u) => ({ id: u.id, nome: u.name })) : undefined,
     }),
-    [querProjeto, querAplicacao, querEmpresa, projetos.data, aplicacoes.data, empresas.data],
+    [
+      querProjeto,
+      querAplicacao,
+      querEmpresa,
+      querResponsavel,
+      projetos.data,
+      aplicacoes.data,
+      empresas.data,
+      usuarios.data,
+    ],
   );
 }

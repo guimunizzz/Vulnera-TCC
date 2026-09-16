@@ -20,6 +20,9 @@ export async function cleanDatabase(): Promise<void> {
   // CASCADE (deletar user com scan pendurado quebraria a constraint).
   await prisma.dastFinding.deleteMany();
   await prisma.dastScan.deleteMany();
+  // RiskAcceptance (CP-4) antes de Vulnerability — FK Cascade cuidaria, mas
+  // explícito é mais seguro e mantém a ordem legível de cima para baixo.
+  await prisma.riskAcceptance.deleteMany();
   await prisma.evidence.deleteMany();
   await prisma.vulnerabilityComment.deleteMany();
   await prisma.vulnerability.deleteMany();
@@ -41,6 +44,17 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.refreshToken.deleteMany();
   await prisma.passwordResetToken.deleteMany();
   await prisma.subscription.deleteMany();
+  // SlaPolicy (CP-2) tem FK Cascade pra Company — o cascade limparia, mas
+  // explícito é mais seguro, e a política PADRÃO (companyId = null) não é
+  // alcançada por cascade nenhum: sem esta linha ela sobreviveria entre testes.
+  await prisma.slaPolicy.deleteMany();
+  // RemediationPlaybook (CP-5): o custom tem FK Cascade pra Company, mas o
+  // System (companyId = null) não é alcançado por cascade nenhum — sem esta
+  // linha o catálogo semeado vazaria de um teste para o outro.
+  // SavedQuery (CP-6) tem FK Cascade para User; explícito mantém a ordem
+  // legível e não depende do cascade para a limpeza entre testes.
+  await prisma.savedQuery.deleteMany();
+  await prisma.remediationPlaybook.deleteMany();
   await prisma.user.deleteMany();
   await prisma.company.deleteMany();
   await prisma.plan.deleteMany();

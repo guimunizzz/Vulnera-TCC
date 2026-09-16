@@ -934,3 +934,67 @@ Correções por R5 (o código é a verdade), listadas para não passarem em bran
 - `ADR-001` (plataforma **não** executa ataque real) ganhou um aviso de tensão
   com o que o DAST faz. **Status não alterado** — rebaixar ADR é decisão do
   Rafael (§0.2 S3).
+
+---
+
+# INICIATIVA — Exposure & Remediation Management ✅ CP-0 a CP-7 concluídos em 2026-09-16
+
+> Branch `feat/exposure-remediation-management`, a partir de `dev` @ `84e1518`.
+> Documento técnico: `docs/EXPOSURE_REMEDIATION.md`.
+
+## O que foi entregue
+
+Sete checkpoints, na ordem em que a pergunta operacional aparece na vida de
+quem usa o produto:
+
+| CP | Entrega | ADR |
+|----|---------|-----|
+| CP-0 | Baseline: build do web destravado, decisões D1–D10 | ADR-033 |
+| CP-1 | Contexto de risco da aplicação | — |
+| CP-2 | SLA de remediação — persiste o prazo, deriva o estado | ADR-034 |
+| CP-3 | Vulnera Risk Score aditivo | ADR-035 |
+| CP-4 | Aceite formal de risco como entidade | ADR-036 |
+| CP-5 | Playbooks + OWASP Top 10 por CLI, com snapshot offline | ADR-037 |
+| CP-6 | Buscas salvas e watchlists | ADR-038 |
+| CP-7 | Quadro de remediação por menu + `assignedTo` ponta a ponta | ADR-039 |
+
+**CP-8 (Exposure Graph) NÃO foi implementado.** Era condicional e fica para uma
+próxima rodada; as decisões D8/D9 continuam registradas.
+
+## Histórico
+
+- **Branch:** `feat/exposure-remediation-management`
+- **PR:** a abrir — a entrega foi validada localmente, sem commit (pedido
+  explícito do Rafael em todas as sessões da iniciativa)
+- **Commits anteriores da branch:** `3e67abc` (CP-0), `fbd8027` (CP-1 a CP-3 +
+  scaffold do CP-4)
+
+### Desvios do plano
+
+1. **A fórmula do VRS mudou antes da implementação.** O relatório de mapeamento
+   propunha multiplicativa; a implementação é **aditiva**, por
+   explicabilidade — ver ADR-035.
+2. **CP-8 não entrou.** Era condicional a todos os gates anteriores estarem
+   verdes; eles estão, mas o orçamento da rodada foi para o endurecimento e a
+   documentação dos sete CPs entregues, que é o que a banca lê.
+3. **Um ADR a mais que o previsto.** O plano falava em ADR-034 a 038; saíram
+   **034 a 039**, porque separar "buscas salvas" de "quadro sem arrastar" num
+   ADR só teria misturado duas decisões independentes.
+
+### Bugs encontrados no caminho (e corrigidos)
+
+| O quê | Como apareceu |
+|---|---|
+| `where()` do Prisma: uma chave `AND` por filtro composto, e a última apagava as anteriores — SLA + aceite perdia o SLA **em silêncio** | ao acrescentar o terceiro filtro composto (responsável) |
+| Tradução pt-BR do A10 com três headings divergentes (`## Como Previnir`) — o A10 entrava no catálogo **sem remediação** | no primeiro seed real, conferindo o conteúdo gravado |
+| `IndexTopTen.md` tem uma 11ª seção ("A11 – Next Steps") que não é categoria | teste OWASP-P-07 |
+| `config/` faltando no `COPY` do Dockerfile do web — build quebrava só **dentro** do container | `docker compose build --no-cache` |
+| `SavedQuery` era o único model com `@default(uuid())`; e o validador de id rejeitava os **cuid** reais do produto, descartando em silêncio o filtro por empresa/projeto | teste SQ-10 |
+
+### O que ficou de fora, de propósito
+
+- CP-8 (Exposure Graph).
+- Pesos do VRS configuráveis por tenant.
+- Conteúdo das ~122 Cheat Sheets (a v1 guarda o link).
+- CSP no servidor de desenvolvimento (ver ADR-037).
+- Notificação ao ser atribuído — a tabela `Notification` continua inativa.

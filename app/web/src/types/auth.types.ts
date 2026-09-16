@@ -10,6 +10,12 @@ export interface User {
   email: string;
   role: UserRole;
   companyId: string | null;
+  /**
+   * OWNER | MEMBER | null — só para a tela decidir o que oferecer; a
+   * autorização é do backend (CP-2). Opcional porque uma sessão persistida
+   * antes do CP-2 não tem o campo — ausente vale como "não é OWNER".
+   */
+  companyRole?: string | null;
   createdAt: string;
 }
 

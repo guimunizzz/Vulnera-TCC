@@ -7,8 +7,14 @@ automaticamente por CVSS 3.1, clientes acompanham a remediação em tempo
 real e exportam relatórios executivos/técnicos em PDF — tudo isolado por
 empresa (multi-tenancy) e por papel (ADMIN / CLIENT / PENTESTER).
 
-> Vulnera **gerencia** o processo de segurança — não executa scans
-> automatizados nem substitui um pentester humano (ADR-001).
+> Vulnera **gerencia** o processo de segurança e não substitui um pentester
+> humano (ADR-001). Desde a Fase 9 ele **também executa scans DAST**
+> automatizados via OWASP ZAP — o que continua fora do escopo é atacar de
+> verdade e julgar por conta própria: todo achado do scanner passa por triagem
+> humana antes de virar finding (ADR-029, ADR-032).
+>
+> _Esta ressalva dizia "não executa scans automatizados" até 2026-09-16 — falso
+> desde a Fase 9, e corrigido aqui pela R5 do `CLAUDE.md` (o código é a verdade)._
 
 ---
 
@@ -21,6 +27,7 @@ empresa (multi-tenancy) e por papel (ADMIN / CLIENT / PENTESTER).
 - [Setup do zero](#setup-do-zero)
 - [Demo guiada](#demo-guiada)
 - [Qualidade e segurança](#qualidade-e-segurança)
+- [Documentação técnica](#documentação-técnica)
 - [Estrutura do repositório](#estrutura-do-repositório)
 - [Limitações conhecidas](#limitações-conhecidas)
 - [Trabalho futuro](#trabalho-futuro)
@@ -50,6 +57,13 @@ críticos seguem em aberto. A Vulnera resolve isso com:
   a plataforma sobe um container ZAP, roda spider + active scan e devolve
   findings estruturados, o relatório HTML original e um PDF, sem mais
   nenhuma intervenção manual (ver `docs/DAST.md`).
+- **Gestão do que vem DEPOIS do achado** (iniciativa *Exposure & Remediation
+  Management*, 2026-09-16): prazo de remediação por severidade (**SLA**),
+  priorização por contexto (**Vulnera Risk Score** = CVSS + criticidade da
+  aplicação + exposição + sensibilidade dos dados), **aceite formal de risco**
+  com alçada e validade, **catálogo de remediação** com o OWASP Top 10 oficial,
+  **buscas salvas/watchlists** e um **quadro de remediação** com responsável.
+  Ver `docs/EXPOSURE_REMEDIATION.md`.
 - **App mobile read-only** pro cliente acompanhar findings e receber push
   quando algo crítico é registrado.
 - **Isolamento multi-tenant real**, provado por dezenas de testes de
@@ -150,8 +164,13 @@ flowchart TB
 git clone https://github.com/guimunizzz/Vulnera-TCC.git
 cd Vulnera-TCC
 docker compose up --build          # sobe MySQL + Mailhog + API + Web
-docker compose exec api npm run db:seed   # popula a empresa de demo (TechNova)
+docker compose exec api npm run db:seed             # empresa de demo (TechNova)
+docker compose exec api npm run db:seed:playbooks   # catálogo OWASP Top 10
 ```
+
+> O segundo seed **não usa Internet**: o conteúdo oficial da OWASP vem de um
+> snapshot versionado em `app/api/prisma/seeds/owasp/`, com `sha256` de cada
+> arquivo. Sem ele, o bloco "Como corrigir" dos findings aparece vazio.
 
 Acesse:
 
@@ -171,6 +190,7 @@ cp .env.example .env               # ajustar se necessário
 npm install
 npx prisma migrate dev
 npm run db:seed
+npm run db:seed:playbooks          # catálogo OWASP (offline)
 npm run dev                        # http://localhost:3001
 
 cd ../web
@@ -195,12 +215,16 @@ push no celular: **[`docs/DEMO.md`](docs/DEMO.md)**.
 
 ## Qualidade e segurança
 
-- **269 testes de integração** no backend (Jest + Supertest) — happy path,
+- **528 testes no backend** (Jest + Supertest, 41 suítes) — happy path,
   validação, regra de negócio e isolamento multi-tenant (`TEN-*`) em cada
   recurso que toca dado de cliente.
-- **24 testes de frontend** (Vitest + Testing Library + axe-core) —
+- **206 testes de frontend** (Vitest + Testing Library + axe-core) —
   acessibilidade, contraste (WCAG AA, 66 pares medidos, 0 falhas), tema,
-  filtros.
+  filtros, sanitização de Markdown e a própria CSP.
+- **Testes de ponta a ponta** (Playwright, Chrome real contra a stack Docker):
+  o fluxo do pentester no DAST e os nove casos da iniciativa de remediação —
+  incluindo um que prova que mover um finding no quadro funciona **só com o
+  teclado**.
 - **OWASP ZAP baseline** contra a stack de produção real (não o dev
   server) — evidência completa em [`docs/evidencias/zap/`](docs/evidencias/zap/README.md).
   0 FAIL, achados corrigidos onde era barato (headers de segurança, um bug
@@ -219,6 +243,19 @@ push no celular: **[`docs/DEMO.md`](docs/DEMO.md)**.
 
 ---
 
+## Documentação técnica
+
+| Documento | O que cobre |
+|---|---|
+| [`docs/EXPOSURE_REMEDIATION.md`](docs/EXPOSURE_REMEDIATION.md) | SLA, Vulnera Risk Score, aceite de risco, playbooks OWASP, buscas salvas e quadro de remediação — o que existe, onde, e provado por qual teste |
+| [`docs/DAST.md`](docs/DAST.md) | O módulo de scan automatizado via OWASP ZAP |
+| [`docs/FINDINGS_QUERY.md`](docs/FINDINGS_QUERY.md) | A linguagem de busca da listagem de findings |
+| [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) | Tokens, componentes e contrato de acessibilidade |
+| [`docs/Vulnera/07-Decisoes/`](docs/Vulnera/07-Decisoes/) | Os ADRs — toda decisão não-trivial, com a alternativa descartada |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Decisões de projeto em ordem cronológica |
+
+---
+
 ## Estrutura do repositório
 
 ```
@@ -230,7 +267,9 @@ docs/
 ├── DEMO.md                    # roteiro de demonstração
 ├── BACKLOG.md                 # backlog por fase
 ├── ROADMAP_PROMPTS.md         # prompts de execução por fase
-├── evidencias/                # ZAP, SonarQube, screenshots
+├── EXPOSURE_REMEDIATION.md    # SLA, VRS, aceite de risco, playbooks, quadro
+├── DAST.md                    # módulo de scan automatizado (OWASP ZAP)
+├── evidencias/                # ZAP, SonarQube, screenshots, exposure-remediation
 └── Vulnera/                   # vault de documentação (ADRs, contexto, decisões)
 PRD_VIVO.md                    # estado de implementação, atualizado a cada fase
 CLAUDE.md                      # guia de como o código é escrito neste projeto
@@ -250,7 +289,7 @@ técnico consciente em vez de escondê-lo.
 | --- | --- |
 | **`react-router-dom@6.28.0`** tem um Open Redirect conhecido (fix só na major 7.x) | Upgrade de major version muda API de rotas — exigiria re-testar toda a navegação. Fora do orçamento de uma sessão de fechamento. |
 | **Dockerfiles não usam `npm ci`/lockfile** (`app/api`, `app/web`) | Builds não são 100% reprodutíveis (resolvem semver ranges a cada build, não a árvore exata do lockfile). Corrigir exigiria mudar o build context pra raiz do monorepo (workspace tem um lockfile único fora do context atual) — mudança estrutural, não um fix pontual. |
-| **Sem CSP (Content-Security-Policy)** no frontend | O design system usa `style` inline em vários componentes; uma CSP estrita o bastante pra valer a pena exigiria testar a aplicação inteira contra ela. Ver `docs/evidencias/zap/README.md`. |
+| **CSP só no `vite preview`, não no servidor de desenvolvimento** | Desde 2026-09-16 existe uma CSP **real** no modo que o Docker serve e o ZAP escaneia (`script-src 'self' + hash`, sem `'unsafe-inline'`; conferida no cabeçalho HTTP em `docs/evidencias/exposure-remediation/security-headers.txt`). No dev server ela fica de fora de propósito: o `@vitejs/plugin-react` injeta um preâmbulo inline que muda a cada boot, e cobri-lo exigiria `'unsafe-inline'` — ou seja, uma CSP sem a única diretiva que protege. `style-src 'unsafe-inline'` é concessão consciente (estilo inline não executa JavaScript). Ver ADR-037. |
 | **Sem rate limiting** (login, upload) | Fora do escopo do MVP — exigiria decisão de store (Redis está cortado do escopo). |
 | **Sem `DELETE` de Evidence** | Evidência anexada por engano não pode ser removida pela API hoje. |
 | **Chunk único de ~1.4MB no build do frontend** | Sem code-splitting por rota — aceitável pro tamanho atual do produto, mas cresce sem controle se novas telas grandes entrarem. |
@@ -277,8 +316,14 @@ Cortado do escopo do MVP deliberadamente (não é ausência por esquecimento):
 - **Reset de senha via e-mail.**
 - **Reproducibilidade completa de build Docker** (`npm ci` + lockfile do
   workspace, ver Limitações conhecidas).
-- **Content-Security-Policy real**, calibrada e testada contra a UI
-  inteira.
+- **Exposure Graph / Cadeias de Exposição** — o CP-8 da iniciativa de
+  remediação, deliberadamente adiado; as decisões que o delimitam (sem graph
+  database, projeção do MySQL, e por que o nome **não** é "Attack Path") já
+  estão registradas em `docs/DECISIONS.md` (D8/D9).
+- **Pesos do Vulnera Risk Score configuráveis por empresa** — hoje a fórmula é
+  única, o que mantém o número comparável entre tenants.
+- **CSP também no servidor de desenvolvimento**, se o Fast Refresh passar a
+  emitir um preâmbulo estável.
 
 ---
 

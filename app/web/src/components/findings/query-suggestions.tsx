@@ -66,6 +66,8 @@ export interface EntidadesSugeriveis {
   projeto?: { id: string; nome: string }[];
   aplicacao?: { id: string; nome: string }[];
   empresa?: { id: string; nome: string }[];
+  /** Responsáveis pela remediação (CP-7). */
+  responsavel?: { id: string; nome: string }[];
 }
 
 export interface QuerySuggestionsProps {
@@ -164,6 +166,36 @@ function montarSugestoes(
   }
 
   if (field === "titulo") return [];
+
+  // SLA (CP-2): enum como severidade/status, com o vocabulário da BUSCA
+  // (RESOLVED junta "no prazo" e "com atraso" — ver SLA_FILTER_VALUES).
+  // Sem contagem: a faceta de SLA ficou fora da v1 (custaria 3 counts a mais
+  // por busca). Autocontido de propósito — sem import novo neste arquivo.
+  if (field === "sla") {
+    const opcoes: Array<[string, string]> = [
+      ["BREACHED", "Vencido"],
+      ["DUE_SOON", "Vence em breve"],
+      ["ON_TRACK", "No prazo"],
+      ["RESOLVED", "Resolvido"],
+      ["NO_SLA", "Sem SLA"],
+    ];
+    return opcoes
+      .filter(([valor, rotulo]) => casa(valor) || casa(rotulo))
+      .map(([valor, rotulo]) => ({ inserir: valor, rotulo, apoio: valor }));
+  }
+
+  // Aceite de risco (CP-4): enum, sem contagem (sem faceta na v1).
+  if (field === "aceite") {
+    const opcoes: Array<[string, string]> = [
+      ["ACTIVE", "Risco aceito (vigente)"],
+      ["REQUESTED", "Aguardando decisão"],
+      ["EXPIRED", "Aceite encerrado"],
+      ["NONE", "Sem aceite"],
+    ];
+    return opcoes
+      .filter(([valor, rotulo]) => casa(valor) || casa(rotulo))
+      .map(([valor, rotulo]) => ({ inserir: valor, rotulo, apoio: valor }));
+  }
 
   // Entidade: mostra o NOME, insere o ID — a API aceita só id, de propósito
   // (nome não é único entre empresas).

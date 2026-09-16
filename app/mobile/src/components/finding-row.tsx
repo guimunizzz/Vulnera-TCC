@@ -6,7 +6,7 @@ import { IconAvatar } from "./icon-avatar";
 import { Card } from "./card";
 import { ROTULO_ESTADO, ROTULO_SEVERIDADE, SeverityBadge, StatusBadge } from "./badge";
 import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from "../theme/tokens";
-import type { Vulnerability } from "../types/vulnerability.types";
+import { fraseDoSla, VRS_BAND_LABELS, type Vulnerability } from "../types/vulnerability.types";
 
 // Tom do avatar acompanha a severidade — mesma pista visual do SeverityBadge,
 // só que reforçada no ícone que abre a linha (varredura mais rápida da lista).
@@ -47,6 +47,24 @@ export function FindingRow({
             <SeverityBadge severidade={finding.severityFinal} />
             <StatusBadge status={finding.status} />
           </View>
+          {/* SLA (CP-2), read-only: frase, não só cor. Só aparece quando a API já manda. */}
+          {finding.slaState && finding.slaState !== "NO_SLA" && (
+            <Text
+              style={[styles.sla, finding.slaState === "BREACHED" && styles.slaVencido]}
+              accessibilityLabel={`SLA: ${fraseDoSla(finding.slaState, finding.slaRemainingMs)}`}
+            >
+              SLA · {fraseDoSla(finding.slaState, finding.slaRemainingMs)}
+            </Text>
+          )}
+          {/* VRS (CP-3), read-only: número + faixa em texto. */}
+          {finding.vrsScore != null && finding.vrsBand && (
+            <Text
+              style={[styles.sla, finding.vrsBand === "IMEDIATO" && styles.slaVencido]}
+              accessibilityLabel={`Prioridade ${finding.vrsScore}, ${VRS_BAND_LABELS[finding.vrsBand]}`}
+            >
+              VRS {finding.vrsScore} · {VRS_BAND_LABELS[finding.vrsBand]}
+            </Text>
+          )}
         </View>
         <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
       </Card>
@@ -72,5 +90,14 @@ const styles = StyleSheet.create({
   badges: {
     flexDirection: "row",
     gap: SPACING[2],
+  },
+  sla: {
+    fontSize: FONT_SIZE.xs,
+    fontFamily: FONT_FAMILY.medium,
+    color: COLORS.textMuted,
+  },
+  slaVencido: {
+    // tom "ink" da severidade crítica: é o que fica legível sobre o card escuro
+    color: COLORS.severity.criticalInk,
   },
 });
