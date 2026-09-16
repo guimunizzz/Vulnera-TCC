@@ -40,7 +40,7 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Table, type ColunaTabela } from "../ui/table";
-import { SeverityBadge, StatusBadge, ROTULO_SEVERIDADE, type Severidade } from "../ui/badge";
+import { Badge, SeverityBadge, StatusBadge, ROTULO_SEVERIDADE, type Severidade } from "../ui/badge";
 import { SlaBadge } from "./sla-badge";
 import { VrsBadge } from "./vrs-badge";
 import { Button } from "../ui/button";
@@ -194,7 +194,13 @@ export function FindingsTable({
         id: "slaDueAt",
         cabecalho: "SLA",
         ordenavel: true,
-        celula: (f) => <SlaBadge state={f.slaState} remainingMs={f.slaRemainingMs} dueAt={f.slaDueAt} />,
+        celula: (f) => (
+          <span className="inline-flex flex-wrap items-center gap-1">
+            <SlaBadge state={f.slaState} remainingMs={f.slaRemainingMs} dueAt={f.slaDueAt} />
+            {/* Aceite vigente (CP-4): badge AO LADO do SLA — o finding segue aberto. */}
+            {f.hasActiveRiskAcceptance && <Badge tom="acento">aceito</Badge>}
+          </span>
+        ),
       },
       {
         chave: "owasp",

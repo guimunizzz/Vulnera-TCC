@@ -241,6 +241,33 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 
 ---
 
+## INICIATIVA — Exposure & Remediation Management (CP-0 a CP-7) — ✅ CP-0 a CP-7 concluídos em 2026-09-16
+
+> Branch `feat/exposure-remediation-management`. Documento técnico:
+> `docs/EXPOSURE_REMEDIATION.md`. Decisões: **ADR-033 a ADR-039** e a seção de
+> decisões de implementação em `docs/DECISIONS.md`.
+
+| #    | Task                                                                    | Estado |
+| ---- | ----------------------------------------------------------------------- | ------ |
+| CP-0 | Baseline: branch, build do web destravado, ADR-033, decisões D1–D10      | ✅ |
+| CP-1 | Application Context (ambiente, criticidade, exposição, sensibilidade)    | ✅ |
+| CP-1b| Contexto embutido no DTO do finding (PENTESTER não lê `/applications`)   | ✅ |
+| CP-2 | SLA Engine: `SlaPolicy`, ciclo por finding, estados derivados           | ✅ |
+| CP-2b| Filtro `slaState` nos DOIS construtores + `slaDueSoonAt` persistido     | ✅ |
+| CP-3 | Vulnera Risk Score aditivo + faixas + `vrsFactors` auditável            | ✅ |
+| CP-4 | Risk Acceptance: entidade, alçada, pausa de SLA, expiração preguiçosa   | ✅ |
+| CP-4b| FK de `revokedById` por migration ADITIVA (a aplicada não foi editada)  | ✅ (descoberta) |
+| CP-5 | Playbooks + importação OWASP por CLI + snapshot offline com sha256      | ✅ |
+| CP-5b| Três camadas contra XSS (escrita, renderização, CSP real no preview)    | ✅ |
+| CP-5c| Parser tolerante à tradução pt-BR divergente do A10                     | ✅ (descoberta) |
+| CP-6 | Saved Queries / Watchlists com canonização da query                     | ✅ |
+| CP-7 | Quadro de remediação por menu (sem arrastar) + `assignedTo` ponta a ponta| ✅ |
+| CP-7b| Correção do `where()`: chaves `AND` concorrentes apagavam filtros        | ✅ (descoberta) |
+| CP-7c| `config/` faltando no `COPY` do Dockerfile do web                       | ✅ (descoberta) |
+| CP-8 | Exposure Graph / Cadeias de Exposição                                   | ⛔ **não implementado** — era condicional; ver `docs/EXPOSURE_REMEDIATION.md` §9 |
+
+---
+
 ## Findings de auditoria
 
 > Os achados da auditoria consolidada, com o estado de cada um. Antes desta

@@ -36,12 +36,23 @@
  */
 
 import { OWASP_CATEGORIES, SLA_FILTER_VALUES } from "../types/vulnerability.types";
+import { RISK_ACCEPTANCE_FILTER_VALUES } from "../types/risk-acceptance.types";
 
 /* ==========================================================================
    Campos
    ========================================================================== */
 
-export type FilterField = "projeto" | "aplicacao" | "empresa" | "severidade" | "status" | "owasp" | "sla" | "titulo";
+export type FilterField =
+  | "projeto"
+  | "aplicacao"
+  | "empresa"
+  | "severidade"
+  | "status"
+  | "owasp"
+  | "sla"
+  | "aceite"
+  | "responsavel"
+  | "titulo";
 
 export type OperadorFiltro = "=" | "!=" | "~";
 
@@ -60,6 +71,8 @@ export const SEVERIDADES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"] as cons
 export const STATUS = ["OPEN", "IN_PROGRESS", "FIXED", "CLOSED"] as const;
 /** O vocabulário da BUSCA (CP-2) — `RESOLVED` junta "no prazo" e "com atraso"; ver `SLA_FILTER_VALUES`. */
 export const SLA = SLA_FILTER_VALUES;
+/** Aceite formal de risco (CP-4): ACTIVE | EXPIRED | REQUESTED | NONE. */
+export const ACEITE = RISK_ACCEPTANCE_FILTER_VALUES;
 
 export const CAMPOS: Record<FilterField, DefinicaoDeCampo> = {
   projeto: { param: "projectId", tipo: "entidade", rotulo: "projeto" },
@@ -69,6 +82,12 @@ export const CAMPOS: Record<FilterField, DefinicaoDeCampo> = {
   status: { param: "status", tipo: "enum", valores: STATUS, rotulo: "status" },
   owasp: { param: "owaspCategory", tipo: "enum", valores: OWASP_CATEGORIES, rotulo: "categoria OWASP" },
   sla: { param: "slaState", tipo: "enum", valores: SLA, rotulo: "SLA" },
+  aceite: { param: "riskAcceptance", tipo: "enum", valores: ACEITE, rotulo: "aceite de risco" },
+  // Responsável (CP-7). É `entidade` porque na tela é um NOME e na API é um id
+  // — quem resolve é o autocomplete, igual a projeto/aplicação/empresa. O
+  // valor especial `none` (sem responsável) passa pelo mesmo caminho: a API o
+  // trata como IS NULL.
+  responsavel: { param: "assignedTo", tipo: "entidade", rotulo: "responsável" },
   titulo: { param: "search", tipo: "texto", rotulo: "título" },
 };
 
@@ -101,6 +120,14 @@ const APELIDOS: Record<string, FilterField> = {
   busca: "titulo",
   sla: "sla",
   prazo: "sla",
+  aceite: "aceite",
+  risco: "aceite",
+  acceptance: "aceite",
+  responsavel: "responsavel",
+  responsable: "responsavel",
+  assignee: "responsavel",
+  atribuido: "responsavel",
+  dono: "responsavel",
 };
 
 /**
@@ -116,9 +143,11 @@ export const DESCRICAO_DOS_CAMPOS: Record<FilterField, { descricao: string; exem
   status: { descricao: "Em que ponto do ciclo está", exemplo: "status != CLOSED" },
   owasp: { descricao: "Categoria do OWASP Top 10", exemplo: "owasp = A03" },
   sla: { descricao: "Prazo de remediação", exemplo: "sla = BREACHED, DUE_SOON" },
+  aceite: { descricao: "Aceite formal de risco", exemplo: "aceite = ACTIVE" },
   projeto: { descricao: "Projeto de análise", exemplo: "projeto = Pentest Web" },
   aplicacao: { descricao: "Aplicação analisada", exemplo: "aplicacao = Portal" },
   empresa: { descricao: "Empresa dona do finding", exemplo: "empresa = TechNova" },
+  responsavel: { descricao: "Quem ficou de corrigir", exemplo: "responsavel = Ana Souza" },
   titulo: { descricao: "Texto no título e na descrição", exemplo: "titulo ~ injection" },
 };
 

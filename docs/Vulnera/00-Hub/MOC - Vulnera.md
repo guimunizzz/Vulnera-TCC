@@ -136,6 +136,13 @@ status: ativo
 [[ADR-030 - Execucao assincrona sem fila]]
 [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]]
 [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]
+[[ADR-033 - Transicoes de retorno na maquina de Vulnerability]]
+[[ADR-034 - SLA de remediacao persiste o prazo e deriva o estado]]
+[[ADR-035 - Vulnera Risk Score aditivo e auditavel]]
+[[ADR-036 - Aceite de risco como entidade, nunca como status]]
+[[ADR-037 - Catalogo OWASP importado por CLI com snapshot offline]]
+[[ADR-038 - Buscas salvas guardam a pergunta, nunca a resposta]]
+[[ADR-039 - Quadro de remediacao por menu, sem arrastar]]
 
 ## Dados e modelagem
 [[MER Conceitual]]

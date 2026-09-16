@@ -20,6 +20,9 @@ import { DastPage } from "./pages/dast-page";
 import { DastScanDetailPage } from "./pages/dast-scan-detail-page";
 import { DastScanReportPage } from "./pages/dast-scan-report-page";
 import { SlaSettingsPage } from "./pages/settings/sla-settings-page";
+import { PlaybooksPage } from "./pages/playbooks-page";
+import { PlaybookDetailPage } from "./pages/playbook-detail-page";
+import { RemediationPage } from "./pages/remediation-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
 
@@ -55,12 +58,21 @@ export function App() {
               dentro da própria página (canEdit) e reforçada pelo backend. */}
           <Route path="/companies/:companyId/maturity" element={<MaturityAssessmentPage />} />
 
+          {/* Catálogo de remediação (CP-5). Leitura para os três papéis: o
+              CLIENT precisa entender o que foi pedido para corrigir. A
+              ESCRITA é barrada no backend (D5) e a tela não a oferece. */}
+          <Route path="/playbooks" element={<PlaybooksPage />} />
+          <Route path="/playbooks/:id" element={<PlaybookDetailPage />} />
+
           {/* Varredura global de findings — ferramenta de quem analisa.
               O CLIENT é barrado aqui e não vê o item na Sidebar; o backend
               continua servindo os findings da própria empresa a ele (RN16),
               que é o que o dashboard e o app mobile consomem. */}
           <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
             <Route path="/findings" element={<FindingsPage />} />
+            {/* Quadro de remediação (CP-7). Mesmo recorte da listagem global:
+                mover e atribuir são escrita em finding, e o CLIENT não escreve. */}
+            <Route path="/remediation" element={<RemediationPage />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>

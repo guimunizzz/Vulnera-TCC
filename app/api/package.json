@@ -19,7 +19,9 @@
     "check": "npm run lint && npm run test",
     "db:seed:demo": "tsx prisma/seed-demo.ts",
     "sla:backfill": "tsx prisma/backfill-sla.ts",
-    "vrs:backfill": "tsx prisma/backfill-vrs.ts"
+    "vrs:backfill": "tsx prisma/backfill-vrs.ts",
+    "sync:owasp-playbooks": "tsx scripts/sync-owasp-playbooks.ts",
+    "db:seed:playbooks": "tsx prisma/seed-playbooks.ts"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

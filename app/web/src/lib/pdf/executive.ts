@@ -38,7 +38,12 @@ import {
 } from "./base";
 import { OWASP_LABELS } from "../../types/vulnerability.types";
 import { MATURITY_LEVEL_LABELS, type MaturityLevel } from "../../types/maturity.types";
-import type { ReportData, ReportMaturityDomain, ReportVulnerability } from "../../types/report.types";
+import type {
+  ReportAcceptedRisk,
+  ReportData,
+  ReportMaturityDomain,
+  ReportVulnerability,
+} from "../../types/report.types";
 
 export async function generateExecutivePdf(data: ReportData): Promise<Blob> {
   const ctx = await createReportContext(data.company.name);
@@ -95,6 +100,25 @@ export async function generateExecutivePdf(data: ReportData): Promise<Blob> {
   }
   for (const risk of data.topRisks) {
     cursor = drawRiskCard(ctx, cursor, risk);
+  }
+
+  // Riscos formalmente aceitos (CP-4) — vem ANTES da maturidade porque é
+  // decisão de negócio sobre ESTE projeto, e é o que uma auditoria procura
+  // primeiro. Some quando não há nenhum: seção vazia é ruído no relatório.
+  if (data.acceptedRisks.length > 0) {
+    cursor = addPage(ctx);
+    cursor = drawSectionTitle(ctx, cursor, "Riscos formalmente aceitos");
+    cursor = drawText(
+      ctx,
+      cursor,
+      `${data.acceptedRisks.length} finding(s) com aceite de risco vigente. Eles continuam ABERTOS e contam ` +
+        "normalmente nas métricas acima — o aceite registra que a organização decidiu conviver com o risco por " +
+        "um prazo determinado, com justificativa e responsável identificados.",
+      { color: COLORS.mutedInk, gapAfter: 16 },
+    );
+    for (const risco of data.acceptedRisks) {
+      cursor = drawAcceptedRiskCard(ctx, cursor, risco);
+    }
   }
 
   cursor = addPage(ctx);
@@ -213,6 +237,29 @@ function drawRiskCard(ctx: ReportContext, cursor: Cursor, risk: ReportVulnerabil
 }
 
 /** Tabela simples de 2 colunas (domínio / média) — desenhada linha a linha, mesmo estilo manual do resto do pdf-lib aqui. */
+/** Um risco aceito: qual falha, quão grave, por quê, até quando e quem assinou. */
+function drawAcceptedRiskCard(ctx: ReportContext, cursor: Cursor, risco: ReportAcceptedRisk): Cursor {
+  let c = ensureSpace(ctx, cursor, 120);
+  const severidade = SEVERITY_LABELS[risco.severityFinal as keyof typeof SEVERITY_LABELS] ?? risco.severityFinal;
+  const validade = risco.expiresAt ? new Date(risco.expiresAt).toLocaleDateString("pt-BR") : "sem prazo";
+
+  c = drawText(ctx, c, risco.title, { font: ctx.fonts.bold, size: 11, gapAfter: 4 });
+  c = drawText(
+    ctx,
+    c,
+    `${severidade}${risco.cvssScore != null ? ` · CVSS ${risco.cvssScore.toFixed(1)}` : ""} · válido até ${validade}` +
+      ` · solicitado por ${risco.requestedByName}` +
+      (risco.approvedByName ? ` · aprovado por ${risco.approvedByName}` : ""),
+    { color: COLORS.mutedInk, size: 9, gapAfter: 6 },
+  );
+  c = drawText(ctx, c, `Razão: ${risco.reason}`, { size: 9, gapAfter: 4 });
+  c = drawText(ctx, c, `Justificativa: ${risco.businessJustification}`, { size: 9, gapAfter: 4 });
+  if (risco.compensatingControls) {
+    c = drawText(ctx, c, `Controles compensatórios: ${risco.compensatingControls}`, { size: 9, gapAfter: 4 });
+  }
+  return drawDivider(ctx, c, 14);
+}
+
 function drawMaturityTable(ctx: ReportContext, cursor: Cursor, domains: ReportMaturityDomain[]): Cursor {
   const rowHeight = 22;
   let { page, y } = ensureSpace(ctx, cursor, rowHeight * 2);

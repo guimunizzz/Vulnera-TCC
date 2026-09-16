@@ -69,18 +69,20 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  company             Company?               @relation(fields: [companyId], references: [id])
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  projectMembers      ProjectMember[]
-  vulnerabilities     Vulnerability[]        @relation("VulnerabilityAssignee")
-  vulnComments        VulnerabilityComment[]
-  evidences           Evidence[]
-  auditLogs           AuditLog[]
-  dastScans           DastScan[]
-  dastTriagedFindings DastFinding[] @relation("DastFindingTriagedBy")
-  riskAcceptancesRequested RiskAcceptance[] @relation("RiskAcceptanceRequester") // CP-4
-  riskAcceptancesReviewed  RiskAcceptance[] @relation("RiskAcceptanceReviewer") // CP-4
+  company                  Company?               @relation(fields: [companyId], references: [id])
+  refreshTokens            RefreshToken[]
+  passwordResetTokens      PasswordResetToken[]
+  projectMembers           ProjectMember[]
+  vulnerabilities          Vulnerability[]        @relation("VulnerabilityAssignee")
+  vulnComments             VulnerabilityComment[]
+  evidences                Evidence[]
+  auditLogs                AuditLog[]
+  dastScans                DastScan[]
+  dastTriagedFindings      DastFinding[]          @relation("DastFindingTriagedBy")
+  riskAcceptancesRequested RiskAcceptance[]       @relation("RiskAcceptanceRequester") // CP-4
+  riskAcceptancesReviewed  RiskAcceptance[]       @relation("RiskAcceptanceReviewer") // CP-4
+  riskAcceptancesRevoked   RiskAcceptance[]       @relation("RiskAcceptanceRevoker") // CP-4
+  savedQueries             SavedQuery[] // CP-6 — buscas salvas e watchlists
 
   @@index([companyId])
 }
@@ -128,7 +130,7 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  plan            Plan            @relation(fields: [planId], references: [id])
+  plan            Plan                  @relation(fields: [planId], references: [id])
   users           User[]
   subscriptions   Subscription[]
   applications    Application[]
@@ -137,6 +139,8 @@ model Company {
   auditLogs       AuditLog[]
   slaPolicies     SlaPolicy[] // CP-2 — histórico de políticas de SLA da empresa
   riskAcceptances RiskAcceptance[] // CP-4 — aceites formais de risco da empresa
+  playbooks       RemediationPlaybook[] // CP-5 — playbooks customizados da empresa
+  savedQueries    SavedQuery[] // CP-6 — buscas compartilhadas com a empresa
 
   @@index([planId])
 }
@@ -187,14 +191,14 @@ model Subscription {
 // Pertence a UMA Company. Reutilizável entre projetos no tempo.
 // RN03: count(Application by company) ≤ plan.maxApplications da Subscription ativa
 model Application {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   url         String?
-  environment String   @default("PROD") // PROD | HOMOL | DEV
+  environment String  @default("PROD") // PROD | HOMOL | DEV
   techStack   String?
-  description String?  @db.Text
+  description String? @db.Text
   companyId   String
-  isActive    Boolean  @default(true)
+  isActive    Boolean @default(true)
 
   // ---------------------------------------------------------------------
   // Contexto de risco (Exposure & Remediation, CP-1 — 2026-09-15).
@@ -223,8 +227,8 @@ model Application {
   businessOwner   String? // texto livre — o dono de negócio quase nunca tem conta no Vulnera
   technicalOwner  String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   company         Company         @relation(fields: [companyId], references: [id])
   projects        Project[]
@@ -433,6 +437,10 @@ model Vulnerability {
   @@index([companyId, slaDueAt])
   // VRS (CP-3): "abertos da empresa por prioridade" — o recorte do Kanban e do dashboard
   @@index([companyId, status, vrsScore])
+  // CP-7 — o Kanban de remediação filtra por responsável dentro da empresa;
+  // sem este índice, "minhas tarefas" varre a tabela inteira.
+  @@index([assignedTo])
+  @@index([companyId, assignedTo, status])
 }
 
 // ============================================================================
@@ -507,17 +515,23 @@ model RiskAcceptance {
   compensatingControls  String?   @db.Text
   requestedById         String
   requestedAt           DateTime  @default(now())
-  /** Prazo pedido pelo solicitante; o aprovador pode encurtar (nunca alongar além do teto). */
+  /**
+   * Prazo pedido pelo solicitante; o aprovador pode encurtar (nunca alongar além do teto).
+   */
   requestedExpiresAt    DateTime?
   reviewedById          String?
   reviewedAt            DateTime?
   reviewNote            String?   @db.Text
-  /** Obrigatório em APPROVED. Teto de 365 dias a partir da aprovação. */
+  /**
+   * Obrigatório em APPROVED. Teto de 365 dias a partir da aprovação.
+   */
   expiresAt             DateTime?
   revokedAt             DateTime?
   revokedById           String?
   revokeReason          String?   @db.Text
-  /** Quando o aceite deixou de valer (revogado ou expirado) — o fim do intervalo que pausa o SLA. */
+  /**
+   * Quando o aceite deixou de valer (revogado ou expirado) — o fim do intervalo que pausa o SLA.
+   */
   endedAt               DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -526,6 +540,12 @@ model RiskAcceptance {
   company       Company       @relation(fields: [companyId], references: [id])
   requestedBy   User          @relation("RiskAcceptanceRequester", fields: [requestedById], references: [id])
   reviewedBy    User?         @relation("RiskAcceptanceReviewer", fields: [reviewedById], references: [id])
+  // `revokedById` nasceu como String solta na migration 20260916003626 —
+  // quem revogou é tão parte da trilha quanto quem pediu e quem aprovou, e
+  // sem FK o banco aceitaria um id inexistente. Corrigido por migration
+  // ADITIVA (20260916xxxxx_add_risk_acceptance_revoker_fk); a original não
+  // foi tocada, porque já estava aplicada.
+  revokedBy     User?         @relation("RiskAcceptanceRevoker", fields: [revokedById], references: [id])
 
   @@index([vulnerabilityId])
   @@index([companyId, status])
@@ -567,6 +587,118 @@ model VulnerabilityComment {
   author        User          @relation(fields: [authorId], references: [id])
 
   @@index([vulnerabilityId])
+}
+
+// ============================================================================
+// REMEDIATION PLAYBOOKS (Exposure & Remediation, CP-5)
+// ============================================================================
+//
+// Catálogo de "como corrigir". Duas origens, uma tabela:
+//
+//   SYSTEM  isSystem = true,  companyId = null
+//           Conteúdo OFICIAL da OWASP (Top 10 2021 pt-BR + mapeamento do
+//           IndexTopTen.md para as Cheat Sheets). Ninguém edita — nem ADMIN.
+//           Só o script `npm run sync:owasp-playbooks` escreve aqui, e o seed
+//           versionado garante que a demonstração funcione sem Internet.
+//
+//   CUSTOM  isSystem = false, companyId = <tenant>
+//           Escrito por ADMIN/PENTESTER, do zero ou clonando um System.
+//           O clone é CÓPIA PROFUNDA de valores, não herança viva: atualizar a
+//           fonte oficial depois NÃO reescreve o que a empresa adaptou —
+//           `clonedFromId` guarda só a procedência. Mesmo raciocínio do
+//           `sourceDastFindingId` no ADR-032: perde-se o ponteiro, nunca o
+//           conteúdo que alguém escreveu.
+//
+// A invariante `isSystem = true ⟺ companyId IS NULL` é imposta no service;
+// nenhuma rota de escrita aceita `isSystem` vindo do corpo.
+//
+// CONTEÚDO É MARKDOWN, não HTML. O que vem da OWASP e o que o tenant escreve
+// ficam em texto editável; a renderização sanitiza na leitura (marked +
+// DOMPurify). Guardar HTML pré-renderizado seria guardar o vetor de XSS.
+//
+// LICENÇA: o conteúdo OWASP é CC BY-SA 4.0 — `source`, `sourceUrl` e
+// `sourceVersion` existem para a atribuição aparecer no produto, não só no
+// banco. O clone preserva os três.
+model RemediationPlaybook {
+  id                   String   @id @default(cuid())
+  title                String
+  summary              String?  @db.Text
+  owaspCategory        String? // A01..A10 — a ponte com Vulnerability (RN11)
+  cweIds               String?  @db.Text // JSON array, vindo do "List of Mapped CWEs" oficial
+  rootCause            String?  @db.Text
+  remediation          String?  @db.Text
+  validationSteps      String?  @db.Text
+  secureExample        String?  @db.Text
+  compensatingControls String?  @db.Text
+  references           String?  @db.Text // JSON array de {title, url}
+  source               String   @default("CUSTOM") // OWASP_TOP10 | CUSTOM
+  sourceUrl            String?  @db.VarChar(2048)
+  sourceVersion        String? // "2021" ou o SHA/ref do conteúdo sincronizado
+  sourceKey            String? // chave estável do sync: "A03_2021"
+  isSystem             Boolean  @default(false)
+  companyId            String?
+  clonedFromId         String?
+  createdBy            String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  company    Company?              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  clonedFrom RemediationPlaybook?  @relation("PlaybookClone", fields: [clonedFromId], references: [id], onDelete: SetNull)
+  clones     RemediationPlaybook[] @relation("PlaybookClone")
+
+  // Idempotência do sync: rodar dez vezes produz o mesmo estado.
+  @@unique([source, sourceKey])
+  @@index([companyId, owaspCategory])
+  @@index([isSystem, owaspCategory])
+}
+
+// ============================================================================
+// BUSCAS SALVAS / WATCHLISTS (CP-6)
+// ============================================================================
+
+// SavedQuery — uma busca da listagem de findings, guardada com nome.
+//
+// 🎯 O QUE SE GUARDA É A PERGUNTA, NUNCA A RESPOSTA (docs/DECISIONS.md D6).
+// `queryString` é a query CANÔNICA da API ("severity=HIGH&status=OPEN"), não a
+// lista de findings que ela devolveu. Guardar o resultado criaria um retrato
+// que envelhece: a watchlist "críticas estouradas" tem de refletir o estado de
+// HOJE, e um snapshot mostraria o de ontem — com aparência de atual. Também
+// evita o problema de tenancy mais sutil possível: um snapshot gravado por
+// quem via um finding continuaria exibindo esse finding para quem perdeu o
+// acesso a ele.
+//
+// A string é validada e reordenada na escrita (`saved-query.util.ts`): só
+// parâmetros conhecidos entram, e duas buscas equivalentes viram a MESMA
+// string.
+//
+// scope: "PRIVATE" (só o dono) | "COMPANY" (todos da empresa)
+model SavedQuery {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(120)
+  description String? @db.VarChar(400)
+
+  /// A query canônica da API. Sem `page`/`pageSize`: busca salva sempre abre na primeira página.
+  queryString String @db.VarChar(2000)
+
+  scope String @default("PRIVATE") @db.VarChar(20)
+
+  ownerId   String
+  /// Null quando o dono não tem empresa (PENTESTER autônomo) — nesse caso scope é sempre PRIVATE.
+  companyId String?
+
+  /// Fixada na barra lateral. Há teto por usuário: uma lista infinita deixa de ser atalho.
+  pinned Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Dois atalhos com o mesmo nome para a mesma pessoa seriam indistinguíveis na lista.
+  @@unique([ownerId, name])
+  @@index([companyId, scope])
+  @@index([ownerId, pinned])
 }
 
 // ============================================================================

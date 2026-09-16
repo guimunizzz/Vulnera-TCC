@@ -45,6 +45,11 @@ ARG VITE_API_URL=http://localhost:3001/api
 ENV VITE_API_URL=$VITE_API_URL
 
 COPY index.html tsconfig.json vite.config.ts tailwind.config.ts postcss.config.js ./
+# `config/` guarda a Content-Security-Policy (CP-5), importada pelo vite.config
+# e verificada por teste. Sem esta linha o build falha DENTRO do container e
+# passa fora dele — que foi exatamente o que aconteceu no primeiro
+# `build --no-cache` depois de a CSP entrar.
+COPY config ./config
 COPY src ./src
 
 RUN npm run build

@@ -27,7 +27,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { vulnerabilitiesApi } from "../lib/api/vulnerabilities.api";
 import { useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
@@ -38,10 +38,12 @@ import { Card } from "../components/ui/card";
 import { Alert } from "../components/ui/alert";
 import { ErrorState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/card";
-import { SeverityBadge, StatusBadge } from "../components/ui/badge";
+import { Badge, SeverityBadge, StatusBadge } from "../components/ui/badge";
 import { RiskContextChips } from "../components/applications/risk-context-chips";
 import { SlaBadge } from "../components/findings/sla-badge";
 import { VrsBadge } from "../components/findings/vrs-badge";
+import { RiskAcceptancePanel } from "../components/findings/risk-acceptance-panel";
+import { HowToFixPanel } from "../components/findings/how-to-fix-panel";
 import { transitionLabel } from "../types/vulnerability.types";
 import { EvidenceUploader } from "../components/findings/evidence-uploader";
 import { CommentTimeline } from "../components/findings/comment-timeline";
@@ -58,6 +60,7 @@ export function FindingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const role = useAuthStore((s) => s.user?.role);
+  const companyRole = useAuthStore((s) => s.user?.companyRole);
   const queryClient = useQueryClient();
   const getErrorMessage = useApiError();
 
@@ -103,6 +106,10 @@ export function FindingDetailPage() {
   const temOverride = finding.severityFinal !== finding.severityCalculated;
   const transicoes = ALLOWED_TRANSITIONS[finding.status] ?? [];
   const podeEscrever = role !== "CLIENT";
+  // Quem pode PEDIR aceite (D10): ADMIN, CLIENT OWNER, PENTESTER membro.
+  // O CLIENT MEMBER fica de fora; o backend confere a filiação do pentester.
+  const podeSolicitarAceite =
+    role === "ADMIN" || role === "PENTESTER" || (role === "CLIENT" && companyRole === "OWNER");
 
   return (
     <div>
@@ -136,6 +143,9 @@ export function FindingDetailPage() {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={finding.status} />
             <SeverityBadge severidade={finding.severityFinal} cvss={finding.cvssScore} />
+            {/* Risco aceito é um badge AO LADO do status (CP-4), nunca no lugar
+                dele: o finding continua aberto, e a tela precisa mostrar isso. */}
+            {finding.sla?.state === "ACCEPTED" && <Badge tom="acento">Risco aceito</Badge>}
             <span className="text-xs text-fg-muted">{owaspLabel}</span>
           </div>
 
@@ -145,6 +155,18 @@ export function FindingDetailPage() {
           {finding.applicationContext && (
             <RiskContextChips contexto={finding.applicationContext} className="mt-2" />
           )}
+
+          {/* Responsável pela remediação (CP-7). Só leitura aqui: atribuir é
+              operação do quadro de remediação, onde se vê a fila inteira e a
+              decisão "quem pega o quê" faz sentido. */}
+          <p className="mt-2 text-sm text-fg-muted">
+            Responsável:{" "}
+            {finding.assigneeName ? (
+              <span className="font-medium text-fg">{finding.assigneeName}</span>
+            ) : (
+              <span>ninguém ainda — atribua no <Link to="/remediation" className="text-accent-ink hover:underline">quadro de remediação</Link></span>
+            )}
+          </p>
 
           {/* VRS (CP-3): prioridade contextual ao lado do CVSS — nunca no lugar
               dele. O número vem do banco; a explicação parcela a parcela vem
@@ -230,6 +252,16 @@ export function FindingDetailPage() {
               )}
             </Card>
           )}
+
+          {/* Aceite formal de risco (CP-4) — seção própria: o aceite não é o
+              status do finding, é uma decisão paralela com autor e validade. */}
+          <RiskAcceptancePanel vulnerabilityId={finding.id} canRequest={podeSolicitarAceite} />
+
+          {/* "Como corrigir" (CP-5): playbooks da categoria OWASP deste
+              finding — o da própria empresa antes do oficial da OWASP. Fica
+              ANTES da descrição técnica porque quem abre um finding aberto
+              quer saber o que fazer, não reler o que já sabe. */}
+          <HowToFixPanel owaspCategory={finding.owaspCategory} companyId={finding.companyId} />
 
           <Card>
             <h2 className="mb-2 font-semibold text-fg">Descrição</h2>

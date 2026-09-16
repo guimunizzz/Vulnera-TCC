@@ -32,6 +32,9 @@ const base: FindingListItem = {
   slaRemainingMs: 172_800_000,
   vrsScore: 77,
   vrsBand: "URGENTE",
+  hasActiveRiskAcceptance: false,
+  assignedTo: null,
+  assigneeName: null,
 };
 
 const linhas = (csv: string) => csv.replace(/^\uFEFF/, "").trim().split("\r\n");

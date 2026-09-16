@@ -67,6 +67,19 @@ const MESSAGES: Record<string, string> = {
   // VRS (CP-3)
   INVALID_VRS_RANGE: "Faixa de prioridade inválida — use inteiros entre 0 e 100, com o mínimo abaixo do máximo.",
 
+  // Risk Acceptance (CP-4)
+  RISK_ACCEPTANCE_NOT_FOUND: "Aceite de risco não encontrado.",
+  RISK_ACCEPTANCE_ALREADY_ACTIVE: "Já existe um aceite em aberto para este finding. Encerre o atual antes de pedir outro.",
+  CANNOT_APPROVE_OWN_REQUEST: "Quem solicita não aprova. Outro administrador ou dono da empresa precisa decidir.",
+  INVALID_EXPIRES_AT: "Prazo inválido — precisa ser uma data futura, no máximo 365 dias à frente.",
+  EXPIRES_AT_EXCEEDS_REQUESTED: "O prazo aprovado não pode ser maior que o solicitado. Você pode encurtar, não estender.",
+  INVALID_BUSINESS_JUSTIFICATION: "Descreva a justificativa de negócio com pelo menos 20 caracteres.",
+  INVALID_COMPENSATING_CONTROLS: "Controles compensatórios: texto muito longo.",
+  INVALID_REVIEW_NOTE: "Parecer muito longo.",
+  MISSING_REVIEW_NOTE: "Escreva um parecer para registrar a decisão.",
+  INVALID_RISK_ACCEPTANCE: "Filtro de aceite de risco inválido.",
+  INVALID_REASON: "Descreva a razão com pelo menos 20 caracteres (10 para revogação).",
+
   // project
   PROJECT_NOT_FOUND: "Projeto não encontrado.",
   INVALID_APPLICATION_ID: "Selecione uma aplicação válida.",

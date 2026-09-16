@@ -792,3 +792,72 @@ lido **do banco**, nunca do JWT — o token carrega só `{userId, role}`, e um
 refresh desatualizado não pode conceder alçada.
 
 ---
+
+---
+
+## Exposure & Remediation Management — decisões da IMPLEMENTAÇÃO (CP-1 a CP-7, 2026-09-16)
+
+> As decisões D1–D10 acima foram tomadas no **mapeamento** (CP-0). Esta seção
+> registra o que a implementação **confirmou, alterou ou acrescentou**. Nada é
+> reescrito acima: a R6 do CLAUDE.md manda preservar o histórico.
+
+### Alterada — a fórmula do VRS é ADITIVA, não multiplicativa
+
+A proposta multiplicativa do relatório de mapeamento foi **descartada antes da
+implementação**. O VRS é soma com teto, e a razão principal é a explicabilidade:
+a tela mostra "60 (CVSS 9.8) + 15 (crítica) + 8 (exposta) = 83". Numa fórmula
+multiplicativa, a contribuição de cada fator depende de todos os outros, e o
+contexto quase não move findings de baixa gravidade — que é onde o contexto mais
+importa. Registrado em **[[ADR-035 - Vulnera Risk Score aditivo e auditavel]]**.
+
+### Confirmada — CP-8 não entra nesta rodada
+
+O Exposure Graph era condicional e **não foi implementado**. D8 e D9 continuam
+valendo como decisão registrada; não há código, rota, tabela nem tela. O nome
+oficial permanece **Exposure Graph / Cadeias de Exposição** — nunca "Attack
+Path", porque o produto não tem dado de alcançabilidade.
+
+### Nova — importação da OWASP é CLI, com snapshot versionado
+
+`npm run sync:owasp-playbooks` (rede), `-- --snapshot` (grava
+`prisma/seeds/owasp/` com sha256) e `npm run db:seed:playbooks` (offline, mesmo
+pipeline). **Não existe endpoint HTTP de sync**: indisponibilidade do GitHub não
+pode virar indisponibilidade do Vulnera. Ver
+**[[ADR-037 - Catalogo OWASP importado por CLI com snapshot offline]]**.
+
+### Nova — CSP real, aplicada no `vite preview`
+
+Aplicada de fato no modo que o Docker serve e que o ZAP escaneia, com
+`script-src 'self' + hash` (sem `'unsafe-inline'`) e o hash calculado do HTML
+**realmente servido**. Fica **fora do servidor de desenvolvimento** de propósito
+— cobri-lo exigiria `'unsafe-inline'`, ou seja, uma CSP sem a diretiva que
+protege. `style-src 'unsafe-inline'` é concessão consciente (o design system usa
+estilo inline; estilo não executa JavaScript).
+
+### Nova — busca salva guarda a PERGUNTA, nunca a RESPOSTA
+
+Sem snapshot de resultados. A mesma watchlist devolve conjuntos diferentes para
+pessoas com acessos diferentes, porque quem recorta é a listagem. Ver
+**[[ADR-038 - Buscas salvas guardam a pergunta, nunca a resposta]]**.
+
+### Nova — o quadro de remediação não tem arrastar-e-soltar
+
+Mover é menu, operável por teclado, com as transições válidas do ADR-033. Sem
+`dnd-kit`. Ver **[[ADR-039 - Quadro de remediacao por menu, sem arrastar]]**.
+
+### Bug de produção encontrado e corrigido no caminho
+
+`where()` do `vulnerability.repository.ts` montava **uma chave `AND` por filtro
+composto** num mesmo objeto literal — e a última apagava as anteriores.
+Combinar `slaState` com `riskAcceptance` perdia o filtro de SLA **em silêncio**,
+devolvendo mais findings do que o pedido. Corrigido com lista única de
+condições; canário **`VULN-LIST-09`**.
+
+### Dívida assumida e presa por teste
+
+O vocabulário de filtros está duplicado entre `vulnerability.controller.ts`
+(constantes locais, não exportadas) e `saved-query.util.ts`. Refatorar o
+controller mais usado do produto não era trabalho deste CP. A duplicação é
+vigiada pelo teste **`SQ-U-08`**, que lê o controller e falha se ele ganhar um
+parâmetro que o utilitário não conhece — e o canário já cobrou a dívida uma vez,
+quando `assignedTo` entrou na listagem.

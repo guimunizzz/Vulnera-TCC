@@ -24,6 +24,7 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FindingsTable } from "../components/findings/findings-table";
+import { SavedQueriesBar } from "../components/findings/saved-queries-bar";
 import { useFindings } from "../hooks/use-findings";
 import { SeverityBadge } from "../components/ui/badge";
 import { SEVERIDADES } from "../lib/finding-query";
@@ -106,6 +107,10 @@ export function FindingsPage() {
           </dl>
         )}
       </header>
+
+      {/* Buscas salvas (CP-6): atalhos para o recorte atual. Ficam ACIMA
+          da tabela porque são um ponto de partida, não um resultado. */}
+      <SavedQueriesBar />
 
       <FindingsTable syncToUrl exportavel />
     </div>

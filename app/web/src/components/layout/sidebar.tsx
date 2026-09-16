@@ -17,8 +17,10 @@
  */
 
 import { NavLink } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
+import { savedQueriesApi } from "../../lib/api/saved-queries.api";
 import type { UserRole } from "../../types/auth.types";
 
 interface ItemNav {
@@ -67,6 +69,21 @@ const ITENS: ItemNav[] = [
     rotulo: "Aprovações",
     papeis: ["ADMIN"],
     icone: <path d="M8 1.5 14 5v6l-6 3.5L2 11V5l6-3.5Zm-.8 8.7 4-4.2-1-1-3 3.2-1.4-1.5-1 1 2.4 2.5Z" />,
+  },
+  {
+    // Quadro de remediação (CP-7) — operação do dia a dia de quem corrige.
+    // Mover e atribuir são escrita em finding: mesmo recorte da listagem.
+    para: "/remediation",
+    rotulo: "Remediação",
+    papeis: ["ADMIN", "PENTESTER"],
+    icone: <path d="M2 2h3.5v12H2V2Zm4.5 0H10v8H6.5V2Zm4.5 0h3.5v5H11V2Z" />,
+  },
+  {
+    // Catálogo de remediação (CP-5). Todos os papéis leem: o CLIENT precisa
+    // saber o que foi pedido para corrigir, e o catálogo System é global.
+    para: "/playbooks",
+    rotulo: "Playbooks",
+    icone: <path d="M3 2h7l3 3v9H3V2Zm1.5 1.5v9h7V6H9.5V3.5h-5Zm1.5 4h5V9H6V7.5Zm0 2.5h5v1.5H6V10Z" />,
   },
   {
     para: "/dast",
@@ -119,6 +136,64 @@ export function Sidebar({ aoNavegar, embutida }: { aoNavegar?: () => void; embut
           )}
         </NavLink>
       ))}
+
+      <WatchlistsFixadas aoNavegar={aoNavegar} />
     </nav>
+  );
+}
+
+/**
+ * Os atalhos fixados (CP-6).
+ *
+ * 🎯 SÓ OS FIXADOS, E COM TETO. A API já limita quantos cada pessoa pode
+ * fixar; pedir `pinned=true` é o que mantém a barra lateral navegável quando
+ * alguém tem cinquenta buscas salvas. As demais ficam na própria tela de
+ * findings, que é onde uma lista longa faz sentido.
+ *
+ * Silenciosa quando não há nada: um cabeçalho "Watchlists" acima do vazio só
+ * ocuparia espaço para dizer que não há nada.
+ */
+function WatchlistsFixadas({ aoNavegar }: { aoNavegar?: () => void }) {
+  const fixadas = useQuery({
+    queryKey: ["saved-queries", "pinned"],
+    queryFn: () => savedQueriesApi.list(true),
+    // Um erro aqui (sessão expirando, rede caindo) não pode derrubar a
+    // navegação principal — a seção simplesmente não aparece.
+    retry: false,
+  });
+
+  if (!fixadas.data || fixadas.data.length === 0) return null;
+
+  return (
+    <div className="mt-6">
+      <h2 className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">Watchlists</h2>
+
+      <ul className="flex flex-col gap-1">
+        {fixadas.data.map((q) => (
+          <li key={q.id}>
+            {/* Abrir é NAVEGAR: a listagem busca de novo, com o escopo de quem
+                clicou. Não há resultado guardado em lugar nenhum. */}
+            <NavLink
+              to={`/findings?${q.queryString}`}
+              onClick={aoNavegar}
+              title={q.description ?? q.name}
+              className={({ isActive }) =>
+                cn(
+                  "flex min-h-touch items-center gap-2 rounded-control px-3 py-2 text-sm",
+                  "transition-colors duration-fast ease-out",
+                  isActive ? "bg-accent-surface font-medium text-accent-ink" : "text-fg-muted hover:bg-hovered hover:text-fg",
+                )
+              }
+            >
+              <span aria-hidden="true" className="text-xs">
+                ◆
+              </span>
+              <span className="truncate">{q.name}</span>
+              {q.scope === "COMPANY" && <span className="sr-only">(compartilhada com a empresa)</span>}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
