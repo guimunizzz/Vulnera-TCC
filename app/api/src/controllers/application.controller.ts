@@ -97,11 +97,14 @@ export class ApplicationController {
       if (erroContexto) return res.status(400).json({ error: erroContexto });
 
       const dto = extrairDto(body) as CreateApplicationDTO;
+      const companyId = typeof body.companyId === "string" ? body.companyId : undefined;
 
       const actor = req.user!;
-      const application = await this.service.create(actor, dto);
+      const application = await this.service.create(actor, dto, companyId);
       return res.status(201).json(application.toResponse());
     } catch (error: any) {
+      if (error.message === "MISSING_COMPANY_ID") return res.status(400).json({ error: "MISSING_COMPANY_ID" });
+      if (error.message === "COMPANY_NOT_FOUND") return res.status(404).json({ error: "COMPANY_NOT_FOUND" });
       if (error.message === "USER_HAS_NO_COMPANY") return res.status(404).json({ error: "USER_HAS_NO_COMPANY" });
       if (error.message === "NO_ACTIVE_SUBSCRIPTION") return res.status(422).json({ error: "NO_ACTIVE_SUBSCRIPTION" });
       if (error.message === "PLAN_NOT_FOUND") return res.status(404).json({ error: "PLAN_NOT_FOUND" });

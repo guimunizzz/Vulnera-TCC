@@ -4,7 +4,8 @@
  * Regra crítica (RN03 + RN07) no create(): a company precisa de uma
  * Subscription ACTIVE, e o número de applications ativas não pode estourar
  * plan.maxApplications. companyId nunca vem do DTO — é sempre resolvido a
- * partir do actor autenticado.
+ * a partir do actor autenticado ou do target administrativo explicitamente
+ * selecionado na operação.
  *
  * ==========================================================================
  * CONTEXTO DE RISCO (CP-1 — Exposure & Remediation, docs/DECISIONS.md D2)
@@ -35,6 +36,7 @@
 
 import type { ApplicationRepository } from "../repositories/application.repository";
 import type { UserRepository } from "../repositories/user.repository";
+import type { CompanyRepository } from "../repositories/company.repository";
 import type { SubscriptionRepository } from "../repositories/subscription.repository";
 import type { PlanRepository } from "../repositories/plan.repository";
 import type { AuditLogRepository } from "../repositories/audit-log.repository";
@@ -70,6 +72,7 @@ export class ApplicationService {
     private readonly subscriptionRepository: SubscriptionRepository,
     private readonly planRepository: PlanRepository,
     private readonly auditLogRepository: AuditLogRepository,
+    private readonly companyRepository: CompanyRepository,
   ) {}
 
   /** Registra o recálculo de VRS (CP-3). Só a factory chama. */
@@ -97,19 +100,36 @@ export class ApplicationService {
     return new ApplicationEntity(application);
   }
 
-  async create(actor: Actor, dto: CreateApplicationDTO): Promise<ApplicationEntity> {
-    const user = await this.userRepository.findById(actor.userId);
-    if (!user?.companyId) throw new Error("USER_HAS_NO_COMPANY");
+  async create(actor: Actor, dto: CreateApplicationDTO, companyId?: string): Promise<ApplicationEntity> {
+    // PENTESTER é somente leitura neste recurso. Barrar antes de qualquer
+    // consulta evita que o actor consiga observar gates ou existência de tenant.
+    if (actor.role === "PENTESTER") throw new Error("FORBIDDEN");
+
+    let user: User | null = null;
+    let targetCompanyId: string;
+
+    if (actor.role === "ADMIN") {
+      if (typeof companyId !== "string" || companyId.trim().length === 0) {
+        throw new Error("MISSING_COMPANY_ID");
+      }
+      const company = await this.companyRepository.findById(companyId);
+      if (!company) throw new Error("COMPANY_NOT_FOUND");
+      targetCompanyId = company.id;
+    } else {
+      user = await this.userRepository.findById(actor.userId);
+      if (!user?.companyId) throw new Error("USER_HAS_NO_COMPANY");
+      targetCompanyId = user.companyId;
+    }
 
     // RN07 — projeto (e por extensão, o catálogo pago de applications) exige assinatura ativa
-    const activeSubscription = await this.subscriptionRepository.findActiveByCompany(user.companyId);
+    const activeSubscription = await this.subscriptionRepository.findActiveByCompany(targetCompanyId);
     if (!activeSubscription) throw new Error("NO_ACTIVE_SUBSCRIPTION");
 
     const plan = await this.planRepository.findById(activeSubscription.planId);
     if (!plan) throw new Error("PLAN_NOT_FOUND");
 
     // RN03 — limite de applications pelo plano ativo
-    const count = await this.repository.countActiveByCompany(user.companyId);
+    const count = await this.repository.countActiveByCompany(targetCompanyId);
     if (count >= plan.maxApplications) throw new Error("PLAN_LIMIT_REACHED");
 
     // Na criação não há "antes" para comparar, então a regra de direção não
@@ -117,11 +137,11 @@ export class ApplicationService {
     // risco NOVOS (D2: não ganha poder administrativo novo). `environment`
     // fica de fora deste check: sempre pôde ser informado na criação por
     // qualquer CLIENT, e barrá-lo agora seria regressão, não regra.
-    if (user.role === "CLIENT" && user.companyRole !== "OWNER" && temCampoDeRiscoNovo(dto)) {
+    if (actor.role === "CLIENT" && user && user.companyRole !== "OWNER" && temCampoDeRiscoNovo(dto)) {
       throw new Error("FORBIDDEN");
     }
 
-    const created = await this.repository.create(user.companyId, dto);
+    const created = await this.repository.create(targetCompanyId, dto);
     return new ApplicationEntity(created);
   }
 

@@ -1,7 +1,8 @@
 // app/api/src/factories/application.factory.ts
 //
 // FACTORY METHOD para o recurso Application (padrão GoF).
-// Depende de UserRepository (resolver companyId/companyRole do actor),
+// Depende de UserRepository (resolver companyId/companyRole do CLIENT) e
+// CompanyRepository (validar o tenant escolhido por ADMIN),
 // SubscriptionRepository e PlanRepository (gate RN03/RN07 — assinatura ativa +
 // limite do plano) e AuditLogRepository (RISK_CONTEXT_CHANGED, CP-1).
 //
@@ -11,6 +12,7 @@
 import { prisma } from "../database/prisma.database";
 import { ApplicationRepository } from "../repositories/application.repository";
 import { UserRepository } from "../repositories/user.repository";
+import { CompanyRepository } from "../repositories/company.repository";
 import { SubscriptionRepository } from "../repositories/subscription.repository";
 import { PlanRepository } from "../repositories/plan.repository";
 import { AuditLogRepository } from "../repositories/audit-log.repository";
@@ -21,6 +23,7 @@ import { makeVrsService } from "./vrs.factory";
 export function makeApplicationController(): ApplicationController {
   const repository = new ApplicationRepository(prisma);
   const userRepository = new UserRepository(prisma);
+  const companyRepository = new CompanyRepository(prisma);
   const subscriptionRepository = new SubscriptionRepository(prisma);
   const planRepository = new PlanRepository(prisma);
   const auditLogRepository = new AuditLogRepository(prisma);
@@ -30,6 +33,7 @@ export function makeApplicationController(): ApplicationController {
     subscriptionRepository,
     planRepository,
     auditLogRepository,
+    companyRepository,
   );
   // VRS (CP-3): mudou o contexto de risco → recalcula o score de todos os
   // findings da app. O acoplamento Application → Vulnerability mora AQUI, num
