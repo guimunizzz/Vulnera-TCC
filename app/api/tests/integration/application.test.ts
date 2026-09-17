@@ -104,6 +104,190 @@ describe("Application (list/getById/create/update/delete)", () => {
     expect(res.body.companyId).toBe(company.id);
   });
 
+  it("POST /api/applications: ADMIN global cria na companyId enviada e devolve o ID alvo", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const company = await seedCompany({ name: "Target Co", planId: plan.id });
+    await seedSubscription({ companyId: company.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-create@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Target App", url: "https://target.example.com", companyId: company.id });
+
+    expect(res.status).toBe(201);
+    expect(res.body.companyId).toBe(company.id);
+  });
+
+  it("POST /api/applications: ADMIN global sem companyId recebe 400 MISSING_COMPANY_ID", async () => {
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-missing-company@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Missing Context App", url: "https://missing-context.example.com" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("MISSING_COMPANY_ID");
+  });
+
+  it("POST /api/applications: ADMIN global com companyId inexistente recebe 404 COMPANY_NOT_FOUND", async () => {
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-unknown-company@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "Unknown Context App",
+        url: "https://unknown-context.example.com",
+        companyId: "company-inexistente",
+      });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("COMPANY_NOT_FOUND");
+  });
+
+  it("POST /api/applications: CLIENT sem companyId cria na própria company", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const company = await seedCompany({ name: "Client Co", planId: plan.id });
+    await seedSubscription({ companyId: company.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    const client = await seedUser({
+      name: "Client",
+      email: "client-own-company@vulnera.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: company.id,
+      companyRole: "OWNER",
+    });
+    const token = await loginAs(app, client.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Own Company App", url: "https://own-company.example.com" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.companyId).toBe(company.id);
+  });
+
+  it("POST /api/applications: CLIENT sem company recebe 404 USER_HAS_NO_COMPANY", async () => {
+    const client = await seedUser({
+      name: "Unassigned Client",
+      email: "client-without-company@vulnera.local",
+      password: PASSWORD,
+      role: "CLIENT",
+    });
+    const token = await loginAs(app, client.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Unassigned App", url: "https://unassigned.example.com" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("USER_HAS_NO_COMPANY");
+  });
+
+  it("POST /api/applications: PENTESTER sem company recebe 403 FORBIDDEN", async () => {
+    const pentester = await seedUser({
+      name: "Unassigned Pentester",
+      email: "pentester-without-company@vulnera.local",
+      password: PASSWORD,
+      role: "PENTESTER",
+    });
+    const token = await loginAs(app, pentester.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Pentester App", url: "https://pentester.example.com" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("FORBIDDEN");
+  });
+
+  it("POST /api/applications: PENTESTER com company ativa recebe 403 FORBIDDEN", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const company = await seedCompany({ name: "Pentest Co", planId: plan.id });
+    await seedSubscription({ companyId: company.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    const pentester = await seedUser({
+      name: "Assigned Pentester",
+      email: "pentester-with-company@vulnera.local",
+      password: PASSWORD,
+      role: "PENTESTER",
+      companyId: company.id,
+    });
+    const token = await loginAs(app, pentester.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Pentester App", url: "https://pentester-company.example.com" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("FORBIDDEN");
+  });
+
+  it("POST /api/applications: ADMIN global sem subscription ativa recebe 422 NO_ACTIVE_SUBSCRIPTION", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const company = await seedCompany({ name: "No Subscription Co", planId: plan.id });
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-no-subscription@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "No Subscription App", url: "https://no-subscription.example.com", companyId: company.id });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe("NO_ACTIVE_SUBSCRIPTION");
+  });
+
+  it("POST /api/applications: ADMIN global em company no limite recebe 422 PLAN_LIMIT_REACHED", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 1 });
+    const company = await seedCompany({ name: "Full Co", planId: plan.id });
+    await seedSubscription({ companyId: company.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    await seedApplication({ name: "Existing App", companyId: company.id, url: "https://existing.example.com" });
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-plan-limit@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Full Company App", url: "https://full-company.example.com", companyId: company.id });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe("PLAN_LIMIT_REACHED");
+  });
+
   // APP-04
   it("DELETE faz soft delete (isActive=false), some da listagem e libera vaga no limite do plano", async () => {
     const plan = await seedPlan({ name: "BASIC", maxApplications: 1 });
