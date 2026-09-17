@@ -5,6 +5,9 @@
 >
 > Para o *porquê* de cada decisão, ver os ADRs 033–039 em
 > `docs/Vulnera/07-Decisoes/` e `docs/DECISIONS.md` (D1–D10).
+>
+> Critérios de aceite, casos de uso e a matriz de evidências rastreável estão em
+> [`EXPOSURE_REMEDIATION_ACCEPTANCE.md`](./EXPOSURE_REMEDIATION_ACCEPTANCE.md).
 
 ---
 
@@ -47,10 +50,10 @@ auditoria. O que faltava era tudo o que vem **depois** do achado:
 
 | Campo | Valores |
 |---|---|
-| `environment` | `PRODUCTION` · `STAGING` · `DEVELOPMENT` |
+| `environment` | `PROD` · `HOMOL` · `DEV` |
 | `criticality` | `CRITICAL` · `HIGH` · `MEDIUM` · `LOW` |
 | `internetFacing` | booleano |
-| `dataSensitivity` | `PII_FINANCIAL` · `PII` · `INTERNAL` · `PUBLIC` |
+| `dataSensitivity` | `PUBLIC` · `INTERNAL` · `CONFIDENTIAL` · `RESTRICTED` |
 
 **O contexto viaja embutido no DTO do finding** (`applicationContext`), não numa
 segunda requisição: o PENTESTER recebe 403 em `GET /applications`, e é
@@ -86,13 +89,16 @@ Estados derivados (`src/utils/sla.util.ts`):
 Regras que não são óbvias:
 
 - **Salvar política não recalcula nada.** Reaplicar é ação separada de ADMIN e
-  gera `SLA_RECALCULATED`.
+  gera `SLA_POLICY_APPLIED`.
 - **`slaDueSoonAt` é persistido** para que os dois construtores de filtro
   expressem `DUE_SOON` como *coluna vs. agora* — ver ADR-034.
 - **`IN_PROGRESS → OPEN` não mexe no relógio; `FIXED → IN_PROGRESS` abre novo
   ciclo** (ADR-033).
 
-Rotas: `GET/PUT /sla-policies`, `POST /sla-policies/apply`.
+Rotas reais (a política é uma sub-rota de Company):
+`GET/PUT /companies/:id/sla-policy`,
+`GET /companies/:id/sla-policy/history` e
+`POST /companies/:id/sla-policy/apply`.
 Backfill: `npm run sla:backfill`.
 
 ---
@@ -106,7 +112,8 @@ VRS = round(cvss × 6) + criticidade + ambiente + exposição + sensibilidade
         0–60            0/5/10/15     0/3/7      0/8         0/3/7/10
 ```
 
-Faixas: `MONITORAR` (<25) · `PLANEJADO` (<50) · `URGENTE` (<75) · `IMEDIATO`.
+Faixas: `MONITORAR` (0–39) · `PLANEJADO` (40–64) · `URGENTE` (65–84) ·
+`IMEDIATO` (85–100).
 
 `vrsFactors` guarda o detalhamento em JSON — a tela mostra parcela a parcela.
 **SLA e proveniência ficam de fora** de propósito.
@@ -244,8 +251,9 @@ pendente.
 
 | Método | Rota | CP |
 |---|---|---|
-| `GET/PUT` | `/sla-policies` | CP-2 |
-| `POST` | `/sla-policies/apply` | CP-2 |
+| `GET/PUT` | `/companies/:id/sla-policy` | CP-2 |
+| `GET` | `/companies/:id/sla-policy/history` | CP-2 |
+| `POST` | `/companies/:id/sla-policy/apply` | CP-2 |
 | `GET/POST` | `/vulnerabilities/:id/risk-acceptances` | CP-4 |
 | `POST` | `/risk-acceptances/:id/approve\|reject\|revoke` | CP-4 |
 | `GET` | `/playbooks`, `/playbooks/:id` | CP-5 |

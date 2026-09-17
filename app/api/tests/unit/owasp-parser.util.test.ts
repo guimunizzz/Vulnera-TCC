@@ -41,6 +41,16 @@ interface Manifest {
   files: Array<{ url: string; file: string; sha256: string; bytes: number }>;
 }
 
+/**
+ * O MANIFEST é gerado sobre bytes LF, independentemente do sistema que
+ * executa a suíte. O checkout Windows pode materializar o mesmo Markdown em
+ * CRLF por `core.autocrlf`; normalizar apenas finais de linha preserva o
+ * conteúdo semântico e evita que a verificação de integridade dependa do SO.
+ */
+function conteudoCanonicoParaHash(conteudo: string): string {
+  return conteudo.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
 describe("owasp-parser.util (CP-5)", () => {
   // Se o snapshot não existir, o problema é de setup, não do parser — e a
   // mensagem tem de dizer isso, senão dez testes falham por um motivo só.
@@ -160,8 +170,12 @@ describe("owasp-parser.util (CP-5)", () => {
     expect(manifest.files).toHaveLength(11); // 10 categorias + IndexTopTen
     for (const arquivo of manifest.files) {
       const conteudo = ler(arquivo.file);
-      const sha = createHash("sha256").update(conteudo, "utf-8").digest("hex");
+      const canonico = conteudoCanonicoParaHash(conteudo);
+      const sha = createHash("sha256").update(canonico, "utf-8").digest("hex");
       expect(sha).toBe(arquivo.sha256);
+      // O tamanho do manifesto também é canônico (UTF-8 + LF), e torna
+      // explícito que a normalização não mascara alterações de conteúdo.
+      expect(Buffer.byteLength(canonico, "utf-8")).toBe(arquivo.bytes);
       expect(arquivo.url.startsWith("https://raw.githubusercontent.com/OWASP/")).toBe(true);
     }
   });

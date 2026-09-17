@@ -8,6 +8,7 @@ import type {
   VulnerabilityStatus,
 } from "../../types/vulnerability.types";
 import type { AuditLogEntry } from "../../types/audit-log.types";
+import type { AssigneeCandidate } from "../../types/auth.types";
 
 /** Teto do backend. Repetido aqui só pra evitar pedir o que será clampado. */
 export const FINDINGS_PAGE_SIZE_MAX = 100;
@@ -28,6 +29,14 @@ export const vulnerabilitiesApi = {
   search: (params: URLSearchParams) =>
     apiClient.get<FindingSearchResponse>(`/vulnerabilities?${params.toString()}`).then((res) => res.data),
   getById: (id: string) => apiClient.get<Vulnerability>(`/vulnerabilities/${id}`).then((res) => res.data),
+  assignees: (id: string) =>
+    apiClient.get<AssigneeCandidate[]>(`/vulnerabilities/${id}/assignees`).then((res) => res.data),
+  assigneeCandidates: (projectId?: string) =>
+    apiClient
+      .get<AssigneeCandidate[]>(
+        `/vulnerabilities/assignee-candidates${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`,
+      )
+      .then((res) => res.data),
   /** Trilha de auditoria do finding — criação, transições, overrides. */
   auditLog: (id: string) =>
     apiClient.get<AuditLogEntry[]>(`/vulnerabilities/${id}/audit-log`).then((res) => res.data),

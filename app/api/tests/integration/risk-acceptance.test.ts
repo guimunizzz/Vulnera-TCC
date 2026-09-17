@@ -339,6 +339,70 @@ describe("Risk Acceptance (CP-4)", () => {
     expect((await pedir(c.ownerA, v.id)).status).toBe(201);
   });
 
+  it("RISK-ACC-15: pedidos concorrentes deixam exatamente um aceite ativo", async () => {
+    const c = await montarCenario();
+    const v = await criarFinding(c);
+
+    const respostas = await Promise.all([pedir(c.ownerA, v.id), pedir(c.ownerA2, v.id)]);
+    expect(respostas.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(await prisma.riskAcceptance.count({ where: { vulnerabilityId: v.id, status: "REQUESTED" } })).toBe(1);
+    expect(await prisma.auditLog.count({ where: { action: "RISK_ACCEPTANCE_REQUESTED" } })).toBe(1);
+  });
+
+  it("RISK-ACC-16: listagem e detalhe consolidam expiração e devolvem a pausa ao SLA", async () => {
+    const c = await montarCenario();
+    const v = await criarFinding(c);
+    const findingDeOutraEmpresa = await criarFinding(c, {
+      projectId: c.projectBId,
+      applicationId: c.appBId,
+      companyId: c.companyBId,
+      createdBy: c.adminId,
+      title: "finding de B não visível para A",
+    });
+    const aceiteDeB = await pedir(c.ownerB, findingDeOutraEmpresa.id);
+    expect(aceiteDeB.status).toBe(201);
+    await aprovar(c.admin, aceiteDeB.body.id);
+    await prisma.riskAcceptance.update({
+      where: { id: aceiteDeB.body.id },
+      data: { expiresAt: new Date(Date.now() - DIA_MS) },
+    });
+    const estadoDeBAntes = await prisma.vulnerability.findUniqueOrThrow({ where: { id: findingDeOutraEmpresa.id } });
+    await request(app).post(`/api/companies/${c.companyAId}/sla-policy/apply`).set(auth(c.admin));
+    const antes = await prisma.vulnerability.findUniqueOrThrow({ where: { id: v.id } });
+
+    const pedido = await pedir(c.ownerA, v.id);
+    await aprovar(c.admin, pedido.body.id);
+    const inicioPausa = new Date(Date.now() - 3 * DIA_MS);
+    const fimPausa = new Date(Date.now() - DIA_MS);
+    await prisma.riskAcceptance.update({
+      where: { id: pedido.body.id },
+      data: { reviewedAt: inicioPausa, expiresAt: fimPausa },
+    });
+
+    const lista = await buscar(c.ownerA, "?status=OPEN&pageSize=100");
+    expect(lista.status).toBe(200);
+    const linha = lista.body.data.find((item: { id: string }) => item.id === v.id);
+    expect(linha.hasActiveRiskAcceptance).toBe(false);
+    expect(linha.slaState).not.toBe("ACCEPTED");
+
+    // Ler a company A não pode normalizar nem auditar o aceite vencido da B.
+    const aceiteDeBPersistido = await prisma.riskAcceptance.findUniqueOrThrow({ where: { id: aceiteDeB.body.id } });
+    expect(aceiteDeBPersistido.status).toBe("APPROVED");
+    const estadoDeBDepois = await prisma.vulnerability.findUniqueOrThrow({ where: { id: findingDeOutraEmpresa.id } });
+    expect(estadoDeBDepois.slaPausedMs).toBe(estadoDeBAntes.slaPausedMs);
+
+    const detalhe = await request(app).get(`/api/vulnerabilities/${v.id}`).set(auth(c.ownerA));
+    expect(detalhe.status).toBe(200);
+    expect(detalhe.body.sla.pausedMs).toBeGreaterThanOrEqual(2 * DIA_MS - 60_000);
+
+    const persistido = await prisma.riskAcceptance.findUniqueOrThrow({ where: { id: pedido.body.id } });
+    expect(persistido.status).toBe("EXPIRED");
+    const depois = await prisma.vulnerability.findUniqueOrThrow({ where: { id: v.id } });
+    expect(depois.slaPausedMs).toBeGreaterThanOrEqual(2 * DIA_MS - 60_000);
+    expect(depois.slaDueAt!.getTime()).toBeGreaterThanOrEqual(antes.slaDueAt!.getTime() + 2 * DIA_MS - 60_000);
+    expect(await prisma.auditLog.count({ where: { entityId: pedido.body.id, action: "RISK_ACCEPTANCE_EXPIRED" } })).toBe(1);
+  });
+
   it("RISK-ACC-11: SLA vira ACCEPTED enquanto vigente; VRS não muda; o finding segue aberto", async () => {
     const c = await montarCenario();
     const v = await criarFinding(c);

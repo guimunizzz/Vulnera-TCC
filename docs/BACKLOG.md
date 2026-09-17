@@ -264,6 +264,8 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | CP-7 | Quadro de remediação por menu (sem arrastar) + `assignedTo` ponta a ponta| ✅ |
 | CP-7b| Correção do `where()`: chaves `AND` concorrentes apagavam filtros        | ✅ (descoberta) |
 | CP-7c| `config/` faltando no `COPY` do Dockerfile do web                       | ✅ (descoberta) |
+| VAL-01 | Critérios de aceite, seis cruzamentos e matriz de evidências CP-1–CP-7 | ✅ `docs/EXPOSURE_REMEDIATION_ACCEPTANCE.md`; histórias, UCs, critérios e evidências documentados; specs E2E-EXP-01..09 revisados, com reexecução local do Playwright ainda bloqueada por dependência ausente |
+| VAL-02 | Hardening P2 e validação final CP-1–CP-7 | ✅ Locks transacionais em SLA/Saved Query; candidatos mínimos e lazy no quadro; playbook customizado para PENTESTER membro; filtros/expiração; cleanup E2E-EXP-05/06 por marcador único. **API focal 75/75 · Web serial 128/128 · lint 0 erros · contraste 66/66**; `docker compose build --no-cache` API/Web verde e stack saudável; validação manual moveu/restaurou cartão. Playwright E2E não reexecutado no host (`@playwright/test` ausente); dependências foram instaladas normalmente nas imagens Docker. Sem alteração de schema, migration ou lockfile nesta validação |
 | CP-8 | Exposure Graph / Cadeias de Exposição                                   | ⛔ **não implementado** — era condicional; ver `docs/EXPOSURE_REMEDIATION.md` §9 |
 
 ---

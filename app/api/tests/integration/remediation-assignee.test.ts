@@ -162,6 +162,77 @@ describe("Responsável pela remediação (CP-7)", () => {
     expect(persistido.assignedTo).toBe(c.pentesterId);
   });
 
+  it("ASSIGN-10 lista no quadro somente responsáveis elegíveis, inclusive outro membro", async () => {
+    const v = await criarFinding(c);
+    await seedProjectMember(c.projectAId, c.pentesterForaId);
+
+    const lista = await request(app)
+      .get(`/api/vulnerabilities/${v.id}/assignees`)
+      .set(auth(c.pentester));
+    expect(lista.status).toBe(200);
+    const ids = (lista.body as Array<{ id: string }>).map((u) => u.id);
+    expect(ids).toEqual(expect.arrayContaining([c.pentesterId, c.pentesterForaId, c.adminId, c.clientAId]));
+    // Cliente de outra empresa não passa pela mesma regra do endpoint POST.
+    expect(ids).not.toContain(c.clientBId);
+    for (const candidato of lista.body as Array<Record<string, unknown>>) {
+      expect(Object.keys(candidato).sort()).toEqual(["id", "name"]);
+      expect(candidato).not.toHaveProperty("email");
+      expect(candidato).not.toHaveProperty("companyId");
+    }
+  });
+
+  it("ASSIGN-12 endpoint reutilizável do filtro agrega membros dos projetos sem PII", async () => {
+    await seedProjectMember(c.projectAId, c.pentesterForaId);
+
+    const lista = await request(app)
+      .get("/api/vulnerabilities/assignee-candidates")
+      .set(auth(c.pentester));
+    expect(lista.status).toBe(200);
+    const ids = (lista.body as Array<{ id: string }>).map((u) => u.id);
+    expect(ids).toEqual(expect.arrayContaining([c.pentesterId, c.pentesterForaId, c.adminId, c.clientAId]));
+    expect(ids).not.toContain(c.clientBId);
+    for (const candidato of lista.body as Array<Record<string, unknown>>) {
+      expect(Object.keys(candidato).sort()).toEqual(["id", "name"]);
+    }
+
+    const porProjeto = await request(app)
+      .get(`/api/vulnerabilities/assignee-candidates?projectId=${c.projectAId}`)
+      .set(auth(c.pentester));
+    expect(porProjeto.status).toBe(200);
+    expect(porProjeto.body.map((u: { id: string }) => u.id)).toEqual(expect.arrayContaining(ids));
+  });
+
+  it("ASSIGN-11 POST e PUT mapeiam erros de responsável sem responder 500", async () => {
+    const base = {
+      projectId: c.projectAId,
+      title: "Finding com responsável inválido",
+      description: "Descrição suficiente para o teste de validação.",
+      owaspCategory: "A03",
+      cvssVector: "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    };
+
+    const tipoInvalido = await request(app)
+      .post("/api/vulnerabilities")
+      .set(auth(c.pentester))
+      .send({ ...base, assignedTo: 123 });
+    expect(tipoInvalido.status).toBe(400);
+    expect(tipoInvalido.body.error).toBe("INVALID_ASSIGNEE");
+
+    const create = await request(app).post("/api/vulnerabilities").set(auth(c.pentester)).send(base);
+    expect(create.status).toBe(201);
+
+    const postNaoEncontrado = await atribuir(c.admin, create.body.id, "nao-existe");
+    expect(postNaoEncontrado.status).toBe(404);
+    expect(postNaoEncontrado.body.error).toBe("ASSIGNEE_NOT_FOUND");
+
+    const putNaoPermitido = await request(app)
+      .put(`/api/vulnerabilities/${create.body.id}`)
+      .set(auth(c.admin))
+      .send({ assignedTo: c.clientBId });
+    expect(putNaoPermitido.status).toBe(422);
+    expect(putNaoPermitido.body.error).toBe("ASSIGNEE_NOT_ALLOWED");
+  });
+
   it("ASSIGN-03 CLIENT só é responsável na própria empresa", async () => {
     const v = await criarFinding(c);
 

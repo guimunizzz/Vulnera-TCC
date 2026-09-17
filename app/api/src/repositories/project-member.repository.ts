@@ -32,4 +32,13 @@ export class ProjectMemberRepository {
     });
     return !!found;
   }
+
+  /** Companies whose projects the PENTESTER is assigned to. */
+  async findCompanyIdsByUser(userId: string): Promise<string[]> {
+    const memberships = await this.prisma.projectMember.findMany({
+      where: { userId },
+      select: { project: { select: { companyId: true } } },
+    });
+    return [...new Set(memberships.map((membership) => membership.project.companyId))];
+  }
 }

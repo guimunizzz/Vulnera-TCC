@@ -35,6 +35,9 @@ import { seedUser } from "../fixtures/users.fixture";
 import { seedPlan } from "../fixtures/plans.fixture";
 import { seedCompany } from "../fixtures/companies.fixture";
 import { seedSubscription } from "../fixtures/subscriptions.fixture";
+import { seedApplication } from "../fixtures/applications.fixture";
+import { seedProject, seedProjectMember } from "../fixtures/projects.fixture";
+import { seedVulnerability } from "../fixtures/vulnerabilities.fixture";
 import { loginAs } from "../fixtures/auth.fixture";
 import { makeSyncServiceDeTeste, seedOwaspSystemPlaybooks } from "../fixtures/playbooks.fixture";
 import { OWASP_LICENSE } from "../../src/utils/owasp-parser.util";
@@ -46,7 +49,9 @@ type Cenario = {
   admin: string;
   pentesterA: string;
   pentesterB: string;
+  pentesterBId: string;
   pentesterSemEmpresa: string;
+  pentesterSemEmpresaId: string;
   clientA: string;
   companyAId: string;
   companyBId: string;
@@ -79,7 +84,9 @@ async function montarCenario(): Promise<Cenario> {
     admin: await loginAs(app, admin.email, PASSWORD),
     pentesterA: await loginAs(app, pentesterA.email, PASSWORD),
     pentesterB: await loginAs(app, pentesterB.email, PASSWORD),
+    pentesterBId: pentesterB.id,
     pentesterSemEmpresa: await loginAs(app, pentesterSemEmpresa.email, PASSWORD),
+    pentesterSemEmpresaId: pentesterSemEmpresa.id,
     clientA: await loginAs(app, clientA.email, PASSWORD),
     companyAId: companyA.id,
     companyBId: companyB.id,
@@ -389,6 +396,56 @@ describe("Remediation Playbooks (CP-5)", () => {
     expect(res.status).toBe(422);
     expect(res.body.error).toBe("USER_HAS_NO_COMPANY");
     expect(await prisma.remediationPlaybook.count({ where: { isSystem: false } })).toBe(0);
+  });
+
+  it("PB-14 PENTESTER sem companyId herda o escopo do projeto no catálogo e no finding", async () => {
+    const appA = await seedApplication({ name: "Aplicação A", companyId: c.companyAId });
+    const appB = await seedApplication({ name: "Aplicação B", companyId: c.companyBId });
+    const projectA = await seedProject({ name: "Projeto A", applicationId: appA.id, companyId: c.companyAId });
+    const projectB = await seedProject({ name: "Projeto B", applicationId: appB.id, companyId: c.companyBId });
+    await seedProjectMember(projectA.id, c.pentesterSemEmpresaId);
+
+    const findingA = await seedVulnerability({
+      projectId: projectA.id,
+      applicationId: appA.id,
+      companyId: c.companyAId,
+      createdBy: c.pentesterSemEmpresaId,
+      title: "Finding A",
+      owaspCategory: "A03",
+    });
+    await seedVulnerability({
+      projectId: projectB.id,
+      applicationId: appB.id,
+      companyId: c.companyBId,
+      createdBy: c.pentesterBId,
+      title: "Finding B",
+      owaspCategory: "A03",
+    });
+
+    const customA = await criarCustom(c.pentesterA, { title: "Playbook privado A", owaspCategory: "A03" });
+    const customB = await criarCustom(c.pentesterB, { title: "Playbook privado B", owaspCategory: "A03" });
+
+    const catalogo = await request(app)
+      .get("/api/playbooks?source=CUSTOM")
+      .set(auth(c.pentesterSemEmpresa));
+    expect(catalogo.status).toBe(200);
+    expect(catalogo.body.map((p: { id: string }) => p.id)).toEqual([customA.id]);
+    expect(catalogo.body.map((p: { id: string }) => p.id)).not.toContain(customB.id);
+
+    // Este é o contrato consumido pelo HowToFixPanel do finding: o companyId
+    // vem do finding, enquanto o escopo efetivo vem do vínculo do projeto.
+    const comoCorrigirA = await request(app)
+      .get(`/api/playbooks/for-category/${findingA.owaspCategory}?companyId=${findingA.companyId}`)
+      .set(auth(c.pentesterSemEmpresa));
+    expect(comoCorrigirA.status).toBe(200);
+    expect(comoCorrigirA.body.map((p: { id: string }) => p.id)).toContain(customA.id);
+    expect(comoCorrigirA.body.map((p: { id: string }) => p.id)).not.toContain(customB.id);
+
+    const comoCorrigirB = await request(app)
+      .get(`/api/playbooks/for-category/A03?companyId=${c.companyBId}`)
+      .set(auth(c.pentesterSemEmpresa));
+    expect(comoCorrigirB.status).toBe(200);
+    expect(comoCorrigirB.body.map((p: { id: string }) => p.id)).not.toContain(customB.id);
   });
 
   it("PB-SEED-01 todo playbook System tem remediação e ao menos uma referência", async () => {

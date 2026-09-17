@@ -16,9 +16,10 @@
  * preguiçosa geraria AuditLog duplicado sob concorrência.
  */
 
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import type { RiskAcceptance, RiskAcceptanceWithActors } from "../models/risk-acceptance.model";
 import { RISK_ACCEPTANCE_ACTIVE_STATUSES } from "../models/risk-acceptance.model";
+import type { EscopoDeAcesso } from "./vulnerability.repository";
 
 /** Nomes de quem pediu/decidiu/revogou — a trilha lida por gente. */
 const ATORES = {
@@ -77,6 +78,25 @@ export class RiskAcceptanceRepository {
   }
 
   /**
+   * Aprovados vencidos apenas nos findings que o ator pode enxergar.
+   *
+   * A normalização grava `EXPIRED` e desloca o SLA; por isso a consulta precisa
+   * carregar o mesmo escopo da listagem. Fazer `findMany` global antes do RBAC
+   * transformava uma leitura de A em uma escrita também nos dados de B.
+   */
+  async findExpiredApprovedForScope(scope: EscopoDeAcesso, now: Date): Promise<RiskAcceptance[]> {
+    const vulnerability =
+      scope.tipo === "TODAS"
+        ? {}
+        : scope.tipo === "COMPANY"
+          ? { companyId: scope.companyId }
+          : { project: { members: { some: { userId: scope.userId } } } };
+    return this.prisma.riskAcceptance.findMany({
+      where: { status: "APPROVED", expiresAt: { lt: now }, vulnerability },
+    });
+  }
+
+  /**
    * Aceites VIGENTES de um conjunto de findings — alimenta o estado ACCEPTED
    * do SLA na listagem. Map id do finding → aceite, em UMA consulta.
    */
@@ -93,6 +113,32 @@ export class RiskAcceptanceRepository {
 
   async create(data: CreateRiskAcceptanceData): Promise<RiskAcceptance> {
     return this.prisma.riskAcceptance.create({ data });
+  }
+
+  /**
+   * Cria o único pedido ativo do finding sob lock pessimista do MySQL.
+   *
+   * O schema não pode expressar um unique parcial (REQUESTED/APPROVED), e um
+   * `findActive` seguido de `create` deixa uma janela TOCTOU. O SELECT FOR
+   * UPDATE bloqueia a linha pai do finding na conexão da transação interativa;
+   * assim, a segunda transação só consulta o aceite depois do commit da
+   * primeira. Não há alteração de schema; `null` significa que outro pedido
+   * ativo já existia.
+   */
+  async createIfNoActive(data: CreateRiskAcceptanceData): Promise<RiskAcceptance | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const finding = await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT id FROM \`Vulnerability\` WHERE id = ${data.vulnerabilityId} FOR UPDATE`,
+      );
+      if (!finding[0]) throw new Error("VULNERABILITY_NOT_FOUND");
+
+      const active = await tx.riskAcceptance.findFirst({
+        where: { vulnerabilityId: data.vulnerabilityId, status: { in: [...RISK_ACCEPTANCE_ACTIVE_STATUSES] } },
+        orderBy: { requestedAt: "desc" },
+      });
+      if (active) return null;
+      return await tx.riskAcceptance.create({ data });
+    });
   }
 
   /* ======================================================================

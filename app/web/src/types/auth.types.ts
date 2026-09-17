@@ -19,6 +19,12 @@ export interface User {
   createdAt: string;
 }
 
+/** Resposta mínima de GET /vulnerabilities/:id/assignees. */
+export interface AssigneeCandidate {
+  id: string;
+  name: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;

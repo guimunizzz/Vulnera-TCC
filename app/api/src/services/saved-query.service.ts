@@ -26,7 +26,11 @@
  * recorte da listagem. A busca é uma pergunta, e perguntar não dá acesso.
  */
 
-import type { SavedQueryRepository, ListSavedQueriesFilter } from "../repositories/saved-query.repository";
+import type {
+  SavedQueryRepository,
+  ListSavedQueriesFilter,
+  UpdateSavedQueryData,
+} from "../repositories/saved-query.repository";
 import type { UserRepository } from "../repositories/user.repository";
 import {
   SAVED_QUERY_LIMITS,
@@ -91,13 +95,10 @@ export class SavedQueryService {
 
     // Mesma pergunta, salva duas vezes, é ruído na barra lateral. A comparação
     // é sobre a forma CANÔNICA — por isso a ordem dos filtros não engana.
-    const jaExiste = await this.repository.findByOwnerAndQuery(actor.userId, queryString);
-    if (jaExiste) throw new Error("SAVED_QUERY_ALREADY_EXISTS");
-
     const pinned = dto.pinned === true;
     if (pinned) await this.assertPodeFixar(actor.userId);
 
-    const criado = await this.criarTratandoNomeDuplicado({
+    const resultado = await this.criarTratandoNomeDuplicado({
       name: nome,
       description: descricao,
       queryString,
@@ -109,8 +110,11 @@ export class SavedQueryService {
       companyId: escopo.companyId,
       pinned,
     });
+    if (resultado.kind === "QUERY_DUPLICATE") throw new Error("SAVED_QUERY_ALREADY_EXISTS");
+    if (resultado.kind === "LIMIT_REACHED") throw new Error("SAVED_QUERY_LIMIT_REACHED");
+    if (resultado.kind === "PINNED_LIMIT_REACHED") throw new Error("PINNED_LIMIT_REACHED");
 
-    return { saved: new SavedQueryEntity(criado).toResponse(actor.userId), descartados };
+    return { saved: new SavedQueryEntity(resultado.saved).toResponse(actor.userId), descartados };
   }
 
   async update(actor: Actor, id: string, dto: UpdateSavedQueryDTO): Promise<ResultadoCriacao> {
@@ -120,7 +124,7 @@ export class SavedQueryService {
     if (existente.ownerId !== actor.userId && actor.role !== "ADMIN") throw new Error("FORBIDDEN");
 
     const escopo = await this.resolverEscopo(actor);
-    const dados: Record<string, unknown> = {};
+    const dados: UpdateSavedQueryData = {};
     let descartados: ResultadoCriacao["descartados"] = [];
 
     if (dto.name !== undefined) dados.name = this.validarNome(dto.name);
@@ -139,7 +143,7 @@ export class SavedQueryService {
       dados.pinned = dto.pinned;
     }
 
-    const atualizado = await this.atualizarTratandoNomeDuplicado(id, dados);
+    const atualizado = await this.atualizarTratandoNomeDuplicado(existente.ownerId, id, dados);
     return { saved: new SavedQueryEntity(atualizado).toResponse(actor.userId), descartados };
   }
 
@@ -221,18 +225,23 @@ export class SavedQueryService {
    * O unique `[ownerId, name]` é a regra; traduzi-lo aqui evita que um nome
    * repetido chegue à tela como 500 do Prisma.
    */
-  private async criarTratandoNomeDuplicado(data: Parameters<SavedQueryRepository["create"]>[0]) {
+  private async criarTratandoNomeDuplicado(data: Parameters<SavedQueryRepository["createSerialized"]>[0]) {
     try {
-      return await this.repository.create(data);
+      return await this.repository.createSerialized(data, {
+        maxPorUsuario: SAVED_QUERY_LIMITS.maxPorUsuario,
+        maxPinned: SAVED_QUERY_LIMITS.maxPinned,
+      });
     } catch (e) {
       if ((e as { code?: string }).code === "P2002") throw new Error("SAVED_QUERY_NAME_TAKEN");
       throw e;
     }
   }
 
-  private async atualizarTratandoNomeDuplicado(id: string, dados: Record<string, unknown>) {
+  private async atualizarTratandoNomeDuplicado(ownerId: string, id: string, dados: UpdateSavedQueryData) {
     try {
-      return await this.repository.update(id, dados);
+      const atualizado = await this.repository.updateSerialized(id, ownerId, dados);
+      if (!atualizado) throw new Error("SAVED_QUERY_ALREADY_EXISTS");
+      return atualizado;
     } catch (e) {
       if ((e as { code?: string }).code === "P2002") throw new Error("SAVED_QUERY_NAME_TAKEN");
       throw e;
