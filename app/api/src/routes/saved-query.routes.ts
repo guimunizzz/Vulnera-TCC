@@ -11,12 +11,12 @@
 
 import { Router } from "express";
 import { makeSavedQueryController } from "../factories/saved-query.factory";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 
 const router = Router();
 const controller = makeSavedQueryController();
 
-router.use(authMiddleware);
+router.use(authRateLimitMiddleware);
 
 router.get("/", (req, res) => controller.list(req, res));
 router.get("/:id", (req, res) => controller.getById(req, res));

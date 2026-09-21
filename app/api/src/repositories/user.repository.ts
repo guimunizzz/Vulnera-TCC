@@ -27,6 +27,12 @@ export class UserRepository {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  /** Projeção mínima para o bucket de tenant; nunca decide autorização. */
+  async findCompanyIdById(id: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({ where: { id }, select: { companyId: true } });
+    return user?.companyId ?? null;
+  }
+
   findAll(filters: { companyId?: string } = {}): Promise<User[]> {
     return this.prisma.user.findMany({
       where: filters.companyId ? { companyId: filters.companyId } : {},
