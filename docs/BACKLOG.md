@@ -6,6 +6,8 @@
 
 ## Status
 
+✅ **2026-09-22 — Ajuste visual do dashboard (100%)**: hero compartilhado nos três perfis, refinamento ADMIN, ondas Three.js no fundo e órbitas nos KPIs usando um único canvas lazy. Fallback estático para mobile/reduced-motion/ausência de WebGL, cleanup e pausa por visibilidade. Build Docker verde; 221 testes web e 66 pares de contraste aprovados; validação visual ADMIN em 1440/1024/768/375 px e dark/light/system. Sem alteração de API, banco, RBAC ou dependências. Relatório em `docs/DASHBOARD_VISUAL.md`.
+
 | Fase               | Escopo                                             | Estado         |
 | ------------------ | -------------------------------------------------- | -------------- |
 | 0 Refactor         | Alinhamento com CLAUDE.md                          | ✅             |

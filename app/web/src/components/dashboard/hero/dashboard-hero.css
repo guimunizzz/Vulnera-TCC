@@ -1,0 +1,97 @@
+/**
+ * dashboard-hero.css
+ *
+ * O QUE FAZ
+ * Estilos específicos da atmosfera do hero: fallback imediato, máscara do
+ * canvas e transição de entrada da cena.
+ *
+ * POR QUE EXISTE
+ * Gradientes compostos e máscaras não têm uma representação legível em uma
+ * sequência longa de classes; os valores continuam vindo dos tokens do tema.
+ *
+ * QUEM USA
+ * Apenas os componentes em `components/dashboard/hero/`.
+ */
+
+.dashboard-hero-surface {
+  background:
+    linear-gradient(110deg, oklch(var(--color-bg-surface)) 0%, oklch(var(--color-bg-surface) / 0.95) 36%, oklch(var(--color-bg-surface) / 0.25) 100%);
+  box-shadow:
+    var(--elevation-raised),
+    inset 0 1px 0 oklch(var(--color-text-primary) / 0.035);
+}
+
+.dashboard-hero-fallback {
+  background:
+    radial-gradient(70% 130% at 82% 28%, oklch(var(--color-accent) / 0.2) 0%, transparent 64%),
+    linear-gradient(90deg, transparent 0%, oklch(var(--color-accent-surface) / 0.34) 100%);
+}
+
+.dashboard-hero-grid {
+  opacity: 0.34;
+  background-image:
+    linear-gradient(oklch(var(--color-border-subtle) / 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(var(--color-border-subtle) / 0.3) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at 86% 30%, black 0%, transparent 70%);
+}
+
+.dashboard-hero-orbit {
+  right: 8%;
+  top: 50%;
+  width: 10rem;
+  height: 10rem;
+  translate: 0 -50%;
+  border: 1px solid oklch(var(--color-accent-ink) / 0.12);
+  border-radius: var(--radius-full);
+  box-shadow:
+    0 0 0 2.5rem oklch(var(--color-accent-ink) / 0.025),
+    0 0 0 5rem oklch(var(--color-accent-ink) / 0.018);
+}
+
+.dashboard-ambient-canvas {
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease-out);
+  z-index: -1;
+}
+
+.dashboard-ambient-canvas[data-ready="true"] {
+  opacity: 1;
+}
+
+:root[data-theme="light"] .dashboard-ambient-canvas[data-ready="true"] {
+  opacity: 0.85;
+}
+
+.dashboard-atmosphere-fallback {
+  z-index: -2;
+  background: radial-gradient(ellipse at 90% 12%, oklch(var(--color-accent) / 0.16), transparent 58%),
+    radial-gradient(ellipse at 8% 72%, oklch(var(--color-accent) / 0.09), transparent 45%);
+}
+
+.dashboard-kpi {
+  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 46%, oklch(var(--color-bg-surface) / 0.96) 62%, oklch(var(--color-bg-surface) / 0.2));
+}
+
+.dashboard-kpi-orbit-fallback {
+  transform: rotate(-28deg) scaleY(0.5);
+  box-shadow: 0 0 0 10px oklch(var(--color-accent) / 0.035);
+}
+
+.dashboard-workspace[data-scene-ready="true"] .dashboard-kpi-orbit-fallback {
+  opacity: 0;
+}
+
+@media (max-width: 767px) {
+  .dashboard-hero-orbit {
+    right: -4rem;
+    width: 8rem;
+    height: 8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-ambient-canvas {
+    transition: none;
+  }
+}

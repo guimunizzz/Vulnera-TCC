@@ -18,10 +18,11 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
+| Entrega visual atual | **2026-09-22 — Dashboard atmosférico concluído (100%)**, branch `feat/improve-front-dash`: hero dos três perfis, KPIs e ranking ADMIN refinados, ondas e órbitas Three.js em canvas único lazy, fallback CSS/mobile/reduced-motion. Build Docker verde, Web **221/221**, contraste **66/66**, lint sem erros (9 avisos preexistentes). ADMIN validado com conta demo e dados existentes, sem novo seed. Relatório: `docs/DASHBOARD_VISUAL.md`. |
 | Sprint atual       | **Exposure & Remediation Management — CP-1 a CP-7 implementados** (branch `feat/exposure-remediation-management`). Contexto de risco, SLA, VRS, aceite de risco, playbooks OWASP, buscas salvas e quadro de remediação. **CP-8 (Exposure Graph) NÃO implementado** — era condicional |
 | Data início        | 2026-06-10 (Sprint 0)               |
 | Data alvo TCC      | 2026-10-25 (**40 dias restantes** a partir de 2026-09-15) |
-| Última atualização | **2026-09-21** por Codex: rate limiting multi-tenant concluído em `feat/rate-limit` — Token Bucket em memória limitado, camadas global/tenant/user/escrita/endpoints/auth, resolução segura de tenant por cache curto e proteção DAST sem alterar o watchdog. **API 552/552 em 43 suítes · build verde · testes focais 14/14 · k6 smoke/rate-limit e JMeter over-limit executados**; steady, breakpoint e multi-tenant de carga ficaram `NOT RUN` por exigirem tokens temporários. Lint continua bloqueado somente por dois imports não usados preexistentes em `vulnerability.service.ts`. A stack Docker existente está saudável; a reconstrução atualizada ficou pendente porque o build travou em uma camada pré-existente. Nenhuma alteração de schema, migration ou lockfile. <br> _Anterior:_ **2026-09-17** por Codex: fechamento do hardening P2 de CP-1–CP-7 — locks transacionais de SLA/Saved Query, candidatos mínimos e lazy no quadro, escopo de playbook para PENTESTER membro, filtros/expiração e cleanup E2E com marcador único. **API focal 75/75 · Web serial 128/128 · lint 0 erros · contraste 66/66**; `docker compose build --no-cache` de API/Web verde e stack saudável; validação manual moveu e restaurou um cartão. O Playwright E2E não foi reexecutado no host porque `@playwright/test` não está instalado; as imagens Docker instalaram suas dependências normalmente. Nenhuma alteração de schema, migration ou lockfile nesta validação. |
+| Atualização anterior | **2026-09-21** por Codex: rate limiting multi-tenant concluído em `feat/rate-limit` — Token Bucket em memória limitado, camadas global/tenant/user/escrita/endpoints/auth, resolução segura de tenant por cache curto e proteção DAST sem alterar o watchdog. **API 552/552 em 43 suítes · build verde · testes focais 14/14 · k6 smoke/rate-limit e JMeter over-limit executados**; steady, breakpoint e multi-tenant de carga ficaram `NOT RUN` por exigirem tokens temporários. Lint continua bloqueado somente por dois imports não usados preexistentes em `vulnerability.service.ts`. A stack Docker existente está saudável; a reconstrução atualizada ficou pendente porque o build travou em uma camada pré-existente. Nenhuma alteração de schema, migration ou lockfile. <br> _Anterior:_ **2026-09-17** por Codex: fechamento do hardening P2 de CP-1–CP-7 — locks transacionais de SLA/Saved Query, candidatos mínimos e lazy no quadro, escopo de playbook para PENTESTER membro, filtros/expiração e cleanup E2E com marcador único. **API focal 75/75 · Web serial 128/128 · lint 0 erros · contraste 66/66**; `docker compose build --no-cache` de API/Web verde e stack saudável; validação manual moveu e restaurou um cartão. O Playwright E2E não foi reexecutado no host porque `@playwright/test` não está instalado; as imagens Docker instalaram suas dependências normalmente. Nenhuma alteração de schema, migration ou lockfile nesta validação. |
 
 ---
 
@@ -53,6 +54,10 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 ---
 
 ## 3. Detalhamento por feature
+
+### Ajuste visual — Dashboard atmosférico (2026-09-22)
+
+**✅ Concluído — 100%.** Hero compartilhado por ADMIN/CLIENT/PENTESTER; apresentação ADMIN e KPIs; Three.js decorativo no fundo e cards com um único renderer, movimento reduzido e fallback; testes e revisão de ciclo de vida. Sem mudanças em API, schema, RBAC ou dependências. Evidências e limitações em `docs/DASHBOARD_VISUAL.md`.
 
 ### FEAT-00 — Refactor de estrutura
 
@@ -417,6 +422,8 @@ Rafael decide quando commitar.
 ---
 
 ## 6. Histórico de marcos importantes
+
+**2026-09-22 — Dashboard atmosférico:** redesign concluído em `feat/improve-front-dash`, com correção TS18047 nas referências do canvas/host. Build web Docker aprovado e container web atualizado em `localhost:8086`; banco existente preservado. Validação ADMIN em quatro larguras, três temas, CTA e três ciclos de navegação, sem canvas duplicado ou erros de console. Web 221/221; contraste 66/66; lint 0 erros. Commit local autorizado pelo Rafael ao final; sem push/PR nesta tarefa.
 
 > Quando algo significativo for entregue, anote aqui. Vira material pro TCC.
 
