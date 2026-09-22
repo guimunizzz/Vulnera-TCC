@@ -18,7 +18,7 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Entrega visual atual | **2026-09-22 — Dashboard atmosférico concluído (100%)**, branch `feat/improve-front-dash`: hero dos três perfis, KPIs e ranking ADMIN refinados, ondas e órbitas Three.js em canvas único lazy, fallback CSS/mobile/reduced-motion. Build Docker verde, Web **221/221**, contraste **66/66**, lint sem erros (9 avisos preexistentes). ADMIN validado com conta demo e dados existentes, sem novo seed. Relatório: `docs/DASHBOARD_VISUAL.md`. |
+| Entrega visual atual | **2026-09-22 — Aplicações refinada (100%)**, branch `feat/improve-front-dash`: inventário mais legível com hero estático, capacidade e filtro derivados dos dados reais, tabela rolável acessível no mobile e entrada discreta por Motion. Build Docker verde; Web **223/223**, contraste 66/66 e lint sem erros (9 avisos preexistentes). _Anterior:_ **Dashboard atmosférico concluído (100%)**: hero dos três perfis, KPIs e ranking ADMIN refinados, ondas e órbitas Three.js em canvas único lazy, fallback CSS/mobile/reduced-motion. Relatório: `docs/DASHBOARD_VISUAL.md`. |
 | Sprint atual       | **Exposure & Remediation Management — CP-1 a CP-7 implementados** (branch `feat/exposure-remediation-management`). Contexto de risco, SLA, VRS, aceite de risco, playbooks OWASP, buscas salvas e quadro de remediação. **CP-8 (Exposure Graph) NÃO implementado** — era condicional |
 | Data início        | 2026-06-10 (Sprint 0)               |
 | Data alvo TCC      | 2026-10-25 (**40 dias restantes** a partir de 2026-09-15) |
@@ -58,6 +58,10 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 ### Ajuste visual — Dashboard atmosférico (2026-09-22)
 
 **✅ Concluído — 100%.** Hero compartilhado por ADMIN/CLIENT/PENTESTER; apresentação ADMIN e KPIs; Three.js decorativo no fundo e cards com um único renderer, movimento reduzido e fallback; testes e revisão de ciclo de vida. Sem mudanças em API, schema, RBAC ou dependências. Evidências e limitações em `docs/DASHBOARD_VISUAL.md`.
+
+### Ajuste visual — Aplicações (2026-09-22)
+
+**✅ Concluído — 100%.** Inventário operacional refinado com hero CSS estático mais discreto, contador de alvos e plano baseados nos dados existentes, busca com resultado anunciado, skeleton, tabela com `ScrollArea` acessível no mobile e entrada curta das linhas pelo Motion. Sem Three.js nesta página para manter o foco nos dados, e sem mudanças em API, schema, RBAC ou dependências. Testes `APP-VIS-01/02` protegem dados e permissões de PENTESTER.
 
 ### FEAT-00 — Refactor de estrutura
 
@@ -422,6 +426,8 @@ Rafael decide quando commitar.
 ---
 
 ## 6. Histórico de marcos importantes
+
+**2026-09-22 — Aplicações refinada:** continuação visual em `feat/improve-front-dash`, com commit local desta atualização. O inventário recebeu uma trilha estática com tokens, sem canvas, e tabela scrollável acessível no mobile; movimentos se limitam ao stagger de entrada já centralizado. ADMIN validado no navegador com seis aplicações reais, busca funcional e claro/escuro; largura 375 px sem overflow da página. Build Docker passou por `tsc --noEmit && vite build`; Web 223/223 em 16 suítes, lint 0 erros/9 avisos preexistentes e contraste 66/66. Nenhuma alteração de API, banco, RBAC, manifesto ou lockfile.
 
 **2026-09-22 — Dashboard atmosférico:** redesign concluído em `feat/improve-front-dash`, com correção TS18047 nas referências do canvas/host. Build web Docker aprovado e container web atualizado em `localhost:8086`; banco existente preservado. Validação ADMIN em quatro larguras, três temas, CTA e três ciclos de navegação, sem canvas duplicado ou erros de console. Web 221/221; contraste 66/66; lint 0 erros. Commit local autorizado pelo Rafael ao final; sem push/PR nesta tarefa.
 
