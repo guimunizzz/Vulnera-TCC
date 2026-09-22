@@ -28,8 +28,17 @@ const LINKS = [
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
+  const [atTop, setAtTop] = useState(() => window.scrollY < 24);
   const { resolvido, definirTema } = useTheme();
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateVisibility = () => setAtTop(window.scrollY < 24);
+
+    updateVisibility();
+    window.addEventListener("scroll", updateVisibility, { passive: true });
+    return () => window.removeEventListener("scroll", updateVisibility);
+  }, []);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -51,22 +60,40 @@ export default function Nav() {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!atTop) setOpen(false);
+  }, [atTop]);
+
   const isDark = resolvido === "dark";
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-[30] border-b border-[rgba(var(--vx-accent-rgb),0.15)] bg-[rgba(var(--vx-bg-2-rgb),0.75)] backdrop-blur-sm">
-      <div className="mx-auto flex h-[76px] max-w-6xl items-center justify-between px-6">
+    <motion.header
+      className="fixed left-0 right-0 top-0 z-[30] border-b border-[rgba(var(--vx-accent-rgb),0.15)] bg-[rgba(var(--vx-bg-2-rgb),0.75)] backdrop-blur-sm"
+    >
+      <motion.div
+        animate={{ height: atTop ? 76 : 48 }}
+        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+        className="mx-auto flex max-w-6xl items-center justify-between overflow-hidden px-6"
+      >
         <a href="#" className="group flex flex-col leading-none">
           <span className="flex items-baseline gap-[3px] font-mono text-base font-bold tracking-widest text-[var(--vx-text)] transition-colors group-hover:text-[var(--vx-accent)]">
             VULNERA
             <span className="vx-blink h-[13px] w-[4px] bg-[var(--vx-accent)]" aria-hidden="true" />
           </span>
-          <span className="mt-1 font-mono text-[10px] tracking-[0.4em] text-[var(--vx-text-2)]">SECURITY</span>
+          <motion.span
+            animate={{ opacity: atTop ? 1 : 0, height: atTop ? "auto" : 0, marginTop: atTop ? 4 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden font-mono text-[10px] tracking-[0.4em] text-[var(--vx-text-2)]"
+          >
+            SECURITY
+          </motion.span>
         </a>
 
         <nav
           aria-label="Navegação principal"
-          className="vx-main-nav hidden md:absolute md:left-1/2 md:flex md:-translate-x-1/2 md:items-center md:whitespace-nowrap"
+          className={`vx-main-nav hidden md:absolute md:left-1/2 md:flex md:-translate-x-1/2 md:items-center md:whitespace-nowrap ${
+            atTop ? "opacity-100" : "pointer-events-none -translate-y-3 opacity-0"
+          }`}
         >
           <div ref={dropdownRef} className="relative shrink-0">
             <button
@@ -133,14 +160,20 @@ export default function Nav() {
           >
             {isDark ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
           </button>
-          <Link
-            to="/register"
-            className="hidden rounded-[6px] border border-[var(--vx-accent)] px-5 py-[10px] font-mono text-sm font-bold tracking-wide text-[var(--vx-accent)] transition-all duration-[300ms] hover:bg-[var(--vx-accent)] hover:text-[var(--vx-on-accent)] md:inline-block"
+          <motion.div
+            animate={{ opacity: atTop ? 1 : 0, width: atTop ? "auto" : 0, marginLeft: atTop ? 0 : -12 }}
+            transition={{ duration: 0.2 }}
+            className="hidden overflow-hidden md:block"
           >
-            Começar →
-          </Link>
+            <Link
+              to="/register"
+              className="block whitespace-nowrap rounded-[6px] border border-[var(--vx-accent)] px-5 py-[10px] font-mono text-sm font-bold tracking-wide text-[var(--vx-accent)] transition-all duration-[300ms] hover:bg-[var(--vx-accent)] hover:text-[var(--vx-on-accent)]"
+            >
+              Começar →
+            </Link>
+          </motion.div>
         </div>
-      </div>
-    </header>
+      </motion.div>
+    </motion.header>
   );
 }
