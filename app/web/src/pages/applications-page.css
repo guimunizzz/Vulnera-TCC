@@ -1,0 +1,49 @@
+/**
+ * applications-page.css
+ *
+ * O QUE FAZ
+ * Compõe a abertura discreta do inventário de aplicações e a leitura da
+ * tabela, usando exclusivamente tokens do design system.
+ *
+ * POR QUE EXISTE
+ * A página é uma área operacional densa. A trilha visual ajuda a separar
+ * inventário e ações sem usar uma cena animada que concorra com a tabela.
+ *
+ * QUEM CONSOME
+ * Apenas `pages/applications-page.tsx`.
+ */
+
+.applications-hero {
+  background:
+    linear-gradient(112deg, oklch(var(--color-bg-surface)) 0%, oklch(var(--color-bg-surface) / 0.96) 55%, oklch(var(--color-accent-surface) / 0.46) 100%);
+  box-shadow:
+    var(--elevation-raised),
+    inset 0 1px 0 oklch(var(--color-text-primary) / 0.035);
+}
+
+.applications-hero-signal {
+  background:
+    linear-gradient(115deg, transparent 16%, oklch(var(--color-accent) / 0.14) 16.1%, transparent 16.5%),
+    linear-gradient(115deg, transparent 45%, oklch(var(--color-border-subtle) / 0.66) 45.1%, transparent 45.5%),
+    repeating-linear-gradient(90deg, transparent 0 32px, oklch(var(--color-accent) / 0.055) 33px 34px);
+  mask-image: linear-gradient(90deg, transparent, black 50%, black 86%, transparent);
+}
+
+.applications-hero-stat {
+  border-left: 1px solid oklch(var(--color-accent-ink) / 0.28);
+}
+
+.applications-inventory-table tbody tr {
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.applications-inventory-table tbody tr:hover {
+  background-color: oklch(var(--color-bg-hovered));
+}
+
+@media (max-width: 639px) {
+  .applications-hero-stat {
+    border-top: 1px solid oklch(var(--color-accent-ink) / 0.2);
+    border-left: 0;
+  }
+}
