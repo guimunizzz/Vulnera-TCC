@@ -1,0 +1,300 @@
+/* A paleta é local ao login; acompanha o tema escolhido no restante do app. */
+.vx-login {
+  --login-bg: #08070d;
+  --login-panel: #100e18;
+  --login-input: #0c0b12;
+  --login-text: #edeaf4;
+  --login-muted: #aaa5b8;
+  --login-placeholder: #847d95;
+  --login-accent: #a78bfa;
+  --login-action: #8b5cf6;
+  --login-action-hover: #9b73f8;
+  --login-on-action: #100a1e;
+  --login-line-rgb: 139 112 194;
+  --login-border: #2c263c;
+  --login-shadow: 0 24px 64px rgb(0 0 0 / 22%);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: 44px 1fr 44px;
+  gap: 24px;
+  min-height: 100dvh;
+  padding: 24px clamp(20px, 4vw, 64px);
+  background: var(--login-bg);
+  color: var(--login-text);
+  font-family: var(--font-sans);
+}
+
+:root[data-theme="light"] .vx-login {
+  --login-bg: #f4f2f7;
+  --login-panel: #fff;
+  --login-input: #faf9fc;
+  --login-text: #231b32;
+  --login-muted: #665d74;
+  --login-placeholder: #786e86;
+  --login-accent: #6d28d9;
+  --login-action: #6d28d9;
+  --login-action-hover: #5b21b6;
+  --login-on-action: #fff;
+  --login-line-rgb: 109 74 174;
+  --login-border: #d9d3e3;
+  --login-shadow: 0 24px 64px rgb(40 22 68 / 7%);
+}
+
+.vx-login-background {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-image: radial-gradient(rgb(var(--login-line-rgb) / 16%) .7px, transparent .7px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent);
+}
+
+.vx-login-circuit {
+  width: 100%;
+  height: 100%;
+  min-height: 700px;
+}
+
+.vx-login-tracks {
+  stroke: rgb(var(--login-line-rgb) / 19%);
+  stroke-width: 1;
+}
+
+.vx-login-signals {
+  stroke: var(--login-accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.vx-login-signals path {
+  stroke-dasharray: 7 93;
+  stroke-dashoffset: 10;
+  opacity: 0;
+  animation: vx-login-signal 9s linear infinite;
+}
+
+.vx-login-signals path:nth-child(2) { animation-delay: -4s; }
+.vx-login-signals path:nth-child(3) { animation-delay: -7s; animation-duration: 13s; }
+
+.vx-login-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  animation: vx-login-enter .65s .08s both;
+}
+
+.vx-login-brand {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  color: var(--login-text);
+  font: 700 1rem/1 var(--font-mono);
+  letter-spacing: .15em;
+  text-decoration: none;
+}
+
+.vx-login-cursor {
+  width: 4px;
+  height: 14px;
+  background: var(--login-accent);
+  animation: vx-login-cursor 3s ease-in-out infinite;
+}
+
+.vx-login-back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  color: var(--login-muted);
+  font-size: .8125rem;
+  text-decoration: none;
+  transition: color .2s ease;
+}
+
+.vx-login-back:hover { color: var(--login-text); }
+.vx-login-back svg { transition: transform .2s ease; }
+.vx-login-back:hover svg { transform: translateX(-3px); }
+
+.vx-login-stage {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 24px 0;
+}
+
+.vx-login-panel {
+  position: relative;
+  width: min(100%, 420px);
+  padding: 38px 36px 28px;
+  border: 1px solid var(--login-border);
+  border-radius: 10px;
+  background: var(--login-panel);
+  box-shadow: var(--login-shadow);
+  animation: vx-login-enter .7s .12s both;
+}
+
+/* Um traço na borda referencia o cursor da marca, sem competir com o formulário. */
+.vx-login-panel::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 36px;
+  width: 40px;
+  height: 2px;
+  background: var(--login-accent);
+  transform-origin: left;
+  animation: vx-login-line .7s .4s both;
+}
+
+.vx-login-heading { margin-bottom: 32px; }
+
+.vx-login-heading .vx-login-eyebrow {
+  margin: 0 0 14px;
+  color: var(--login-accent);
+  font: 500 .625rem/1.5 var(--font-mono);
+  letter-spacing: .16em;
+}
+
+.vx-login-heading h1 {
+  margin: 0 0 10px;
+  font-size: 2.375rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -.045em;
+}
+
+.vx-login-heading > p:last-child {
+  margin: 0;
+  color: var(--login-muted);
+  font-size: .875rem;
+  line-height: 1.6;
+}
+
+.vx-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.vx-login .vx-login-field { gap: 9px; }
+.vx-login-field label { color: var(--login-text); font-size: .8125rem; font-weight: 500; }
+.vx-login .vx-login-input {
+  height: 50px;
+  padding-left: 42px;
+  border: 1px solid var(--login-border);
+  border-radius: 6px;
+  background: var(--login-input);
+  color: var(--login-text);
+  font-size: .9375rem;
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+
+.vx-login .vx-login-password-input { padding-right: 58px; }
+.vx-login .vx-login-input::placeholder { color: var(--login-placeholder); font-size: .875rem; }
+.vx-login .vx-login-input:hover { border-color: rgb(var(--login-line-rgb) / 65%); }
+.vx-login .vx-login-input:focus {
+  border-color: var(--login-accent);
+  box-shadow: 0 0 0 3px rgb(var(--login-line-rgb) / 12%);
+}
+
+.vx-login-input-icon { color: var(--login-placeholder); transition: color .2s ease; }
+.vx-login-field:focus-within .vx-login-input-icon { color: var(--login-accent); }
+
+.vx-login-password-toggle {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  margin-right: -8px;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--login-muted);
+  transition: color .2s ease, background-color .2s ease;
+}
+
+.vx-login-password-toggle:hover { background: rgb(var(--login-line-rgb) / 10%); color: var(--login-text); }
+
+.vx-login .vx-login-submit {
+  height: 50px;
+  margin-top: 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--login-action);
+  color: var(--login-on-action);
+  box-shadow: none;
+  font-size: .875rem;
+  font-weight: 600;
+  transition: background-color .2s ease, transform .2s ease;
+}
+
+.vx-login .vx-login-submit:hover:not([aria-disabled="true"]) { background: var(--login-action-hover); }
+.vx-login-submit svg { transition: transform .25s ease; }
+.vx-login-submit:hover:not([aria-disabled="true"]) svg { transform: translateX(4px); }
+
+.vx-login-register {
+  margin: 28px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--login-border);
+  color: var(--login-muted);
+  text-align: center;
+  font-size: .8125rem;
+  line-height: 1.7;
+}
+
+.vx-login-register a { color: var(--login-text); font-weight: 500; text-underline-offset: 4px; }
+.vx-login-register a:hover { color: var(--login-accent); text-decoration: underline; }
+
+.vx-login-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--login-muted);
+  text-align: center;
+  font: .625rem/1.5 var(--font-mono);
+  letter-spacing: .025em;
+  animation: vx-login-enter .7s .3s both;
+}
+
+.vx-login-footer span { color: var(--login-accent); }
+.vx-login :focus-visible { outline-color: var(--login-accent); }
+
+@keyframes vx-login-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes vx-login-line {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes vx-login-signal {
+  0% { stroke-dashoffset: 10; opacity: 0; }
+  12%, 75% { opacity: .65; }
+  95%, 100% { stroke-dashoffset: -100; opacity: 0; }
+}
+
+@keyframes vx-login-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+
+@media (max-width: 480px) {
+  .vx-login { gap: 12px; padding: 16px; }
+  .vx-login-stage { padding: 16px 0; }
+  .vx-login-panel { padding: 30px 24px 24px; }
+  .vx-login-panel::before { left: 24px; }
+  .vx-login-heading h1 { font-size: 2.125rem; }
+  .vx-login .vx-login-input { font-size: 1rem; }
+  .vx-login-footer { flex-wrap: wrap; gap: 4px 8px; font-size: .5625rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vx-login *, .vx-login *::before { animation: none; transition: none; }
+  .vx-login-back:hover svg, .vx-login-submit:hover svg { transform: none; }
+}
