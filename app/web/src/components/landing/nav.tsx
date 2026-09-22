@@ -64,8 +64,11 @@ export default function Nav() {
           <span className="mt-1 font-mono text-[10px] tracking-[0.4em] text-[var(--vx-text-2)]">SECURITY</span>
         </a>
 
-        <nav aria-label="Navegação principal" className="hidden items-center gap-9 sm:flex">
-          <div ref={dropdownRef} className="relative">
+        <nav
+          aria-label="Navegação principal"
+          className="vx-main-nav hidden md:absolute md:left-1/2 md:flex md:-translate-x-1/2 md:items-center md:whitespace-nowrap"
+        >
+          <div ref={dropdownRef} className="relative shrink-0">
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
@@ -107,7 +110,7 @@ export default function Nav() {
             <a
               key={link.href}
               href={link.href}
-              className="font-mono text-sm tracking-wide text-[var(--vx-text-2)] transition-colors hover:text-[var(--vx-accent)]"
+              className="shrink-0 font-mono text-sm tracking-wide text-[var(--vx-text-2)] transition-colors hover:text-[var(--vx-accent)]"
             >
               {link.label}
             </a>

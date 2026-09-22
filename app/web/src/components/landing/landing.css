@@ -74,6 +74,14 @@
   scroll-padding-top: 80px;
 }
 
+/* Navegação central: fora do fluxo das extremidades da barra e sempre em uma
+   única linha. Isso impede que a marca e os CTAs laterais comprimam ou
+   empilhem os links. */
+.vx-main-nav {
+  flex-wrap: nowrap;
+  gap: 2rem;
+}
+
 /* Grid sutil de fundo, presente em todas as seções */
 .vx-grid-bg {
   background-image:

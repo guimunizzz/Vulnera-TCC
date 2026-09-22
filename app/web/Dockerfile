@@ -14,6 +14,10 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# npm 10.9.8 do node:22-alpine falha no resolvedor Arborist em alguns
+# grafos sem lockfile ("edgesOut" nulo). Mantemos npm 11, como na API.
+RUN npm install -g npm@11
+
 COPY package.json ./
 RUN npm install
 
