@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { makePlanController } from "../factories/plan.factory";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 import { requireRole } from "../middlewares/require-role.middleware";
 
 const router = Router();
@@ -11,13 +11,13 @@ router.get("/", (req, res) => controller.list(req, res));
 router.get("/:id", (req, res) => controller.getById(req, res));
 
 // gestão restrita a admin
-router.post("/", authMiddleware, requireRole("ADMIN"), (req, res) =>
+router.post("/", authRateLimitMiddleware, requireRole("ADMIN"), (req, res) =>
   controller.create(req, res),
 );
-router.put("/:id", authMiddleware, requireRole("ADMIN"), (req, res) =>
+router.put("/:id", authRateLimitMiddleware, requireRole("ADMIN"), (req, res) =>
   controller.update(req, res),
 );
-router.delete("/:id", authMiddleware, requireRole("ADMIN"), (req, res) =>
+router.delete("/:id", authRateLimitMiddleware, requireRole("ADMIN"), (req, res) =>
   controller.delete(req, res),
 );
 

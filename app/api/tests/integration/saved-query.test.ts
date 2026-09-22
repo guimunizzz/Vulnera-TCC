@@ -270,6 +270,52 @@ describe("Saved Queries / Watchlists (CP-6)", () => {
     expect(duplicada.body.error).toBe("SAVED_QUERY_ALREADY_EXISTS");
   });
 
+  it("SQ-11 editar query para a pergunta canônica de outra busca é recusado", async () => {
+    const primeira = await salvar(c.ownerA, { name: "Críticas", queryString: "severity=HIGH&status=OPEN" });
+    const segunda = await salvar(c.ownerA, { name: "Vencidas", queryString: "slaState=BREACHED" });
+
+    const duplicada = await request(app)
+      .put(`/api/saved-queries/${segunda.body.id}`)
+      .set(auth(c.ownerA))
+      .send({ queryString: "status=OPEN&severity=HIGH" });
+    expect(duplicada.status).toBe(409);
+    expect(duplicada.body.error).toBe("SAVED_QUERY_ALREADY_EXISTS");
+
+    const preservada = await request(app).get(`/api/saved-queries/${segunda.body.id}`).set(auth(c.ownerA));
+    expect(preservada.body.queryString).toBe("slaState=BREACHED");
+    expect(primeira.body.id).not.toBe(segunda.body.id);
+  });
+
+  it("SQ-12 serializa POSTs concorrentes do mesmo dono para uma query canônica", async () => {
+    const respostas = await Promise.all([
+      salvar(c.ownerA, { name: "Concorrente A", queryString: "status=OPEN&severity=HIGH" }),
+      salvar(c.ownerA, { name: "Concorrente B", queryString: "severity=HIGH&status=OPEN" }),
+    ]);
+
+    expect(respostas.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(respostas.find((r) => r.status === 409)?.body.error).toBe("SAVED_QUERY_ALREADY_EXISTS");
+    expect(await prisma.savedQuery.count({ where: { ownerId: c.ownerAId } })).toBe(1);
+  });
+
+  it("SQ-13 serializa PUTs concorrentes e rejeita colisão de query canônica", async () => {
+    const primeira = await salvar(c.ownerA, { name: "Primeira", queryString: "severity=HIGH" });
+    const segunda = await salvar(c.ownerA, { name: "Segunda", queryString: "severity=LOW" });
+    const respostas = await Promise.all([
+      request(app)
+        .put(`/api/saved-queries/${primeira.body.id}`)
+        .set(auth(c.ownerA))
+        .send({ queryString: "status=OPEN&severity=CRITICAL" }),
+      request(app)
+        .put(`/api/saved-queries/${segunda.body.id}`)
+        .set(auth(c.ownerA))
+        .send({ queryString: "severity=CRITICAL&status=OPEN" }),
+    ]);
+
+    expect(respostas.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(respostas.find((r) => r.status === 409)?.body.error).toBe("SAVED_QUERY_ALREADY_EXISTS");
+    expect(await prisma.savedQuery.count({ where: { ownerId: c.ownerAId, queryString: "severity=CRITICAL&status=OPEN" } })).toBe(1);
+  });
+
   it("SQ-09 a watchlist reexecuta com o escopo de quem abre", async () => {
     // Dois findings na empresa A: um no projeto do PENTESTER, outro fora dele.
     const appA2 = await seedApplication({ name: "App A2", companyId: c.companyAId });

@@ -35,7 +35,7 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { vulnerabilitiesApi } from "../lib/api/vulnerabilities.api";
-import { usersApi } from "../lib/api/users.api";
+import { buscarTodosFindings } from "../lib/remediation-board";
 import { projectsApi } from "../lib/api/projects.api";
 import { useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
@@ -51,6 +51,7 @@ import { SlaBadge } from "../components/findings/sla-badge";
 import { VrsBadge } from "../components/findings/vrs-badge";
 import { ALLOWED_TRANSITIONS, transitionLabel, type VulnerabilityStatus } from "../types/vulnerability.types";
 import type { FindingListItem } from "../types/vulnerability.types";
+import type { AssigneeCandidate, User } from "../types/auth.types";
 
 /** As colunas do quadro. `CLOSED` fica de fora — ver o cabeçalho. */
 const COLUNAS: Array<{ status: VulnerabilityStatus; titulo: string; descricao: string }> = [
@@ -72,7 +73,12 @@ export function RemediationPage() {
   const responsavelFiltrado = params.get("assignedTo") ?? "";
 
   const projetos = useQuery({ queryKey: ["projects"], queryFn: projectsApi.list });
-  const usuarios = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  // Uma lista mínima e reutilizável para o filtro; os menus dos cartões
+  // carregam somente seu recorte quando abertos (ver AssigneeMenu abaixo).
+  const candidatosDoFiltro = useQuery({
+    queryKey: ["assignee-candidates", projetoFiltrado],
+    queryFn: () => vulnerabilitiesApi.assigneeCandidates(projetoFiltrado || undefined),
+  });
 
   /**
    * UMA busca para o quadro inteiro, não uma por coluna: três requisições
@@ -92,7 +98,7 @@ export function RemediationPage() {
 
   const busca = useQuery({
     queryKey: ["findings", "remediation", paramsDaBusca.toString()],
-    queryFn: () => vulnerabilitiesApi.search(paramsDaBusca),
+    queryFn: () => buscarTodosFindings(vulnerabilitiesApi.search, paramsDaBusca),
   });
 
   const mover = useMutation({
@@ -173,7 +179,7 @@ export function RemediationPage() {
                   ...(usuarioAtual ? [{ valor: usuarioAtual.id, rotulo: "Atribuídos a mim" }] : []),
                   // "none" é o valor que a API entende como IS NULL.
                   { valor: "none", rotulo: "Sem responsável" },
-                  ...(usuarios.data ?? [])
+                  ...(candidatosDoFiltro.data ?? [])
                     .filter((u) => u.id !== usuarioAtual?.id)
                     .map((u) => ({ valor: u.id, rotulo: u.name })),
                 ]}
@@ -264,34 +270,10 @@ export function RemediationPage() {
                               }))}
                             />
 
-                            <DropdownMenu
-                              rotulo={`Responsável por "${f.title}"`}
-                              gatilho={
-                                <Button variant="sutil" size="sm">
-                                  {responsavel ? "Trocar responsável" : "Atribuir"}
-                                </Button>
-                              }
-                              itens={[
-                                ...(usuarioAtual
-                                  ? [
-                                      {
-                                        id: "eu",
-                                        rotulo: "Atribuir a mim",
-                                        aoEscolher: () =>
-                                          atribuir.mutate({ id: f.id, assignedTo: usuarioAtual.id }),
-                                      },
-                                    ]
-                                  : []),
-                                ...(f.assignedTo
-                                  ? [
-                                      {
-                                        id: "limpar",
-                                        rotulo: "Remover responsável",
-                                        aoEscolher: () => atribuir.mutate({ id: f.id, assignedTo: null }),
-                                      },
-                                    ]
-                                  : []),
-                              ]}
+                            <AssigneeMenu
+                              finding={f}
+                              usuarioAtual={usuarioAtual}
+                              onAssign={(assignedTo) => atribuir.mutate({ id: f.id, assignedTo })}
                             />
                           </div>
                         </article>
@@ -305,5 +287,52 @@ export function RemediationPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export function AssigneeMenu({
+  finding,
+  usuarioAtual,
+  onAssign,
+}: {
+  finding: FindingListItem;
+  usuarioAtual: User | null;
+  onAssign: (assignedTo: string | null) => void;
+}) {
+  // A lista antiga de /users é deliberadamente restrita para PENTESTER e só
+  // devolve o próprio usuário. Este contrato por finding traz todos os
+  // candidatos que o backend validará (admins, clientes da company e
+  // pentesters membros do projeto), permitindo a troca real de responsável.
+  const [aberto, setAberto] = useState(false);
+  const candidatos = useQuery({
+    queryKey: ["assignees", finding.id],
+    queryFn: () => vulnerabilitiesApi.assignees(finding.id),
+    enabled: aberto,
+  });
+  const opcoes = (candidatos.data ?? []).filter((u) => u.id !== finding.assignedTo);
+
+  return (
+    <DropdownMenu
+      rotulo={`Responsável por "${finding.title}"`}
+      gatilho={
+        <Button variant="sutil" size="sm">
+          {finding.assigneeName ? "Trocar responsável" : "Atribuir"}
+        </Button>
+      }
+      aoAbrir={() => setAberto(true)}
+      itens={[
+        ...(usuarioAtual && usuarioAtual.id !== finding.assignedTo
+          ? [{ id: "eu", rotulo: "Atribuir a mim", aoEscolher: () => onAssign(usuarioAtual.id) }]
+          : []),
+        ...opcoes.map((u: AssigneeCandidate) => ({
+          id: `user-${u.id}`,
+          rotulo: `Atribuir a ${u.name}`,
+          aoEscolher: () => onAssign(u.id),
+        })),
+        ...(finding.assignedTo
+          ? [{ id: "limpar", rotulo: "Remover responsável", aoEscolher: () => onAssign(null) }]
+          : []),
+      ]}
+    />
   );
 }

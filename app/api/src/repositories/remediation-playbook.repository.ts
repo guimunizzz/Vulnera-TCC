@@ -38,6 +38,8 @@ export type UpdatePlaybookData = Partial<Omit<CreatePlaybookData, "isSystem" | "
 export interface ListPlaybooksFilter {
   /** null = ator sem empresa (ADMIN global): vê System + todos os customs. */
   companyId: string | null;
+  /** PENTESTER pode alcançar várias empresas pelos projetos atribuídos. */
+  companyIds?: string[];
   /** ADMIN vê custom de qualquer empresa; os demais, só da sua. */
   todasAsEmpresas: boolean;
   owaspCategory?: string;
@@ -59,7 +61,10 @@ export class RemediationPlaybookRepository {
     if (!f.apenasCustom) alcance.push({ isSystem: true });
     if (!f.apenasSystem) {
       if (f.todasAsEmpresas) alcance.push({ isSystem: false });
-      else if (f.companyId) alcance.push({ isSystem: false, companyId: f.companyId });
+      else {
+        const ids = f.companyIds?.length ? f.companyIds : f.companyId ? [f.companyId] : [];
+        if (ids.length > 0) alcance.push({ isSystem: false, companyId: { in: ids } });
+      }
     }
     return {
       // alcance vazio (PENTESTER sem empresa pedindo apenasCustom) não pode

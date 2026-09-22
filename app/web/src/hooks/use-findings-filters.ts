@@ -57,6 +57,11 @@ export type FindingFilters = {
   severity: string | string[];
   status: string | string[];
   owaspCategory: string | string[];
+  slaState: string | string[];
+  vrsMin: string | string[];
+  vrsMax: string | string[];
+  riskAcceptance: string | string[];
+  assignedTo: string | string[];
   search: string;
 };
 
@@ -70,6 +75,11 @@ const PARAMS_DO_FILTRO = [
   "severity",
   "status",
   "owaspCategory",
+  "slaState",
+  "vrsMin",
+  "vrsMax",
+  "riskAcceptance",
+  "assignedTo",
   "search",
 ] as const;
 const PARAMS_DA_VISTA = ["page", "pageSize", "sortBy", "sortOrder"] as const;
@@ -108,6 +118,43 @@ const lerLista = (valor: string | string[] | undefined): string[] => {
   if (valor === undefined) return [];
   return (Array.isArray(valor) ? valor : valor.split(",")).map((v) => v.trim()).filter(Boolean);
 };
+
+/**
+ * Constrói o recorte que chega ao endpoint de findings.
+ *
+ * URL, chips aplicados e atalhos de Saved Query convergem para o mesmo
+ * `URLSearchParams`; manter esta montagem pura evita que uma nova dimensão
+ * (SLA/VRS/aceite/responsável) seja preservada na URL, mas desapareça antes de
+ * `useFindings` chamar a API. Consumidor: o `useMemo` deste hook e seu teste.
+ */
+export function montarParamsDaBusca(
+  params: URLSearchParams,
+  lockedFilters: Partial<FindingFilters> | undefined,
+  page: number,
+  pageSize: number,
+  sortBy: FindingSortField,
+  sortOrder: SortOrder,
+): URLSearchParams {
+  const saida = new URLSearchParams();
+
+  for (const p of PARAMS_DO_FILTRO) {
+    const valor = params.get(p);
+    if (valor) saida.set(p, valor);
+  }
+
+  // Os travados entram por último: o contexto da aba vence preferências do
+  // link, sem remover os cinco cruzamentos da busca global.
+  for (const [chave, valor] of Object.entries(lockedFilters ?? {})) {
+    const lista = lerLista(valor as string | string[]);
+    if (lista.length > 0) saida.set(chave, lista.join(","));
+  }
+
+  saida.set("page", String(page));
+  saida.set("pageSize", String(pageSize));
+  saida.set("sortBy", sortBy);
+  saida.set("sortOrder", sortOrder);
+  return saida;
+}
 
 /**
  * `useSearchParams` ou um espelho local, com a MESMA assinatura.
@@ -291,30 +338,10 @@ export function useFindingsFilters(
 
   /* --- o que vai pra API -------------------------------------------------- */
 
-  const paramsDaApi = useMemo(() => {
-    const saida = new URLSearchParams();
-
-    for (const p of PARAMS_DO_FILTRO) {
-      const valor = params.get(p);
-      if (valor) saida.set(p, valor);
-    }
-
-    // ⚠️ Os travados entram por ÚLTIMO e SOBRESCREVEM. Numa aba de projeto o
-    // `projectId` não é uma preferência da pessoa — é o contexto da tela. Se
-    // um filtro digitado pudesse vencê-lo, a aba do projeto A mostraria
-    // findings do projeto B.
-    for (const [chave, valor] of Object.entries(lockedFilters ?? {})) {
-      const lista = lerLista(valor as string | string[]);
-      if (lista.length > 0) saida.set(chave, lista.join(","));
-    }
-
-    saida.set("page", String(page));
-    saida.set("pageSize", String(pageSize));
-    saida.set("sortBy", sortBy);
-    saida.set("sortOrder", sortOrder);
-
-    return saida;
-  }, [params, lockedFilters, page, pageSize, sortBy, sortOrder]);
+  const paramsDaApi = useMemo(
+    () => montarParamsDaBusca(params, lockedFilters, page, pageSize, sortBy, sortOrder),
+    [params, lockedFilters, page, pageSize, sortBy, sortOrder],
+  );
 
   const quantidadeAtiva = PARAMS_DO_FILTRO.some((p) => Boolean(params.get(p)));
 

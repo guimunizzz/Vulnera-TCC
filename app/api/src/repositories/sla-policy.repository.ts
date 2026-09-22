@@ -9,7 +9,7 @@
  * propósito — política se versiona, não se edita (ver sla-policy.model.ts).
  */
 
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import type { SlaPolicy } from "../models/sla-policy.model";
 
 export interface CreateSlaPolicyData {
@@ -20,6 +20,11 @@ export interface CreateSlaPolicyData {
   mediumDays: number;
   lowDays: number;
   createdBy: string;
+}
+
+export interface ReplaceCompanyPolicyResult {
+  anterior: SlaPolicy | null;
+  created: SlaPolicy;
 }
 
 export class SlaPolicyRepository {
@@ -61,5 +66,33 @@ export class SlaPolicyRepository {
       data: { isActive: false },
     });
     return r.count;
+  }
+
+  /**
+   * Versiona a política da empresa em uma única transação.
+   *
+   * MySQL não oferece unique parcial para `isActive`; o lock pessimista na
+   * linha-pai de Company serializa dois PUTs para o mesmo tenant. Assim a
+   * leitura da ativa, a desativação e a criação da nova versão compartilham
+   * a mesma conexão e não deixam duas políticas ativas.
+   */
+  async replaceActiveForCompany(companyId: string, data: CreateSlaPolicyData): Promise<ReplaceCompanyPolicyResult> {
+    return this.prisma.$transaction(async (tx) => {
+      const company = await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT id FROM \`Company\` WHERE id = ${companyId} FOR UPDATE`,
+      );
+      if (!company[0]) throw new Error("COMPANY_NOT_FOUND");
+
+      const anterior = await tx.slaPolicy.findFirst({
+        where: { companyId, isActive: true },
+        orderBy: { createdAt: "desc" },
+      });
+      await tx.slaPolicy.updateMany({
+        where: { companyId, isActive: true },
+        data: { isActive: false },
+      });
+      const created = await tx.slaPolicy.create({ data });
+      return { anterior, created };
+    });
   }
 }

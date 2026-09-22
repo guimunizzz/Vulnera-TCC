@@ -18,13 +18,13 @@
 
 import { Router } from "express";
 import { makeRemediationPlaybookController } from "../factories/remediation-playbook.factory";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 import { requireRole } from "../middlewares/require-role.middleware";
 
 const router = Router();
 const controller = makeRemediationPlaybookController();
 
-router.use(authMiddleware);
+router.use(authRateLimitMiddleware);
 
 // Rota literal antes da paramétrica: senão "/for-category" cairia em "/:id".
 router.get("/for-category/:owaspCategory", (req, res) => controller.forCategory(req, res));

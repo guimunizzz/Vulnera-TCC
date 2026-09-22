@@ -41,7 +41,7 @@ import {
   type SlaPolicy,
   type UpsertSlaPolicyDTO,
 } from "../models/sla-policy.model";
-import { computeSlaCycle, type SlaWindow } from "../utils/sla.util";
+import { computeSlaCycle, shiftSlaCycle, type SlaWindow } from "../utils/sla.util";
 import type { UserRole } from "../models/user.model";
 
 interface Actor {
@@ -121,10 +121,7 @@ export class SlaPolicyService {
     const company = await this.companyRepository.findById(companyId);
     if (!company) throw new Error("COMPANY_NOT_FOUND");
 
-    const anterior = await this.repository.findActiveByCompany(companyId);
-    await this.repository.deactivateAll(companyId);
-
-    const created = await this.repository.create({
+    const { anterior, created } = await this.repository.replaceActiveForCompany(companyId, {
       companyId,
       name: dto.name?.trim() || `Política de ${company.name}`,
       criticalDays: dto.criticalDays,
@@ -172,10 +169,14 @@ export class SlaPolicyService {
     for (const v of abertos) {
       const inicio = v.slaStartedAt ?? v.createdAt;
       const ciclo = computeSlaCycle(inicio, resolved.window, v.severityFinal);
+      // Reaplicar a política troca a janela, não desfaz a pausa histórica do
+      // aceite: o prazo novo precisa carregar todo o tempo já congelado.
+      const empurrado = ciclo ? shiftSlaCycle(ciclo, v.slaPausedMs) : null;
       await this.vulnerabilityRepository.updateSla(v.id, {
         slaStartedAt: inicio,
-        slaDueAt: ciclo?.slaDueAt ?? null,
-        slaDueSoonAt: ciclo?.slaDueSoonAt ?? null,
+        slaDueAt: empurrado?.slaDueAt ?? null,
+        slaDueSoonAt: empurrado?.slaDueSoonAt ?? null,
+        slaPausedMs: v.slaPausedMs,
         slaPolicyId: resolved.policyId,
       });
       recalculated++;

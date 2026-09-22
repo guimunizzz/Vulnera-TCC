@@ -162,6 +162,32 @@ describe("SLA Engine (CP-2)", () => {
     expect(audit.map((a) => a.action).sort()).toEqual(["CREATE", "UPDATE"]);
   });
 
+  it("SLA-14: PUTs concorrentes versionam o tenant sem deixar duas políticas ativas", async () => {
+    const c = await montarCenario();
+    const respostas = await Promise.all([
+      putPolitica(c, c.ownerA, c.companyAId, {
+        name: "Política concorrente A",
+        criticalDays: 1,
+        highDays: 3,
+        mediumDays: 10,
+        lowDays: 20,
+      }),
+      putPolitica(c, c.ownerA, c.companyAId, {
+        name: "Política concorrente B",
+        criticalDays: 2,
+        highDays: 4,
+        mediumDays: 11,
+        lowDays: 21,
+      }),
+    ]);
+
+    expect(respostas.map((r) => r.status).sort()).toEqual([200, 200]);
+    const politicas = await prisma.slaPolicy.findMany({ where: { companyId: c.companyAId } });
+    expect(politicas).toHaveLength(2);
+    expect(politicas.filter((p) => p.isActive)).toHaveLength(1);
+    expect(respostas.map((r) => r.body.id)).toContain(politicas.find((p) => p.isActive)!.id);
+  });
+
   it("SLA-03: mudar a política NÃO reescreve o prazo de quem já tem (consistência histórica)", async () => {
     const c = await montarCenario();
     const res = await criarFinding(c, c.pentester);
