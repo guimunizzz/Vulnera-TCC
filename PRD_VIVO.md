@@ -18,6 +18,7 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
+| Entrega visual mais recente | **2026-09-23 — Findings atmosférico (100%)**: hero de triagem, ondas Three.js e órbitas decorativas nos cards de severidade em um canvas lazy compartilhado; pausa manual, fallback CSS mobile e respeito a movimento reduzido. Filtros, contagens e tabela canônica preservados. Web **231/231**, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Validação visual desktop/mobile 375 px, temas claro/escuro, pausa e filtro de severidade. |
 | Entrega visual atual | **2026-09-23 — Aplicações e Projetos refinados (100%)**: inventário com capacidade real do plano e recuperação de erro; portfólio com distribuição pelos quatro estados reais e links semânticos para o detalhe. As duas tabelas se reorganizam em cartões no celular, sem duplicar dados. Web **228/228**, contraste 66/66, lint sem erros (9 avisos preexistentes) e build Docker verde. _Anterior:_ **Aplicações 2026-09-22 (100%)** na branch `feat/improve-front-dash`, Web 223/223; **Dashboard atmosférico 2026-09-22 (100%)** com Three.js decorativo. Relatório: `docs/DASHBOARD_VISUAL.md`. |
 | Sprint atual       | **Exposure & Remediation Management — CP-1 a CP-7 implementados** (branch `feat/exposure-remediation-management`). Contexto de risco, SLA, VRS, aceite de risco, playbooks OWASP, buscas salvas e quadro de remediação. **CP-8 (Exposure Graph) NÃO implementado** — era condicional |
 | Data início        | 2026-06-10 (Sprint 0)               |
@@ -54,6 +55,10 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 ---
 
 ## 3. Detalhamento por feature
+
+### Ajuste visual — Findings atmosférico (2026-09-23)
+
+**✅ Concluído — 100%.** Hero de análise de exposição com total real, superfície de buscas salvas e filtros, ondas lentas ao fundo e órbitas nos cards. Reutiliza a cena Three.js do dashboard com um único renderer lazy; no mobile mantém decoração CSS leve, e movimento reduzido desliga as animações contínuas. Controle de pausa remove o canvas e interrompe CSS. Seletores visuais da tabela são restritos à página global, preservando seu uso no detalhe de projetos. Três testes de regressão cobrem carregamento, erro e resumo filtrado. Web 231/231; contraste 66/66; lint 0 erros (9 avisos preexistentes); build Docker aprovado, com aviso já existente de tamanho de bundle. Conferidos no navegador: desktop, 375 px sem transbordamento horizontal, temas claro/escuro, pausa/retomada e filtro crítico com total/card consistentes. Sem alteração de API, banco, RBAC, dependências ou lockfile.
 
 ### Ajuste visual — Aplicações e Projetos (2026-09-23)
 

@@ -21,16 +21,25 @@
  * Rota `/findings` (App.tsx).
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { motion } from "motion/react";
 import { useSearchParams } from "react-router-dom";
 import { FindingsTable } from "../components/findings/findings-table";
 import { SavedQueriesBar } from "../components/findings/saved-queries-bar";
 import { useFindings } from "../hooks/use-findings";
 import { SeverityBadge } from "../components/ui/badge";
 import { SEVERIDADES } from "../lib/finding-query";
+import { Button } from "../components/ui/button";
+import { DashboardAtmosphere } from "../components/dashboard/hero/dashboard-atmosphere";
+import { NumeroAnimado } from "../motion/components";
+import { useMotion } from "../motion/use-motion";
+import "../components/dashboard/hero/dashboard-hero.css";
+import "./findings-page.css";
 
 export function FindingsPage() {
   const [params] = useSearchParams();
+  const [pausado, setPausado] = useState(false);
+  const { item, lista, reduzido } = useMotion();
 
   // O cabeçalho lê o MESMO recorte que a tabela — é a mesma queryKey do
   // TanStack Query, então não custa uma segunda requisição: o total e as
@@ -71,48 +80,77 @@ export function FindingsPage() {
   const porSeveridade = dados?.facets.severity;
 
   return (
-    <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-fg">Findings</h1>
-        <p className="mt-1 text-fg-muted">
-          {erro
-            ? "A busca não chegou ao servidor"
-            : !sabeOTotal
-              ? "Carregando findings…"
-              : total === 0
-                ? "Nenhum finding no recorte atual"
-                : `${total} finding${total === 1 ? "" : "s"} no recorte atual`}
-        </p>
+    <div className="findings-workspace relative isolate" data-motion={pausado || reduzido ? "paused" : "running"}>
+      <div aria-hidden="true" className="findings-page-glow pointer-events-none absolute inset-0" />
+      <div className="findings-overview relative isolate">
+        <DashboardAtmosphere pausado={pausado} />
+        <motion.header className="findings-hero relative overflow-hidden rounded-container border border-subtle" variants={item} initial="inicial" animate="visivel">
+          <div aria-hidden="true" className="findings-hero-orbits"><span /><span /><span /></div>
+          <div className="relative flex flex-wrap items-start justify-between gap-3">
+            <p className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-accent-ink">Análise de exposição</p>
+            {!reduzido && (
+              <Button variant="sutil" size="sm" aria-pressed={pausado} onClick={() => setPausado((atual) => !atual)}>
+                <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3 w-3" fill="currentColor">
+                  {pausado ? <path d="M5 3v10l8-5Z" /> : <path d="M4 3h3v10H4zm5 0h3v10H9z" />}
+                </svg>
+                {pausado ? "Retomar animações" : "Pausar animações"}
+              </Button>
+            )}
+          </div>
+          <div className="relative mt-4 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+            <div className="max-w-xl">
+              <h1 className="text-3xl font-semibold tracking-tight text-fg sm:text-4xl">Findings</h1>
+              <p className="mt-3 text-sm leading-6 text-fg-secondary">Encontre os achados que precisam de atenção e acompanhe o risco entre projetos.</p>
+            </div>
+            <div className="findings-total shrink-0">
+              <p className="font-mono text-4xl font-medium tracking-tight text-fg" data-numeric>
+                {sabeOTotal && !erro ? total.toLocaleString("pt-BR") : "—"}
+              </p>
+              <p className="mt-2 text-xs text-fg-muted">
+                {erro
+                  ? "A busca não chegou ao servidor"
+                  : !sabeOTotal
+                    ? "Carregando findings…"
+                    : total === 0
+                      ? "Nenhum finding no recorte atual"
+                      : `finding${total === 1 ? "" : "s"} no recorte atual`}
+              </p>
+            </div>
+          </div>
+        </motion.header>
 
-        {/* ⚠️ `<dl>` e não `<div>`: cada item é um par rótulo/valor, e é assim
-            que o leitor de tela anuncia "Crítica: 5" em vez de duas coisas
-            soltas. O espaçamento é assimétrico de propósito — `gap-2` cola o
-            número na severidade a que ele pertence, `gap-x-6` separa os pares
-            entre si. Com o mesmo gap nos dois, "5 Alta" se lê como um par, e
-            a leitura inteira sai trocada. */}
-        {porSeveridade && total > 0 && (
-          <dl className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+        {/* Cada card continua sendo um par rótulo/valor no mesmo dl. A órbita
+            é decorativa; só a resposta da busca alimenta as contagens. */}
+        {porSeveridade && !erro && total > 0 && (
+          <motion.dl aria-label="Findings por severidade no recorte atual" className="findings-severity-grid mt-4 grid gap-3" variants={lista} initial="inicial" animate="visivel">
             {severidadesDoResumo
               .filter((s) => (porSeveridade[s] ?? 0) > 0)
               .map((s) => (
-                <div key={s} className="flex items-center gap-2">
-                  <dt>
+                <motion.div key={s} variants={item} data-ambient-card className="findings-severity-card relative overflow-hidden rounded-container border border-subtle p-4">
+                  <div aria-hidden="true" className="findings-card-orbit" />
+                  <dt className="relative">
                     <SeverityBadge severidade={s} />
                   </dt>
-                  <dd className="text-sm font-medium text-fg" data-numeric>
-                    {porSeveridade[s]}
+                  <dd className="relative mt-4 font-mono text-2xl font-semibold text-fg">
+                    {pausado ? <span data-numeric>{porSeveridade[s]}</span> : <NumeroAnimado valor={porSeveridade[s]} />}
                   </dd>
-                </div>
+                </motion.div>
               ))}
-          </dl>
+          </motion.dl>
         )}
-      </header>
+      </div>
 
       {/* Buscas salvas (CP-6): atalhos para o recorte atual. Ficam ACIMA
           da tabela porque são um ponto de partida, não um resultado. */}
-      <SavedQueriesBar />
+      <section aria-labelledby="findings-saved-heading" className="findings-saved-panel relative mt-5 rounded-container border border-subtle p-4">
+        <h2 id="findings-saved-heading" className="text-sm font-semibold text-fg">Buscas salvas</h2>
+        <p className="mb-3 mt-1 text-xs text-fg-muted">Seus atalhos para retomar análises com os mesmos filtros.</p>
+        <SavedQueriesBar />
+      </section>
 
-      <FindingsTable syncToUrl exportavel />
+      <div className="findings-console relative mt-5">
+        <FindingsTable syncToUrl exportavel />
+      </div>
     </div>
   );
 }
