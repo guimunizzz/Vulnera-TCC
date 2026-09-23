@@ -33,17 +33,99 @@
   border-left: 1px solid oklch(var(--color-accent-ink) / 0.28);
 }
 
+.applications-capacity-track {
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(var(--color-border-subtle));
+}
+
+.applications-capacity-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: oklch(var(--color-accent));
+  transition: width var(--duration-slow) var(--ease-out);
+}
+
 .applications-inventory-table tbody tr {
   transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .applications-inventory-table tbody tr:hover {
-  background-color: oklch(var(--color-bg-hovered));
+  background-color: var(--color-bg-hover);
 }
 
 @media (max-width: 639px) {
   .applications-hero-stat {
     border-top: 1px solid oklch(var(--color-accent-ink) / 0.2);
     border-left: 0;
+  }
+
+  .applications-inventory-table table,
+  .applications-inventory-table tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .applications-inventory-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .applications-inventory-table tbody {
+    padding: 0.75rem;
+  }
+
+  .applications-inventory-table tbody tr {
+    display: block;
+    overflow: hidden;
+    border: 1px solid oklch(var(--color-border-subtle));
+    border-radius: var(--radius-container);
+    background: oklch(var(--color-bg-raised));
+  }
+
+  .applications-inventory-table tbody tr + tr {
+    margin-top: 0.75rem;
+  }
+
+  .applications-inventory-table td {
+    display: block;
+    max-width: none;
+    padding: 0;
+  }
+
+  .applications-inventory-table td:first-child {
+    padding: 1rem 1rem 0.25rem;
+    font-size: 1rem;
+  }
+
+  .applications-inventory-table td:nth-child(2) {
+    overflow: visible;
+    padding: 0 1rem 0.75rem;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .applications-inventory-table td:nth-child(3) {
+    border-top: 1px solid oklch(var(--color-border-subtle));
+    padding: 0.75rem 1rem;
+  }
+
+  .applications-inventory-table td:nth-child(4) {
+    padding: 0 1rem 1rem;
+  }
+
+  .applications-inventory-table td:nth-child(4) > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
   }
 }

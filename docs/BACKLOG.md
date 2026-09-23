@@ -6,6 +6,8 @@
 
 ## Status
 
+✅ **2026-09-23 — Ajuste visual de Aplicações e Projetos (100%)**: ocupação real do plano e recuperação de erro no inventário; portfólio com contagens pelos quatro estados reais, links acessíveis e estados de carregamento/vazio/erro. As tabelas viram cartões no celular usando o mesmo DOM. Web 228/228, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Sem alteração de API, banco, RBAC ou dependências.
+
 ✅ **2026-09-22 — Ajuste visual do dashboard (100%)**: hero compartilhado nos três perfis, refinamento ADMIN, ondas Three.js no fundo e órbitas nos KPIs usando um único canvas lazy. Fallback estático para mobile/reduced-motion/ausência de WebGL, cleanup e pausa por visibilidade. Build Docker verde; 221 testes web e 66 pares de contraste aprovados; validação visual ADMIN em 1440/1024/768/375 px e dark/light/system. Sem alteração de API, banco, RBAC ou dependências. Relatório em `docs/DASHBOARD_VISUAL.md`.
 
 ✅ **2026-09-22 — Ajuste visual de Aplicações (100%)**: inventário com hero CSS estático, capacidade e resultado da busca derivados de dados existentes, skeleton, tabela mais legível e `ScrollArea` acessível para colunas largas no mobile. Entrada curta de linhas por Motion; nenhuma cena Three.js adicionada. Cobertura `APP-VIS-01/02`, build Docker aprovado, Web 223/223, contraste 66/66 e lint 0 erros (9 avisos preexistentes). Sem alteração de API, banco, RBAC ou dependências.

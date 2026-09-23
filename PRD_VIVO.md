@@ -18,7 +18,7 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Entrega visual atual | **2026-09-22 — Aplicações refinada (100%)**, branch `feat/improve-front-dash`: inventário mais legível com hero estático, capacidade e filtro derivados dos dados reais, tabela rolável acessível no mobile e entrada discreta por Motion. Build Docker verde; Web **223/223**, contraste 66/66 e lint sem erros (9 avisos preexistentes). _Anterior:_ **Dashboard atmosférico concluído (100%)**: hero dos três perfis, KPIs e ranking ADMIN refinados, ondas e órbitas Three.js em canvas único lazy, fallback CSS/mobile/reduced-motion. Relatório: `docs/DASHBOARD_VISUAL.md`. |
+| Entrega visual atual | **2026-09-23 — Aplicações e Projetos refinados (100%)**: inventário com capacidade real do plano e recuperação de erro; portfólio com distribuição pelos quatro estados reais e links semânticos para o detalhe. As duas tabelas se reorganizam em cartões no celular, sem duplicar dados. Web **228/228**, contraste 66/66, lint sem erros (9 avisos preexistentes) e build Docker verde. _Anterior:_ **Aplicações 2026-09-22 (100%)** na branch `feat/improve-front-dash`, Web 223/223; **Dashboard atmosférico 2026-09-22 (100%)** com Three.js decorativo. Relatório: `docs/DASHBOARD_VISUAL.md`. |
 | Sprint atual       | **Exposure & Remediation Management — CP-1 a CP-7 implementados** (branch `feat/exposure-remediation-management`). Contexto de risco, SLA, VRS, aceite de risco, playbooks OWASP, buscas salvas e quadro de remediação. **CP-8 (Exposure Graph) NÃO implementado** — era condicional |
 | Data início        | 2026-06-10 (Sprint 0)               |
 | Data alvo TCC      | 2026-10-25 (**40 dias restantes** a partir de 2026-09-15) |
@@ -54,6 +54,10 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 ---
 
 ## 3. Detalhamento por feature
+
+### Ajuste visual — Aplicações e Projetos (2026-09-23)
+
+**✅ Concluído — 100%.** Aplicações ganhou indicador de ocupação do plano quando a capacidade está disponível e estado de erro com nova tentativa; Projetos ganhou hero consistente, contagem por `PENDING`/`IN_PROGRESS`/`IN_REVIEW`/`COMPLETED`, tabela com links nativos e estados de carregamento, vazio e erro. No mobile, as linhas das duas tabelas são apresentadas como cartões sem duplicar o DOM. Dados, permissões, rotas de API e schema permanecem inalterados. Testes `APP-VIS-03` e `PROJ-VIS-01..04` adicionados; Web 228/228, contraste 66/66, lint sem erros (9 avisos preexistentes), build Docker verde.
 
 ### Ajuste visual — Dashboard atmosférico (2026-09-22)
 
