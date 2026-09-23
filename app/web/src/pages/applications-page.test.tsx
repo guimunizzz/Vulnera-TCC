@@ -85,6 +85,7 @@ describe("ApplicationsPage", () => {
     expect(screen.getByRole("heading", { name: "Aplicações" })).toBeInTheDocument();
     expect(screen.getByText("2", { selector: "[data-numeric]" })).toBeInTheDocument();
     expect(screen.getByText("de 5 vagas no plano PRO")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Capacidade de aplicações do plano" })).toHaveAttribute("aria-valuenow", "2");
     expect(screen.getByText("Portal do Cliente")).toBeInTheDocument();
     expect(screen.getByText("Painel interno")).toBeInTheDocument();
 
@@ -104,5 +105,16 @@ describe("ApplicationsPage", () => {
     expect(screen.queryByRole("button", { name: "Nova aplicação" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Contexto" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remover" })).not.toBeInTheDocument();
+  });
+
+  it("APP-VIS-03 — falha de carregamento oferece nova tentativa sem simular lista vazia", async () => {
+    entrarComo("ADMIN");
+    api.applications.mockRejectedValueOnce(new Error("offline"));
+    renderizarPagina();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar as aplicações");
+    expect(screen.queryByText("Nenhuma aplicação encontrada")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(await screen.findByText("Portal do Cliente")).toBeInTheDocument();
   });
 });

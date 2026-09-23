@@ -268,7 +268,7 @@ export function FindingsTable({
   /* --- render ------------------------------------------------------------- */
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="findings-table-layout flex flex-col gap-4">
       <BarraDeFiltros
         filtros={filtros}
         facetas={facetas}
@@ -303,6 +303,7 @@ export function FindingsTable({
           novos chegam). Movimento reduzido mantém a opacidade e some com o
           resto — a pessoa continua vendo QUE mudou, sem a coisa se mexer. */}
       <motion.div
+        className="findings-results"
         animate={{ opacity: atualizando ? 0.55 : 1 }}
         transition={{ duration: reduzido ? 0.08 : 0.18, ease: "easeOut" }}
       >
@@ -422,7 +423,7 @@ function BarraDeFiltros({
   );
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="findings-controls flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[16rem] flex-1">
           <Input

@@ -1,7 +1,7 @@
 /**
  * Atmosfera compartilhada pela página e seus KPIs. Mantém um único canvas
  * lazy e um fallback imediato para poupar GPU e proteger o conteúdo funcional.
- * Consumidor: DashboardPage; nenhuma dependência de Three neste módulo eager.
+ * Consumidores: DashboardPage e FindingsPage; Three permanece no chunk lazy.
  */
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useMotion } from "../../../motion/use-motion";
@@ -9,7 +9,7 @@ import { useMotion } from "../../../motion/use-motion";
 // Falha de download de decoração não deve derrubar a área de trabalho.
 const Canvas = lazy(() => import("./dashboard-ambient-canvas").catch(() => ({ default: () => <></> })));
 
-export function DashboardAtmosphere() {
+export function DashboardAtmosphere({ pausado = false }: { pausado?: boolean }) {
   const { reduzido } = useMotion();
   const [estreita, setEstreita] = useState(() => window.innerWidth < 768);
   useEffect(() => {
@@ -23,7 +23,7 @@ export function DashboardAtmosphere() {
   return (
     <>
       <div aria-hidden="true" className="dashboard-atmosphere-fallback pointer-events-none absolute inset-0" />
-      {!reduzido && !estreita && <Suspense fallback={null}><Canvas /></Suspense>}
+      {!pausado && !reduzido && !estreita && <Suspense fallback={null}><Canvas /></Suspense>}
     </>
   );
 }

@@ -10,6 +10,7 @@ import { Breadcrumb, ScrollArea } from "../components/ui/navigation";
 import { Button, LinkButton } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card, Label, RegiaoCarregando, Skeleton } from "../components/ui/card";
+import { ErrorState } from "../components/ui/empty-state";
 import { Alert } from "../components/ui/alert";
 import { Dialog, DialogDescription, DialogTitle } from "../components/ui/dialog";
 import { RiskContextChips } from "../components/applications/risk-context-chips";
@@ -34,7 +35,7 @@ export function ApplicationsPage() {
   const queryClient = useQueryClient();
   const companyName = useCompanyName(undefined);
 
-  const { data: applications, isLoading } = useQuery({ queryKey: ["applications"], queryFn: applicationsApi.list });
+  const { data: applications, isLoading, isError, refetch } = useQuery({ queryKey: ["applications"], queryFn: applicationsApi.list });
   const { data: currentSubscription } = useQuery({
     queryKey: ["subscriptions", "current"],
     queryFn: subscriptionsApi.current,
@@ -89,6 +90,10 @@ export function ApplicationsPage() {
   });
 
   const totalAplicacoes = applications?.length ?? 0;
+  const limiteAplicacoes = currentPlan?.maxApplications;
+  const ocupacao = applications && limiteAplicacoes && limiteAplicacoes > 0
+    ? Math.min(100, (totalAplicacoes / limiteAplicacoes) * 100)
+    : null;
 
   return (
     <div className="applications-workspace flex flex-col gap-5">
@@ -105,13 +110,27 @@ export function ApplicationsPage() {
             </p>
           </div>
 
-          <div className="applications-hero-stat flex min-w-fit items-baseline gap-3 py-1 pl-4 sm:pb-0">
-            <span className="font-mono text-2xl font-semibold text-fg" data-numeric>{totalAplicacoes}</span>
-            <span className="max-w-36 text-xs leading-5 text-fg-muted">
-              {currentPlan
-                ? `de ${currentPlan.maxApplications} vagas no plano ${currentPlan.name}`
-                : "alvos registrados"}
-            </span>
+          <div className="applications-hero-stat min-w-fit py-1 pl-4 sm:pb-0">
+            <div className="flex items-baseline gap-3">
+              <span className="font-mono text-2xl font-semibold text-fg" data-numeric>{applications ? totalAplicacoes : "—"}</span>
+              <span className="max-w-36 text-xs leading-5 text-fg-muted">
+                {currentPlan
+                  ? `de ${currentPlan.maxApplications} vagas no plano ${currentPlan.name}`
+                  : "alvos registrados"}
+              </span>
+            </div>
+            {ocupacao !== null && (
+              <div
+                role="progressbar"
+                aria-label="Capacidade de aplicações do plano"
+                aria-valuemin={0}
+                aria-valuemax={limiteAplicacoes}
+                aria-valuenow={Math.min(totalAplicacoes, limiteAplicacoes ?? 0)}
+                className="applications-capacity-track mt-3"
+              >
+                <span className="applications-capacity-fill" style={{ width: `${ocupacao}%` }} />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -127,20 +146,27 @@ export function ApplicationsPage() {
           />
         </div>
         <p className="text-xs text-fg-muted" aria-live="polite">
-          {isLoading ? "Carregando inventário…" : `${filtered.length} ${filtered.length === 1 ? "aplicação encontrada" : "aplicações encontradas"}`}
+          {isLoading ? "Carregando inventário…" : isError ? "Inventário indisponível" : `${filtered.length} ${filtered.length === 1 ? "aplicação encontrada" : "aplicações encontradas"}`}
         </p>
         {role !== "PENTESTER" && <Button onClick={() => setIsCreateOpen(true)} className="shrink-0">Nova aplicação</Button>}
       </section>
 
       {isLoading && <ApplicationsLoading />}
 
-      {!isLoading && filtered.length === 0 && (
+      {!isLoading && isError && (
+        <ErrorState
+          titulo="Não foi possível carregar as aplicações"
+          aoTentarNovamente={() => void refetch()}
+        />
+      )}
+
+      {!isLoading && !isError && filtered.length === 0 && (
         <Card titulo="Nenhuma aplicação encontrada" descricao={filter ? "Ajuste o filtro para procurar outro alvo." : "Cadastre o primeiro alvo que será analisado."}>
           {role !== "PENTESTER" && !filter && <Button onClick={() => setIsCreateOpen(true)}>Nova aplicação</Button>}
         </Card>
       )}
 
-      {!isLoading && filtered.length > 0 && (
+      {!isLoading && !isError && filtered.length > 0 && (
         <Card
           titulo="Aplicações registradas"
           descricao="O contexto de risco acompanha cada alvo nas análises e nos findings."

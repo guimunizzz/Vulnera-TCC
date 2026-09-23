@@ -18,7 +18,9 @@
 
 | Métrica            | Valor                               |
 | ------------------ | ----------------------------------- |
-| Entrega visual atual | **2026-09-22 — Aplicações refinada (100%)**, branch `feat/improve-front-dash`: inventário mais legível com hero estático, capacidade e filtro derivados dos dados reais, tabela rolável acessível no mobile e entrada discreta por Motion. Build Docker verde; Web **223/223**, contraste 66/66 e lint sem erros (9 avisos preexistentes). _Anterior:_ **Dashboard atmosférico concluído (100%)**: hero dos três perfis, KPIs e ranking ADMIN refinados, ondas e órbitas Three.js em canvas único lazy, fallback CSS/mobile/reduced-motion. Relatório: `docs/DASHBOARD_VISUAL.md`. |
+| Entrega visual mais recente na branch | **2026-09-23 — Remediação e SLA (100%):** quadro com resumo dos três estados reais, identidade por etapa, movimento de card após confirmação, menus e feedback preservados; política de SLA em quatro módulos, ações Salvar/Reaplicar separadas e histórico responsivo. Sem API, banco, RBAC, dependências ou lockfile alterados. Web 236/236 no contêiner, contraste 66/66, lint 0 erros (9 avisos preexistentes), build Docker verde. Navegador validado em 1440/768/375 px, claro/escuro e perfis ADMIN/OWNER/MEMBER/PENTESTER; emulação de movimento reduzido indisponível na ferramenta de navegador, com caminho de código/CSS revisado. Commit local em `feat/remediation-sla-visual`, sem push. Relatório: `output/remediation-sla-visual-report.md`. |
+| Entrega visual mais recente | **2026-09-23 — Findings atmosférico (100%)**: hero de triagem, ondas Three.js e órbitas decorativas nos cards de severidade em um canvas lazy compartilhado; pausa manual, fallback CSS mobile e respeito a movimento reduzido. Filtros, contagens e tabela canônica preservados. Web **231/231**, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Validação visual desktop/mobile 375 px, temas claro/escuro, pausa e filtro de severidade. |
+| Entrega visual atual | **2026-09-23 — Aplicações e Projetos refinados (100%)**: inventário com capacidade real do plano e recuperação de erro; portfólio com distribuição pelos quatro estados reais e links semânticos para o detalhe. As duas tabelas se reorganizam em cartões no celular, sem duplicar dados. Web **228/228**, contraste 66/66, lint sem erros (9 avisos preexistentes) e build Docker verde. _Anterior:_ **Aplicações 2026-09-22 (100%)** na branch `feat/improve-front-dash`, Web 223/223; **Dashboard atmosférico 2026-09-22 (100%)** com Three.js decorativo. Relatório: `docs/DASHBOARD_VISUAL.md`. |
 | Sprint atual       | **Exposure & Remediation Management — CP-1 a CP-7 implementados** (branch `feat/exposure-remediation-management`). Contexto de risco, SLA, VRS, aceite de risco, playbooks OWASP, buscas salvas e quadro de remediação. **CP-8 (Exposure Graph) NÃO implementado** — era condicional |
 | Data início        | 2026-06-10 (Sprint 0)               |
 | Data alvo TCC      | 2026-10-25 (**40 dias restantes** a partir de 2026-09-15) |
@@ -54,6 +56,18 @@ Legenda: 📋 backlog · 🚧 em progresso · ✅ feito · ❄️ pausado · ❌
 ---
 
 ## 3. Detalhamento por feature
+
+### Ajuste visual — Remediação e SLA (2026-09-23)
+
+**✅ Concluído — 100%, commit local na branch.** `/remediation` apresenta as três etapas reais com contadores factuais, filtros e cards refinados; mudança de coluna depende da confirmação/refetch, atribuição continua lazy e não há drag-and-drop. `/settings/sla` exibe os quatro prazos editáveis, histórico e distinção explícita entre salvar (não recalcula) e reaplicar (ADMIN-only). Movimento segue os tokens existentes e a preferência por movimento reduzido. Testes e validação em `output/remediation-sla-visual-report.md`.
+
+### Ajuste visual — Findings atmosférico (2026-09-23)
+
+**✅ Concluído — 100%.** Hero de análise de exposição com total real, superfície de buscas salvas e filtros, ondas lentas ao fundo e órbitas nos cards. Reutiliza a cena Three.js do dashboard com um único renderer lazy; no mobile mantém decoração CSS leve, e movimento reduzido desliga as animações contínuas. Controle de pausa remove o canvas e interrompe CSS. Seletores visuais da tabela são restritos à página global, preservando seu uso no detalhe de projetos. Três testes de regressão cobrem carregamento, erro e resumo filtrado. Web 231/231; contraste 66/66; lint 0 erros (9 avisos preexistentes); build Docker aprovado, com aviso já existente de tamanho de bundle. Conferidos no navegador: desktop, 375 px sem transbordamento horizontal, temas claro/escuro, pausa/retomada e filtro crítico com total/card consistentes. Sem alteração de API, banco, RBAC, dependências ou lockfile.
+
+### Ajuste visual — Aplicações e Projetos (2026-09-23)
+
+**✅ Concluído — 100%.** Aplicações ganhou indicador de ocupação do plano quando a capacidade está disponível e estado de erro com nova tentativa; Projetos ganhou hero consistente, contagem por `PENDING`/`IN_PROGRESS`/`IN_REVIEW`/`COMPLETED`, tabela com links nativos e estados de carregamento, vazio e erro. No mobile, as linhas das duas tabelas são apresentadas como cartões sem duplicar o DOM. Dados, permissões, rotas de API e schema permanecem inalterados. Testes `APP-VIS-03` e `PROJ-VIS-01..04` adicionados; Web 228/228, contraste 66/66, lint sem erros (9 avisos preexistentes), build Docker verde.
 
 ### Ajuste visual — Dashboard atmosférico (2026-09-22)
 

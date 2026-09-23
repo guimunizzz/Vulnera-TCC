@@ -19,6 +19,8 @@ const CURVAS = 18;
 const AMOSTRAS = 72;
 const FRAME_MS = 1000 / 30;
 const MAX_DPR = 1.5;
+// O mesmo canvas atende aos KPIs do dashboard e aos resumos de findings.
+const CARD_SELECTOR = "[data-dashboard-kpi], [data-ambient-card]";
 
 export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>, options: Options): void {
   const callbacks = useRef(options);
@@ -111,7 +113,7 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
       width = Math.max(1, host.clientWidth);
       height = Math.max(1, host.clientHeight);
       renderer.setSize(width, height, false);
-      cards = Array.from(host.querySelectorAll<HTMLElement>("[data-dashboard-kpi]")).map((card) => {
+      cards = Array.from(host.querySelectorAll<HTMLElement>(CARD_SELECTOR)).map((card) => {
         // offset ignora o translateY temporário do stagger de entrada.
         let left = 0;
         let top = 0;
@@ -222,7 +224,7 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
       resize = new ResizeObserver(() => { layoutDirty = true; });
       resize.observe(host);
       const observeCards = () => {
-        host.querySelectorAll("[data-dashboard-kpi]").forEach((card) => resize?.observe(card));
+        host.querySelectorAll(CARD_SELECTOR).forEach((card) => resize?.observe(card));
         layoutDirty = true;
       };
       mutations = new MutationObserver(observeCards);

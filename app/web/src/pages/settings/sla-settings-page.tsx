@@ -28,14 +28,16 @@
  * Rota `/settings/sla` (ADMIN, CLIENT).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { animate, motion } from "motion/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { companiesApi } from "../../lib/api/companies.api";
 import { slaPolicyApi } from "../../lib/api/sla-policy.api";
 import { useApiError } from "../../hooks/use-api-error";
 import { useAuthStore } from "../../store/auth.store";
-import { Breadcrumb } from "../../components/ui/navigation";
-import { Card } from "../../components/ui/card";
+import { Breadcrumb, ScrollArea } from "../../components/ui/navigation";
+import { Card, Skeleton } from "../../components/ui/card";
+import { ErrorState } from "../../components/ui/empty-state";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Select } from "../../components/ui/select";
@@ -43,17 +45,23 @@ import { Field } from "../../components/ui/field";
 import { Alert } from "../../components/ui/alert";
 import { Badge } from "../../components/ui/badge";
 import { SLA_DAYS_MAX, SLA_DAYS_MIN, type SlaPolicy, type UpsertSlaPolicyInput } from "../../types/sla-policy.types";
+import { useMotion } from "../../motion/use-motion";
+import { DURACAO, EASE } from "../../motion/tokens";
+import "./sla-settings-page.css";
 
 const SEVERIDADES = [
-  { chave: "criticalDays", rotulo: "Crítica", dica: "CVSS 9.0–10.0" },
-  { chave: "highDays", rotulo: "Alta", dica: "CVSS 7.0–8.9" },
-  { chave: "mediumDays", rotulo: "Média", dica: "CVSS 4.0–6.9" },
-  { chave: "lowDays", rotulo: "Baixa", dica: "CVSS 0.1–3.9" },
+  { chave: "criticalDays", rotulo: "Crítica", dica: "CVSS 9.0–10.0", tom: "critical" },
+  { chave: "highDays", rotulo: "Alta", dica: "CVSS 7.0–8.9", tom: "high" },
+  { chave: "mediumDays", rotulo: "Média", dica: "CVSS 4.0–6.9", tom: "medium" },
+  { chave: "lowDays", rotulo: "Baixa", dica: "CVSS 0.1–3.9", tom: "low" },
 ] as const;
 
 type ChaveDias = (typeof SEVERIDADES)[number]["chave"];
 
 export function SlaSettingsPage() {
+  const { item, lista, troca } = useMotion();
+  const jaMostrouPolitica = useRef(false);
+  const jaMostrouHistorico = useRef(false);
   const role = useAuthStore((s) => s.user?.role);
   const isAdmin = role === "ADMIN";
   const getErrorMessage = useApiError();
@@ -78,6 +86,13 @@ export function SlaSettingsPage() {
     queryFn: () => slaPolicyApi.history(companyId!),
     enabled: Boolean(companyId),
   });
+
+  useEffect(() => {
+    if (politica.data) jaMostrouPolitica.current = true;
+  }, [politica.data]);
+  useEffect(() => {
+    if (historico.data?.length) jaMostrouHistorico.current = true;
+  }, [historico.data]);
 
   const [dias, setDias] = useState<Record<ChaveDias, string>>({
     criticalDays: "2",
@@ -140,141 +155,205 @@ export function SlaSettingsPage() {
   const podeEditar = isAdmin || useAuthStore.getState().user?.companyRole === "OWNER";
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="sla-workspace flex flex-col gap-5">
       <Breadcrumb itens={[{ rotulo: "Configurações" }, { rotulo: "SLA de remediação" }]} />
 
-      <header>
-        <h1 className="text-2xl font-bold text-fg">SLA de remediação</h1>
-        <p className="mt-1 max-w-prose text-fg-muted">
-          Quantos dias corridos cada severidade tem para ser corrigida. O relógio começa quando o finding é
-          registrado e para quando ele é marcado como corrigido.
-        </p>
+      <header className="sla-hero relative overflow-hidden rounded-container border border-subtle p-5 sm:p-6">
+        <div aria-hidden="true" className="sla-hero-clock pointer-events-none absolute" />
+        <div className="relative">
+          <p className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-accent-ink">Governança de resposta / Política de tempo</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-fg">SLA de remediação</h1>
+          <p className="mt-2 max-w-prose text-sm text-fg-secondary">
+            Defina os dias corridos para corrigir cada severidade. O prazo começa no registro do finding e para quando ele é marcado como corrigido.
+          </p>
+        </div>
       </header>
 
       {isAdmin && (
-        <Field rotulo="Empresa" className="max-w-sm">
-          {(attrs) => (
-            <Select
-              {...attrs}
-              valor={companyId}
-              aoMudar={(v) => {
-                setCompanyId(v);
-                setFeedback(null);
-              }}
-              opcoes={(empresas.data ?? []).map((c) => ({ valor: c.id, rotulo: c.name }))}
-              placeholder="Escolha a empresa"
-            />
-          )}
-        </Field>
+        <div className="sla-company-panel rounded-container border border-subtle bg-surface p-4">
+          <Field rotulo="Empresa" className="max-w-sm">
+            {(attrs) => (
+              <Select
+                {...attrs}
+                valor={companyId}
+                aoMudar={(v) => {
+                  setCompanyId(v);
+                  setFeedback(null);
+                }}
+                opcoes={(empresas.data ?? []).map((c) => ({ valor: c.id, rotulo: c.name }))}
+                placeholder="Escolha a empresa"
+              />
+            )}
+          </Field>
+        </div>
       )}
 
       {feedback && (
-        <Alert tom={feedback.tom} aoFechar={() => setFeedback(null)}>
-          {feedback.texto}
-        </Alert>
+        <motion.div variants={troca} initial="inicial" animate="visivel" key={feedback.texto}>
+          <Alert tom={feedback.tom} aoFechar={() => setFeedback(null)}>{feedback.texto}</Alert>
+        </motion.div>
       )}
 
-      <Card>
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <h2 className="font-semibold text-fg">Política vigente</h2>
-          {politica.data?.isDefault && <Badge tom="neutro">padrão do produto</Badge>}
-          {politica.data && !politica.data.isDefault && <Badge tom="acento">própria da empresa</Badge>}
-        </div>
+      {(empresas.isError && isAdmin || minha.isError && !isAdmin) && (
+        <ErrorState titulo="Não foi possível identificar a empresa" aoTentarNovamente={() => void (isAdmin ? empresas.refetch() : minha.refetch())} />
+      )}
 
-        {politica.isLoading && <p className="text-fg-muted">Carregando...</p>}
+      <motion.div key={companyId ?? "sem-empresa"} variants={troca} initial="inicial" animate="visivel">
+        <Card className="sla-policy-card">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Da maior à menor severidade</p>
+              <h2 className="mt-1 text-lg font-semibold text-fg">Política vigente</h2>
+            </div>
+            {politica.data?.isDefault && <Badge tom="neutro">padrão do produto</Badge>}
+            {politica.data && !politica.data.isDefault && <Badge tom="acento">própria da empresa</Badge>}
+          </div>
 
-        {politica.data && (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setFeedback(null);
-              salvar.mutate();
-            }}
-          >
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {SEVERIDADES.map((s) => (
-                <Field key={s.chave} rotulo={`${s.rotulo} (dias)`} dica={s.dica} erro={erros[s.chave]}>
-                  {(attrs) => (
-                    <Input
-                      {...attrs}
-                      type="number"
-                      inputMode="numeric"
-                      min={SLA_DAYS_MIN}
-                      max={SLA_DAYS_MAX}
-                      value={dias[s.chave]}
+          {companyId && politica.isLoading && (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-busy="true">
+              <span className="sr-only">Carregando política de SLA</span>
+              {SEVERIDADES.map((s) => <Skeleton key={s.chave} className="h-40 w-full" />)}
+            </div>
+          )}
+          {!companyId && !empresas.isError && !minha.isError && !empresas.isLoading && !minha.isLoading && (
+            <p className="rounded-control border border-dashed border-subtle p-6 text-sm text-fg-muted">Selecione uma empresa para consultar a política.</p>
+          )}
+          {politica.isError && <ErrorState titulo="Não foi possível carregar a política" descricao={getErrorMessage(politica.error)} aoTentarNovamente={() => void politica.refetch()} />}
+
+          {politica.data && (
+            <form
+              className="flex flex-col gap-5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setFeedback(null);
+                salvar.mutate();
+              }}
+            >
+              <motion.div className="sla-level-grid grid gap-3 sm:grid-cols-2 xl:grid-cols-4" variants={lista} initial={jaMostrouPolitica.current ? false : "inicial"} animate="visivel">
+                {SEVERIDADES.map((s) => (
+                  <motion.div key={s.chave} variants={item}>
+                    <PrazoPorSeveridade
+                      severidade={s}
+                      valor={dias[s.chave]}
+                      erro={erros[s.chave]}
                       disabled={!podeEditar}
-                      onChange={(e) => setDias((d) => ({ ...d, [s.chave]: e.target.value }))}
+                      onChange={(valor) => setDias((atual) => ({ ...atual, [s.chave]: valor }))}
                     />
-                  )}
-                </Field>
-              ))}
-            </div>
+                  </motion.div>
+                ))}
+              </motion.div>
 
-            <Alert tom="info">
-              <strong>Salvar não recalcula nada.</strong> A política nova vale para os próximos findings; quem já tem
-              prazo mantém o prazo. Isso impede que um estouro seja "consertado" afrouxando a regra.
-              {isAdmin && " Para reescrever os prazos dos findings abertos, use o botão ao lado — a ação fica na auditoria."}
-            </Alert>
+              <div className="sla-save-panel flex flex-wrap items-center justify-between gap-4 rounded-container border border-subtle p-4">
+                <div className="max-w-prose">
+                  <h3 className="text-sm font-semibold text-fg">{podeEditar ? "Salvar política" : "Política para consulta"}</h3>
+                  <p className="mt-1 text-sm text-fg-secondary">{podeEditar ? "A nova política vale para os próximos findings. Salvar não recalcula prazos já existentes." : "A edição desta política é reservada ao responsável pela empresa."}</p>
+                </div>
+                {podeEditar && <Button type="submit" disabled={!valido || salvar.isPending}>{salvar.isPending ? "Salvando…" : "Salvar política"}</Button>}
+              </div>
 
-            <div className="flex flex-wrap justify-end gap-2">
               {isAdmin && (
-                <Button
-                  type="button"
-                  variant="secundario"
-                  disabled={reaplicar.isPending || !companyId}
-                  onClick={() => {
-                    setFeedback(null);
-                    reaplicar.mutate();
-                  }}
-                >
-                  {reaplicar.isPending ? "Recalculando..." : "Reaplicar aos findings abertos"}
-                </Button>
+                <div className="sla-reapply-panel flex flex-wrap items-center justify-between gap-4 rounded-container border p-4">
+                  <div className="max-w-prose">
+                    <h3 className="text-sm font-semibold text-warning-ink">Reaplicar aos findings abertos</h3>
+                    <p className="mt-1 text-sm text-fg-secondary">Recalcula os prazos dos findings abertos com a política vigente e registra a ação na auditoria.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secundario"
+                    disabled={reaplicar.isPending || !companyId}
+                    onClick={() => {
+                      setFeedback(null);
+                      reaplicar.mutate();
+                    }}
+                  >
+                    {reaplicar.isPending ? "Recalculando…" : "Reaplicar aos findings abertos"}
+                  </Button>
+                </div>
               )}
-              {podeEditar && (
-                <Button type="submit" disabled={!valido || salvar.isPending}>
-                  {salvar.isPending ? "Salvando..." : "Salvar política"}
-                </Button>
-              )}
-            </div>
-          </form>
-        )}
-      </Card>
+            </form>
+          )}
+        </Card>
+      </motion.div>
 
+      {historico.isError && <ErrorState titulo="Não foi possível carregar o histórico" descricao={getErrorMessage(historico.error)} aoTentarNovamente={() => void historico.refetch()} />}
+      {historico.isLoading && companyId && <Card><Skeleton className="h-32 w-full" /></Card>}
       {historico.data && historico.data.length > 0 && (
-        <Card>
-          <h2 className="mb-3 font-semibold text-fg">Histórico</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+        <Card className="sla-history-card" semPadding>
+          <div className="border-b border-subtle p-4">
+            <h2 className="text-lg font-semibold text-fg">Histórico</h2>
+            <p className="mt-1 text-sm text-fg-muted">Versões anteriores e política atualmente vigente.</p>
+          </div>
+          <ScrollArea rotulo="Histórico das políticas de SLA">
+            <table className="min-w-[42rem] w-full text-left text-sm">
               <caption className="sr-only">Versões da política de SLA desta empresa</caption>
-              <thead className="text-fg-muted">
+              <thead className="bg-inset text-xs uppercase tracking-wide text-fg-muted">
                 <tr>
-                  <th className="px-3 py-2 font-medium">Desde</th>
-                  <th className="px-3 py-2 font-medium">Crítica</th>
-                  <th className="px-3 py-2 font-medium">Alta</th>
-                  <th className="px-3 py-2 font-medium">Média</th>
-                  <th className="px-3 py-2 font-medium">Baixa</th>
-                  <th className="px-3 py-2 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium">Desde</th>
+                  <th className="px-4 py-3 font-medium">Crítica</th>
+                  <th className="px-4 py-3 font-medium">Alta</th>
+                  <th className="px-4 py-3 font-medium">Média</th>
+                  <th className="px-4 py-3 font-medium">Baixa</th>
+                  <th className="px-4 py-3 font-medium">Estado</th>
                 </tr>
               </thead>
-              <tbody>
+              <motion.tbody variants={lista} initial={jaMostrouHistorico.current ? false : "inicial"} animate="visivel">
                 {historico.data.map((p: SlaPolicy) => (
-                  <tr key={p.id} className="border-t border-subtle">
-                    <td className="px-3 py-2 text-fg-muted">{new Date(p.createdAt).toLocaleDateString("pt-BR")}</td>
-                    <td className="px-3 py-2 tabular-nums">{p.criticalDays}d</td>
-                    <td className="px-3 py-2 tabular-nums">{p.highDays}d</td>
-                    <td className="px-3 py-2 tabular-nums">{p.mediumDays}d</td>
-                    <td className="px-3 py-2 tabular-nums">{p.lowDays}d</td>
-                    <td className="px-3 py-2">
-                      {p.isActive ? <Badge tom="sucesso">vigente</Badge> : <Badge tom="neutro">substituída</Badge>}
-                    </td>
-                  </tr>
+                  <motion.tr key={p.id} variants={item} data-active={p.isActive || undefined} className="sla-history-row border-t border-subtle text-fg-secondary">
+                    <td className="px-4 py-3"><time dateTime={p.createdAt}>{new Date(p.createdAt).toLocaleDateString("pt-BR")}</time></td>
+                    <td className="px-4 py-3 font-mono tabular-nums text-severity-critical-ink">{p.criticalDays}d</td>
+                    <td className="px-4 py-3 font-mono tabular-nums text-severity-high-ink">{p.highDays}d</td>
+                    <td className="px-4 py-3 font-mono tabular-nums text-severity-medium-ink">{p.mediumDays}d</td>
+                    <td className="px-4 py-3 font-mono tabular-nums text-severity-low-ink">{p.lowDays}d</td>
+                    <td className="px-4 py-3">{p.isActive ? <Badge tom="sucesso">vigente</Badge> : <Badge tom="neutro">substituída</Badge>}</td>
+                  </motion.tr>
                 ))}
-              </tbody>
+              </motion.tbody>
             </table>
-          </div>
+          </ScrollArea>
         </Card>
       )}
+    </div>
+  );
+}
+
+function PrazoPorSeveridade({ severidade, valor, erro, disabled, onChange }: {
+  severidade: (typeof SEVERIDADES)[number];
+  valor: string;
+  erro?: string;
+  disabled: boolean;
+  onChange: (valor: string) => void;
+}) {
+  const { reduzido } = useMotion();
+  const painel = useRef<HTMLDivElement>(null);
+  const ultimoConfirmado = useRef(valor);
+
+  const destacarEdicao = () => {
+    const numero = Number(valor);
+    if (reduzido || disabled || valor === ultimoConfirmado.current || !Number.isInteger(numero) || numero < SLA_DAYS_MIN || numero > SLA_DAYS_MAX) return;
+    ultimoConfirmado.current = valor;
+    if (painel.current) void animate(painel.current, { scale: [1, 1.015, 1] }, { duration: DURACAO.base, ease: EASE.out });
+  };
+
+  return (
+    <div ref={painel} className={`sla-level sla-level--${severidade.tom} relative overflow-hidden rounded-container border border-subtle p-4`}>
+      <span className="sla-level-clock" aria-hidden="true" />
+      <Field rotulo={`${severidade.rotulo} (dias)`} dica={severidade.dica} erro={erro}>
+        {(attrs) => (
+          <Input
+            {...attrs}
+            className="sla-level-input font-mono font-semibold tabular-nums"
+            type="number"
+            inputMode="numeric"
+            min={SLA_DAYS_MIN}
+            max={SLA_DAYS_MAX}
+            value={valor}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            onBlur={destacarEdicao}
+          />
+        )}
+      </Field>
+      <p className="mt-2 font-mono text-xs uppercase tracking-wide text-fg-muted">dias corridos</p>
     </div>
   );
 }
