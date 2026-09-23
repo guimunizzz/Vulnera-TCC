@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { makeMaturityController } from "../factories/maturity.factory";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 
 const router = Router();
 const controller = makeMaturityController();
 
-router.use(authMiddleware);
+router.use(authRateLimitMiddleware);
 
 // rota literal antes de paramétrica
 router.get("/catalog", (req, res) => controller.getCatalog(req, res));

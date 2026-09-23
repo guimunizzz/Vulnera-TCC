@@ -23,6 +23,10 @@
 - Celular com o Expo Go instalado e o app mobile rodando (`npx expo start`
   em `app/mobile`, `.env` apontando pro IP da rede local) — só necessário
   pro passo 5 (push notification)
+- **Catálogo OWASP semeado** (só na primeira vez, e **sem Internet**):
+  `npm run db:seed:playbooks --workspace=app/api` — as dez categorias do Top
+  10 vêm do snapshot versionado em `app/api/prisma/seeds/owasp/`. Sem isso, o
+  bloco "Como corrigir" do passo 11 aparece vazio.
 - Anotar as credenciais de demo (todas com `npm run db:seed`):
 
 | Perfil | E-mail | Senha |
@@ -157,6 +161,53 @@
 
 ---
 
+## Trilha "exposição e remediação" — o que veio depois do achado
+
+> Esta parte responde à pergunta que a banca faz depois de ver um finding
+> bonito: **"e aí, o que acontece com ele?"**. Dá para encaixar em ~3 min.
+
+### 11. Do finding ao "como corrigir" — ~1 min
+
+1. Abrir qualquer finding de **A03 (Injeção)**.
+2. Mostrar, no mesmo lugar:
+   - o **contexto da aplicação** (produção · crítica · exposta · dados
+     sensíveis) — é isso que diferencia esta injeção de uma igual num
+     ambiente de desenvolvimento;
+   - o **VRS** ao lado do CVSS, com a conta aberta ("60 + 15 + 8 = 83");
+   - o **prazo de SLA** e quanto falta;
+   - o bloco **"Como corrigir"**, com o conteúdo oficial da OWASP e a
+     atribuição CC BY-SA visível no rodapé.
+3. Frase para dizer em voz alta: *"o CVSS diz o quanto é grave; o VRS diz o
+   que eu faço primeiro; o SLA diz até quando"*.
+
+### 12. Catálogo e adaptação — ~0,5 min
+
+1. Menu **Playbooks** → as dez categorias do Top 10.
+2. Abrir uma delas: a tarja diz **"conteúdo oficial, somente leitura"** e não
+   existe botão de editar.
+3. Clicar em **"Duplicar e adaptar"** — a cópia vira playbook da casa,
+   editável, e **continua creditando a OWASP** (obra derivada).
+
+### 13. Aceite formal de risco — ~1 min
+
+1. Num finding, abrir o painel de **aceite de risco** e solicitar, com
+   justificativa e prazo.
+2. Trocar de usuário e aprovar — **o mesmo usuário não aprova o próprio
+   pedido**, nem o ADMIN (mostrar o 403 se quiser).
+3. Voltar ao finding: ele **continua ABERTO**, com o selo de risco aceito, e o
+   SLA aparece **pausado**.
+
+### 14. Buscas salvas e quadro de remediação — ~0,5 min
+
+1. Em **Findings**, montar um recorte (ex.: `severidade = CRITICAL` e
+   `sla = BREACHED`), clicar em **Salvar esta busca**, marcar **fixar** —
+   o atalho aparece na barra lateral.
+2. Menu **Remediação**: as três colunas, e **"Mover para…"** por menu.
+   Mostrar que funciona **só com o teclado** (Tab, Enter, setas) — é a razão
+   de não haver arrastar-e-soltar (ADR-039).
+
+---
+
 ## Se algo falhar no meio da demo
 
 - **Push não chegou no celular**: confirma que o `.env` do mobile aponta
@@ -166,6 +217,10 @@
   `COMPLETED` (RN18) — confirma o status na aba Visão geral antes.
 - **Onboarding trava em "aguardando aprovação"**: precisa logar como ADMIN
   e aprovar em `/admin/subscriptions` — não existe auto-aprovação.
+- **"Como corrigir" vazio no finding**: o catálogo não foi semeado — rodar
+  `npm run db:seed:playbooks --workspace=app/api` (não precisa de Internet).
+- **Não consigo aprovar o aceite de risco**: é a regra, não um bug. Quem
+  solicitou não aprova; troque de usuário.
 - **Quer reiniciar do zero**: `docker compose down -v` apaga tudo
   (inclusive o volume do banco) — depois `docker compose up --build` +
   `npm run db:seed`.

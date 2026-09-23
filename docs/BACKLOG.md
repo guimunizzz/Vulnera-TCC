@@ -6,6 +6,16 @@
 
 ## Status
 
+✅ **2026-09-23 — Ajuste visual de Remediação e SLA (100%; commit local em `feat/remediation-sla-visual`):** quadro de três etapas com movimento após confirmação e atribuição lazy; política de quatro severidades com Salvar/Reaplicar separados e histórico responsivo. Web 236/236 em contêiner, contraste 66/66, lint 0 erros e build Docker verde; validação real em desktop/tablet/mobile e dark/light. Sem alterações de API, banco, RBAC, dependências ou lockfile. Ver `output/remediation-sla-visual-report.md`.
+
+✅ **2026-09-23 — Ajuste visual de Findings (100%)**: hero de triagem, ondas Three.js e órbitas nos resumos com um único canvas lazy; fundo CSS discreto, pausa manual e movimento reduzido. Filtros, tabela canônica e contagens do recorte preservados. Web 231/231, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Validação visual desktop/mobile 375 px, claro/escuro, pausa e filtro de severidade. Sem alteração de API, banco, RBAC ou dependências.
+
+✅ **2026-09-23 — Ajuste visual de Aplicações e Projetos (100%)**: ocupação real do plano e recuperação de erro no inventário; portfólio com contagens pelos quatro estados reais, links acessíveis e estados de carregamento/vazio/erro. As tabelas viram cartões no celular usando o mesmo DOM. Web 228/228, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Sem alteração de API, banco, RBAC ou dependências.
+
+✅ **2026-09-22 — Ajuste visual do dashboard (100%)**: hero compartilhado nos três perfis, refinamento ADMIN, ondas Three.js no fundo e órbitas nos KPIs usando um único canvas lazy. Fallback estático para mobile/reduced-motion/ausência de WebGL, cleanup e pausa por visibilidade. Build Docker verde; 221 testes web e 66 pares de contraste aprovados; validação visual ADMIN em 1440/1024/768/375 px e dark/light/system. Sem alteração de API, banco, RBAC ou dependências. Relatório em `docs/DASHBOARD_VISUAL.md`.
+
+✅ **2026-09-22 — Ajuste visual de Aplicações (100%)**: inventário com hero CSS estático, capacidade e resultado da busca derivados de dados existentes, skeleton, tabela mais legível e `ScrollArea` acessível para colunas largas no mobile. Entrada curta de linhas por Motion; nenhuma cena Three.js adicionada. Cobertura `APP-VIS-01/02`, build Docker aprovado, Web 223/223, contraste 66/66 e lint 0 erros (9 avisos preexistentes). Sem alteração de API, banco, RBAC ou dependências.
+
 | Fase               | Escopo                                             | Estado         |
 | ------------------ | -------------------------------------------------- | -------------- |
 | 0 Refactor         | Alinhamento com CLAUDE.md                          | ✅             |
@@ -144,7 +154,7 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | 8.6 | SonarQube (pipeline) + ZAP baseline — evidências capturadas     | 3   | 🚧 ZAP ✅ (0 FAIL/5 WARN/62 PASS, `docs/evidencias/zap/`); Sonar bloqueado — CI nunca rodou (mismatch `dev`/`develop`, corrigido), falta abrir PR (ação do Rafael) |
 | 8.7 | `docs/DEMO.md` + README + diagrama + limitações conhecidas (base pronta: ver "Limitações conhecidas — Fase 5" no fim deste arquivo) | 5   | ✅ README.md + docs/DEMO.md, screenshots reais via Playwright, diagrama Mermaid |
 | 8.9 | (descoberta 2026-08-07) Rota DELETE de Evidence — hoje não existe (L-05) | 1 | 📋 |
-| 8.10 | (descoberta 2026-08-07) Rate limiting em upload e login (L-07)  | 2   | 📋     |
+| 8.10 | (descoberta 2026-08-07) Rate limiting em upload e login (L-07)  | 2   | ✅ Concluída em 2026-09-21 — camadas global/tenant/user/write/endpoint/auth, Token Bucket limitado, testes e cenários k6/JMeter; ver ADR-040 |
 | 8.11 | (descoberta 2026-08-07) PDF Executivo: título longo sobrepõe o texto de CVSS/OWASP no "Top 5 riscos" (`lib/pdf/executive.ts`) | 1 | 📋 |
 | 8.12 | (descoberta 2026-08-18, `fix/landing-publica`) Landing "cena Three.js" completa (efeito ASCII, samurai procedural, mergulho de câmera por scroll) — nunca foi implementada em nenhum formato neste repositório. KAN-110 ganhou só o placeholder mínimo (ver PRD_VIVO.md); a versão 3D descrita na issue original fica como feature nova, não bugfix. Exige `useHeroScene` com `dispose()`/`cancelAnimationFrame`/descarte de render targets no unmount (evitar vazar contexto WebGL a cada navegação landing↔dashboard) | 8 | ✅ Concluída em 2026-08-19 — ver PRD_VIVO.md §6 e ADR-026 |
 | 8.8 | Smoke E2E cronometrado + tag `v1.0.0`                           | 3   | 📋     |
@@ -241,6 +251,35 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 
 ---
 
+## INICIATIVA — Exposure & Remediation Management (CP-0 a CP-7) — ✅ CP-0 a CP-7 concluídos em 2026-09-16
+
+> Branch `feat/exposure-remediation-management`. Documento técnico:
+> `docs/EXPOSURE_REMEDIATION.md`. Decisões: **ADR-033 a ADR-039** e a seção de
+> decisões de implementação em `docs/DECISIONS.md`.
+
+| #    | Task                                                                    | Estado |
+| ---- | ----------------------------------------------------------------------- | ------ |
+| CP-0 | Baseline: branch, build do web destravado, ADR-033, decisões D1–D10      | ✅ |
+| CP-1 | Application Context (ambiente, criticidade, exposição, sensibilidade)    | ✅ |
+| CP-1b| Contexto embutido no DTO do finding (PENTESTER não lê `/applications`)   | ✅ |
+| CP-2 | SLA Engine: `SlaPolicy`, ciclo por finding, estados derivados           | ✅ |
+| CP-2b| Filtro `slaState` nos DOIS construtores + `slaDueSoonAt` persistido     | ✅ |
+| CP-3 | Vulnera Risk Score aditivo + faixas + `vrsFactors` auditável            | ✅ |
+| CP-4 | Risk Acceptance: entidade, alçada, pausa de SLA, expiração preguiçosa   | ✅ |
+| CP-4b| FK de `revokedById` por migration ADITIVA (a aplicada não foi editada)  | ✅ (descoberta) |
+| CP-5 | Playbooks + importação OWASP por CLI + snapshot offline com sha256      | ✅ |
+| CP-5b| Três camadas contra XSS (escrita, renderização, CSP real no preview)    | ✅ |
+| CP-5c| Parser tolerante à tradução pt-BR divergente do A10                     | ✅ (descoberta) |
+| CP-6 | Saved Queries / Watchlists com canonização da query                     | ✅ |
+| CP-7 | Quadro de remediação por menu (sem arrastar) + `assignedTo` ponta a ponta| ✅ |
+| CP-7b| Correção do `where()`: chaves `AND` concorrentes apagavam filtros        | ✅ (descoberta) |
+| CP-7c| `config/` faltando no `COPY` do Dockerfile do web                       | ✅ (descoberta) |
+| VAL-01 | Critérios de aceite, seis cruzamentos e matriz de evidências CP-1–CP-7 | ✅ `docs/EXPOSURE_REMEDIATION_ACCEPTANCE.md`; histórias, UCs, critérios e evidências documentados; specs E2E-EXP-01..09 revisados, com reexecução local do Playwright ainda bloqueada por dependência ausente |
+| VAL-02 | Hardening P2 e validação final CP-1–CP-7 | ✅ Locks transacionais em SLA/Saved Query; candidatos mínimos e lazy no quadro; playbook customizado para PENTESTER membro; filtros/expiração; cleanup E2E-EXP-05/06 por marcador único. **API focal 75/75 · Web serial 128/128 · lint 0 erros · contraste 66/66**; `docker compose build --no-cache` API/Web verde e stack saudável; validação manual moveu/restaurou cartão. Playwright E2E não reexecutado no host (`@playwright/test` ausente); dependências foram instaladas normalmente nas imagens Docker. Sem alteração de schema, migration ou lockfile nesta validação |
+| CP-8 | Exposure Graph / Cadeias de Exposição                                   | ⛔ **não implementado** — era condicional; ver `docs/EXPOSURE_REMEDIATION.md` §9 |
+
+---
+
 ## Findings de auditoria
 
 > Os achados da auditoria consolidada, com o estado de cada um. Antes desta
@@ -293,7 +332,7 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 | L-04 | **Acesso negado responde 403, não 404.** Um atacante com um ID válido de outra company aprende que o recurso existe. | O `CLAUDE.md` §9 define `FORBIDDEN`→403 como padrão do projeto, e as Fases 3/4 já usam 403 em TEN-01..06. Mudar só a Fase 5 criaria inconsistência; mudar tudo quebraria contrato já mergeado. | IDs são `cuid()`, não enumeráveis por força bruta — o ganho do 404 é marginal. Isolamento em si é total e provado por TEN-07..13. |
 | L-05 | **Não há rota de DELETE para Evidence.** Uma evidência anexada por engano não pode ser removida pela API. | Criar a rota é **feature nova**, fora do escopo de uma sessão de endurecimento. | Anexar evidência errada exige refazer o finding ou remoção manual no banco. **Candidata a task da Fase 8.** |
 | L-06 | **`text/plain` aceita qualquer texto UTF-8**, inclusive HTML, SVG, JS ou script shell renomeados para `.txt`. | Texto não tem assinatura binária própria; distinguir "texto de log" de "texto que é código" exigiria heurística frágil e cheia de falso-positivo. | Servido sempre como `attachment` + `nosniff` + `Content-Type: text/plain` — o navegador não renderiza. Bytes de controle são recusados desde 2026-08-07. |
-| L-07 | **Sem rate limiting em nenhuma rota**, inclusive upload e login. | Fora do escopo do MVP; exigiria middleware novo e decisão sobre store (memória × Redis, e Redis está fora do escopo). | Limites de tamanho e de partes no multipart reduzem o custo por requisição. **Candidata a task da Fase 8.** |
+| L-07 | **Rate limiting é local à instância.** Em memória, portanto um restart zera os buckets e várias réplicas não compartilham a cota. | O MVP opera em instância única; Redis/store compartilhado permanece fora do escopo atual. | A proteção cobre global/tenant/user/escrita/endpoints e autenticação; escalar horizontalmente exige trocar somente a implementação do store. Ver ADR-040. |
 | L-09 | **A paridade de acessibilidade foi provada em jsdom, não em leitor de tela real.** NVDA e VoiceOver não foram testados. | Exigiria máquina com leitor de tela instalado e um protocolo de teste manual — fora do que uma sessão automatizada alcança. | 14 testes cobrindo role/ARIA/teclado/foco item a item do contrato, mais `axe-core` sem violações. O que NÃO se prova é a experiência de escuta: ordem de anúncio, verbosidade, se o texto faz sentido em voz alta. **Candidata a task da Fase 8.** |
 | L-10 | **A validação visual no navegador real não foi feita na Fase 6.5.** Aparência, responsividade em 375/768/1440 e console limpo não foram conferidos. | A extensão do Chrome não conectou na sessão (mesmo bloqueio da Fase 6). | Build e tipos limpos; 24 testes de frontend em jsdom; contraste medido matematicamente. **Pendente para o Rafael** — os 10 itens estão no bloqueio de 2026-08-09 do `PRD_VIVO.md`. |
 | L-11 | **O risk score da SÉRIE TEMPORAL é aproximado**, diferente do valor exato do `summary`. | Reconstruir o CVSS de cada finding aberto em cada período passado exigiria tabela de snapshot, que o ADR-025 evitou de propósito. | Serve para ver TENDÊNCIA, que é a função da linha. Está comentado no código, dito no ADR-025 e visível na interface. O `summary` — o número que a pessoa lê — é exato. |
@@ -301,6 +340,26 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 | L-15 | **O donut de severidade não renderiza** — só a legenda aparece, no dashboard do CLIENT e no de aplicação. Recharts avisa `width(0) and height(0)` dentro de um contêiner `h-48 w-48` legítimo. | Pré-existente (provável efeito do upgrade para `recharts@^3.10.1`, major). Encontrado na validação da Fase 9, em componente que a entrega não tocou — §0.2 S6. | A informação não se perde: a legenda lista severidade e contagem em texto, e os KPIs numéricos acima estão corretos. O gráfico é reforço, não portador. |
 | L-16 | **Falha de rede silenciosa em todas as telas fora da Fase 9.** O `networkMode: "online"` padrão do TanStack Query pausa a consulta em vez de errar (`status: pending`, `error: null`), então a tela não mostra erro nem oferece recuperação — e `refetch()` numa consulta pausada também pausa. | Corrigir de vez é trocar o padrão do `queryClient` global, que afeta toda tela do app — grande demais para entrar junto de uma entrega de findings. Marcado `[FUTURO]` em `use-findings.ts`. | As buscas de finding já usam `networkMode: "always"` e mostram erro de verdade com botão de recuperação. As demais telas continuam com o comportamento antigo. |
 | L-17 | **Uma queda da API desloga o usuário.** O refresh falha, e o interceptor de `lib/api/client.ts` não distingue "refresh recusado" (401 legítimo) de "refresh não chegou ao servidor" (rede), chamando `clearAuth()` nos dois casos. | Pré-existente; mexer no interceptor de autenticação é risco desproporcional numa entrega de listagem. | A sessão volta com um login; nenhum dado se perde. |
+
+---
+
+## Limitações conhecidas — Build / Docker
+
+> Levantadas em **2026-09-14** ao destravar o `docker compose up --build`, e
+> **restauradas em 2026-09-15** no CP-0 da iniciativa Exposure & Remediation.
+>
+> ⚠️ **Por que sumiram e voltaram:** esta seção entrou junto do fix `74cb60e` e
+> foi removida pelo revert da landing (`31988ba`), que levou o fix junto por
+> estar na mesma árvore. O build ficou quebrado em `dev` e `main` de 2026-09-14
+> a 2026-09-15 sem nenhuma limitação registrada explicando por quê. Mesmo
+> critério das demais: encontradas, avaliadas e conscientemente não corrigidas.
+
+| # | Limitação | Por que não foi corrigida | Mitigação existente |
+| --- | --- | --- | --- |
+| L-12 | **Build da imagem não é reproduzível.** `package-lock.json` está no `.gitignore`, então nenhum lock chega ao contexto de build — cada `docker build` re-resolve as versões dentro das faixas de semver e pode trazer uma transitiva diferente da que o dev testou. | Passar a versionar o lock é decisão de projeto (afeta API, web e mobile) e exige validar `npm ci` nos três Dockerfiles. **Decisão do Rafael.** É também a causa-raiz de L-13. | Versões diretas pinadas por `^` em `package.json`; a stack é validada à mão antes da demo. `npm install -g npm@11` (L-13) neutraliza o sintoma mais grave |
+| L-13 | **`npm install -g npm@11` é obrigatório nas imagens de API e Web.** O npm 10.9.8 que vem no `node:22-alpine` aborta com `Cannot read properties of null (reading 'edgesOut')` ao montar o grafo de peers sem lock (bug do Arborist). | O bug é do npm, não do projeto; resolver de verdade exigiria versionar o lock (L-12). **Reproduzido de novo em 2026-09-15** no CP-0, com npm 10.9.8, estágio `[web 4/8] RUN npm install`. | Linha presente e **documentada nos dois Dockerfiles**, com aviso de que já foi perdida uma vez. O comentário do `app/api/Dockerfile` referencia o do web e vice-versa |
+| L-14 | **O `tsc --noEmit` do build da imagem type-checka os arquivos de teste.** `npm run build` roda `tsc --noEmit && vite build`, e o `tsconfig.json` inclui `src` inteiro — um erro de tipo em `*.test.tsx` derruba o build de produção. | É também a única checagem de tipos automatizada com gatilho: o CI só roda SonarQube, e `npm run check` é lint + contraste + testes, sem `tsc`. Removê-la do Dockerfile deixaria o `tsc` sem nenhum gatilho automático. | Aceito de propósito enquanto o CI não rodar `tsc`; o efeito é conservador (falha a mais, nunca a menos). Foi o que expôs a peer `@testing-library/dom` faltante |
+| L-18 | **Peers usadas pelo código precisam estar declaradas à mão.** `@testing-library/react@16` não implementa `screen`/`waitFor`/`within` — só reexporta de `@testing-library/dom`, declarada como peer. Na máquina do dev o npm instala a peer sozinho, então a ausência da declaração fica invisível até o container. | Não é bug: é o comportamento correto de peer dependency. Auditar todas as peers do projeto é trabalho próprio. | `@testing-library/dom@^10.4.1` declarado explicitamente em `app/web/package.json` desde 2026-09-15 — o código usa aqueles símbolos, então a dependência é real e deve ser declarada, não herdada por acaso do resolvedor |
 
 ---
 

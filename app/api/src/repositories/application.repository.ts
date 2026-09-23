@@ -33,12 +33,28 @@ export class ApplicationRepository {
         techStack: data.techStack,
         description: data.description,
         companyId,
+        // Contexto de risco (CP-1). `undefined` deixa o default do schema
+        // valer (MEDIUM / false / INTERNAL) — só grava o que veio explícito.
+        ...(data.criticality !== undefined ? { criticality: data.criticality } : {}),
+        ...(data.internetFacing !== undefined ? { internetFacing: data.internetFacing } : {}),
+        ...(data.dataSensitivity !== undefined ? { dataSensitivity: data.dataSensitivity } : {}),
+        ...(data.businessOwner !== undefined ? { businessOwner: data.businessOwner } : {}),
+        ...(data.technicalOwner !== undefined ? { technicalOwner: data.technicalOwner } : {}),
       },
     });
   }
 
   async update(id: string, data: UpdateApplicationDTO): Promise<Application> {
     return this.prisma.application.update({ where: { id }, data });
+  }
+
+  /**
+   * Todas as aplicações de uma empresa, ativas ou não — o recorte do grafo e
+   * do recálculo de VRS. Sem filtro de `isActive` de propósito: uma app
+   * desativada ainda tem findings, e eles ainda têm contexto.
+   */
+  async findAllByCompanyIncludingInactive(companyId: string): Promise<Application[]> {
+    return this.prisma.application.findMany({ where: { companyId }, orderBy: { name: "asc" } });
   }
 
   /** RN04: exclusão é soft delete via isActive — nunca DELETE físico. */

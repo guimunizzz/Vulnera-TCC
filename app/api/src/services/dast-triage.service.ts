@@ -44,7 +44,11 @@ import type { VulnerabilityRepository } from "../repositories/vulnerability.repo
 import type { ProjectRepository } from "../repositories/project.repository";
 import type { ProjectMemberRepository } from "../repositories/project-member.repository";
 import type { AuditLogRepository } from "../repositories/audit-log.repository";
+import type { SlaPolicyService } from "./sla-policy.service";
 import { calculateCvss } from "../utils/cvss.util";
+import { computeSlaCycle } from "../utils/sla.util";
+import { calcularVrs } from "../utils/vrs.util";
+import type { ApplicationRepository } from "../repositories/application.repository";
 import { buildPromotionDraft, type PromotionDraft } from "../utils/dast-promotion.util";
 import { DastFindingEntity } from "../models/dast-finding.model";
 import type { UserRole } from "../models/user.model";
@@ -99,6 +103,8 @@ export class DastTriageService {
     private readonly projectRepository: ProjectRepository,
     private readonly projectMemberRepository: ProjectMemberRepository,
     private readonly auditLogRepository: AuditLogRepository,
+    private readonly slaPolicyService: SlaPolicyService,
+    private readonly applicationRepository: ApplicationRepository,
   ) {}
 
   // ==========================================================================
@@ -178,6 +184,28 @@ export class DastTriageService {
     // lança em vetor malformado — o controller traduz pra 400.
     const { score, severity } = calculateCvss(dto.cvssVector.trim());
 
+    // SLA (CP-2): o relógio começa AGORA — na promoção, não no scan do ZAP.
+    // Antes da triagem humana o alerta não era um finding do produto.
+    const agora = new Date(); // o mesmo instante vai em createdAt e slaStartedAt
+    const politica = await this.slaPolicyService.resolveFor(project.companyId);
+    const ciclo = computeSlaCycle(agora, politica.window, severity);
+
+    // VRS (CP-3): CVSS revisado pelo humano + contexto da app. Sem desconto por
+    // ser DAST — procedência não é severidade (D3).
+    const application = await this.applicationRepository.findById(project.applicationId);
+    const vrs = application
+      ? calcularVrs(
+          {
+            cvssScore: score,
+            criticality: application.criticality,
+            environment: application.environment,
+            internetFacing: application.internetFacing,
+            dataSensitivity: application.dataSensitivity,
+          },
+          agora,
+        )
+      : null;
+
     let created: Vulnerability;
     try {
       created = await this.vulnerabilityRepository.create({
@@ -196,6 +224,14 @@ export class DastTriageService {
         recommendation: dto.recommendation?.trim() || undefined,
         sourceType: "DAST_IMPORT",
         sourceDastFindingId: finding.id,
+        createdAt: agora,
+        slaStartedAt: ciclo?.slaStartedAt ?? null,
+        slaDueAt: ciclo?.slaDueAt ?? null,
+        slaDueSoonAt: ciclo?.slaDueSoonAt ?? null,
+        slaPolicyId: ciclo ? politica.policyId : null,
+        vrsScore: vrs?.score ?? null,
+        vrsFactors: vrs ? JSON.stringify(vrs.breakdown) : null,
+        vrsComputedAt: agora,
       });
     } catch (error) {
       // Fecha a janela entre a checagem lá em cima e este insert: dois cliques

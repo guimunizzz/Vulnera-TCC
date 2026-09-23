@@ -29,6 +29,7 @@ import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { applicationsApi } from "../lib/api/applications.api";
+import { RiskContextChips } from "../components/applications/risk-context-chips";
 import { metricsApi, montarQuery } from "../lib/api/metrics.api";
 import { useFiltrosMetricas } from "../hooks/use-filtros-metricas";
 import {
@@ -144,6 +145,8 @@ export function ApplicationDashboardPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold text-fg">{aplicacao.data?.name ?? <Skeleton className="h-7 w-48" />}</h1>
+          {/* Contexto de risco (CP-1): o que esta aplicação é, antes dos números. */}
+          {aplicacao.data && <RiskContextChips contexto={aplicacao.data} />}
           <p className="text-sm text-fg-muted">
             Postura de segurança{" "}
             {s && (
@@ -189,7 +192,7 @@ export function ApplicationDashboardPage() {
                         ajuda="Findings com status OPEN ou IN_PROGRESS dentro do período e dos filtros aplicados."
                       />
                       <KpiCard
-                        rotulo="Risk score"
+                        rotulo="Risco acumulado da aplicação"
                         valor={s.riskScore}
                         casas={1}
                         delta={s.comparacao?.riskScore}
@@ -494,7 +497,7 @@ function Comparativo({
           },
           {
             id: "risco",
-            cabecalho: "Risk score",
+            cabecalho: "Risco acumulado",
             alinhamento: "direita",
             ordenarPor: (l) => l.riskScore,
             celula: (l) => l.riskScore.toLocaleString("pt-BR", { maximumFractionDigits: 1 }),

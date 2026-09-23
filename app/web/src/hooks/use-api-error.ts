@@ -52,6 +52,33 @@ const MESSAGES: Record<string, string> = {
   INVALID_ENVIRONMENT: "Ambiente inválido.",
   NO_ACTIVE_SUBSCRIPTION: "Sua empresa ainda não tem uma assinatura ativa. Aguarde a aprovação do admin.",
   PLAN_LIMIT_REACHED: "Limite de aplicações do plano atual atingido.",
+  // contexto de risco (CP-1)
+  INVALID_CRITICALITY: "Criticidade inválida.",
+  INVALID_DATA_SENSITIVITY: "Sensibilidade do dado inválida.",
+  INVALID_INTERNET_FACING: "Exposição à internet precisa ser sim ou não.",
+  INVALID_BUSINESS_OWNER: "Dono de negócio: use até 180 caracteres.",
+  INVALID_TECHNICAL_OWNER: "Dono técnico: use até 180 caracteres.",
+  RISK_CONTEXT_REDUCTION_REQUIRES_ADMIN:
+    "Reduzir criticidade, exposição, ambiente ou sensibilidade exige um administrador. Você pode aumentar; para diminuir, peça a um admin.",
+
+  // SLA (CP-2)
+  INVALID_SLA_DAYS: "Cada prazo precisa ser um número inteiro entre 1 e 365 dias.",
+  INVALID_SLA_STATE: "Estado de SLA inválido.",
+  // VRS (CP-3)
+  INVALID_VRS_RANGE: "Faixa de prioridade inválida — use inteiros entre 0 e 100, com o mínimo abaixo do máximo.",
+
+  // Risk Acceptance (CP-4)
+  RISK_ACCEPTANCE_NOT_FOUND: "Aceite de risco não encontrado.",
+  RISK_ACCEPTANCE_ALREADY_ACTIVE: "Já existe um aceite em aberto para este finding. Encerre o atual antes de pedir outro.",
+  CANNOT_APPROVE_OWN_REQUEST: "Quem solicita não aprova. Outro administrador ou dono da empresa precisa decidir.",
+  INVALID_EXPIRES_AT: "Prazo inválido — precisa ser uma data futura, no máximo 365 dias à frente.",
+  EXPIRES_AT_EXCEEDS_REQUESTED: "O prazo aprovado não pode ser maior que o solicitado. Você pode encurtar, não estender.",
+  INVALID_BUSINESS_JUSTIFICATION: "Descreva a justificativa de negócio com pelo menos 20 caracteres.",
+  INVALID_COMPENSATING_CONTROLS: "Controles compensatórios: texto muito longo.",
+  INVALID_REVIEW_NOTE: "Parecer muito longo.",
+  MISSING_REVIEW_NOTE: "Escreva um parecer para registrar a decisão.",
+  INVALID_RISK_ACCEPTANCE: "Filtro de aceite de risco inválido.",
+  INVALID_REASON: "Descreva a razão com pelo menos 20 caracteres (10 para revogação).",
 
   // project
   PROJECT_NOT_FOUND: "Projeto não encontrado.",

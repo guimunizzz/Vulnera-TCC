@@ -6,17 +6,24 @@ import { plansApi } from "../lib/api/plans.api";
 import { getApiErrorCode, useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
 import { useCompanyName } from "../hooks/use-company-name";
-import { Breadcrumb } from "../components/ui/navigation";
+import { Breadcrumb, ScrollArea } from "../components/ui/navigation";
 import { Button, LinkButton } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/card";
+import { Card, Label, RegiaoCarregando, Skeleton } from "../components/ui/card";
+import { ErrorState } from "../components/ui/empty-state";
 import { Alert } from "../components/ui/alert";
 import { Dialog, DialogDescription, DialogTitle } from "../components/ui/dialog";
+import { RiskContextChips } from "../components/applications/risk-context-chips";
+import { ApplicationRiskForm } from "../components/applications/application-risk-form";
+import { StaggerItem, StaggerList } from "../motion/components";
 import type { Application } from "../types/application.types";
+import "./applications-page.css";
 
 export function ApplicationsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Application | null>(null);
+  // Contexto de risco (CP-1): qual app está com o formulário aberto.
+  const [contextTarget, setContextTarget] = useState<Application | null>(null);
   const [filter, setFilter] = useState("");
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
@@ -28,7 +35,7 @@ export function ApplicationsPage() {
   const queryClient = useQueryClient();
   const companyName = useCompanyName(undefined);
 
-  const { data: applications, isLoading } = useQuery({ queryKey: ["applications"], queryFn: applicationsApi.list });
+  const { data: applications, isLoading, isError, refetch } = useQuery({ queryKey: ["applications"], queryFn: applicationsApi.list });
   const { data: currentSubscription } = useQuery({
     queryKey: ["subscriptions", "current"],
     queryFn: subscriptionsApi.current,
@@ -82,72 +89,126 @@ export function ApplicationsPage() {
     },
   });
 
+  const totalAplicacoes = applications?.length ?? 0;
+  const limiteAplicacoes = currentPlan?.maxApplications;
+  const ocupacao = applications && limiteAplicacoes && limiteAplicacoes > 0
+    ? Math.min(100, (totalAplicacoes / limiteAplicacoes) * 100)
+    : null;
+
   return (
-    <div>
-      <Breadcrumb itens={[{ rotulo: companyName ?? "Empresa" }, { rotulo: "Aplicações" }]} />
+    <div className="applications-workspace flex flex-col gap-5">
+      <section className="applications-hero relative overflow-hidden rounded-container border border-subtle px-5 py-5 sm:px-6">
+        <div aria-hidden="true" className="applications-hero-signal pointer-events-none absolute inset-0" />
+        <Breadcrumb itens={[{ rotulo: companyName ?? "Empresa" }, { rotulo: "Aplicações" }]} className="relative" />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-fg">Aplicações</h1>
-          <p className="mt-1 text-fg-muted">
-            {currentPlan
-              ? `${applications?.length ?? 0}/${currentPlan.maxApplications} aplicações do plano ${currentPlan.name}`
-              : "Cadastre as aplicações que serão analisadas."}
-          </p>
+        <div className="relative mt-5 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold tracking-[0.16em] text-accent-ink">INVENTÁRIO DE SUPERFÍCIE</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-fg">Aplicações</h1>
+            <p className="mt-2 text-sm text-fg-secondary">
+              Organize os alvos que serão analisados e mantenha o contexto de risco ao alcance da equipe.
+            </p>
+          </div>
+
+          <div className="applications-hero-stat min-w-fit py-1 pl-4 sm:pb-0">
+            <div className="flex items-baseline gap-3">
+              <span className="font-mono text-2xl font-semibold text-fg" data-numeric>{applications ? totalAplicacoes : "—"}</span>
+              <span className="max-w-36 text-xs leading-5 text-fg-muted">
+                {currentPlan
+                  ? `de ${currentPlan.maxApplications} vagas no plano ${currentPlan.name}`
+                  : "alvos registrados"}
+              </span>
+            </div>
+            {ocupacao !== null && (
+              <div
+                role="progressbar"
+                aria-label="Capacidade de aplicações do plano"
+                aria-valuemin={0}
+                aria-valuemax={limiteAplicacoes}
+                aria-valuenow={Math.min(totalAplicacoes, limiteAplicacoes ?? 0)}
+                className="applications-capacity-track mt-3"
+              >
+                <span className="applications-capacity-fill" style={{ width: `${ocupacao}%` }} />
+              </div>
+            )}
+          </div>
         </div>
-        {role !== "PENTESTER" && <Button onClick={() => setIsCreateOpen(true)}>Nova aplicação</Button>}
-      </div>
+      </section>
 
-      <Input
-        placeholder="Filtrar por nome ou URL..."
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        className="mt-6 max-w-sm"
-      />
+      <section aria-label="Buscar aplicações" className="flex flex-col gap-3 rounded-container border border-subtle bg-surface p-4 shadow-raised sm:flex-row sm:items-center sm:justify-between">
+        <div className="w-full sm:max-w-sm">
+          <Label htmlFor="application-filter" className="sr-only">Filtrar aplicações</Label>
+          <Input
+            id="application-filter"
+            placeholder="Filtrar por nome ou URL..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
+        <p className="text-xs text-fg-muted" aria-live="polite">
+          {isLoading ? "Carregando inventário…" : isError ? "Inventário indisponível" : `${filtered.length} ${filtered.length === 1 ? "aplicação encontrada" : "aplicações encontradas"}`}
+        </p>
+        {role !== "PENTESTER" && <Button onClick={() => setIsCreateOpen(true)} className="shrink-0">Nova aplicação</Button>}
+      </section>
 
-      {isLoading && <p className="mt-6 text-fg-muted">Carregando...</p>}
+      {isLoading && <ApplicationsLoading />}
 
-      {!isLoading && filtered.length === 0 && (
-        <p className="mt-6 text-fg-muted">Nenhuma aplicação encontrada.</p>
+      {!isLoading && isError && (
+        <ErrorState
+          titulo="Não foi possível carregar as aplicações"
+          aoTentarNovamente={() => void refetch()}
+        />
       )}
 
-      {!isLoading && filtered.length > 0 && (
-        <div className="mt-4 overflow-hidden rounded-container border border-subtle">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-surface text-fg-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium">Nome</th>
-                <th className="px-4 py-3 font-medium">URL</th>
-                <th className="px-4 py-3 font-medium">Ambiente</th>
-                <th className="px-4 py-3 font-medium">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((application) => (
-                <tr key={application.id} className="border-t border-subtle">
-                  <td className="px-4 py-3 text-fg">{application.name}</td>
-                  <td className="px-4 py-3 text-fg-muted">{application.url ?? "—"}</td>
-                  <td className="px-4 py-3 text-fg-muted">{application.environment}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <LinkButton variant="secundario" size="sm" to={`/applications/${application.id}/dashboard`}>
-                        Painel
-                      </LinkButton>
-                      <LinkButton variant="secundario" size="sm" to={`/new-analysis?applicationId=${application.id}`}>
-                        Nova análise
-                      </LinkButton>
-                      {role !== "PENTESTER" && (
-                        <Button variant="destrutivo" onClick={() => setDeleteTarget(application)}>
-                          Remover
-                        </Button>
-                      )}
-                    </div>
-                  </td>
+      {!isLoading && !isError && filtered.length === 0 && (
+        <Card titulo="Nenhuma aplicação encontrada" descricao={filter ? "Ajuste o filtro para procurar outro alvo." : "Cadastre o primeiro alvo que será analisado."}>
+          {role !== "PENTESTER" && !filter && <Button onClick={() => setIsCreateOpen(true)}>Nova aplicação</Button>}
+        </Card>
+      )}
+
+      {!isLoading && !isError && filtered.length > 0 && (
+        <Card
+          titulo="Aplicações registradas"
+          descricao="O contexto de risco acompanha cada alvo nas análises e nos findings."
+          semPadding
+          className="overflow-hidden"
+        >
+          <ScrollArea rotulo="Tabela de aplicações" className="applications-inventory-table">
+            <table className="min-w-[56rem] w-full text-left text-sm">
+              <thead className="border-b border-subtle bg-inset text-xs uppercase tracking-[0.1em] text-fg-muted">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Nome</th>
+                  <th className="px-4 py-3 font-medium">URL</th>
+                  <th className="px-4 py-3 font-medium">Contexto de risco</th>
+                  <th className="px-4 py-3 font-medium">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <StaggerList as="tbody">
+                {filtered.map((application, index) => (
+                  <StaggerItem as="tr" indice={index} key={application.id} className="border-t border-subtle align-middle">
+                    <td className="px-4 py-4 font-medium text-fg">{application.name}</td>
+                    <td className="max-w-60 truncate px-4 py-4 text-fg-muted" title={application.url ?? undefined}>
+                      {application.url ?? "—"}
+                    </td>
+                    <td className="px-4 py-4"><RiskContextChips contexto={application} /></td>
+                    <td className="px-4 py-4">
+                      <div className="flex min-w-[19rem] flex-wrap gap-2">
+                        <LinkButton variant="secundario" size="sm" to={`/applications/${application.id}/dashboard`}>Painel</LinkButton>
+                        {role !== "PENTESTER" && (
+                          <Button variant="secundario" size="sm" onClick={() => setContextTarget(application)}>Contexto</Button>
+                        )}
+                        <LinkButton variant="secundario" size="sm" to={`/new-analysis?applicationId=${application.id}`}>Nova análise</LinkButton>
+                        {role !== "PENTESTER" && (
+                          <Button variant="destrutivo" size="sm" onClick={() => setDeleteTarget(application)}>Remover</Button>
+                        )}
+                      </div>
+                    </td>
+                  </StaggerItem>
+                ))}
+              </StaggerList>
+            </table>
+          </ScrollArea>
+        </Card>
       )}
 
       <Dialog aberto={isCreateOpen} aoFechar={() => { setIsCreateOpen(false); resetForm(); }}>
@@ -197,6 +258,26 @@ export function ApplicationsPage() {
         </>
       </Dialog>
 
+      {/* Contexto de risco (CP-1). O Dialog só monta o formulário com um alvo:
+          o form usa o `application` como estado inicial e não deve nascer
+          vazio para depois "trocar" de app — cada abertura é uma instância. */}
+      <Dialog aberto={contextTarget !== null} aoFechar={() => setContextTarget(null)}>
+        <>
+          <DialogTitle>Contexto de risco — {contextTarget?.name}</DialogTitle>
+          <DialogDescription>
+            Onde esta aplicação está e o que ela guarda. Define a prioridade (VRS) de todos os findings dela.
+          </DialogDescription>
+          {contextTarget && (
+            <ApplicationRiskForm
+              key={contextTarget.id}
+              application={contextTarget}
+              aoSalvar={() => setContextTarget(null)}
+              aoCancelar={() => setContextTarget(null)}
+            />
+          )}
+        </>
+      </Dialog>
+
       <Dialog aberto={deleteTarget !== null} aoFechar={() => setDeleteTarget(null)}>
         <>
           <DialogTitle>Remover aplicação?</DialogTitle>
@@ -218,5 +299,24 @@ export function ApplicationsPage() {
         </>
       </Dialog>
     </div>
+  );
+}
+
+function ApplicationsLoading() {
+  return (
+    <RegiaoCarregando rotulo="Carregando aplicações">
+      <Card semPadding className="overflow-hidden">
+        <div className="border-b border-subtle bg-inset px-4 py-3"><Skeleton className="h-3 w-72" /></div>
+        <div className="flex flex-col gap-0">
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="grid grid-cols-[1.1fr_1.4fr_2fr] gap-4 border-b border-subtle px-4 py-5 last:border-0">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-6 w-52" />
+            </div>
+          ))}
+        </div>
+      </Card>
+    </RegiaoCarregando>
   );
 }

@@ -21,10 +21,22 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProtectedRoute } from "../layout/protected-route";
 import { Sidebar } from "../layout/sidebar";
 import { useAuthStore } from "../../store/auth.store";
 import type { UserRole } from "../../types/auth.types";
+
+/**
+ * A Sidebar consulta as watchlists fixadas (CP-6), então precisa de um
+ * QueryClient como na aplicação real. `retry: false` para que a consulta
+ * falhe rápido em vez de segurar o teste: o que se verifica aqui são os itens
+ * de menu por papel, e a seção de watchlists é irrelevante para isso.
+ */
+function comProviders(ui: React.ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
+}
 
 /** Sessão falsa — o `ProtectedRoute` e a `Sidebar` leem o store direto. */
 function entrarComo(role: UserRole) {
@@ -77,9 +89,11 @@ describe("Acesso à página global de findings", () => {
     entrarComo("CLIENT");
 
     render(
-      <MemoryRouter>
-        <Sidebar />
-      </MemoryRouter>,
+      comProviders(
+        <MemoryRouter>
+          <Sidebar />
+        </MemoryRouter>,
+      ),
     );
 
     expect(screen.queryByRole("link", { name: /findings/i })).not.toBeInTheDocument();
@@ -91,9 +105,11 @@ describe("Acesso à página global de findings", () => {
     for (const papel of ["ADMIN", "PENTESTER"] as UserRole[]) {
       entrarComo(papel);
       const { unmount } = render(
-        <MemoryRouter>
-          <Sidebar />
-        </MemoryRouter>,
+        comProviders(
+          <MemoryRouter>
+            <Sidebar />
+          </MemoryRouter>,
+        ),
       );
       expect(screen.getByRole("link", { name: /findings/i })).toBeInTheDocument();
       unmount();

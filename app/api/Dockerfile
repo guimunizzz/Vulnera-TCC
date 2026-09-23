@@ -23,9 +23,16 @@ RUN apk add --no-cache python3 make g++ docker-cli
 
 # npm 10.9.8 (versão que vem junto do node:22-alpine) tem um bug conhecido no
 # resolvedor de dependências (Arborist) que quebra `npm install` sem lockfile
-# em certos grafos de dependência — mesma causa raiz corrigida em
-# app/web/Dockerfile. Preventivo aqui: a API não reproduziu o erro até agora,
-# mas usa a mesma imagem base e o mesmo padrão (install sem lockfile).
+# em certos grafos de dependência — a MESMA linha, pela MESMA causa, está em
+# app/web/Dockerfile. Preventivo aqui: a API nunca reproduziu o erro; o web
+# reproduz sempre (é o grafo dele que dispara o bug). As duas imagens usam a
+# mesma base e o mesmo padrão (install sem lockfile), então as duas levam o fix.
+#
+# ⚠️ Em 2026-09-15 esta afirmação estava FALSA: o revert `31988ba` tinha
+# removido o fix do web, e o build de lá quebrava enquanto este comentário
+# dizia que estava corrigido. Restaurado no CP-0 da iniciativa Exposure &
+# Remediation — se algum dia a linha sumir de um dos dois, este comentário
+# volta a mentir.
 RUN npm install -g npm@11
 
 # Manifesto primeiro pra aproveitar cache de layer: só reinstala deps se

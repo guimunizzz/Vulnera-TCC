@@ -442,3 +442,23 @@ npm run dev             # /styleguide fica em http://localhost:3000/styleguide
 
 **A regra que mais importa levar:** componente usa só token semântico. É o que
 faz o mobile herdar o tema em vez de reinventá-lo.
+
+## Atmosfera do dashboard (2026-09-22)
+
+`DashboardAtmosphere` monta um único canvas lazy para os três perfis. O Three.js
+desenha 18 curvas lentas no fundo e três órbitas com núcleo geométrico no canto
+de cada KPI, usando viewport/scissor no mesmo renderer. São decoração, nunca
+gráficos ou indicadores de risco. Texto e valores permanecem em HTML; Motion
+continua responsável pelas entradas, contadores e barras reais do ranking.
+
+- Canvas `aria-hidden`, sem foco e sem capturar cliques.
+- Fallback CSS eager; falha no download, GPU ou contexto mantém o conteúdo.
+- Abaixo de 768px ou com `useMotion().reduzido`, o canvas não é montado.
+- Máximo de 30 renders/s e DPR 1,5; pausa com documento oculto ou região fora
+  da viewport. Pointer altera valores imperativos, sem estado React por frame.
+- Mudança de tema atualiza materiais existentes. A tradução para cores Three
+  permanece centralizada em `dashboard-scene-palette.ts`.
+- Unmount/context loss descarta geometrias, materiais, renderer/contexto,
+  RAF, listeners e observers. Não existe renderer por card.
+- Superfície opaca atrás dos números; transparência decorativa concentrada no
+  canto direito. Não reutilizar Three para controles comuns da interface.

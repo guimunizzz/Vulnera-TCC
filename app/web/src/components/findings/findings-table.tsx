@@ -40,7 +40,9 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Table, type ColunaTabela } from "../ui/table";
-import { SeverityBadge, StatusBadge, ROTULO_SEVERIDADE, type Severidade } from "../ui/badge";
+import { Badge, SeverityBadge, StatusBadge, ROTULO_SEVERIDADE, type Severidade } from "../ui/badge";
+import { SlaBadge } from "./sla-badge";
+import { VrsBadge } from "./vrs-badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Popover } from "../ui/popover";
@@ -66,7 +68,17 @@ import { Alert } from "../ui/alert";
 import { OWASP_CATEGORIES, OWASP_LABELS, type OwaspCategory } from "../../types/vulnerability.types";
 import type { FacetCounts, FindingListItem } from "../../types/vulnerability.types";
 
-export type ColumnKey = "title" | "severity" | "status" | "owasp" | "project" | "application" | "company" | "createdAt";
+export type ColumnKey =
+  | "title"
+  | "severity"
+  | "vrs"
+  | "status"
+  | "sla"
+  | "owasp"
+  | "project"
+  | "application"
+  | "company"
+  | "createdAt";
 
 export interface FindingsTableProps {
   /** Filtros fixos, não editáveis pelo usuário. Ex.: `{ projectId: "abc" }`. */
@@ -160,11 +172,35 @@ export function FindingsTable({
         celula: (f) => <SeverityBadge severidade={f.severityFinal} cvss={f.cvssScore} />,
       },
       {
+        // VRS (CP-3): prioridade contextual, ao lado do CVSS — não no lugar
+        // dele. `id` casa com `sortBy=vrsScore` (coluna indexada no backend).
+        chave: "vrs",
+        id: "vrsScore",
+        cabecalho: "Prioridade (VRS)",
+        ordenavel: true,
+        celula: (f) => <VrsBadge score={f.vrsScore} band={f.vrsBand} />,
+      },
+      {
         chave: "status",
         id: "status",
         cabecalho: "Status",
         ordenavel: true,
         celula: (f) => <StatusBadge status={f.status} />,
+      },
+      {
+        // SLA (CP-2): ordena por prazo (`sortBy=slaDueAt` no backend, coluna
+        // indexada). O estado vem derivado do servidor; a célula só desenha.
+        chave: "sla",
+        id: "slaDueAt",
+        cabecalho: "SLA",
+        ordenavel: true,
+        celula: (f) => (
+          <span className="inline-flex flex-wrap items-center gap-1">
+            <SlaBadge state={f.slaState} remainingMs={f.slaRemainingMs} dueAt={f.slaDueAt} />
+            {/* Aceite vigente (CP-4): badge AO LADO do SLA — o finding segue aberto. */}
+            {f.hasActiveRiskAcceptance && <Badge tom="acento">aceito</Badge>}
+          </span>
+        ),
       },
       {
         chave: "owasp",
@@ -232,7 +268,7 @@ export function FindingsTable({
   /* --- render ------------------------------------------------------------- */
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="findings-table-layout flex flex-col gap-4">
       <BarraDeFiltros
         filtros={filtros}
         facetas={facetas}
@@ -267,6 +303,7 @@ export function FindingsTable({
           novos chegam). Movimento reduzido mantém a opacidade e some com o
           resto — a pessoa continua vendo QUE mudou, sem a coisa se mexer. */}
       <motion.div
+        className="findings-results"
         animate={{ opacity: atualizando ? 0.55 : 1 }}
         transition={{ duration: reduzido ? 0.08 : 0.18, ease: "easeOut" }}
       >
@@ -386,7 +423,7 @@ function BarraDeFiltros({
   );
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="findings-controls flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[16rem] flex-1">
           <Input

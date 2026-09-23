@@ -35,13 +35,26 @@
  * `components/findings/findings-table.tsx` e `hooks/use-findings.ts`.
  */
 
-import { OWASP_CATEGORIES } from "../types/vulnerability.types";
+import { OWASP_CATEGORIES, SLA_FILTER_VALUES } from "../types/vulnerability.types";
+import { RISK_ACCEPTANCE_FILTER_VALUES } from "../types/risk-acceptance.types";
 
 /* ==========================================================================
    Campos
    ========================================================================== */
 
-export type FilterField = "projeto" | "aplicacao" | "empresa" | "severidade" | "status" | "owasp" | "titulo";
+export type FilterField =
+  | "projeto"
+  | "aplicacao"
+  | "empresa"
+  | "severidade"
+  | "status"
+  | "owasp"
+  | "sla"
+  | "vrsMin"
+  | "vrsMax"
+  | "aceite"
+  | "responsavel"
+  | "titulo";
 
 export type OperadorFiltro = "=" | "!=" | "~";
 
@@ -49,7 +62,7 @@ export type OperadorFiltro = "=" | "!=" | "~";
 interface DefinicaoDeCampo {
   /** Nome do parâmetro na API. */
   param: string;
-  tipo: "enum" | "entidade" | "texto";
+  tipo: "enum" | "entidade" | "texto" | "numero";
   /** Só para `enum`: valores aceitos. */
   valores?: readonly string[];
   /** Rótulo no singular, para as mensagens de erro. */
@@ -58,6 +71,10 @@ interface DefinicaoDeCampo {
 
 export const SEVERIDADES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"] as const;
 export const STATUS = ["OPEN", "IN_PROGRESS", "FIXED", "CLOSED"] as const;
+/** O vocabulário da BUSCA (CP-2) — `RESOLVED` junta "no prazo" e "com atraso"; ver `SLA_FILTER_VALUES`. */
+export const SLA = SLA_FILTER_VALUES;
+/** Aceite formal de risco (CP-4): ACTIVE | EXPIRED | REQUESTED | NONE. */
+export const ACEITE = RISK_ACCEPTANCE_FILTER_VALUES;
 
 export const CAMPOS: Record<FilterField, DefinicaoDeCampo> = {
   projeto: { param: "projectId", tipo: "entidade", rotulo: "projeto" },
@@ -66,6 +83,15 @@ export const CAMPOS: Record<FilterField, DefinicaoDeCampo> = {
   severidade: { param: "severity", tipo: "enum", valores: SEVERIDADES, rotulo: "severidade" },
   status: { param: "status", tipo: "enum", valores: STATUS, rotulo: "status" },
   owasp: { param: "owaspCategory", tipo: "enum", valores: OWASP_CATEGORIES, rotulo: "categoria OWASP" },
+  sla: { param: "slaState", tipo: "enum", valores: SLA, rotulo: "SLA" },
+  vrsMin: { param: "vrsMin", tipo: "numero", rotulo: "VRS mínimo" },
+  vrsMax: { param: "vrsMax", tipo: "numero", rotulo: "VRS máximo" },
+  aceite: { param: "riskAcceptance", tipo: "enum", valores: ACEITE, rotulo: "aceite de risco" },
+  // Responsável (CP-7). É `entidade` porque na tela é um NOME e na API é um id
+  // — quem resolve é o autocomplete, igual a projeto/aplicação/empresa. O
+  // valor especial `none` (sem responsável) passa pelo mesmo caminho: a API o
+  // trata como IS NULL.
+  responsavel: { param: "assignedTo", tipo: "entidade", rotulo: "responsável" },
   titulo: { param: "search", tipo: "texto", rotulo: "título" },
 };
 
@@ -96,6 +122,20 @@ const APELIDOS: Record<string, FilterField> = {
   titulo: "titulo",
   title: "titulo",
   busca: "titulo",
+  sla: "sla",
+  prazo: "sla",
+  vrsmin: "vrsMin",
+  "vrs-min": "vrsMin",
+  vrsmax: "vrsMax",
+  "vrs-max": "vrsMax",
+  aceite: "aceite",
+  risco: "aceite",
+  acceptance: "aceite",
+  responsavel: "responsavel",
+  responsable: "responsavel",
+  assignee: "responsavel",
+  atribuido: "responsavel",
+  dono: "responsavel",
 };
 
 /**
@@ -110,9 +150,14 @@ export const DESCRICAO_DOS_CAMPOS: Record<FilterField, { descricao: string; exem
   severidade: { descricao: "Gravidade do achado", exemplo: "severidade = HIGH, CRITICAL" },
   status: { descricao: "Em que ponto do ciclo está", exemplo: "status != CLOSED" },
   owasp: { descricao: "Categoria do OWASP Top 10", exemplo: "owasp = A03" },
+  sla: { descricao: "Prazo de remediação", exemplo: "sla = BREACHED, DUE_SOON" },
+  vrsMin: { descricao: "Piso da prioridade contextual", exemplo: "vrsMin = 40" },
+  vrsMax: { descricao: "Teto da prioridade contextual", exemplo: "vrsMax = 84" },
+  aceite: { descricao: "Aceite formal de risco", exemplo: "aceite = ACTIVE" },
   projeto: { descricao: "Projeto de análise", exemplo: "projeto = Pentest Web" },
   aplicacao: { descricao: "Aplicação analisada", exemplo: "aplicacao = Portal" },
   empresa: { descricao: "Empresa dona do finding", exemplo: "empresa = TechNova" },
+  responsavel: { descricao: "Quem ficou de corrigir", exemplo: "responsavel = Ana Souza" },
   titulo: { descricao: "Texto no título e na descrição", exemplo: "titulo ~ injection" },
 };
 
@@ -376,6 +421,16 @@ export function parseQuery(input: string): QueryToken[] {
         continue;
       }
       tokens.push({ kind: "filter", field, operator, values: normalizados, raw });
+      continue;
+    }
+
+    if (definicao.tipo === "numero") {
+      const numero = Number(values[0]);
+      if (operator !== "=" || values.length !== 1 || !Number.isInteger(numero) || numero < 0 || numero > 100) {
+        tokens.push({ kind: "invalid", raw, reason: `${definicao.rotulo} deve ser um inteiro entre 0 e 100` });
+        continue;
+      }
+      tokens.push({ kind: "filter", field, operator, values: [String(numero)], raw });
       continue;
     }
 

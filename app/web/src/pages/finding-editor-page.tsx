@@ -35,7 +35,7 @@ import {
   ALLOWED_TRANSITIONS,
   OWASP_CATEGORIES,
   OWASP_LABELS,
-  TRANSITION_LABELS,
+  transitionLabel,
   type VulnerabilityStatus,
 } from "../types/vulnerability.types";
 
@@ -178,7 +178,7 @@ export function FindingEditorPage() {
                 disabled={transitionMutation.isPending}
                 onClick={() => transitionMutation.mutate(toStatus)}
               >
-                {TRANSITION_LABELS[toStatus]}
+                {transitionLabel(existing.status, toStatus)}
               </Button>
             ))}
             <Button variant="secundario" onClick={() => setIsOverrideOpen(true)}>

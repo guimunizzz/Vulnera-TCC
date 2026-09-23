@@ -26,6 +26,15 @@ const base: FindingListItem = {
   applicationName: "Portal E-commerce",
   companyId: "c1",
   companyName: "TechNova Solutions",
+  // SLA (CP-2) — o CSV não os exporta na v1, mas o item da lista os carrega.
+  slaState: "ON_TRACK",
+  slaDueAt: "2026-09-16T12:00:00.000Z",
+  slaRemainingMs: 172_800_000,
+  vrsScore: 77,
+  vrsBand: "URGENTE",
+  hasActiveRiskAcceptance: false,
+  assignedTo: null,
+  assigneeName: null,
 };
 
 const linhas = (csv: string) => csv.replace(/^\uFEFF/, "").trim().split("\r\n");
