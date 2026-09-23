@@ -12,10 +12,11 @@
 
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { authApi } from "../../lib/api/auth.api";
 import { useAuthStore } from "../../store/auth.store";
 import { useApiError } from "../../hooks/use-api-error";
-import { Alert, Button, Card, Field, Input } from "../../components/ui";
+import { Alert, Button, Field, Input } from "../../components/ui";
 
 export function RegisterPage() {
   const [nome, setNome] = useState("");
@@ -51,74 +52,74 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-canvas px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col gap-2 text-center">
-          <span className="text-2xl font-bold tracking-tight text-accent-ink">Vulnera</span>
-          <p className="text-sm text-fg-muted">Gestão de análises de segurança</p>
-        </div>
-
-        <Card>
-          <form onSubmit={enviar} className="flex flex-col gap-5">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-lg font-semibold text-fg">Criar conta</h1>
-              <p className="text-sm text-fg-muted">O próximo passo é cadastrar sua empresa.</p>
-            </div>
-
-            {erro && (
-              <Alert tom="perigo" titulo="Não foi possível criar a conta">
-                {erro}
-              </Alert>
-            )}
-
-            <Field rotulo="Nome" obrigatorio>
-              {(attrs) => <Input {...attrs} autoComplete="name" value={nome} onChange={(e) => setNome(e.target.value)} />}
-            </Field>
-
-            <Field rotulo="E-mail" obrigatorio>
-              {(attrs) => (
-                <Input {...attrs} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-              )}
-            </Field>
-
-            <Field rotulo="Senha" dica="Mínimo de 8 caracteres." obrigatorio>
-              {(attrs) => (
-                <Input
-                  {...attrs}
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={8}
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                />
-              )}
-            </Field>
-
-            <Field rotulo="Confirmar senha" erro={erroConfirmacao} obrigatorio>
-              {(attrs) => (
-                <Input
-                  {...attrs}
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirmacao}
-                  onChange={(e) => setConfirmacao(e.target.value)}
-                />
-              )}
-            </Field>
-
-            <Button type="submit" carregando={enviando} larguraTotal>
-              Criar conta
-            </Button>
-
-            <p className="text-center text-sm text-fg-muted">
-              Já tem conta?{" "}
-              <Link to="/login" className="rounded-control text-accent-ink hover:underline">
-                Entrar
-              </Link>
-            </p>
-          </form>
-        </Card>
+    <section className="vx-login-panel vx-register-panel" aria-labelledby="register-title">
+      <span className="vx-login-panel-tab" aria-hidden="true">VULNERA / CADASTRO</span>
+      <span className="vx-login-panel-corner" aria-hidden="true" />
+      <div className="vx-login-heading">
+        <p className="vx-login-eyebrow"><span aria-hidden="true">//</span> COMECE POR AQUI</p>
+        <h1 id="register-title" tabIndex={-1}>Criar conta<span className="vx-login-title-mark" aria-hidden="true">_</span></h1>
+        <p>Crie seu acesso. O próximo passo é cadastrar sua empresa.</p>
       </div>
-    </div>
+      <form onSubmit={enviar} className="vx-login-form" aria-labelledby="register-title">
+
+        {erro && (
+          <Alert tom="perigo" titulo="Não foi possível criar a conta">
+            {erro}
+          </Alert>
+        )}
+
+        <Field rotulo="Nome" obrigatorio className="vx-login-field">
+          {(attrs) => <Input {...attrs} name="name" autoComplete="name" value={nome} onChange={(e) => setNome(e.target.value)} className="vx-login-input" prefixo={<UserRound size={18} className="vx-login-input-icon" />} />}
+        </Field>
+
+        <Field rotulo="E-mail" obrigatorio className="vx-login-field">
+          {(attrs) => (
+            <Input {...attrs} name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="vx-login-input" prefixo={<Mail size={18} className="vx-login-input-icon" />} />
+          )}
+        </Field>
+
+        <Field rotulo="Senha" dica="Mínimo de 8 caracteres." obrigatorio className="vx-login-field">
+          {(attrs) => (
+            <Input
+              {...attrs}
+              name="password"
+              className="vx-login-input"
+              prefixo={<LockKeyhole size={18} className="vx-login-input-icon" />}
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+            />
+          )}
+        </Field>
+
+        <Field rotulo="Confirmar senha" erro={erroConfirmacao} obrigatorio className="vx-login-field">
+          {(attrs) => (
+            <Input
+              {...attrs}
+              name="password-confirmation"
+              className="vx-login-input"
+              prefixo={<LockKeyhole size={18} className="vx-login-input-icon" />}
+              type="password"
+              autoComplete="new-password"
+              value={confirmacao}
+              onChange={(e) => setConfirmacao(e.target.value)}
+            />
+          )}
+        </Field>
+
+        <Button type="submit" carregando={enviando} larguraTotal className="vx-login-submit" iconeFim={<ArrowRight size={18} />}>
+          Criar conta
+        </Button>
+
+      </form>
+      <p className="vx-login-register">
+        Já tem conta?{" "}
+        <Link to="/login">
+          Entrar <ArrowRight size={14} aria-hidden="true" />
+        </Link>
+      </p>
+    </section>
   );
 }

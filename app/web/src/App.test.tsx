@@ -11,7 +11,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
@@ -63,6 +63,22 @@ function renderApp(rotaInicial: string) {
 afterEach(limparAuth);
 
 describe("Roteamento de App", () => {
+  it("permite alternar entre login e cadastro mantendo o cenário de acesso", async () => {
+    limparAuth();
+    renderApp("/login");
+    const logo = screen.getByRole("link", { name: "Vulnera — página inicial" });
+
+    fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
+    expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Nome" })).toBeRequired();
+    expect(screen.getByRole("link", { name: "Vulnera — página inicial" })).toBe(logo);
+
+    fireEvent.click(screen.getByRole("link", { name: "Entrar" }));
+    expect(await screen.findByRole("heading", { name: "Entrar" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Criar conta" })).not.toBeInTheDocument();
+  });
+
   it("ROTA-01 — '/' sem sessão renderiza a landing, sem redirecionar pro login", () => {
     limparAuth();
     renderApp("/");

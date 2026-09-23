@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { LandingPage } from "./pages/landing-page";
 import { LoginPage } from "./pages/auth/login-page";
 import { RegisterPage } from "./pages/auth/register-page";
+import { AuthLayout } from "./pages/auth/auth-layout";
 import { PlansPage } from "./pages/plans-page";
 import { OnboardingPage } from "./pages/onboarding-page";
 import { DashboardPage } from "./pages/dashboard-page";
@@ -26,8 +27,10 @@ export function App() {
           logado (é material de apresentação da banca). */}
       <Route path="/" element={<LandingPage />} />
 
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
       <Route path="/plans" element={<PlansPage />} />
 
       {/* O styleguide é ferramenta de desenvolvimento e evidência para a banca,
