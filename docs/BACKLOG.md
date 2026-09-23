@@ -6,6 +6,8 @@
 
 ## Status
 
+✅ **2026-09-23 — Ajuste visual de Remediação e SLA (100%; commit local em `feat/remediation-sla-visual`):** quadro de três etapas com movimento após confirmação e atribuição lazy; política de quatro severidades com Salvar/Reaplicar separados e histórico responsivo. Web 236/236 em contêiner, contraste 66/66, lint 0 erros e build Docker verde; validação real em desktop/tablet/mobile e dark/light. Sem alterações de API, banco, RBAC, dependências ou lockfile. Ver `output/remediation-sla-visual-report.md`.
+
 ✅ **2026-09-23 — Ajuste visual de Findings (100%)**: hero de triagem, ondas Three.js e órbitas nos resumos com um único canvas lazy; fundo CSS discreto, pausa manual e movimento reduzido. Filtros, tabela canônica e contagens do recorte preservados. Web 231/231, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Validação visual desktop/mobile 375 px, claro/escuro, pausa e filtro de severidade. Sem alteração de API, banco, RBAC ou dependências.
 
 ✅ **2026-09-23 — Ajuste visual de Aplicações e Projetos (100%)**: ocupação real do plano e recuperação de erro no inventário; portfólio com contagens pelos quatro estados reais, links acessíveis e estados de carregamento/vazio/erro. As tabelas viram cartões no celular usando o mesmo DOM. Web 228/228, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Sem alteração de API, banco, RBAC ou dependências.

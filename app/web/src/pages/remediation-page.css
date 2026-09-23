@@ -1,0 +1,114 @@
+/**
+ * Quadro operacional de remediação: trilha de três etapas e cartões legíveis.
+ * Os estados usam tokens semânticos; a página de remediação é a única consumidora.
+ */
+
+.remediation-workspace { --flow-color: var(--color-accent-ink); }
+
+.remediation-hero {
+  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 32%, oklch(var(--color-bg-surface) / 0.9) 70%, oklch(var(--color-accent-surface) / 0.75));
+  box-shadow: var(--elevation-raised);
+}
+
+.remediation-hero-grid {
+  background-image: repeating-linear-gradient(90deg, transparent 0 31px, oklch(var(--color-accent-ink) / 0.06) 32px);
+  mask-image: linear-gradient(90deg, transparent 45%, black);
+}
+
+.remediation-flow { background: oklch(var(--color-border-subtle)); }
+.remediation-flow > div { background: oklch(var(--color-bg-surface) / 0.96); }
+.remediation-flow-step { position: relative; }
+.remediation-flow-step::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: oklch(var(--flow-color));
+}
+.remediation-flow-dot,
+.remediation-column-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: 50%;
+  background: oklch(var(--flow-color));
+}
+.remediation-flow-step--open,
+.remediation-column--open { --flow-color: var(--color-text-muted); }
+.remediation-flow-step--in_progress,
+.remediation-column--in_progress { --flow-color: var(--color-accent-ink); }
+.remediation-flow-step--fixed,
+.remediation-column--fixed { --flow-color: var(--color-success-ink); }
+
+.remediation-filters { position: relative; overflow: visible; }
+.remediation-filters::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: oklch(var(--color-accent));
+}
+
+.remediation-column {
+  position: relative;
+  background: linear-gradient(180deg, oklch(var(--flow-color) / 0.09), oklch(var(--color-bg-surface)) 8rem);
+  box-shadow: var(--elevation-raised);
+}
+.remediation-column::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: oklch(var(--flow-color) / 0.8);
+  border-radius: var(--radius-container) var(--radius-container) 0 0;
+}
+
+.remediation-empty {
+  background: oklch(var(--color-bg-inset) / 0.48);
+}
+
+.remediation-finding {
+  position: relative;
+  box-shadow: var(--elevation-raised);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+.remediation-finding:hover,
+.remediation-finding:focus-within {
+  border-color: oklch(var(--flow-color) / 0.55);
+  box-shadow: var(--elevation-raised), 0 0 0 1px oklch(var(--flow-color) / 0.12);
+}
+.remediation-finding[data-moving="true"] {
+  border-color: oklch(var(--color-accent-ink) / 0.7);
+  background: linear-gradient(90deg, oklch(var(--color-accent-surface)), oklch(var(--color-bg-raised)));
+}
+.remediation-finding[data-confirmed="true"],
+.remediation-finding[data-assigned="true"] {
+  animation: remediation-confirm var(--duration-slow) var(--ease-out) both;
+}
+@keyframes remediation-confirm {
+  50% { box-shadow: var(--elevation-raised), 0 0 0 2px oklch(var(--color-success-ink) / 0.55); }
+}
+
+@media (min-width: 1024px) {
+  .remediation-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(26rem, 0.9fr);
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .remediation-hero .remediation-flow { align-self: stretch; margin-top: 0; }
+  .remediation-filters { display: grid; grid-template-columns: 11rem minmax(0, 1fr); align-items: end; }
+  .remediation-filters > header { padding: 1rem; }
+  .remediation-filters > div { padding: 1rem; }
+}
+
+@media (max-width: 639px) {
+  .remediation-flow > div:nth-child(3) { border-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .remediation-finding { transition: none; }
+  .remediation-finding[data-confirmed="true"],
+  .remediation-finding[data-assigned="true"] { animation: none; }
+}
