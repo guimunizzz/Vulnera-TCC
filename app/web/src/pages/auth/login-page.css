@@ -29,11 +29,12 @@
   --login-ease-soft: cubic-bezier(.4, 0, .2, 1);
   --login-mouse-x: 50vw;
   --login-mouse-y: 50vh;
+  --login-panel-padding: clamp(20px, 5vw, 40px);
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template-rows: 64px 1fr 64px;
-  gap: 24px;
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
   min-height: 100dvh;
   padding: 24px clamp(20px, 4vw, 64px);
   background: var(--login-bg);
@@ -133,6 +134,7 @@
 
 .vx-login-header {
   display: flex;
+  min-height: 44px;
   align-items: center;
   animation: vx-login-enter .8s var(--login-ease) .05s both;
 }
@@ -159,22 +161,24 @@
   display: grid;
   place-items: center;
   min-width: 0;
-  padding: 24px 0;
+  padding: 16px 0;
 }
 
-.vx-auth-transition { width: min(100%, 460px); min-width: 0; }
-.vx-register-panel .vx-login-form { gap: 18px; }
-.vx-register-panel .vx-login-heading h1 { font-size: clamp(2rem, 7vw, 2.75rem); }
-.vx-login-field > p:not([role="alert"]) { color: var(--login-muted); }
+.vx-auth-transition { width: min(100%, 480px); min-width: 0; }
+.vx-register-panel .vx-login-form { gap: 16px; }
+/* A dica vem abaixo do controle para manter rótulo e campo sempre juntos. */
+.vx-login-field > p:not([role="alert"]) { order: 1; color: var(--login-muted); }
+.vx-login-field > p { font-size: .8125rem; line-height: 1.5; overflow-wrap: anywhere; }
 .vx-login .vx-login-input[aria-invalid="true"] { border-color: #fb7185; }
-.vx-login-field > p[role="alert"] { color: #fda4af; }
+.vx-login-field > p[role="alert"] { order: 2; color: #fda4af; }
 .vx-login-heading h1:focus { outline: none; }
 
 .vx-login-panel {
   position: relative;
   isolation: isolate;
-  width: min(100%, 460px);
-  padding: 52px 42px 40px;
+  width: 100%;
+  min-width: 0;
+  padding: 40px var(--login-panel-padding) 32px;
   --login-frame: polygon(24px 0, 35% 0, calc(35% + 10px) 10px, calc(100% - 28px) 10px, 100% 38px, 100% 44%, calc(100% - 6px) calc(44% + 6px), calc(100% - 6px) 62%, 100% calc(62% + 6px), 100% calc(100% - 24px), calc(100% - 24px) 100%, 66% 100%, calc(66% - 10px) calc(100% - 10px), 24px calc(100% - 10px), 0 calc(100% - 34px), 0 62%, 6px calc(62% - 6px), 6px 44%, 0 calc(44% - 6px), 0 24px);
 }
 
@@ -190,12 +194,12 @@
 .vx-login-panel-tab {
   position: absolute;
   top: -6px;
-  left: 32px;
+  left: calc(var(--login-panel-padding) - 8px);
   padding: 0 8px;
   background: var(--login-bg);
   color: var(--login-muted);
-  font-size: .5625rem;
-  line-height: 14px;
+  font-size: .625rem;
+  line-height: 16px;
   letter-spacing: .09em;
 }
 .vx-login-panel-corner {
@@ -209,20 +213,20 @@
 .vx-login-title-mark { color: var(--login-accent); }
 .vx-login-eyebrow > span { margin-right: 6px; }
 
-.vx-login-heading { margin-bottom: 32px; }
+.vx-login-heading { margin-bottom: 24px; }
 
 .vx-login-heading .vx-login-eyebrow {
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   color: var(--login-accent);
-  font: 600 .6875rem/1.5 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: .14em;
+  font: 600 .75rem/1.5 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: .1em;
 }
 
 .vx-login-heading h1 {
-  margin: 0 0 10px;
-  font-size: 3.25rem;
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 1.25rem + 3vw, 2.5rem);
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.2;
   letter-spacing: -.045em;
 }
 
@@ -236,19 +240,20 @@
 .vx-login-form {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
 }
 
-.vx-login .vx-login-field { gap: 9px; }
-.vx-login-field label { color: var(--login-text); font-size: .8125rem; font-weight: 500; }
+.vx-login .vx-login-field { min-width: 0; gap: 6px; }
+.vx-login-field label { color: var(--login-text); font-size: .875rem; font-weight: 500; line-height: 1.5; }
 .vx-login .vx-login-input {
-  height: 50px;
+  height: 48px;
+  min-width: 0;
   padding-left: 42px;
   border: 1px solid var(--login-border);
   border-radius: 0;
   background: var(--login-input);
   color: var(--login-text);
-  font-size: .9375rem;
+  font-size: 1rem;
   transition: border-color .35s var(--login-ease-soft), box-shadow .35s var(--login-ease-soft), background-color .35s var(--login-ease-soft);
 }
 
@@ -277,8 +282,10 @@
 .vx-login-password-toggle:hover { background: rgb(var(--login-line-rgb) / 10%); color: var(--login-text); }
 
 .vx-login .vx-login-submit {
-  height: 54px;
-  margin-top: 6px;
+  min-height: 48px;
+  height: auto;
+  padding-block: 12px;
+  margin-top: 4px;
   border: 1px solid transparent;
   border-radius: 0;
   background: var(--login-action);
@@ -295,33 +302,42 @@
 .vx-login-submit:hover:not([aria-disabled="true"]) svg { transform: translateX(4px); }
 
 .vx-login-register {
-  margin: 28px 0 0;
-  padding-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 6px;
+  margin: 20px 0 0;
+  padding-top: 12px;
   border-top: 1px solid var(--login-border);
   color: var(--login-muted);
   text-align: center;
-  font-size: .8125rem;
-  line-height: 1.7;
+  font-size: .875rem;
+  line-height: 1.5;
 }
 
-.vx-login-register a { display: inline-flex; align-items: center; gap: 6px; color: var(--login-text); font-weight: 500; text-underline-offset: 4px; transition: color .3s var(--login-ease-soft); }
+.vx-login-register a { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 6px; color: var(--login-text); font-weight: 500; text-underline-offset: 4px; transition: color .3s var(--login-ease-soft); }
 .vx-login-register a:hover { color: var(--login-accent); text-decoration: underline; }
 
 .vx-login-footer {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  min-height: 44px;
+  padding-block: 12px;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   color: var(--login-muted);
   text-align: center;
-  font: .625rem/1.5 var(--font-mono);
+  font: .75rem/1.5 var(--font-mono);
   letter-spacing: .025em;
   border-top: 1px solid var(--login-border);
   animation: vx-login-enter .8s var(--login-ease) .25s both;
 }
 
 .vx-login-footer-brand > span, .vx-login-footer-decoration { color: var(--login-accent); }
-.vx-login-footer-decoration { letter-spacing: .4em; }
+.vx-login-footer-brand { justify-self: start; text-align: left; }
+.vx-login-footer-decoration { justify-self: end; letter-spacing: .4em; }
 .vx-login :focus-visible { outline-color: var(--login-accent); }
 
 @keyframes vx-login-enter {
@@ -350,14 +366,18 @@
   50% { opacity: .3; }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .vx-login { gap: 12px; padding: 16px; }
-  .vx-login-stage { padding: 16px 0; }
-  .vx-login-panel { padding: 42px 24px 32px; }
-  .vx-login-heading h1 { font-size: 2.75rem; }
-  .vx-login .vx-login-input { font-size: 1rem; }
-  .vx-login-footer { flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px 16px; font-size: .5625rem; }
+  .vx-login-stage { padding: 8px 0; }
+  .vx-login-panel { padding-block: 32px 24px; }
+  .vx-login-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; }
   .vx-login-footer-decoration { display: none; }
+}
+
+/* Menos espaço externo em notebooks baixos e com o teclado virtual aberto. */
+@media (max-height: 800px) {
+  .vx-login { padding-block: 16px; gap: 12px; }
+  .vx-login-stage { padding-block: 8px; }
 }
 
 @media (hover: none) {
