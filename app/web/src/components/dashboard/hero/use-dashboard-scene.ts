@@ -110,8 +110,10 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
 
     function measure(): void {
       if (!renderer) return;
-      width = Math.max(1, host.clientWidth);
-      height = Math.max(1, host.clientHeight);
+      // No layout global o conteúdo pode ter milhares de pixels de altura.
+      // O buffer WebGL segue o tamanho visível do canvas, nunca a página toda.
+      width = Math.max(1, canvas.clientWidth);
+      height = Math.max(1, canvas.clientHeight);
       renderer.setSize(width, height, false);
       cards = Array.from(host.querySelectorAll<HTMLElement>(CARD_SELECTOR)).map((card) => {
         // offset ignora o translateY temporário do stagger de entrada.
@@ -126,7 +128,7 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
         const w = Math.min(140, card.offsetWidth * 0.42);
         const h = Math.min(90, card.offsetHeight * 0.6);
         return { x: left + card.offsetWidth - w - 6, y: height - top - card.offsetHeight + 2, w, h };
-      });
+      }).filter((card) => card.x + card.w > 0 && card.x < width && card.y + card.h > 0 && card.y < height);
       layoutDirty = false;
     }
 
@@ -223,6 +225,7 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
       aplicarTema.current(callbacks.current.theme);
       resize = new ResizeObserver(() => { layoutDirty = true; });
       resize.observe(host);
+      resize.observe(canvas);
       const observeCards = () => {
         host.querySelectorAll(CARD_SELECTOR).forEach((card) => resize?.observe(card));
         layoutDirty = true;

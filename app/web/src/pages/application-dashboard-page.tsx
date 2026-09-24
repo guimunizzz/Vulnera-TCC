@@ -142,8 +142,9 @@ export function ApplicationDashboardPage() {
         ]}
       />
 
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header data-ops-hero="application" className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
+          <p className="font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Superfície de ataque</p>
           <h1 className="text-2xl font-bold text-fg">{aplicacao.data?.name ?? <Skeleton className="h-7 w-48" />}</h1>
           {/* Contexto de risco (CP-1): o que esta aplicação é, antes dos números. */}
           {aplicacao.data && <RiskContextChips contexto={aplicacao.data} />}
