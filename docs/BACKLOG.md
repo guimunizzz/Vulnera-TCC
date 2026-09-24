@@ -6,6 +6,8 @@
 
 ## Status
 
+✅ **2026-09-23 — Área autenticada unificada (100%; branch `feat/visual-overhaul-authenticated`):** fundo padrão no `AppLayout` com grade, luz e cena opcional única; identidade de aplicação, projeto, finding, DAST, maturidade, playbook e governança por superfícies semânticas; wizards com transição Motion e redução de movimento; hash CSP do tema corrigido para CRLF. Web versionado 237/237, contraste 66/66, lint 0 erros e build Docker verde. Browser 1440/768/375 px, dark/light/reduced-motion sem overflow/canvas duplicado; detalhe DAST sem scan demo. Suíte completa 237/239 porque dois testes não rastreados preexistentes falham. Ver `docs/FRONTEND_WEB.md`, ADR-041 e `output/frontend-visual-overhaul-report.md`.
+
 ✅ **2026-09-23 — Ajuste visual de Remediação e SLA (100%; commit local em `feat/remediation-sla-visual`):** quadro de três etapas com movimento após confirmação e atribuição lazy; política de quatro severidades com Salvar/Reaplicar separados e histórico responsivo. Web 236/236 em contêiner, contraste 66/66, lint 0 erros e build Docker verde; validação real em desktop/tablet/mobile e dark/light. Sem alterações de API, banco, RBAC, dependências ou lockfile. Ver `output/remediation-sla-visual-report.md`.
 
 ✅ **2026-09-23 — Ajuste visual de Findings (100%)**: hero de triagem, ondas Three.js e órbitas nos resumos com um único canvas lazy; fundo CSS discreto, pausa manual e movimento reduzido. Filtros, tabela canônica e contagens do recorte preservados. Web 231/231, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Validação visual desktop/mobile 375 px, claro/escuro, pausa e filtro de severidade. Sem alteração de API, banco, RBAC ou dependências.

@@ -145,8 +145,9 @@ export function DastPage() {
     <div>
       <Breadcrumb itens={[{ rotulo: "DAST" }]} />
 
-      <div className="flex items-center justify-between">
+      <div data-ops-hero="dast" className="flex flex-wrap items-center justify-between gap-4">
         <div>
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Monitoramento ativo</p>
           <h1 className="text-2xl font-bold text-fg">Scans DAST</h1>
           <p className="mt-1 text-fg-muted">Análise dinâmica automatizada via OWASP ZAP.</p>
         </div>
@@ -183,7 +184,7 @@ export function DastPage() {
       )}
 
       {!scansQuery.isLoading && !scansQuery.isError && scans.length > 0 && (
-        <div className="mt-4 overflow-x-auto rounded-container border border-subtle">
+        <div data-ops-surface className="mt-4 overflow-x-auto rounded-container border border-subtle">
           <table className="w-full text-left text-sm">
             <thead className="bg-surface text-fg-muted">
               <tr>
@@ -202,7 +203,7 @@ export function DastPage() {
             </thead>
             <tbody>
               {scans.map((scan) => (
-                <tr key={scan.id} className="border-t border-subtle">
+                <tr key={scan.id} className="border-t border-subtle transition-colors duration-fast hover:bg-hovered">
                   <td className="max-w-xs truncate px-4 py-3 font-mono text-xs text-fg" title={scan.targetUrl}>
                     {scan.targetUrl}
                   </td>

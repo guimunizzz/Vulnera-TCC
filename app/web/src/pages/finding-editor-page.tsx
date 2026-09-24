@@ -155,8 +155,9 @@ export function FindingEditorPage() {
         ]}
       />
 
-      <div className="flex items-start justify-between gap-4">
+      <div data-ops-hero="finding" className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Registro de ameaça</p>
           <h1 className="text-2xl font-bold text-fg">{isEditMode ? "Editar finding" : "Novo finding"}</h1>
           {isEditMode && existing && (
             <div className="mt-2 flex items-center gap-2">

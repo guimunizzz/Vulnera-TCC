@@ -144,7 +144,7 @@ export function PlaybookDetailPage() {
         ]}
       />
 
-      <header className="flex flex-wrap items-start justify-between gap-3">
+      <header data-ops-hero="playbook" className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-fg">{playbook.title}</h1>

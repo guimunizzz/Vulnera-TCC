@@ -359,8 +359,9 @@ export function DastScanDetailPage() {
     <div>
       <Breadcrumb itens={[{ rotulo: "DAST", para: "/dast" }, { rotulo: scan.targetUrl }]} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div data-ops-hero="dast" className="flex flex-wrap items-center justify-between gap-3">
         <div>
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Execução DAST</p>
           <h1 className="break-all text-2xl font-bold text-fg">{scan.targetUrl}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <StatusBadge status={scan.status} />
@@ -404,7 +405,7 @@ export function DastScanDetailPage() {
       )}
 
       {isActive && (
-        <div className="mt-4 rounded-container border border-subtle bg-surface p-4">
+        <div data-ops-surface data-scan-active className="mt-4 rounded-container border border-subtle bg-surface p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-medium text-fg">
               {posicaoNaFila ? `Aguardando vaga — ${posicaoNaFila}º da fila` : labelDaFase(scan.phase)}

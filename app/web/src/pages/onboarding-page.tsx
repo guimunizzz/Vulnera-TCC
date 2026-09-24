@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { plansApi } from "../lib/api/plans.api";
@@ -11,6 +12,8 @@ import { Label } from "../components/ui/card";
 import { Alert } from "../components/ui/alert";
 import { Card, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { cn } from "../lib/cn";
+import { useMotion } from "../motion/use-motion";
+import "../components/layout/operations-backdrop.css";
 
 const STEPS = ["Empresa", "Plano", "Confirmação"];
 
@@ -20,6 +23,7 @@ const STEPS = ["Empresa", "Plano", "Confirmação"];
  * 3 passos não justificam trazer uma lib de wizard.
  */
 export function OnboardingPage() {
+  const { troca } = useMotion();
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [cnpj, setCnpj] = useState("");
@@ -69,8 +73,9 @@ export function OnboardingPage() {
 
   if (done) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-canvas px-4">
-        <Card className="w-full max-w-md text-center">
+      <div className="relative isolate flex min-h-dvh items-center justify-center overflow-hidden bg-canvas px-4">
+        <div aria-hidden="true" className="operations-backdrop pointer-events-none absolute inset-0" />
+        <Card className="relative w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>Empresa cadastrada!</CardTitle>
             <CardDescription>
@@ -84,13 +89,15 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-canvas px-4">
-      <Card className="w-full max-w-md">
+    <div className="relative isolate flex min-h-dvh items-center justify-center overflow-hidden bg-canvas px-4 py-8">
+      <div aria-hidden="true" className="operations-backdrop pointer-events-none absolute inset-0" />
+      <Card className="relative w-full max-w-md">
         <CardHeader>
-          <CardTitle>Configure sua empresa</CardTitle>
-          <CardDescription>
-            Passo {step} de 3 — {STEPS[step - 1]}
-          </CardDescription>
+          <div>
+            <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Configuração inicial</p>
+            <CardTitle>Configure sua empresa</CardTitle>
+            <CardDescription>Passo {step} de 3 — {STEPS[step - 1]}</CardDescription>
+          </div>
         </CardHeader>
 
         <div className="mb-6 flex gap-2">
@@ -100,6 +107,9 @@ export function OnboardingPage() {
         </div>
 
         {error && <Alert className="mb-4">{error}</Alert>}
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={step} variants={troca} initial="inicial" animate="visivel" exit="saindo">
 
         {step === 1 && (
           <div className="flex flex-col gap-4">
@@ -174,6 +184,8 @@ export function OnboardingPage() {
             </div>
           </div>
         )}
+          </motion.div>
+        </AnimatePresence>
       </Card>
     </div>
   );

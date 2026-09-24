@@ -1,0 +1,70 @@
+/**
+ * Fundo compartilhado da área autenticada.
+ * A grade e os sinais leves dão continuidade entre módulos sem carregar dados
+ * nem disputar atenção com painéis. Consumidor: AppLayout.
+ */
+
+.operations-main {
+  overflow: clip;
+}
+
+.operations-main > .operations-backdrop,
+.operations-main > .dashboard-atmosphere-fallback,
+.operations-main > .dashboard-ambient-canvas {
+  z-index: 0;
+}
+
+.operations-main > .dashboard-ambient-canvas {
+  bottom: auto;
+  height: min(100dvh, 60rem);
+}
+
+.operations-content {
+  z-index: 1;
+}
+
+.operations-backdrop {
+  background:
+    radial-gradient(ellipse 48rem 28rem at 92% 4%, oklch(var(--color-accent) / 0.085), transparent 76%),
+    radial-gradient(ellipse 38rem 28rem at 4% 65%, oklch(var(--color-chart-2) / 0.045), transparent 72%);
+}
+
+.operations-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.36;
+  background-image:
+    linear-gradient(oklch(var(--color-border-subtle) / 0.38) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(var(--color-border-subtle) / 0.38) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.operations-backdrop::after {
+  content: "";
+  position: absolute;
+  top: 18rem;
+  right: -12rem;
+  width: 38rem;
+  height: 38rem;
+  border: 1px solid oklch(var(--color-accent-ink) / 0.08);
+  border-radius: 50%;
+  box-shadow: 0 0 0 5rem oklch(var(--color-accent) / 0.012), 0 0 0 10rem oklch(var(--color-accent) / 0.008);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .operations-backdrop::after {
+    animation: operations-drift 24s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes operations-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-1.5rem, 2rem, 0); }
+}
+
+@media (max-width: 767px) {
+  .operations-backdrop::before { opacity: 0.2; }
+  .operations-backdrop::after { display: none; }
+}

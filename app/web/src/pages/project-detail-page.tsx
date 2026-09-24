@@ -181,10 +181,11 @@ export function ProjectDetailPage() {
         ]}
       />
 
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-fg">{project.name}</h1>
+      <div data-ops-hero="project" className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Pipeline de avaliação</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="min-w-0 break-words text-2xl font-bold text-fg">{project.name}</h1>
             <StatusBadge status={project.status} />
             {criticalOpenCount > 0 && (
               <span className="rounded-full bg-severity-critical/20 px-2.5 py-1 text-xs font-medium text-severity-critical-ink">
@@ -198,7 +199,7 @@ export function ProjectDetailPage() {
         </div>
 
         {canTransition && transitions.length > 0 && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {transitions.map((toStatus) => (
               <Button
                 key={toStatus}
