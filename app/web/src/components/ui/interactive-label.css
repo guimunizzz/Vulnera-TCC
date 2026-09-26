@@ -1,13 +1,22 @@
 .vx-label { position: relative; display: inline-block; vertical-align: bottom; }
-.vx-label-decoded, .vx-label-slice {
+.vx-label-slice {
   position: absolute;
   inset: 0;
   pointer-events: none;
   opacity: 0;
 }
-.vx-label-decoded { overflow: hidden; }
-.vx-label[data-decoding] > .vx-label-original { opacity: 0; }
-.vx-label[data-decoding] > .vx-label-decoded { opacity: 1; }
+.vx-label-slots, .vx-label-slot { display: inline-block; white-space: pre; }
+.vx-label-slot { position: relative; }
+.vx-label-decoded-char {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+}
+.vx-label[data-decoding] .vx-label-char-original { opacity: 0; }
+.vx-label[data-decoding] .vx-label-decoded-char { opacity: 1; }
 .vx-label-top { clip-path: inset(0 0 67% 0); }
 .vx-label-bottom { clip-path: inset(67% 0 0 0); }
 
@@ -34,6 +43,6 @@
   :is(a, button):hover:not(:disabled):not([aria-disabled="true"]) .vx-label-bottom { animation: vx-label-bottom 1.5s linear infinite; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .vx-label[data-decoding] > .vx-label-original { opacity: 1; }
-  .vx-label[data-decoding] > .vx-label-decoded { opacity: 0; }
+  .vx-label[data-decoding] .vx-label-char-original { opacity: 1; }
+  .vx-label[data-decoding] .vx-label-decoded-char { opacity: 0; }
 }

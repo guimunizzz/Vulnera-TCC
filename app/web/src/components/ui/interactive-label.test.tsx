@@ -44,3 +44,20 @@ it("does not animate reduced-motion or busy controls", () => {
   fireEvent.pointerEnter(screen.getByRole("button"));
   expect(document.querySelector("[data-decoding]")).toBeNull();
 });
+
+it("keeps character slots and the accessible name stable during the same decoding effect", () => {
+  vi.useFakeTimers();
+  render(<button><InteractiveLabel>Entrar na plataforma</InteractiveLabel></button>);
+  const button = screen.getByRole("button", { name: "Entrar na plataforma" });
+  const slots = Array.from(button.querySelectorAll(".vx-label-slot"));
+  expect(slots).toHaveLength(Array.from("Entrar na plataforma").length);
+  fireEvent.pointerEnter(button);
+  vi.advanceTimersByTime(100);
+  expect(button.querySelector("[data-decoding]")).not.toBeNull();
+  expect(Array.from(button.querySelectorAll(".vx-label-slot"))).toEqual(slots);
+  expect(Array.from(button.querySelectorAll(".vx-label-char-original")).map((char) => char.textContent).join(""))
+    .toBe("Entrar na plataforma");
+  expect(button).toHaveAccessibleName("Entrar na plataforma");
+  fireEvent.pointerLeave(button);
+  expect(vi.getTimerCount()).toBe(0);
+});

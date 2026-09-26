@@ -316,7 +316,7 @@
   transition: color .3s var(--login-ease-soft), box-shadow .3s var(--login-ease-soft), filter .3s var(--login-ease-soft), transform .3s var(--login-ease);
 }
 
-.vx-login .vx-login-submit:hover:not([aria-disabled="true"]) { color: #fff; filter: brightness(1.1); box-shadow: 0 14px 30px rgb(104 67 205 / 34%); transform: translateY(-2px); }
+.vx-login .vx-login-submit:hover:not([aria-disabled="true"]) { color: #fff; filter: brightness(1.1); box-shadow: 0 14px 30px rgb(104 67 205 / 34%); }
 .vx-login .vx-login-submit:active:not([aria-disabled="true"]) { transform: translateY(0) scale(.985); }
 .vx-login-submit svg { transition: transform .35s var(--login-ease); }
 .vx-login-submit:hover:not([aria-disabled="true"]) svg { transform: translateX(4px); }
