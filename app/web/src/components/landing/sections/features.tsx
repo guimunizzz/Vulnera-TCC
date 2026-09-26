@@ -50,7 +50,7 @@ const PREVIEW_ROWS = [
   { label: "Críticas", pct: "11%", color: "var(--vx-danger)" },
   { label: "Altas", pct: "18%", color: "var(--vx-orange)" },
   { label: "Médias", pct: "29%", color: "var(--vx-yellow)" },
-  { label: "Baixas", pct: "42%", color: "var(--vx-cyan)" },
+  { label: "Baixas", pct: "42%", color: "var(--vx-accent-soft)" },
 ];
 
 function ReportPreviewModal({ onClose }: { onClose: () => void }) {
@@ -153,14 +153,14 @@ export default function Features() {
                       <button
                         type="button"
                         onClick={() => setPreviewOpen(true)}
-                        className="font-mono text-xs tracking-wide text-[var(--vx-cyan)] underline-offset-2 transition-colors hover:text-[var(--vx-accent)] hover:underline"
+                        className="font-mono text-xs tracking-wide text-[var(--vx-accent-soft)] underline-offset-2 transition-colors hover:text-[var(--vx-accent)] hover:underline"
                       >
                         <InteractiveLabel effect="glitch">Ver exemplo ↗</InteractiveLabel>
                       </button>
                     ) : (
                       <span />
                     )}
-                    <p className="font-mono text-xs tracking-widest text-[var(--vx-cyan)]">{feature.tag}</p>
+                    <p className="font-mono text-xs tracking-widest text-[var(--vx-accent-soft)]">{feature.tag}</p>
                   </div>
                 </div>
               </Reveal>

@@ -8,7 +8,7 @@
  * mesma preferência. Os CTAs de conta viram `<Link>` do react-router.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, User, Sun, Moon } from "lucide-react";
@@ -61,11 +61,21 @@ export default function Nav() {
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!atTop) setOpen(false);
-  }, [atTop]);
-
   const isDark = resolvido === "dark";
+
+  function scrollToSection(event: ReactMouseEvent<HTMLAnchorElement>, href: string) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const target = document.getElementById(href.slice(1));
+    if (!target) return;
+
+    event.preventDefault();
+    setOpen(false);
+    if (window.location.hash !== href) window.history.pushState(null, "", href);
+    target.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      block: "start",
+    });
+  }
 
   return (
     <motion.header
@@ -74,7 +84,7 @@ export default function Nav() {
       <motion.div
         animate={{ height: atTop ? 76 : 48 }}
         transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-        className="mx-auto flex max-w-6xl items-center justify-between overflow-hidden px-6"
+        className="mx-auto flex max-w-6xl items-center justify-between px-6"
       >
         <a href="#" className="group flex flex-col leading-none">
           <span className="flex items-baseline gap-[3px] font-mono text-base font-bold tracking-widest text-[var(--vx-text)] transition-colors group-hover:text-[var(--vx-accent)]">
@@ -92,9 +102,7 @@ export default function Nav() {
 
         <nav
           aria-label="Navegação principal"
-          className={`vx-main-nav hidden md:absolute md:left-1/2 md:flex md:-translate-x-1/2 md:items-center md:whitespace-nowrap ${
-            atTop ? "opacity-100" : "pointer-events-none -translate-y-3 opacity-0"
-          }`}
+          className="vx-main-nav hidden md:absolute md:left-1/2 md:flex md:-translate-x-1/2 md:items-center md:whitespace-nowrap"
         >
           <div ref={dropdownRef} className="relative shrink-0">
             <button
@@ -122,7 +130,7 @@ export default function Nav() {
                     <li key={link.href}>
                       <a
                         href={link.href}
-                        onClick={() => setOpen(false)}
+                        onClick={(event) => scrollToSection(event, link.href)}
                         className="block rounded-[6px] px-3 py-2 font-mono text-sm text-[var(--vx-text-2)] transition-colors hover:bg-[rgba(var(--vx-accent-rgb),0.1)] hover:text-[var(--vx-accent)]"
                       >
                         <InteractiveLabel effect="glitch">{link.label}</InteractiveLabel>
@@ -138,6 +146,7 @@ export default function Nav() {
             <a
               key={link.href}
               href={link.href}
+              onClick={(event) => scrollToSection(event, link.href)}
               className="shrink-0 font-mono text-sm tracking-wide text-[var(--vx-text-2)] transition-colors hover:text-[var(--vx-accent)]"
             >
               <InteractiveLabel effect="glitch">{link.label}</InteractiveLabel>

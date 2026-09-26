@@ -77,7 +77,7 @@ export default function Team() {
                 <p className="mt-1 font-mono text-xs tracking-wide text-[var(--vx-accent)]">{member.role}</p>
                 <p className="mt-4 flex-1 text-sm leading-relaxed text-[var(--vx-text-2)]">{member.bio}</p>
                 <p className="mt-6 font-mono text-xs text-[var(--vx-text-2)]">
-                  Especialidade: <span className="text-[var(--vx-cyan)]">{member.specialty}</span>
+                  Especialidade: <span className="text-[var(--vx-accent-soft)]">{member.specialty}</span>
                 </p>
               </div>
             </Reveal>

@@ -22,7 +22,7 @@ interface Plan {
   features: string[];
   cta: string;
   highlight: boolean;
-  cyan: boolean;
+  softAccent: boolean;
 }
 
 const PLANS: Plan[] = [
@@ -32,7 +32,7 @@ const PLANS: Plan[] = [
     features: ["2 aplicações", "1 projeto simultâneo", "Suporte por e-mail", "Relatórios PDF"],
     cta: "Começar com Basic",
     highlight: false,
-    cyan: false,
+    softAccent: false,
   },
   {
     name: "PRO",
@@ -47,7 +47,7 @@ const PLANS: Plan[] = [
     ],
     cta: "Começar com Pro",
     highlight: true,
-    cyan: false,
+    softAccent: false,
   },
   {
     name: "ENTERPRISE",
@@ -55,7 +55,7 @@ const PLANS: Plan[] = [
     features: ["Aplicações ilimitadas", "Projetos ilimitados", "SLA dedicado", "Tudo do Pro"],
     cta: "Falar com vendas",
     highlight: false,
-    cyan: true,
+    softAccent: true,
   },
 ];
 
@@ -79,8 +79,8 @@ export default function Pricing() {
                 className={`relative flex w-full flex-col rounded-[6px] bg-[var(--vx-bg-2)] p-8 transition-shadow duration-[300ms] ${
                   plan.highlight
                     ? "border-2 border-[var(--vx-accent)] shadow-[0_0_36px_rgba(var(--vx-accent-rgb),0.25)] md:scale-105"
-                    : plan.cyan
-                      ? "border border-[var(--vx-cyan)] hover:shadow-[0_0_20px_rgba(var(--vx-cyan-rgb),0.2)]"
+                    : plan.softAccent
+                      ? "border border-[var(--vx-accent-soft)] hover:shadow-[0_0_20px_rgba(var(--vx-accent-soft-rgb),0.2)]"
                       : "border border-[rgba(var(--vx-neutral-rgb),0.25)] hover:border-[rgba(var(--vx-accent-rgb),0.4)]"
                 }`}
               >
@@ -112,8 +112,8 @@ export default function Pricing() {
                   className={`mt-10 rounded-[6px] px-6 py-3 text-center font-mono text-sm font-bold tracking-wide transition-all duration-[300ms] ${
                     plan.highlight
                       ? "bg-[var(--vx-accent)] text-[var(--vx-on-accent)] hover:shadow-[0_0_24px_rgba(var(--vx-accent-rgb),0.6)]"
-                      : plan.cyan
-                        ? "border border-[var(--vx-cyan)] text-[var(--vx-cyan)] hover:bg-[rgba(var(--vx-cyan-rgb),0.08)]"
+                      : plan.softAccent
+                        ? "border border-[var(--vx-accent-soft)] text-[var(--vx-accent-soft)] hover:bg-[rgba(var(--vx-accent-soft-rgb),0.08)]"
                         : "border border-[rgba(var(--vx-neutral-rgb),0.4)] text-[var(--vx-text)] hover:border-[var(--vx-accent)] hover:text-[var(--vx-accent)]"
                   }`}
                 >

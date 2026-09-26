@@ -16,7 +16,7 @@
  */
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "../design/theme-provider";
@@ -70,6 +70,7 @@ beforeEach(() => {
     window.sessionStorage.setItem("vx-intro-seen", "1");
   }
   document.documentElement.removeAttribute("data-theme");
+  window.history.replaceState(null, "", "/");
 });
 
 function renderLanding() {
@@ -142,5 +143,28 @@ describe("LandingPage", () => {
     const rafael = await screen.findByRole("link", { name: /Rafael no LinkedIn/ }, ESPERA);
     expect(rafael).toHaveAttribute("target", "_blank");
     expect(rafael).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("LAND-07 — links da navbar levam às seções e o menu Produto continua utilizável", async () => {
+    const user = userEvent.setup();
+    renderLanding();
+    const nav = await screen.findByRole("navigation", { name: "Navegação principal" }, ESPERA);
+
+    await user.click(within(nav).getByRole("link", { name: "Planos" }));
+    expect(window.location.hash).toBe("#planos");
+    expect(document.getElementById("planos")?.scrollIntoView).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    await user.click(within(nav).getByRole("button", { name: "Produto" }));
+    expect(within(nav).getByRole("button", { name: "Produto" })).toHaveAttribute("aria-expanded", "true");
+    await user.click(within(nav).getByRole("link", { name: "Recursos" }));
+    expect(window.location.hash).toBe("#recursos");
+    expect(document.getElementById("recursos")?.scrollIntoView).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "start",
+    });
+    expect(within(nav).getByRole("button", { name: "Produto" })).toHaveAttribute("aria-expanded", "false");
   });
 });

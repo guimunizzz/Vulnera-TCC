@@ -23,14 +23,14 @@ const BARS: string[] = [
   ...Array<string>(3).fill("var(--vx-danger)"),
   ...Array<string>(5).fill("var(--vx-orange)"),
   ...Array<string>(8).fill("var(--vx-yellow)"),
-  ...Array<string>(12).fill("var(--vx-cyan)"),
+  ...Array<string>(12).fill("var(--vx-accent-soft)"),
 ];
 
 const FINDINGS = [
   { sev: "CRÍTICA", color: "var(--vx-danger)", title: "SQL Injection em /api/v1/orders" },
   { sev: "ALTA", color: "var(--vx-orange)", title: "JWT sem expiração no painel admin" },
   { sev: "MÉDIA", color: "var(--vx-yellow)", title: "CORS permissivo em api.technova.com" },
-  { sev: "BAIXA", color: "var(--vx-cyan)", title: "Header X-Frame-Options ausente" },
+  { sev: "BAIXA", color: "var(--vx-accent-soft)", title: "Header X-Frame-Options ausente" },
 ];
 
 const NAV_ITEMS = ["Dashboard", "Aplicações", "Projetos", "Maturidade", "Configurações"];
@@ -129,7 +129,7 @@ export default function Demo() {
             <div className="absolute right-3 top-3 flex gap-1">
               <span className="vx-blink h-[4px] w-[4px] bg-[var(--vx-accent)]" />
               <span
-                className="vx-blink h-[4px] w-[4px] bg-[var(--vx-cyan)]"
+                className="vx-blink h-[4px] w-[4px] bg-[var(--vx-accent-soft)]"
                 style={{ animationDelay: "400ms" }}
               />
               <span
@@ -145,7 +145,7 @@ export default function Demo() {
               </span>
               <div className="hidden gap-4 font-mono text-[10px] text-[var(--vx-text-2)] sm:flex">
                 <span>TechNova Solutions</span>
-                <span className="text-[var(--vx-cyan)]">analista@vulnera.sec</span>
+                <span className="text-[var(--vx-accent-soft)]">analista@vulnera.sec</span>
               </div>
             </div>
 

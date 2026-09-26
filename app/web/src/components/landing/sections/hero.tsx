@@ -85,7 +85,7 @@ export default function Hero() {
             href="#demo"
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.97 }}
-            className="rounded-[6px] border border-[var(--vx-cyan)] px-8 py-3 font-mono text-sm font-bold tracking-wider text-[var(--vx-cyan)] transition-all duration-[300ms] hover:bg-[rgba(var(--vx-cyan-rgb),0.08)] hover:shadow-[0_0_20px_rgba(var(--vx-cyan-rgb),0.4)]"
+            className="rounded-[6px] border border-[var(--vx-accent-soft)] px-8 py-3 font-mono text-sm font-bold tracking-wider text-[var(--vx-accent-soft)] transition-all duration-[300ms] hover:bg-[rgba(var(--vx-accent-soft-rgb),0.08)] hover:shadow-[0_0_20px_rgba(var(--vx-accent-soft-rgb),0.4)]"
           >
             <InteractiveLabel>VER DEMO</InteractiveLabel>
           </motion.a>

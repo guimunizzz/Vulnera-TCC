@@ -58,7 +58,7 @@ export default function CustomCursor() {
 
   if (!enabled) return null;
 
-  const color = hovering ? "#00d4ff" : "#8b5cf6";
+  const color = hovering ? "var(--vx-accent-soft)" : "var(--vx-accent)";
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[50]" aria-hidden="true">
@@ -66,7 +66,7 @@ export default function CustomCursor() {
       {trail.map((p, i) => (
         <div
           key={p.id}
-          className="absolute h-[3px] w-[3px] bg-[#8b5cf6]"
+          className="absolute h-[3px] w-[3px] bg-[var(--vx-accent)]"
           style={{
             left: p.x,
             top: p.y,

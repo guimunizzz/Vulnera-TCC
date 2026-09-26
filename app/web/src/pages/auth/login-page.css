@@ -308,7 +308,7 @@
   margin-top: 4px;
   border: 1px solid transparent;
   border-radius: 8px;
-  background: linear-gradient(100deg, #8b5cf6, #7c5ce8 52%, #5b8df2);
+  background: linear-gradient(100deg, #8b5cf6, #7c5ce8 52%, #a78bfa);
   color: var(--login-on-action);
   box-shadow: 0 10px 22px rgb(104 67 205 / 22%);
   font-size: .875rem;

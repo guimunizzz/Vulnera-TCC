@@ -23,7 +23,7 @@ function randomChar(): string {
   return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
 }
 
-/** Campo de partículas violeta/ciano com rotação lenta do sistema todo. */
+/** Campo de partículas em tons de violeta com rotação lenta do sistema todo. */
 function ParticleField({ count }: { count: number }) {
   const ref = useRef<THREE.Points>(null);
 
@@ -31,13 +31,13 @@ function ParticleField({ count }: { count: number }) {
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const violet = new THREE.Color("#8b5cf6");
-    const cyan = new THREE.Color("#00d4ff");
+    const lightViolet = new THREE.Color("#c4b5fd");
     const tmp = new THREE.Color();
     for (let i = 0; i < count; i++) {
       pos[i * 3 + 0] = (Math.random() - 0.5) * 900;
       pos[i * 3 + 1] = (Math.random() - 0.5) * 600;
       pos[i * 3 + 2] = (Math.random() - 0.5) * 1200;
-      tmp.copy(violet).lerp(cyan, Math.random());
+      tmp.copy(violet).lerp(lightViolet, Math.random());
       col[i * 3 + 0] = tmp.r;
       col[i * 3 + 1] = tmp.g;
       col[i * 3 + 2] = tmp.b;
@@ -191,7 +191,7 @@ export default function Intro3D({ onComplete }: { onComplete: () => void }) {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 0.8, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="mt-4 font-mono text-lg tracking-[0.6em] text-[#00d4ff] md:text-xl"
+            className="mt-4 font-mono text-lg tracking-[0.6em] text-[#c4b5fd] md:text-xl"
           >
             SECURITY
           </motion.p>

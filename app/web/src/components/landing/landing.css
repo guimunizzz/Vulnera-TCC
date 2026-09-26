@@ -24,8 +24,8 @@
   --vx-accent: #8b5cf6;
   --vx-accent-rgb: 139, 92, 246;
   --vx-on-accent: #000000;
-  --vx-cyan: #00d4ff;
-  --vx-cyan-rgb: 0, 212, 255;
+  --vx-accent-soft: #c4b5fd;
+  --vx-accent-soft-rgb: 196, 181, 253;
   --vx-magenta: #ff2ec4;
   --vx-danger: #ff2e63;
   --vx-danger-rgb: 255, 46, 99;
@@ -51,8 +51,8 @@
   --vx-accent: #6d28d9;
   --vx-accent-rgb: 109, 40, 217;
   --vx-on-accent: #ffffff;
-  --vx-cyan: #0891b2;
-  --vx-cyan-rgb: 8, 145, 178;
+  --vx-accent-soft: #7c3aed;
+  --vx-accent-soft-rgb: 124, 58, 237;
   --vx-magenta: #c026d3;
   --vx-danger: #dc2626;
   --vx-danger-rgb: 220, 38, 38;
@@ -141,7 +141,7 @@
 }
 .vx-glitch:hover .vx-glitch-c {
   opacity: 0.8;
-  color: var(--vx-cyan);
+  color: var(--vx-accent-soft);
   animation: vx-glitch-right 200ms steps(2, end) 1;
 }
 @keyframes vx-glitch-base {
