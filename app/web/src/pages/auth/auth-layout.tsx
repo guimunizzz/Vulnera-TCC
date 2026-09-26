@@ -1,4 +1,4 @@
-import { useId, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useId, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useLocation, useOutlet } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import "@fontsource-variable/inter";
@@ -7,23 +7,45 @@ import "./login-page.css";
 // O cenário permanece montado enquanto apenas o formulário troca de rota.
 export function AuthLayout() {
   const loginRef = useRef<HTMLElement>(null);
+  const pointerFrameRef = useRef<number>();
+  const pointerPositionRef = useRef({ x: 0, y: 0 });
   const patternId = useId();
   const { pathname } = useLocation();
   const outlet = useOutlet();
   const reducedMotion = useReducedMotion();
   const direction = pathname === "/register" ? 1 : -1;
 
+  useEffect(() => () => {
+    if (pointerFrameRef.current !== undefined) cancelAnimationFrame(pointerFrameRef.current);
+  }, []);
+
   function revelarFundo(event: ReactPointerEvent<HTMLElement>): void {
     const pagina = loginRef.current;
     if (!pagina || event.pointerType === "touch") return;
 
-    const limites = pagina.getBoundingClientRect();
-    pagina.style.setProperty("--login-mouse-x", `${event.clientX - limites.left}px`);
-    pagina.style.setProperty("--login-mouse-y", `${event.clientY - limites.top}px`);
-    pagina.dataset.revealActive = "true";
+    // Eventos de ponteiro podem chegar bem acima de 60 Hz. Atualizar uma
+    // máscara/SVG a cada evento força repaints extras e deixa o fundo pesado.
+    // Mantemos apenas a posição mais recente e aplicamos no próximo frame.
+    pointerPositionRef.current = { x: event.clientX, y: event.clientY };
+    if (pagina.dataset.revealActive !== "true") pagina.dataset.revealActive = "true";
+    if (pointerFrameRef.current !== undefined) return;
+
+    pointerFrameRef.current = requestAnimationFrame(() => {
+      const elemento = loginRef.current;
+      if (elemento) {
+        const { x, y } = pointerPositionRef.current;
+        elemento.style.setProperty("--login-mouse-x", `${x}px`);
+        elemento.style.setProperty("--login-mouse-y", `${y}px`);
+      }
+      pointerFrameRef.current = undefined;
+    });
   }
 
   function ocultarFundo(): void {
+    if (pointerFrameRef.current !== undefined) {
+      cancelAnimationFrame(pointerFrameRef.current);
+      pointerFrameRef.current = undefined;
+    }
     if (loginRef.current) loginRef.current.dataset.revealActive = "false";
   }
 

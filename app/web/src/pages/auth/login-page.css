@@ -40,7 +40,6 @@
   background: var(--login-bg);
   color: var(--login-text);
   font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
-  transition: --login-mouse-x .16s var(--login-ease-soft), --login-mouse-y .16s var(--login-ease-soft);
 }
 
 .vx-login::before {
@@ -65,8 +64,11 @@
   opacity: 0;
   background-image: radial-gradient(rgb(var(--login-line-rgb) / 18%) .7px, transparent .7px);
   background-size: 24px 24px;
-  -webkit-mask-image: radial-gradient(circle 300px at var(--login-mouse-x) var(--login-mouse-y), #000 0%, rgb(0 0 0 / 94%) 42%, transparent 78%);
-  mask-image: radial-gradient(circle 300px at var(--login-mouse-x) var(--login-mouse-y), #000 0%, rgb(0 0 0 / 94%) 42%, transparent 78%);
+  /* `mask-image` repinta o SVG inteiro em cada movimento. Um recorte circular
+     tem o mesmo efeito visual e costuma ficar na camada de composição. */
+  clip-path: circle(300px at var(--login-mouse-x) var(--login-mouse-y));
+  contain: paint;
+  will-change: clip-path;
   transition: opacity .55s var(--login-ease-soft);
 }
 
@@ -383,8 +385,7 @@
 @media (hover: none) {
   .vx-login-background {
     opacity: .32;
-    -webkit-mask-image: radial-gradient(circle 310px at 50% 46%, #000, transparent 82%);
-    mask-image: radial-gradient(circle 310px at 50% 46%, #000, transparent 82%);
+    clip-path: circle(310px at 50% 46%);
   }
 }
 
@@ -394,8 +395,8 @@
   .vx-login-pulses { display: none; }
   .vx-login-background, .vx-login[data-reveal-active="true"] .vx-login-background {
     opacity: .18;
-    -webkit-mask-image: radial-gradient(circle 280px at 50% 50%, #000, transparent 82%);
-    mask-image: radial-gradient(circle 280px at 50% 50%, #000, transparent 82%);
+    clip-path: circle(280px at 50% 50%);
+    will-change: auto;
   }
   .vx-login-submit:hover svg, .vx-login .vx-login-submit:active:not([aria-disabled="true"]) { transform: none; }
 }
