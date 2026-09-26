@@ -13,6 +13,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Points, PointMaterial } from "@react-three/drei";
 import { motion } from "motion/react";
 import * as THREE from "three";
+import { InteractiveLabel } from "../ui/interactive-label";
 
 const WORD = "VULNERA";
 const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%";
@@ -170,7 +171,7 @@ export default function Intro3D({ onComplete }: { onComplete: () => void }) {
         transition={{ delay: 0.6 }}
         className="absolute right-6 top-6 z-[10] font-mono text-sm tracking-widest text-[#d1d5db]"
       >
-        SKIP INTRO →
+        <InteractiveLabel effect="glitch">SKIP INTRO →</InteractiveLabel>
       </motion.button>
 
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">

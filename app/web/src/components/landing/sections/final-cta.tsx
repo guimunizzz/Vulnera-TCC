@@ -9,6 +9,7 @@ import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "motion/react";
 import { GlitchHeading } from "../ui";
+import { InteractiveLabel } from "../../ui/interactive-label";
 
 const MotionLink = motion.create(Link);
 
@@ -50,7 +51,7 @@ export default function FinalCTA() {
             className="mt-12 inline-block rounded-[6px] bg-[var(--vx-accent)] px-12 py-4 font-mono text-base font-bold tracking-wider text-[var(--vx-on-accent)] transition-shadow duration-[300ms] hover:shadow-[0_0_44px_rgba(var(--vx-accent-rgb),0.8)]"
             style={{ boxShadow: "0 0 20px rgba(var(--vx-accent-rgb),0.45)" }}
           >
-            ORGANIZAR MINHA PRIMEIRA ANÁLISE →
+            <InteractiveLabel>ORGANIZAR MINHA PRIMEIRA ANÁLISE →</InteractiveLabel>
           </MotionLink>
         </motion.div>
       </section>
@@ -71,7 +72,7 @@ export default function FinalCTA() {
               {FOOTER_LINKS.map((link) => (
                 <li key={link.label}>
                   <a href={link.href} className="transition-colors hover:text-[var(--vx-accent)]">
-                    {link.label}
+                    <InteractiveLabel effect="glitch">{link.label}</InteractiveLabel>
                   </a>
                 </li>
               ))}

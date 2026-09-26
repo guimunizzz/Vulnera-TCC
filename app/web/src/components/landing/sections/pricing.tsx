@@ -12,6 +12,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { Reveal, GlitchHeading } from "../ui";
+import { InteractiveLabel } from "../../ui/interactive-label";
 
 const MotionLink = motion.create(Link);
 
@@ -116,7 +117,7 @@ export default function Pricing() {
                         : "border border-[rgba(var(--vx-neutral-rgb),0.4)] text-[var(--vx-text)] hover:border-[var(--vx-accent)] hover:text-[var(--vx-accent)]"
                   }`}
                 >
-                  {plan.cta}
+                  <InteractiveLabel>{plan.cta}</InteractiveLabel>
                 </MotionLink>
               </motion.div>
             </Reveal>

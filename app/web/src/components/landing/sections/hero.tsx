@@ -12,6 +12,7 @@ import { motion, type Variants } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import { GlitchHeading } from "../ui";
 import AmbientParticles from "../ambient-particles";
+import { InteractiveLabel } from "../../ui/interactive-label";
 
 const MotionLink = motion.create(Link);
 
@@ -78,7 +79,7 @@ export default function Hero() {
             className="rounded-[6px] bg-[var(--vx-accent)] px-8 py-3 font-mono text-sm font-bold tracking-wider text-[var(--vx-on-accent)] transition-shadow duration-[300ms] hover:shadow-[0_0_30px_rgba(var(--vx-accent-rgb),0.7)]"
             style={{ boxShadow: "0 0 16px rgba(var(--vx-accent-rgb),0.4)" }}
           >
-            INICIAR ANÁLISE →
+            <InteractiveLabel>INICIAR ANÁLISE →</InteractiveLabel>
           </MotionLink>
           <motion.a
             href="#demo"
@@ -86,7 +87,7 @@ export default function Hero() {
             whileTap={{ scale: 0.97 }}
             className="rounded-[6px] border border-[var(--vx-cyan)] px-8 py-3 font-mono text-sm font-bold tracking-wider text-[var(--vx-cyan)] transition-all duration-[300ms] hover:bg-[rgba(var(--vx-cyan-rgb),0.08)] hover:shadow-[0_0_20px_rgba(var(--vx-cyan-rgb),0.4)]"
           >
-            VER DEMO
+            <InteractiveLabel>VER DEMO</InteractiveLabel>
           </motion.a>
         </motion.div>
       </motion.div>

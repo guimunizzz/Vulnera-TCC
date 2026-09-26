@@ -7,6 +7,7 @@ import { authApi } from "../../lib/api/auth.api";
 import { useAuthStore } from "../../store/auth.store";
 import { useApiError } from "../../hooks/use-api-error";
 import { Alert, Button, Field, Input } from "../../components/ui";
+import { InteractiveLabel } from "../../components/ui/interactive-label";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -94,12 +95,12 @@ export function LoginPage() {
         </Field>
 
         <Button type="submit" carregando={enviando} larguraTotal className="vx-login-submit" iconeFim={<ArrowRight size={18} />}>
-          Entrar na plataforma
+          <InteractiveLabel>Entrar na plataforma</InteractiveLabel>
         </Button>
       </form>
 
       <p className="vx-login-register">
-        Primeira vez por aqui? <Link to="/register">Criar uma conta <ArrowRight size={14} aria-hidden="true" /></Link>
+        Primeira vez por aqui? <Link to="/register"><InteractiveLabel effect="glitch">Criar uma conta</InteractiveLabel> <ArrowRight size={14} aria-hidden="true" /></Link>
       </p>
     </section>
   );

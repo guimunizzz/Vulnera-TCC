@@ -1,0 +1,39 @@
+.vx-label { position: relative; display: inline-block; vertical-align: bottom; }
+.vx-label-decoded, .vx-label-slice {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+.vx-label-decoded { overflow: hidden; }
+.vx-label[data-decoding] > .vx-label-original { opacity: 0; }
+.vx-label[data-decoding] > .vx-label-decoded { opacity: 1; }
+.vx-label-top { clip-path: inset(0 0 67% 0); }
+.vx-label-bottom { clip-path: inset(67% 0 0 0); }
+
+@keyframes vx-label-top {
+  0%, 100% { transform: none; }
+  2%, 64% { transform: translate(2px, -2px); }
+  4%, 60% { transform: translate(-2px, 2px); }
+  62% { transform: translate(8px, -1px) skewX(-13deg); }
+}
+@keyframes vx-label-bottom {
+  0%, 100% { transform: none; }
+  2%, 60%, 64% { transform: translate(-2px); }
+  62% { transform: translate(-10px, 3px) skewX(18deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(a, button):focus-visible:not(:disabled):not([aria-disabled="true"]) .vx-label-slice { opacity: 1; }
+  :is(a, button):focus-visible:not(:disabled):not([aria-disabled="true"]) .vx-label-top { animation: vx-label-top 1s linear infinite; }
+  :is(a, button):focus-visible:not(:disabled):not([aria-disabled="true"]) .vx-label-bottom { animation: vx-label-bottom 1.5s linear infinite; }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :is(a, button):hover:not(:disabled):not([aria-disabled="true"]) .vx-label-slice { opacity: 1; }
+  :is(a, button):hover:not(:disabled):not([aria-disabled="true"]) .vx-label-top { animation: vx-label-top 1s linear infinite; }
+  :is(a, button):hover:not(:disabled):not([aria-disabled="true"]) .vx-label-bottom { animation: vx-label-bottom 1.5s linear infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vx-label[data-decoding] > .vx-label-original { opacity: 1; }
+  .vx-label[data-decoding] > .vx-label-decoded { opacity: 0; }
+}

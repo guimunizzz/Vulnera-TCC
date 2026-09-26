@@ -6,6 +6,7 @@
 
 import { Check, X } from "lucide-react";
 import { Reveal, GlitchHeading } from "../ui";
+import { InteractiveLabel } from "../../ui/interactive-label";
 
 const ROWS = [
   { aspect: "Tempo pra abrir um projeto", vulnera: "Em até 1 dia útil", old: "2-4 semanas de proposta" },
@@ -75,7 +76,7 @@ export default function Comparison() {
             href="#planos"
             className="inline-block rounded-[6px] border border-[rgba(var(--vx-neutral-rgb),0.4)] px-8 py-3 font-mono text-sm font-bold tracking-wide text-[var(--vx-text)] transition-all duration-[300ms] hover:border-[var(--vx-accent)] hover:text-[var(--vx-accent)]"
           >
-            Ver planos →
+            <InteractiveLabel>Ver planos →</InteractiveLabel>
           </a>
         </Reveal>
       </div>

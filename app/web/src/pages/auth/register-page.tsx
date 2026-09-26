@@ -17,6 +17,7 @@ import { authApi } from "../../lib/api/auth.api";
 import { useAuthStore } from "../../store/auth.store";
 import { useApiError } from "../../hooks/use-api-error";
 import { Alert, Button, Field, Input } from "../../components/ui";
+import { InteractiveLabel } from "../../components/ui/interactive-label";
 
 export function RegisterPage() {
   const [nome, setNome] = useState("");
@@ -110,14 +111,14 @@ export function RegisterPage() {
         </Field>
 
         <Button type="submit" carregando={enviando} larguraTotal className="vx-login-submit" iconeFim={<ArrowRight size={18} />}>
-          Criar conta
+          <InteractiveLabel>Criar conta</InteractiveLabel>
         </Button>
 
       </form>
       <p className="vx-login-register">
         Já tem conta?{" "}
         <Link to="/login">
-          Entrar <ArrowRight size={14} aria-hidden="true" />
+          <InteractiveLabel effect="glitch">Entrar</InteractiveLabel> <ArrowRight size={14} aria-hidden="true" />
         </Link>
       </p>
     </section>

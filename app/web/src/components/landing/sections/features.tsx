@@ -8,6 +8,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Calculator, FileBarChart, Smartphone, Sparkles, X, type LucideIcon } from "lucide-react";
 import { Reveal, GlitchHeading } from "../ui";
+import { InteractiveLabel } from "../../ui/interactive-label";
 
 interface Feature {
   icon: LucideIcon;
@@ -154,7 +155,7 @@ export default function Features() {
                         onClick={() => setPreviewOpen(true)}
                         className="font-mono text-xs tracking-wide text-[var(--vx-cyan)] underline-offset-2 transition-colors hover:text-[var(--vx-accent)] hover:underline"
                       >
-                        Ver exemplo ↗
+                        <InteractiveLabel effect="glitch">Ver exemplo ↗</InteractiveLabel>
                       </button>
                     ) : (
                       <span />

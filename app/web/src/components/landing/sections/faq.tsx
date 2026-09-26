@@ -8,6 +8,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Plus } from "lucide-react";
 import { Reveal, GlitchHeading } from "../ui";
+import { InteractiveLabel } from "../../ui/interactive-label";
 
 interface QA {
   q: string;
@@ -48,7 +49,7 @@ function FAQItem({ item, open, onToggle }: FAQItemProps) {
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-4 text-left"
       >
-        <span className="font-mono text-sm text-[var(--vx-text)] md:text-base">{item.q}</span>
+        <span className="font-mono text-sm text-[var(--vx-text)] md:text-base"><InteractiveLabel effect="glitch">{item.q}</InteractiveLabel></span>
         <motion.span
           animate={{ rotate: open ? 45 : 0 }}
           transition={{ duration: 0.2 }}

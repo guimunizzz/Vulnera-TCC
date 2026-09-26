@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, User, Sun, Moon } from "lucide-react";
 import { useTheme } from "../../design/theme-provider";
+import { InteractiveLabel } from "../ui/interactive-label";
 
 const PRODUCT_LINKS = [
   { label: "Como funciona", href: "#como-funciona" },
@@ -102,7 +103,7 @@ export default function Nav() {
               aria-expanded={open}
               className="flex items-center gap-[6px] font-mono text-sm tracking-wide text-[var(--vx-text-2)] transition-colors hover:text-[var(--vx-accent)]"
             >
-              Produto
+              <InteractiveLabel effect="glitch">Produto</InteractiveLabel>
               <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.15 }}>
                 <ChevronDown size={15} aria-hidden="true" />
               </motion.span>
@@ -124,7 +125,7 @@ export default function Nav() {
                         onClick={() => setOpen(false)}
                         className="block rounded-[6px] px-3 py-2 font-mono text-sm text-[var(--vx-text-2)] transition-colors hover:bg-[rgba(var(--vx-accent-rgb),0.1)] hover:text-[var(--vx-accent)]"
                       >
-                        {link.label}
+                        <InteractiveLabel effect="glitch">{link.label}</InteractiveLabel>
                       </a>
                     </li>
                   ))}
@@ -139,7 +140,7 @@ export default function Nav() {
               href={link.href}
               className="shrink-0 font-mono text-sm tracking-wide text-[var(--vx-text-2)] transition-colors hover:text-[var(--vx-accent)]"
             >
-              {link.label}
+              <InteractiveLabel effect="glitch">{link.label}</InteractiveLabel>
             </a>
           ))}
         </nav>
@@ -169,7 +170,7 @@ export default function Nav() {
               to="/register"
               className="block whitespace-nowrap rounded-[6px] border border-[var(--vx-accent)] px-5 py-[10px] font-mono text-sm font-bold tracking-wide text-[var(--vx-accent)] transition-all duration-[300ms] hover:bg-[var(--vx-accent)] hover:text-[var(--vx-on-accent)]"
             >
-              Começar →
+              <InteractiveLabel>Começar →</InteractiveLabel>
             </Link>
           </motion.div>
         </div>
