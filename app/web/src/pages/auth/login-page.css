@@ -47,7 +47,7 @@
   position: absolute;
   z-index: -1;
   inset: 0;
-  background: radial-gradient(circle 280px at var(--login-mouse-x) var(--login-mouse-y), rgb(var(--login-line-rgb) / 8%), transparent 72%);
+  background: radial-gradient(circle 360px at var(--login-mouse-x) var(--login-mouse-y), rgb(108 79 190 / 10%), transparent 72%);
   opacity: 0;
   pointer-events: none;
   transition: opacity .55s var(--login-ease-soft);
@@ -64,11 +64,10 @@
   opacity: 0;
   background-image: radial-gradient(rgb(var(--login-line-rgb) / 18%) .7px, transparent .7px);
   background-size: 24px 24px;
-  /* `mask-image` repinta o SVG inteiro em cada movimento. Um recorte circular
-     tem o mesmo efeito visual e costuma ficar na camada de composição. */
-  clip-path: circle(300px at var(--login-mouse-x) var(--login-mouse-y));
-  contain: paint;
-  will-change: clip-path;
+  /* A posição é atualizada uma vez por frame no componente. Assim o degradê
+     continua suave sem reiniciar uma transição para cada evento do mouse. */
+  -webkit-mask-image: radial-gradient(circle 300px at var(--login-mouse-x) var(--login-mouse-y), #000 0%, rgb(0 0 0 / 90%) 38%, rgb(0 0 0 / 45%) 62%, transparent 82%);
+  mask-image: radial-gradient(circle 300px at var(--login-mouse-x) var(--login-mouse-y), #000 0%, rgb(0 0 0 / 90%) 38%, rgb(0 0 0 / 45%) 62%, transparent 82%);
   transition: opacity .55s var(--login-ease-soft);
 }
 
@@ -79,7 +78,8 @@
   height: 100%;
   min-height: 700px;
   transform-origin: center;
-  animation: vx-login-drift 18s ease-in-out infinite alternate;
+  opacity: .78;
+  animation: vx-login-drift 22s ease-in-out infinite alternate;
 }
 
 .vx-login-tracks {
@@ -181,6 +181,10 @@
   width: 100%;
   min-width: 0;
   padding: 40px var(--login-panel-padding) 32px;
+  border: 1px solid rgb(167 139 250 / 16%);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgb(20 17 31 / 94%), rgb(8 8 13 / 97%));
+  box-shadow: 0 28px 80px rgb(0 0 0 / 42%), 0 0 0 1px rgb(167 139 250 / 4%), 0 -1px 28px rgb(139 92 246 / 10%);
   --login-frame: polygon(24px 0, 35% 0, calc(35% + 10px) 10px, calc(100% - 28px) 10px, 100% 38px, 100% 44%, calc(100% - 6px) calc(44% + 6px), calc(100% - 6px) 62%, 100% calc(62% + 6px), 100% calc(100% - 24px), calc(100% - 24px) 100%, 66% 100%, calc(66% - 10px) calc(100% - 10px), 24px calc(100% - 10px), 0 calc(100% - 34px), 0 62%, 6px calc(62% - 6px), 6px 44%, 0 calc(44% - 6px), 0 24px);
 }
 
@@ -191,8 +195,8 @@
   pointer-events: none;
   clip-path: var(--login-frame);
 }
-.vx-login-panel::before { inset: 0; z-index: -2; background: #51465f; }
-.vx-login-panel::after { inset: 1px; z-index: -1; background: var(--login-panel); }
+.vx-login-panel::before { inset: 0; z-index: -2; background: linear-gradient(120deg, #7868a0, #403752 42%, #262032); }
+.vx-login-panel::after { inset: 1px; z-index: -1; background: linear-gradient(145deg, #12101c, var(--login-panel) 48%, #08080d); }
 .vx-login-panel-tab {
   position: absolute;
   top: -6px;
@@ -215,7 +219,7 @@
 .vx-login-title-mark { color: var(--login-accent); }
 .vx-login-eyebrow > span { margin-right: 6px; }
 
-.vx-login-heading { margin-bottom: 24px; }
+.vx-login-heading { margin-bottom: 26px; }
 
 .vx-login-heading .vx-login-eyebrow {
   margin: 0 0 8px;
@@ -234,10 +238,23 @@
 
 .vx-login-heading > p:last-child {
   margin: 0;
-  color: var(--login-muted);
+  color: #b9b3c6;
   font-size: .875rem;
   line-height: 1.6;
 }
+
+.vx-login-heading::after {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 14px;
+  color: #c4b5fd;
+  font: 500 .6875rem/1.35 var(--font-mono);
+  letter-spacing: .02em;
+}
+
+.vx-login-panel:not(.vx-register-panel) .vx-login-heading::after { content: "\2713  AMBIENTE PROTEGIDO"; }
+.vx-register-panel .vx-login-heading::after { content: "\2501\2501  ETAPA 1 DE 2  \00B7  LEVA MENOS DE UM MINUTO"; }
 
 .vx-login-form {
   display: flex;
@@ -251,9 +268,9 @@
   height: 48px;
   min-width: 0;
   padding-left: 42px;
-  border: 1px solid var(--login-border);
-  border-radius: 0;
-  background: var(--login-input);
+  border: 1px solid #393247;
+  border-radius: 8px;
+  background: rgb(4 4 8 / 72%);
   color: var(--login-text);
   font-size: 1rem;
   transition: border-color .35s var(--login-ease-soft), box-shadow .35s var(--login-ease-soft), background-color .35s var(--login-ease-soft);
@@ -261,10 +278,11 @@
 
 .vx-login .vx-login-password-input { padding-right: 58px; }
 .vx-login .vx-login-input::placeholder { color: var(--login-placeholder); font-size: .875rem; }
-.vx-login .vx-login-input:hover { border-color: rgb(var(--login-line-rgb) / 65%); }
+.vx-login .vx-login-input:hover { border-color: rgb(167 139 250 / 58%); background: rgb(9 8 15 / 92%); }
 .vx-login .vx-login-input:focus {
-  border-color: var(--login-accent);
-  box-shadow: 0 0 0 3px rgb(var(--login-line-rgb) / 12%);
+  border-color: #b69cff;
+  background: #0b0912;
+  box-shadow: 0 0 0 3px rgb(167 139 250 / 14%), 0 0 20px rgb(139 92 246 / 10%);
 }
 
 .vx-login-input-icon { color: var(--login-placeholder); transition: color .35s var(--login-ease-soft); }
@@ -289,17 +307,17 @@
   padding-block: 12px;
   margin-top: 4px;
   border: 1px solid transparent;
-  border-radius: 0;
-  background: var(--login-action);
+  border-radius: 8px;
+  background: linear-gradient(100deg, #8b5cf6, #7c5ce8 52%, #5b8df2);
   color: var(--login-on-action);
-  box-shadow: none;
+  box-shadow: 0 10px 22px rgb(104 67 205 / 22%);
   font-size: .875rem;
   font-weight: 600;
-  transition: color .3s var(--login-ease-soft), background-color .3s var(--login-ease-soft), transform .3s var(--login-ease);
+  transition: color .3s var(--login-ease-soft), box-shadow .3s var(--login-ease-soft), filter .3s var(--login-ease-soft), transform .3s var(--login-ease);
 }
 
-.vx-login .vx-login-submit:hover:not([aria-disabled="true"]) { background: var(--login-text); color: #642dc4; }
-.vx-login .vx-login-submit:active:not([aria-disabled="true"]) { transform: scale(.985); }
+.vx-login .vx-login-submit:hover:not([aria-disabled="true"]) { color: #fff; filter: brightness(1.1); box-shadow: 0 14px 30px rgb(104 67 205 / 34%); transform: translateY(-2px); }
+.vx-login .vx-login-submit:active:not([aria-disabled="true"]) { transform: translateY(0) scale(.985); }
 .vx-login-submit svg { transition: transform .35s var(--login-ease); }
 .vx-login-submit:hover:not([aria-disabled="true"]) svg { transform: translateX(4px); }
 
@@ -385,7 +403,8 @@
 @media (hover: none) {
   .vx-login-background {
     opacity: .32;
-    clip-path: circle(310px at 50% 46%);
+    -webkit-mask-image: radial-gradient(circle 310px at 50% 46%, #000, transparent 82%);
+    mask-image: radial-gradient(circle 310px at 50% 46%, #000, transparent 82%);
   }
 }
 
@@ -395,8 +414,18 @@
   .vx-login-pulses { display: none; }
   .vx-login-background, .vx-login[data-reveal-active="true"] .vx-login-background {
     opacity: .18;
-    clip-path: circle(280px at 50% 50%);
-    will-change: auto;
+    -webkit-mask-image: radial-gradient(circle 280px at 50% 50%, #000, transparent 82%);
+    mask-image: radial-gradient(circle 280px at 50% 50%, #000, transparent 82%);
   }
   .vx-login-submit:hover svg, .vx-login .vx-login-submit:active:not([aria-disabled="true"]) { transform: none; }
 }
+
+/* O conteúdo é o foco: o card usa uma superfície simples, sem marcadores
+   decorativos ou moldura técnica adicional. */
+.vx-login-panel::before,
+.vx-login-panel::after,
+.vx-login-panel-tab,
+.vx-login-panel-corner,
+.vx-login-title-mark,
+.vx-login-heading::after,
+.vx-login-footer-decoration { display: none; }
