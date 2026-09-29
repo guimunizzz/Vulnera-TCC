@@ -21,7 +21,9 @@ export const API_URL = process.env.E2E_API_URL ?? "http://localhost:3001/api";
 
 /** Alvo público e reservado pela IANA para documentação/testes — o mesmo das evidências do projeto. */
 export function alvoUnico(sufixo: string): string {
-  return `https://example.com/?e2e=${sufixo}-${Date.now()}`;
+  const base = process.env.E2E_DAST_TARGET_URL;
+  if (!base) throw new Error("Defina E2E_DAST_TARGET_URL para um alvo local controlado.");
+  return new URL(`#${sufixo}-${Date.now()}`, base).href;
 }
 
 export async function login(page: Page, quem: keyof typeof CREDENCIAIS = "pentester"): Promise<void> {
@@ -48,7 +50,7 @@ export async function criarScanViaApi(request: APIRequestContext, targetUrl: str
 
   const criado = await request.post(`${API_URL}/dast/scans`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-    data: { targetUrl },
+    data: { targetUrl: targetUrl.split("#")[0], mode: "REAL", confirmedRealScan: true },
   });
   expect(criado.status(), await criado.text()).toBe(201);
   return (await criado.json()).id as string;
@@ -71,7 +73,11 @@ export async function esperarScanTerminar(
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const scan = await res.json();
-    if (["COMPLETED", "FAILED", "CANCELLED"].includes(scan.status)) return scan;
+    if (["FAILED", "CANCELLED"].includes(scan.status)) throw new Error(`Scan real ${scan.status}: ${scan.errorMessage}`);
+    if (scan.status === "COMPLETED") {
+      if (scan.simulated) throw new Error("E2E real recebeu demonstração inesperada");
+      return scan;
+    }
     await new Promise((r) => setTimeout(r, 3000));
   }
   throw new Error(`scan ${scanId} não terminou em ${maxMs}ms`);

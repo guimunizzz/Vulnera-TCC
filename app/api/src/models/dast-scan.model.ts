@@ -24,6 +24,8 @@ export type { DastScanStatus };
 
 export type CreateDastScanDTO = {
   targetUrl: string;
+  mode: "REAL" | "SIMULATED";
+  confirmedRealScan?: boolean;
 };
 
 export type DastScanResponseDTO = {

@@ -1,0 +1,59 @@
+{
+  "_description": "Estados finais da validacao UI realizada em 2026-09-28, conferidos em 2026-09-29. Consumidor: relatorio DAST.",
+  "scans": [
+    {
+      "id": "cmulc5ofp0003oc012ggwrcgp",
+      "targetUrl": "http://vulnera-dast-ui-fixture:8080/",
+      "status": "COMPLETED",
+      "simulated": false,
+      "progress": 100,
+      "phase": "DONE",
+      "durationMs": 45507,
+      "errorMessage": null,
+      "warningMessage": null,
+      "alertsHigh": 0,
+      "alertsMedium": 5,
+      "alertsLow": 6,
+      "alertsInfo": 0,
+      "_count": {
+        "findings": 11
+      }
+    },
+    {
+      "id": "cmulc7fn9000koc01gtae3j8h",
+      "targetUrl": "http://vulnera-dast-ui-fixture:8080/",
+      "status": "COMPLETED",
+      "simulated": true,
+      "progress": 100,
+      "phase": "SIMULATED",
+      "durationMs": 3000,
+      "errorMessage": null,
+      "warningMessage": "Demonstração solicitada: o OWASP ZAP não foi executado e o alvo não recebeu requisições. Estes achados são fictícios.",
+      "alertsHigh": 5,
+      "alertsMedium": 5,
+      "alertsLow": 4,
+      "alertsInfo": 1,
+      "_count": {
+        "findings": 15
+      }
+    },
+    {
+      "id": "cmulc8xq50015oc018a46a0he",
+      "targetUrl": "http://vulnera-dast-ui-fixture:9/",
+      "status": "FAILED",
+      "simulated": false,
+      "progress": 100,
+      "phase": "FAILED",
+      "durationMs": 73047,
+      "errorMessage": "TARGET_UNREACHABLE: O ZAP não conseguiu alcançar o alvo. Verifique DNS, endereço/porta, certificado TLS, firewall e acesso pela rede do Docker.",
+      "warningMessage": null,
+      "alertsHigh": 0,
+      "alertsMedium": 0,
+      "alertsLow": 0,
+      "alertsInfo": 0,
+      "_count": {
+        "findings": 0
+      }
+    }
+  ]
+}

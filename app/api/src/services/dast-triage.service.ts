@@ -151,12 +151,15 @@ export class DastTriageService {
   async getPromotionDraft(actor: Actor, findingId: string): Promise<PromotionDraft & { alreadyPromotedTo: string | null }> {
     const finding = await this.getOwnedFinding(actor, findingId);
     const scan = await this.scanRepository.findById(finding.scanId);
+    if (scan?.simulated) throw new Error("SIMULATED_SCAN_OPERATION_NOT_ALLOWED");
     const draft = buildPromotionDraft(finding, scan?.targetUrl ?? finding.url);
     return { ...draft, alreadyPromotedTo: finding.promotedVulnerability?.id ?? null };
   }
 
   async promote(actor: Actor, findingId: string, dto: PromoteDTO): Promise<Vulnerability> {
     const finding = await this.getOwnedFinding(actor, findingId);
+    const scan = await this.getOwnedScan(actor, finding.scanId);
+    if (scan.simulated) throw new Error("SIMULATED_SCAN_OPERATION_NOT_ALLOWED");
 
     // Dedup: o índice UNIQUE em Vulnerability.sourceDastFindingId já garante
     // isso no banco. Esta checagem existe pra devolver um erro que o usuário
@@ -290,6 +293,7 @@ export class DastTriageService {
 
     const base = await this.getOwnedScan(actor, baseScanId);
     const head = await this.getOwnedScan(actor, headScanId);
+    if (base.simulated || head.simulated) throw new Error("SIMULATED_SCAN_OPERATION_NOT_ALLOWED");
 
     // Comparar alvos diferentes produziria um diff onde 100% "sumiu" e 100%
     // "apareceu" — tecnicamente correto e completamente inútil. Melhor
@@ -331,10 +335,11 @@ export class DastTriageService {
   /** Scans COMPLETED do mesmo alvo — alimenta o seletor "comparar com...". */
   async listComparableScans(actor: Actor, scanId: string): Promise<Array<{ id: string; finishedAt: string | null; total: number }>> {
     const scan = await this.getOwnedScan(actor, scanId);
+    if (scan.simulated) return [];
     const todos = actor.role === "ADMIN" ? await this.scanRepository.findAll() : await this.scanRepository.findByRequester(actor.userId);
 
     return todos
-      .filter((s) => s.id !== scan.id && s.targetUrl === scan.targetUrl && s.status === "COMPLETED")
+      .filter((s) => s.id !== scan.id && s.targetUrl === scan.targetUrl && s.status === "COMPLETED" && !s.simulated)
       .map((s) => ({
         id: s.id,
         finishedAt: s.finishedAt?.toISOString() ?? null,

@@ -5,14 +5,14 @@
  * MEMÓRIA do processo (nada aqui toca Prisma — CLAUDE.md P1):
  *
  *  1. LIMITE DE CONCORRÊNCIA. No máximo `DAST_MAX_CONCURRENT_SCANS` (default
- *     2) scans REAIS ao mesmo tempo. O excedente fica numa fila FIFO e entra
+ *     1) scan por vez ao mesmo tempo. O excedente fica numa fila FIFO e entra
  *     assim que uma vaga abre. Sem isso, cinco scans disparados juntos viram
  *     cinco containers do ZAP — cada um com uma JVM de ~1GB — e a máquina do
  *     Rafael (ou a da banca, no dia da apresentação) morre.
  *  2. DETECÇÃO DE TRAVAMENTO. O runner "pulsa" a cada poll na API do ZAP
  *     (~3s). Se um scan em execução passar `DAST_HEARTBEAT_TIMEOUT_MS` sem
  *     pulsar, o watchdog aborta e registra um alerta — sem isso um scan
- *     travado ocuparia uma das duas vagas pra sempre.
+ *     travado ocuparia uma vaga pra sempre.
  *  3. AVISO. Todo erro/abort vira um alerta no anel de `alerts` (últimos 20)
  *     E um `console.warn`/`console.error`. O anel é o que a UI mostra no
  *     banner da tela de DAST; o console é o rastro pro log do servidor.
@@ -31,7 +31,7 @@
 import { EnvVar } from "../config/EnvVar";
 import { EnvKeys } from "../config/enum/EnvKeys";
 
-const DEFAULT_MAX_CONCURRENT = 2;
+const DEFAULT_MAX_CONCURRENT = 1;
 const DEFAULT_HEARTBEAT_TIMEOUT_MS = 2 * 60 * 1000; // 2min sem pulso = travado
 const MONITOR_INTERVAL_MS = 5000;
 const MAX_ALERTS = 20;

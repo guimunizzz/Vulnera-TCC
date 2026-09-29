@@ -1402,3 +1402,16 @@ corte de "toggle de tema"), ADR-025 (métricas). `docs/DESIGN_SYSTEM.md` criado 
 é o que a Fase 7 consome. `PRD_VIVO.md`, `docs/BACKLOG.md`,
 `docs/ROADMAP_PROMPTS.md`, `docs/DECISIONS.md`, `Fora do Escopo` e
 `Contexto Mestre v4` atualizados.
+
+
+## 2026-09-28 — DAST explícito e baseline real em WSL de 4 GB
+
+Escolha Simulado/Real no formulário, segundo aviso com autorização, contrato da API validado e auditado. Removido fallback automático: falha real permanece FAILED, com mensagem tratada e diagnóstico preservado antes da limpeza. Demonstração não consulta Docker/alvo e não promove achados a vulnerabilidades.
+
+ZAP real usa navegação GET limitada e análise passiva, sem formulários/active scan. Default de um container de 2 GiB/2 CPUs; consultas toleram até três tentativas transitórias. Validação com ZAP 2.17.0 em alvo descartável, sem tocar sites externos. JSON/HTML reais, prova de métodos recebidos e falha em porta fechada. Detalhes de testes e ressalvas em `docs/DAST-VALIDACAO-2026-09-28.md`; ADR-042 e `docs/DAST.md` atualizados.
+
+Branch `feat/dast-real-explicit-mode`, entrega por commit local detalhado, sem PR/push. Nenhuma migration, alteração de schema ou dependência.
+
+### Fechamento — 2026-09-29
+
+Aceite de todos os pontos solicitados: scan real da UI concluído em 45,5 s com 11 findings; demonstração em 3 s sem tráfego; falha por porta fechada tratada com zero findings. Artefatos e estados persistidos reconferidos. Mantida fila FIFO/watchdog sem broker externo, conforme escopo confirmado. API focal 81/81, novos testes UI 3/3, builds aprovados; ressalvas dos checks gerais documentadas.

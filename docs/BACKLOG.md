@@ -6,6 +6,27 @@
 
 ## Status
 
+✅ **2026-09-29 — Aceite final DAST:** todos os requisitos solicitados de modo explícito, consentimento, retry, falha tratada e relatório real validados. Fila/watchdog atual mantida; mensageria externa não adicionada. Relatório `docs/DAST-VALIDACAO-2026-09-28.md` e evidências versionadas; pendências técnicas ampliadas abaixo não são apresentadas como concluídas.
+
+**✅ 2026-09-28 — DAST explícito e baseline real (100% do escopo solicitado).** Branch `feat/dast-real-explicit-mode`: escolha Simulado/Real, segundo aviso e confirmação exigida também pela API; demo sem tráfego, falha real sem fallback; GET limitado com análise passiva do ZAP, retries de leitura e diagnóstico de rede/memória. Padrão de um ZAP de 2 GiB/2 CPUs para WSL de 4 GB. Scan real executado em alvo local controlado. Validação, limites e pendências preexistentes em `docs/DAST-VALIDACAO-2026-09-28.md`; decisão ADR-042. Sem migration ou alteração de dependências.
+
+✅ **2026-09-28 — Diagnóstico OWASP ZAP na WSL de 4 GB (100% da análise):** três falhas reais confirmadas nos logs/banco, seguidas de fallback simulado. Configuração permite 2 × 2 GiB; execução isolada também falha, sem prova de OOM. Relatório: `docs/DAST-DIAGNOSTICO-2026-09-28.md`. Registro histórico da análise inicial; as correções posteriores estão na entrega acima.
+
+Pendências derivadas desta análise (não alteram os marcos históricos de entrega do DAST):
+
+- [x] DAST-DIAG-01a — Separar demo explícita de falha real; impedir promoção/comparação operacional de simulado. Inclui segundo aviso e confirmação da API.
+- [x] DAST-DIAG-02 — Baseline sem active scan, sem formulários, com allowlist GET/origem/subárvore e validação local de tráfego/redirects.
+- [x] DAST-DIAG-03a — Perfil WSL 4 GB: um scan, teto de 2 GiB/2 CPUs e crawling limitado; execução real pequena comprovada.
+- [x] DAST-DIAG-04a — Diagnóstico por fase/endpoint, logs e OOM antes da limpeza, retries limitados de leitura e heartbeat durante espera.
+- [x] DAST-DIAG-05a — Drenar fila passiva antes de publicar, falhar explicitamente se não drenar; validar relatório real sem simulação em alvo local.
+- [ ] DAST-DIAG-01b — Preservar/publicar achados reais parciais com cobertura identificada, sem tratá-los como scan completo.
+- [ ] DAST-DIAG-03b — Medir picos contínuos de RAM/CPU por escopo; amostra pontual não dimensiona sites grandes.
+- [ ] DAST-DIAG-04b — Ampliar diagnóstico de encerramento por exit code além de OOM/heap/rede; retenção automática de relatórios/logs.
+- [ ] DAST-DIAG-05b — Fixar versão/digest do ZAP para reprodução; imagem `stable` observada como 2.17.0.
+- [ ] DAST-FUT-01 — Confinamento por IP resolvido/egress contra DNS rebinding; permanece limitação anterior, não resolvida por filtros de URL.
+- [ ] WEB-TEST-REM-01 — Investigar `remediation-page-flow.test.tsx:47`: falha de carregamento/region reproduzida na suíte completa e isolada em 2026-09-28; fora do escopo DAST.
+- [ ] DAST-FUT-02 — Identificar cobertura de baseline versus scans ativos históricos na comparação (sem mudança de schema nesta sessão).
+
 ✅ **2026-09-23 — Área autenticada unificada (100%; branch `feat/visual-overhaul-authenticated`):** fundo padrão no `AppLayout` com grade, luz e cena opcional única; identidade de aplicação, projeto, finding, DAST, maturidade, playbook e governança por superfícies semânticas; wizards com transição Motion e redução de movimento; hash CSP do tema corrigido para CRLF. Web versionado 237/237, contraste 66/66, lint 0 erros e build Docker verde. Browser 1440/768/375 px, dark/light/reduced-motion sem overflow/canvas duplicado; detalhe DAST sem scan demo. Suíte completa 237/239 porque dois testes não rastreados preexistentes falham. Ver `docs/FRONTEND_WEB.md`, ADR-041 e `output/frontend-visual-overhaul-report.md`.
 
 ✅ **2026-09-23 — Ajuste visual de Remediação e SLA (100%; commit local em `feat/remediation-sla-visual`):** quadro de três etapas com movimento após confirmação e atribuição lazy; política de quatro severidades com Salvar/Reaplicar separados e histórico responsivo. Web 236/236 em contêiner, contraste 66/66, lint 0 erros e build Docker verde; validação real em desktop/tablet/mobile e dark/light. Sem alterações de API, banco, RBAC, dependências ou lockfile. Ver `output/remediation-sla-visual-report.md`.
