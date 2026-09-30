@@ -1455,3 +1455,8 @@ aberta, sem commits ou push registrados.
 CP-0 a CP-3 concluídos; implementação e validação funcional em 100%. Branch `fix/19-admin-create-application`, base `fecacab3`; PR ainda não aberta e commits/push não registrados nesta atualização. O smoke Chrome real passou 44/44 verificações. Web final serial: 257/257 testes em 21 suítes (54,59 s), focal 20/20, lint 0 erros/9 avisos preexistentes, contraste 66/66 e build `tsc + vite` aprovado com aviso conhecido de bundle. API: 588/588 testes em 43 suítes, focal 42/42, build aprovado e cobertura de `application.service` 100% linhas/funções, 85,71% branches e 94,44% statements.
 
 Ressalva mantida: o `npm run check` global da API não está verde devido a `UserEntity` e `UserResponseDTO` não usados em `vulnerability.service.ts:45`; imports preexistentes fora do escopo. No baseline Web paralelo, 237/240; Remediação e SLA passaram na execução serial final. As falhas paralelas não persistiram, sem causa comprovada. O Select nativo no modal é desvio documentado do plano; L-19 mantém o conflito geral entre portal e overlay como trabalho futuro. Relatório: `output/issue-19-validation.md`; decisão: ADR-043.
+
+
+### Marco administrativo posterior - Issue #19 (2026-09-30)
+
+Commit local criado: `7b847c473e10ed1ca93e787704ed9a91dd1f70ab` (`7b847c4`), mensagem `fix(application): complete admin company selection flow`. O push final ficara com o usuario; nenhum push ocorreu e PR ainda nao foi aberta. Os resultados de validacao e a ressalva do lint API acima permanecem inalterados.

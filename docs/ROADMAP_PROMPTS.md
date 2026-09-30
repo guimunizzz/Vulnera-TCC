@@ -1018,7 +1018,7 @@ próxima rodada; as decisões D8/D9 continuam registradas.
 
 ✅ **Concluída em 2026-09-30** — implementação e validação funcional (100%, CP-0 a CP-3).
 
-**Data:** 2026-09-30 · **Branch:** `fix/19-admin-create-application` · **Base:** `fecacab3` · **PR:** ainda não aberta · **Commits/push:** não registrados até esta atualização.
+**Data:** 2026-09-30 | **Branch:** `fix/19-admin-create-application` | **Base:** `fecacab3` | **Commit local:** `7b847c4` (`7b847c473e10ed1ca93e787704ed9a91dd1f70ab`), `fix(application): complete admin company selection flow` | **Push:** usuario fara o push final; ainda nao ocorreu | **PR:** nao aberta.
 
 ## Checkpoints
 
@@ -1039,7 +1039,7 @@ O plano previa o `Select` customizado dentro do modal. Seu popover sai em portal
 
 - **Branch/base:** `fix/19-admin-create-application`, base `fecacab3`; comparação com `dev` em `f301fd0`.
 - **Data:** 2026-09-30.
-- **PR:** ainda não aberta. Commits/push não registrados nesta atualização.
+- **Marco administrativo posterior:** commit local `7b847c4` (`7b847c473e10ed1ca93e787704ed9a91dd1f70ab`), mensagem `fix(application): complete admin company selection flow`; push final pelo usuario, ainda nao ocorreu; PR nao aberta.
 - **Validação final:** smoke Chrome 44/44; Web serial 257/257 (21 suítes, 54,59 s), focal 20/20, lint sem erros (9 avisos preexistentes), contraste 66/66 e build aprovado com aviso conhecido de tamanho do bundle. API 588/588 (43 suítes), focal 42/42, cobertura de `application.service` 100% linhas/funções, 85,71% branches e 94,44% statements; build aprovado.
 - **Ressalva de gate:** `npm run check` global da API não está verde por dois imports não usados preexistentes em `vulnerability.service.ts:45` (`UserEntity` e `UserResponseDTO`).
 - **Resultado que substitui o snapshot intermediário:** os testes Remediação/SLA passaram na execução serial final; as falhas do baseline paralelo 237/240 não persistiram, sem causa comprovada para as falhas anteriores.
@@ -1048,3 +1048,7 @@ O plano previa o `Select` customizado dentro do modal. Seu popover sai em portal
 ### Marco intermediário preservado — 75%, supersedido pela conclusão acima
 
 O registro anterior reportava CP-0 a CP-2 concluídos e testes Web finais pendentes. Esse estado foi substituído após CP-3, sem apagar o histórico da evolução.
+
+### Marco administrativo posterior - 2026-09-30
+
+Commit local `7b847c4` (`7b847c473e10ed1ca93e787704ed9a91dd1f70ab`), mensagem `fix(application): complete admin company selection flow`. O usuario fara o push final; nenhum push ocorreu e PR nao aberta.

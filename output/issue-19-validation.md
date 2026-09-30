@@ -126,3 +126,8 @@ Naquele marco, os testes, checks e build finais do Web ainda não tinham chegado
 - `git diff --check`: exit 0, conforme validação do orquestrador.
 
 A implementação e validação funcional da Issue #19 estão concluídas (100%; CP-0 a CP-3). Branch `fix/19-admin-create-application`, base `fecacab3`; PR ainda não aberta nesta atualização. O select nativo dentro do Dialog e o follow-up L-19 estão registrados no ADR-043 e no backlog.
+
+
+### Marco administrativo posterior - commit e publicacao
+
+O commit local de implementacao e `7b847c473e10ed1ca93e787704ed9a91dd1f70ab`. O push final foi deixado explicitamente a cargo do usuario; nenhum push ocorreu e nenhuma PR foi aberta. Tentativas de publicacao foram bloqueadas pela revisao automatica de destino/autorizacao, sem relacao com os resultados de codigo ou testes.

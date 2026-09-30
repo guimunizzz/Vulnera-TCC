@@ -21,6 +21,10 @@
 
 O estado intermediário e o baseline paralelo de 237/240 foram registrados antes da validação serial final. As falhas de Remediação/SLA não persistiram na execução final; a causa das falhas paralelas não foi determinada.
 
+### Marco administrativo - 2026-09-30
+
+Commit local `7b847c4` (`7b847c473e10ed1ca93e787704ed9a91dd1f70ab`), mensagem `fix(application): complete admin company selection flow`. O push final ficara com o usuario; nenhum push ocorreu e PR ainda nao foi aberta.
+
 ### Registro histórico — estado após CP-1, substituído em 2026-09-30 após CP-2
 
 O snapshot abaixo preserva o progresso inicial de 50% registrado antes da
