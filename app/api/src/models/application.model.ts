@@ -14,8 +14,10 @@
  * fazer cada uma (docs/DECISIONS.md D2). Subir é permitido a CLIENT OWNER;
  * descer exige ADMIN. Sem rank, "mudança" seria um só verbo.
  *
- * companyId NUNCA entra em DTO — é sempre derivado do req.user no service
- * (anti-pattern do CLAUDE.md §14: "aceitar companyId vindo do body").
+ * companyId não integra os DTOs genéricos de create/update. Na criação, o
+ * controller passa o alvo ADMIN em parâmetro separado e o service valida a
+ * empresa; para CLIENT, o service deriva companyId do usuário no banco e
+ * ignora qualquer alvo enviado. A atualização não permite trocar a empresa.
  */
 
 import type { Application as PrismaApplication } from "@prisma/client";

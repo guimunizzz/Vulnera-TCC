@@ -67,6 +67,8 @@ export interface Application extends ApplicationRiskContext {
 
 export interface CreateApplicationInput {
   name: string;
+  /** Alvo selecionado no fluxo ADMIN; CLIENT tem o tenant derivado pela API. */
+  companyId?: string;
   url?: string;
   environment?: string;
   techStack?: string;
@@ -77,6 +79,9 @@ export interface CreateApplicationInput {
   businessOwner?: string | null;
   technicalOwner?: string | null;
 }
+
+/** O alvo é imutável após a criação e não faz parte do contrato de update. */
+export type UpdateApplicationInput = Partial<Omit<CreateApplicationInput, "companyId">>;
 
 /** O que o formulário de contexto envia — só os campos de risco e os donos. */
 export type UpdateRiskContextInput = Pick<
