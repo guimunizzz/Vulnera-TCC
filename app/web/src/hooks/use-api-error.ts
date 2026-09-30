@@ -48,6 +48,7 @@ const MESSAGES: Record<string, string> = {
 
   // application
   APPLICATION_NOT_FOUND: "Aplicação não encontrada.",
+  MISSING_COMPANY_ID: "Selecione a empresa da aplicação.",
   INVALID_URL: "URL inválida. Use o formato https://exemplo.com.",
   INVALID_ENVIRONMENT: "Ambiente inválido.",
   NO_ACTIVE_SUBSCRIPTION: "Sua empresa ainda não tem uma assinatura ativa. Aguarde a aprovação do admin.",

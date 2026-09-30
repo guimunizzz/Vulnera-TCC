@@ -6,6 +6,35 @@
 
 ## Status
 
+✅ **2026-09-30 — Issue #19: ADMIN criar Application sem `companyId` próprio (100%; CP-0 a CP-3 concluídos, 4/4).** Baseline da branch `fix/19-admin-create-application` (`fecacab3`) comparado a `dev` (`f301fd0`). ADMIN escolhe a empresa no modal; CLIENT permanece confinado à empresa do banco e `companyId` não pode ser atualizado. Smoke Chrome real passou 44/44 verificações. Web: `npm run check -- -- --maxWorkers=1 --silent` aprovado, 257/257 testes em 21 suítes (54,59 s), lint 0 erros/9 avisos preexistentes, contraste 66/66 e build `tsc + vite` aprovado com aviso conhecido de tamanho de bundle. API: focal 42/42, full 588/588 em 43 suítes, build aprovado e cobertura de `application.service` 100% linhas/funções, 85,71% branches, 94,44% statements. **Ressalva:** o `npm run check` global da API continua falhando somente pelos imports preexistentes não usados `UserEntity`/`UserResponseDTO` em `vulnerability.service.ts:45`; o gate global da API não está verde. O lint da API é fora do escopo e não invalida os testes/build aprovados. O smoke confirmou ADMIN sem vínculo e ADMIN vinculado a A criando em B, CLIENT criando em A mesmo com body forjado com B, além de lista, reset, teclado/foco e responsividade. PR ainda não aberta.
+
+| CP | Estado | Escopo |
+| --- | --- | --- |
+| CP-0 | ✅ | Confirmar branch, HEAD, comparação com `dev` e baseline informado. |
+| CP-1 | ✅ | `CreateApplicationInput` aceita alvo opcional; tipo de update exclui empresa; API web de update usa tipo específico; `MISSING_COMPANY_ID` tem mensagem própria. |
+| CP-2 | ✅ | Modal e estados ADMIN/CLIENT, proteção de resposta tardia/envio duplicado e smoke Chrome real de 44 verificações. |
+| CP-3 | ✅ | API focal 42/42 e full 588/588; Web focal 20/20 e serial 257/257 em 21 suítes; builds Web/API e contraste 66/66 aprovados. Ressalva: `npm run check` global da API acusa somente dois imports preexistentes não usados em `vulnerability.service.ts:45`. |
+
+**Implementação e validação funcional da issue #19 concluídas (100%).** A PR ainda não foi aberta. O resultado serial Web substitui o baseline paralelo de 237/240: Remediação e SLA passaram na execução final; não há causa comprovada para as falhas anteriores.
+
+### Marco intermediário — CP-0 a CP-2 (75%), substituído pelo resultado final acima
+
+O estado intermediário e o baseline paralelo de 237/240 foram registrados antes da validação serial final. As falhas de Remediação/SLA não persistiram na execução final; a causa das falhas paralelas não foi determinada.
+
+### Registro histórico — estado após CP-1, substituído em 2026-09-30 após CP-2
+
+O snapshot abaixo preserva o progresso inicial de 50% registrado antes da
+implementação e do smoke real do modal.
+
+> 🚧 **2026-09-30 — Issue #19 (50%; CP-0 e CP-1 concluídos, 2/4).** Baseline da branch `fix/19-admin-create-application` (`fecacab3`) comparado a `dev` (`f301fd0`); contratos web de create/update e tradução de `MISSING_COMPANY_ID` alinhados. O agente de CP-1 não executou testes/build. A validação ocorreu depois: duas execuções complementares da API somaram 580/580 testes em 43 suítes, com build API e `tsc` Web aprovados. No baseline Web paralelo, build aprovado, lint 0 erros/9 avisos, contraste 66/66 e testes 237/240, ainda aguardando execução serial.
+
+| CP | Estado naquele marco | Escopo |
+| --- | --- | --- |
+| CP-0 | ✅ | Confirmar branch, HEAD, comparação com `dev` e baseline. |
+| CP-1 | ✅ | Contrato web create/update e mensagem `MISSING_COMPANY_ID`. |
+| CP-2 | 🚧 | Modal e fluxo ADMIN/CLIENT ainda não implementados. |
+| CP-3 | 📋 | Testes, validação final, evidências e fechamento. |
+
 ✅ **2026-09-29 — Aceite final DAST:** todos os requisitos solicitados de modo explícito, consentimento, retry, falha tratada e relatório real validados. Fila/watchdog atual mantida; mensageria externa não adicionada. Relatório `docs/DAST-VALIDACAO-2026-09-28.md` e evidências versionadas; pendências técnicas ampliadas abaixo não são apresentadas como concluídas.
 
 **✅ 2026-09-28 — DAST explícito e baseline real (100% do escopo solicitado).** Branch `feat/dast-real-explicit-mode`: escolha Simulado/Real, segundo aviso e confirmação exigida também pela API; demo sem tráfego, falha real sem fallback; GET limitado com análise passiva do ZAP, retries de leitura e diagnóstico de rede/memória. Padrão de um ZAP de 2 GiB/2 CPUs para WSL de 4 GB. Scan real executado em alvo local controlado. Validação, limites e pendências preexistentes em `docs/DAST-VALIDACAO-2026-09-28.md`; decisão ADR-042. Sem migration ou alteração de dependências.
@@ -363,6 +392,7 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 | L-15 | **O donut de severidade não renderiza** — só a legenda aparece, no dashboard do CLIENT e no de aplicação. Recharts avisa `width(0) and height(0)` dentro de um contêiner `h-48 w-48` legítimo. | Pré-existente (provável efeito do upgrade para `recharts@^3.10.1`, major). Encontrado na validação da Fase 9, em componente que a entrega não tocou — §0.2 S6. | A informação não se perde: a legenda lista severidade e contagem em texto, e os KPIs numéricos acima estão corretos. O gráfico é reforço, não portador. |
 | L-16 | **Falha de rede silenciosa em todas as telas fora da Fase 9.** O `networkMode: "online"` padrão do TanStack Query pausa a consulta em vez de errar (`status: pending`, `error: null`), então a tela não mostra erro nem oferece recuperação — e `refetch()` numa consulta pausada também pausa. | Corrigir de vez é trocar o padrão do `queryClient` global, que afeta toda tela do app — grande demais para entrar junto de uma entrega de findings. Marcado `[FUTURO]` em `use-findings.ts`. | As buscas de finding já usam `networkMode: "always"` e mostram erro de verdade com botão de recuperação. As demais telas continuam com o comportamento antigo. |
 | L-17 | **Uma queda da API desloga o usuário.** O refresh falha, e o interceptor de `lib/api/client.ts` não distingue "refresh recusado" (401 legítimo) de "refresh não chegou ao servidor" (rede), chamando `clearAuth()` nos dois casos. | Pré-existente; mexer no interceptor de autenticação é risco desproporcional numa entrega de listagem. | A sessão volta com um login; nenhum dado se perde. |
+| L-19 | **O Select customizado não funciona dentro do Dialog.** O painel do Select abre em portal fora do conteúdo do modal; o `Dialog` torna os siblings inertes e trata o clique nesse painel como clique externo. | Corrigir a infraestrutura compartilhada de portal/foco/dismiss ampliaria o escopo da Issue #19. Encontrado durante CP-2 em 2026-09-30; aplicar a regra S6. | Para o seletor de empresa desta issue, usar `<select>` nativo dentro do modal, estilizado com `CLASSES_CONTROLE`; mantém teclado nativo e a interação dentro do foco do diálogo. Evoluir o Select/coordenação de overlays fica como trabalho futuro. |
 
 ---
 

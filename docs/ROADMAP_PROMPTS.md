@@ -1012,3 +1012,39 @@ próxima rodada; as decisões D8/D9 continuam registradas.
 - Trabalho futuro separado do aceite: relatório parcial, digest fixo, telemetria de pico, retenção e isolamento de egress. Sem alteração de schema/AGENTS.md.
 
 - Fechamento em 2026-09-29: estados reais/de demonstração/falha reconferidos, relatório atualizado, alvo descartável removido e commit local solicitado. Fila existente mantida sem mensageria externa.
+
+
+# CORREÇÃO — Issue #19: criação administrativa de Application
+
+✅ **Concluída em 2026-09-30** — implementação e validação funcional (100%, CP-0 a CP-3).
+
+**Data:** 2026-09-30 · **Branch:** `fix/19-admin-create-application` · **Base:** `fecacab3` · **PR:** ainda não aberta · **Commits/push:** não registrados até esta atualização.
+
+## Checkpoints
+
+| CP | Estado | Resumo |
+| --- | --- | --- |
+| CP-0 — Baseline | ✅ | Confirmada a branch e comparada a `dev` em `f301fd0`; serviço já resolvia o alvo ADMIN, mas a UI não enviava a seleção. |
+| CP-1 — Contratos web | ✅ | `CreateApplicationInput` aceita `companyId` opcional; `UpdateApplicationInput` exclui o campo; mensagem contextual para `MISSING_COMPANY_ID`. |
+| CP-2 — Modal por papel | ✅ | ADMIN seleciona explicitamente empresa; CLIENT não recebe seletor. Proteção contra envio duplicado/resposta tardia, reset, invalidação e smoke Chrome real 44/44. |
+| CP-3 — Validação final | ✅ | Web serial 257/257 em 21 suítes (54,59 s), focal 20/20, lint 0 erros/9 avisos preexistentes, contraste 66/66 e build `tsc + vite` aprovados. API full 588/588 em 43 suítes, focal 42/42 e build aprovado. Ressalva: check global da API ainda acusa dois imports preexistentes não usados em `vulnerability.service.ts:45`; gate global API não está verde. |
+
+## Decisão e desvio do plano
+
+ADR-043 registra a exceção estreita: somente ADMIN informa empresa no POST de criação; a API valida existência e gates de assinatura ativa/limite. CLIENT continua usando a empresa do banco e body forjado não altera o escopo; PENTESTER continua sem criar. `companyId` não entra em update. Sem alteração de schema, migration ou JWT; mobile não tem consumidor de criação.
+
+O plano previa o `Select` customizado dentro do modal. Seu popover sai em portal para fora do conteúdo do Dialog e conflita com o `inert`/dismiss do overlay. O modal usa `<select>` nativo estilizado por `CLASSES_CONTROLE`, preservando teclado nativo e foco dentro do diálogo. A limitação geral ficou como L-19 no BACKLOG; componentes globais não foram ampliados nesta issue.
+
+## Histórico
+
+- **Branch/base:** `fix/19-admin-create-application`, base `fecacab3`; comparação com `dev` em `f301fd0`.
+- **Data:** 2026-09-30.
+- **PR:** ainda não aberta. Commits/push não registrados nesta atualização.
+- **Validação final:** smoke Chrome 44/44; Web serial 257/257 (21 suítes, 54,59 s), focal 20/20, lint sem erros (9 avisos preexistentes), contraste 66/66 e build aprovado com aviso conhecido de tamanho do bundle. API 588/588 (43 suítes), focal 42/42, cobertura de `application.service` 100% linhas/funções, 85,71% branches e 94,44% statements; build aprovado.
+- **Ressalva de gate:** `npm run check` global da API não está verde por dois imports não usados preexistentes em `vulnerability.service.ts:45` (`UserEntity` e `UserResponseDTO`).
+- **Resultado que substitui o snapshot intermediário:** os testes Remediação/SLA passaram na execução serial final; as falhas do baseline paralelo 237/240 não persistiram, sem causa comprovada para as falhas anteriores.
+- **Desvio:** Select nativo em vez do Select customizado devido ao conflito de portal/foco dentro do Dialog (L-19).
+
+### Marco intermediário preservado — 75%, supersedido pela conclusão acima
+
+O registro anterior reportava CP-0 a CP-2 concluídos e testes Web finais pendentes. Esse estado foi substituído após CP-3, sem apagar o histórico da evolução.

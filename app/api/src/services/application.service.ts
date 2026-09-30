@@ -3,9 +3,9 @@
  *
  * Regra crítica (RN03 + RN07) no create(): a company precisa de uma
  * Subscription ACTIVE, e o número de applications ativas não pode estourar
- * plan.maxApplications. companyId nunca vem do DTO — é sempre resolvido a
- * a partir do actor autenticado ou do target administrativo explicitamente
- * selecionado na operação.
+ * plan.maxApplications. companyId não integra os DTOs genéricos: para CLIENT,
+ * vem do usuário autenticado no banco; para ADMIN, o alvo é recebido em
+ * parâmetro separado e validado pelo CompanyRepository.
  *
  * ==========================================================================
  * CONTEXTO DE RISCO (CP-1 — Exposure & Remediation, docs/DECISIONS.md D2)
@@ -30,8 +30,9 @@
  * technicalOwner) seguem a autorização de sempre: ADMIN, ou CLIENT da company.
  *
  * ⚠️ `companyRole` é lido do BANCO, nunca do JWT. O token carrega só
- * {userId, role} (CLAUDE.md §8) — um refresh desatualizado não pode conceder
- * alçada de OWNER. Mesma razão pela qual `companyId` também vem do banco.
+ * {userId, role} (AGENTS.md §8) — um refresh desatualizado não pode conceder
+ * alçada de OWNER. O companyId do CLIENT também vem do banco; para ADMIN, o
+ * alvo explícito precisa existir antes de ser usado.
  */
 
 import type { ApplicationRepository } from "../repositories/application.repository";

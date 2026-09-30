@@ -1415,3 +1415,43 @@ Branch `feat/dast-real-explicit-mode`, entrega por commit local detalhado, sem P
 ### Fechamento — 2026-09-29
 
 Aceite de todos os pontos solicitados: scan real da UI concluído em 45,5 s com 11 findings; demonstração em 3 s sem tráfego; falha por porta fechada tratada com zero findings. Artefatos e estados persistidos reconferidos. Mantida fila FIFO/watchdog sem broker externo, conforme escopo confirmado. API focal 81/81, novos testes UI 3/3, builds aprovados; ressalvas dos checks gerais documentadas.
+
+
+## 2026-09-30 — Issue #19: criação de Application por ADMIN (75%, CP-0 a CP-2)
+
+Na branch `fix/19-admin-create-application` (`fecacab3`), a criação web passou a
+representar o contrato administrativo: ADMIN escolhe a empresa explicitamente;
+CLIENT continua enviando sem alvo e a API deriva a própria empresa do banco.
+`companyId` fica fora do contrato de atualização. A seleção tem estados de
+carregamento, erro e lista vazia, e o formulário impede submissão sem um alvo
+ADMIN válido. Respostas tardias de uma sessão anterior não fecham nem alteram
+um formulário novo; a trava impede envio duplicado.
+
+O `Select` customizado usa portal fora do conteúdo do `Dialog`, em conflito
+com `inert` e o tratamento de clique externo do modal. Para esta tela foi
+adotado um `<select>` nativo estilizado com `CLASSES_CONTROLE`. A regra geral
+de overlays fica no backlog como L-19, sem expansão de escopo nesta issue.
+
+Validação reportada: lint focal da página e `tsc` Web passaram; API 580/580
+testes em 43 suítes por duas execuções complementares e build aprovado. Smoke
+Chrome real passou 44 verificações contra API/Web reais e banco `vulnera_test`:
+ADMIN sem `companyId` selecionou empresa B; ADMIN vinculado a A também escolheu
+B; CLIENT criou em A; CLIENT enviando B manualmente permaneceu em A. Três
+vínculos foram conferidos no banco antes da limpeza das fixtures. Também foram
+confirmados invalidação da lista, reset após sucesso, ausência de consulta
+`/subscriptions/current` para ADMIN e de listagem global para CLIENT, seleção
+por teclado, foco no modal e viewport mobile de 375px sem overflow. O
+orquestrador conferiu screenshots em 1440px e 375px; evidências em
+`output/issue-19-smoke-result.json`, `output/issue-19-desktop.png` e
+`output/issue-19-mobile.png`.
+
+**CP-3 continua em andamento:** testes Web finais/seriais e fechamento das
+ressalvas ainda não foram reportados. A Issue #19 permanece aberta; PR não
+aberta, sem commits ou push registrados.
+
+
+## Fechamento — Issue #19: criação de Application por ADMIN (2026-09-30)
+
+CP-0 a CP-3 concluídos; implementação e validação funcional em 100%. Branch `fix/19-admin-create-application`, base `fecacab3`; PR ainda não aberta e commits/push não registrados nesta atualização. O smoke Chrome real passou 44/44 verificações. Web final serial: 257/257 testes em 21 suítes (54,59 s), focal 20/20, lint 0 erros/9 avisos preexistentes, contraste 66/66 e build `tsc + vite` aprovado com aviso conhecido de bundle. API: 588/588 testes em 43 suítes, focal 42/42, build aprovado e cobertura de `application.service` 100% linhas/funções, 85,71% branches e 94,44% statements.
+
+Ressalva mantida: o `npm run check` global da API não está verde devido a `UserEntity` e `UserResponseDTO` não usados em `vulnerability.service.ts:45`; imports preexistentes fora do escopo. No baseline Web paralelo, 237/240; Remediação e SLA passaram na execução serial final. As falhas paralelas não persistiram, sem causa comprovada. O Select nativo no modal é desvio documentado do plano; L-19 mantém o conflito geral entre portal e overlay como trabalho futuro. Relatório: `output/issue-19-validation.md`; decisão: ADR-043.
