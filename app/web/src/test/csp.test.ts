@@ -58,6 +58,13 @@ describe("Content-Security-Policy (CP-5)", () => {
     expect(diretiva(buildCsp({ scriptHashes: hashes }), "script-src")).toContain(hashes[0]);
   });
 
+  it("CSP-02b normaliza quebras de linha como o parser HTML do navegador", () => {
+    const scriptWindows = "\r\n  document.documentElement.dataset.theme = 'dark';\r\n";
+    const scriptNavegador = scriptWindows.replace(/\r\n/g, "\n");
+    expect(hashDeScript(scriptWindows)).toBe(hashDeScript(scriptNavegador));
+    expect(hashesDosScriptsInline(`<script>${scriptWindows}</script>`)).toEqual([hashDeScript(scriptNavegador)]);
+  });
+
   it("CSP-03 as diretivas de contenção estão presentes", () => {
     const csp = buildCsp();
     expect(diretiva(csp, "default-src")).toEqual(["'self'"]);

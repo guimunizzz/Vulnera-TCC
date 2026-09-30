@@ -24,7 +24,7 @@
  * sem intervenção manual no banco.
  *
  * Concorrência (2026-09-09): `create()` não dispara mais o scan direto — ele
- * ENFILEIRA no `DastWatchdog`, que roda no máximo 2 (configurável) ao mesmo
+ * ENFILEIRA no `DastWatchdog`, que roda por padrão 1 (configurável) ao mesmo
  * tempo e aborta scan travado. O registro fica em QUEUED até o watchdog dar a
  * vaga; só então vira RUNNING. O progresso (0..100 + fase) é persistido a
  * cada tick do runner, com throttle, porque é o banco — e não a memória —
@@ -46,6 +46,7 @@ import {
   readReportFile,
   getDockerStatus,
   SCAN_PHASE_LABELS,
+  friendlyFailureReason,
   type ScanPhase,
 } from "./zap-runner.service";
 import type { DastWatchdog, WatchdogRunContext, WatchdogSnapshot } from "./dast-watchdog.service";
@@ -59,7 +60,7 @@ interface Actor {
 
 /** Payload do GET /api/dast/status — alimenta o banner da tela de DAST. */
 export interface DastModuleStatus {
-  /** Se false, todo scan novo já sai simulado (o front avisa antes de o usuário clicar). */
+  /** Disponibilidade do motor real; nunca altera a escolha do usuário. */
   dockerAvailable: boolean;
   dockerCheckedAt: string;
   maxConcurrent: number;
@@ -93,9 +94,11 @@ export class DastScanService {
   async create(actor: Actor, dto: CreateDastScanDTO): Promise<DastScanEntity> {
     if (!dto.targetUrl || typeof dto.targetUrl !== "string") throw new Error("MISSING_TARGET_URL");
 
+    if (dto.mode === "REAL" && dto.confirmedRealScan !== true) throw new Error("REAL_SCAN_CONFIRMATION_REQUIRED");
+
     // validateTargetUrl lança INVALID_TARGET_URL (protocolo) ou
     // TARGET_NOT_ALLOWED (SSRF) — ver zap-runner.service.ts.
-    const parsed = validateTargetUrl(dto.targetUrl);
+    const parsed = validateTargetUrl(dto.targetUrl, dto.mode === "SIMULATED" ? true : undefined);
     // .href canonicaliza (ex: adiciona "/" no root) — evita que a mesma URL
     // digitada de duas formas ligeiramente diferentes escape o lock abaixo.
     const targetUrl = parsed.href;
@@ -103,8 +106,8 @@ export class DastScanService {
     const active = await this.repository.findActiveForTarget(targetUrl);
     if (active) throw new Error("SCAN_ALREADY_RUNNING_FOR_TARGET");
 
-    const created = await this.repository.create({ targetUrl, requestedById: actor.userId });
-    const scan = await this.repository.update(created.id, { containerName: containerNameFor(created.id) });
+    const created = await this.repository.create({ targetUrl, requestedById: actor.userId, simulated: dto.mode === "SIMULATED" });
+    const scan = await this.repository.update(created.id, { containerName: created.simulated ? null : containerNameFor(created.id) });
 
     await this.auditLogRepository.create({
       actorId: actor.userId,
@@ -112,7 +115,7 @@ export class DastScanService {
       entityType: "DastScan",
       entityId: scan.id,
       action: "CREATE",
-      diffJson: JSON.stringify({ targetUrl }),
+      diffJson: JSON.stringify({ targetUrl, mode: dto.mode, confirmedRealScan: dto.confirmedRealScan === true }),
     });
 
     // Enfileira no watchdog em vez de disparar direto: ele decide QUANDO
@@ -146,10 +149,10 @@ export class DastScanService {
     if (!new DastScanEntity(scan).isActive()) throw new Error("INVALID_STATUS_TRANSITION");
 
     // Ordem importa: abortar primeiro faz o runner parar no próximo tick e
-    // desistir do fallback simulado; o `docker rm -f` derruba o container que
+    // interromper a execução; o `docker rm -f` derruba o container que
     // já estiver de pé (nenhum, se o scan ainda estava na fila).
     this.watchdog.abort(scan.id, "Scan cancelado pelo usuário.");
-    await killContainer(scan.id);
+    if (!scan.simulated) await killContainer(scan.id);
     const updated = await this.repository.update(scan.id, {
       status: "CANCELLED",
       finishedAt: new Date(),
@@ -240,6 +243,7 @@ export class DastScanService {
   async recoverOrphanedScans(): Promise<number> {
     const orphans = await this.repository.findActiveOrQueued();
     for (const scan of orphans) {
+      if (!scan.simulated) await killContainer(scan.id);
       await this.repository.update(scan.id, {
         status: "FAILED",
         errorMessage: "Scan interrompido por reinício do servidor",
@@ -280,13 +284,14 @@ export class DastScanService {
       startedAt: new Date(),
       phase: "STARTING",
       progress: 0,
-      simulated: false,
+      simulated: scan.simulated,
       warningMessage: null,
     });
 
     try {
       const outcome = await runScan({
         scanId,
+        mode: scan.simulated ? "SIMULATED" : "REAL",
         targetUrl: scan.targetUrl,
         signal: ctx.signal,
         onProgress: this.makeProgressSink(scanId, ctx),
@@ -301,11 +306,11 @@ export class DastScanService {
           outcome.errorMessage === "SCAN_CANCELLED"
             ? String(ctx.signal.reason ?? "Scan interrompido.")
             : (outcome.errorMessage ?? "Falha desconhecida na execução do scan");
-        await this.markFinished(scan, "FAILED", outcome.durationMs, reason);
+        await this.markFinished(scan, "FAILED", outcome.durationMs, `${reason}: ${friendlyFailureReason(reason)}`);
         return;
       }
 
-      // O fallback simulado NÃO interrompe de verdade o timer interno quando
+      // A demonstração NÃO interrompe de verdade o timer interno quando
       // cancel() é chamado (só o Docker real morre na hora via
       // killContainer) — sem esta checagem, um scan cancelado enquanto
       // "rodava" simulado ainda tentaria persistir findings de um registro
@@ -340,10 +345,6 @@ export class DastScanService {
     } catch (err) {
       // Erro inesperado fora do contrato normal do runner (ex: falha de I/O
       // no host) — nunca deixa o scan pendurado em RUNNING pra sempre.
-      // "DOCKER_UNAVAILABLE" só aparece aqui de verdade se o fallback
-      // simulado também falhar (ambiente sem disco gravável, por exemplo) —
-      // em operação normal, Docker indisponível cai no simulado antes de
-      // chegar nesse catch (ver zap-runner.service.ts).
       this.watchdog.raise("error", scanId, `Erro inesperado na execução: ${(err as Error).message}`);
       await this.markFinished(scan, "FAILED", undefined, (err as Error).message || "DOCKER_UNAVAILABLE");
     }
@@ -413,7 +414,7 @@ export class DastScanService {
       // 100% mesmo em FAILED: a barra para de andar, não volta pra trás.
       progress: 100,
       phase: status === "COMPLETED" ? (extra?.simulated ? "SIMULATED" : "DONE") : "FAILED",
-      simulated: extra?.simulated ?? false,
+      simulated: extra?.simulated ?? scan.simulated,
       warningMessage: extra?.warningMessage ?? null,
     });
     await this.auditLogRepository.create({

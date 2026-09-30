@@ -45,7 +45,7 @@
  */
 
 import type { RiskAcceptanceRepository } from "../repositories/risk-acceptance.repository";
-import type { VulnerabilityRepository } from "../repositories/vulnerability.repository";
+import type { EscopoDeAcesso, VulnerabilityRepository } from "../repositories/vulnerability.repository";
 import type { ProjectMemberRepository } from "../repositories/project-member.repository";
 import type { UserRepository } from "../repositories/user.repository";
 import type { AuditLogRepository } from "../repositories/audit-log.repository";
@@ -127,10 +127,7 @@ export class RiskAcceptanceService {
     // que já venceu não deve impedir um pedido novo só porque ninguém leu a
     // linha desde então.
     await this.normalizeExpired(vulnerabilityId);
-    const emAberto = await this.repository.findActiveByVulnerability(vulnerabilityId);
-    if (emAberto) throw new Error("RISK_ACCEPTANCE_ALREADY_ACTIVE");
-
-    const created = await this.repository.create({
+    const created = await this.repository.createIfNoActive({
       vulnerabilityId,
       companyId: vulnerability.companyId, // RN09 — desnormalizado, nunca do cliente
       reason: dto.reason.trim(),
@@ -139,6 +136,7 @@ export class RiskAcceptanceService {
       requestedById: actor.userId,
       requestedExpiresAt: dto.requestedExpiresAt ?? null,
     });
+    if (!created) throw new Error("RISK_ACCEPTANCE_ALREADY_ACTIVE");
 
     await this.audit(actor, created, "RISK_ACCEPTANCE_REQUESTED", {
       vulnerabilityId,
@@ -266,6 +264,23 @@ export class RiskAcceptanceService {
   async normalizeExpired(vulnerabilityId: string): Promise<number> {
     const now = new Date();
     const vencidos = await this.repository.findExpiredApproved([vulnerabilityId], now);
+    return this.normalizarExpirados(vencidos, now);
+  }
+
+  /**
+   * Normaliza somente findings no escopo já resolvido do ator.
+   *
+   * `normalizarExpirados` também busca cada Vulnerability para atualizar a
+   * pausa do SLA; a lista inicial, entretanto, já foi limitada por company ou
+   * membership, então essa escrita não cruza tenant antes de autorização.
+   */
+  async normalizeExpiredForScope(scope: EscopoDeAcesso): Promise<number> {
+    const now = new Date();
+    const vencidos = await this.repository.findExpiredApprovedForScope(scope, now);
+    return this.normalizarExpirados(vencidos, now);
+  }
+
+  private async normalizarExpirados(vencidos: RiskAcceptance[], now: Date): Promise<number> {
     let expirados = 0;
 
     for (const ra of vencidos) {

@@ -195,6 +195,8 @@ export interface DastReportData {
 }
 
 export interface CreateDastScanInput {
+  mode: "REAL" | "SIMULATED";
+  confirmedRealScan?: boolean;
   targetUrl: string;
 }
 

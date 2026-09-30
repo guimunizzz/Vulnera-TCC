@@ -1,0 +1,122 @@
+/**
+ * Atmosfera da triagem de findings: superfície legível, órbitas decorativas e
+ * movimento lento. A página consome estes estilos; tokens seguem o tema ativo.
+ * O mesmo controle pausa CSS e Three.js, inclusive no fallback móvel.
+ */
+
+.findings-workspace { min-height: calc(100dvh - 7rem); }
+
+.findings-page-glow {
+  z-index: -3;
+  max-height: 60rem;
+  background:
+    radial-gradient(ellipse at 98% 25%, oklch(var(--color-accent) / 0.13), transparent 48%),
+    radial-gradient(ellipse at 4% 65%, oklch(var(--color-accent) / 0.07), transparent 40%);
+}
+
+.findings-hero {
+  padding: 1.5rem;
+  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 30%, oklch(var(--color-bg-surface) / 0.88) 65%, oklch(var(--color-bg-surface) / 0.28));
+  box-shadow: var(--elevation-raised), inset 0 1px 0 oklch(var(--color-text-primary) / 0.04);
+}
+
+.findings-total {
+  min-width: 12rem;
+  border-left: 1px solid oklch(var(--color-accent-ink) / 0.25);
+  padding-left: 1.5rem;
+}
+
+.findings-hero-orbits {
+  position: absolute;
+  pointer-events: none;
+  width: 24rem;
+  height: 24rem;
+  right: -7rem;
+  top: -7rem;
+  opacity: 0.45;
+}
+
+.findings-hero-orbits span {
+  position: absolute;
+  inset: 0;
+  border: 1px solid oklch(var(--color-accent-ink) / 0.2);
+  border-radius: 50%;
+  transform: rotate(-30deg) scaleY(0.62);
+}
+
+.findings-hero-orbits span:nth-child(2) { inset: 2.5rem; transform: rotate(30deg) scaleY(0.62); }
+.findings-hero-orbits span:nth-child(3) { inset: 5rem; transform: rotate(75deg) scaleY(0.62); }
+
+.findings-severity-grid { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+
+.findings-severity-card {
+  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 38%, oklch(var(--color-bg-surface) / 0.94) 63%, oklch(var(--color-bg-surface) / 0.25));
+  box-shadow: var(--elevation-raised);
+  transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+}
+
+.findings-severity-card:hover {
+  border-color: oklch(var(--color-accent-ink) / 0.4);
+  box-shadow: var(--elevation-raised), 0 0 22px oklch(var(--color-accent) / 0.06);
+}
+
+.findings-card-orbit {
+  position: absolute;
+  pointer-events: none;
+  width: 4.5rem;
+  height: 4.5rem;
+  right: -0.5rem;
+  bottom: -0.5rem;
+  border: 1px solid oklch(var(--color-accent-ink) / 0.16);
+  border-radius: 50%;
+  transform: rotate(-30deg) scaleY(0.5);
+  box-shadow: 0 0 0 12px oklch(var(--color-accent-ink) / 0.025);
+}
+
+.findings-overview[data-scene-ready="true"] .findings-card-orbit { opacity: 0; }
+
+.findings-saved-panel {
+  background: oklch(var(--color-bg-surface) / 0.96);
+  box-shadow: var(--elevation-raised);
+}
+
+.findings-saved-panel > section { margin-bottom: 0; }
+.findings-saved-panel ul:empty { display: none; }
+
+.findings-workspace .findings-controls {
+  position: relative;
+  padding: 1rem;
+  border: 1px solid oklch(var(--color-border-subtle));
+  border-radius: var(--radius-container);
+  background: oklch(var(--color-bg-surface));
+  box-shadow: var(--elevation-raised);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.findings-workspace .findings-controls:focus-within { border-color: oklch(var(--color-accent-ink) / 0.45); }
+.findings-workspace .findings-results { border-radius: var(--radius-container); background: oklch(var(--color-bg-surface)); }
+.findings-workspace .findings-results thead { background: oklch(var(--color-bg-inset)); }
+.findings-workspace .findings-results tbody tr { transition: background-color var(--duration-fast) var(--ease-out); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .findings-workspace[data-motion="running"] .findings-page-glow { animation: findings-drift 18s ease-in-out infinite alternate; }
+  .findings-workspace[data-motion="running"] .findings-hero-orbits { animation: findings-orbit 60s linear infinite; }
+  .findings-workspace[data-motion="running"] .findings-card-orbit { animation: findings-card-drift 16s ease-in-out infinite alternate; }
+}
+
+@keyframes findings-drift { to { transform: translateY(16px); opacity: 0.65; } }
+@keyframes findings-orbit { to { transform: rotate(360deg); } }
+@keyframes findings-card-drift { to { transform: rotate(25deg) scaleY(0.7); } }
+
+@media (max-width: 639px) {
+  .findings-hero { padding: 1.25rem; }
+  .findings-total { border-left: 0; border-top: 1px solid oklch(var(--color-accent-ink) / 0.2); padding: 1rem 0 0; }
+  .findings-severity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .findings-workspace .findings-controls { padding: 0.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .findings-severity-card,
+  .findings-workspace .findings-controls,
+  .findings-workspace .findings-results tbody tr { transition: none; }
+}

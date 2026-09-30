@@ -2,7 +2,7 @@ import { Router } from "express";
 import { makeCompanyController } from "../factories/company.factory";
 import { makeMetricsController } from "../factories/metrics.factory";
 import { makeSlaPolicyController } from "../factories/sla-policy.factory";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimitMiddleware, endpointRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 import { requireRole } from "../middlewares/require-role.middleware";
 
 const router = Router();
@@ -12,10 +12,10 @@ const metricsController = makeMetricsController();
 // métricas: a URL é aninhada (é governança DA empresa), mas o recurso é outro.
 const slaPolicyController = makeSlaPolicyController();
 
-router.use(authMiddleware);
+router.use(authRateLimitMiddleware);
 
 // rota literal ANTES de paramétrica
-router.get("/me/metrics/comparison", (req, res) => metricsController.comparison(req, res));
+router.get("/me/metrics/comparison", endpointRateLimitMiddleware("expensive"), (req, res) => metricsController.comparison(req, res));
 router.get("/me", (req, res) => controller.me(req, res));
 
 // SLA — sub-rotas de /:id, ANTES de "/:id" por consistência (CLAUDE.md §5.6).

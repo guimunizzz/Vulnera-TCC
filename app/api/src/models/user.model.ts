@@ -60,6 +60,12 @@ export interface UserResponseDTO {
   createdAt: Date;
 }
 
+/** Projeção mínima do candidato a responsável (CP-7). */
+export interface AssigneeCandidateDTO {
+  id: string;
+  name: string;
+}
+
 // ---------- Entity ----------
 
 /**

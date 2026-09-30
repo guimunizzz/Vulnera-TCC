@@ -10,7 +10,7 @@
  * e uma paginação ou um `take` acrescentado depois vazaria pela borda.
  */
 
-import type { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import type { SavedQuery } from "../models/saved-query.model";
 
 export interface CreateSavedQueryData {
@@ -24,6 +24,17 @@ export interface CreateSavedQueryData {
 }
 
 export type UpdateSavedQueryData = Partial<Omit<CreateSavedQueryData, "ownerId">>;
+
+export interface SavedQueryCreateLimits {
+  maxPorUsuario: number;
+  maxPinned: number;
+}
+
+export type SerializedCreateResult =
+  | { kind: "CREATED"; saved: SavedQuery }
+  | { kind: "QUERY_DUPLICATE" }
+  | { kind: "LIMIT_REACHED" }
+  | { kind: "PINNED_LIMIT_REACHED" };
 
 export interface ListSavedQueriesFilter {
   actorId: string;
@@ -78,8 +89,65 @@ export class SavedQueryRepository {
     return this.prisma.savedQuery.create({ data });
   }
 
+  /**
+   * Cria uma busca sob o lock pessimista da linha User.
+   *
+   * O MySQL não oferece unique parcial para a pergunta canônica, e a guarda
+   * `findByOwnerAndQuery` isolada teria uma janela TOCTOU. A mesma transação
+   * serializa limites, duplicata e INSERT por owner; o lock não altera schema
+   * e não expõe dados além do contrato do repository.
+   */
+  async createSerialized(data: CreateSavedQueryData, limites: SavedQueryCreateLimits): Promise<SerializedCreateResult> {
+    return this.prisma.$transaction(async (tx) => {
+      const owner = await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT id FROM \`User\` WHERE id = ${data.ownerId} FOR UPDATE`,
+      );
+      if (!owner[0]) throw new Error("USER_NOT_FOUND");
+
+      const total = await tx.savedQuery.count({ where: { ownerId: data.ownerId } });
+      if (total >= limites.maxPorUsuario) return { kind: "LIMIT_REACHED" };
+      if (data.pinned) {
+        const pinned = await tx.savedQuery.count({ where: { ownerId: data.ownerId, pinned: true } });
+        if (pinned >= limites.maxPinned) return { kind: "PINNED_LIMIT_REACHED" };
+      }
+
+      const duplicate = await tx.savedQuery.findFirst({
+        where: { ownerId: data.ownerId, queryString: data.queryString },
+      });
+      if (duplicate) return { kind: "QUERY_DUPLICATE" };
+
+      const saved = await tx.savedQuery.create({ data });
+      return { kind: "CREATED", saved };
+    });
+  }
+
   async update(id: string, data: UpdateSavedQueryData): Promise<SavedQuery> {
     return this.prisma.savedQuery.update({ where: { id }, data });
+  }
+
+  /**
+   * Atualiza sob o mesmo lock por owner. Quando a query canônica muda, a
+   * colisão é verificada depois do lock e antes do UPDATE, evitando que dois
+   * PUTs concorrentes deixem a mesma pergunta salva duas vezes.
+   */
+  async updateSerialized(id: string, ownerId: string, data: UpdateSavedQueryData): Promise<SavedQuery | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const owner = await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT id FROM \`User\` WHERE id = ${ownerId} FOR UPDATE`,
+      );
+      if (!owner[0]) throw new Error("USER_NOT_FOUND");
+
+      const existente = await tx.savedQuery.findUnique({ where: { id } });
+      if (!existente || existente.ownerId !== ownerId) throw new Error("SAVED_QUERY_NOT_FOUND");
+      if (data.queryString !== undefined) {
+        const duplicate = await tx.savedQuery.findFirst({
+          where: { ownerId, queryString: data.queryString, NOT: { id } },
+        });
+        if (duplicate) return null;
+      }
+
+      return tx.savedQuery.update({ where: { id }, data });
+    });
   }
 
   async delete(id: string): Promise<void> {

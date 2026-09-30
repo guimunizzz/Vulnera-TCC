@@ -50,6 +50,8 @@ export type FilterField =
   | "status"
   | "owasp"
   | "sla"
+  | "vrsMin"
+  | "vrsMax"
   | "aceite"
   | "responsavel"
   | "titulo";
@@ -60,7 +62,7 @@ export type OperadorFiltro = "=" | "!=" | "~";
 interface DefinicaoDeCampo {
   /** Nome do parâmetro na API. */
   param: string;
-  tipo: "enum" | "entidade" | "texto";
+  tipo: "enum" | "entidade" | "texto" | "numero";
   /** Só para `enum`: valores aceitos. */
   valores?: readonly string[];
   /** Rótulo no singular, para as mensagens de erro. */
@@ -82,6 +84,8 @@ export const CAMPOS: Record<FilterField, DefinicaoDeCampo> = {
   status: { param: "status", tipo: "enum", valores: STATUS, rotulo: "status" },
   owasp: { param: "owaspCategory", tipo: "enum", valores: OWASP_CATEGORIES, rotulo: "categoria OWASP" },
   sla: { param: "slaState", tipo: "enum", valores: SLA, rotulo: "SLA" },
+  vrsMin: { param: "vrsMin", tipo: "numero", rotulo: "VRS mínimo" },
+  vrsMax: { param: "vrsMax", tipo: "numero", rotulo: "VRS máximo" },
   aceite: { param: "riskAcceptance", tipo: "enum", valores: ACEITE, rotulo: "aceite de risco" },
   // Responsável (CP-7). É `entidade` porque na tela é um NOME e na API é um id
   // — quem resolve é o autocomplete, igual a projeto/aplicação/empresa. O
@@ -120,6 +124,10 @@ const APELIDOS: Record<string, FilterField> = {
   busca: "titulo",
   sla: "sla",
   prazo: "sla",
+  vrsmin: "vrsMin",
+  "vrs-min": "vrsMin",
+  vrsmax: "vrsMax",
+  "vrs-max": "vrsMax",
   aceite: "aceite",
   risco: "aceite",
   acceptance: "aceite",
@@ -143,6 +151,8 @@ export const DESCRICAO_DOS_CAMPOS: Record<FilterField, { descricao: string; exem
   status: { descricao: "Em que ponto do ciclo está", exemplo: "status != CLOSED" },
   owasp: { descricao: "Categoria do OWASP Top 10", exemplo: "owasp = A03" },
   sla: { descricao: "Prazo de remediação", exemplo: "sla = BREACHED, DUE_SOON" },
+  vrsMin: { descricao: "Piso da prioridade contextual", exemplo: "vrsMin = 40" },
+  vrsMax: { descricao: "Teto da prioridade contextual", exemplo: "vrsMax = 84" },
   aceite: { descricao: "Aceite formal de risco", exemplo: "aceite = ACTIVE" },
   projeto: { descricao: "Projeto de análise", exemplo: "projeto = Pentest Web" },
   aplicacao: { descricao: "Aplicação analisada", exemplo: "aplicacao = Portal" },
@@ -411,6 +421,16 @@ export function parseQuery(input: string): QueryToken[] {
         continue;
       }
       tokens.push({ kind: "filter", field, operator, values: normalizados, raw });
+      continue;
+    }
+
+    if (definicao.tipo === "numero") {
+      const numero = Number(values[0]);
+      if (operator !== "=" || values.length !== 1 || !Number.isInteger(numero) || numero < 0 || numero > 100) {
+        tokens.push({ kind: "invalid", raw, reason: `${definicao.rotulo} deve ser um inteiro entre 0 e 100` });
+        continue;
+      }
+      tokens.push({ kind: "filter", field, operator, values: [String(numero)], raw });
       continue;
     }
 

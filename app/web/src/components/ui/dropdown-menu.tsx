@@ -185,9 +185,11 @@ export interface DropdownMenuProps {
   alinhamento?: Alinhamento;
   /** Nome do menu para o leitor de tela ("Ações do finding"). */
   rotulo?: string;
+  /** Chamado somente quando o gatilho abre o menu (útil para dados sob demanda). */
+  aoAbrir?: () => void;
 }
 
-export function DropdownMenu({ gatilho, itens, lado = "bottom", alinhamento = "end", rotulo }: DropdownMenuProps) {
+export function DropdownMenu({ gatilho, itens, lado = "bottom", alinhamento = "end", rotulo, aoAbrir }: DropdownMenuProps) {
   const [aberto, setAberto] = useState(false);
   const refGatilho = useRef<HTMLElement>(null);
   const refPainel = useRef<HTMLDivElement>(null);
@@ -233,7 +235,10 @@ export function DropdownMenu({ gatilho, itens, lado = "bottom", alinhamento = "e
     "aria-controls": aberto ? id : undefined,
     onClick: (e) => {
       onClickOriginal?.(e);
-      setAberto((v) => !v);
+      setAberto((v) => {
+        if (!v) aoAbrir?.();
+        return !v;
+      });
     },
   });
 

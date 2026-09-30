@@ -11,12 +11,12 @@
 
 import { Router } from "express";
 import { makeRiskAcceptanceController } from "../factories/risk-acceptance.factory";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 
 const router = Router();
 const controller = makeRiskAcceptanceController();
 
-router.use(authMiddleware);
+router.use(authRateLimitMiddleware);
 
 router.post("/:id/approve", (req, res) => controller.approve(req, res));
 router.post("/:id/reject", (req, res) => controller.reject(req, res));

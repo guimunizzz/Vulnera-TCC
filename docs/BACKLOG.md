@@ -6,6 +6,39 @@
 
 ## Status
 
+✅ **2026-09-29 — Aceite final DAST:** todos os requisitos solicitados de modo explícito, consentimento, retry, falha tratada e relatório real validados. Fila/watchdog atual mantida; mensageria externa não adicionada. Relatório `docs/DAST-VALIDACAO-2026-09-28.md` e evidências versionadas; pendências técnicas ampliadas abaixo não são apresentadas como concluídas.
+
+**✅ 2026-09-28 — DAST explícito e baseline real (100% do escopo solicitado).** Branch `feat/dast-real-explicit-mode`: escolha Simulado/Real, segundo aviso e confirmação exigida também pela API; demo sem tráfego, falha real sem fallback; GET limitado com análise passiva do ZAP, retries de leitura e diagnóstico de rede/memória. Padrão de um ZAP de 2 GiB/2 CPUs para WSL de 4 GB. Scan real executado em alvo local controlado. Validação, limites e pendências preexistentes em `docs/DAST-VALIDACAO-2026-09-28.md`; decisão ADR-042. Sem migration ou alteração de dependências.
+
+✅ **2026-09-28 — Diagnóstico OWASP ZAP na WSL de 4 GB (100% da análise):** três falhas reais confirmadas nos logs/banco, seguidas de fallback simulado. Configuração permite 2 × 2 GiB; execução isolada também falha, sem prova de OOM. Relatório: `docs/DAST-DIAGNOSTICO-2026-09-28.md`. Registro histórico da análise inicial; as correções posteriores estão na entrega acima.
+
+Pendências derivadas desta análise (não alteram os marcos históricos de entrega do DAST):
+
+- [x] DAST-DIAG-01a — Separar demo explícita de falha real; impedir promoção/comparação operacional de simulado. Inclui segundo aviso e confirmação da API.
+- [x] DAST-DIAG-02 — Baseline sem active scan, sem formulários, com allowlist GET/origem/subárvore e validação local de tráfego/redirects.
+- [x] DAST-DIAG-03a — Perfil WSL 4 GB: um scan, teto de 2 GiB/2 CPUs e crawling limitado; execução real pequena comprovada.
+- [x] DAST-DIAG-04a — Diagnóstico por fase/endpoint, logs e OOM antes da limpeza, retries limitados de leitura e heartbeat durante espera.
+- [x] DAST-DIAG-05a — Drenar fila passiva antes de publicar, falhar explicitamente se não drenar; validar relatório real sem simulação em alvo local.
+- [ ] DAST-DIAG-01b — Preservar/publicar achados reais parciais com cobertura identificada, sem tratá-los como scan completo.
+- [ ] DAST-DIAG-03b — Medir picos contínuos de RAM/CPU por escopo; amostra pontual não dimensiona sites grandes.
+- [ ] DAST-DIAG-04b — Ampliar diagnóstico de encerramento por exit code além de OOM/heap/rede; retenção automática de relatórios/logs.
+- [ ] DAST-DIAG-05b — Fixar versão/digest do ZAP para reprodução; imagem `stable` observada como 2.17.0.
+- [ ] DAST-FUT-01 — Confinamento por IP resolvido/egress contra DNS rebinding; permanece limitação anterior, não resolvida por filtros de URL.
+- [ ] WEB-TEST-REM-01 — Investigar `remediation-page-flow.test.tsx:47`: falha de carregamento/region reproduzida na suíte completa e isolada em 2026-09-28; fora do escopo DAST.
+- [ ] DAST-FUT-02 — Identificar cobertura de baseline versus scans ativos históricos na comparação (sem mudança de schema nesta sessão).
+
+✅ **2026-09-23 — Área autenticada unificada (100%; branch `feat/visual-overhaul-authenticated`):** fundo padrão no `AppLayout` com grade, luz e cena opcional única; identidade de aplicação, projeto, finding, DAST, maturidade, playbook e governança por superfícies semânticas; wizards com transição Motion e redução de movimento; hash CSP do tema corrigido para CRLF. Web versionado 237/237, contraste 66/66, lint 0 erros e build Docker verde. Browser 1440/768/375 px, dark/light/reduced-motion sem overflow/canvas duplicado; detalhe DAST sem scan demo. Suíte completa 237/239 porque dois testes não rastreados preexistentes falham. Ver `docs/FRONTEND_WEB.md`, ADR-041 e `output/frontend-visual-overhaul-report.md`.
+
+✅ **2026-09-23 — Ajuste visual de Remediação e SLA (100%; commit local em `feat/remediation-sla-visual`):** quadro de três etapas com movimento após confirmação e atribuição lazy; política de quatro severidades com Salvar/Reaplicar separados e histórico responsivo. Web 236/236 em contêiner, contraste 66/66, lint 0 erros e build Docker verde; validação real em desktop/tablet/mobile e dark/light. Sem alterações de API, banco, RBAC, dependências ou lockfile. Ver `output/remediation-sla-visual-report.md`.
+
+✅ **2026-09-23 — Ajuste visual de Findings (100%)**: hero de triagem, ondas Three.js e órbitas nos resumos com um único canvas lazy; fundo CSS discreto, pausa manual e movimento reduzido. Filtros, tabela canônica e contagens do recorte preservados. Web 231/231, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Validação visual desktop/mobile 375 px, claro/escuro, pausa e filtro de severidade. Sem alteração de API, banco, RBAC ou dependências.
+
+✅ **2026-09-23 — Ajuste visual de Aplicações e Projetos (100%)**: ocupação real do plano e recuperação de erro no inventário; portfólio com contagens pelos quatro estados reais, links acessíveis e estados de carregamento/vazio/erro. As tabelas viram cartões no celular usando o mesmo DOM. Web 228/228, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Sem alteração de API, banco, RBAC ou dependências.
+
+✅ **2026-09-22 — Ajuste visual do dashboard (100%)**: hero compartilhado nos três perfis, refinamento ADMIN, ondas Three.js no fundo e órbitas nos KPIs usando um único canvas lazy. Fallback estático para mobile/reduced-motion/ausência de WebGL, cleanup e pausa por visibilidade. Build Docker verde; 221 testes web e 66 pares de contraste aprovados; validação visual ADMIN em 1440/1024/768/375 px e dark/light/system. Sem alteração de API, banco, RBAC ou dependências. Relatório em `docs/DASHBOARD_VISUAL.md`.
+
+✅ **2026-09-22 — Ajuste visual de Aplicações (100%)**: inventário com hero CSS estático, capacidade e resultado da busca derivados de dados existentes, skeleton, tabela mais legível e `ScrollArea` acessível para colunas largas no mobile. Entrada curta de linhas por Motion; nenhuma cena Three.js adicionada. Cobertura `APP-VIS-01/02`, build Docker aprovado, Web 223/223, contraste 66/66 e lint 0 erros (9 avisos preexistentes). Sem alteração de API, banco, RBAC ou dependências.
+
 | Fase               | Escopo                                             | Estado         |
 | ------------------ | -------------------------------------------------- | -------------- |
 | 0 Refactor         | Alinhamento com CLAUDE.md                          | ✅             |
@@ -144,7 +177,7 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | 8.6 | SonarQube (pipeline) + ZAP baseline — evidências capturadas     | 3   | 🚧 ZAP ✅ (0 FAIL/5 WARN/62 PASS, `docs/evidencias/zap/`); Sonar bloqueado — CI nunca rodou (mismatch `dev`/`develop`, corrigido), falta abrir PR (ação do Rafael) |
 | 8.7 | `docs/DEMO.md` + README + diagrama + limitações conhecidas (base pronta: ver "Limitações conhecidas — Fase 5" no fim deste arquivo) | 5   | ✅ README.md + docs/DEMO.md, screenshots reais via Playwright, diagrama Mermaid |
 | 8.9 | (descoberta 2026-08-07) Rota DELETE de Evidence — hoje não existe (L-05) | 1 | 📋 |
-| 8.10 | (descoberta 2026-08-07) Rate limiting em upload e login (L-07)  | 2   | 📋     |
+| 8.10 | (descoberta 2026-08-07) Rate limiting em upload e login (L-07)  | 2   | ✅ Concluída em 2026-09-21 — camadas global/tenant/user/write/endpoint/auth, Token Bucket limitado, testes e cenários k6/JMeter; ver ADR-040 |
 | 8.11 | (descoberta 2026-08-07) PDF Executivo: título longo sobrepõe o texto de CVSS/OWASP no "Top 5 riscos" (`lib/pdf/executive.ts`) | 1 | 📋 |
 | 8.12 | (descoberta 2026-08-18, `fix/landing-publica`) Landing "cena Three.js" completa (efeito ASCII, samurai procedural, mergulho de câmera por scroll) — nunca foi implementada em nenhum formato neste repositório. KAN-110 ganhou só o placeholder mínimo (ver PRD_VIVO.md); a versão 3D descrita na issue original fica como feature nova, não bugfix. Exige `useHeroScene` com `dispose()`/`cancelAnimationFrame`/descarte de render targets no unmount (evitar vazar contexto WebGL a cada navegação landing↔dashboard) | 8 | ✅ Concluída em 2026-08-19 — ver PRD_VIVO.md §6 e ADR-026 |
 | 8.8 | Smoke E2E cronometrado + tag `v1.0.0`                           | 3   | 📋     |
@@ -264,6 +297,8 @@ Restante estimado: **~200h-equivalente** em 12 semanas.
 | CP-7 | Quadro de remediação por menu (sem arrastar) + `assignedTo` ponta a ponta| ✅ |
 | CP-7b| Correção do `where()`: chaves `AND` concorrentes apagavam filtros        | ✅ (descoberta) |
 | CP-7c| `config/` faltando no `COPY` do Dockerfile do web                       | ✅ (descoberta) |
+| VAL-01 | Critérios de aceite, seis cruzamentos e matriz de evidências CP-1–CP-7 | ✅ `docs/EXPOSURE_REMEDIATION_ACCEPTANCE.md`; histórias, UCs, critérios e evidências documentados; specs E2E-EXP-01..09 revisados, com reexecução local do Playwright ainda bloqueada por dependência ausente |
+| VAL-02 | Hardening P2 e validação final CP-1–CP-7 | ✅ Locks transacionais em SLA/Saved Query; candidatos mínimos e lazy no quadro; playbook customizado para PENTESTER membro; filtros/expiração; cleanup E2E-EXP-05/06 por marcador único. **API focal 75/75 · Web serial 128/128 · lint 0 erros · contraste 66/66**; `docker compose build --no-cache` API/Web verde e stack saudável; validação manual moveu/restaurou cartão. Playwright E2E não reexecutado no host (`@playwright/test` ausente); dependências foram instaladas normalmente nas imagens Docker. Sem alteração de schema, migration ou lockfile nesta validação |
 | CP-8 | Exposure Graph / Cadeias de Exposição                                   | ⛔ **não implementado** — era condicional; ver `docs/EXPOSURE_REMEDIATION.md` §9 |
 
 ---
@@ -320,7 +355,7 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 | L-04 | **Acesso negado responde 403, não 404.** Um atacante com um ID válido de outra company aprende que o recurso existe. | O `CLAUDE.md` §9 define `FORBIDDEN`→403 como padrão do projeto, e as Fases 3/4 já usam 403 em TEN-01..06. Mudar só a Fase 5 criaria inconsistência; mudar tudo quebraria contrato já mergeado. | IDs são `cuid()`, não enumeráveis por força bruta — o ganho do 404 é marginal. Isolamento em si é total e provado por TEN-07..13. |
 | L-05 | **Não há rota de DELETE para Evidence.** Uma evidência anexada por engano não pode ser removida pela API. | Criar a rota é **feature nova**, fora do escopo de uma sessão de endurecimento. | Anexar evidência errada exige refazer o finding ou remoção manual no banco. **Candidata a task da Fase 8.** |
 | L-06 | **`text/plain` aceita qualquer texto UTF-8**, inclusive HTML, SVG, JS ou script shell renomeados para `.txt`. | Texto não tem assinatura binária própria; distinguir "texto de log" de "texto que é código" exigiria heurística frágil e cheia de falso-positivo. | Servido sempre como `attachment` + `nosniff` + `Content-Type: text/plain` — o navegador não renderiza. Bytes de controle são recusados desde 2026-08-07. |
-| L-07 | **Sem rate limiting em nenhuma rota**, inclusive upload e login. | Fora do escopo do MVP; exigiria middleware novo e decisão sobre store (memória × Redis, e Redis está fora do escopo). | Limites de tamanho e de partes no multipart reduzem o custo por requisição. **Candidata a task da Fase 8.** |
+| L-07 | **Rate limiting é local à instância.** Em memória, portanto um restart zera os buckets e várias réplicas não compartilham a cota. | O MVP opera em instância única; Redis/store compartilhado permanece fora do escopo atual. | A proteção cobre global/tenant/user/escrita/endpoints e autenticação; escalar horizontalmente exige trocar somente a implementação do store. Ver ADR-040. |
 | L-09 | **A paridade de acessibilidade foi provada em jsdom, não em leitor de tela real.** NVDA e VoiceOver não foram testados. | Exigiria máquina com leitor de tela instalado e um protocolo de teste manual — fora do que uma sessão automatizada alcança. | 14 testes cobrindo role/ARIA/teclado/foco item a item do contrato, mais `axe-core` sem violações. O que NÃO se prova é a experiência de escuta: ordem de anúncio, verbosidade, se o texto faz sentido em voz alta. **Candidata a task da Fase 8.** |
 | L-10 | **A validação visual no navegador real não foi feita na Fase 6.5.** Aparência, responsividade em 375/768/1440 e console limpo não foram conferidos. | A extensão do Chrome não conectou na sessão (mesmo bloqueio da Fase 6). | Build e tipos limpos; 24 testes de frontend em jsdom; contraste medido matematicamente. **Pendente para o Rafael** — os 10 itens estão no bloqueio de 2026-08-09 do `PRD_VIVO.md`. |
 | L-11 | **O risk score da SÉRIE TEMPORAL é aproximado**, diferente do valor exato do `summary`. | Reconstruir o CVSS de cada finding aberto em cada período passado exigiria tabela de snapshot, que o ADR-025 evitou de propósito. | Serve para ver TENDÊNCIA, que é a função da linha. Está comentado no código, dito no ADR-025 e visível na interface. O `summary` — o número que a pessoa lê — é exato. |

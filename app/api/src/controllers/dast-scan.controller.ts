@@ -22,7 +22,12 @@ export class DastScanController {
       const targetUrl = typeof req.body?.targetUrl === "string" ? req.body.targetUrl : "";
       if (!targetUrl) return res.status(400).json({ error: "MISSING_TARGET_URL" });
 
-      const scan = await this.service.create(actor, { targetUrl });
+      const mode = req.body?.mode;
+      if (mode !== "REAL" && mode !== "SIMULATED") return res.status(400).json({ error: "INVALID_SCAN_MODE" });
+      if (mode === "REAL" && req.body?.confirmedRealScan !== true) {
+        return res.status(400).json({ error: "REAL_SCAN_CONFIRMATION_REQUIRED" });
+      }
+      const scan = await this.service.create(actor, { targetUrl, mode, confirmedRealScan: req.body?.confirmedRealScan === true });
       return res.status(201).json(scan.toResponse());
     } catch (error: any) {
       if (error.message === "MISSING_TARGET_URL") return res.status(400).json({ error: "MISSING_TARGET_URL" });

@@ -125,8 +125,9 @@ export function FindingDetailPage() {
         ]}
       />
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div data-ops-hero="finding" className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Sinal de ameaça</p>
           <button
             type="button"
             onClick={() => navigate(-1)}
@@ -138,7 +139,7 @@ export function FindingDetailPage() {
             Voltar
           </button>
 
-          <h1 className="text-2xl font-bold text-fg">{finding.title}</h1>
+          <h1 className="break-words text-2xl font-bold text-fg">{finding.title}</h1>
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={finding.status} />

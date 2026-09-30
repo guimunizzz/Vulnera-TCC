@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { makeNotificationController } from "../factories/notification.factory";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 
 const router = Router();
 const controller = makeNotificationController();
 
-router.use(authMiddleware);
+router.use(authRateLimitMiddleware);
 
 router.post("/register-push", (req, res) => controller.registerPush(req, res));
 

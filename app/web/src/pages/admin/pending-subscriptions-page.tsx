@@ -55,8 +55,11 @@ export function PendingSubscriptionsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-fg">Assinaturas pendentes</h1>
-      <p className="mt-1 text-fg-muted">Aprove ou recuse os pedidos de assinatura das empresas.</p>
+      <header data-ops-hero="governance">
+        <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Governança comercial</p>
+        <h1 className="text-2xl font-bold text-fg">Assinaturas pendentes</h1>
+        <p className="mt-1 text-fg-muted">Aprove ou recuse os pedidos de assinatura das empresas.</p>
+      </header>
 
       {error && <Alert className="mt-4">{error}</Alert>}
 
@@ -67,8 +70,8 @@ export function PendingSubscriptionsPage() {
       )}
 
       {!isLoading && subscriptions && subscriptions.length > 0 && (
-        <div className="mt-6 overflow-hidden rounded-container border border-subtle">
-          <table className="w-full text-left text-sm">
+        <div className="mt-6 overflow-x-auto rounded-container border border-subtle">
+          <table className="min-w-[40rem] w-full text-left text-sm">
             <thead className="bg-surface text-fg-muted">
               <tr>
                 <th className="px-4 py-3 font-medium">Empresa</th>

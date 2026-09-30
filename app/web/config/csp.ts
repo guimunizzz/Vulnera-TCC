@@ -49,7 +49,10 @@ import { createHash } from "node:crypto";
 
 /** O hash CSP de um trecho de script inline: `'sha256-<base64>'`. */
 export function hashDeScript(conteudo: string): string {
-  return `'sha256-${createHash("sha256").update(conteudo, "utf-8").digest("base64")}'`;
+  // O parser HTML normaliza CRLF para LF antes de executar o script. Fazer o
+  // hash dos bytes crus bloquearia o tema no primeiro paint em checkout Windows.
+  const interpretadoPeloNavegador = conteudo.replace(/\r\n?/g, "\n");
+  return `'sha256-${createHash("sha256").update(interpretadoPeloNavegador, "utf-8").digest("base64")}'`;
 }
 
 /**

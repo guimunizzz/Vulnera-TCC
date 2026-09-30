@@ -53,10 +53,9 @@ export function DastStatusBanner({ status }: { status: DastModuleStatus | undefi
   return (
     <div className="mt-4 flex flex-col gap-3">
       {!dockerAvailable && (
-        <Alert tom="atencao" titulo="Modo de demonstração — o OWASP ZAP não vai ser executado">
-          O Docker não está acessível para a API neste momento, então qualquer scan novo devolve um conjunto de
-          achados de demonstração em vez de analisar o alvo de verdade. Os resultados continuam navegáveis (útil
-          para conhecer a tela), mas <strong>não descrevem o alvo informado</strong>.
+        <Alert tom="atencao" titulo="Motor real indisponível">
+          O Docker não está acessível para a API. Abra o Docker Desktop para executar um scan real.
+          A opção Simulado continua disponível e não acessa o alvo. Uma falha real nunca será substituída por demonstração.
         </Alert>
       )}
 
@@ -67,7 +66,7 @@ export function DastStatusBanner({ status }: { status: DastModuleStatus | undefi
             className={`h-2 w-2 rounded-full ${dockerAvailable ? "bg-success" : "bg-warning"}`}
           />
           <span className="text-fg-muted">Motor:</span>
-          <span className="font-medium text-fg">{dockerAvailable ? "OWASP ZAP via Docker" : "simulado"}</span>
+          <span className="font-medium text-fg">{dockerAvailable ? "OWASP ZAP via Docker" : "indisponível"}</span>
         </span>
 
         <span className="text-fg-muted">

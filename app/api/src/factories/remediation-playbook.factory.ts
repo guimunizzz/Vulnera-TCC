@@ -18,6 +18,7 @@ import { prisma } from "../database/prisma.database";
 import { RemediationPlaybookRepository } from "../repositories/remediation-playbook.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { AuditLogRepository } from "../repositories/audit-log.repository";
+import { ProjectMemberRepository } from "../repositories/project-member.repository";
 import { RemediationPlaybookService } from "../services/remediation-playbook.service";
 import { OwaspSyncService } from "../services/owasp-sync.service";
 import { RemediationPlaybookController } from "../controllers/remediation-playbook.controller";
@@ -28,6 +29,7 @@ export function makeRemediationPlaybookService(): RemediationPlaybookService {
     new RemediationPlaybookRepository(prisma),
     new UserRepository(prisma),
     new AuditLogRepository(prisma),
+    new ProjectMemberRepository(prisma),
   );
 }
 

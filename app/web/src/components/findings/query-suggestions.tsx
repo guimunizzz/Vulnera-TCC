@@ -197,6 +197,13 @@ function montarSugestoes(
       .map(([valor, rotulo]) => ({ inserir: valor, rotulo, apoio: valor }));
   }
 
+  if (field === "vrsMin" || field === "vrsMax") {
+    const opcoes = ["0", "40", "65", "85", "100"];
+    return opcoes
+      .filter((valor) => casa(valor))
+      .map((valor) => ({ inserir: valor, rotulo: valor, apoio: "inteiro entre 0 e 100" }));
+  }
+
   // Entidade: mostra o NOME, insere o ID — a API aceita só id, de propósito
   // (nome não é único entre empresas).
   const lista = entidades[field] ?? [];

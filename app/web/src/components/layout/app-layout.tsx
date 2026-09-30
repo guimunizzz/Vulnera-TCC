@@ -25,7 +25,7 @@
  * `App.tsx`, envolvendo todas as rotas autenticadas.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "./sidebar";
 import { Button, Drawer, DrawerBody, DrawerHeader, DropdownMenu, Avatar } from "../ui";
@@ -33,6 +33,10 @@ import { ThemeToggle } from "../../design/theme-toggle";
 import { TransicaoDeRota } from "../../motion/components";
 import { useAuthStore } from "../../store/auth.store";
 import { authApi } from "../../lib/api/auth.api";
+import { DashboardAtmosphere } from "../dashboard/hero/dashboard-atmosphere";
+import { AmbientHostContext } from "../dashboard/hero/ambient-host-context";
+import "./operations-backdrop.css";
+import "./module-surfaces.css";
 
 const ROTULO_PAPEL: Record<string, string> = {
   ADMIN: "Administrador",
@@ -47,6 +51,13 @@ export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [navAberta, setNavAberta] = useState(false);
+  const [ambientePausado, setAmbientePausado] = useState(false);
+
+  useEffect(() => {
+    const atualizar = (event: Event) => setAmbientePausado((event as CustomEvent<boolean>).detail);
+    window.addEventListener("vulnera:ambient-pause", atualizar);
+    return () => window.removeEventListener("vulnera:ambient-pause", atualizar);
+  }, []);
 
   async function sair(): Promise<void> {
     if (refreshToken) {
@@ -116,12 +127,18 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main id="conteudo" tabIndex={-1} className="flex-1 p-4 focus-visible:outline-none lg:p-6">
+        <main id="conteudo" tabIndex={-1} className="operations-main relative isolate flex-1 p-4 focus-visible:outline-none lg:p-6">
+          <div aria-hidden="true" className="operations-backdrop pointer-events-none absolute inset-0" />
+          <DashboardAtmosphere pausado={ambientePausado} />
           {/* A chave é o caminho: o crossfade dispara na troca de rota, não a
               cada re-render da mesma rota. */}
-          <TransicaoDeRota chave={location.pathname}>
-            <Outlet />
-          </TransicaoDeRota>
+          <div className="operations-content relative">
+            <AmbientHostContext.Provider value={true}>
+              <TransicaoDeRota chave={location.pathname}>
+                <Outlet />
+              </TransicaoDeRota>
+            </AmbientHostContext.Provider>
+          </div>
         </main>
       </div>
     </div>

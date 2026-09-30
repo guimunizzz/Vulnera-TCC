@@ -25,7 +25,7 @@
  *      npm run db:seed:playbooks --workspace=app/api
  */
 
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { login, API_URL, CREDENCIAIS } from "./helpers";
 
 /**
@@ -38,7 +38,7 @@ import { login, API_URL, CREDENCIAIS } from "./helpers";
  * Aconteceu exatamente isso quando o E2E-EXP-05 falhou depois de salvar e
  * antes de limpar.
  */
-async function limparBuscasDeTeste(request: APIRequestContext): Promise<void> {
+async function limparBuscasDeTeste(request: APIRequestContext, marcador: string): Promise<void> {
   const auth = await request.post(`${API_URL}/auth/login`, {
     data: { email: CREDENCIAIS.pentester.email, password: CREDENCIAIS.pentester.senha },
   });
@@ -47,10 +47,113 @@ async function limparBuscasDeTeste(request: APIRequestContext): Promise<void> {
 
   const lista = await request.get(`${API_URL}/saved-queries`, { headers });
   for (const q of (await lista.json()) as Array<{ id: string; name: string; isOwner: boolean }>) {
-    if (q.isOwner && q.name.startsWith("E2E ")) {
+    if (q.isOwner && q.name.startsWith(marcador)) {
       await request.delete(`${API_URL}/saved-queries/${q.id}`, { headers });
     }
   }
+}
+
+/** Marcador exclusivo para que o cleanup nunca toque buscas de outra execução. */
+function marcadorDaExecucao(prefixo: string): string {
+  return `${prefixo}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function criarFindingDoRun(request: APIRequestContext, prefixo: string): Promise<string> {
+  const auth = await request.post(`${API_URL}/auth/login`, {
+    data: { email: CREDENCIAIS.pentester.email, password: CREDENCIAIS.pentester.senha },
+  });
+  expect(auth.ok(), "login de criação do E2E falhou").toBeTruthy();
+  const { accessToken } = await auth.json();
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  const projetos = await request.get(`${API_URL}/projects`, { headers });
+  expect(projetos.ok(), "o pentester precisa ter um projeto para o finding do E2E").toBeTruthy();
+  const projeto = ((await projetos.json()) as Array<{ id: string }>)[0];
+  expect(projeto, "precondição impossível: pentester sem projeto atribuível").toBeTruthy();
+
+  const criado = await request.post(`${API_URL}/vulnerabilities`, {
+    headers,
+    data: {
+      projectId: projeto.id,
+      title: `${prefixo} Finding do quadro`,
+      description: "Finding temporário criado pelo E2E-EXP-07.",
+      owaspCategory: "A03",
+      cvssVector: "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    },
+  });
+  expect(criado.status(), await criado.text()).toBe(201);
+  return ((await criado.json()) as { id: string }).id;
+}
+
+/** Remove somente findings criados por esta execução; AuditLog é append-only. */
+async function limparFindingsDoRun(request: APIRequestContext, prefixo: string): Promise<void> {
+  const auth = await request.post(`${API_URL}/auth/login`, {
+    data: { email: CREDENCIAIS.admin.email, password: CREDENCIAIS.admin.senha },
+  });
+  expect(auth.ok(), "login administrativo de limpeza falhou").toBeTruthy();
+  const { accessToken } = await auth.json();
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  const lista = await request.get(`${API_URL}/vulnerabilities?search=${encodeURIComponent(prefixo)}&pageSize=100`, { headers });
+  expect(lista.ok(), "listagem de limpeza do E2E falhou").toBeTruthy();
+  const body = (await lista.json()) as { data?: Array<{ id: string; title: string }> };
+  for (const finding of body.data ?? []) {
+    if (!finding.title.startsWith(prefixo)) continue;
+    const removido = await request.delete(`${API_URL}/vulnerabilities/${finding.id}`, { headers });
+    expect(removido.status(), await removido.text()).toBe(204);
+  }
+}
+
+const ROTULO_COLUNA: Record<"OPEN" | "IN_PROGRESS" | "FIXED", string> = {
+  OPEN: "Aberto",
+  IN_PROGRESS: "Em andamento",
+  FIXED: "Corrigido",
+};
+
+function rotuloDaTransicao(
+  de: "OPEN" | "IN_PROGRESS" | "FIXED",
+  para: "OPEN" | "IN_PROGRESS" | "FIXED",
+): string {
+  if (de === "IN_PROGRESS" && para === "OPEN") return "Devolver ao backlog";
+  if (de === "FIXED" && para === "IN_PROGRESS") return "Reprovar validação";
+  if (para === "IN_PROGRESS") return "Iniciar correção";
+  return "Marcar como corrigido";
+}
+
+/** Move um cartão e prova o efeito no retrato único que alimenta o quadro. */
+async function moverNoQuadro(
+  page: Page,
+  findingId: string,
+  titulo: string,
+  de: "OPEN" | "IN_PROGRESS" | "FIXED",
+  para: "OPEN" | "IN_PROGRESS" | "FIXED",
+  aoSolicitar?: () => void,
+): Promise<void> {
+  const origem = page.getByRole("region", { name: new RegExp(`^${ROTULO_COLUNA[de]}:`) });
+  const cartao = origem.locator("article").filter({ hasText: titulo });
+  await expect(cartao).toHaveCount(1);
+
+  const gatilho = cartao.getByRole("button", { name: /mover para/i });
+  await gatilho.click();
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+
+  const item = menu.getByRole("menuitem", { name: rotuloDaTransicao(de, para), exact: true });
+  await expect(item).toBeVisible();
+
+  const transicao = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === `/api/vulnerabilities/${findingId}/transition` &&
+      response.status() === 200,
+  );
+  await item.click();
+  // O callback marca a mutação antes de aguardar a resposta, permitindo que
+  // o teste restaure a base mesmo se a UI falhar depois do clique.
+  aoSolicitar?.();
+  await transicao;
+
+  const destino = page.getByRole("region", { name: new RegExp(`^${ROTULO_COLUNA[para]}:`) });
+  await expect(destino.locator("article").filter({ hasText: titulo })).toHaveCount(1);
+  await expect(origem.locator("article").filter({ hasText: titulo })).toHaveCount(0);
 }
 
 test.describe("Exposure & Remediation Management", () => {
@@ -62,7 +165,7 @@ test.describe("Exposure & Remediation Management", () => {
     await expect(page.getByRole("heading", { name: /playbooks de remediação/i })).toBeVisible();
 
     // As dez categorias do Top 10 2021, cada uma como seção do catálogo.
-    for (const categoria of ["A01", "A03", "A06", "A10"]) {
+    for (const categoria of ["A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "A10"]) {
       await expect(page.getByRole("heading", { name: new RegExp(`^${categoria} ·`) })).toBeVisible();
     }
     // E o selo de origem oficial em pelo menos um cartão.
@@ -113,7 +216,7 @@ test.describe("Exposure & Remediation Management", () => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const { data } = await busca.json();
-    test.skip(data.length === 0, "nenhum finding A03 na base de demonstração");
+    expect(data.length, "precondição impossível: nenhum finding A03 na base de demonstração").toBeGreaterThan(0);
 
     await login(page, "pentester");
     await page.goto(`/findings/${data[0].id}`);
@@ -125,85 +228,106 @@ test.describe("Exposure & Remediation Management", () => {
   });
 
   test("E2E-EXP-05 salvar a busca atual e reabrir por ela", async ({ page, request }) => {
-    await limparBuscasDeTeste(request);
-    await login(page, "pentester");
-    const nome = `E2E críticas ${Date.now()}`;
+    const marcador = marcadorDaExecucao("E2E-EXP-05");
+    const nome = `${marcador} críticas`;
+    await limparBuscasDeTeste(request, marcador);
+    try {
+      await login(page, "pentester");
+      await page.goto("/findings?severity=CRITICAL&status=OPEN");
+      await page.getByRole("button", { name: /salvar esta busca/i }).click();
+      await page.getByLabel(/nome da busca/i).fill(nome);
+      await page.getByRole("button", { name: /^salvar$/i }).click();
 
-    await page.goto("/findings?severity=CRITICAL&status=OPEN");
-    await page.getByRole("button", { name: /salvar esta busca/i }).click();
-    await page.getByLabel(/nome da busca/i).fill(nome);
-    await page.getByRole("button", { name: /^salvar$/i }).click();
+      await expect(page.getByText(/busca salva/i)).toBeVisible();
 
-    await expect(page.getByText(/busca salva/i)).toBeVisible();
-
-    // Sai do recorte e volta CLICANDO no atalho — é navegação, não snapshot.
-    await page.goto("/findings");
-    // Âncoras (^$) porque o botão de remover tem `aria-label` "Remover a busca
-    // salva <nome>" e casaria com o mesmo padrão sem elas.
-    await page.getByRole("button", { name: new RegExp(`^${nome}$`) }).click();
-    await expect(page).toHaveURL(/severity=CRITICAL/);
-    await expect(page).toHaveURL(/status=OPEN/);
-
-    // Limpa o que o teste criou.
-    await page.getByRole("button", { name: new RegExp(`Remover a busca salva ${nome}`) }).click();
+      // Sai do recorte e volta CLICANDO no atalho — é navegação, não snapshot.
+      await page.goto("/findings");
+      // Âncoras (^$) porque o botão de remover tem `aria-label` "Remover a busca
+      // salva <nome>" e casaria com o mesmo padrão sem elas.
+      await page.getByRole("button", { name: new RegExp(`^${nome}$`) }).click();
+      await expect(page).toHaveURL(/severity=CRITICAL/);
+      await expect(page).toHaveURL(/status=OPEN/);
+    } finally {
+      await limparBuscasDeTeste(request, marcador);
+    }
   });
 
   test("E2E-EXP-06 watchlist fixada aparece na barra lateral e navega", async ({ page, request }) => {
-    await limparBuscasDeTeste(request);
-    await login(page, "pentester");
-    const nome = `E2E fixada ${Date.now()}`;
+    const marcador = marcadorDaExecucao("E2E-EXP-06");
+    const nome = `${marcador} fixada`;
+    await limparBuscasDeTeste(request, marcador);
+    try {
+      await login(page, "pentester");
+      await page.goto("/findings?slaState=BREACHED");
+      await page.getByRole("button", { name: /salvar esta busca/i }).click();
+      await page.getByLabel(/nome da busca/i).fill(nome);
+      // Clique no RÓTULO, não no input: o Checkbox do design system esconde o
+      // input e desenha o estado no `<span>`; é o label que recebe o clique de
+      // uma pessoa de verdade (e o `.check()` do Playwright bate no input, que
+      // está atrás dele).
+      await page.getByText(/fixar na barra lateral/i).click();
+      await page.getByRole("button", { name: /^salvar$/i }).click();
+      await expect(page.getByText(/busca salva/i)).toBeVisible();
 
-    await page.goto("/findings?slaState=BREACHED");
-    await page.getByRole("button", { name: /salvar esta busca/i }).click();
-    await page.getByLabel(/nome da busca/i).fill(nome);
-    // Clique no RÓTULO, não no input: o Checkbox do design system esconde o
-    // input e desenha o estado no `<span>`; é o label que recebe o clique de
-    // uma pessoa de verdade (e o `.check()` do Playwright bate no input, que
-    // está atrás dele).
-    await page.getByText(/fixar na barra lateral/i).click();
-    await page.getByRole("button", { name: /^salvar$/i }).click();
-    await expect(page.getByText(/busca salva/i)).toBeVisible();
+      // A seção "Watchlists" só existe quando há atalho fixado.
+      const barra = page.getByRole("navigation", { name: /navegação principal/i });
+      await expect(barra.getByRole("heading", { name: /watchlists/i })).toBeVisible();
 
-    // A seção "Watchlists" só existe quando há atalho fixado.
-    const barra = page.getByRole("navigation", { name: /navegação principal/i });
-    await expect(barra.getByRole("heading", { name: /watchlists/i })).toBeVisible();
-
-    await page.goto("/dashboard");
-    await barra.getByRole("link", { name: new RegExp(nome) }).click();
-    await expect(page).toHaveURL(/\/findings\?.*slaState=BREACHED/);
-
-    await page.goto("/findings?slaState=BREACHED");
-    await page.getByRole("button", { name: new RegExp(`Remover a busca salva ${nome}`) }).click();
+      await page.goto("/dashboard");
+      await barra.getByRole("link", { name: new RegExp(nome) }).click();
+      await expect(page).toHaveURL(/\/findings\?.*slaState=BREACHED/);
+    } finally {
+      await limparBuscasDeTeste(request, marcador);
+    }
   });
 
-  test("E2E-EXP-07 o quadro de remediação mostra colunas e move um finding", async ({ page }) => {
-    await login(page, "pentester");
-    await page.getByRole("link", { name: "Remediação" }).click();
-    await page.waitForURL(/\/remediation/);
+  test("E2E-EXP-07 o quadro de remediação mostra colunas e move um finding", async ({ page, request }) => {
+    const prefixo = `E2E-EXP-07-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    try {
+      // Fica dentro do try para que até uma falha após o POST seja limpa pelo
+      // prefixo exclusivo desta execução.
+      const findingId = await criarFindingDoRun(request, prefixo);
+      await login(page, "pentester");
+      await page.getByRole("link", { name: "Remediação" }).click();
+      await page.waitForURL(/\/remediation/);
 
-    await expect(page.getByRole("heading", { name: /quadro de remediação/i })).toBeVisible();
-    // As três colunas de trabalho; `CLOSED` NÃO está aqui, de propósito.
-    for (const coluna of ["Aberto", "Em andamento", "Corrigido"]) {
-      await expect(page.getByRole("heading", { name: coluna, exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /quadro de remediação/i })).toBeVisible();
+      // As três colunas de trabalho; `CLOSED` NÃO está aqui, de propósito.
+      for (const coluna of ["Aberto", "Em andamento", "Corrigido"]) {
+        await expect(page.getByRole("heading", { name: coluna, exact: true })).toBeVisible();
+      }
+      await expect(page.getByRole("heading", { name: /encerrado/i })).toHaveCount(0);
+
+      const cartao = page.locator(`a[href="/findings/${findingId}"]`).locator("xpath=ancestor::article[1]");
+      await expect(cartao).toBeVisible();
+      const titulo = (await cartao.getByRole("link").first().innerText()).trim();
+      const href = await cartao.getByRole("link").first().getAttribute("href");
+      expect(href).toBe(`/findings/${findingId}`);
+      const secaoOrigem = cartao.locator("xpath=ancestor::section[1]");
+      const rotuloOrigem = await secaoOrigem.getAttribute("aria-label");
+      const origem = rotuloOrigem?.startsWith("Aberto")
+        ? ("OPEN" as const)
+        : rotuloOrigem?.startsWith("Em andamento")
+          ? ("IN_PROGRESS" as const)
+          : ("FIXED" as const);
+      const destino =
+        origem === "OPEN" ? ("IN_PROGRESS" as const) : origem === "IN_PROGRESS" ? ("FIXED" as const) : ("IN_PROGRESS" as const);
+
+      // Esperar a rede sossegar ANTES de abrir o menu. Ao chegar por navegação
+      // SPA, a busca do quadro ainda pode estar revalidando; um re-render no
+      // instante do clique remonta o cartão e o menu recém-aberto vai junto.
+      await page.waitForLoadState("networkidle");
+      await moverNoQuadro(page, findingId, titulo, origem, destino);
+
+      // A mesma mudança precisa aparecer no filtro da listagem global, que
+      // usa a API como fonte — não apenas no estado local do Kanban.
+      await page.goto(`/findings?status=${destino}`);
+      await expect(page.getByRole("link", { name: titulo, exact: true })).toBeVisible();
+    } finally {
+      // O finding temporário é o único dado mutável criado pelo teste. A
+      // exclusão é deliberada; AuditLog é append-only e não é "restaurado".
+      await limparFindingsDoRun(request, prefixo);
     }
-    await expect(page.getByRole("heading", { name: /encerrado/i })).toHaveCount(0);
-
-    const primeiroMover = page.getByRole("button", { name: /mover para/i }).first();
-    await primeiroMover.waitFor({ state: "visible", timeout: 20_000 }).catch(() => undefined);
-    // ⚠️ Esperar a rede sossegar ANTES de abrir o menu. Ao chegar por
-    // navegação SPA, a busca do quadro ainda pode estar revalidando; um
-    // re-render no instante do clique remonta o cartão e o menu recém-aberto
-    // vai junto — abre e fecha, sem item nenhum dentro.
-    await page.waitForLoadState("networkidle");
-    test.skip((await primeiroMover.count()) === 0, "nenhum finding aberto na base de demonstração");
-
-    await primeiroMover.click();
-    // O menu oferece só as transições VÁLIDAS a partir do status atual.
-    // `expect(...).toBeVisible()` e não `count()`: a contagem é instantânea e
-    // não espera o painel montar, o que deixava o teste falhar por corrida.
-    await expect(page.getByRole("menu")).toBeVisible();
-    await expect(page.getByRole("menuitem").first()).toBeVisible();
-    await page.keyboard.press("Escape");
   });
 
   test("E2E-EXP-08 mover um finding é operável só com o teclado", async ({ page }) => {
@@ -217,8 +341,7 @@ test.describe("Exposure & Remediation Management", () => {
     // `goto` devolve 0 porque a busca ainda está no skeleton — e o teste se
     // pulava sozinho, em silêncio, justamente no caso que ele existe para
     // proteger (a operação por teclado, ADR-039).
-    await gatilho.waitFor({ state: "visible", timeout: 20_000 }).catch(() => undefined);
-    test.skip((await gatilho.count()) === 0, "nenhum finding aberto na base de demonstração");
+    await expect(gatilho).toBeVisible();
 
     await gatilho.focus();
     await expect(gatilho).toBeFocused();

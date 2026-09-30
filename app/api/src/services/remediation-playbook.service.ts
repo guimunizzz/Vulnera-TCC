@@ -36,6 +36,7 @@
 import type { RemediationPlaybookRepository, ListPlaybooksFilter } from "../repositories/remediation-playbook.repository";
 import type { UserRepository } from "../repositories/user.repository";
 import type { AuditLogRepository } from "../repositories/audit-log.repository";
+import type { ProjectMemberRepository } from "../repositories/project-member.repository";
 import {
   PLAYBOOK_FIELD_LIMITS,
   PlaybookEntity,
@@ -57,6 +58,8 @@ interface Actor {
 interface EscopoDoAtor {
   companyId: string | null;
   todasAsEmpresas: boolean;
+  /** PENTESTER: custom das empresas alcançadas pelos próprios projetos. */
+  companyIds?: string[];
 }
 
 export class RemediationPlaybookService {
@@ -64,6 +67,7 @@ export class RemediationPlaybookService {
     private readonly repository: RemediationPlaybookRepository,
     private readonly userRepository: UserRepository,
     private readonly auditLogRepository: AuditLogRepository,
+    private readonly projectMemberRepository: ProjectMemberRepository,
   ) {}
 
   /* ======================================================================
@@ -93,9 +97,25 @@ export class RemediationPlaybookService {
    * que a referência genérica para quem vai corrigir (D5).
    */
   async findForOwaspCategory(actor: Actor, owaspCategory: string, companyIdDoFinding: string) {
-    const escopo = await this.resolverEscopo(actor);
-    // ADMIN lê o custom da empresa DO FINDING, não de uma empresa qualquer.
-    const companyId = escopo.todasAsEmpresas ? companyIdDoFinding : escopo.companyId;
+    if (!OWASP_CATEGORIES.includes(owaspCategory as never)) throw new Error("INVALID_OWASP_CATEGORY");
+    let companyId: string | null = null;
+    if (actor.role === "ADMIN") {
+      // ADMIN lê o custom da empresa DO FINDING, não de uma empresa qualquer.
+      companyId = companyIdDoFinding;
+    } else if (actor.role === "PENTESTER") {
+      // Há instalações em que o PENTESTER também tem companyId, e outras em
+      // que ele atravessa empresas só por ProjectMember. Em ambos os casos o
+      // custom só entra quando o vínculo com a empresa do finding existe;
+      // sem vínculo, ainda devolvemos o System global (não 403), preservando
+      // a referência oficial sem abrir o tenant alheio.
+      const user = await this.userRepository.findById(actor.userId);
+      const membro = await this.projectMemberRepository.existsForUserInCompany(actor.userId, companyIdDoFinding);
+      companyId = user?.companyId === companyIdDoFinding || membro ? companyIdDoFinding : null;
+    } else {
+      const escopo = await this.resolverEscopo(actor);
+      companyId = escopo.companyId;
+      if (!companyId || companyId !== companyIdDoFinding) throw new Error("FORBIDDEN");
+    }
     const registros = await this.repository.findByOwaspCategory(owaspCategory, companyId);
     return registros.map((p) => new PlaybookEntity(p).toListItem());
   }
@@ -258,13 +278,27 @@ export class RemediationPlaybookService {
   private async resolverEscopo(actor: Actor): Promise<EscopoDoAtor> {
     if (actor.role === "ADMIN") return { companyId: null, todasAsEmpresas: true };
     const user = await this.userRepository.findById(actor.userId);
-    return { companyId: user?.companyId ?? null, todasAsEmpresas: false };
+    const companyId = user?.companyId ?? null;
+    if (actor.role !== "PENTESTER") return { companyId, todasAsEmpresas: false };
+
+    const companyIds = await this.projectMemberRepository.findCompanyIdsByUser(actor.userId);
+    if (companyId) companyIds.push(companyId);
+    return { companyId, companyIds: [...new Set(companyIds)], todasAsEmpresas: false };
   }
 
   /** System é global; custom só da própria empresa. */
   private async assertCanRead(actor: Actor, playbook: RemediationPlaybook): Promise<void> {
     if (playbook.isSystem) return;
     if (actor.role === "ADMIN") return;
+    if (actor.role === "PENTESTER") {
+      const user = await this.userRepository.findById(actor.userId);
+      if (
+        playbook.companyId &&
+        (user?.companyId === playbook.companyId ||
+          await this.projectMemberRepository.existsForUserInCompany(actor.userId, playbook.companyId))
+      ) return;
+      throw new Error("FORBIDDEN");
+    }
     const user = await this.userRepository.findById(actor.userId);
     if (user?.companyId && user.companyId === playbook.companyId) return;
     throw new Error("FORBIDDEN");
