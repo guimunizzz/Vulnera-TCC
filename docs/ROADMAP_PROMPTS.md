@@ -998,3 +998,17 @@ próxima rodada; as decisões D8/D9 continuam registradas.
 - Conteúdo das ~122 Cheat Sheets (a v1 guarda o link).
 - CSP no servidor de desenvolvimento (ver ADR-037).
 - Notificação ao ser atribuído — a tabela `Notification` continua inativa.
+
+
+## DAST — correção operacional solicitada diretamente (2026-09-28)
+
+✅ Concluída em 2026-09-29 — modos explícitos, confirmação de execução real, retry e falhas tratadas, baseline GET/passivo e validação em alvo local. Relatório: `docs/DAST-VALIDACAO-2026-09-28.md`.
+
+### Histórico
+
+- Branch: `feat/dast-real-explicit-mode`; commit local detalhado solicitado, sem PR/push nesta sessão.
+- Pedido: análise da simulação involuntária em WSL 4 GB, implementação e revisão de todos os critérios.
+- Decisão autônoma: interpretar baixo impacto como análise passiva com GET restrito; não existe POST universalmente seguro. Retry de leituras, sem repetir ações de navegação. ADR-042 registra a redução explícita de cobertura em relação ao pipeline ativo anterior.
+- Trabalho futuro separado do aceite: relatório parcial, digest fixo, telemetria de pico, retenção e isolamento de egress. Sem alteração de schema/AGENTS.md.
+
+- Fechamento em 2026-09-29: estados reais/de demonstração/falha reconferidos, relatório atualizado, alvo descartável removido e commit local solicitado. Fila existente mantida sem mensageria externa.

@@ -54,13 +54,15 @@ async function waitForTerminalStatus(token: string, scanId: string, maxMs = 8000
 }
 
 /** Cria um scan já concluído (simulado) e devolve o scan + seus findings. */
-async function scanConcluido(token: string, targetUrl: string) {
+async function scanConcluido(token: string, targetUrl: string, simulated = false) {
   const criado = await request(app)
     .post("/api/dast/scans")
     .set("Authorization", `Bearer ${token}`)
-    .send({ targetUrl });
+    .send({ mode: "SIMULATED", targetUrl });
   expect(criado.status).toBe(201);
   await waitForTerminalStatus(token, criado.body.id);
+  // Fixture sintética de resultado real para testar triagem sem tráfego externo.
+  await prisma.dastScan.update({ where: { id: criado.body.id }, data: { simulated } });
 
   const findings = await request(app)
     .get(`/api/dast/scans/${criado.body.id}/findings`)
@@ -471,5 +473,19 @@ describe("DAST — RBAC das rotas novas", () => {
     for (const res of await Promise.all(chamadas)) {
       expect(res.status).toBe(403);
     }
+  });
+});
+
+
+describe("DAST — isolamento de demonstração", () => {
+  it("bloqueia promoção e não oferece comparáveis para demo", async () => {
+    const { pentesterAToken } = await seedActors();
+    const demo = await scanConcluido(pentesterAToken, "https://demo-only.test/", true);
+    const auth = { Authorization: `Bearer ${pentesterAToken}` };
+    const promotion = await request(app).post(`/api/dast/scans/findings/${demo.findings[0].id}/promote`).set(auth).send({});
+    expect(promotion.status).toBe(422);
+    expect(promotion.body.error).toBe("SIMULATED_SCAN_OPERATION_NOT_ALLOWED");
+    const comparable = await request(app).get(`/api/dast/scans/${demo.scanId}/comparable`).set(auth);
+    expect(comparable.body).toEqual([]);
   });
 });

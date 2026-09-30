@@ -76,3 +76,6 @@ test-results/
 playwright-report/
 blob-report/
 .playwright/
+
+# Relatórios brutos de validação DAST; síntese versionada em docs/evidencias/dast/.
+output/dast-real-validation/

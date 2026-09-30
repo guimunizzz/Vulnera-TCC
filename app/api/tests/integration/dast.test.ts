@@ -78,7 +78,7 @@ describe("DAST — RBAC", () => {
     const fakeId = "id-que-nao-existe";
 
     const calls = [
-      request(app).post("/api/dast/scans").set(auth).send({ targetUrl: "https://alvo.test" }),
+      request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://alvo.test" }),
       request(app).get("/api/dast/scans").set(auth),
       request(app).get(`/api/dast/scans/${fakeId}`).set(auth),
       request(app).post(`/api/dast/scans/${fakeId}/cancel`).set(auth),
@@ -100,7 +100,7 @@ describe("DAST — RBAC", () => {
     const createRes = await request(app)
       .post("/api/dast/scans")
       .set("Authorization", `Bearer ${pentesterAToken}`)
-      .send({ targetUrl: "https://alvo-rbac-08.test" });
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-rbac-08.test" });
     expect(createRes.status).toBe(201);
     const scanId = createRes.body.id;
 
@@ -128,7 +128,7 @@ describe("DAST — RBAC", () => {
     const createRes = await request(app)
       .post("/api/dast/scans")
       .set("Authorization", `Bearer ${pentesterAToken}`)
-      .send({ targetUrl: "https://alvo-rbac-09.test" });
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-rbac-09.test" });
     const scanId = createRes.body.id;
 
     const listRes = await request(app).get("/api/dast/scans").set("Authorization", `Bearer ${adminToken}`);
@@ -147,7 +147,7 @@ describe("DAST — RBAC", () => {
     const createRes = await request(app)
       .post("/api/dast/scans")
       .set("Authorization", `Bearer ${pentesterAToken}`)
-      .send({ targetUrl: "https://alvo-visibilidade.test" });
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-visibilidade.test" });
     const scanId = createRes.body.id;
 
     const listAsB = await request(app).get("/api/dast/scans").set("Authorization", `Bearer ${pentesterBToken}`);
@@ -165,17 +165,17 @@ describe("DAST — ciclo de vida", () => {
     const { pentesterAToken } = await seedActors();
     const targetUrl = "https://alvo-concorrente.test";
 
-    const first = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`).send({ targetUrl });
+    const first = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`).send({ mode: "SIMULATED", targetUrl });
     expect(first.status).toBe(201);
 
-    const second = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`).send({ targetUrl });
+    const second = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`).send({ mode: "SIMULATED", targetUrl });
     expect(second.status).toBe(409);
     expect(second.body.error).toBe("SCAN_ALREADY_RUNNING_FOR_TARGET");
 
     await waitForTerminalStatus(pentesterAToken, first.body.id);
 
     // depois de terminado, o mesmo alvo pode ser escaneado de novo
-    const third = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`).send({ targetUrl });
+    const third = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`).send({ mode: "SIMULATED", targetUrl });
     expect(third.status).toBe(201);
     await waitForTerminalStatus(pentesterAToken, third.body.id);
   });
@@ -185,7 +185,7 @@ describe("DAST — ciclo de vida", () => {
     const createRes = await request(app)
       .post("/api/dast/scans")
       .set("Authorization", `Bearer ${pentesterAToken}`)
-      .send({ targetUrl: "https://alvo-cancelar.test" });
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-cancelar.test" });
     const scanId = createRes.body.id;
 
     const cancelRes = await request(app).post(`/api/dast/scans/${scanId}/cancel`).set("Authorization", `Bearer ${pentesterAToken}`);
@@ -206,12 +206,12 @@ describe("DAST — ciclo de vida", () => {
       const createRes = await request(app)
         .post("/api/dast/scans")
         .set("Authorization", `Bearer ${pentesterAToken}`)
-        .send({ targetUrl: "https://alvo-timeout.test" });
+        .send({ mode: "SIMULATED", targetUrl: "https://alvo-timeout.test" });
       expect(createRes.status).toBe(201);
 
       const final = await waitForTerminalStatus(pentesterAToken, createRes.body.id);
       expect(final.status).toBe("FAILED");
-      expect(final.errorMessage).toBe("SCAN_TIMEOUT");
+      expect(final.errorMessage).toContain("SCAN_TIMEOUT");
     } finally {
       if (original === undefined) delete process.env.DAST_SCAN_TIMEOUT_MS;
       else process.env.DAST_SCAN_TIMEOUT_MS = original;
@@ -282,7 +282,7 @@ describe("DAST — fluxo feliz completo", () => {
     const createRes = await request(app)
       .post("/api/dast/scans")
       .set("Authorization", `Bearer ${pentesterAToken}`)
-      .send({ targetUrl: "https://alvo-fluxo-feliz.test" });
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-fluxo-feliz.test" });
     expect(createRes.status).toBe(201);
     expect(createRes.body.status).toBe("QUEUED");
 
@@ -319,7 +319,7 @@ describe("DAST — progresso, resultado simulado e status do módulo", () => {
     const createRes = await request(app)
       .post("/api/dast/scans")
       .set("Authorization", `Bearer ${pentesterAToken}`)
-      .send({ targetUrl: "https://alvo-progresso.test" });
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-progresso.test" });
 
     expect(createRes.status).toBe(201);
     // Recém-criado: a barra existe e está zerada (não é undefined — a UI
@@ -341,13 +341,13 @@ describe("DAST — progresso, resultado simulado e status do módulo", () => {
     const createRes = await request(app)
       .post("/api/dast/scans")
       .set("Authorization", `Bearer ${pentesterAToken}`)
-      .send({ targetUrl: "https://alvo-simulado.test" });
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-simulado.test" });
 
     const final = await waitForTerminalStatus(pentesterAToken, createRes.body.id);
     expect(final.status).toBe("COMPLETED");
     expect(final.simulated).toBe(true);
     expect(typeof final.warningMessage).toBe("string");
-    expect(final.warningMessage).toContain("demonstração");
+    expect(final.warningMessage.toLowerCase()).toContain("demonstração");
     // errorMessage continua reservado a FAILED — um scan concluído com
     // ressalva não é um scan com erro.
     expect(final.errorMessage).toBeNull();
@@ -374,5 +374,42 @@ describe("DAST — progresso, resultado simulado e status do módulo", () => {
     // a resposta seria 404 SCAN_NOT_FOUND.
     expect(res.status).toBe(200);
     expect(res.body).not.toHaveProperty("error");
+  });
+});
+
+
+describe("DAST — modo explícito e confirmação obrigatória", () => {
+  it("rejeita modo ausente/inválido e real sem confirmação literal true", async () => {
+    const { pentesterAToken } = await seedActors();
+    for (const body of [
+      { targetUrl: "https://example.com" },
+      { targetUrl: "https://example.com", mode: "invalid" },
+      { targetUrl: "https://example.com", mode: "REAL" },
+      { targetUrl: "https://example.com", mode: "REAL", confirmedRealScan: "true" },
+    ]) {
+      const res = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`).send(body);
+      expect(res.status).toBe(400);
+    }
+    expect(await prisma.dastScan.count()).toBe(0);
+  });
+
+  it("real em ambiente de demo falha com mensagem tratada sem mockar achados", async () => {
+    const { pentesterAToken } = await seedActors();
+    const original = process.env.DAST_FORCE_SIMULATE;
+    process.env.DAST_FORCE_SIMULATE = "true";
+    try {
+      const res = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`)
+        .send({ targetUrl: "https://example.com", mode: "REAL", confirmedRealScan: true });
+      expect(res.status).toBe(201);
+      const final = await waitForTerminalStatus(pentesterAToken, res.body.id);
+      expect(final.status).toBe("FAILED");
+      expect(final.simulated).toBe(false);
+      expect(final.errorMessage).toContain("REAL_SCAN_DISABLED");
+      expect(final.errorMessage).toContain("Desative DAST_FORCE_SIMULATE");
+      expect(await prisma.dastFinding.count()).toBe(0);
+    } finally {
+      if (original === undefined) delete process.env.DAST_FORCE_SIMULATE;
+      else process.env.DAST_FORCE_SIMULATE = original;
+    }
   });
 });

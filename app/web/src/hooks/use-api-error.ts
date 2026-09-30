@@ -122,6 +122,9 @@ const MESSAGES: Record<string, string> = {
   PROJECT_NOT_READY_FOR_REPORT: "O projeto precisa estar em revisão ou concluído para gerar relatório.",
 
   // DAST (scans via OWASP ZAP)
+  SIMULATED_SCAN_OPERATION_NOT_ALLOWED: "Demonstrações não podem ser promovidas nem comparadas como resultados reais.",
+  INVALID_SCAN_MODE: "Escolha Simulado ou Real antes de continuar.",
+  REAL_SCAN_CONFIRMATION_REQUIRED: "Confirme a autorização para executar o scan real.",
   MISSING_TARGET_URL: "Informe a URL do alvo.",
   INVALID_TARGET_URL: "URL inválida. Use o formato http(s)://exemplo.com.",
   TARGET_NOT_ALLOWED: "Esse alvo não é permitido (endereço local ou de rede privada).",

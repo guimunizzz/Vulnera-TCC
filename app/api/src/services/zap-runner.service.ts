@@ -1,60 +1,9 @@
 /**
- * zap-runner.service.ts
- *
- * Motor de execução do scan DAST. Sobe UM container do OWASP ZAP por scan
- * (`docker run -d`), em MODO DAEMON/PROXY, e conduz o scan falando com a API
- * HTTP do próprio ZAP (spider -> passivo -> active scan -> relatórios).
- *
- * ⚠️ MUDANÇA DE 2026-09-09 — antes daqui o runner chamava `zap-full-scan.py`
- * dentro do container e lia `report.json` de um volume compartilhado. Dois
- * problemas mataram esse desenho:
- *
- *  1. PROGRESSO. `zap-full-scan.py` é uma caixa preta: só devolve texto no
- *     stdout no final. Não dá pra saber que o spider está em 40%. A API do
- *     ZAP em modo daemon devolve percentual REAL por fase
- *     (/JSON/spider/view/status/ e /JSON/ascan/view/status/) — é isso que
- *     alimenta a barra de progresso da UI.
- *  2. VOLUME. Com a API rodando DENTRO de um container (docker compose), o
- *     caminho passado em `-v` era interpretado pelo daemon do HOST, não pelo
- *     filesystem do container da API: o ZAP escrevia o relatório num lugar
- *     que a API nunca leria (diagnóstico completo em docs/DAST-DOCKER-GAP.md
- *     §3, "Causa 3"). Buscando os relatórios pela API HTTP do ZAP
- *     (/OTHER/core/other/jsonreport/) o bind mount some do desenho inteiro —
- *     quem escreve no disco é o processo Node, no caminho que ele mesmo lê.
- *
- * Por que não é uma classe com injeção de dependência como os outros services
- * (CLAUDE.md §5.3): este módulo NÃO toca o Prisma — não sabe o que é um
- * DastScan, não marca status, não grava nada no banco. Só executa o processo
- * e devolve um resultado descritivo. Quem orquestra (cria o registro QUEUED,
- * decide RUNNING/COMPLETED/FAILED, aciona o pipeline de findings) é o
- * `dast-scan.service.ts`, e quem limita a concorrência é o
- * `dast-watchdog.service.ts` — mesma separação que `push.util.ts` já usa.
- * Mantém a regra do CLAUDE.md de que só Repository importa `@prisma/client`.
- *
- * SEGURANÇA (ver docs/DAST.md §5 pra detalhe de cada item):
- *  - `execFile`, NUNCA `exec`/`shell:true` — argumentos vão como array pro
- *    processo, nunca interpolados numa string de shell. Uma targetUrl com
- *    `; rm -rf /` vira só um argumento de URL inválido, nunca um comando.
- *  - `validateTargetUrl` bloqueia protocolo != http/https e, por padrão,
- *    loopback/faixas privadas (SSRF) — liberável via DAST_ALLOW_PRIVATE_TARGETS.
- *  - `resolveReportPath` impede path traversal ao servir report.html/json.
- *  - A API do ZAP sobe com uma `api.key` ALEATÓRIA por scan (nunca
- *    `api.disablekey=true`): mesmo que alguém alcance a porta do daemon, sem
- *    a chave não dispara scan nenhum. Quando a API roda no host, a porta é
- *    publicada só em 127.0.0.1, nunca em 0.0.0.0.
- *
- * ⚠️ Limitação conhecida: a checagem de host privado é sobre o LITERAL da URL
- * (hostname/IP escrito), não sobre DNS resolvido. Um hostname público que só
- * resolve pra IP privado em tempo de requisição (DNS rebinding) não é pego
- * aqui — documentado em docs/DAST.md §10, fora de escopo desta entrega.
- *
- * Fallback simulado (`simulateScan`): gera report.json/report.html estáticos
- * com ~8 alertas representativos. Aciona em DOIS casos — Docker indisponível
- * (CI, Docker Desktop fechado) e scan real que FALHOU. No segundo caso o
- * resultado simulado é mantido de propósito, com `warningMessage` amigável e
- * `simulated: true` gravados no banco: a tela nunca fica vazia, e nunca
- * finge que o dado é real (era exatamente o buraco de produto apontado em
- * docs/DAST-DOCKER-GAP.md §5).
+ * Executa demonstrações explícitas ou análise passiva real pelo OWASP ZAP.
+ * O runner isola um daemon por scan e visita somente URLs GET do escopo,
+ * sem formulários, JavaScript, autenticação ou active scan. Retentativas de
+ * leitura toleram lentidão sem duplicar comandos. Falha real nunca vira demo.
+ * Consumidor: DastScanService. Diagnóstico local é salvo antes da limpeza.
  */
 
 import { execFile } from "child_process";
@@ -89,8 +38,8 @@ function getStartupTimeoutMs(): number {
 }
 
 function getSpiderMaxDurationMin(): number {
-  const parsed = Number(EnvVar.getOptional(EnvKeys.DAST_ZAP_SPIDER_MAX_DURATION_MIN, "5"));
-  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 5;
+  const parsed = Number(EnvVar.getOptional(EnvKeys.DAST_ZAP_SPIDER_MAX_DURATION_MIN, "1"));
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 1;
 }
 
 /**
@@ -114,7 +63,7 @@ function getZapMemory(): string {
 }
 
 function getZapCpus(): string {
-  return EnvVar.getOptional(EnvKeys.DAST_ZAP_CPUS, "4").trim();
+  return EnvVar.getOptional(EnvKeys.DAST_ZAP_CPUS, "2").trim();
 }
 
 /** "2g"/"1536m"/"2048" (bytes) -> MB. Devolve null pro que não entender, e aí o limite é omitido em vez de chutado. */
@@ -213,12 +162,13 @@ export function validateTargetUrl(targetUrl: string, allowPrivate: boolean = all
   } catch {
     throw new Error("INVALID_TARGET_URL");
   }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+  if (parsed.username || parsed.password || (parsed.protocol !== "http:" && parsed.protocol !== "https:")) {
     throw new Error("INVALID_TARGET_URL");
   }
   if (!allowPrivate && isPrivateOrLoopbackHost(parsed.hostname)) {
     throw new Error("TARGET_NOT_ALLOWED");
   }
+  parsed.hash = "";
   return parsed;
 }
 
@@ -308,7 +258,7 @@ export interface ScanOutcome {
   jsonReportPath?: string; // absoluto no disco de quem roda a API
   htmlReportPath?: string; // absoluto no disco de quem roda a API
   errorMessage?: string;
-  /** Aviso amigável quando CONCLUIU com ressalva (tipicamente o fallback simulado). */
+  /** Aviso amigável que identifica os dados fictícios da demonstração. */
   warningMessage?: string;
   durationMs: number;
   simulated: boolean;
@@ -317,6 +267,7 @@ export interface ScanOutcome {
 export interface RunScanOptions {
   scanId: string;
   targetUrl: string;
+  mode: "REAL" | "SIMULATED";
   timeoutMs?: number;
   /** Chamado a cada tick de polling — alimenta a barra da UI e o pulso do watchdog. */
   onProgress?: (progress: ScanProgress) => void;
@@ -338,18 +289,29 @@ interface ZapHttpResponse {
   body: string;
 }
 
-function httpGet(url: string, timeoutMs: number): Promise<ZapHttpResponse> {
+function httpGet(url: string, timeoutMs: number, signal?: AbortSignal): Promise<ZapHttpResponse> {
   return new Promise((resolve, reject) => {
     const req = http.get(url, { timeout: timeoutMs }, (res) => {
       const chunks: Buffer[] = [];
-      res.on("data", (chunk: Buffer) => chunks.push(chunk));
-      res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf-8") }));
-      res.on("error", reject);
+      let bytes = 0;
+      res.on("data", (chunk: Buffer) => {
+        bytes += chunk.length;
+        // Um relatório/página enorme não pode consumir a RAM inteira da API.
+        if (bytes > 20 * 1024 * 1024) req.destroy(new Error("ZAP_RESPONSE_TOO_LARGE"));
+        else chunks.push(chunk);
+      });
+      res.on("end", () => { cleanup(); resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf-8") }); });
+      res.on("error", (error) => { cleanup(); reject(error); });
+      res.on("aborted", () => { cleanup(); reject(new Error("ECONNRESET")); });
     });
-    // "timeout" só avisa que o socket ficou ocioso — quem encerra a requisição
-    // é o destroy(); sem ele a promise ficaria pendurada pra sempre.
+    // Prazo absoluto além de inatividade: resposta em gotejamento também termina.
+    const timer = setTimeout(() => req.destroy(new Error("ZAP_HTTP_TIMEOUT")), timeoutMs);
+    const abort = () => req.destroy(new Error("SCAN_CANCELLED"));
+    const cleanup = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); };
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
     req.on("timeout", () => req.destroy(new Error("ZAP_HTTP_TIMEOUT")));
-    req.on("error", reject);
+    req.on("error", (error: NodeJS.ErrnoException) => { cleanup(); reject(new Error(error.code ?? error.message)); });
   });
 }
 
@@ -369,18 +331,27 @@ async function zapJson(
   baseUrl: string,
   endpoint: string,
   params: Record<string, string>,
-  timeoutMs = 20000,
+  timeoutMs = 45000,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
-  const response = await httpGet(buildZapUrl(baseUrl, endpoint, params), timeoutMs);
+  const response = await httpGet(buildZapUrl(baseUrl, endpoint, params), timeoutMs, signal);
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(response.body) as Record<string, unknown>;
   } catch {
-    throw new Error(`ZAP_BAD_RESPONSE:${endpoint}:${response.body.slice(0, 200)}`);
+    if (response.status !== 200) throw new Error(`ZAP_HTTP_${response.status}`);
+    throw new Error(`ZAP_BAD_RESPONSE:${endpoint}`);
   }
+  // O ZAP também entrega erros estruturados com HTTP 500, por exemplo ao
+  // tentar abrir uma porta fechada. Não descarte o código nesses casos.
+  if ([502, 503, 504].includes(response.status)) throw new Error(`ZAP_HTTP_${response.status}`);
   if (typeof parsed.code === "string") {
-    throw new Error(`ZAP_API_ERROR:${parsed.code}:${String(parsed.message ?? "").slice(0, 200)}`);
+    if (endpoint === "/JSON/core/action/accessUrl/" && parsed.code === "internal_error") {
+      throw new Error("TARGET_ACCESS_FAILED");
+    }
+    throw new Error(`ZAP_API_ERROR:${parsed.code}`);
   }
+  if (response.status !== 200) throw new Error(`ZAP_HTTP_${response.status}`);
   return parsed;
 }
 
@@ -417,6 +388,8 @@ interface RealScanContext {
   deadline: number;
   signal?: AbortSignal;
   report: (percent: number, phase: ScanPhase, message: string) => void;
+  progress: ScanProgress;
+  lastEndpoint?: string;
 }
 
 /**
@@ -467,7 +440,7 @@ async function waitForZapReady(ctx: RealScanContext, startupDeadline: number): P
   for (;;) {
     assertStillRunning(ctx);
     try {
-      const version = await zapJson(ctx.baseUrl, "/JSON/core/view/version/", { apikey: ctx.apiKey }, 5000);
+      const version = await zapJson(ctx.baseUrl, "/JSON/core/view/version/", { apikey: ctx.apiKey }, Math.max(1, Math.min(5000, ctx.deadline - Date.now())), ctx.signal);
       if (version.version) return;
     } catch {
       // Conexão recusada é o estado NORMAL enquanto a JVM sobe — só vira erro
@@ -485,91 +458,109 @@ async function waitForZapReady(ctx: RealScanContext, startupDeadline: number): P
   }
 }
 
-/** Dispara o spider e acompanha até 100%. Devolve quantas URLs entraram na árvore. */
-async function runSpiderPhase(ctx: RealScanContext, targetUrl: string): Promise<number> {
-  const maxDuration = getSpiderMaxDurationMin();
-  if (maxDuration > 0) {
-    await zapJson(ctx.baseUrl, "/JSON/spider/action/setOptionMaxDuration/", {
-      apikey: ctx.apiKey,
-      Integer: String(maxDuration),
-    });
-  }
-
-  const started = await zapJson(ctx.baseUrl, "/JSON/spider/action/scan/", {
-    apikey: ctx.apiKey,
-    url: targetUrl,
-    recurse: "true",
-  });
-  const spiderId = String(started.scan ?? "0");
-
-  for (;;) {
+/** Retenta apenas leituras; ações podem ter sido aceitas mesmo sem resposta. */
+async function zapCall(ctx: RealScanContext, endpoint: string, params: Record<string, string> = {}): Promise<Record<string, unknown>> {
+  const attempts = endpoint.includes("/view/") ? readBoundedNumber(EnvKeys.DAST_ZAP_HTTP_ATTEMPTS, 3, 1, 5) : 1;
+  for (let attempt = 1; ; attempt++) {
     assertStillRunning(ctx);
-    const status = await zapJson(ctx.baseUrl, "/JSON/spider/view/status/", { apikey: ctx.apiKey, scanId: spiderId });
-    const percent = Number(status.status ?? "0");
-    ctx.report(
-      PHASE_WEIGHTS.startingTo + (percent / 100) * (PHASE_WEIGHTS.spiderTo - PHASE_WEIGHTS.startingTo),
-      "SPIDER",
-      `Rastreando o alvo (spider): ${clampPercent(percent)}%`,
-    );
-    if (percent >= 100) break;
-    await sleep(ZAP_POLL_INTERVAL_MS);
+    ctx.lastEndpoint = endpoint;
+    try {
+      return await withKeepAlive(zapJson(ctx.baseUrl, endpoint, { ...params, apikey: ctx.apiKey },
+        Math.max(1, Math.min(readBoundedNumber(EnvKeys.DAST_ZAP_HTTP_TIMEOUT_MS, 45000, 1000, 60000), ctx.deadline - Date.now())), ctx.signal),
+        () => ctx.report(ctx.progress.percent, ctx.progress.phase, "Aguardando resposta do OWASP ZAP..."));
+    } catch (error) {
+      assertStillRunning(ctx);
+      const code = (error as Error).message;
+      if (attempt >= attempts || !/^(ZAP_HTTP_TIMEOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ZAP_HTTP_50[234])$/.test(code)) throw error;
+      ctx.report(ctx.progress.percent, ctx.progress.phase, `Reconectando ao OWASP ZAP (${attempt + 1}/${attempts})...`);
+      await sleep(500 * attempt);
+    }
   }
+}
 
-  const results = await zapJson(ctx.baseUrl, "/JSON/spider/view/results/", { apikey: ctx.apiKey, scanId: spiderId });
-  const urls = results.results;
-  return Array.isArray(urls) ? urls.length : 0;
+function readBoundedNumber(key: EnvKeys, fallback: number, min: number, max: number): number {
+  const parsed = Number(EnvVar.getOptional(key, String(fallback)));
+  return Number.isFinite(parsed) ? Math.max(min, Math.min(max, Math.floor(parsed))) : fallback;
+}
+
+/** Origem + subárvore explícitas, sem query, credenciais ou ações conhecidas. */
+export function isBaselineUrlAllowed(candidate: URL, target: URL): boolean {
+  const root = target.pathname.endsWith("/") ? target.pathname : target.pathname + "/";
+  return candidate.origin === target.origin && !candidate.username && !candidate.password && !candidate.search
+    && (candidate.pathname === target.pathname || candidate.pathname.startsWith(root))
+    && !/(?:logout|signout|delete|remove|unsubscribe|checkout|purchase|comprar|excluir|sair)/i.test(candidate.pathname.replace(/%([0-9a-f]{2})/gi, (_, hex: string) => String.fromCharCode(parseInt(hex, 16))));
 }
 
 /**
- * Espera a fila do scanner PASSIVO drenar. Sem isso, o relatório sai antes de
- * os alertas passivos (headers ausentes, cookies sem flag) serem gravados —
- * justamente a maior parte dos achados de um alvo bem-comportado.
+ * Crawler conservador: no máximo 30 páginas, profundidade 2, um GET por vez.
+ * O próprio ZAP recebe as respostas e executa suas regras passivas reais.
+ * Redirects são resolvidos aqui para validar o destino ANTES de requisitá-lo.
+ * Só links HTML com href entre aspas são descobertos; formulários/JS não rodam.
  */
-async function waitForPassiveScan(ctx: RealScanContext): Promise<void> {
-  const passiveDeadline = Math.min(ctx.deadline, Date.now() + 120000);
-  let initialQueue = 0;
-
-  for (;;) {
+async function runBaselinePhase(ctx: RealScanContext, targetUrl: string): Promise<void> {
+  const target = new URL(targetUrl);
+  if (!isBaselineUrlAllowed(target, target)) throw new Error("TARGET_UNSAFE_PATH");
+  const escaped = target.origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const context = await zapCall(ctx, "/JSON/context/action/newContext/", { contextName: "vulnera-baseline" });
+  await zapCall(ctx, "/JSON/context/action/includeInContext/", { contextName: "vulnera-baseline", regex: escaped + "/.*" });
+  await zapCall(ctx, "/JSON/context/action/setContextInScope/", { contextName: "vulnera-baseline", booleanInScope: "true" });
+  if (!context.contextId) throw new Error("ZAP_BAD_RESPONSE:context");
+  await zapCall(ctx, "/JSON/core/action/setMode/", { mode: "protect" });
+  const queue = [{ url: target.href, depth: 0 }];
+  const seen = new Set<string>();
+  const crawlDeadline = Math.min(ctx.deadline, Date.now() + Math.max(1, getSpiderMaxDurationMin()) * 60000);
+  while (queue.length && seen.size < 30 && Date.now() < crawlDeadline) {
     assertStillRunning(ctx);
-    const status = await zapJson(ctx.baseUrl, "/JSON/pscan/view/recordsToScan/", { apikey: ctx.apiKey });
-    const remaining = Number(status.recordsToScan ?? "0");
-    if (initialQueue === 0) initialQueue = remaining;
-
-    const done = initialQueue === 0 ? 1 : Math.max(0, (initialQueue - remaining) / initialQueue);
-    ctx.report(
-      PHASE_WEIGHTS.spiderTo + done * (PHASE_WEIGHTS.passiveTo - PHASE_WEIGHTS.spiderTo),
-      "PASSIVE",
-      `Analisando respostas (scan passivo): ${remaining} na fila`,
-    );
-
-    if (remaining <= 0) return;
-    // Estourar o orçamento passivo NÃO é falha: o active scan ainda produz
-    // resultado válido, só sai com menos alerta passivo. Segue o baile.
-    if (Date.now() > passiveDeadline) return;
-    await sleep(ZAP_POLL_INTERVAL_MS);
+    const item = queue.shift()!;
+    const current = new URL(item.url);
+    current.hash = "";
+    if (seen.has(current.href) || !isBaselineUrlAllowed(current, target)) continue;
+    seen.add(current.href);
+    ctx.report(8 + Math.min(65, seen.size * 2), "SPIDER", `Visitando páginas com GET (${seen.size}/30)...`);
+    // Ação não é retentada: mesmo um GET pode ter efeitos em um alvo mal projetado.
+    const result = await zapCall(ctx, "/JSON/core/action/accessUrl/", { url: current.href, followRedirects: "false" });
+    const messages = result.accessUrl as { responseHeader?: string; responseBody?: string }[] | undefined;
+    if (!Array.isArray(messages) || !messages.length) throw new Error("TARGET_UNREACHABLE");
+    const message = messages[0];
+    const header = message.responseHeader ?? "";
+    const status = Number(/^HTTP\/\S+\s+(\d+)/.exec(header)?.[1] ?? 0);
+    if (status < 100 || status >= 500) throw new Error(status ? `TARGET_HTTP_${status}` : "TARGET_UNREACHABLE");
+    if (seen.size === 1 && status >= 400) throw new Error(`TARGET_HTTP_${status}`);
+    const addUrl = (raw: string, depth: number) => {
+      try {
+        const next = new URL(raw.replace(/&amp;/g, "&"), current);
+        next.hash = "";
+        if (queue.length < 60 && isBaselineUrlAllowed(next, target) && !seen.has(next.href)) queue.push({ url: next.href, depth });
+      } catch { /* URL malformada não amplia o escopo. */ }
+    };
+    if (status >= 300 && status < 400) {
+      const location = /^location:\s*(.+)$/im.exec(header)?.[1]?.trim();
+      if (location) {
+        let allowed = false;
+        try { allowed = isBaselineUrlAllowed(new URL(location, current), target); } catch { /* inválido */ }
+        if (!allowed && seen.size === 1) throw new Error("TARGET_REDIRECT_OUT_OF_SCOPE");
+        if (allowed) addUrl(location, item.depth);
+      }
+    } else if (/content-type:.*text\/html/i.test(header) && item.depth < 2) {
+      const html = (message.responseBody ?? "").slice(0, 1000000);
+      for (const match of html.matchAll(/<a\b[^>]*\bhref\s*=\s*(["'])(.*?)\1/gi)) addUrl(match[2], item.depth + 1);
+    }
+    await sleep(250);
   }
 }
 
-/** Dispara o active scan e acompanha até 100%. */
-async function runActiveScanPhase(ctx: RealScanContext, targetUrl: string): Promise<void> {
-  const started = await zapJson(ctx.baseUrl, "/JSON/ascan/action/scan/", {
-    apikey: ctx.apiKey,
-    url: targetUrl,
-    recurse: "true",
-    inScopeOnly: "false",
-  });
-  const ascanId = String(started.scan ?? "0");
-
+/** Só publica relatório completo quando a fila passiva esvaziar. */
+async function waitForPassiveScan(ctx: RealScanContext): Promise<void> {
+  ctx.report(85, "PASSIVE", "Aguardando análise passiva...");
+  const passiveDeadline = Math.min(ctx.deadline, Date.now() + 300000);
   for (;;) {
     assertStillRunning(ctx);
-    const status = await zapJson(ctx.baseUrl, "/JSON/ascan/view/status/", { apikey: ctx.apiKey, scanId: ascanId });
-    const percent = Number(status.status ?? "0");
-    ctx.report(
-      PHASE_WEIGHTS.passiveTo + (percent / 100) * (PHASE_WEIGHTS.activeTo - PHASE_WEIGHTS.passiveTo),
-      "ACTIVE",
-      `Testando vulnerabilidades (scan ativo): ${clampPercent(percent)}%`,
-    );
-    if (percent >= 100) return;
+    const status = await zapCall(ctx, "/JSON/pscan/view/recordsToScan/");
+    const remaining = Number(status.recordsToScan);
+    if (!Number.isFinite(remaining)) throw new Error("ZAP_BAD_RESPONSE:passive");
+    ctx.report(85, "PASSIVE", `Analisando respostas: ${remaining} na fila`);
+    if (remaining === 0) return;
+    if (Date.now() > passiveDeadline) throw new Error("ZAP_PASSIVE_TIMEOUT");
     await sleep(ZAP_POLL_INTERVAL_MS);
   }
 }
@@ -579,6 +570,23 @@ async function runActiveScanPhase(ctx: RealScanContext, targetUrl: string): Prom
  * A API. Nenhum volume compartilhado no meio — é este ponto que resolve a
  * "Causa 3" do docs/DAST-DOCKER-GAP.md.
  */
+async function readZapReport(ctx: RealScanContext, endpoint: string): Promise<ZapHttpResponse> {
+  const attempts = readBoundedNumber(EnvKeys.DAST_ZAP_HTTP_ATTEMPTS, 3, 1, 5);
+  for (let attempt = 1; ; attempt++) {
+    assertStillRunning(ctx);
+    ctx.lastEndpoint = endpoint;
+    try {
+      const response = await httpGet(buildZapUrl(ctx.baseUrl, endpoint, { apikey: ctx.apiKey }), Math.max(1, Math.min(120000, ctx.deadline - Date.now())), ctx.signal);
+      if ([502, 503, 504].includes(response.status)) throw new Error(`ZAP_HTTP_${response.status}`);
+      return response;
+    } catch (error) {
+      assertStillRunning(ctx);
+      if (attempt >= attempts || !/^(ZAP_HTTP_TIMEOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ZAP_HTTP_50[234])$/.test((error as Error).message)) throw error;
+      await sleep(500 * attempt);
+    }
+  }
+}
+
 async function downloadReports(ctx: RealScanContext, scanDir: string): Promise<{ jsonPath: string; htmlPath?: string }> {
   ctx.report(PHASE_WEIGHTS.activeTo, "REPORT", "Gerando relatórios...");
 
@@ -586,7 +594,7 @@ async function downloadReports(ctx: RealScanContext, scanDir: string): Promise<{
   const htmlPath = path.join(scanDir, "report.html");
 
   const jsonResponse = await withKeepAlive(
-    httpGet(buildZapUrl(ctx.baseUrl, "/OTHER/core/other/jsonreport/", { apikey: ctx.apiKey }), 120000),
+    readZapReport(ctx, "/OTHER/core/other/jsonreport/"),
     () => ctx.report(PHASE_WEIGHTS.activeTo, "REPORT", "Gerando relatórios (alvo grande, isso leva um tempo)..."),
   );
   if (jsonResponse.status !== 200) throw new Error(`ZAP_REPORT_HTTP_${jsonResponse.status}`);
@@ -602,7 +610,7 @@ async function downloadReports(ctx: RealScanContext, scanDir: string): Promise<{
   let savedHtml: string | undefined;
   try {
     const htmlResponse = await withKeepAlive(
-      httpGet(buildZapUrl(ctx.baseUrl, "/OTHER/core/other/htmlreport/", { apikey: ctx.apiKey }), 120000),
+      readZapReport(ctx, "/OTHER/core/other/htmlreport/"),
       () => ctx.report(PHASE_WEIGHTS.activeTo, "REPORT", "Gerando o relatório HTML do ZAP..."),
     );
     if (htmlResponse.status === 200 && htmlResponse.body.length > 0) {
@@ -672,13 +680,15 @@ async function runRealScan(
   const started = Date.now();
   const deadline = started + timeoutMs;
 
+  const progress: ScanProgress = { percent: 0, phase: "STARTING", message: "" };
   const report = (percent: number, phase: ScanPhase, message: string): void => {
-    onProgress?.({ percent: clampPercent(percent), phase, message });
+    Object.assign(progress, { percent: Math.max(progress.percent, clampPercent(percent)), phase, message });
+    onProgress?.({ ...progress });
   };
 
   report(1, "STARTING", "Preparando o container do OWASP ZAP...");
 
-  const runArgs = ["run", "-d", "--rm", "--name", containerName];
+  const runArgs = ["run", "-d", "--name", containerName];
 
   // Teto de recurso POR CONTAINER — o watchdog limita quantos scans rodam,
   // isto limita quanto cada um come. Ver getZapMemory() pro racional e pra
@@ -739,24 +749,26 @@ async function runRealScan(
   );
   if (runResult.code !== 0) {
     const detail = runResult.stderr.trim().slice(0, 500) || `docker run saiu com código ${runResult.code ?? "desconhecido"}`;
+    console.warn(`[DAST] container start failed: ${detail.replaceAll(apiKey, "[REDACTED]")}`);
+    await killContainer(scanId);
     return {
       status: "FAILED",
-      errorMessage: `ZAP_CONTAINER_START_FAILED: ${detail}`,
+      errorMessage: "ZAP_CONTAINER_START_FAILED",
       durationMs: Date.now() - started,
       simulated: false,
     };
   }
 
-  const ctx: RealScanContext = { baseUrl, apiKey, deadline, signal, report };
+  const ctx: RealScanContext = { baseUrl, apiKey, deadline, signal, report, progress };
 
   try {
     await waitForZapReady(ctx, Math.min(deadline, started + getStartupTimeoutMs()));
 
-    await runSpiderPhase(ctx, targetUrl);
+    await runBaselinePhase(ctx, targetUrl);
     await waitForPassiveScan(ctx);
-    await runActiveScanPhase(ctx, targetUrl);
 
     const { jsonPath, htmlPath } = await downloadReports(ctx, scanDir);
+    assertStillRunning(ctx);
     report(100, "DONE", "Scan concluído.");
 
     return {
@@ -768,6 +780,21 @@ async function runRealScan(
     };
   } catch (error) {
     const original = (error as Error).message || "ZAP_UNKNOWN_ERROR";
+    const diagnosed = original === "SCAN_CANCELLED" ? original : await describeContainerDeath(containerName, original);
+    const logs = await runDocker(["logs", "--tail", "150", containerName], { timeout: 5000 });
+    const safeLog = (logs.stdout + logs.stderr).replaceAll(apiKey, "[REDACTED]");
+    let reason = diagnosed;
+    if (original !== "SCAN_CANCELLED" && /OutOfMemoryError|Java heap space/.test(safeLog)) {
+      reason = "ZAP_JAVA_OUT_OF_MEMORY";
+    } else if (original !== "SCAN_CANCELLED" && diagnosed === original && ctx.lastEndpoint === "/JSON/core/action/accessUrl/" &&
+      /(?:HostConnect|UnknownHost|SocketTimeout|SSLHandshake)Exception/.test(safeLog)) {
+      reason = "TARGET_UNREACHABLE";
+    }
+    await fs.writeFile(path.join(scanDir, "diagnostics.json"), JSON.stringify({
+      phase: progress.phase, endpoint: ctx.lastEndpoint, reason, memoryLimit, cpus,
+      elapsedMs: Date.now() - started, log: safeLog.slice(-16000),
+    }, null, 2)).catch(() => undefined);
+    console.warn(`[DAST] ${scanId} phase=${progress.phase} endpoint=${ctx.lastEndpoint ?? "startup"} error=${reason}`);
     return {
       status: "FAILED",
       // Um container morto por estourar `--memory` derruba o daemon do ZAP, e
@@ -775,7 +802,7 @@ async function runRealScan(
       // nada a quem lê. Como o limite de RAM é NOSSO (ver getZapMemory()), a
       // causa precisa aparecer com nome, senão vira um "erro estranho" sem
       // pista de que a saída é aumentar DAST_ZAP_MEMORY.
-      errorMessage: original === "SCAN_CANCELLED" ? original : await describeContainerDeath(containerName, original),
+      errorMessage: reason,
       durationMs: Date.now() - started,
       simulated: false,
     };
@@ -804,7 +831,7 @@ async function describeContainerDeath(containerName: string, originalError: stri
     const inspect = await runDocker(["inspect", "--format", "{{.State.OOMKilled}}|{{.State.ExitCode}}", containerName], { timeout: 5000 });
     if (inspect.code !== 0) return originalError;
     const [oomKilled] = inspect.stdout.trim().split("|");
-    if (oomKilled === "true") return `ZAP_OOM_KILLED: ${originalError}`;
+    if (oomKilled === "true") return "ZAP_OOM_KILLED";
     return originalError;
   } catch {
     return originalError;
@@ -814,14 +841,13 @@ async function describeContainerDeath(containerName: string, originalError: stri
 /** `docker rm -f` no container determinístico do scan — cancelamento e limpeza de timeout usam a mesma função. */
 export async function killContainer(scanId: string): Promise<void> {
   await runDocker(["rm", "-f", containerNameFor(scanId)], { timeout: 10000 });
-  // Não lança em "No such container": scan já tinha terminado (--rm já
-  // limpou sozinho) ou era simulado (nunca existiu container de verdade).
+  // Não lança em "No such container": outro caminho pode já ter limpado.
   // cancel() no service de negócio é best-effort por design — quem chama já
   // marca CANCELLED no banco independente do resultado aqui.
 }
 
 // ============================================================================
-// Fallback simulado — Docker indisponível (docker info falhou)
+// Demonstração explicitamente solicitada — nenhum acesso ao Docker/alvo
 // ============================================================================
 
 export function escapeHtml(input: string): string {
@@ -981,14 +1007,14 @@ function buildSimulatedAlerts(target: URL): unknown[] {
       wascid: "13",
       count: "2",
       // segunda instance é de domínio EXTERNO de propósito — exercita o
-      // descarte por escopo do pipeline (Fase 3) mesmo no fallback simulado.
+      // descarte por escopo do pipeline (Fase 3) mesmo na demonstração.
       instances: [instance("/api/status"), externalInstance],
     }),
   ];
 }
 
 /**
- * `timeoutMs` opcional deixa o fallback simulado honrar o MESMO contrato de
+ * `timeoutMs` opcional deixa a demonstração honrar o MESMO contrato de
  * timeout do scan real — importante pro teste DAST-LIFE-03 (timeout marca
  * FAILED) rodar sem Docker: um `DAST_SCAN_TIMEOUT_MS` bem baixo faz o
  * simulado também "estourar" em vez de sempre completar em 3s fixos.
@@ -1010,7 +1036,7 @@ export async function simulateScan(scanId: string, targetUrl: string, timeoutMs?
   const alerts = buildSimulatedAlerts(target);
 
   const jsonReport = {
-    "@programName": "ZAP (simulado — Docker indisponível)",
+    "@programName": "ZAP (demonstração solicitada)",
     "@version": "simulated",
     "@generated": new Date().toUTCString(),
     created: new Date().toISOString(),
@@ -1033,7 +1059,7 @@ export async function simulateScan(scanId: string, targetUrl: string, timeoutMs?
   const html = `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><title>ZAP Scanning Report (simulado)</title></head>
 <body>
-<h1>ZAP Scanning Report — SIMULADO (Docker indisponível)</h1>
+<h1>ZAP Scanning Report — SIMULADO (demonstração solicitada)</h1>
 <p>Alvo: ${safeTarget}</p>
 <table border="1"><thead><tr><th>Alerta</th><th>Risco</th><th>Ocorrências</th></tr></thead><tbody>
 ${rows}
@@ -1054,93 +1080,45 @@ ${rows}
 // Orquestração pública
 // ============================================================================
 
-/**
- * Mensagens amigáveis do fallback. Ficam AQUI, e não na UI, porque a UI só
- * recebe o texto já pronto pelo campo `warningMessage` do scan — assim o
- * mesmo aviso vale pra web, pro mobile e pro PDF sem duplicar tradução.
- */
-export const FALLBACK_MESSAGES = {
-  dockerUnavailable:
-    "O Docker não está acessível neste ambiente, então o OWASP ZAP não pôde ser executado. " +
-    "Os achados abaixo são um conjunto de demonstração — não representam o alvo informado.",
-  forced:
-    "Modo de demonstração ligado (DAST_FORCE_SIMULATE): o OWASP ZAP não foi executado. " +
-    "Os achados abaixo são um conjunto de demonstração — não representam o alvo informado.",
-  realScanFailed: (reason: string): string =>
-    "O scan real do OWASP ZAP não pôde ser concluído, então exibimos um resultado de demonstração no lugar. " +
-    `Motivo técnico: ${reason}`,
-} as const;
-
-/** Traduz o código técnico do runner numa frase curta que faz sentido pra quem só quer usar o produto. */
+/** Mensagem tratada; códigos técnicos ficam separados de segredos/stack. */
 export function friendlyFailureReason(errorMessage: string | undefined): string {
-  if (!errorMessage) return "falha desconhecida na execução do scan.";
-  if (errorMessage === "SCAN_TIMEOUT") return "o scan ultrapassou o tempo máximo configurado.";
-  if (errorMessage === "ZAP_STARTUP_TIMEOUT") return "o OWASP ZAP não terminou de subir dentro do tempo esperado.";
-  if (errorMessage === "ZAP_PORT_UNRESOLVED") return "não foi possível descobrir a porta do container do OWASP ZAP.";
-  if (errorMessage.startsWith("ZAP_CONTAINER_START_FAILED")) return "o container do OWASP ZAP não subiu (imagem ausente ou Docker sem permissão).";
-  if (errorMessage.startsWith("ZAP_API_ERROR:url_not_found")) return "o alvo informado não respondeu ao OWASP ZAP.";
-  if (errorMessage.startsWith("ZAP_API_ERROR")) return "o OWASP ZAP recusou o comando do scan.";
-  if (errorMessage.startsWith("ZAP_BAD_RESPONSE")) return "o OWASP ZAP devolveu uma resposta inesperada.";
-  if (errorMessage === "REPORT_JSON_INVALID") return "o relatório gerado pelo OWASP ZAP veio corrompido.";
-  // Acionável de propósito: quem lê isto precisa saber que existe um botão a
-  // girar (DAST_ZAP_MEMORY), não só que "algo deu errado".
-  if (errorMessage.startsWith("ZAP_OOM_KILLED")) {
-    return "o OWASP ZAP ficou sem memória neste alvo — aumente DAST_ZAP_MEMORY ou escaneie um escopo menor.";
-  }
-  if (errorMessage === "ZAP_HTTP_TIMEOUT") return "o OWASP ZAP parou de responder durante o scan.";
-  return errorMessage.slice(0, 200);
+  const code = errorMessage ?? "UNKNOWN";
+  if (code === "DOCKER_UNAVAILABLE") return "O Docker não está acessível. Abra o Docker Desktop e tente novamente.";
+  if (code === "REAL_SCAN_DISABLED") return "O ambiente está configurado para demonstração. Desative DAST_FORCE_SIMULATE para permitir scans reais.";
+  if (/ZAP_OOM_KILLED|ZAP_JAVA_OUT_OF_MEMORY/.test(code)) return "O OWASP ZAP ficou sem memória. Execute um scan por vez, reduza o escopo ou aumente a memória disponível para Docker/ZAP.";
+  if (code === "TARGET_REDIRECT_OUT_OF_SCOPE") return "O alvo redireciona para fora do escopo permitido. Informe diretamente a URL final autorizada.";
+  if (code === "TARGET_UNSAFE_PATH") return "Este perfil aceita URLs sem parâmetros e bloqueia caminhos de ações sensíveis. Escolha uma página de leitura.";
+  if (code.startsWith("TARGET_HTTP_")) return `O alvo respondeu HTTP ${code.slice(12)}. Verifique a URL, autenticação e bloqueios de acesso antes de tentar novamente.`;
+  if (code === "TARGET_UNREACHABLE" || /ZAP_API_ERROR:(url_not_found|failed_to_access_url|io_error)/.test(code)) return "O ZAP não conseguiu alcançar o alvo. Verifique DNS, endereço/porta, certificado TLS, firewall e acesso pela rede do Docker.";
+  if (code === "TARGET_ACCESS_FAILED") return "O ZAP falhou ao acessar o alvo. Verifique endereço/porta e acesso pela rede Docker; o diagnóstico da execução contém a causa retornada pelo motor.";
+  if (code === "ZAP_HTTP_TIMEOUT") return "O OWASP ZAP não respondeu dentro do prazo. As consultas de leitura têm tentativas limitadas; comandos de navegação não são repetidos automaticamente. Verifique recursos e conectividade e tente novamente.";
+  if (/ECONNREFUSED|ECONNRESET|EAI_AGAIN|ENOTFOUND/.test(code)) return "A comunicação com o container do ZAP foi interrompida. Verifique a rede Docker e se o processo continua disponível.";
+  if (code === "SCAN_TIMEOUT") return "O scan ultrapassou o tempo máximo. Reduza o escopo e verifique os recursos disponíveis antes de tentar novamente.";
+  if (code === "SCAN_CANCELLED") return "A execução foi interrompida.";
+  if (code === "ZAP_PASSIVE_TIMEOUT") return "A análise passiva não terminou no prazo; nenhum relatório completo foi publicado. Reduza o escopo ou disponibilize mais recursos.";
+  if (code === "ZAP_STARTUP_TIMEOUT") return "O OWASP ZAP não terminou de iniciar no prazo. Confira memória, CPU e a imagem Docker.";
+  if (code.startsWith("ZAP_CONTAINER_START_FAILED")) return "O container do OWASP ZAP não subiu. Verifique a imagem, a rede Docker e as permissões da API.";
+  if (code === "REPORT_JSON_INVALID") return "O relatório gerado pelo OWASP ZAP veio corrompido. Tente uma nova execução.";
+  if (code === "ZAP_RESPONSE_TOO_LARGE") return "A resposta excedeu o limite de tamanho. Reduza o escopo do scan.";
+  if (code.startsWith("ZAP_API_ERROR")) return "O OWASP ZAP recusou o comando. Consulte o diagnóstico da execução e confira a versão da imagem.";
+  return "Não foi possível concluir a execução do OWASP ZAP. Consulte o diagnóstico salvo para este scan.";
 }
 
-/**
- * Decide real vs simulado e roda o scan até concluir, timeoutar ou falhar.
- *
- * Três caminhos, nesta ordem:
- *  1. DAST_FORCE_SIMULATE=true  -> simulado direto (CI e suíte de testes).
- *  2. Docker indisponível        -> simulado, com aviso amigável.
- *  3. Scan real                  -> se FALHAR, cai pro simulado MANTENDO o
- *     resultado (nunca deixa a tela vazia) e carimbando `simulated: true` +
- *     `warningMessage`. Cancelamento é a única falha que NÃO vira fallback:
- *     quem cancelou não quer resultado nenhum.
- */
+/** Escolha explícita: demonstração não consulta Docker nem faz tráfego ao alvo. */
 export async function runScan(options: RunScanOptions): Promise<ScanOutcome> {
-  const forceSimulate = EnvVar.getOptional(EnvKeys.DAST_FORCE_SIMULATE, "false").toLowerCase() === "true";
   const timeoutMs = options.timeoutMs ?? getTimeoutMs();
-
-  if (forceSimulate) {
+  if (options.signal?.aborted) return { status: "FAILED", simulated: options.mode === "SIMULATED", durationMs: 0, errorMessage: "SCAN_CANCELLED" };
+  if (options.mode === "SIMULATED") {
     const outcome = await simulateScan(options.scanId, options.targetUrl, timeoutMs);
-    return withWarning(outcome, FALLBACK_MESSAGES.forced, options.onProgress);
+    if (outcome.status === "COMPLETED") options.onProgress?.({ percent: 100, phase: "SIMULATED", message: "Demonstração gerada." });
+    return { ...outcome, warningMessage: "Demonstração solicitada: o OWASP ZAP não foi executado e o alvo não recebeu requisições. Estes achados são fictícios." };
   }
-
-  if (!(await isDockerAvailable())) {
-    console.warn(`[DAST] Docker indisponível — scan ${options.scanId} vai usar resultado simulado.`);
-    const outcome = await simulateScan(options.scanId, options.targetUrl, timeoutMs);
-    return withWarning(outcome, FALLBACK_MESSAGES.dockerUnavailable, options.onProgress);
+  if (options.mode !== "REAL") throw new Error("INVALID_SCAN_MODE");
+  if (EnvVar.getOptional(EnvKeys.DAST_FORCE_SIMULATE, "false").toLowerCase() === "true") {
+    return { status: "FAILED", simulated: false, durationMs: 0, errorMessage: "REAL_SCAN_DISABLED" };
   }
-
-  const real = await runRealScan(options.scanId, options.targetUrl, timeoutMs, options.onProgress, options.signal);
-  if (real.status === "COMPLETED") return real;
-  if (real.errorMessage === "SCAN_CANCELLED") return real;
-
-  console.warn(`[DAST] Scan real ${options.scanId} falhou (${real.errorMessage}) — caindo pro resultado simulado.`);
-  // Sem timeoutMs de propósito: o orçamento de tempo já foi gasto pelo scan
-  // real, e o ponto do fallback é SEMPRE entregar um resultado.
-  const fallback = await simulateScan(options.scanId, options.targetUrl);
-  return withWarning(
-    { ...fallback, durationMs: real.durationMs + fallback.durationMs },
-    FALLBACK_MESSAGES.realScanFailed(friendlyFailureReason(real.errorMessage)),
-    options.onProgress,
-  );
-}
-
-/** Carimba o aviso no resultado simulado e empurra o último tick de progresso pra UI. */
-function withWarning(
-  outcome: ScanOutcome,
-  warningMessage: string,
-  onProgress?: (progress: ScanProgress) => void,
-): ScanOutcome {
-  if (outcome.status === "FAILED") return outcome;
-  onProgress?.({ percent: 100, phase: "SIMULATED", message: "Resultado simulado gerado." });
-  return { ...outcome, warningMessage };
+  if (!(await isDockerAvailable())) return { status: "FAILED", simulated: false, durationMs: 0, errorMessage: "DOCKER_UNAVAILABLE" };
+  return runRealScan(options.scanId, options.targetUrl, timeoutMs, options.onProgress, options.signal);
 }
 
 // ============================================================================

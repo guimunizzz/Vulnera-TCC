@@ -11,7 +11,7 @@
  *
  * O percentual vem do backend (coluna `progress`), alimentado pela API do
  * OWASP ZAP fase a fase — não é estimativa de tempo. Quando o scan cai no
- * resultado simulado (Docker fora do ar ou falha do ZAP), a tela diz isso em
+ * resultado simulado (demonstração escolhida explicitamente), a tela diz isso em
  * letras grandes: um resultado de demonstração não pode se passar por real
  * (docs/DAST-DOCKER-GAP.md §5).
  */
@@ -90,12 +90,14 @@ function FindingRow({
   expanded,
   onToggle,
   onPromote,
+  simulated,
   onError,
 }: {
   finding: DastFinding;
   expanded: boolean;
   onToggle: () => void;
   onPromote: () => void;
+  simulated: boolean;
   onError: (mensagem: string | null) => void;
 }) {
   const detailId = `finding-detalhe-${finding.id}`;
@@ -153,11 +155,11 @@ function FindingRow({
                   </>
                 ) : (
                   <>
-                    <Button size="sm" onClick={onPromote}>
+                    <Button size="sm" onClick={onPromote} disabled={simulated}>
                       Promover para vulnerabilidade
                     </Button>
                     <span className="text-xs text-fg-muted">
-                      Leva este achado para um projeto, com evidências, comentários e relatório.
+                      {simulated ? "Achados de demonstração não podem virar vulnerabilidades reais." : "Leva este achado para um projeto, com evidências, comentários e relatório."}
                     </span>
                   </>
                 )}
@@ -426,7 +428,7 @@ export function DastScanDetailPage() {
           <p className="mt-3 text-sm text-fg-muted">
             {posicaoNaFila
               ? "Rodamos no máximo alguns scans ao mesmo tempo para não sobrecarregar a máquina. Este começa sozinho assim que uma vaga liberar — pode deixar a tela aberta."
-              : "O ZAP primeiro rastreia o alvo (spider) e depois testa ativamente cada página encontrada (active scan). Isso costuma levar alguns minutos — esta tela atualiza sozinha, nenhuma ação é necessária."}
+              : "O modo real visita páginas com GET e analisa as respostas, sem formulários ou testes ativos. Consultas ao ZAP são repetidas quando há falha transitória. Esta tela atualiza sozinha."}
           </p>
         </div>
       )}
@@ -434,7 +436,7 @@ export function DastScanDetailPage() {
       {scan.status === "COMPLETED" && scan.simulated && (
         <Alert tom="atencao" className="mt-4" titulo="Estes achados são de demonstração, não do seu alvo">
           {scan.warningMessage ??
-            "O OWASP ZAP não pôde ser executado, então exibimos um conjunto de achados de demonstração no lugar."}
+            "Você escolheu uma demonstração. O OWASP ZAP não foi executado e estes achados são fictícios."}
         </Alert>
       )}
 
@@ -471,6 +473,7 @@ export function DastScanDetailPage() {
             ).map(([chave, rotulo]) => (
               <button
                 key={chave}
+                disabled={scan.simulated && chave === "comparacao"}
                 type="button"
                 role="tab"
                 aria-selected={aba === chave}
@@ -582,6 +585,7 @@ export function DastScanDetailPage() {
                       finding={finding}
                       expanded={expandedId === finding.id}
                       onToggle={() => setExpandedId(expandedId === finding.id ? null : finding.id)}
+                      simulated={scan.simulated}
                       onPromote={() => setFindingParaPromover(finding)}
                       onError={setError}
                     />

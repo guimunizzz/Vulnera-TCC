@@ -14,7 +14,7 @@ export enum EnvKeys {
   DAST_ALLOW_PRIVATE_TARGETS = "DAST_ALLOW_PRIVATE_TARGETS",
   DAST_SCAN_TIMEOUT_MS = "DAST_SCAN_TIMEOUT_MS",
   DAST_ZAP_IMAGE = "DAST_ZAP_IMAGE",
-  // "true" força o fallback simulado mesmo com Docker disponível — usado em
+  // "true" bloqueia scans reais mesmo com Docker disponível — usado em
   // .env.test pra a suíte nunca depender de Docker/rede real (CLAUDE.md §12).
   DAST_FORCE_SIMULATE = "DAST_FORCE_SIMULATE",
   // Rede Docker onde o container do ZAP é criado. Preenchida no
@@ -40,6 +40,9 @@ export enum EnvKeys {
   DAST_ZAP_MEMORY = "DAST_ZAP_MEMORY",
   // Teto de CPUs de cada container do ZAP (aceita fração: "2", "1.5").
   DAST_ZAP_CPUS = "DAST_ZAP_CPUS",
+  // Consultas ao daemon: tentativas limitadas, sem repetir comandos de scan.
+  DAST_ZAP_HTTP_TIMEOUT_MS = "DAST_ZAP_HTTP_TIMEOUT_MS",
+  DAST_ZAP_HTTP_ATTEMPTS = "DAST_ZAP_HTTP_ATTEMPTS",
   // Rate limiting em memória, apropriado apenas para a instância única atual.
   RATE_LIMIT_ENABLED = "RATE_LIMIT_ENABLED",
   RATE_LIMIT_GLOBAL_RPS = "RATE_LIMIT_GLOBAL_RPS",
