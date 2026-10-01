@@ -1460,3 +1460,26 @@ Ressalva mantida: o `npm run check` global da API não está verde devido a `Use
 ### Marco administrativo posterior - Issue #19 (2026-09-30)
 
 Commit local criado: `7b847c473e10ed1ca93e787704ed9a91dd1f70ab` (`7b847c4`), mensagem `fix(application): complete admin company selection flow`. O push final ficara com o usuario; nenhum push ocorreu e PR ainda nao foi aberta. Os resultados de validacao e a ressalva do lint API acima permanecem inalterados.
+
+## Sessão — carregamento na navegação (2026-10-01)
+
+✅ Concluída em 100%, branch `codex/fix-page-loading`, base `origin/dev` em
+`36fcaec`. Perguntas iniciais confirmaram todas as telas, ambiente dev e origem
+dev. A cópia local estava seis commits atrás; nova branch criada do remoto.
+
+Reprodução HTTP confirmou quatro métricas contra burst três: 429 pedindo seis
+segundos, enquanto o frontend tentava uma vez após apenas um segundo. Queries
+agora respeitam o prazo, fazem até duas retentativas transitórias, mantêm cache
+fresco por 30 s e exibem spinner depois de 200 ms. Métricas fechadas não são
+consultadas; a janela não muda só ao trocar aba; transição preserva contexto.
+Invalidações após gravações e limpeza por usuário mantêm os dados consistentes.
+A nova tentativa do finding refaz seu GET.
+
+Web no contêiner: 286/286 em 27 suítes, lint 0 erros/9 avisos preexistentes,
+contraste 66/66 e build aprovado. Chrome com dados/API reais: 17/17; 429
+controlado de dois segundos e 429 real recuperado em 6,276 s, sem clique;
+painel com dados em 375 px/movimento reduzido e nenhuma exceção JavaScript.
+Host tem dependências ausentes preexistentes; nenhum manifesto/lockfile,
+limite de API ou schema mudou. Não foram escritos dados de domínio nem
+executados scans. Commit local; sem push/PR. ADR-044, FRONTEND_WEB e relatório
+`output/page-loading-validation.md` registram decisão, evidências e limites.

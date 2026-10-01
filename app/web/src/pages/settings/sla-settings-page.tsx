@@ -69,7 +69,7 @@ export function SlaSettingsPage() {
 
   // ADMIN escolhe a empresa; CLIENT usa a própria.
   const empresas = useQuery({ queryKey: ["companies"], queryFn: companiesApi.list, enabled: isAdmin });
-  const minha = useQuery({ queryKey: ["companies", "me"], queryFn: companiesApi.me, enabled: !isAdmin, retry: false });
+  const minha = useQuery({ queryKey: ["companies", "me"], queryFn: companiesApi.me, enabled: !isAdmin });
   const [companyId, setCompanyId] = useState<string | null>(null);
   useEffect(() => {
     if (!isAdmin && minha.data) setCompanyId(minha.data.id);
@@ -147,6 +147,7 @@ export function SlaSettingsPage() {
     mutationFn: () => slaPolicyApi.apply(companyId!),
     onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+      queryClient.invalidateQueries({ queryKey: ["findings"] });
       setFeedback({ tom: "sucesso", texto: `Prazo recalculado em ${r.recalculated} finding(s) aberto(s). Registrado na auditoria.` });
     },
     onError: (e: unknown) => setFeedback({ tom: "perigo", texto: getErrorMessage(e) }),

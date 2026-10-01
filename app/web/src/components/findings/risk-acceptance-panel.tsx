@@ -101,6 +101,7 @@ export function RiskAcceptancePanel({ vulnerabilityId, canRequest }: RiskAccepta
     // o SLA do finding vira/deixa de ser ACCEPTED, e a listagem mostra o badge
     queryClient.invalidateQueries({ queryKey: ["vulnerability", vulnerabilityId] });
     queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+    queryClient.invalidateQueries({ queryKey: ["findings"] });
   }
 
   const solicitar = useMutation({

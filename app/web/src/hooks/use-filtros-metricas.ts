@@ -236,8 +236,14 @@ export function useFiltrosMetricas(applicationId: string): ControlesDeFiltro {
     setParams(novos, { replace: true });
   }, [params, setParams]);
 
+  // Trocar só a aba não muda o período. Recalcular Date.now() nessa troca
+  // criaria outra chave de cache e repetiria todas as métricas já carregadas.
+  const janela = useMemo(
+    () => calcularJanela(filtros.preset, filtros.de, filtros.ate),
+    [filtros.preset, filtros.de, filtros.ate],
+  );
+
   const paraApi = useMemo<FiltroMetricas>(() => {
-    const janela = calcularJanela(filtros.preset, filtros.de, filtros.ate);
     return {
       ...janela,
       severity: filtros.severidades.length ? filtros.severidades : undefined,
@@ -246,7 +252,7 @@ export function useFiltrosMetricas(applicationId: string): ControlesDeFiltro {
       granularity: filtros.granularidade,
       compare: filtros.comparar || undefined,
     };
-  }, [filtros]);
+  }, [filtros, janela]);
 
   const quantidadeAtiva =
     filtros.severidades.length + filtros.status.length + filtros.owasp.length + (filtros.busca ? 1 : 0);

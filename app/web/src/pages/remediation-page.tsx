@@ -117,6 +117,8 @@ export function RemediationPage() {
       setErro(null);
       setUltimaMovimentacao(variaveis);
       void queryClient.invalidateQueries({ queryKey: ["findings"] });
+      void queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+      void queryClient.invalidateQueries({ queryKey: ["metrics"] });
     },
     onError: (e) => setErro(getErrorMessage(e)),
   });
@@ -128,6 +130,7 @@ export function RemediationPage() {
       setErro(null);
       setUltimaAtribuicao(variaveis);
       void queryClient.invalidateQueries({ queryKey: ["findings"] });
+      void queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
     },
     onError: (e) => setErro(getErrorMessage(e)),
   });

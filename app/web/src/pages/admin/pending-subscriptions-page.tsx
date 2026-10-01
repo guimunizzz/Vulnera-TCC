@@ -28,7 +28,7 @@ export function PendingSubscriptionsPage() {
   const planName = (id: string): string => plans?.find((p) => p.id === id)?.name ?? id;
 
   function invalidate(): void {
-    queryClient.invalidateQueries({ queryKey: ["subscriptions", "pending"] });
+    queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
     setPendingAction(null);
   }
 
