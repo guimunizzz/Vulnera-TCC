@@ -7,7 +7,7 @@
 
 # Frontend web do Vulnera
 
-**Estado em 2026-09-23.** O frontend está em `app/web/` e é uma SPA React +
+**Estado em 2026-10-01.** O frontend está em `app/web/` e é uma SPA React +
 TypeScript construída com Vite. Tailwind usa os tokens próprios em
 `src/styles/tokens.css`; os componentes de interface ficam em
 `src/components/ui/`. Motion anima transições de interface. Three.js só desenha
@@ -36,6 +36,27 @@ Voltar ou ser compartilháveis ficam na URL, como no painel de aplicação e na
 busca de findings. Os números exibidos vêm dessas queries; decoração não cria
 dados de negócio. O backend continua sendo a autoridade de permissões, regras
 e escopo de empresa.
+
+### Carregamento e recuperação ao navegar
+
+O cliente de queries mantém leituras frescas por 30 segundos e executa até
+duas retentativas para falhas transitórias Axios. Em 429, respeita
+`retryAfterSeconds` do JSON, com fallback para Retry-After, mais 250 ms;
+prazos acima de 30 segundos encerram a tentativa automática. Cancelamentos,
+401/403/404 e gravações não são repetidos. `networkMode: always` evita que as
+leituras fiquem pausadas sem feedback quando o navegador informa estar offline.
+
+O cabeçalho autenticado mostra um spinner e “Carregando dados…” após 200 ms,
+sem bloquear navegação ou deslocar a barra. No mobile o texto é acessível ao
+leitor de tela; com movimento reduzido o indicador fica estático. Skeletons
+reservam o conteúdo durante a carga inicial. O elemento de `useOutlet` preserva
+o contexto da página em saída na transição.
+
+Métricas de Insights e Comparativo são buscadas só ao abrir essas abas; Postura
+e Evolução compartilham a série temporal. A janela do período permanece igual
+ao trocar somente a aba. Gravações invalidam listas/detalhes/quadro/métricas
+afetados, e sair ou trocar de usuário limpa o cache da sessão. O botão “Tentar
+novamente” do detalhe de finding refaz a consulta. Decisão e limites em ADR-044.
 
 ## Fundo único da área autenticada
 

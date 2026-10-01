@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { applicationsApi } from "../lib/api/applications.api";
 import { projectsApi } from "../lib/api/projects.api";
 import { useApiError } from "../hooks/use-api-error";
@@ -51,6 +51,7 @@ export function NewAnalysisPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const getErrorMessage = useApiError();
   const { data: applications } = useQuery({ queryKey: ["applications"], queryFn: applicationsApi.list });
   const selectedApplication = applications?.find((a) => a.id === applicationId);
@@ -79,6 +80,7 @@ export function NewAnalysisPage() {
         scopeOut: scopeOut.trim() || undefined,
         hasRemediation,
       });
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
       navigate(`/projects/${project.id}`);
     } catch (err) {
       setError(getErrorMessage(err));

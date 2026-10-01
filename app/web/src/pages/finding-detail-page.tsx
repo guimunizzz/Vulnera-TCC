@@ -71,6 +71,7 @@ export function FindingDetailPage() {
     data: finding,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["vulnerabilities", id],
     queryFn: () => vulnerabilitiesApi.getById(id!),
@@ -80,10 +81,10 @@ export function FindingDetailPage() {
   const transicao = useMutation({
     mutationFn: (toStatus: VulnerabilityStatus) => vulnerabilitiesApi.transition(id!, toStatus),
     onSuccess: () => {
-      // A trilha ganhou um evento novo e a listagem tem um status diferente —
-      // invalidar as duas evita a tela mostrar o status novo com a história velha.
-      queryClient.invalidateQueries({ queryKey: ["vulnerabilities", id] });
-      queryClient.invalidateQueries({ queryKey: ["vulnerabilities", "search"] });
+      // O status mudou no detalhe, na trilha, nas listas e nas métricas.
+      queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+      queryClient.invalidateQueries({ queryKey: ["findings"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
       setErro(null);
     },
     onError: (err: unknown) => setErro(getErrorMessage(err)),
@@ -96,7 +97,7 @@ export function FindingDetailPage() {
       <ErrorState
         titulo="Não foi possível abrir este finding"
         descricao="Ele pode ter sido removido, ou você não tem acesso a ele."
-        aoTentarNovamente={() => navigate(-1)}
+        aoTentarNovamente={() => void refetch()}
       />
     );
   }
