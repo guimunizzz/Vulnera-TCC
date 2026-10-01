@@ -12,6 +12,8 @@ import { prisma } from "../database/prisma.database";
 import { ProjectRepository } from "../repositories/project.repository";
 import { ApplicationRepository } from "../repositories/application.repository";
 import { UserRepository } from "../repositories/user.repository";
+import { SubscriptionRepository } from "../repositories/subscription.repository";
+import { PlanRepository } from "../repositories/plan.repository";
 import { ProjectMemberRepository } from "../repositories/project-member.repository";
 import { AuditLogRepository } from "../repositories/audit-log.repository";
 import { ProjectService } from "../services/project.service";
@@ -21,12 +23,16 @@ export function makeProjectController(): ProjectController {
   const repository = new ProjectRepository(prisma);
   const applicationRepository = new ApplicationRepository(prisma);
   const userRepository = new UserRepository(prisma);
+  const subscriptionRepository = new SubscriptionRepository(prisma);
+  const planRepository = new PlanRepository(prisma);
   const projectMemberRepository = new ProjectMemberRepository(prisma);
   const auditLogRepository = new AuditLogRepository(prisma);
   const service = new ProjectService(
     repository,
     applicationRepository,
     userRepository,
+    subscriptionRepository,
+    planRepository,
     projectMemberRepository,
     auditLogRepository,
   );

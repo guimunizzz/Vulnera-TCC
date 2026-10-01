@@ -57,9 +57,9 @@ export const findingsQueryKey = (params: URLSearchParams) => {
  * Com `"always"`, a falha vira erro de verdade: a tela mostra o estado de erro
  * e o "Tentar novamente" refaz a busca.
  *
- * 🚧 [FUTURO] provavelmente deveria ser o padrão do `queryClient` inteiro —
- * toda tela do app tem hoje o mesmo comportamento silencioso. Fica aqui
- * porque mudar o cliente global afeta telas fora do escopo desta entrega.
+ * Desde 2026-10-01 o cliente global também usa esse padrão; mantemos o valor
+ * explícito aqui para que consumidores com provider próprio tenham a mesma
+ * recuperação, como os testes isolados da tabela.
  */
 const NETWORK_MODE = "always" as const;
 

@@ -1460,3 +1460,40 @@ Ressalva mantida: o `npm run check` global da API não está verde devido a `Use
 ### Marco administrativo posterior - Issue #19 (2026-09-30)
 
 Commit local criado: `7b847c473e10ed1ca93e787704ed9a91dd1f70ab` (`7b847c4`), mensagem `fix(application): complete admin company selection flow`. O push final ficara com o usuario; nenhum push ocorreu e PR ainda nao foi aberta. Os resultados de validacao e a ressalva do lint API acima permanecem inalterados.
+
+
+## Fechamento — Issue #20: criação de Project pela interface (2026-10-01)
+
+**Status:** CP-0 a CP-4 validados, 100%. Branch `fix/20-create-project-flow`; sem commit, push ou PR.
+
+Projetos mantém “Novo projeto” para ADMIN/CLIENT em lista cheia, vazia, carregando e erro; PENTESTER não recebe ação de criação. Aplicações mantêm a pré-seleção e informam origem `/applications`; Projetos usa `/projects`. O wizard compartilhado valida a seleção da Application, o nome após trim (1–191 code points), apresenta a revisão e os erros, e permite cancelar em cada etapa sem enviar Project. Os gates de assinatura ACTIVE/Plan, capacidade simultânea e remediação opt-in são aplicados pelo service/API; o wizard não consulta assinatura/Plan para desabilitar o checkbox de remediação. Após sucesso, a criação atualiza o cache/lista.
+
+Smoke Playwright CLI 1/1 contra stack real, sem mocks nem trace. Confirmados dois POSTs 201, ADMIN sem empresa pessoal criando para a Company da Application, CLIENT criando pela pré-seleção de Aplicações, retorno à lista sem reload, Cancelar 1–4 sem POST, teclado/foco, PENTESTER sem CTA e viewports 1440/375 sem overflow. O root revisou quatro screenshots. Prisma somente leitura confirmou exatamente os dois Projects identificados pelo marcador e a igualdade de seus `companyId` com o da Application e Company esperadas. Evidências em `output/issue-20/issue20-smoke-evidence.json` e screenshots; matriz dos dez critérios em `output/issue-20-qa-report.md`.
+
+**Validação Web:** 297/297 em 22 suítes; wizard 32/32, Projects 11/11, Applications 21/21; lint sem erros (9 avisos preexistentes), contraste 66/66 e builds TypeScript/Vite/Docker aprovados.
+
+**Validação API:** Project focal 24/24; cobertura `project.service` 100% linhas/funções, 84,31% branches e 93,2% statements; builds host/Docker aprovados. Suíte API total 598/601 em 43 suítes por três erros ambientais `spawn EPERM` ao iniciar DAST no sandbox; repetição isolada/escalada DAST 17/17. `npm run check` global não está verde pelos imports `UserEntity`/`UserResponseDTO` preexistentes não usados em `vulnerability.service.ts:45`; não corrigidos fora do escopo.
+
+O smoke inicial recebeu 429 legítimo depois do burst de requisições do dashboard ADMIN; a interface apresentou recuperação e a rodada final seguiu `Retry-After` pelo botão real, sem alterar o limiter ou repetir POST. Limitação preservada: a checagem RN05 e a contagem de `maxProjects` não são serializadas com create; requests concorrentes podem duplicar projeto ou exceder capacidade. Hardening concorrente é trabalho separado. Nenhuma alteração de schema, migration, dependências ou lockfile.
+## Sessão — carregamento na navegação (2026-10-01)
+
+✅ Concluída em 100%, branch `codex/fix-page-loading`, base `origin/dev` em
+`36fcaec`. Perguntas iniciais confirmaram todas as telas, ambiente dev e origem
+dev. A cópia local estava seis commits atrás; nova branch criada do remoto.
+
+Reprodução HTTP confirmou quatro métricas contra burst três: 429 pedindo seis
+segundos, enquanto o frontend tentava uma vez após apenas um segundo. Queries
+agora respeitam o prazo, fazem até duas retentativas transitórias, mantêm cache
+fresco por 30 s e exibem spinner depois de 200 ms. Métricas fechadas não são
+consultadas; a janela não muda só ao trocar aba; transição preserva contexto.
+Invalidações após gravações e limpeza por usuário mantêm os dados consistentes.
+A nova tentativa do finding refaz seu GET.
+
+Web no contêiner: 286/286 em 27 suítes, lint 0 erros/9 avisos preexistentes,
+contraste 66/66 e build aprovado. Chrome com dados/API reais: 17/17; 429
+controlado de dois segundos e 429 real recuperado em 6,276 s, sem clique;
+painel com dados em 375 px/movimento reduzido e nenhuma exceção JavaScript.
+Host tem dependências ausentes preexistentes; nenhum manifesto/lockfile,
+limite de API ou schema mudou. Não foram escritos dados de domínio nem
+executados scans. Commit local; sem push/PR. ADR-044, FRONTEND_WEB e relatório
+`output/page-loading-validation.md` registram decisão, evidências e limites.

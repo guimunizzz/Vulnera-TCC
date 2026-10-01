@@ -8,7 +8,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "../design/theme-provider";
 import { useAuthStore } from "../store/auth.store";
@@ -30,12 +30,21 @@ function project(id: string, status: ProjectStatus): Project {
   };
 }
 
-function enterAs(role: "CLIENT" | "PENTESTER") {
+function enterAs(
+  role: "ADMIN" | "CLIENT" | "PENTESTER",
+  companyId: string | null = role === "ADMIN" ? null : "company-1",
+  companyRole?: string | null,
+) {
   useAuthStore.setState({
     accessToken: "token", refreshToken: "refresh",
     user: { id: "user-1", name: "Rafael", email: "rafael@vulnera.test", role,
-      companyId: "company-1", createdAt: "2026-01-01T00:00:00.000Z" },
+      companyId, companyRole, createdAt: "2026-01-01T00:00:00.000Z" },
   });
+}
+
+function NavigationProbe() {
+  const location = useLocation();
+  return <output data-testid="navegacao">{JSON.stringify({ pathname: location.pathname, state: location.state })}</output>;
 }
 
 function renderPage() {
@@ -43,7 +52,12 @@ function renderPage() {
   return render(
     <ThemeProvider>
       <QueryClientProvider client={client}>
-        <MemoryRouter><ProjectsPage /></MemoryRouter>
+        <MemoryRouter initialEntries={["/projects"]}>
+          <Routes>
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/new-analysis" element={<NavigationProbe />} />
+          </Routes>
+        </MemoryRouter>
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -66,6 +80,7 @@ describe("ProjectsPage", () => {
 
     const table = await screen.findByRole("table");
     expect(screen.getByRole("heading", { name: "Projetos" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Novo projeto" })).toHaveAttribute("href", "/new-analysis");
     expect(screen.getByText("3", { selector: ".projects-hero-stat [data-numeric]" })).toBeInTheDocument();
     const flow = screen.getByRole("region", { name: "Fluxo dos projetos" });
     expect(within(flow).getByText("Pendentes").parentElement).toHaveTextContent("Pendentes1");
@@ -82,19 +97,66 @@ describe("ProjectsPage", () => {
 
     const table = await screen.findByRole("table");
     expect(within(table).getByRole("link", { name: "Projeto A" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Novo projeto" })).not.toBeInTheDocument();
     expect(api.applications).not.toHaveBeenCalled();
   });
 
-  it("PROJ-VIS-03 — estado vazio orienta a próxima ação", async () => {
-    enterAs("CLIENT");
+  it.each([
+    { role: "ADMIN" as const, companyId: null, companyRole: null },
+    { role: "CLIENT" as const, companyId: "company-1", companyRole: "OWNER" },
+    { role: "CLIENT" as const, companyId: "company-1", companyRole: "MEMBER" },
+  ])("PROJ-VIS-07 — lista preenchida mantém CTA para $role/$companyRole, mesmo sem empresa pessoal do ADMIN", async (actor) => {
+    enterAs(actor.role, actor.companyId, actor.companyRole);
+    renderPage();
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Novo projeto" })).toHaveAttribute("href", "/new-analysis");
+  });
+
+  it.each([
+    ["ADMIN", "Novo projeto", "Quando uma análise for solicitada, você poderá acompanhar o andamento aqui."],
+    ["CLIENT", "Novo projeto", "Quando uma análise for solicitada, você poderá acompanhar o andamento aqui."],
+    ["PENTESTER", null, "Os projetos atribuídos a você aparecerão aqui para acompanhamento."],
+  ] as const)("PROJ-VIS-03 — estado vazio para %s respeita a permissão de criação", async (role, createLabel, description) => {
+    enterAs(role);
     api.projects.mockResolvedValue([]);
     renderPage();
 
     expect(await screen.findByText("Nenhum projeto ainda")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Nova análise" })).toHaveAttribute("href", "/new-analysis");
+    expect(screen.getByText(description)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Nova análise" })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("link", { name: "Novo projeto" })).toHaveLength(createLabel ? 2 : 0);
   });
 
-  it("PROJ-VIS-04 — erro de rede permite tentar novamente", async () => {
+  it("PROJ-VIS-04 — CTA continua disponível durante carregamento e erro", async () => {
+    enterAs("CLIENT");
+    let resolveProjects!: (projects: Project[]) => void;
+    api.projects.mockReturnValueOnce(new Promise<Project[]>((resolve) => { resolveProjects = resolve; }));
+    const view = renderPage();
+
+    expect(await screen.findByRole("link", { name: "Novo projeto" })).toHaveAttribute("href", "/new-analysis");
+    resolveProjects([project("A", "PENDING")]);
+    await screen.findByRole("table");
+    view.unmount();
+
+    api.projects.mockRejectedValueOnce(new Error("offline"));
+    renderPage();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar os projetos");
+    expect(screen.getByRole("link", { name: "Novo projeto" })).toHaveAttribute("href", "/new-analysis");
+  });
+
+  it("PROJ-VIS-05 — CTA abre o wizard com retorno seguro para Projetos", async () => {
+    enterAs("CLIENT");
+    renderPage();
+
+    const cta = await screen.findByRole("link", { name: "Novo projeto" });
+    fireEvent.click(cta);
+    expect(await screen.findByTestId("navegacao")).toHaveTextContent(
+      JSON.stringify({ pathname: "/new-analysis", state: { returnTo: "/projects" } }),
+    );
+  });
+
+  it("PROJ-VIS-06 — erro de rede permite tentar novamente", async () => {
     enterAs("CLIENT");
     api.projects.mockRejectedValueOnce(new Error("offline"));
     renderPage();

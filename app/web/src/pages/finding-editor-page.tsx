@@ -100,6 +100,13 @@ export function FindingEditorPage() {
     [title, description, impact, recommendation],
   );
 
+  function invalidarFindings(): void {
+    // Listagens, quadro e métricas mantêm caches diferentes do mesmo finding.
+    void queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+    void queryClient.invalidateQueries({ queryKey: ["findings"] });
+    void queryClient.invalidateQueries({ queryKey: ["metrics"] });
+  }
+
   const createMutation = useMutation({
     mutationFn: () =>
       vulnerabilitiesApi.create({
@@ -112,7 +119,7 @@ export function FindingEditorPage() {
         recommendation: recommendation || undefined,
       }),
     onSuccess: (created) => {
-      void queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+      invalidarFindings();
       navigate(`/findings/${created.id}`);
     },
     onError: (err: unknown) => setFormError(getErrorMessage(err)),
@@ -129,7 +136,7 @@ export function FindingEditorPage() {
         recommendation: recommendation || undefined,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["vulnerabilities", id] });
+      invalidarFindings();
       setFormError(null);
     },
     onError: (err: unknown) => setFormError(getErrorMessage(err)),
@@ -137,7 +144,7 @@ export function FindingEditorPage() {
 
   const transitionMutation = useMutation({
     mutationFn: (toStatus: VulnerabilityStatus) => vulnerabilitiesApi.transition(id!, toStatus),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["vulnerabilities", id] }),
+    onSuccess: invalidarFindings,
     onError: (err: unknown) => setFormError(getErrorMessage(err)),
   });
 
