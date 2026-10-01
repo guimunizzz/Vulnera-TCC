@@ -1084,3 +1084,33 @@ Não houve alteração de schema, migration, dependências, lockfile, commit, pu
 - **API:** Project focal 24/24; builds host/Docker aprovados. Full API 598/601 em 43 suítes devido a três falhas ambientais `spawn EPERM` no DAST; repetição isolada/escalada 17/17. `npm run check` global continua não verde pelos dois imports preexistentes não usados em `vulnerability.service.ts:45`.
 - **Smoke/evidências:** CLI Playwright 1/1 contra stack real, sem mocks e sem trace; duas criações 201; consulta Prisma somente leitura confirmou exatamente os Projects `cmupi93xj002low01w0huund3` e `cmupi9pm3002pow016ngfsa20`, ambos com `companyId` `cmupi8tnb0025ow018s67pn70`, igual ao da Application escolhida. JSON e screenshots em `output/issue-20/`; matriz de dez critérios em `output/issue-20-qa-report.md`.
 - **Desvios/limitações:** Browser RPC recusado por trusted path, substituído por CLI Playwright em Chromium no container temporário. A primeira rodada expôs 429 legítimo após burst do dashboard; o spec respeitou `Retry-After` e retomou pela ação da UI, sem desativar o limiter ou repetir POST. Falhas ambientais DAST e lint global API permanecem documentados, sem correção fora do escopo. A corrida de capacidade/RN05 permanece como trabalho futuro.
+## Correção — carregamento na navegação (2026-10-01)
+
+✅ Concluída em 2026-10-01 — 100% (4/4 tasks).
+
+Pedido do Rafael: investigar erro ao entrar/trocar de tela, que só recuperava
+com “Tentar novamente”; alinhar dúvidas antes de trabalhar e criar branch
+partindo de `dev`, com espera visual fluida quando necessária.
+
+- NAV-01: ✅ Branch de origem validada; diagnóstico HTTP 200/200/200/429 e
+  recuperação depois de seis segundos. APIs já retornam Promises corretamente.
+- NAV-02: ✅ Retry central respeitando a API, cache 30 s, invalidações após
+  gravações e limpeza de sessão. Falhas definitivas/mutations sem retry.
+- NAV-03: ✅ Métricas por aba, janela estável, contexto da transição e spinner
+  acessível após 200 ms, respeitando movimento reduzido.
+- NAV-04: ✅ Web 286/286, lint sem erros, contraste 66/66, build e Chrome 17/17;
+  PRD/BACKLOG/FRONTEND_WEB/Changelog e ADR-044 atualizados.
+
+## Histórico
+
+- **Branch/base:** `codex/fix-page-loading` ← `origin/dev` em `36fcaec`.
+- **Data:** 2026-10-01; commit local, sem push/PR.
+- **Validação:** Web no contêiner com dependências existentes; 286/286 em 27
+  suítes, lint 0 erros/9 avisos anteriores, contraste 66/66 e build aprovado.
+  Chrome dev/StrictMode/API real: 17/17, incluindo 429 real recuperado em
+  6,276 s e painel com dados em 375 px/movimento reduzido.
+- **Decisão:** ADR-044; relatório `output/page-loading-validation.md`.
+- **Desvios:** causa é rate limiting + política de carregamento, sem falta de
+  await. Build do host limitado pelas dependências preexistentes ausentes;
+  contêiner validou fonte atual sem instalar pacotes. Não é uma nova fase de
+  produto; limites da API, schema e dependências foram preservados.

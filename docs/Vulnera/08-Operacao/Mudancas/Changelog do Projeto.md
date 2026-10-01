@@ -1475,3 +1475,25 @@ Smoke Playwright CLI 1/1 contra stack real, sem mocks nem trace. Confirmados doi
 **Validação API:** Project focal 24/24; cobertura `project.service` 100% linhas/funções, 84,31% branches e 93,2% statements; builds host/Docker aprovados. Suíte API total 598/601 em 43 suítes por três erros ambientais `spawn EPERM` ao iniciar DAST no sandbox; repetição isolada/escalada DAST 17/17. `npm run check` global não está verde pelos imports `UserEntity`/`UserResponseDTO` preexistentes não usados em `vulnerability.service.ts:45`; não corrigidos fora do escopo.
 
 O smoke inicial recebeu 429 legítimo depois do burst de requisições do dashboard ADMIN; a interface apresentou recuperação e a rodada final seguiu `Retry-After` pelo botão real, sem alterar o limiter ou repetir POST. Limitação preservada: a checagem RN05 e a contagem de `maxProjects` não são serializadas com create; requests concorrentes podem duplicar projeto ou exceder capacidade. Hardening concorrente é trabalho separado. Nenhuma alteração de schema, migration, dependências ou lockfile.
+## Sessão — carregamento na navegação (2026-10-01)
+
+✅ Concluída em 100%, branch `codex/fix-page-loading`, base `origin/dev` em
+`36fcaec`. Perguntas iniciais confirmaram todas as telas, ambiente dev e origem
+dev. A cópia local estava seis commits atrás; nova branch criada do remoto.
+
+Reprodução HTTP confirmou quatro métricas contra burst três: 429 pedindo seis
+segundos, enquanto o frontend tentava uma vez após apenas um segundo. Queries
+agora respeitam o prazo, fazem até duas retentativas transitórias, mantêm cache
+fresco por 30 s e exibem spinner depois de 200 ms. Métricas fechadas não são
+consultadas; a janela não muda só ao trocar aba; transição preserva contexto.
+Invalidações após gravações e limpeza por usuário mantêm os dados consistentes.
+A nova tentativa do finding refaz seu GET.
+
+Web no contêiner: 286/286 em 27 suítes, lint 0 erros/9 avisos preexistentes,
+contraste 66/66 e build aprovado. Chrome com dados/API reais: 17/17; 429
+controlado de dois segundos e 429 real recuperado em 6,276 s, sem clique;
+painel com dados em 375 px/movimento reduzido e nenhuma exceção JavaScript.
+Host tem dependências ausentes preexistentes; nenhum manifesto/lockfile,
+limite de API ou schema mudou. Não foram escritos dados de domínio nem
+executados scans. Commit local; sem push/PR. ADR-044, FRONTEND_WEB e relatório
+`output/page-loading-validation.md` registram decisão, evidências e limites.

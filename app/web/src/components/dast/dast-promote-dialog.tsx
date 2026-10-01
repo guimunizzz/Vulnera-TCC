@@ -107,6 +107,8 @@ export function DastPromoteDialog({
       // e a de vulnerabilities do projeto de destino.
       queryClient.invalidateQueries({ queryKey: ["dast", "scans", finding?.scanId, "findings"] });
       queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+      queryClient.invalidateQueries({ queryKey: ["findings"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
       aoFechar();
     },
     onError: (err: unknown) => setErro(getErrorMessage(err)),

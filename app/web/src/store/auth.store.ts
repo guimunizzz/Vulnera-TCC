@@ -9,6 +9,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AuthResponse, User } from "../types/auth.types";
+import { queryClient } from "../lib/query-client";
 
 interface AuthState {
   accessToken: string | null;
@@ -21,14 +22,21 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       accessToken: null,
       refreshToken: null,
       user: null,
-      setAuth: (auth) =>
-        set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user }),
+      setAuth: (auth) => {
+        // Leituras recentes pertencem à sessão: outro usuário precisa buscar
+        // seu próprio escopo, mesmo que visite a mesma rota dentro de 30 s.
+        if (get().user?.id !== auth.user.id) queryClient.clear();
+        set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user });
+      },
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
-      clearAuth: () => set({ accessToken: null, refreshToken: null, user: null }),
+      clearAuth: () => {
+        queryClient.clear();
+        set({ accessToken: null, refreshToken: null, user: null });
+      },
     }),
     { name: "vulnera-auth" },
   ),

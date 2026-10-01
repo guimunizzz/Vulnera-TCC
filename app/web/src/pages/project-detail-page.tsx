@@ -114,7 +114,8 @@ export function ProjectDetailPage() {
   const transitionMutation = useMutation({
     mutationFn: (toStatus: ProjectStatus) => projectsApi.transition(id!, toStatus),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects", id] });
+      // O status também aparece no portfólio e nos filtros das outras telas.
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setError(null);
     },
     onError: (err: unknown) => setError(getErrorMessage(err)),

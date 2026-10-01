@@ -45,7 +45,6 @@ export function ApplicationsPage() {
     queryKey: ["companies"],
     queryFn: companiesApi.list,
     enabled: role === "ADMIN",
-    retry: false,
     networkMode: "always",
   });
   const { data: currentSubscription } = useQuery({

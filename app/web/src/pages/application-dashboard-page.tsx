@@ -26,7 +26,7 @@
  */
 
 import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { applicationsApi } from "../lib/api/applications.api";
 import { RiskContextChips } from "../components/applications/risk-context-chips";
@@ -60,6 +60,8 @@ import type { Insight } from "../types/metrics.types";
 
 export function ApplicationDashboardPage() {
   const { id = "" } = useParams();
+  const [params] = useSearchParams();
+  const aba = params.get("aba") ?? "postura";
   const controles = useFiltrosMetricas(id);
   const { paraApi, filtros, aplicarRecorte } = controles;
 
@@ -83,20 +85,23 @@ export function ApplicationDashboardPage() {
   const timeseries = useQuery({
     queryKey: ["metrics", "timeseries", id, chave],
     queryFn: () => metricsApi.timeseries(id, paraApi),
-    enabled: Boolean(id),
+    // Sparklines da postura e gráficos da evolução compartilham a série.
+    enabled: Boolean(id) && (aba === "postura" || aba === "evolucao"),
     placeholderData: keepPreviousData,
   });
 
   const insights = useQuery({
     queryKey: ["metrics", "insights", id, chave],
     queryFn: () => metricsApi.insights(id, paraApi),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && aba === "insights",
     placeholderData: keepPreviousData,
   });
 
   const comparison = useQuery({
     queryKey: ["metrics", "comparison", chave],
     queryFn: () => metricsApi.comparison(paraApi),
+    // Abas fechadas não gastam o burst compartilhado de consultas caras.
+    enabled: Boolean(id) && aba === "comparativo",
     placeholderData: keepPreviousData,
   });
 
