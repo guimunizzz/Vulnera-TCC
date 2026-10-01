@@ -14,10 +14,11 @@
 import type { ProjectRepository } from "../repositories/project.repository";
 import type { ApplicationRepository } from "../repositories/application.repository";
 import type { UserRepository } from "../repositories/user.repository";
+import type { SubscriptionRepository } from "../repositories/subscription.repository";
+import type { PlanRepository } from "../repositories/plan.repository";
 import type { ProjectMemberRepository } from "../repositories/project-member.repository";
 import type { AuditLogRepository } from "../repositories/audit-log.repository";
-import { ProjectEntity, type CreateProjectDTO, type ProjectStatus, type UpdateProjectDTO } from "../models/project.model";
-import type { Project } from "@prisma/client";
+import { ProjectEntity, type CreateProjectDTO, type Project, type ProjectStatus, type UpdateProjectDTO } from "../models/project.model";
 import type { UserRole } from "../models/user.model";
 
 interface Actor {
@@ -37,6 +38,8 @@ export class ProjectService {
     private readonly repository: ProjectRepository,
     private readonly applicationRepository: ApplicationRepository,
     private readonly userRepository: UserRepository,
+    private readonly subscriptionRepository: SubscriptionRepository,
+    private readonly planRepository: PlanRepository,
     private readonly projectMemberRepository: ProjectMemberRepository,
     private readonly auditLogRepository: AuditLogRepository,
   ) {}
@@ -72,9 +75,22 @@ export class ProjectService {
       if (!user?.companyId || user.companyId !== application.companyId) throw new Error("FORBIDDEN");
     }
 
-    // RN05 — 1-para-1 (sem @unique no schema; invariante garantida aqui)
+    // Validar o tenant antes de revelar se a aplicação foi desativada.
+    if (!application.isActive) throw new Error("APPLICATION_INACTIVE");
+
+    // O acesso comercial pertence à empresa da aplicação, inclusive para ADMIN.
+    const plan = await this.getActivePlanForCompany(application.companyId);
+    if (dto.hasRemediation === true && !plan.includesRemediation) {
+      throw new Error("REMEDIATION_NOT_INCLUDED");
+    }
+
+    // RN05 — um Project existente bloqueia a Application em qualquer status.
+    // Sem constraint @unique, verificações concorrentes ainda podem duplicar.
     const existing = await this.repository.findByApplication(dto.applicationId);
     if (existing) throw new Error("APPLICATION_ALREADY_HAS_PROJECT");
+
+    const simultaneousProjects = await this.repository.countSimultaneousByCompany(application.companyId);
+    if (simultaneousProjects >= plan.maxProjects) throw new Error("PROJECT_LIMIT_REACHED");
 
     const created = await this.repository.create({
       applicationId: application.id,
@@ -99,6 +115,12 @@ export class ProjectService {
     const project = await this.repository.findById(id);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
     await this.assertCanEditMetadata(actor, project);
+
+    // A flag só passa a ser habilitada se o plano ativo da empresa contratou o serviço.
+    if (dto.hasRemediation === true && !project.hasRemediation) {
+      const plan = await this.getActivePlanForCompany(project.companyId);
+      if (!plan.includesRemediation) throw new Error("REMEDIATION_NOT_INCLUDED");
+    }
 
     const updated = await this.repository.update(id, dto);
     return new ProjectEntity(updated);
@@ -134,6 +156,15 @@ export class ProjectService {
     });
 
     return new ProjectEntity(updated);
+  }
+
+  private async getActivePlanForCompany(companyId: string) {
+    const activeSubscription = await this.subscriptionRepository.findActiveByCompany(companyId);
+    if (!activeSubscription) throw new Error("NO_ACTIVE_SUBSCRIPTION");
+
+    const plan = await this.planRepository.findById(activeSubscription.planId);
+    if (!plan) throw new Error("PLAN_NOT_FOUND");
+    return plan;
   }
 
   /** RN16 (CLIENT) + RN17 (PENTESTER via ProjectMember). */

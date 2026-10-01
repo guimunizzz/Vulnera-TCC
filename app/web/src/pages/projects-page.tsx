@@ -30,6 +30,7 @@ const STATUS_STEPS: { status: ProjectStatus; label: string }[] = [
 
 export function ProjectsPage() {
   const role = useAuthStore((s) => s.user?.role);
+  const canCreateProject = role === "ADMIN" || role === "CLIENT";
   const companyName = useCompanyName(undefined);
   const { data: projects, isLoading, isError, refetch } = useQuery({
     queryKey: ["projects"], queryFn: projectsApi.list,
@@ -54,11 +55,18 @@ export function ProjectsPage() {
               Acompanhe cada análise de segurança, do pedido à entrega, em um só lugar.
             </p>
           </div>
-          <div className="projects-hero-stat flex min-w-fit items-baseline gap-3 py-1 pl-4 sm:pb-0">
-            <span className="font-mono text-2xl font-semibold text-fg" data-numeric>{projects ? totalProjects : "—"}</span>
-            <span className="max-w-28 text-xs leading-5 text-fg-muted">
-              {totalProjects === 1 ? "projeto registrado" : "projetos registrados"}
-            </span>
+          <div className="projects-hero-actions flex flex-wrap items-center gap-4 sm:justify-end">
+            <div className="projects-hero-stat flex min-w-fit items-baseline gap-3 py-1 pl-4 sm:pb-0">
+              <span className="font-mono text-2xl font-semibold text-fg" data-numeric>{projects ? totalProjects : "—"}</span>
+              <span className="max-w-28 text-xs leading-5 text-fg-muted">
+                {totalProjects === 1 ? "projeto registrado" : "projetos registrados"}
+              </span>
+            </div>
+            {canCreateProject && (
+              <LinkButton to="/new-analysis" state={{ returnTo: "/projects" }} size="md">
+                Novo projeto
+              </LinkButton>
+            )}
           </div>
         </div>
       </section>
@@ -85,8 +93,14 @@ export function ProjectsPage() {
       {!isLoading && !isError && totalProjects === 0 && (
         <EmptyState
           titulo="Nenhum projeto ainda"
-          descricao="Quando uma análise for solicitada, você poderá acompanhar o andamento aqui."
-          acao={<LinkButton to="/new-analysis" size="sm">Nova análise</LinkButton>}
+          descricao={canCreateProject
+            ? "Quando uma análise for solicitada, você poderá acompanhar o andamento aqui."
+            : "Os projetos atribuídos a você aparecerão aqui para acompanhamento."}
+          acao={canCreateProject ? (
+            <LinkButton to="/new-analysis" state={{ returnTo: "/projects" }} size="sm">
+              Novo projeto
+            </LinkButton>
+          ) : undefined}
         />
       )}
       {!isLoading && !isError && totalProjects > 0 && (

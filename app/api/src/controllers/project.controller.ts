@@ -5,6 +5,7 @@ import type { CreateProjectDTO, ProjectStatus, UpdateProjectDTO } from "../model
 const ANALYSIS_TYPES = ["SAST", "DAST", "MATURITY", "COMBO"];
 const ANALYSIS_LEVELS = ["BASIC", "INTERMEDIATE", "ADVANCED"];
 const STATUSES: ProjectStatus[] = ["PENDING", "IN_PROGRESS", "IN_REVIEW", "COMPLETED"];
+const MAX_PROJECT_NAME_LENGTH = 191;
 
 export class ProjectController {
   constructor(private readonly service: ProjectService) {}
@@ -43,7 +44,11 @@ export class ProjectController {
       if (!body.applicationId || typeof body.applicationId !== "string") {
         return res.status(400).json({ error: "INVALID_APPLICATION_ID" });
       }
-      if (!body.name || typeof body.name !== "string") {
+      if (typeof body.name !== "string" || body.name.trim().length === 0) {
+        return res.status(400).json({ error: "INVALID_NAME" });
+      }
+      const name = body.name.trim();
+      if ([...name].length > MAX_PROJECT_NAME_LENGTH) {
         return res.status(400).json({ error: "INVALID_NAME" });
       }
       if (body.analysisType !== undefined && !ANALYSIS_TYPES.includes(body.analysisType)) {
@@ -58,7 +63,7 @@ export class ProjectController {
 
       const dto: CreateProjectDTO = {
         applicationId: body.applicationId,
-        name: body.name,
+        name,
         description: body.description,
         analysisType: body.analysisType,
         analysisLevel: body.analysisLevel,
@@ -77,6 +82,11 @@ export class ProjectController {
       if (error.message === "APPLICATION_ALREADY_HAS_PROJECT") {
         return res.status(409).json({ error: "APPLICATION_ALREADY_HAS_PROJECT" });
       }
+      if (error.message === "APPLICATION_INACTIVE") return res.status(422).json({ error: "APPLICATION_INACTIVE" });
+      if (error.message === "NO_ACTIVE_SUBSCRIPTION") return res.status(422).json({ error: "NO_ACTIVE_SUBSCRIPTION" });
+      if (error.message === "PROJECT_LIMIT_REACHED") return res.status(422).json({ error: "PROJECT_LIMIT_REACHED" });
+      if (error.message === "REMEDIATION_NOT_INCLUDED") return res.status(422).json({ error: "REMEDIATION_NOT_INCLUDED" });
+      if (error.message === "PLAN_NOT_FOUND") return res.status(404).json({ error: "PLAN_NOT_FOUND" });
       console.error("ProjectController.create", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
@@ -86,9 +96,16 @@ export class ProjectController {
     try {
       const id = req.params.id as string;
       const body = req.body as UpdateProjectDTO;
+      let name: string | undefined;
 
-      if (body.name !== undefined && (typeof body.name !== "string" || !body.name)) {
-        return res.status(400).json({ error: "INVALID_NAME" });
+      if (body.name !== undefined) {
+        if (typeof body.name !== "string") {
+          return res.status(400).json({ error: "INVALID_NAME" });
+        }
+        name = body.name.trim();
+        if (name.length === 0 || [...name].length > MAX_PROJECT_NAME_LENGTH) {
+          return res.status(400).json({ error: "INVALID_NAME" });
+        }
       }
       if (body.analysisType !== undefined && !ANALYSIS_TYPES.includes(body.analysisType)) {
         return res.status(400).json({ error: "INVALID_ANALYSIS_TYPE" });
@@ -101,11 +118,24 @@ export class ProjectController {
       }
 
       const actor = req.user!;
-      const project = await this.service.update(actor, id, body);
+      const dto: UpdateProjectDTO = {};
+      if (name !== undefined) dto.name = name;
+      if (body.description !== undefined) dto.description = body.description;
+      if (body.analysisType !== undefined) dto.analysisType = body.analysisType;
+      if (body.analysisLevel !== undefined) dto.analysisLevel = body.analysisLevel;
+      if (body.hasRemediation !== undefined) dto.hasRemediation = body.hasRemediation;
+      if (body.scopeIn !== undefined) dto.scopeIn = body.scopeIn;
+      if (body.scopeOut !== undefined) dto.scopeOut = body.scopeOut;
+      if (body.notes !== undefined) dto.notes = body.notes;
+
+      const project = await this.service.update(actor, id, dto);
       return res.status(200).json(project.toResponse());
     } catch (error: any) {
       if (error.message === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "PROJECT_NOT_FOUND" });
       if (error.message === "FORBIDDEN") return res.status(403).json({ error: "FORBIDDEN" });
+      if (error.message === "NO_ACTIVE_SUBSCRIPTION") return res.status(422).json({ error: "NO_ACTIVE_SUBSCRIPTION" });
+      if (error.message === "REMEDIATION_NOT_INCLUDED") return res.status(422).json({ error: "REMEDIATION_NOT_INCLUDED" });
+      if (error.message === "PLAN_NOT_FOUND") return res.status(404).json({ error: "PLAN_NOT_FOUND" });
       console.error("ProjectController.update", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }

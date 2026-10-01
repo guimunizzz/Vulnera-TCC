@@ -247,7 +247,14 @@ export function ApplicationsPage() {
                         {role !== "PENTESTER" && (
                           <Button variant="secundario" size="sm" onClick={() => setContextTarget(application)}>Contexto</Button>
                         )}
-                        <LinkButton variant="secundario" size="sm" to={`/new-analysis?applicationId=${application.id}`}>Nova análise</LinkButton>
+                        <LinkButton
+                          variant="secundario"
+                          size="sm"
+                          to={`/new-analysis?applicationId=${application.id}`}
+                          state={{ returnTo: "/applications" }}
+                        >
+                          Nova análise
+                        </LinkButton>
                         {role !== "PENTESTER" && (
                           <Button variant="destrutivo" size="sm" onClick={() => setDeleteTarget(application)}>Remover</Button>
                         )}

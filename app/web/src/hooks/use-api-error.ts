@@ -83,11 +83,15 @@ const MESSAGES: Record<string, string> = {
 
   // project
   PROJECT_NOT_FOUND: "Projeto não encontrado.",
+  INVALID_NAME: "Informe um nome válido.",
   INVALID_APPLICATION_ID: "Selecione uma aplicação válida.",
   INVALID_ANALYSIS_TYPE: "Tipo de análise inválido.",
   INVALID_ANALYSIS_LEVEL: "Nível de análise inválido.",
   INVALID_HAS_REMEDIATION: "Valor inválido para remediação.",
   APPLICATION_ALREADY_HAS_PROJECT: "Esta aplicação já tem um projeto de análise.",
+  APPLICATION_INACTIVE: "Esta aplicação está inativa e não pode receber um novo projeto.",
+  PROJECT_LIMIT_REACHED: "A empresa da aplicação atingiu o limite de projetos simultâneos do plano.",
+  REMEDIATION_NOT_INCLUDED: "O plano da empresa da aplicação não inclui remediação.",
   INVALID_STATUS_TRANSITION: "Essa transição de status não é permitida.",
 
   // project member

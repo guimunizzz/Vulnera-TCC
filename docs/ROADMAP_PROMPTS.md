@@ -1053,6 +1053,37 @@ O registro anterior reportava CP-0 a CP-2 concluídos e testes Web finais penden
 
 Commit local `7b847c4` (`7b847c473e10ed1ca93e787704ed9a91dd1f70ab`), mensagem `fix(application): complete admin company selection flow`. O usuario fara o push final; nenhum push ocorreu e PR nao aberta.
 
+
+# CORREÇÃO — Issue #20: fluxo de criação de Project pela interface
+
+✅ **Concluída em 2026-10-01** — CP-0 a CP-4 validados (100%, 5/5).
+
+**Branch:** `fix/20-create-project-flow` | **Commit/push:** não realizados | **PR:** não aberta.
+
+## Checkpoints
+
+| CP | Estado | Resultado |
+| --- | --- | --- |
+| CP-0 — Baseline e decisão comercial | ✅ | Decisão registrada no ADR-044 e nas notas de RN07, Plan e Remediation Service. Sem alteração de schema ou migration. |
+| CP-1 — Entrada visível | ✅ | CTA permanente em Projetos para ADMIN/CLIENT, sem criação para PENTESTER; state de retorno seguro para `/projects` e `/applications`. Projects 11/11; Applications 21/21. |
+| CP-2 — Wizard compartilhado | ✅ | Elegibilidade, pré-seleção, nome, revisão, cancelamento sem POST, foco e cache validados. Wizard 32/32; Web 297/297 em 22 suítes. |
+| CP-3 — Regras de negócio | ✅ | API focal Project 24/24; cobertura do service 100% linhas/funções, 84,31% branches e 93,2% statements; builds host/Docker aprovados. |
+| CP-4 — Aceite integrado | ✅ | Smoke CLI Playwright real 1/1 sem mocks/trace; Prisma somente leitura confirmou exatamente dois Projects do marcador e igualdade dos vínculos Company/Application/Project; screenshots e critérios de role, lista, cancelamento, keyboard/foco e mobile aprovados. |
+
+## Decisão e desvios
+
+O wizard existente “Nova análise” foi reutilizado como fluxo de criação de Project. A origem de cancelamento fica restrita a `/projects` ou `/applications`; a pré-seleção de Application não se perde. O nome após trim aceita de 1 a 191 code points. Regras comerciais usam assinatura ACTIVE e Plan da empresa da Application, capacidade de estados abertos e remediação opt-in. RN05 segue sendo um Project por Application, incluindo COMPLETED.
+
+Não houve alteração de schema, migration, dependências, lockfile, commit, push ou PR. A checagem concorrente de RN05 e `maxProjects` continua separada e não é serializada com create; a entrega não promete proteção contra corridas.
+
+## Histórico
+
+- **Branch:** `fix/20-create-project-flow`; PR não aberta; commit/push não realizados.
+- **Data de conclusão:** 2026-10-01.
+- **Web:** 297/297 testes em 22 suítes; lint com 0 erros e 9 avisos preexistentes; contraste 66/66; builds TypeScript/Vite/Docker aprovados.
+- **API:** Project focal 24/24; builds host/Docker aprovados. Full API 598/601 em 43 suítes devido a três falhas ambientais `spawn EPERM` no DAST; repetição isolada/escalada 17/17. `npm run check` global continua não verde pelos dois imports preexistentes não usados em `vulnerability.service.ts:45`.
+- **Smoke/evidências:** CLI Playwright 1/1 contra stack real, sem mocks e sem trace; duas criações 201; consulta Prisma somente leitura confirmou exatamente os Projects `cmupi93xj002low01w0huund3` e `cmupi9pm3002pow016ngfsa20`, ambos com `companyId` `cmupi8tnb0025ow018s67pn70`, igual ao da Application escolhida. JSON e screenshots em `output/issue-20/`; matriz de dez critérios em `output/issue-20-qa-report.md`.
+- **Desvios/limitações:** Browser RPC recusado por trusted path, substituído por CLI Playwright em Chromium no container temporário. A primeira rodada expôs 429 legítimo após burst do dashboard; o spec respeitou `Retry-After` e retomou pela ação da UI, sem desativar o limiter ou repetir POST. Falhas ambientais DAST e lint global API permanecem documentados, sem correção fora do escopo. A corrida de capacidade/RN05 permanece como trabalho futuro.
 ## Correção — carregamento na navegação (2026-10-01)
 
 ✅ Concluída em 2026-10-01 — 100% (4/4 tasks).

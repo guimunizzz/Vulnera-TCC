@@ -26,6 +26,10 @@
   border-left: 1px solid oklch(var(--color-accent-ink) / 0.28);
 }
 
+.projects-hero-actions {
+  flex: none;
+}
+
 .projects-flow-grid {
   border-top: 1px solid oklch(var(--color-border-subtle));
 }
@@ -91,6 +95,11 @@
 }
 
 @media (max-width: 639px) {
+  .projects-hero-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .projects-hero-stat {
     border-top: 1px solid oklch(var(--color-accent-ink) / 0.2);
     border-left: 0;
