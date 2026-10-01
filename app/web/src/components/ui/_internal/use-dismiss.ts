@@ -31,9 +31,24 @@ export interface OpcoesDismiss {
   refGatilho?: React.RefObject<HTMLElement>;
   /** Desliga o fechamento por clique fora (dialog de confirmação, por ex). */
   fecharAoClicarFora?: boolean;
+  /**
+   * Fechamento por CLIQUE FORA, quando ele precisa ser diferente do por
+   * Escape. Existe por causa do foco: fechar com Escape deve devolver o foco
+   * ao gatilho; fechar clicando em outro lugar, não — o foco pertence ao que
+   * a pessoa clicou. Ausente = usa `aoFechar` para os dois, que é o certo para
+   * overlays sem gatilho focável.
+   */
+  aoFecharPorPonteiro?: () => void;
 }
 
-export function useDismiss({ ativo, aoFechar, refConteudo, refGatilho, fecharAoClicarFora = true }: OpcoesDismiss) {
+export function useDismiss({
+  ativo,
+  aoFechar,
+  aoFecharPorPonteiro,
+  refConteudo,
+  refGatilho,
+  fecharAoClicarFora = true,
+}: OpcoesDismiss) {
   useEffect(() => {
     if (!ativo) return;
 
@@ -55,7 +70,7 @@ export function useDismiss({ ativo, aoFechar, refConteudo, refGatilho, fecharAoC
       const alvo = e.target as Node;
       if (refConteudo.current?.contains(alvo)) return;
       if (refGatilho?.current?.contains(alvo)) return;
-      aoFechar();
+      (aoFecharPorPonteiro ?? aoFechar)();
     };
 
     document.addEventListener("keydown", aoTeclar);
@@ -66,7 +81,7 @@ export function useDismiss({ ativo, aoFechar, refConteudo, refGatilho, fecharAoC
       document.removeEventListener("keydown", aoTeclar);
       document.removeEventListener("pointerdown", aoApontar, true);
     };
-  }, [ativo, aoFechar, refConteudo, refGatilho, fecharAoClicarFora]);
+  }, [ativo, aoFechar, aoFecharPorPonteiro, refConteudo, refGatilho, fecharAoClicarFora]);
 }
 
 /* ==========================================================================

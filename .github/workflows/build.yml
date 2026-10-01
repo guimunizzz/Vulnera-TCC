@@ -1,18 +1,96 @@
 name: Build
+
 on:
   push:
     branches:
       - main
+
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
 jobs:
   sonarqube:
-    name: SonarQube
+    name: Test + Coverage + SonarQube
     runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: vulnera_test
+          MYSQL_USER: vulnera
+          MYSQL_PASSWORD: vulnera
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      NODE_ENV: test
+
+      DATABASE_URL: mysql://vulnera:vulnera@127.0.0.1:3306/vulnera_test
+
+      JWT_ACCESS_SECRET: test_access_secret_012345678901234567890123
+      JWT_ACCESS_TTL: 15m
+
+      JWT_REFRESH_SECRET: test_refresh_secret_012345678901234567890123
+      JWT_REFRESH_TTL: 7d
+
+      BCRYPT_COST: "4"
+
+      CORS_ORIGIN: http://localhost:3000
+
+      UPLOADS_DIR: uploads-test
+
+      DAST_FORCE_SIMULATE: "true"
+      DAST_REPORTS_DIR: dast-reports-test
+
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma Client
+        working-directory: app/api
+        run: npx prisma generate
+
+      - name: Apply database migrations
+        working-directory: app/api
+        run: npx prisma migrate deploy
+
+      - name: Run tests with coverage
+        working-directory: app/api
+        run: npm run test:coverage -- --runInBand
+
+      - name: Verify LCOV report
+        run: |
+          echo "Checking coverage report..."
+          test -s app/api/coverage/lcov.info
+
+          echo "LCOV report found:"
+          ls -lh app/api/coverage/lcov.info
+
+          echo "Sample covered source files:"
+          grep -m 5 "^SF:" app/api/coverage/lcov.info
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:

@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { makeSubscriptionController } from "../factories/subscription.factory";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 import { requireRole } from "../middlewares/require-role.middleware";
 
 const router = Router();
 const controller = makeSubscriptionController();
 
-router.use(authMiddleware);
+router.use(authRateLimitMiddleware);
 
 // rotas literais ANTES de paramétricas
 router.get("/pending", requireRole("ADMIN"), (req, res) => controller.listPending(req, res));

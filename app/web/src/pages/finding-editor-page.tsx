@@ -31,21 +31,13 @@ import { StatusBadge } from "../components/ui/badge";
 import { OverrideSeverityDialog } from "../components/findings/override-severity-dialog";
 import { EvidenceUploader } from "../components/findings/evidence-uploader";
 import { CommentTimeline } from "../components/findings/comment-timeline";
-import { OWASP_CATEGORIES, OWASP_LABELS, type VulnerabilityStatus } from "../types/vulnerability.types";
-
-const ALLOWED_TRANSITIONS: Record<VulnerabilityStatus, VulnerabilityStatus[]> = {
-  OPEN: ["IN_PROGRESS"],
-  IN_PROGRESS: ["FIXED"],
-  FIXED: ["CLOSED"],
-  CLOSED: [],
-};
-
-const TRANSITION_LABELS: Record<VulnerabilityStatus, string> = {
-  OPEN: "Reabrir",
-  IN_PROGRESS: "Iniciar correção",
-  FIXED: "Marcar como corrigido",
-  CLOSED: "Fechar finding",
-};
+import {
+  ALLOWED_TRANSITIONS,
+  OWASP_CATEGORIES,
+  OWASP_LABELS,
+  transitionLabel,
+  type VulnerabilityStatus,
+} from "../types/vulnerability.types";
 
 // Espelham FIELD_LIMITS do backend (app/api/src/models/vulnerability.model.ts).
 // O backend é a validação de verdade; aqui é UX — o usuário vê o limite
@@ -163,8 +155,9 @@ export function FindingEditorPage() {
         ]}
       />
 
-      <div className="flex items-start justify-between gap-4">
+      <div data-ops-hero="finding" className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Registro de ameaça</p>
           <h1 className="text-2xl font-bold text-fg">{isEditMode ? "Editar finding" : "Novo finding"}</h1>
           {isEditMode && existing && (
             <div className="mt-2 flex items-center gap-2">
@@ -186,7 +179,7 @@ export function FindingEditorPage() {
                 disabled={transitionMutation.isPending}
                 onClick={() => transitionMutation.mutate(toStatus)}
               >
-                {TRANSITION_LABELS[toStatus]}
+                {transitionLabel(existing.status, toStatus)}
               </Button>
             ))}
             <Button variant="secundario" onClick={() => setIsOverrideOpen(true)}>

@@ -9,9 +9,38 @@ status: ativo
 
 # Roadmap Fases
 
-## Visão geral — 13 semanas · 6 fases restantes
+> [!warning] Atualizada em 2026-09-10 — este documento estava congelado em 2026-07-26
+> A tabela abaixo dizia que as Fases 3-8 estavam em backlog e que 1 e 2 precisavam de retrabalho. **Isso não é mais verdade desde agosto de 2026.** A coluna Status foi corrigida contra o `PRD_VIVO.md` e o [[Changelog do Projeto]]; os avisos históricos ficam como registro (R6), não como estado atual. As quebras de linha escapadas que impediam a tabela de renderizar também foram desfeitas nesta passagem.
+> **A fonte de verdade do estado de implementação é o `PRD_VIVO.md` do repositório** — esta nota é o plano, não o placar.
 
-**Início:** 2026-07-27 · **Entrega alvo:** 2026-10-25\n\n| Fase | Nome | Semanas | Período | Status |\n|---|---|---|---|---|\n| 0 | Refactor de alinhamento | — | — | ✅ concluída |\n| 1 | Fundação | — | — | ⚠️ **retrabalho** — código apagado, ver nota |\n| 2 | Auth + User | — | — | ⚠️ **retrabalho** — código apagado, ver nota |\n| **3** | **Plan + Company + Subscription** | 1–2 | 27/07 → 09/08 | 📋 bloqueada até 1 e 2 estarem refeitas |\n| 4 | Application + Project + Member | 3–4 | 10/08 → 23/08 | 📋 |\n| 5 | Vulnerability + Evidence ⭐ | 5–7 | 24/08 → 13/09 | 📋 |\n| 6 | Relatórios + Dashboards | 8–9 | 14/09 → 27/09 | 📋 |\n| 7 | Mobile + Push + IA | 10–11 | 28/09 → 11/10 | 📋 |\n| 8 | Maturidade + entrega TCC | 12–13 | 12/10 → 25/10 | 📋 |\n\n> [!danger] Fases 1 e 2 marcadas concluídas não correspondem ao código — auditoria de 2026-07-26\n> Existiu uma implementação NestJS funcional de Auth + Users + Companies + Plans + Applications + Projects (sessões 16–18 do changelog, "Ondas 2–4"), em `Vulnera/apps/api/`. O commit `654fd80 refactoring` (2026-07-26) **apagou essa árvore inteira** ao migrar para o esqueleto Express em `Vulnera-TCC/`. O que sobrou em `Vulnera-TCC/app/api/src/` é: `config/` real (EnvVar + EnvKeys), e `controller/model/repository/routes/service` de `user` **todos com 0 bytes**. `server.ts` também tem 0 bytes — a API não sobe. Não há middleware de auth, JWT, bcrypt, testes, docker-compose, migrations ou seed. `schema.prisma` tem 9/19 models. `app/web` e `app/mobile` só têm `package.json`, sem nenhum código-fonte.\n> Enquanto isso não for corrigido, a Fase 3 não deveria começar — ela depende de Company/User que ainda não existem em código.\n\n> [!warning] Cronograma sem buffer\n> 13 semanas para 6 fases não deixa folga para imprevisto. O plano anterior de 4 meses tinha 2 semanas de buffer; este não tem.\n> **Válvula de escape definida:** se houver atraso acumulado de mais de 1 semana até o fim da Fase 6, a **Fase 7 (Mobile + IA) é a primeira a encolher** — o mobile vira demonstração de telas com dados de seed, sem push funcional. Ver [[Riscos]].
+## Visão geral — plano de 13 semanas (estado real na coluna Status)
+
+**Início:** 2026-07-27 · **Entrega alvo:** 2026-10-25
+
+| Fase | Nome | Semanas | Período | Status |
+|---|---|---|---|---|
+| 0 | Refactor de alinhamento | — | — | ✅ concluída |
+| 1 | Fundação | — | — | ✅ concluída (retrabalho feito em agosto/2026) |
+| 2 | Auth + User | — | — | ✅ concluída (retrabalho feito em agosto/2026) |
+| **3** | **Plan + Company + Subscription** | 1–2 | 27/07 → 09/08 | ✅ concluída em 2026-08-04 |
+| 4 | Application + Project + Member | 3–4 | 10/08 → 23/08 | ✅ concluída em 2026-08-04 |
+| 5 | Vulnerability + Evidence ⭐ | 5–7 | 24/08 → 13/09 | ✅ concluída em 2026-08-05, endurecida em 2026-08-07 |
+| 6 | Relatórios + Dashboards | 8–9 | 14/09 → 27/09 | ✅ concluída em 2026-08-07 |
+| 6.5 | Design System + Analytics | — | — | ✅ concluída em 2026-08-09 (inserida fora do plano original) |
+| 7 | Mobile + Push (**sem IA**) | 10–11 | 28/09 → 11/10 | ✅ concluída em 2026-08-10 |
+| 8 | Maturidade + entrega TCC | 12–13 | 12/10 → 25/10 | 🚧 em andamento — SonarQube bloqueado em Rafael |
+| **9** | **DAST (OWASP ZAP)** | — | 05/09 | ✅ concluída em 2026-09-05 (fora da numeração original) |
+| **9.1** | **DAST: scan real na stack Docker** | — | 09/09 | ✅ código completo em 2026-09-09, aguardando PR |
+| **9.2** | **DAST: triagem, promoção e comparação** | — | 09/09 | ✅ código completo em 2026-09-09, aguardando PR |
+
+> [!note]- 🗄️ Histórico — auditoria de 2026-07-26 (situação resolvida em agosto/2026; mantida como registro)
+> Existiu uma implementação NestJS funcional de Auth + Users + Companies + Plans + Applications + Projects (sessões 16–18 do changelog, "Ondas 2–4"), em `Vulnera/apps/api/`. O commit `654fd80 refactoring` (2026-07-26) **apagou essa árvore inteira** ao migrar para o esqueleto Express em `Vulnera-TCC/`. O que sobrou em `Vulnera-TCC/app/api/src/` é: `config/` real (EnvVar + EnvKeys), e `controller/model/repository/routes/service` de `user` **todos com 0 bytes**. `server.ts` também tem 0 bytes — a API não sobe. Não há middleware de auth, JWT, bcrypt, testes, docker-compose, migrations ou seed. `schema.prisma` tem 9/19 models. `app/web` e `app/mobile` só têm `package.json`, sem nenhum código-fonte.
+> Enquanto isso não for corrigido, a Fase 3 não deveria começar — ela depende de Company/User que ainda não existem em código.
+> **Resolvido:** o retrabalho das Fases 1 e 2 e as Fases 3-8 saíram entre 2026-08-04 e 2026-08-10 — ver [[Changelog do Projeto]], sessões 21 em diante.
+
+> [!warning] Cronograma sem buffer
+> 13 semanas para 6 fases não deixa folga para imprevisto. O plano anterior de 4 meses tinha 2 semanas de buffer; este não tem.
+> **Válvula de escape definida:** se houver atraso acumulado de mais de 1 semana até o fim da Fase 6, a **Fase 7 (Mobile + IA) é a primeira a encolher** — o mobile vira demonstração de telas com dados de seed, sem push funcional. Ver [[Riscos]].
 
 ## Fase 3 — Plan + Company + Subscription (semanas 1–2)
 
@@ -94,6 +123,38 @@ A Fase 7 depende apenas de 4 e 5 — pode correr em paralelo com a 6 se houver c
 
 ---
 
+## Fase 9 — DAST com OWASP ZAP (2026-09-05) — fora da numeração original
+
+**Entregas:** [[DastScan]]/[[DastFinding]] no schema, runner que sobe um container do ZAP por scan (`execFile`, sem shell, com bloqueio de SSRF), pipeline de normalização com fingerprint estável, API com RBAC e ownership fina, telas de lista/detalhe/relatório, PDF client-side, evidências reais em `docs/evidencias/dast/`, stack Docker unificada na porta 8086.
+
+**Marco:** o pentester informa uma URL e recebe findings estruturados dentro do produto.
+
+**Canários:** `SEC-01..05`, `RBAC-01..09`, `PIPE-01..05`, `LIFE-01..04`
+
+---
+
+## Fase 9.1 — DAST: scan real dentro da stack (2026-09-09)
+
+**Entregas:** ZAP em modo daemon por scan conduzido pela API HTTP dele, DooD (`docker-cli` na imagem + socket do host montado), watchdog com fila FIFO e teto de 2 simultâneos, progresso e fase persistidos, selo "simulado" visível na interface.
+
+**Marco:** dentro do `docker compose`, o scan é real — e quando não é, a tela diz.
+
+**Canários:** `DAST-WD-01..07`, `DAST-PROG-01`, `DAST-SIM-01`, `DAST-STAT-01`
+
+---
+
+## Fase 9.2 — DAST: o que fazer com o resultado (2026-09-09)
+
+**Entregas:** triagem por finding, promoção para [[Vulnerability]] com CVSS sugerido e revisado por humano, comparação entre execuções do mesmo alvo, limites de RAM/CPU por container, suíte E2E com Playwright.
+
+**Marco:** ciclo completo — scan → triagem → promoção → remediação → novo scan → prova da correção.
+
+**Canários:** `DAST-TRI-*`, `DAST-PRO-*` (inclui `DAST-PRO-07` e o caso de promoção concorrente), `DAST-CMP-*`, `RBAC-10`, casos E2E do Playwright
+
+> Detalhe e racional em [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]] e [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]; passo a passo em `docs/DAST.md`.
+
+---
+
 ## Convenções de execução
 
 - 1 branch por fase: `feat/fase-N-<nome>` a partir de `develop`
@@ -110,4 +171,5 @@ A Fase 7 depende apenas de 4 e 5 — pode correr em paralelo com a 6 se houver c
 [[Riscos]]
 [[ADR-014 - Escopo reduzido para prazo de 3 meses]]
 [[Changelog do Projeto]]
+[[DAST]]
 [[MOC - Operacao]]

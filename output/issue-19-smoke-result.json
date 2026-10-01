@@ -1,0 +1,63 @@
+{
+  "checks": [
+    "Login ADMIN/issue19-1790770861842-global",
+    "ADMIN global tem companyId null",
+    "ADMIN inicia sem empresa selecionada",
+    "ADMIN sem seleção tem criação bloqueada",
+    "Seleção efetiva é empresa B",
+    "Foco permanece no modal 1",
+    "Foco permanece no modal 2",
+    "Foco permanece no modal 3",
+    "Foco permanece no modal 4",
+    "Foco permanece no modal 5",
+    "Foco permanece no modal 6",
+    "Foco permanece no modal 7",
+    "Foco permanece no modal 8",
+    "Mobile sem transbordamento horizontal",
+    "POST real retorna 201",
+    "Payload segue o papel",
+    "Resposta pertence à empresa efetiva",
+    "Nova aplicação aparece após atualização da lista",
+    "Nome limpo ao reabrir após sucesso",
+    "Seleção limpa após sucesso",
+    "ADMIN não consulta assinatura pessoal",
+    "ADMIN não mostra capacidade empresarial global",
+    "Login ADMIN/issue19-1790770861842-linked",
+    "ADMIN inicia sem empresa selecionada",
+    "ADMIN sem seleção tem criação bloqueada",
+    "Seleção efetiva é empresa B",
+    "POST real retorna 201",
+    "Payload segue o papel",
+    "Resposta pertence à empresa efetiva",
+    "Nova aplicação aparece após atualização da lista",
+    "Nome limpo ao reabrir após sucesso",
+    "Seleção limpa após sucesso",
+    "ADMIN não consulta assinatura pessoal",
+    "ADMIN não mostra capacidade empresarial global",
+    "Login CLIENT/issue19-1790770861842-client",
+    "CLIENT sem seletor de empresa",
+    "POST real retorna 201",
+    "Payload segue o papel",
+    "Resposta pertence à empresa efetiva",
+    "Nova aplicação aparece após atualização da lista",
+    "Nome limpo ao reabrir após sucesso",
+    "CLIENT não consulta empresas globais",
+    "CLIENT com alvo forjado permanece na empresa A",
+    "Banco confirma os três vínculos reais"
+  ],
+  "associations": [
+    {
+      "id": "cmuo2qomq0005mh0ivs5pg8h6",
+      "companyId": "cmuo2qhqn0004mh58u7fg10qn"
+    },
+    {
+      "id": "cmuo2qsdf0009mh0iuwcbgz2u",
+      "companyId": "cmuo2qhqn0004mh58u7fg10qn"
+    },
+    {
+      "id": "cmuo2qw5v000dmh0ir5a0zq6r",
+      "companyId": "cmuo2qhqa0002mh585bhsbxpi"
+    }
+  ],
+  "databaseVerified": true
+}

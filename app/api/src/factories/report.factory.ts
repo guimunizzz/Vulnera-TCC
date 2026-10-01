@@ -23,6 +23,7 @@ import { UserRepository } from "../repositories/user.repository";
 import { ProjectMemberRepository } from "../repositories/project-member.repository";
 import { AuditLogRepository } from "../repositories/audit-log.repository";
 import { MaturityRepository } from "../repositories/maturity.repository";
+import { RiskAcceptanceRepository } from "../repositories/risk-acceptance.repository";
 import { ReportService } from "../services/report.service";
 import { ReportController } from "../controllers/report.controller";
 
@@ -51,6 +52,9 @@ export function makeReportController(): ReportController {
     projectMemberRepository,
     auditLogRepository,
     maturityRepository,
+    // Risk Acceptance (CP-4): a seção de riscos formalmente aceitos do PDF
+    // Executivo. Só leitura — decidir é do RiskAcceptanceService.
+    new RiskAcceptanceRepository(prisma),
   );
   return new ReportController(service);
 }

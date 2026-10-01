@@ -11,6 +11,10 @@ import { vulnerabilityRoutes } from "./vulnerability.routes";
 import { reportRoutes } from "./report.routes";
 import { notificationRoutes } from "./notification.routes";
 import { maturityRoutes } from "./maturity.routes";
+import { dastScanRoutes } from "./dast-scan.routes";
+import { riskAcceptanceRoutes } from "./risk-acceptance.routes";
+import { remediationPlaybookRoutes } from "./remediation-playbook.routes";
+import { savedQueryRoutes } from "./saved-query.routes";
 
 const router = Router();
 
@@ -26,5 +30,15 @@ router.use("/vulnerabilities", vulnerabilityRoutes);
 router.use("/reports", reportRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/maturity", maturityRoutes);
+router.use("/dast/scans", dastScanRoutes);
+// CP-4 — decisões sobre um aceite já existente (aprovar/rejeitar/revogar).
+// Solicitar e listar ficam aninhados em /vulnerabilities/:id/risk-acceptances.
+router.use("/risk-acceptances", riskAcceptanceRoutes);
+
+// CP-5 — catálogo de remediação: System OWASP (global) + custom do tenant.
+router.use("/playbooks", remediationPlaybookRoutes);
+
+// CP-6 — buscas salvas e watchlists (a pergunta, nunca a resposta).
+router.use("/saved-queries", savedQueryRoutes);
 
 export { router as apiRoutes };

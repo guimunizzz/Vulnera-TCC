@@ -53,3 +53,9 @@ coverage/
 uploads/*
 !uploads/.gitkeep
 uploads-test/
+
+# Relatórios de scan DAST (módulo ZAP) — mesmo motivo de uploads/ acima:
+# arquivo gerado em runtime, nunca deve ir pro repo.
+dast-reports/*
+!dast-reports/.gitkeep
+dast-reports-test/

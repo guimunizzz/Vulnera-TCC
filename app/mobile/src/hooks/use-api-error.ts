@@ -26,7 +26,7 @@ function messageForCode(code: string): string {
   return "Não foi possível concluir a ação. Tente novamente.";
 }
 
-export function getApiErrorCode(error: unknown): string | undefined {
+function getApiErrorCode(error: unknown): string | undefined {
   if (axios.isAxiosError(error)) {
     return (error.response?.data?.code ?? error.response?.data?.error) as string | undefined;
   }

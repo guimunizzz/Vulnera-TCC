@@ -26,6 +26,8 @@ data: 2026-07-26
 
 Plataforma SaaS de gestão de análises de segurança, no modelo Tenable/Wiz simplificado. Empresas contratam um plano, cadastram aplicações, abrem projetos de análise. Pentesters registram vulnerabilidades com evidências e severidade CVSS. O sistema gera relatórios executivos e técnicos em PDF, além de avaliação de maturidade.
 
+Desde setembro de 2026 há **uma exceção ao "só gestão"**: o módulo [[DAST]] executa varredura dinâmica de verdade — sobe um container do OWASP ZAP por scan contra a URL que o pentester informar, tria os achados e promove os confirmados para [[Vulnerability]] dentro do fluxo normal do produto. Tensão com o [[ADR-001 - Plataforma foca gestao e nao execucao real]] registrada na própria ADR-001.
+
 - **Contexto acadêmico:** TCC · Técnico em Desenvolvimento de Sistemas · SENAI
 - **Cliente fictício da demo:** TechNova Solutions
 - **Superfícies:** web (React), mobile (Expo), landing page, uma API REST
@@ -40,8 +42,10 @@ Atores: `ADMIN` · `CLIENT` · `PENTESTER` → ver [[Roles]] e [[Matriz de Permi
 | Campo | Valor |
 |---|---|
 | **Prazo** | **3 meses** (~13 semanas), entrega 25/10/2026 |
-| Progresso | **Fases 0-7 concluídas** (incluindo a 6.5, inserida no meio pra o mobile herdar tokens prontos) + **Fase 8 em andamento** (checklist de maturidade completo — backend, tela, radar no PDF — e seed de demo da TechNova; Sonar/ZAP/documentação final em progresso). Backend: schema completo (19 models + `User.expoPushToken`), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember, Vulnerability+Evidence+VulnerabilityComment (núcleo — CVSS 3.1 manual, upload validado por magic number, AuditLog completo), report-data (RN18, **maturidade real desde a Fase 8**) + Report metadata, métricas/dashboard analítico (ADR-025), push notification via Expo (`utils/push.util.ts` + hook em CRITICAL), **recurso Maturity completo (Fase 8)**. Frontend web: design system próprio em OKLCH (ADR-023/024, `docs/DESIGN_SYSTEM.md`), Login/Register/Dashboard(3 roles)/Plans/Onboarding/Applications/Projects/ProjectDetail(+Relatórios)/Findings/FindingEditor/FindingDetail/dashboard analítico/**Maturidade (Fase 8)**, PDFs client-side (pdf-lib, ADR-003, **radar desenhado à mão desde a Fase 8**). **App mobile (Expo, Fase 7)**: 5 telas read-only exclusivas do CLIENT (Login/Home/ProjectDetail/FindingDetail/Configurações), tema herdado dos tokens do web, push de findings CRITICAL. |
-| Fase atual | **Fase 8 — Maturidade + TCC**, a última antes da entrega. |
+| Progresso | **Fases 0-7 concluídas** (incluindo a 6.5, inserida no meio pra o mobile herdar tokens prontos) + **Fase 8 em andamento** (checklist de maturidade completo — backend, tela, radar no PDF — e seed de demo da TechNova; Sonar/ZAP/documentação final em progresso). Backend: schema completo (19 models + `User.expoPushToken`), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember, Vulnerability+Evidence+VulnerabilityComment (núcleo — CVSS 3.1 manual, upload validado por magic number, AuditLog completo), report-data (RN18, **maturidade real desde a Fase 8**) + Report metadata, métricas/dashboard analítico (ADR-025), push notification via Expo (`utils/push.util.ts` + hook em CRITICAL), **recurso Maturity completo (Fase 8)**. Frontend web: design system próprio em OKLCH (ADR-023/024, `docs/DESIGN_SYSTEM.md`), Login/Register/Dashboard(3 roles)/Plans/Onboarding/Applications/Projects/ProjectDetail(+Relatórios)/Findings/FindingEditor/FindingDetail/dashboard analítico/**Maturidade (Fase 8)**, PDFs client-side (pdf-lib, ADR-003, **radar desenhado à mão desde a Fase 8**). **App mobile (Expo, Fase 7)**: 5 telas read-only exclusivas do CLIENT (Login/Home/ProjectDetail/FindingDetail/Configurações), tema herdado dos tokens do web, push de findings CRITICAL. **Fase 9:** busca global de findings — `GET /api/vulnerabilities` com filtros, paginação e facetas contadas no banco (fecha `BACKEND-002`), leitura do `AuditLog` (que era gravado desde a Fase 5 e nunca lido), query wizard em PT-BR e **uma única implementação de tabela de findings** para a página global e a aba do projeto (ver [[ADR-028 - Tabela de findings como componente canonico]] e [[Findings Globais]]). |
+| Fase atual | **Fase 9 — Findings Globais + Query Wizard** (concluída em 2026-09-14, branch `feat/findings-globais` não commitada). A Fase 8 segue aberta em dois itens dependentes do Rafael (Sonar, slides). |
+| Progresso | **Fases 0-7 concluídas** (incluindo a 6.5, inserida no meio pra o mobile herdar tokens prontos) + **Fase 8 em andamento** (checklist de maturidade completo — backend, tela, radar no PDF — e seed de demo da TechNova; Sonar/ZAP/documentação final em progresso). Backend: schema completo (**21 models** — os 19 originais + `DastScan`/`DastFinding` — e `User.expoPushToken`), Auth+User, Company+Plan+Subscription, Application+Project+ProjectMember, Vulnerability+Evidence+VulnerabilityComment (núcleo — CVSS 3.1 manual, upload validado por magic number, AuditLog completo), report-data (RN18, **maturidade real desde a Fase 8**) + Report metadata, métricas/dashboard analítico (ADR-025), push notification via Expo (`utils/push.util.ts` + hook em CRITICAL), **recurso Maturity completo (Fase 8)**. Frontend web: design system próprio em OKLCH (ADR-023/024, `docs/DESIGN_SYSTEM.md`), Login/Register/Dashboard(3 roles)/Plans/Onboarding/Applications/Projects/ProjectDetail(+Relatórios)/Findings/FindingEditor/FindingDetail/dashboard analítico/**Maturidade (Fase 8)**, PDFs client-side (pdf-lib, ADR-003, **radar desenhado à mão desde a Fase 8**). **App mobile (Expo, Fase 7)**: 5 telas read-only exclusivas do CLIENT (Login/Home/ProjectDetail/FindingDetail/Configurações), tema herdado dos tokens do web, push de findings CRITICAL. **Módulo DAST (Fases 9 / 9.1 / 9.2, set/2026)**: scan real com OWASP ZAP em container por execução, watchdog de concorrência com fila e limites de RAM/CPU, progresso medido na UI, triagem, promoção para `Vulnerability` com CVSS revisado por humano, e comparação entre execuções — ver [[DAST]] e `docs/DAST.md`. |
+| Fase atual | **Fase 8 — Maturidade + TCC** (última antes da entrega) segue aberta, com o SonarQube bloqueado em Rafael. Em paralelo, o módulo **DAST** foi entregue em três sessões fora da numeração original (Fases 9, 9.1 e 9.2, 2026-09-05 e 2026-09-09) na branch `feat/dast-zap`, ainda sem PR. |
 | Modo de execução | Solo-delegado: Rafael supervisiona, Claude Code executa |
 | Branch de integração | `dev` — **não** `develop` como o resto deste documento e o `CLAUDE.md` chamam. Divergência real do repositório descoberta na Fase 8 (2026-08-11): o workflow de CI sempre disparou em push/PR pra `develop`, que nunca existiu no GitHub — nenhuma PR das Fases 3-7 rodou o pipeline de verdade. Corrigido em `.github/workflows/build.yml` (agora aceita os dois nomes); as menções a "develop" neste documento ficam como estão até uma limpeza dedicada, mas na prática **use `dev`**. |
 
@@ -59,7 +63,7 @@ Detalhamento em [[Roadmap Fases]] e [[Roadmap MVP]] — ambos também pendentes 
 | Framework | **Express** |
 | ORM | Prisma |
 | Banco | **MySQL 8** |
-| Testes | Jest + Supertest (integração) |
+| Testes | Jest + Supertest (integração). **Playwright** (E2E, no `app/web`) desde 2026-09-09 — deliberadamente fora do `npm run check`, porque exige a stack Docker de pé |
 
 ### Frontend web
 React + Vite + Tailwind + TanStack Query + Zustand + Axios + Recharts + **pdf-lib** + **motion**.
@@ -75,7 +79,7 @@ React + Vite + Tailwind + TanStack Query + Zustand + Axios + Recharts + **pdf-li
 Expo + React Native + Expo Router + expo-secure-store.
 
 ### IA
-Gemini 1.5 Flash — 🚩 ver [[ADR-011 - Provedor de IA em revisao]].
+~~Gemini 1.5 Flash~~ — **cortada do escopo do MVP em 2026-08-03** ([[Adr 017 ia cortada do escopo do mvp]], `CLAUDE.md` §15). Não há integração de IA no código; `Vulnerability.aiAssisted` permanece no schema sempre `false`. A flag 🚩 de [[ADR-011 - Provedor de IA em revisao]] deixou de ser uma decisão pendente — virou item de trabalho futuro.
 
 ---
 
@@ -156,7 +160,7 @@ Outras: cabeçalho comentado em PT-BR em todo arquivo novo · comentários expli
 
 ---
 
-## Modelo de domínio — 19 models
+## Modelo de domínio — 21 models
 
 ### Tenancy
 ```
@@ -171,6 +175,13 @@ Company ──► Application ──► Project (1-1) ──► Vulnerability �
                                │                    │
                                └► ProjectMember      └► VulnerabilityComment
 ```
+
+### DAST (silo, desde 2026-09-05)
+```
+User ──► DastScan ──► DastFinding ──(promoção)──► Vulnerability
+                                    sourceDastFindingId @unique, SetNull
+```
+Sem FK para `Company`/`Application`/`Project` ([[ADR-029 - DAST como silo]]); a única ponte com o núcleo é a promoção ([[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]). Ver [[DastScan]], [[DastFinding]] e [[Enum - DAST]].
 
 ### Suporte
 `AuditLog` (append-only) · `RefreshToken` · `PasswordResetToken` (reservado) · `Notification` · `Report` · `MaturityDomain/Control/Assessment/Score`

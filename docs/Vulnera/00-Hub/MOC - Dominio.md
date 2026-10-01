@@ -17,6 +17,12 @@ status: ativo
 [[Vulnerability]]
 [[Evidence]]
 [[VulnerabilityComment]]
+[[DastScan]]
+[[DastFinding]]
+[[SlaPolicy]]
+[[RiskAcceptance]]
+[[RemediationPlaybook]]
+[[SavedQuery]]
 [[MaturityAssessment]]
 [[MaturityDomain]]
 [[MaturityControl]]
@@ -71,6 +77,7 @@ status: ativo
 [[Enum - VulnerabilityStatus]]
 [[Enum - SubscriptionStatus]]
 [[Enum - AnalysisType e Level]]
+[[Enum - DAST]]
 
 ## Fora do escopo (histórico)
 [[ChatMessage]] · [[SupportTicket]] · [[Maquina - SupportTicket]] · [[Enum - TicketStatus]]

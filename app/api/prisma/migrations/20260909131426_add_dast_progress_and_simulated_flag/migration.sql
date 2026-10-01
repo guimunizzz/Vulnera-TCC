@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `DastScan` ADD COLUMN `phase` VARCHAR(191) NULL,
+    ADD COLUMN `progress` INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN `simulated` BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN `warningMessage` TEXT NULL;

@@ -17,12 +17,15 @@ export function Screen({
   scroll = true,
   onRefresh,
   refreshing = false,
+  contentBottomPadding,
 }: {
   children: ReactNode;
   /** false pra telas que já têm sua própria lista rolável (FlatList) — evita ScrollView aninhado. */
   scroll?: boolean;
   onRefresh?: () => void;
   refreshing?: boolean;
+  /** Sobrescreve o padding inferior do conteúdo rolável — usado pelas telas dentro de (tabs) pra reservar espaço sob a tab bar flutuante (ver useTabBarClearance). Ignorado quando `scroll` é false. */
+  contentBottomPadding?: number;
 }) {
   if (!scroll) {
     return (
@@ -35,7 +38,7 @@ export function Screen({
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, contentBottomPadding != null && { paddingBottom: contentBottomPadding }]}
         refreshControl={
           onRefresh ? (
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accentInk} />

@@ -257,3 +257,117 @@ pre {
     animation: spin 1.6s linear infinite !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   MARKDOWN DE PLAYBOOK (CP-5)
+
+   O preflight do Tailwind zera margens, marcadores de lista e tamanhos de
+   título. Isso é certo para a interface, e errado para um bloco de PROSA: o
+   conteúdo da OWASP é Markdown longo, com hierarquia e listas, e sem estas
+   regras ele chega à tela como um paredão de texto.
+
+   O escopo é `.prose-playbook` justamente para não vazar: o reset continua
+   valendo em todo o resto do produto.
+
+   Não usamos o plugin @tailwindcss/typography porque ele traz uma paleta
+   própria, que brigaria com os tokens de tema (claro/escuro) do design system.
+   --------------------------------------------------------------------------- */
+
+.prose-playbook > * + * {
+  margin-top: 0.75rem;
+}
+
+.prose-playbook h1,
+.prose-playbook h2,
+.prose-playbook h3,
+.prose-playbook h4 {
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+  margin-top: 1.25rem;
+}
+
+.prose-playbook h1 { font-size: 1.125rem; }
+.prose-playbook h2 { font-size: 1rem; }
+.prose-playbook h3,
+.prose-playbook h4 { font-size: 0.9375rem; }
+
+.prose-playbook p,
+.prose-playbook li {
+  color: var(--color-text-secondary);
+}
+
+.prose-playbook ul,
+.prose-playbook ol {
+  padding-left: 1.5rem;
+  list-style-position: outside;
+}
+
+.prose-playbook ul { list-style-type: disc; }
+.prose-playbook ol { list-style-type: decimal; }
+
+.prose-playbook li + li {
+  margin-top: 0.375rem;
+}
+
+.prose-playbook strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.prose-playbook a {
+  color: var(--color-accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-playbook code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8125em;
+  background: var(--color-bg-inset);
+  border-radius: 0.25rem;
+  padding: 0.1em 0.35em;
+}
+
+/* Bloco de código rola na horizontal em vez de empurrar a página inteira:
+   um playbook mostra payload longo, e o corpo do documento não pode passar a
+   rolar de lado por causa dele. */
+.prose-playbook pre {
+  background: var(--color-bg-inset);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.prose-playbook pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.prose-playbook blockquote {
+  border-left: 3px solid var(--color-border-subtle);
+  padding-left: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.prose-playbook table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.prose-playbook th,
+.prose-playbook td {
+  border: 1px solid var(--color-border-subtle);
+  padding: 0.375rem 0.5rem;
+  text-align: left;
+}
+
+.prose-playbook th {
+  background: var(--color-bg-inset);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}

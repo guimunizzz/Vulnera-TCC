@@ -54,6 +54,24 @@ export type ReportMaturity = {
   domains: ReportMaturityDomain[];
 } | null;
 
+/**
+ * Risco formalmente aceito (CP-4) — a seção que uma auditoria procura
+ * primeiro. O finding continua contado em `stats` e em `topRisks`: o aceite
+ * registra uma decisão, não some com o problema.
+ */
+export interface ReportAcceptedRisk {
+  vulnerabilityId: string;
+  title: string;
+  severityFinal: string;
+  cvssScore: number | null;
+  reason: string;
+  businessJustification: string;
+  compensatingControls: string | null;
+  expiresAt: string | null;
+  requestedByName: string;
+  approvedByName: string | null;
+}
+
 export interface ReportData {
   project: Project;
   company: Company;
@@ -62,4 +80,6 @@ export interface ReportData {
   stats: ReportStats;
   topRisks: ReportVulnerability[];
   maturity: ReportMaturity;
+  /** Riscos com aceite VIGENTE (CP-4). Vazio quando não há nenhum. */
+  acceptedRisks: ReportAcceptedRisk[];
 }

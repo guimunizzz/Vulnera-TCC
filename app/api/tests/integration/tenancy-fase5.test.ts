@@ -400,7 +400,7 @@ describe("Isolamento multi-tenant — Fase 5 completa (TEN-07..TEN-12)", () => {
         .get("/api/vulnerabilities")
         .set("Authorization", `Bearer ${c.pentesterForaToken}`);
       expect(geral.status).toBe(200);
-      expect(geral.body).toHaveLength(0);
+      expect(geral.body.data).toHaveLength(0);
     });
 
     it("o PENTESTER MEMBRO atualiza, transiciona e faz override (controle positivo)", async () => {

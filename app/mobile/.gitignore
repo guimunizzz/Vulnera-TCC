@@ -1,6 +1,10 @@
 # dependencies
 node_modules/
 
+# Este app é instalado de forma independente do workspace raiz; o lockfile
+# mantém reproduzível a matriz de dependências validada para o Expo SDK 57.
+!package-lock.json
+
 # Expo
 .expo/
 dist/

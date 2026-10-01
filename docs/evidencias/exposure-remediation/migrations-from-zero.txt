@@ -1,0 +1,18 @@
+# Migrations aplicadas do ZERO num banco limpo (vulnera_migrate_check)
+# Gerado em: 2026-09-16T04:05:40Z
+# Comando: DATABASE_URL=<banco vazio> npx prisma migrate deploy
+
+20260615135850_initial
+20260810115400_add_expo_push_token
+20260905213245_add_dast_module
+20260909131426_add_dast_progress_and_simulated_flag
+20260909230000_add_dast_triage_and_vulnerability_provenance
+20260915231844_add_application_risk_context
+20260915233701_add_sla_engine
+20260915234621_add_sla_due_soon_at
+20260916001837_add_vrs_columns
+20260916003626_add_risk_acceptance
+20260916015804_add_risk_acceptance_revoker_fk
+20260916020702_add_remediation_playbook
+20260916022913_add_saved_query
+20260916023717_add_assignee_index

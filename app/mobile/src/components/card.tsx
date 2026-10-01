@@ -1,8 +1,28 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { COLORS, RADIUS, SPACING } from "../theme/tokens";
+import { BlurView } from "expo-blur";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { COLORS, MOTION, RADIUS, SHADOW, SPACING } from "../theme/tokens";
 
-/** Superfície elevada — mesmo papel do <Card> web (bg-surface + borda + raio de container). */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/**
+ * Superfície de vidro fosco (blur + tint) — mesmo papel do <Card> web
+ * (agrupar conteúdo relacionado), agora com glassmorphism em vez de fundo
+ * chapado. API não muda (children/onPress/style/accessibilityLabel), então
+ * nenhuma das dezenas de telas que já usam Card precisou editar nada — é
+ * por isso que esse componente é o primeiro a mudar quando o pedido é
+ * "todas as telas".
+ *
+ * Estrutura em 2 camadas (mesma receita da tab bar flutuante): a de fora
+ * carrega a sombra sem `overflow:hidden` (senão corta a sombra no iOS), a
+ * de dentro recorta o blur nas pontas arredondadas e recebe o `style` do
+ * chamador (padding/gap/flexDirection/bordas extras como a faixa de acento
+ * do hero/perfil) — um caller que passasse `backgroundColor` via `style`
+ * não teria mais efeito visual, já que o tint fica por cima; nenhum
+ * call-site atual faz isso (só gap/flexDirection), confirmado antes dessa
+ * mudança.
+ */
 export function Card({
   children,
   onPress,
@@ -15,33 +35,61 @@ export function Card({
   /** Lido pelo leitor de tela como uma frase só, em vez de cada Text filho separado — útil em cards que são um item de lista tocável. */
   accessibilityLabel?: string;
 }) {
+  const scale = useSharedValue(1);
+  const [pressed, setPressed] = useState(false);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const glass = (
+    <View style={[styles.inner, style]}>
+      <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={[styles.tint, pressed && styles.tintPressed]} />
+      {children}
+    </View>
+  );
+
   if (onPress) {
     return (
-      <Pressable
+      <AnimatedPressable
         onPress={onPress}
+        onPressIn={() => {
+          scale.value = withTiming(0.97, { duration: MOTION.fast });
+          setPressed(true);
+        }}
+        onPressOut={() => {
+          scale.value = withTiming(1, { duration: MOTION.fast });
+          setPressed(false);
+        }}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [styles.card, style, pressed && styles.pressed]}
+        style={[styles.outer, animatedStyle]}
         // 44px mínimo de alvo de toque mesmo quando o card é mais baixo que isso
         hitSlop={4}
       >
-        {children}
-      </Pressable>
+        {glass}
+      </AnimatedPressable>
     );
   }
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <View style={styles.outer}>{glass}</View>;
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.surface,
+  outer: {
     borderRadius: RADIUS.container,
-    borderWidth: 1,
-    borderColor: COLORS.borderSubtle,
+    ...SHADOW.card,
+  },
+  inner: {
+    borderRadius: RADIUS.container,
+    overflow: "hidden",
     padding: SPACING[4],
     gap: SPACING[2],
   },
-  pressed: {
+  tint: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: COLORS.surface,
+    opacity: 0.55,
+  },
+  tintPressed: {
     backgroundColor: COLORS.raised,
+    opacity: 0.65,
   },
 });

@@ -51,12 +51,14 @@ import {
   ReportEntity,
   type ReportDataDTO,
   type ReportStatsDTO,
+  type ReportAcceptedRiskDTO,
   type ReportVulnerabilityDTO,
   type ReportType,
   type ReportMaturityDTO,
 } from "../models/report.model";
 import type { Project } from "@prisma/client";
 import type { UserRole } from "../models/user.model";
+import type { RiskAcceptanceRepository } from "../repositories/risk-acceptance.repository";
 
 interface Actor {
   userId: string;
@@ -80,6 +82,7 @@ export class ReportService {
     private readonly projectMemberRepository: ProjectMemberRepository,
     private readonly auditLogRepository: AuditLogRepository,
     private readonly maturityRepository: MaturityRepository,
+    private readonly riskAcceptanceRepository: RiskAcceptanceRepository,
   ) {}
 
   async getReportData(actor: Actor, projectId: string): Promise<ReportDataDTO> {
@@ -133,6 +136,7 @@ export class ReportService {
       .slice(0, 5);
 
     const maturity = await this.buildMaturitySection(project.companyId);
+    const acceptedRisks = await this.buildAcceptedRisksSection(reportVulnerabilities);
 
     return {
       project: new ProjectEntity(project).toResponse(),
@@ -142,7 +146,44 @@ export class ReportService {
       stats,
       topRisks,
       maturity,
+      acceptedRisks,
     };
+  }
+
+  /**
+   * Riscos com aceite VIGENTE (CP-4) — a seção que uma auditoria procura
+   * primeiro. Uma consulta para o projeto inteiro, não uma por finding.
+   *
+   * ⚠️ O finding continua contado em `stats` e em `topRisks`: o aceite
+   * registra uma decisão, não some com o problema.
+   */
+  private async buildAcceptedRisksSection(
+    vulnerabilities: ReportVulnerabilityDTO[],
+  ): Promise<ReportAcceptedRiskDTO[]> {
+    const porId = new Map(vulnerabilities.map((v) => [v.id, v]));
+    const aceites = await this.riskAcceptanceRepository.findActiveByVulnerabilityIds(
+      Array.from(porId.keys()),
+      new Date(),
+    );
+    const saida: ReportAcceptedRiskDTO[] = [];
+    for (const [vulnerabilityId, aceite] of aceites) {
+      const v = porId.get(vulnerabilityId);
+      if (!v) continue;
+      const comAtores = await this.riskAcceptanceRepository.findByIdWithActors(aceite.id);
+      saida.push({
+        vulnerabilityId,
+        title: v.title,
+        severityFinal: v.severityFinal,
+        cvssScore: v.cvssScore,
+        reason: aceite.reason,
+        businessJustification: aceite.businessJustification,
+        compensatingControls: aceite.compensatingControls,
+        expiresAt: aceite.expiresAt?.toISOString() ?? null,
+        requestedByName: comAtores?.requestedBy.name ?? "—",
+        approvedByName: comAtores?.reviewedBy?.name ?? null,
+      });
+    }
+    return saida;
   }
 
   /**

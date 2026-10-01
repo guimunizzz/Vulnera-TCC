@@ -9,6 +9,7 @@
  *   - `matchMedia`  — o jsdom não tem. Sem ele, `useReducedMotion` do `motion`
  *                     e o `useTelaEstreita` dos gráficos lançam na montagem.
  *   - `ResizeObserver` — usado pelo posicionamento ancorado e pelo `ScrollArea`.
+ *   - `IntersectionObserver` — animações de entrada da landing dependem dele.
  *   - `scrollIntoView` — usado pela navegação por setas das listas.
  *   - `getComputedStyle` de custom property — o jsdom devolve "" para
  *     `--tokens`; os gráficos leem cor por ali. Não afeta os testes de ARIA.
@@ -69,21 +70,16 @@ class ResizeObserverFalso {
 }
 window.ResizeObserver = ResizeObserverFalso as unknown as typeof ResizeObserver;
 
-// `IntersectionObserver` — o jsdom não tem. O `whileInView` do `motion` (usado
-// nos `Reveal` da landing) o instancia na montagem e lança sem ele. O falso não
-// dispara callback: em teste, "entrou na viewport" não é o que se afirma.
 class IntersectionObserverFalso {
   readonly root = null;
-  readonly rootMargin = "";
-  readonly thresholds: ReadonlyArray<number> = [];
+  readonly rootMargin = "0px";
+  readonly thresholds = [0];
   observe() {}
   unobserve() {}
   disconnect() {}
-  takeRecords(): IntersectionObserverEntry[] {
-    return [];
-  }
+  takeRecords() { return []; }
 }
-window.IntersectionObserver = IntersectionObserverFalso as unknown as typeof IntersectionObserver;
+globalThis.IntersectionObserver = IntersectionObserverFalso as unknown as typeof IntersectionObserver;
 
 Element.prototype.scrollIntoView = vi.fn();
 

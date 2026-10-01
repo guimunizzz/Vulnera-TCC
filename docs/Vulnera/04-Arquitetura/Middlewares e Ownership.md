@@ -48,6 +48,28 @@ router.post("/", authMiddleware, requireRole("ADMIN"), (req, res) => ...)
 
 Falha: `403 FORBIDDEN`.
 
+### `rate-limit.middleware.ts`
+
+Rate limiting é uma defesa de **disponibilidade**, não uma decisão de acesso.
+O primeiro middleware aplica um bucket global antes das rotas de negócio
+(`GET /api/health` é deliberadamente isento); depois de autenticar, a cadeia
+aplica buckets de usuário, tenant de CLIENT, escrita e, quando aplicável,
+endpoint caro. `429` devolve `RATE_LIMITED`, `Retry-After` e os headers
+`RateLimit-*`, sem chave ou identidade.
+
+```
+request → global → auth → user → tenant CLIENT → write/endpoint → controller
+```
+
+O tenant é resolvido do banco, em cache curto e limitado, **somente** para a
+chave de rate limit. JWT continua `{ userId, role }`; `companyId`, body, query
+e `X-Tenant-ID` nunca escolhem bucket. ADMIN e PENTESTER não recebem um tenant
+fictício porque podem atravessar companies por regras próprias de domínio.
+
+`trust proxy` usa quantidade explícita de hops (`0` local/Docker, `1` no
+Render), nunca `true`; assim `req.ip` não aceita um `X-Forwarded-For` arbitrário.
+Ownership, RBAC e services não usam o cache do limiter. Ver ADR-040.
+
 ## Ownership no service
 
 Toda regra que depende de **qual registro** está sendo acessado vive no service. Padrão:

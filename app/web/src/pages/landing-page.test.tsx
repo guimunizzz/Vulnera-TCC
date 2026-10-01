@@ -89,7 +89,7 @@ const ESPERA = { timeout: 10000 } as const;
 // qualquer asserção com timeout.
 beforeAll(async () => {
   await import("../components/landing/landing-root");
-});
+}, 60000);
 
 describe("LandingPage", () => {
   it("LAND-01 — a navbar da landing renderiza", async () => {

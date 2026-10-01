@@ -185,9 +185,11 @@ export interface DropdownMenuProps {
   alinhamento?: Alinhamento;
   /** Nome do menu para o leitor de tela ("Ações do finding"). */
   rotulo?: string;
+  /** Chamado somente quando o gatilho abre o menu (útil para dados sob demanda). */
+  aoAbrir?: () => void;
 }
 
-export function DropdownMenu({ gatilho, itens, lado = "bottom", alinhamento = "end", rotulo }: DropdownMenuProps) {
+export function DropdownMenu({ gatilho, itens, lado = "bottom", alinhamento = "end", rotulo, aoAbrir }: DropdownMenuProps) {
   const [aberto, setAberto] = useState(false);
   const refGatilho = useRef<HTMLElement>(null);
   const refPainel = useRef<HTMLDivElement>(null);
@@ -200,7 +202,29 @@ export function DropdownMenu({ gatilho, itens, lado = "bottom", alinhamento = "e
     refGatilho.current?.focus({ preventScroll: true });
   }, []);
 
-  useDismiss({ ativo: aberto, aoFechar: () => setAberto(false), refConteudo: refPainel, refGatilho });
+  /**
+   * ⚠️ DOIS caminhos de fechamento, e a diferença é proposital:
+   *
+   *   ESCAPE       → `fechar()`, que DEVOLVE o foco ao gatilho. É o que o
+   *                  padrão ARIA pede: quem fechou com o teclado precisa
+   *                  continuar de onde estava, e não no início da página.
+   *   CLIQUE FORA  → só `setAberto(false)`. Aqui devolver o foco seria errado:
+   *                  a pessoa clicou em OUTRO lugar, e o foco pertence a esse
+   *                  outro lugar.
+   *
+   * Até 2026-09-16 os dois passavam por `setAberto(false)` — ou seja, o Escape
+   * deixava o foco no `body` e o Tab seguinte recomeçava do topo, apesar de o
+   * cabeçalho deste arquivo afirmar o contrário. Encontrado pelo E2E-EXP-08,
+   * que existe justamente porque o quadro de remediação (ADR-039) trocou
+   * arrastar-e-soltar por menu para ser operável por teclado.
+   */
+  useDismiss({
+    ativo: aberto,
+    aoFechar: fechar,
+    aoFecharPorPonteiro: () => setAberto(false),
+    refConteudo: refPainel,
+    refGatilho,
+  });
   const posicao = useAnchoredPosition({ ativo: aberto, refGatilho, refFlutuante: refPainel, lado, alinhamento });
 
   const onClickOriginal = gatilho.props.onClick;
@@ -211,7 +235,10 @@ export function DropdownMenu({ gatilho, itens, lado = "bottom", alinhamento = "e
     "aria-controls": aberto ? id : undefined,
     onClick: (e) => {
       onClickOriginal?.(e);
-      setAberto((v) => !v);
+      setAberto((v) => {
+        if (!v) aoAbrir?.();
+        return !v;
+      });
     },
   });
 

@@ -29,7 +29,7 @@ Uma segunda divergência apareceu na Fase 6.5: o prompt de execução instruía 
 | **Desenvolvimento** (padrão) | `docker compose up -d db mailhog` + `npm run dev` em cada app | Dia a dia. Hot reload no front e no back; o Docker só provê a infraestrutura. É o modo do [[ADR-005 - Desenvolvimento local com Docker minimo]], preservado. |
 | **Stack completa** | `docker compose up --build` | Demonstração, validação de imagem, e prova para a banca de que o projeto sobe num comando em máquina limpa. |
 
-**Portas e endereços:** web `:3000` · API `:3001/api` · MySQL `:3307` (host) → `3306` (container) · Mailhog `:8025`.
+**Portas e endereços:** web `:8086` (entrada do app — ver atualização de 2026-09-06) · API `:3001/api` · MySQL `:3307` (host) → `3306` (container) · Mailhog `:8025`.
 
 **Duas decisões de rede que costumam ser erradas e ficam registradas aqui:**
 
@@ -79,3 +79,34 @@ corrigida: exigiria mudar o build context de `app/api`/`app/web` pra raiz
 do repo (pra alcançar o `package-lock.json` único do workspace) e reescrever
 os `COPY` dos Dockerfiles — mudança estrutural maior que um fix de
 fechamento de fase. Registrado como limitação conhecida no README raiz.
+
+## Atualização — 2026-09-06 (porta de entrada 8086 + build quebrado de vez)
+
+Duas mudanças nesta sessão:
+
+**1. Porta de entrada do `web` mudou de `:3000` para `:8086`** — só o
+mapeamento HOST (`"8086:3000"` no compose); internamente o `vite preview`
+continua servindo em `:3000` (Dockerfile e `vite.config.ts` não tocados).
+`CORS_ORIGIN` da API precisou acompanhar (`http://localhost:8086`) porque é
+o `Origin` que o navegador envia, não a porta interna do container.
+
+**2. A limitação de reprodutibilidade registrada acima finalmente quebrou o
+build de verdade.** `docker compose up --build` passou a falhar em
+`app/web` com `npm error Cannot read properties of null (reading
+'edgesOut')` — bug conhecido do resolvedor de dependências do npm (Arborist)
+ao rodar `npm install` **sem lockfile** contra um grafo de dependências que
+o npm 10.9.8 (versão embutida na imagem `node:22-alpine`) não consegue
+resolver. Confirmado isoladamente: o MESMO `package.json`, copiado pra fora
+do container e instalado localmente com npm 11.17.0, funciona sem nenhum
+erro — ou seja, é bug de versão do npm, não de dependência quebrada do
+projeto. Provavelmente exposto por alguma dependência adicionada depois de
+2026-08-11 (Fase 6.5 trouxe `motion`, `vitest`, `axe-core`,
+`@testing-library/*`; o módulo DAST não mexeu em `app/web/package.json`).
+
+**Correção aplicada (cirúrgica, não a estrutural):** `RUN npm install -g
+npm@11` no início dos dois Dockerfiles (`api` e `web`), antes de qualquer
+`npm install` do projeto — resolve o bug de resolução sem tocar em
+lockfile e sem `--legacy-peer-deps` (que mudaria COMO as dependências são
+resolvidas, e não é o problema real). A correção estrutural completa
+(copiar o lockfile do workspace + `npm ci`) continua como dívida registrada
+acima — não foi feita agora pelo mesmo motivo de antes.

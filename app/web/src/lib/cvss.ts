@@ -81,6 +81,72 @@ function severityFromScore(score: number): CvssSeverity {
 
 /** Retorna null quando o vetor é inválido/incompleto — o chamador decide como exibir isso. */
 export function calculateCvss(vector: string): CvssResult | null {
+  return calcular(vector);
+}
+
+/* ==========================================================================
+   Decomposição por métrica (FEAT-09)
+   ==========================================================================
+   A nota isolada ("9.8 CRITICAL") diz o TAMANHO do risco, não a FORMA dele.
+   Dois findings 9.8 podem exigir respostas opostas: um explorável da internet
+   sem autenticação, outro só com acesso físico à máquina. A decomposição é o
+   que a banca e o cliente leem para entender POR QUE a nota é aquela.
+   ========================================================================== */
+
+export interface MetricaCvss {
+  sigla: MetricKey;
+  /** Nome da métrica em PT-BR. */
+  nome: string;
+  /** A letra escolhida no vetor (ex.: "N"). */
+  valor: string;
+  /** O que essa letra significa (ex.: "Rede"). */
+  rotulo: string;
+}
+
+const NOME_DA_METRICA: Record<MetricKey, string> = {
+  AV: "Vetor de ataque",
+  AC: "Complexidade do ataque",
+  PR: "Privilégios necessários",
+  UI: "Interação do usuário",
+  S: "Escopo",
+  C: "Confidencialidade",
+  I: "Integridade",
+  A: "Disponibilidade",
+};
+
+const ROTULO_DO_VALOR: Record<MetricKey, Record<string, string>> = {
+  AV: { N: "Rede", A: "Rede adjacente", L: "Local", P: "Físico" },
+  AC: { L: "Baixa", H: "Alta" },
+  PR: { N: "Nenhum", L: "Baixo", H: "Alto" },
+  UI: { N: "Não requer", R: "Requer" },
+  S: { U: "Inalterado", C: "Alterado" },
+  C: { H: "Alto", L: "Baixo", N: "Nenhum" },
+  I: { H: "Alto", L: "Baixo", N: "Nenhum" },
+  A: { H: "Alto", L: "Baixo", N: "Nenhum" },
+};
+
+/**
+ * Quebra o vetor nas 8 métricas base, já traduzidas.
+ *
+ * Devolve `null` para vetor inválido ou ausente — o mesmo contrato de
+ * `calculateCvss`, e pelo mesmo motivo: quem chama decide como mostrar isso,
+ * porque "sem vetor" e "vetor errado" se parecem na tela mas não no domínio.
+ */
+export function decomporVetor(vector: string | null | undefined): MetricaCvss[] | null {
+  if (!vector) return null;
+  const metricas = parseVector(vector);
+  if (!metricas) return null;
+
+  return REQUIRED_METRICS.map((sigla) => ({
+    sigla,
+    nome: NOME_DA_METRICA[sigla],
+    valor: metricas[sigla],
+    // Letra fora da tabela: mostra a letra crua em vez de sumir com a linha.
+    rotulo: ROTULO_DO_VALOR[sigla][metricas[sigla]] ?? metricas[sigla],
+  }));
+}
+
+function calcular(vector: string): CvssResult | null {
   const metrics = parseVector(vector);
   if (!metrics) return null;
   if (!SCOPE_VALUES.includes(metrics.S)) return null;

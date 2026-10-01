@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { makeApplicationController } from "../factories/application.factory";
 import { makeMetricsController } from "../factories/metrics.factory";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authRateLimitMiddleware, endpointRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 
 const router = Router();
 const controller = makeApplicationController();
@@ -11,15 +11,15 @@ const controller = makeApplicationController();
 // Fase 6: a URL exigida é aninhada, mas o recurso é outro.
 const metricsController = makeMetricsController();
 
-router.use(authMiddleware);
+router.use(authRateLimitMiddleware);
 
 router.get("/", (req, res) => controller.list(req, res));
 
 // ⚠️ ANTES de "/:id" — senão `/abc/metrics/summary` cairia em getById("abc")
 // e o Express nunca chegaria aqui (CLAUDE.md: literal antes de paramétrica).
-router.get("/:id/metrics/summary", (req, res) => metricsController.summary(req, res));
-router.get("/:id/metrics/timeseries", (req, res) => metricsController.timeseries(req, res));
-router.get("/:id/metrics/insights", (req, res) => metricsController.insights(req, res));
+router.get("/:id/metrics/summary", endpointRateLimitMiddleware("expensive"), (req, res) => metricsController.summary(req, res));
+router.get("/:id/metrics/timeseries", endpointRateLimitMiddleware("expensive"), (req, res) => metricsController.timeseries(req, res));
+router.get("/:id/metrics/insights", endpointRateLimitMiddleware("expensive"), (req, res) => metricsController.insights(req, res));
 
 router.get("/:id", (req, res) => controller.getById(req, res));
 router.post("/", (req, res) => controller.create(req, res));

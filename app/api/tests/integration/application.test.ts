@@ -1,5 +1,6 @@
 import request from "supertest";
 import { app } from "../../src/app";
+import { prisma } from "../../src/database/prisma.database";
 import { cleanDatabase } from "../setup";
 import { seedUser } from "../fixtures/users.fixture";
 import { seedPlan } from "../fixtures/plans.fixture";
@@ -36,6 +37,7 @@ describe("Application (list/getById/create/update/delete)", () => {
 
     expect(res.status).toBe(422);
     expect(res.body.error).toBe("NO_ACTIVE_SUBSCRIPTION");
+    expect(await prisma.application.count({ where: { companyId: company.id } })).toBe(0);
   });
 
   // APP-02
@@ -71,6 +73,7 @@ describe("Application (list/getById/create/update/delete)", () => {
       .send({ name: "App 3", url: "https://app3.acme.com" });
     expect(third.status).toBe(422);
     expect(third.body.error).toBe("PLAN_LIMIT_REACHED");
+    expect(await prisma.application.count({ where: { companyId: company.id, name: "App 3" } })).toBe(0);
   });
 
   // APP-03
@@ -102,6 +105,314 @@ describe("Application (list/getById/create/update/delete)", () => {
       .send({ name: "App 1", url: "https://app1.acme.com", companyId: otherCompany.id });
     expect(res.status).toBe(201);
     expect(res.body.companyId).toBe(company.id);
+    const persisted = await prisma.application.findUniqueOrThrow({ where: { id: res.body.id } });
+    expect(persisted.companyId).toBe(company.id);
+    expect(await prisma.application.count({ where: { companyId: otherCompany.id, name: "App 1" } })).toBe(0);
+  });
+
+  it("POST /api/applications: ADMIN global cria na companyId enviada e devolve o ID alvo", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const company = await seedCompany({ name: "Target Co", planId: plan.id });
+    await seedSubscription({ companyId: company.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-create@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Target App", url: "https://target.example.com", companyId: company.id });
+
+    expect(res.status).toBe(201);
+    expect(res.body.companyId).toBe(company.id);
+    const persisted = await prisma.application.findUniqueOrThrow({ where: { id: res.body.id } });
+    expect(persisted.companyId).toBe(company.id);
+  });
+
+  // TEN-35 — ADMIN escolhe o tenant explicitamente; o vínculo pessoal não define o alvo.
+  it("TEN-35: ADMIN vinculado à Company A cria na Company B selecionada e persiste o vínculo", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const companyA = await seedCompany({ name: "Admin Home Co", planId: plan.id });
+    const companyB = await seedCompany({ name: "Selected Target Co", planId: plan.id });
+    await seedSubscription({ companyId: companyB.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    const admin = await seedUser({
+      name: "Linked Admin",
+      email: "linked-admin-cross-company@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+      companyId: companyA.id,
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Selected Company App", url: "https://selected.example.com", companyId: companyB.id });
+
+    expect(res.status).toBe(201);
+    expect(res.body.companyId).toBe(companyB.id);
+    const persisted = await prisma.application.findUniqueOrThrow({ where: { id: res.body.id } });
+    expect(persisted.companyId).toBe(companyB.id);
+    expect(await prisma.application.count({ where: { companyId: companyA.id, name: "Selected Company App" } })).toBe(0);
+  });
+
+  it("POST /api/applications: ADMIN global sem companyId recebe 400 MISSING_COMPANY_ID", async () => {
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-missing-company@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Missing Context App", url: "https://missing-context.example.com" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("MISSING_COMPANY_ID");
+    expect(await prisma.application.count({ where: { name: "Missing Context App" } })).toBe(0);
+  });
+
+  it("POST /api/applications: ADMIN vinculado a uma company continua obrigado a informar o alvo", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const company = await seedCompany({ name: "Admin Linked Co", planId: plan.id });
+    const admin = await seedUser({
+      name: "Linked Admin",
+      email: "linked-admin-missing-target@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+      companyId: company.id,
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Still Missing Target App", url: "https://missing-target.example.com" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("MISSING_COMPANY_ID");
+    expect(await prisma.application.count({ where: { companyId: company.id } })).toBe(0);
+  });
+
+  it.each([
+    ["null", null],
+    ["numérico", 42],
+    ["string vazia", ""],
+    ["somente espaços", " \t "],
+  ])("POST /api/applications: ADMIN com companyId %s recebe 400 sem criar", async (_caso, companyId) => {
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-invalid-company@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Invalid Target App", url: "https://invalid-target.example.com", companyId });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("MISSING_COMPANY_ID");
+    expect(await prisma.application.count({ where: { name: "Invalid Target App" } })).toBe(0);
+  });
+
+  it("POST /api/applications: ADMIN global com companyId inexistente recebe 404 COMPANY_NOT_FOUND", async () => {
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-unknown-company@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "Unknown Context App",
+        url: "https://unknown-context.example.com",
+        companyId: "company-inexistente",
+      });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("COMPANY_NOT_FOUND");
+    expect(await prisma.application.count({ where: { name: "Unknown Context App" } })).toBe(0);
+  });
+
+  it("POST /api/applications: CLIENT sem companyId cria na própria company", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const company = await seedCompany({ name: "Client Co", planId: plan.id });
+    await seedSubscription({ companyId: company.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    const client = await seedUser({
+      name: "Client",
+      email: "client-own-company@vulnera.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: company.id,
+      companyRole: "OWNER",
+    });
+    const token = await loginAs(app, client.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Own Company App", url: "https://own-company.example.com" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.companyId).toBe(company.id);
+    const persisted = await prisma.application.findUniqueOrThrow({ where: { id: res.body.id } });
+    expect(persisted.companyId).toBe(company.id);
+  });
+
+  it("POST /api/applications: CLIENT sem company não pode escolher uma enviada e recebe 404", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const otherCompany = await seedCompany({ name: "Unassigned Target Co", planId: plan.id });
+    const client = await seedUser({
+      name: "Unassigned Client",
+      email: "client-without-company@vulnera.local",
+      password: PASSWORD,
+      role: "CLIENT",
+    });
+    const token = await loginAs(app, client.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Unassigned App", url: "https://unassigned.example.com", companyId: otherCompany.id });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("USER_HAS_NO_COMPANY");
+    expect(await prisma.application.count({ where: { name: "Unassigned App" } })).toBe(0);
+  });
+
+  it("POST /api/applications: PENTESTER sem company recebe 403 FORBIDDEN", async () => {
+    const pentester = await seedUser({
+      name: "Unassigned Pentester",
+      email: "pentester-without-company@vulnera.local",
+      password: PASSWORD,
+      role: "PENTESTER",
+    });
+    const token = await loginAs(app, pentester.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Pentester App", url: "https://pentester.example.com" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("FORBIDDEN");
+  });
+
+  it("POST /api/applications: PENTESTER com company ativa recebe 403 FORBIDDEN", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const company = await seedCompany({ name: "Pentest Co", planId: plan.id });
+    await seedSubscription({ companyId: company.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    const pentester = await seedUser({
+      name: "Assigned Pentester",
+      email: "pentester-with-company@vulnera.local",
+      password: PASSWORD,
+      role: "PENTESTER",
+      companyId: company.id,
+    });
+    const token = await loginAs(app, pentester.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Pentester App", url: "https://pentester-company.example.com", companyId: company.id });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("FORBIDDEN");
+    expect(await prisma.application.count({ where: { companyId: company.id, name: "Pentester App" } })).toBe(0);
+  });
+
+  it("POST /api/applications: ADMIN global sem subscription ativa recebe 422 NO_ACTIVE_SUBSCRIPTION", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const company = await seedCompany({ name: "No Subscription Co", planId: plan.id });
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-no-subscription@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "No Subscription App", url: "https://no-subscription.example.com", companyId: company.id });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe("NO_ACTIVE_SUBSCRIPTION");
+    expect(await prisma.application.count({ where: { companyId: company.id, name: "No Subscription App" } })).toBe(0);
+  });
+
+  it("POST /api/applications: ADMIN global em company no limite recebe 422 PLAN_LIMIT_REACHED", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 1 });
+    const company = await seedCompany({ name: "Full Co", planId: plan.id });
+    await seedSubscription({ companyId: company.id, planId: plan.id, status: "ACTIVE", startDate: new Date() });
+    await seedApplication({ name: "Existing App", companyId: company.id, url: "https://existing.example.com" });
+    const admin = await seedUser({
+      name: "Global Admin",
+      email: "global-admin-plan-limit@vulnera.local",
+      password: PASSWORD,
+      role: "ADMIN",
+    });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const res = await request(app)
+      .post("/api/applications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Full Company App", url: "https://full-company.example.com", companyId: company.id });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe("PLAN_LIMIT_REACHED");
+    expect(await prisma.application.count({ where: { companyId: company.id } })).toBe(1);
+  });
+
+  it("POST /api/applications sem autenticação retorna 401 e não cria", async () => {
+    const res = await request(app)
+      .post("/api/applications")
+      .send({ name: "Unauthenticated App", url: "https://unauthenticated.example.com", companyId: "company-any" });
+
+    expect(res.status).toBe(401);
+    expect(await prisma.application.count({ where: { name: "Unauthenticated App" } })).toBe(0);
+  });
+
+  it("PUT /api/applications/:id ignora companyId e mantém o tenant original", async () => {
+    const plan = await seedPlan({ name: "BASIC", maxApplications: 2 });
+    const companyA = await seedCompany({ name: "Original Company", planId: plan.id });
+    const companyB = await seedCompany({ name: "Forged Update Company", planId: plan.id });
+    const application = await seedApplication({ name: "Original App", companyId: companyA.id });
+    const client = await seedUser({
+      name: "Original Company Owner",
+      email: "application-update-company-owner@vulnera.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "OWNER",
+    });
+    const token = await loginAs(app, client.email, PASSWORD);
+
+    const res = await request(app)
+      .put(`/api/applications/${application.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Updated App", companyId: companyB.id });
+
+    expect(res.status).toBe(200);
+    expect(res.body.companyId).toBe(companyA.id);
+    const persisted = await prisma.application.findUniqueOrThrow({ where: { id: application.id } });
+    expect(persisted.name).toBe("Updated App");
+    expect(persisted.companyId).toBe(companyA.id);
   });
 
   // APP-04

@@ -5,8 +5,8 @@
  * PrismaClient injetado por construtor (DI manual via factory).
  */
 
-import type { PrismaClient, User } from "@prisma/client";
-import type { UserRole } from "../models/user.model";
+import type { Prisma, PrismaClient, User } from "@prisma/client";
+import type { AssigneeCandidateDTO, UserRole } from "../models/user.model";
 
 export interface CreateUserData {
   name: string;
@@ -27,10 +27,44 @@ export class UserRepository {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  /** Projeção mínima para o bucket de tenant; nunca decide autorização. */
+  async findCompanyIdById(id: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({ where: { id }, select: { companyId: true } });
+    return user?.companyId ?? null;
+  }
+
   findAll(filters: { companyId?: string } = {}): Promise<User[]> {
     return this.prisma.user.findMany({
       where: filters.companyId ? { companyId: filters.companyId } : {},
       orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /** Responsáveis elegíveis, sem vazar email/company de admins globais. */
+  findEligibleAssignees(projectId: string, companyId: string): Promise<AssigneeCandidateDTO[]> {
+    return this.prisma.user.findMany({
+      where: {
+        OR: [
+          { role: "ADMIN" },
+          { role: "CLIENT", companyId },
+          { role: "PENTESTER", projectMembers: { some: { projectId } } },
+        ],
+      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  }
+
+  /** Responsáveis para o filtro do quadro, agregados pelos projetos visíveis. */
+  findEligibleAssigneesForProjects(projectIds: string[], companyIds: string[]): Promise<AssigneeCandidateDTO[]> {
+    if (projectIds.length === 0 && companyIds.length === 0) return Promise.resolve([]);
+    const regras: Prisma.UserWhereInput[] = [{ role: "ADMIN" }];
+    if (companyIds.length > 0) regras.push({ role: "CLIENT", companyId: { in: companyIds } });
+    if (projectIds.length > 0) regras.push({ role: "PENTESTER", projectMembers: { some: { projectId: { in: projectIds } } } });
+    return this.prisma.user.findMany({
+      where: { OR: regras },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     });
   }
 

@@ -413,7 +413,7 @@ export function GraficoDeRiskScore({
 
   return (
     <ChartShell
-      titulo="Risk score ao longo do tempo"
+      titulo="Risco acumulado ao longo do tempo"
       descricao="Soma ponderada por CVSS dos findings em aberto. A faixa é a média do período."
       vazio={!temDados}
       altura={240}
@@ -440,7 +440,7 @@ export function GraficoDeRiskScore({
               payload?.[0] ? (
                 <TooltipDoGrafico
                   titulo={String(label)}
-                  itens={[{ nome: "Risk score", valor: Math.round(Number(payload[0].value) * 10) / 10, cor: cores.serie[0] ?? cores.acento }]}
+                  itens={[{ nome: "Risco acumulado", valor: Math.round(Number(payload[0].value) * 10) / 10, cor: cores.serie[0] ?? cores.acento }]}
                   sufixo=" pts"
                   cores={cores}
                 />
@@ -450,7 +450,7 @@ export function GraficoDeRiskScore({
           <Line
             type="monotone"
             dataKey="riskScore"
-            name="Risk score"
+            name="Risco acumulado"
             stroke={cores.serie[0] ?? cores.acento}
             strokeWidth={2}
             dot={false}

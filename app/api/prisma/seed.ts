@@ -25,6 +25,7 @@
  *   11.  1 avaliação de maturidade respondida                   (Fase 8)
  */
 
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import * as fs from "fs";
@@ -279,16 +280,63 @@ async function main() {
   // ========================================================================
   // 8. Aplicações (5) + 1 projeto cada
   // ========================================================================
+  // ========================================================================
+  // 7.5. Política de SLA padrão do produto (CP-2)
+  // ========================================================================
+  // companyId = null: é o fallback de toda empresa que nunca configurou a sua.
+  // Sem esta linha, o produto cai na janela hardcoded (DEFAULT_SLA_WINDOW) e
+  // os findings ficam com slaPolicyId null — funciona, mas a trilha "qual
+  // política gerou este prazo" fica vazia. Idempotente: só cria se não houver
+  // uma padrão ativa.
+  const politicaPadrao = await prisma.slaPolicy.findFirst({ where: { companyId: null, isActive: true } });
+  if (!politicaPadrao) {
+    await prisma.slaPolicy.create({
+      data: {
+        companyId: null,
+        name: "Padrão do produto",
+        criticalDays: 2,
+        highDays: 7,
+        mediumDays: 30,
+        lowDays: 90,
+        createdBy: "system",
+      },
+    });
+    console.log("  ✓ política de SLA padrão do produto (2 / 7 / 30 / 90 dias)");
+  }
+
+  // Contexto de risco (CP-1) entra aqui de propósito VARIADO: se as cinco
+  // aplicações nascessem todas "PROD / MEDIUM / interna / INTERNAL", o VRS
+  // (CP-3) seria o CVSS com outra escala e as Cadeias de Exposição (CP-8)
+  // nunca disparariam. A demonstração precisa de uma app crítica exposta com
+  // dado restrito, uma interna de RH, uma menos crítica — e é isso que segue.
+  //
+  // É UPSERT de verdade: se a app já existe (banco de dev antigo, criado
+  // antes do CP-1), o contexto é ATUALIZADO para o valor daqui — senão as seis
+  // apps de quem já rodou o seed ficariam para sempre com os defaults da
+  // migration, e a variação nunca chegaria ao dashboard.
   async function upsertApplication(data: {
     name: string;
     url?: string;
     environment: string;
     techStack: string;
     description: string;
+    criticality: string;
+    internetFacing: boolean;
+    dataSensitivity: string;
+    businessOwner?: string;
+    technicalOwner?: string;
   }) {
     const existing = await prisma.application.findFirst({ where: { companyId: technova.id, name: data.name } });
-    if (existing) return existing;
-    return prisma.application.create({ data: { ...data, companyId: technova.id } });
+    const contexto = {
+      environment: data.environment,
+      criticality: data.criticality,
+      internetFacing: data.internetFacing,
+      dataSensitivity: data.dataSensitivity,
+      businessOwner: data.businessOwner ?? null,
+      technicalOwner: data.technicalOwner ?? null,
+    };
+    if (existing) return prisma.application.update({ where: { id: existing.id }, data: contexto });
+    return prisma.application.create({ data: { ...data, ...contexto, companyId: technova.id } });
   }
 
   async function upsertProject(data: {
@@ -322,39 +370,73 @@ async function main() {
     });
   }
 
+  // A loja: o caso "PROD crítica exposta com dado de cartão" — dispara CHAIN-01.
   const appEcommerce = await upsertApplication({
     name: "Portal E-commerce",
     url: "https://loja.technova.com.br",
     environment: "PROD",
     techStack: "Next.js + Node.js + PostgreSQL",
     description: "Loja virtual B2C da TechNova — catálogo, carrinho e checkout.",
+    criticality: "CRITICAL",
+    internetFacing: true,
+    dataSensitivity: "RESTRICTED",
+    businessOwner: "Diretoria Comercial",
+    technicalOwner: "Squad Checkout",
   });
+  // O app: exposto e importante, mas o dado sensível fica na API, não nele.
   const appMobile = await upsertApplication({
     name: "App Mobile TechNova",
     environment: "PROD",
     techStack: "React Native + Expo",
     description: "Aplicativo mobile para clientes finais (iOS/Android).",
+    criticality: "HIGH",
+    internetFacing: true,
+    dataSensitivity: "CONFIDENTIAL",
+    businessOwner: "Produto Digital",
+    technicalOwner: "Squad Mobile",
   });
+  // A API de parceiros: exposta, crítica, dado confidencial de contratos.
   const appB2B = await upsertApplication({
     name: "API B2B Integração",
     url: "https://api-b2b.technova.com.br",
     environment: "PROD",
     techStack: "Node.js + Express + PostgreSQL",
     description: "API de integração com parceiros e revendedores.",
+    criticality: "HIGH",
+    internetFacing: true,
+    dataSensitivity: "CONFIDENTIAL",
+    businessOwner: "Canais e Parcerias",
+    technicalOwner: "Squad Integrações",
   });
+  // O ERP: NÃO exposto (intranet), mas guarda folha de pagamento — dado
+  // restrito sem exposição à internet. É o contraste que mostra que os
+  // fatores são independentes.
   const appInterno = await upsertApplication({
     name: "Sistema Interno de Gestão",
     url: "https://intranet.technova.local",
     environment: "PROD",
     techStack: "Java + Spring Boot + Oracle",
     description: "ERP interno — financeiro, estoque e RH.",
+    criticality: "HIGH",
+    internetFacing: false,
+    dataSensitivity: "RESTRICTED",
+    businessOwner: "Controladoria",
+    technicalOwner: "TI Corporativa",
   });
+  // O portal em HOMOLOGAÇÃO: o caso "menos crítico" — ambiente de
+  // homologação, dado interno, sem exposição. Um CRITICAL aqui precisa ficar
+  // ABAIXO de um HIGH na loja, e é o VRS que tem de mostrar isso.
   const appPortalCliente = await upsertApplication({
     name: "Portal do Cliente",
     url: "https://portal.technova.com.br",
-    environment: "PROD",
+    environment: "HOMOL",
     techStack: "React + Node.js + MySQL",
     description: "Área logada do cliente — pedidos, notas fiscais e suporte.",
+    criticality: "MEDIUM",
+    internetFacing: false,
+    dataSensitivity: "INTERNAL",
+    businessOwner: "Atendimento",
+    technicalOwner: "Squad Portal",
   });
 
   const projEcommerce = await upsertProject({

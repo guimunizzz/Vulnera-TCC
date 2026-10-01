@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { applicationsApi } from "../lib/api/applications.api";
@@ -9,6 +10,7 @@ import { Alert } from "../components/ui/alert";
 import { Card, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { cn } from "../lib/cn";
 import type { AnalysisLevel, AnalysisType } from "../types/project.types";
+import { useMotion } from "../motion/use-motion";
 
 const STEPS = ["Aplicação", "Tipo", "Nível e escopo", "Remediação"];
 
@@ -34,6 +36,7 @@ const ANALYSIS_LEVELS: Array<{ value: AnalysisLevel; label: string }> = [
  * está implementado em analysisType; seguimos o schema (fonte de verdade).
  */
 export function NewAnalysisPage() {
+  const { troca } = useMotion();
   const [searchParams] = useSearchParams();
   const preselectedApplicationId = searchParams.get("applicationId");
 
@@ -85,13 +88,18 @@ export function NewAnalysisPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto max-w-2xl">
+      <header data-ops-hero="project" className="mb-4">
+        <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Início da avaliação</p>
+        <h1 className="text-2xl font-bold text-fg">Nova análise</h1>
+        <p className="mt-2 text-sm text-fg-secondary">Defina o alvo, a abordagem e o escopo antes de criar o projeto.</p>
+      </header>
       <Card>
         <CardHeader>
-          <CardTitle>Nova análise</CardTitle>
-          <CardDescription>
-            Passo {step} de {STEPS.length} — {STEPS[step - 1]}
-          </CardDescription>
+          <div>
+            <CardTitle>{STEPS[step - 1]}</CardTitle>
+            <CardDescription>Passo {step} de {STEPS.length}</CardDescription>
+          </div>
         </CardHeader>
 
         <div className="mb-6 flex gap-2">
@@ -101,6 +109,9 @@ export function NewAnalysisPage() {
         </div>
 
         {error && <Alert className="mb-4">{error}</Alert>}
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={step} variants={troca} initial="inicial" animate="visivel" exit="saindo">
 
         {step === 1 && (
           <div className="flex flex-col gap-3">
@@ -247,6 +258,8 @@ export function NewAnalysisPage() {
             </div>
           </div>
         )}
+          </motion.div>
+        </AnimatePresence>
       </Card>
     </div>
   );

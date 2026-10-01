@@ -92,6 +92,26 @@ export type ReportMaturityDTO = {
   domains: ReportMaturityDomainDTO[];
 };
 
+/**
+ * Risco formalmente aceito (CP-4) para o PDF Executivo.
+ *
+ * O finding continua nas métricas normais — o aceite não o esconde. Esta
+ * seção existe para a auditoria enxergar, num lugar só, o que a organização
+ * decidiu conviver: qual falha, quão grave, por quê, até quando e quem assinou.
+ */
+export type ReportAcceptedRiskDTO = {
+  vulnerabilityId: string;
+  title: string;
+  severityFinal: string;
+  cvssScore: number | null;
+  reason: string;
+  businessJustification: string;
+  compensatingControls: string | null;
+  expiresAt: string | null;
+  requestedByName: string;
+  approvedByName: string | null;
+};
+
 export type ReportDataDTO = {
   project: ProjectResponseDTO;
   company: CompanyResponseDTO;
@@ -102,4 +122,6 @@ export type ReportDataDTO = {
   // null quando a company ainda não tem nenhuma avaliação de maturidade —
   // o PDF executivo mostra um aviso condicional nesse caso (ver executive.ts).
   maturity: ReportMaturityDTO | null;
+  /** Riscos com aceite VIGENTE no projeto (CP-4). Vazio quando não há nenhum. */
+  acceptedRisks: ReportAcceptedRiskDTO[];
 };

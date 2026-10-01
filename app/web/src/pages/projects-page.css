@@ -1,0 +1,186 @@
+/**
+ * projects-page.css
+ *
+ * O QUE FAZ: organiza o cabeçalho, o fluxo de estados e a tabela de projetos.
+ * POR QUE EXISTE: diferencia as etapas sem criar métricas artificiais ou ruído.
+ * QUEM CONSOME: `pages/projects-page.tsx`.
+ */
+
+.projects-hero {
+  background:
+    radial-gradient(circle at 88% 110%, oklch(var(--color-accent-surface) / 0.7), transparent 46%),
+    oklch(var(--color-bg-surface));
+  box-shadow:
+    var(--elevation-raised),
+    inset 0 1px 0 oklch(var(--color-text-primary) / 0.035);
+}
+
+.projects-hero-signal {
+  background:
+    linear-gradient(90deg, transparent 0 60%, oklch(var(--color-border-subtle) / 0.7) 60.1%, transparent 60.3%),
+    repeating-linear-gradient(0deg, transparent 0 28px, oklch(var(--color-accent) / 0.05) 29px 30px);
+  mask-image: linear-gradient(90deg, transparent 35%, black 76%, transparent);
+}
+
+.projects-hero-stat {
+  border-left: 1px solid oklch(var(--color-accent-ink) / 0.28);
+}
+
+.projects-flow-grid {
+  border-top: 1px solid oklch(var(--color-border-subtle));
+}
+
+.projects-flow-step {
+  position: relative;
+}
+
+.projects-flow-step + .projects-flow-step {
+  border-left: 1px solid oklch(var(--color-border-subtle));
+}
+
+.projects-flow-step::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 2px;
+  background: oklch(var(--step-color));
+  opacity: 0.62;
+}
+
+.projects-flow-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  flex: none;
+  border-radius: 50%;
+  background: oklch(var(--step-color));
+}
+
+.projects-flow-step--pending { --step-color: var(--color-severity-info); }
+.projects-flow-step--in_progress { --step-color: var(--color-warning); }
+.projects-flow-step--in_review { --step-color: var(--color-accent); }
+.projects-flow-step--completed { --step-color: var(--color-success); }
+
+.projects-table tbody tr {
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.projects-table tbody tr:hover,
+.projects-table tbody tr:focus-within {
+  background-color: var(--color-bg-hover);
+}
+
+.projects-row-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.projects-row-arrow {
+  color: oklch(var(--color-accent-ink));
+  opacity: 0;
+  transform: translate(-2px, 2px);
+  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+.projects-row-link:hover .projects-row-arrow,
+.projects-row-link:focus-visible .projects-row-arrow {
+  opacity: 1;
+  transform: translate(0);
+}
+
+@media (max-width: 639px) {
+  .projects-hero-stat {
+    border-top: 1px solid oklch(var(--color-accent-ink) / 0.2);
+    border-left: 0;
+  }
+
+  .projects-flow-step:nth-child(3) {
+    border-left: 0;
+  }
+
+  .projects-flow-step:nth-child(n + 3) {
+    border-top: 1px solid oklch(var(--color-border-subtle));
+  }
+
+  .projects-row-arrow {
+    opacity: 1;
+    transform: none;
+  }
+
+  .projects-table table,
+  .projects-table tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .projects-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .projects-table tbody {
+    padding: 0.75rem;
+  }
+
+  .projects-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding: 1rem;
+    border: 1px solid oklch(var(--color-border-subtle));
+    border-radius: var(--radius-container);
+    background: oklch(var(--color-bg-raised));
+  }
+
+  .projects-table tbody tr:first-child {
+    margin-top: 0;
+  }
+
+  .projects-table td {
+    min-width: 0;
+    padding: 0;
+  }
+
+  .projects-table td:first-child {
+    grid-column: 1 / -1;
+    font-size: 0.95rem;
+  }
+
+  .projects-table td:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+    overflow-wrap: anywhere;
+  }
+
+  .projects-table td:nth-child(3) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .projects-table td:nth-child(4) {
+    grid-column: 1 / -1;
+    border-top: 1px solid oklch(var(--color-border-subtle));
+    padding-top: 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .projects-table td:nth-child(4)::before {
+    content: "Solicitado em ";
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .projects-table tbody tr,
+  .projects-row-link,
+  .projects-row-arrow {
+    transition: none;
+  }
+}

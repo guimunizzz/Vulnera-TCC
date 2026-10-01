@@ -16,11 +16,12 @@ Catálogo de evidências a serem coletadas e apresentadas à banca avaliadora. O
 **O que mostrar**:
 - login como três perfis diferentes (Admin, Pentester, Cliente)
 - fluxo completo: onboarding → aprovação → projeto → finding → evidência → relatório
-- chat em tempo real entre Pentester e Cliente
+- ~~chat em tempo real entre Pentester e Cliente~~ — **fora do escopo do MVP**, não implementado
 - push notification no mobile ao criar finding crítico
 - avaliação de maturidade com radar chart
 - download de relatório PDF (executivo e técnico)
-- sugestão de finding via IA Gemini
+- ~~sugestão de finding via IA Gemini~~ — **IA cortada do escopo em 2026-08-03** ([[Adr 017 ia cortada do escopo do mvp]])
+- **scan DAST ao vivo** (módulo [[DAST]]): informar a URL, acompanhar a barra de progresso real com as fases do ZAP, triar um achado, promover para `Vulnerability` mostrando o aviso de "vetor CVSS sugerido", e comparar com uma execução anterior do mesmo alvo
 
 **Ambiente**: seed com dados realistas pré-carregados — não criar ao vivo.
 
@@ -37,8 +38,10 @@ Catálogo de evidências a serem coletadas e apresentadas à banca avaliadora. O
 - [ ] Dashboard Admin (visão geral operacional)
 - [ ] Dashboard Cliente (projetos e maturidade)
 - [ ] Tela de finding com CVSS, severidade e histórico de status
-- [ ] Chat em tempo real
 - [ ] Tela de maturidade com radar chart
+- [ ] DAST: banner do motor (vagas/fila), scan em progresso com fase nomeada, tabela de achados com coluna de triagem
+- [ ] DAST: diálogo de promoção com o aviso de vetor CVSS **sugerido**
+- [ ] DAST: painel de comparação entre duas execuções (resolvidos / novos / continuam abertos)
 - [ ] Relatório PDF gerado (executivo e técnico)
 - [ ] App mobile (lista de projetos + detalhe de finding)
 - [ ] Notificação push no mobile
@@ -59,9 +62,16 @@ Catálogo de evidências a serem coletadas e apresentadas à banca avaliadora. O
 - [ ] Zero Security Vulnerabilities no painel final
 - [ ] Todos os Security Hotspots revisados
 
-### 2.3 OWASP ZAP
+### 2.3 OWASP ZAP — papel 1 (ferramenta contra a própria aplicação)
 - [ ] Relatório HTML do baseline scan pré-banca (`zap-reports/zap-report-prebanca.html`)
 - [ ] Justificativa para cada alerta encontrado (falso positivo ou corrigido)
+
+### 2.4 OWASP ZAP — papel 2 (motor do módulo DAST, funcionalidade de produto)
+- [x] Dois relatórios reais em `docs/evidencias/dast/` com contraste deliberado: controle negativo (`example.com`, 13 alertas só de cabeçalho ausente) e controle positivo (OWASP Juice Shop, 16 alertas, incluindo *Backup File Disclosure* com 31 instâncias)
+- [ ] Medição de recurso antes/depois do teto por container (`docker stats`): de `1.39GiB / 7.7GiB @ 564%` para `912MiB / 2GiB @ 64%`
+- [ ] Evidência do watchdog: três scans disparados juntos → dois containers no `docker ps` + um na fila
+- [ ] Saída da suíte E2E (Playwright) contra a stack real
+- Ver [[OWASP ZAP]] para a distinção entre os dois papéis
 - [ ] Screenshot da execução do scan
 
 ---

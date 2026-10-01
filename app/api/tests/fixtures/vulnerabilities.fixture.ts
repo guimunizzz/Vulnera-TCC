@@ -22,6 +22,12 @@ export interface SeedVulnerabilityInput {
   severityCalculated?: string;
   severityFinal?: string;
   status?: string;
+  /**
+   * Data de criação forçada — o `@default(now())` do schema não serve pra
+   * testar filtro de intervalo, que precisa de findings em datas diferentes e
+   * previsíveis. O Prisma aceita gravar `createdAt` explícito no create.
+   */
+  createdAt?: Date;
 }
 
 export async function seedVulnerability(input: SeedVulnerabilityInput): Promise<Vulnerability> {
@@ -40,6 +46,7 @@ export async function seedVulnerability(input: SeedVulnerabilityInput): Promise<
       severityCalculated,
       severityFinal: input.severityFinal ?? severityCalculated,
       status: input.status ?? "OPEN",
+      ...(input.createdAt ? { createdAt: input.createdAt } : {}),
     },
   });
 }

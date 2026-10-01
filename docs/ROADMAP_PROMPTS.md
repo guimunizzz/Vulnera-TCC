@@ -739,3 +739,316 @@ camada de movimento, e dashboards analíticos por aplicação.
 | `metrics.service.ts` | lia `actor.companyId`, que **não existe no JWT** (`authMiddleware` popula só `{userId, role}`). Todo CLIENT recebia 403 |
 | `use-focus-trap.ts` | usava `offsetParent === null` para checar visibilidade — errado para todo elemento `position: fixed`, ou seja, todo overlay |
 | `tabs.tsx` | não funcionava sem controle externo nem `paramUrl`: os cliques chamavam um `aoMudar` inexistente |
+
+---
+
+# FASE 9 — DAST (OWASP ZAP) ✅ Concluída em 2026-09-05
+
+**Branch:** `feat/dast-zap` · **Depende de:** Fase 6 (design system), Fase 5 (padrão de camadas)
+
+Módulo novo fora da numeração original do BACKLOG v4 (Fases 3-8) — entrada
+posterior, prompt dado diretamente ao agente numa sessão dedicada. Resumo do
+escopo pedido (prompt completo na sessão que gerou este módulo, não
+reproduzido aqui por extensão): dar ao PENTESTER um fluxo de "um campo e um
+botão" que sobe um container OWASP ZAP por scan, roda spider + active scan
+contra uma URL, persiste os alertas normalizados, e serve três saídas —
+findings na interface, HTML original do ZAP, e PDF client-side. Nove fases
+internas (0-9): reconhecimento do ZAP, schema, runner Docker, pipeline de
+findings, API+RBAC, testes, UI, PDF, validação end-to-end, documentação.
+
+## Histórico
+
+**Branch:** `feat/dast-zap` (renomeada de `feat/scan-dast-OWASP`, sem commits — decisão reversível registrada no relatório da Fase 0) · **Data:** 2026-09-05 · **PR:** não aberta (instrução explícita do prompt: não commitar, não abrir PR)
+
+Todas as 9 fases internas concluídas numa sessão contínua, com checkpoints
+reportados ao final de cada uma. Nenhuma delas exigiu parar e perguntar pelas
+condições listadas no prompt (falha de verificação, schema além do previsto,
+Docker indisponível, contrato público quebrado) — a única pausa real foi a
+decisão do enum nativo (abaixo), resolvida com uma pergunta direta.
+
+Desvios do prompt original:
+
+- **Enum nativo em vez de String.** O prompt pedia `enum DastScanStatus`/`enum DastRisk` nativos do Prisma; o `schema.prisma` documenta como filosofia "sem enums nativos" (String + validação em TS). Divergência sinalizada explicitamente ao Rafael antes de aplicar a migration (pergunta direta, não decisão unilateral) — escolhida a via do prompt, registrada como exceção consciente em `schema.prisma` e no `ADR-028`.
+- **`DAST_FORCE_SIMULATE` (env var nova, não estava no prompt).** Sem ela, a suíte de testes ficaria refém de o Docker "por acaso" estar indisponível no ambiente de CI — um dia em que alguém rodasse os testes com Docker instalado, os testes de ciclo de vida passariam a tentar um scan real (lento, de rede). O flag força o fallback determinístico sempre, independente do ambiente.
+- **`simulateScan` ganhou suporte a `timeoutMs`** (não pedido explicitamente) — sem isso, `DAST-LIFE-03` (timeout marca FAILED) não seria testável sem Docker real, já que o fallback simulado sempre completava em ~3s fixos.
+- **`requestedByName` adicionado ao payload de `/report/data`** (não estava no prompt) — a capa do PDF pede "quem executou", e o endpoint original só devolvia `requestedById` (um cuid cru). Pequeno join a mais no service, sem migration.
+- **`StatusBadge` (componente compartilhado do design system) ganhou 4 entradas novas** (QUEUED/RUNNING/FAILED/CANCELLED) — extensão de um componente usado pelo resto do app, sinalizada aqui por afetar superfície compartilhada (mesma lógica de S3/R4 do CLAUDE.md, embora reversível e de baixo risco).
+- **Tabela HTML manual em vez do componente `<Table>` do design system**, tanto na lista de scans quanto na tabela de findings — decisão de consistência com o padrão real predominante no código (`applications-page.tsx`, `project-detail-page.tsx` já usam `<table>` manual), e porque `<Table>` não tem suporte nativo a linha expansível (necessária pro detalhe de finding), que teve que ser construída do zero de qualquer forma.
+- **Descrição/solução/reference do ZAP passam por `stripHtml()` antes de persistir** (não pedido) — o ZAP devolve esses campos em HTML (`<p>`); sem limpar, a tela e o PDF mostrariam tags cruas.
+
+Bugs reais encontrados e corrigidos durante a execução:
+
+| Onde | O quê |
+|---|---|
+| `dast-scan.service.ts` (`runInBackground`) | Corrida genuína: cancelar um scan simulado não interrompe de verdade o `setTimeout` interno (só o Docker real morre na hora via `killContainer`) — o scan cancelado ainda tentava, ~3s depois, persistir findings e marcar conclusão num registro que já não era mais `RUNNING`. Corrigido com checagem de estado antes de persistir findings E antes de marcar conclusão. Bug de produção real, não só de teste — a mesma corrida existiria com Docker real numa janela menor. |
+| `zap-runner.service.ts` (`isDockerAvailable`) | Timeout de 5s pro `docker info` classificava Docker como indisponível nesta máquina (Docker Desktop/WSL2 levou ~6s na primeira chamada "fria"), derrubando scans reais pro fallback simulado por engano. Subido pra 10s. |
+| Ambiente (pré-existente, não causado pelo módulo) | `npm run check` do backend já estava quebrado no branch antes de qualquer código do DAST: Prisma Client desatualizado (faltava `expoPushToken`) + `expo-server-sdk` ausente do `node_modules` + migration `add_expo_push_token` nunca aplicada no banco de teste. Resolvido como pré-requisito (`prisma generate`, `npm install` na raiz, `prisma migrate deploy` no banco de teste). |
+
+**Validação em navegador real:** a extensão do Chrome não conectou nesta
+sessão (mesmo bloqueio recorrente de todas as fases anteriores). Resolvido
+com o fallback já comprovado do projeto: Playwright instalado ad-hoc no
+scratchpad, Chromium baixado na hora, dois scripts cobrindo 26 checks contra
+a stack de dev real rodando de verdade (`npm run dev` nos dois workspaces,
+não headless/mock) — login real, RBAC visual (CLIENT sem item de menu e
+redirecionado ao forçar `/dast`), scan RUNNING com polling e cronômetro
+reais, scan COMPLETED com tabela/filtro/busca/expansão de linha, download de
+PDF via clique real na UI (arquivo validado depois com `pdf-lib`), abertura
+do relatório HTML do ZAP em nova aba com iframe sandboxed, responsivo em
+375/768/1440, console limpo em toda a navegação. Screenshots e o PDF real
+ficam com o Rafael.
+
+Testes: 269 → 315 no backend (42 novos: SEC-01..05, RBAC-01..09, PIPE-01..05,
+LIFE-01..04, mais o fluxo feliz completo), cobertura 89-96% nos 3 services
+novos, zero dependência de Docker na suíte. Frontend: build e lint limpos
+(nenhum teste automatizado novo — a validação foi via Playwright real, ver
+acima).
+
+---
+
+# FASE 9.1 + 9.2 — DAST: scan real na stack, e o que fazer com o resultado
+
+Duas sessões consecutivas em 2026-09-09, na mesma branch `feat/dast-zap`.
+A 9.1 fez o scan real funcionar dentro do `docker compose` (ADR-031); a 9.2
+verificou se aquilo era mesmo verdade e deu ao pentester o que fazer com o
+resultado (ADR-032).
+
+## Histórico
+
+**Branch:** `feat/dast-zap` (sem commits — mesma decisão de todas as fases
+anteriores: trabalho completo em working tree, o Rafael decide quando
+commitar) · **Data:** 2026-09-09 · **PR:** não aberta
+
+### 9.1 — o que foi entregue
+
+ZAP em **modo daemon por scan** conduzido pela API HTTP dele (spider →
+passivo → ativo → relatórios), DooD na stack (`docker-cli` na imagem +
+socket do host montado), watchdog de concorrência com fila FIFO, e as
+colunas que tornam um resultado simulado distinguível de um real. Fecha as
+três causas e a lacuna de produto de `docs/DAST-DOCKER-GAP.md`.
+
+### 9.2 — o que foi entregue
+
+**Primeiro, verificação.** O prompt pedia para *garantir* que o watchdog
+respeita os limites e que o scan funciona de verdade — então nada foi aceito
+no papel. Medido na stack real: `which docker` dentro do container da API
+responde; três scans disparados juntos produziram **exatamente dois
+containers do ZAP** no `docker ps` e um na fila com alerta; o terceiro entrou
+sozinho ao abrir vaga; três scans reais concluíram com `simulated: false` em
+39-52s.
+
+**A verificação achou o que a leitura não acharia.** O watchdog limitava
+*quantos* scans rodam, mas **nada limitava quanto cada um consome**: dois
+scans reais ocupavam ~960% de 1200% de CPU e cresciam sem teto de RAM
+(`936MiB / 7.7GiB` e `1.39GiB / 7.7GiB` — 7.7GiB é a VM inteira do Docker).
+Respeitar "no máximo 2 scans" e ainda assim travar a máquina não é respeitar
+limite nenhum, e o cenário em que isso dói é a apresentação. Corrigido com
+`DAST_ZAP_MEMORY`/`DAST_ZAP_CPUS` e um `-Xmx` derivado — os dois **têm** de
+andar juntos, porque o `zap.sh` calcula o heap a partir da RAM do *host*, não
+do limite do cgroup, e sozinho o `--memory` só transformaria "sem teto" em
+"morre por OOM no meio do active scan". Depois: `912MiB / 2GiB | 64%`.
+
+Também foram tapados dois buracos de heartbeat que abortariam scans
+legítimos: o `docker run` na primeira execução de uma máquina (pull de
+~3.7GB, sem pulso, e o watchdog corta em 2min — justamente o primeiro scan de
+uma máquina nova) e o download dos relatórios (dois `httpGet` de 120s contra
+um limite de silêncio de 120s).
+
+**Depois, as três frentes escolhidas pelo Rafael:** triagem no silo, promoção
+para `Vulnerability` e comparação entre execuções. Detalhe e racional no
+ADR-032; o ponto que mais importa é que a promoção **não inventa vetor
+CVSS** — ela sugere e o humano revisa, que é o que mantém a RN10 intacta e
+responde a objeção que tinha feito o ADR-029 recusar a integração.
+
+### Desvios do plano
+
+- **`npm install --save-dev @playwright/test` no `app/web`** (mexe no
+  `package.json`, aprovado explicitamente pelo Rafael na abertura da sessão,
+  entre três opções oferecidas). Playwright deliberadamente **fora** do
+  `npm run check`: os E2E exigem a stack de pé, e o `check` precisa continuar
+  rodando sem Docker.
+- **`tsconfig.json` do web passou a incluir `e2e` e `playwright.config.ts`** —
+  sem isso, erro de tipo em teste E2E não seria pego por `npm run build`.
+- **Dois erros de lint pré-existentes corrigidos** em
+  `tests/integration/maturity.test.ts` (`token` desestruturado e nunca usado,
+  do commit `ebcae32`, Sprint 8). Fora do escopo pelo S6, mas **bloqueavam o
+  `npm run check`**, que o §11 exige antes de PR — é a exceção que o próprio
+  S6 prevê. Correção trivial de duas linhas, sem mudança de comportamento.
+- **ADR-031 e ADR-032 indexados em `docs/DECISIONS.md`.** O ADR-031 tinha
+  ficado só como arquivo, sem entrada no índice — corrigido por R5 (o doc se
+  ajusta ao que existe), sem reescrever nada do passado.
+
+### Bugs encontrados e corrigidos durante a execução
+
+| Onde | O quê |
+|---|---|
+| `zap-runner.service.ts` | Sem `--memory`/`--cpus`, dois scans simultâneos consumiam quase toda a CPU da máquina e RAM sem teto. Achado ao **medir** a stack, não ao ler o código. |
+| `zap-runner.service.ts` | `docker run` e download de relatórios ficavam fora de qualquer loop de polling e podiam passar dos 2min de silêncio — o watchdog abortaria scans legítimos, inclusive o primeiro scan de qualquer máquina nova. |
+| `dast-scan-detail-page.tsx` / `dast-promote-dialog.tsx` | Link para `/vulnerabilities/:id`, rota que **não existe** (a do produto é `/findings/:id`). **Pego pelo Playwright** — é exatamente a classe de bug que passa por teste de componente e por teste de endpoint, porque cada metade funciona isolada. |
+
+### Validação em navegador real
+
+Desta vez com Playwright versionado no repositório em vez de ad-hoc no
+scratchpad (a extensão do Chrome segue sem conectar, como em todas as fases
+anteriores). Seis casos E2E contra a stack real, incluindo um que prova que
+**a barra de progresso mede em vez de estimar**: ele exige que o percentual
+suba *e* que as fases nomeadas do ZAP apareçam na tela — uma barra baseada em
+tempo decorrido passaria na primeira asserção e falharia na segunda.
+
+Testes: 333 → **353** no backend (`dast-triage.test.ts` com 16 casos, mais 4
+unitários de limite de recurso), 34 no frontend, 6 E2E. `lint` verde nos dois
+workspaces.
+
+### Adendo — 2026-09-10: o vault entrou no dia (sessão de documentação)
+
+Sessão só de documentação, sem uma linha de código tocada. O módulo DAST
+estava documentado no repositório (`docs/DAST.md`, ADRs 028-032, PRD,
+BACKLOG, DECISIONS) mas **não no vault** (`docs/Vulnera/`), que o `CLAUDE.md`
+§0 define como fonte de verdade do domínio — o changelog do vault parava em
+2026-08-18 e nenhuma nota de entidade, módulo, fluxo ou enum conhecia o DAST.
+
+Criadas: `02-Dominio/Entidades/DastScan.md` e `DastFinding.md`,
+`03-Produto/Modulos/DAST.md`, `03-Produto/Fluxos/Fluxo - Scan DAST.md`,
+`06-Dados/Enum - DAST.md`.
+
+Atualizadas: `Changelog do Projeto` (sessões 28, 29 e 30),
+`Contexto Mestre v4`, `Vulnerability`, `MER Conceitual`,
+`Entidades e Relacionamentos`, `Matriz de Permissoes`, `Jornada - Pentester`,
+`OWASP ZAP`, `Docker Compose`, `Dockerfiles`, `Roadmap Fases`,
+`Decisoes Recentes`, `Status de Preenchimento do Vault`, `Testes`,
+`Evidencias para Banca` e os MOCs de Domínio, Produto e Vulnera.
+
+Correções por R5 (o código é a verdade), listadas para não passarem em branco:
+
+- `docs/DAST.md` §1 e §10 ainda afirmavam que o módulo **não** importa achados
+  para `Vulnerability` — falso desde o §11 do mesmo arquivo (Fase 9.2). §6
+  também não tinha as colunas de triagem nem a proveniência.
+- `09-TCC/Testes.md` dizia que Playwright estava fora do escopo — voltou em
+  2026-09-09.
+- `05-Infra-DevSecOps/OWASP ZAP.md` descrevia só o ZAP manual do
+  [[ADR-007 - Sonar informativo e ZAP manual]]; agora separa os **dois papéis**
+  (ferramenta de DevSecOps × motor do módulo DAST).
+- `05-Infra-DevSecOps/Docker Compose.md` listava MySQL/SonarQube/Mailhog e
+  "código roda local"; a stack inteira sobe no compose desde o ADR-022.
+- `08-Operacao/Backlog/Roadmap Fases.md` estava congelado em 2026-07-26 (Fases
+  3-8 como backlog) e tinha `\n` literais que impediam a tabela de renderizar.
+- `ADR-001` (plataforma **não** executa ataque real) ganhou um aviso de tensão
+  com o que o DAST faz. **Status não alterado** — rebaixar ADR é decisão do
+  Rafael (§0.2 S3).
+
+---
+
+# INICIATIVA — Exposure & Remediation Management ✅ CP-0 a CP-7 concluídos em 2026-09-16
+
+> Branch `feat/exposure-remediation-management`, a partir de `dev` @ `84e1518`.
+> Documento técnico: `docs/EXPOSURE_REMEDIATION.md`.
+
+## O que foi entregue
+
+Sete checkpoints, na ordem em que a pergunta operacional aparece na vida de
+quem usa o produto:
+
+| CP | Entrega | ADR |
+|----|---------|-----|
+| CP-0 | Baseline: build do web destravado, decisões D1–D10 | ADR-033 |
+| CP-1 | Contexto de risco da aplicação | — |
+| CP-2 | SLA de remediação — persiste o prazo, deriva o estado | ADR-034 |
+| CP-3 | Vulnera Risk Score aditivo | ADR-035 |
+| CP-4 | Aceite formal de risco como entidade | ADR-036 |
+| CP-5 | Playbooks + OWASP Top 10 por CLI, com snapshot offline | ADR-037 |
+| CP-6 | Buscas salvas e watchlists | ADR-038 |
+| CP-7 | Quadro de remediação por menu + `assignedTo` ponta a ponta | ADR-039 |
+
+**CP-8 (Exposure Graph) NÃO foi implementado.** Era condicional e fica para uma
+próxima rodada; as decisões D8/D9 continuam registradas.
+
+## Histórico
+
+- **Branch:** `feat/exposure-remediation-management`
+- **PR:** a abrir — a entrega foi validada localmente, sem commit (pedido
+  explícito do Rafael em todas as sessões da iniciativa)
+- **Commits anteriores da branch:** `3e67abc` (CP-0), `fbd8027` (CP-1 a CP-3 +
+  scaffold do CP-4)
+
+### Desvios do plano
+
+1. **A fórmula do VRS mudou antes da implementação.** O relatório de mapeamento
+   propunha multiplicativa; a implementação é **aditiva**, por
+   explicabilidade — ver ADR-035.
+2. **CP-8 não entrou.** Era condicional a todos os gates anteriores estarem
+   verdes; eles estão, mas o orçamento da rodada foi para o endurecimento e a
+   documentação dos sete CPs entregues, que é o que a banca lê.
+3. **Um ADR a mais que o previsto.** O plano falava em ADR-034 a 038; saíram
+   **034 a 039**, porque separar "buscas salvas" de "quadro sem arrastar" num
+   ADR só teria misturado duas decisões independentes.
+
+### Bugs encontrados no caminho (e corrigidos)
+
+| O quê | Como apareceu |
+|---|---|
+| `where()` do Prisma: uma chave `AND` por filtro composto, e a última apagava as anteriores — SLA + aceite perdia o SLA **em silêncio** | ao acrescentar o terceiro filtro composto (responsável) |
+| Tradução pt-BR do A10 com três headings divergentes (`## Como Previnir`) — o A10 entrava no catálogo **sem remediação** | no primeiro seed real, conferindo o conteúdo gravado |
+| `IndexTopTen.md` tem uma 11ª seção ("A11 – Next Steps") que não é categoria | teste OWASP-P-07 |
+| `config/` faltando no `COPY` do Dockerfile do web — build quebrava só **dentro** do container | `docker compose build --no-cache` |
+| `SavedQuery` era o único model com `@default(uuid())`; e o validador de id rejeitava os **cuid** reais do produto, descartando em silêncio o filtro por empresa/projeto | teste SQ-10 |
+
+### O que ficou de fora, de propósito
+
+- CP-8 (Exposure Graph).
+- Pesos do VRS configuráveis por tenant.
+- Conteúdo das ~122 Cheat Sheets (a v1 guarda o link).
+- CSP no servidor de desenvolvimento (ver ADR-037).
+- Notificação ao ser atribuído — a tabela `Notification` continua inativa.
+
+
+## DAST — correção operacional solicitada diretamente (2026-09-28)
+
+✅ Concluída em 2026-09-29 — modos explícitos, confirmação de execução real, retry e falhas tratadas, baseline GET/passivo e validação em alvo local. Relatório: `docs/DAST-VALIDACAO-2026-09-28.md`.
+
+### Histórico
+
+- Branch: `feat/dast-real-explicit-mode`; commit local detalhado solicitado, sem PR/push nesta sessão.
+- Pedido: análise da simulação involuntária em WSL 4 GB, implementação e revisão de todos os critérios.
+- Decisão autônoma: interpretar baixo impacto como análise passiva com GET restrito; não existe POST universalmente seguro. Retry de leituras, sem repetir ações de navegação. ADR-042 registra a redução explícita de cobertura em relação ao pipeline ativo anterior.
+- Trabalho futuro separado do aceite: relatório parcial, digest fixo, telemetria de pico, retenção e isolamento de egress. Sem alteração de schema/AGENTS.md.
+
+- Fechamento em 2026-09-29: estados reais/de demonstração/falha reconferidos, relatório atualizado, alvo descartável removido e commit local solicitado. Fila existente mantida sem mensageria externa.
+
+
+# CORREÇÃO — Issue #19: criação administrativa de Application
+
+✅ **Concluída em 2026-09-30** — implementação e validação funcional (100%, CP-0 a CP-3).
+
+**Data:** 2026-09-30 | **Branch:** `fix/19-admin-create-application` | **Base:** `fecacab3` | **Commit local:** `7b847c4` (`7b847c473e10ed1ca93e787704ed9a91dd1f70ab`), `fix(application): complete admin company selection flow` | **Push:** usuario fara o push final; ainda nao ocorreu | **PR:** nao aberta.
+
+## Checkpoints
+
+| CP | Estado | Resumo |
+| --- | --- | --- |
+| CP-0 — Baseline | ✅ | Confirmada a branch e comparada a `dev` em `f301fd0`; serviço já resolvia o alvo ADMIN, mas a UI não enviava a seleção. |
+| CP-1 — Contratos web | ✅ | `CreateApplicationInput` aceita `companyId` opcional; `UpdateApplicationInput` exclui o campo; mensagem contextual para `MISSING_COMPANY_ID`. |
+| CP-2 — Modal por papel | ✅ | ADMIN seleciona explicitamente empresa; CLIENT não recebe seletor. Proteção contra envio duplicado/resposta tardia, reset, invalidação e smoke Chrome real 44/44. |
+| CP-3 — Validação final | ✅ | Web serial 257/257 em 21 suítes (54,59 s), focal 20/20, lint 0 erros/9 avisos preexistentes, contraste 66/66 e build `tsc + vite` aprovados. API full 588/588 em 43 suítes, focal 42/42 e build aprovado. Ressalva: check global da API ainda acusa dois imports preexistentes não usados em `vulnerability.service.ts:45`; gate global API não está verde. |
+
+## Decisão e desvio do plano
+
+ADR-043 registra a exceção estreita: somente ADMIN informa empresa no POST de criação; a API valida existência e gates de assinatura ativa/limite. CLIENT continua usando a empresa do banco e body forjado não altera o escopo; PENTESTER continua sem criar. `companyId` não entra em update. Sem alteração de schema, migration ou JWT; mobile não tem consumidor de criação.
+
+O plano previa o `Select` customizado dentro do modal. Seu popover sai em portal para fora do conteúdo do Dialog e conflita com o `inert`/dismiss do overlay. O modal usa `<select>` nativo estilizado por `CLASSES_CONTROLE`, preservando teclado nativo e foco dentro do diálogo. A limitação geral ficou como L-19 no BACKLOG; componentes globais não foram ampliados nesta issue.
+
+## Histórico
+
+- **Branch/base:** `fix/19-admin-create-application`, base `fecacab3`; comparação com `dev` em `f301fd0`.
+- **Data:** 2026-09-30.
+- **Marco administrativo posterior:** commit local `7b847c4` (`7b847c473e10ed1ca93e787704ed9a91dd1f70ab`), mensagem `fix(application): complete admin company selection flow`; push final pelo usuario, ainda nao ocorreu; PR nao aberta.
+- **Validação final:** smoke Chrome 44/44; Web serial 257/257 (21 suítes, 54,59 s), focal 20/20, lint sem erros (9 avisos preexistentes), contraste 66/66 e build aprovado com aviso conhecido de tamanho do bundle. API 588/588 (43 suítes), focal 42/42, cobertura de `application.service` 100% linhas/funções, 85,71% branches e 94,44% statements; build aprovado.
+- **Ressalva de gate:** `npm run check` global da API não está verde por dois imports não usados preexistentes em `vulnerability.service.ts:45` (`UserEntity` e `UserResponseDTO`).
+- **Resultado que substitui o snapshot intermediário:** os testes Remediação/SLA passaram na execução serial final; as falhas do baseline paralelo 237/240 não persistiram, sem causa comprovada para as falhas anteriores.
+- **Desvio:** Select nativo em vez do Select customizado devido ao conflito de portal/foco dentro do Dialog (L-19).
+
+### Marco intermediário preservado — 75%, supersedido pela conclusão acima
+
+O registro anterior reportava CP-0 a CP-2 concluídos e testes Web finais pendentes. Esse estado foi substituído após CP-3, sem apagar o histórico da evolução.
+
+### Marco administrativo posterior - 2026-09-30
+
+Commit local `7b847c4` (`7b847c473e10ed1ca93e787704ed9a91dd1f70ab`), mensagem `fix(application): complete admin company selection flow`. O usuario fara o push final; nenhum push ocorreu e PR nao aberta.

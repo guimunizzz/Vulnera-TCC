@@ -21,6 +21,11 @@ Permitir registrar, classificar, discutir e acompanhar vulnerabilidades.
 - evidências
 - comentários
 
+## Onde os findings são listados
+
+Desde a Fase 9, **uma implementação só** de listagem atende a página global e a
+aba do projeto — ver [[Findings Globais]] e [[ADR-028 - Tabela de findings como componente canonico]].
+
 ## Regras associadas
 - [[RN09 - Vulnerability pertence a um Project]]
 - [[RN10 - Severidade via CVSS com override justificado]]
