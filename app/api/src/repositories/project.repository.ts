@@ -32,9 +32,19 @@ export class ProjectRepository {
     return this.prisma.project.findUnique({ where: { id } });
   }
 
-  /** RN05 é 1-para-1, mas não há @unique no schema — a invariante é garantida no service. */
+  /** RN05 — a busca bloqueia duplicatas sequenciais; não protege contra corrida sem constraint no banco. */
   async findByApplication(applicationId: string): Promise<Project | null> {
     return this.prisma.project.findFirst({ where: { applicationId } });
+  }
+
+  /** Conta só projetos simultâneos; concluídos liberam a vaga do plano. */
+  async countSimultaneousByCompany(companyId: string): Promise<number> {
+    return this.prisma.project.count({
+      where: {
+        companyId,
+        status: { in: ["PENDING", "IN_PROGRESS", "IN_REVIEW"] },
+      },
+    });
   }
 
   async findAll(): Promise<Project[]> {

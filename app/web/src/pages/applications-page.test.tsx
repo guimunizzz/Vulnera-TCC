@@ -15,7 +15,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "../design/theme-provider";
 import { useAuthStore } from "../store/auth.store";
@@ -118,13 +118,23 @@ function entrarComo(role: "ADMIN" | "CLIENT" | "PENTESTER", companyId: string | 
   });
 }
 
+function NavigationProbe() {
+  const location = useLocation();
+  return <output data-testid="navegacao">{JSON.stringify({ pathname: location.pathname, search: location.search, state: location.state })}</output>;
+}
+
 function renderizarPagina(prepararCache?: (client: QueryClient) => void) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   prepararCache?.(queryClient);
   const view = render(
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter><ApplicationsPage /></MemoryRouter>
+        <MemoryRouter initialEntries={["/applications"]}>
+          <Routes>
+            <Route path="/applications" element={<ApplicationsPage />} />
+            <Route path="/new-analysis" element={<NavigationProbe />} />
+          </Routes>
+        </MemoryRouter>
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -195,6 +205,21 @@ describe("ApplicationsPage", () => {
     expect(api.companies).not.toHaveBeenCalled();
     expect(api.subscription).not.toHaveBeenCalled();
     expect(api.plans).not.toHaveBeenCalled();
+  });
+
+  it("APP-VIS-04 — Nova análise preserva aplicação pré-selecionada e origem para cancelar", async () => {
+    entrarComo("CLIENT");
+    renderizarPagina();
+
+    const links = await screen.findAllByRole("link", { name: "Nova análise" });
+    expect(links[0]).toHaveAttribute("href", "/new-analysis?applicationId=app-1");
+    fireEvent.click(links[0]);
+
+    expect(await screen.findByTestId("navegacao")).toHaveTextContent(JSON.stringify({
+      pathname: "/new-analysis",
+      search: "?applicationId=app-1",
+      state: { returnTo: "/applications" },
+    }));
   });
 
   it("APP-VIS-03 — falha de carregamento oferece nova tentativa sem simular lista vazia", async () => {
