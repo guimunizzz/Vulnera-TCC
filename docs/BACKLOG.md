@@ -6,7 +6,7 @@
 
 ## Status
 
-✅ **2026-10-06 — README da main revisado (100% documental).** Base `origin/main` em `3efd1e2` após PR #50; branch `codex/docs-readme-main`. README atualizado com funcionalidades/perfis, oito screenshots recentes, três fotos da equipe e galeria antiga preservada; corrigidas operação DAST, rate limiting, CI e instruções Docker/dev. Links locais 55/55, âncoras 15/15, revisão estática de Markdown/imagens e `git diff --check` aprovados. Sem suíte/build/scan, alterações de código/schema/dependências ou imagens. Integração na main será acompanhada pela PR de documentação.
+✅ **2026-10-06 — README da main revisado (100% documental).** Base `origin/main` em `3efd1e2` após PR #50; branch `codex/docs-readme-main`. README atualizado com funcionalidades/perfis, oito screenshots recentes, três fotos da equipe e galeria antiga preservada; corrigidas operação DAST, rate limiting, CI e instruções Docker/dev. Links locais 55/55, âncoras 15/15, revisão estática de Markdown/imagens e `git diff --check` aprovados. Sem suíte/build/scan, alterações de código/schema/dependências ou imagens. PR de documentação [#54](https://github.com/guimunizzz/Vulnera-TCC/pull/54) aberta para `main`, com branch publicada; revisão/merge pendentes.
 
 - [x] **README-MAIN-2026-10:** atualizar apresentação e instruções após a release, reutilizando imagens versionadas e preservando capturas históricas. Revisão documental concluída em 2026-10-06.
 
