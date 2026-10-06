@@ -1,5 +1,49 @@
 # DAST.md — Módulo de scans dinâmicos automatizados (OWASP ZAP)
 
+## Operação vigente — 2026-09-28 (ADR-042)
+
+A UI exige a escolha **Simulado** ou **Real — análise passiva**. Simulado é o padrão do formulário e gera uma demonstração sem acessar o alvo. Real abre um segundo aviso com o endereço e exige marcar a autorização antes de iniciar.
+
+Contrato atual:
+
+```json
+{ "targetUrl": "https://alvo-autorizado.example/", "mode": "SIMULATED" }
+```
+
+```json
+{ "targetUrl": "https://alvo-autorizado.example/", "mode": "REAL", "confirmedRealScan": true }
+```
+
+Real usa ZAP daemon em modo Protected, navegação GET conservadora e análise passiva real. Não dispara active scan, não envia formulários, não executa JavaScript nem autentica no alvo. Navega até 30 páginas com profundidade 2, na mesma origem e subárvore; exclui queries e caminhos comuns de ação. Redirects são validados antes de enviar a próxima requisição. É baixo impacto, não garantia de ausência de efeitos em qualquer aplicação. A análise pode concluir corretamente com zero alertas e não equivale à cobertura de testes de exploração.
+
+O campo existente `simulated` guarda a escolha desde `QUEUED`. O resultado real permanece real: erro termina `FAILED`, com código e mensagem tratada, sem demonstração substituta. A API bloqueia promoção/comparação de dados simulados. As execuções antigas mantêm seus registros.
+
+Configuração padrão atual:
+
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `DAST_MAX_CONCURRENT_SCANS` | `1` | Fila em memória, adequada ao orçamento de WSL 4 GB |
+| `DAST_ZAP_MEMORY` | `2g` | Teto do container, heap `-Xmx1331m`, sem swap no container |
+| `DAST_ZAP_CPUS` | `2` | Teto de CPU por container |
+| `DAST_ZAP_HTTP_TIMEOUT_MS` | `45000` | Prazo HTTP, configurável entre 1 e 60 s |
+| `DAST_ZAP_HTTP_ATTEMPTS` | `3` | Entre 1 e 5 tentativas para consultas de status e relatórios |
+| `DAST_ZAP_SPIDER_MAX_DURATION_MIN` | `1` | Nome legado; agora limita o crawler GET, mínimo efetivo 1 minuto |
+| `DAST_ZAP_STARTUP_TIMEOUT_MS` | `180000` | Prazo de início do daemon |
+| `DAST_SCAN_TIMEOUT_MS` | `1800000` | Prazo total da execução |
+| `DAST_FORCE_SIMULATE` | `false` | Quando true, recusa o real com `REAL_SCAN_DISABLED`; não troca o modo |
+
+No compose, configure as variáveis interpoladas no ambiente do compose ou `.env` da raiz e recrie a API. Alterar apenas `app/api/.env` não substitui `services.api.environment`. Para código novo, execute `docker compose build api web` e `docker compose up -d --no-deps api web`, sem scans pendentes. Não é necessário resetar banco ou volumes.
+
+Retries cobrem timeout/reset e falhas temporárias de leitura; ações de navegação não são repetidas para evitar efeitos duplicados. Cancelamento e prazo global continuam valendo. O progresso é um indicador de etapa/quantidade limitada, não uma estimativa de tempo nem percentual de cobertura do site inteiro.
+
+Falhas são diferenciadas: Docker indisponível, inicialização, comunicação com daemon, OOM/heap Java, HTTP do alvo, alvo inalcançável, redirect fora de escopo, fila passiva não drenada e relatório inválido. Detalhes ficam em `DAST_REPORTS_DIR/<scanId>/diagnostics.json`, com fase, endpoint, recursos configurados e log com chave removida. Esse arquivo não é exposto pelos endpoints públicos de relatório; relatórios podem conter dados sensíveis do alvo e devem receber a mesma proteção do volume da API. Limpeza automática por retenção ainda não existe.
+
+Validação reproduzível: após `npm run build` da API, executar `app/api/scripts/dast-smoke.cjs` em um container com Docker CLI/socket, mesma rede do ZAP e `DAST_REPORTS_DIR` gravável. O script cria/remove um alvo local descartável; verifica relatório real, métodos/URLs recebidos, demo sem tráfego e falha em porta inalcançável. O relatório desta sessão contém os comandos e resultados.
+
+### Histórico técnico preservado
+
+**As seções numeradas abaixo documentam a implementação até 09/09/2026.** Os trechos sobre active scan, fallback automático, payload contendo somente URL, `--rm`, percentuais e padrões de recursos foram **substituídos pela operação acima e pelo ADR-042**. Permanecem como histórico; não são instruções para configurar a versão atual.
+
 > Documento vivo (CLAUDE.md §0.1). Escrito pra alguém reproduzir o módulo
 > inteiro sem o autor original por perto — é entregável de TCC.
 

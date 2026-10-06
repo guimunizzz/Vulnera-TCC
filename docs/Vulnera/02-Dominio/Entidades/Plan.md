@@ -58,6 +58,27 @@ Plano é a base do modelo comercial SaaS simulado do Vulnera. Cada `Subscription
 - desativar um plano (`is_active = false`) não cancela assinaturas existentes; apenas impede novas contratações
 - `concurrent_project_limit` deve ser verificado no momento da criação do Project, não na assinatura
 
+## Nota de implementação — Issue #20 (decisão em 2026-10-01)
+
+O schema vigente chama os campos de `maxProjects` e `includesRemediation`. Para
+Project, `maxProjects` conta os estados simultâneos `PENDING`, `IN_PROGRESS` e
+`IN_REVIEW`; `COMPLETED` não ocupa capacidade. A opção `hasRemediation` só pode
+ser solicitada quando `includesRemediation` do Plan da subscription `ACTIVE` da
+empresa da Application for verdadeiro. A subscription e o Plan são resolvidos
+pela empresa da Application selecionada, inclusive quando quem cria é ADMIN.
+
+**Implementação — CP-3 da Issue #20 (validada em 2026-10-01):** o serviço usa o
+Plan da subscription `ACTIVE` da empresa da Application escolhida. `maxProjects`
+considera apenas `PENDING`, `IN_PROGRESS` e `IN_REVIEW`; `COMPLETED` não ocupa
+capacidade. A criação e a transição de `hasRemediation: false` para `true` só
+passam quando o plano inclui o serviço. Testes focais API: 24/24; cobertura de
+`project.service`: 100% linhas/funções, 84,31% branches, 93,2% statements; build
+API host aprovado.
+
+A contagem de capacidade e a verificação RN05 não são serializadas com create;
+concorrência pode exceder o limite ou produzir duplicidade e continua sem
+garantia nesta entrega. Detalhes: [[ADR-044 - Regras comerciais para criar Project]].
+
 ## Links relacionados
 [[Subscription]]
 [[RN03 - Limite de aplicacoes por plano]]

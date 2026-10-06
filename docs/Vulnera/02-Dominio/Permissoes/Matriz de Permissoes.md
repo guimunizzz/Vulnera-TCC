@@ -13,6 +13,7 @@ status: ativo
 ## Admin
 Pode:
 - gerenciar plataforma
+- cadastrar aplicação escolhendo uma empresa existente; a assinatura ativa e o limite do plano dessa empresa continuam obrigatórios
 - disparar e ver **qualquer** scan DAST, triar e promover achados
 - ativar assinatura
 - atribuir pentester
@@ -47,3 +48,8 @@ Pode:
 - comentar
 - baixar relatório
 - abrir ticket
+
+Na criação de Application, CLIENT continua usando somente a empresa associada
+ao próprio usuário; um `companyId` enviado no corpo da requisição é ignorado.
+ADMIN escolhe o destino apenas na criação; o vínculo não pode ser alterado
+depois. Ver [[ADR-043 - Alvo administrativo explicito na criacao de Application]].

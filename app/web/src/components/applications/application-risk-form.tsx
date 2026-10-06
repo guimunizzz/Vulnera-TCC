@@ -110,6 +110,7 @@ export function ApplicationRiskForm({ application, aoSalvar, aoCancelar }: Appli
       queryClient.invalidateQueries({ queryKey: ["application", application.id] });
       // o VRS dos findings desta app mudou — qualquer listagem em cache está velha
       queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+      queryClient.invalidateQueries({ queryKey: ["findings"] });
       aoSalvar();
     },
     onError: (e: unknown) => setErro(getErrorMessage(e)),

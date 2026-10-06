@@ -35,6 +35,14 @@ Garantir que a operação da consultoria funcione: clientes atendidos, projetos 
 - acompanha projetos em `IN_REVIEW` aguardando aprovação
 - encerra projetos (`CLOSED`) após entrega e confirmação
 
+### Cadastro de aplicações
+- seleciona uma empresa existente e informa os dados do alvo
+- a criação não depende de `companyId` no usuário ADMIN
+- a API confirma a empresa e exige assinatura ativa e vaga no plano antes de criar
+- a empresa vinculada não pode ser alterada depois da criação (RN04)
+
+Ver [[ADR-043 - Alvo administrativo explicito na criacao de Application]].
+
 ### Maturidade
 - acessa projetos ou empresas para avaliação de maturidade
 - preenche domínios e subcontroles no `MaturityAssessment`

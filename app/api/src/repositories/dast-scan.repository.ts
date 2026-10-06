@@ -21,6 +21,7 @@ import type { CandidateFinding, RiskCounters } from "../services/dast-findings.s
 export interface CreateDastScanInput {
   targetUrl: string;
   requestedById: string;
+  simulated?: boolean;
 }
 
 export interface UpdateDastScanInput {
@@ -46,6 +47,7 @@ export class DastScanRepository {
       data: {
         targetUrl: input.targetUrl,
         requestedById: input.requestedById,
+        simulated: input.simulated ?? false,
       },
     });
   }

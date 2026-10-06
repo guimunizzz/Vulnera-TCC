@@ -28,7 +28,7 @@ jest.mock("child_process", () => ({
 }));
 
 // A conversa com o daemon do ZAP é HTTP — mockar `http.get` é o que permite
-// exercitar o fluxo inteiro (spider -> passivo -> ativo -> relatório) sem
+// exercitar o fluxo inteiro (GET limitado -> passivo -> relatório) sem
 // subir container nenhum.
 jest.mock("http", () => ({ get: jest.fn() }));
 
@@ -45,6 +45,7 @@ import {
   parseMemoryToMb,
   heapArgForMemoryLimit,
   friendlyFailureReason,
+  isBaselineUrlAllowed,
 } from "../../src/services/zap-runner.service";
 
 /** Menor report.json que o pipeline aceita — mesmo formato do ZAP de verdade. */
@@ -213,8 +214,13 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
    * aqui cada endpoint devolve a resposta REAL observada de um ZAP 2.17
    * (formato conferido à mão contra um container de verdade nesta sessão).
    */
-  function mockZapApi(overrides: Record<string, { status?: number; body: string }> = {}) {
-    const respostas: Record<string, { status?: number; body: string }> = {
+  function mockZapApi(overrides: Record<string, { status?: number; body: string; error?: string; failTimes?: number }> = {}) {
+    const respostas: Record<string, { status?: number; body: string; error?: string; failTimes?: number }> = {
+      "/JSON/context/action/newContext/": { body: JSON.stringify({ contextId: "1" }) },
+      "/JSON/context/action/includeInContext/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/context/action/setContextInScope/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/core/action/setMode/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/core/action/accessUrl/": { body: JSON.stringify({ accessUrl: [{ responseHeader: "HTTP/1.1 200 OK\r\nContent-Type: text/html", responseBody: "<html>local</html>" }] }) },
       "/JSON/core/view/version/": { body: JSON.stringify({ version: "2.17.0" }) },
       "/JSON/spider/action/setOptionMaxDuration/": { body: JSON.stringify({ Result: "OK" }) },
       "/JSON/spider/action/scan/": { body: JSON.stringify({ scan: "0" }) },
@@ -228,9 +234,10 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
       ...overrides,
     };
 
+    const counts = new Map<string, number>();
     (http.get as unknown as jest.Mock).mockImplementation((url: string, _opts: unknown, cb: (res: any) => void) => {
       const req: any = new EventEmitter();
-      req.destroy = jest.fn();
+      req.destroy = jest.fn((error: Error) => process.nextTick(() => req.emit("error", error)));
       const pathname = new URL(url).pathname;
       const resposta = respostas[pathname];
 
@@ -239,6 +246,9 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
           req.emit("error", new Error(`endpoint não mockado: ${pathname}`));
           return;
         }
+        const count = (counts.get(pathname) ?? 0) + 1;
+        counts.set(pathname, count);
+        if (resposta.error && count <= (resposta.failTimes ?? Infinity)) { req.emit("error", new Error(resposta.error)); return; }
         const res: any = new EventEmitter();
         res.statusCode = resposta.status ?? 200;
         cb(res);
@@ -250,12 +260,12 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
     });
   }
 
-  it("fluxo completo (spider -> passivo -> ativo -> relatório) devolve COMPLETED e NÃO simulado", async () => {
+  it("fluxo completo (GET limitado -> passivo -> relatório) devolve COMPLETED e NÃO simulado", async () => {
     mockDocker();
     mockZapApi();
 
     const fases: string[] = [];
-    const outcome = await runScan({
+    const outcome = await runScan({ mode: "REAL",
       scanId: "scan-ok",
       targetUrl: "https://example.com",
       onProgress: (p) => fases.push(p.phase),
@@ -265,10 +275,80 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
     expect(outcome.simulated).toBe(false);
     expect(outcome.jsonReportPath).toContain("scan-ok");
     // A barra passa por todas as fases, em ordem, e termina em 100%.
-    expect(fases).toEqual(expect.arrayContaining(["STARTING", "SPIDER", "PASSIVE", "ACTIVE", "REPORT", "DONE"]));
+    expect(fases).toEqual(expect.arrayContaining(["STARTING", "SPIDER", "PASSIVE", "REPORT", "DONE"]));
 
     const salvo = JSON.parse(await fs.readFile(path.join(REPORTS_DIR, "scan-ok", "report.json"), "utf-8"));
     expect(salvo.site[0].alerts).toHaveLength(1);
+  });
+
+  it("demonstração explícita não consulta Docker nem HTTP", async () => {
+    const result = await runScan({ mode: "SIMULATED", scanId: "explicit-demo", targetUrl: "https://example.com" });
+    expect(result.simulated).toBe(true);
+    expect(execFile).not.toHaveBeenCalled();
+    expect(http.get).not.toHaveBeenCalled();
+  });
+
+  it("distingue alvo inacessível de falha HTTP do daemon com diagnóstico do ZAP", async () => {
+    mockDocker((args) => ({ code: 0, stdout: args[0] === "logs" ? "HttpHostConnectException: Connection refused" : "" }));
+    mockZapApi({ "/JSON/core/action/accessUrl/": { status: 500, body: '{"code":"internal_error","message":"Internal Error"}' } });
+    const result = await runScan({ mode: "REAL", scanId: "unreachable-target", targetUrl: "https://example.com" });
+    expect(result).toMatchObject({ status: "FAILED", simulated: false, errorMessage: "TARGET_UNREACHABLE" });
+    expect(result.jsonReportPath).toBeUndefined();
+    expect(friendlyFailureReason(result.errorMessage)).toContain("endereço/porta");
+  });
+
+  it("preserva erro estruturado HTTP 500 sem inventar uma causa ausente nos logs", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/core/action/accessUrl/": { status: 500, body: '{"code":"internal_error"}' } });
+    const result = await runScan({ mode: "REAL", scanId: "target-access-failed", targetUrl: "https://example.com" });
+    expect(result.errorMessage).toBe("TARGET_ACCESS_FAILED");
+    expect(friendlyFailureReason(result.errorMessage)).toContain("falhou ao acessar o alvo");
+  });
+
+  it("retenta consulta passiva transitória e conclui sem iniciar active scan", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/pscan/view/recordsToScan/": { body: '{"recordsToScan":"0"}', error: "ECONNRESET", failTimes: 1 } });
+    const result = await runScan({ mode: "REAL", scanId: "retry-read", targetUrl: "https://example.com" });
+    expect(result.status).toBe("COMPLETED");
+    const calls = (http.get as jest.Mock).mock.calls.map((c) => new URL(c[0]).pathname);
+    expect(calls.filter((p) => p === "/JSON/pscan/view/recordsToScan/")).toHaveLength(2);
+    expect(calls.some((p) => p.includes("/ascan/") || p.includes("/spider/action/scan/"))).toBe(false);
+  });
+
+  it("falha persistente de leitura termina após três tentativas", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/pscan/view/recordsToScan/": { body: "", error: "ZAP_HTTP_TIMEOUT" } });
+    const result = await runScan({ mode: "REAL", scanId: "retry-exhausted", targetUrl: "https://example.com" });
+    expect(result.status).toBe("FAILED");
+    expect(result.simulated).toBe(false);
+    expect(result.errorMessage).toBe("ZAP_HTTP_TIMEOUT");
+    expect((http.get as jest.Mock).mock.calls.filter((c) => new URL(c[0]).pathname === "/JSON/pscan/view/recordsToScan/")).toHaveLength(3);
+  });
+
+  it("não repete uma navegação cujo resultado é incerto", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/core/action/accessUrl/": { body: "", error: "ZAP_HTTP_TIMEOUT" } });
+    const result = await runScan({ mode: "REAL", scanId: "action-no-retry", targetUrl: "https://example.com" });
+    expect(result.status).toBe("FAILED");
+    expect((http.get as jest.Mock).mock.calls.filter((c) => new URL(c[0]).pathname === "/JSON/core/action/accessUrl/")).toHaveLength(1);
+  });
+
+  it("identifica OOM antes de remover o container", async () => {
+    const commands: string[][] = [];
+    mockDocker((args) => { commands.push(args); return { code: 0, stdout: args[0] === "inspect" ? "true|137" : "" }; });
+    mockZapApi({ "/JSON/core/action/accessUrl/": { body: "", error: "ECONNRESET" } });
+    const result = await runScan({ mode: "REAL", scanId: "oom", targetUrl: "https://example.com" });
+    expect(result.errorMessage).toBe("ZAP_OOM_KILLED");
+    expect(commands.findIndex((a) => a[0] === "inspect")).toBeLessThan(commands.findIndex((a) => a[0] === "rm"));
+    expect(commands.find((a) => a[0] === "run")).not.toContain("--rm");
+  });
+
+  it("não segue redirect inicial fora do escopo", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/core/action/accessUrl/": { body: JSON.stringify({ accessUrl: [{ responseHeader: "HTTP/1.1 302 Found\r\nLocation: https://elsewhere.test/" }] }) } });
+    const result = await runScan({ mode: "REAL", scanId: "redirect", targetUrl: "https://example.com" });
+    expect(result.errorMessage).toBe("TARGET_REDIRECT_OUT_OF_SCOPE");
+    expect((http.get as jest.Mock).mock.calls.filter((c) => new URL(c[0]).pathname === "/JSON/core/action/accessUrl/")).toHaveLength(1);
   });
 
   it("o container do ZAP sobe em modo daemon, com api.key própria, e é removido no fim", async () => {
@@ -279,7 +359,7 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
     });
     mockZapApi();
 
-    await runScan({ scanId: "scan-args", targetUrl: "https://example.com" });
+    await runScan({ mode: "REAL", scanId: "scan-args", targetUrl: "https://example.com" });
 
     const run = comandos.find((c) => c[0] === "run");
     expect(run).toBeDefined();
@@ -295,65 +375,64 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
     expect(comandos.some((c) => c[0] === "rm" && c.includes("vulnera-zap-scan-args"))).toBe(true);
   });
 
-  it("`docker run` falhando NÃO deixa o usuário sem resultado: cai no simulado com aviso amigável", async () => {
+  it("`docker run` falhando termina FAILED sem fabricar resultados", async () => {
     mockDocker((args) => (args[0] === "run" ? { code: 125, stderr: "no such image" } : { code: 0 }));
     mockZapApi();
 
-    const outcome = await runScan({ scanId: "scan-sem-container", targetUrl: "https://example.com" });
+    const outcome = await runScan({ mode: "REAL", scanId: "scan-sem-container", targetUrl: "https://example.com" });
 
-    expect(outcome.status).toBe("COMPLETED");
-    expect(outcome.simulated).toBe(true);
-    expect(outcome.warningMessage).toContain("resultado de demonstração");
-    expect(outcome.warningMessage).toContain("container do OWASP ZAP não subiu");
+    expect(outcome.status).toBe("FAILED");
+    expect(outcome.simulated).toBe(false);
+    expect(outcome.errorMessage).toBe("ZAP_CONTAINER_START_FAILED");
   });
 
-  it("erro de negócio do ZAP (HTTP 200 + campo `code`) também vira fallback simulado", async () => {
+  it("erro de negócio do ZAP preserva falha real", async () => {
     mockDocker();
     mockZapApi({
-      "/JSON/ascan/action/scan/": { body: JSON.stringify({ code: "url_not_found", message: "URL Not Found" }) },
+      "/JSON/core/action/accessUrl/": { body: JSON.stringify({ code: "url_not_found", message: "URL Not Found" }) },
     });
 
-    const outcome = await runScan({ scanId: "scan-url-404", targetUrl: "https://example.com" });
+    const outcome = await runScan({ mode: "REAL", scanId: "scan-url-404", targetUrl: "https://example.com" });
 
-    expect(outcome.status).toBe("COMPLETED");
-    expect(outcome.simulated).toBe(true);
-    expect(outcome.warningMessage).toContain("não respondeu ao OWASP ZAP");
+    expect(outcome.status).toBe("FAILED");
+    expect(outcome.simulated).toBe(false);
+    expect(outcome.errorMessage).toContain("url_not_found");
   });
 
-  it("relatório corrompido vira fallback simulado (o pipeline nunca recebe JSON inválido)", async () => {
+  it("relatório corrompido termina FAILED", async () => {
     mockDocker();
     mockZapApi({ "/OTHER/core/other/jsonreport/": { body: "{ isso não é json valido" } });
 
-    const outcome = await runScan({ scanId: "scan-json-ruim", targetUrl: "https://example.com" });
+    const outcome = await runScan({ mode: "REAL", scanId: "scan-json-ruim", targetUrl: "https://example.com" });
 
-    expect(outcome.status).toBe("COMPLETED");
-    expect(outcome.simulated).toBe(true);
-    expect(outcome.warningMessage).toContain("corrompido");
+    expect(outcome.status).toBe("FAILED");
+    expect(outcome.simulated).toBe(false);
+    expect(outcome.errorMessage).toBe("REPORT_JSON_INVALID");
   });
 
   it("cancelamento NÃO cai no simulado — quem cancelou não quer resultado nenhum", async () => {
     mockDocker();
-    mockZapApi({ "/JSON/spider/view/status/": { body: JSON.stringify({ status: "10" }) } }); // nunca chega a 100
+    mockZapApi({ "/JSON/pscan/view/recordsToScan/": { body: JSON.stringify({ recordsToScan: "10" }) } }); // nunca chega a 100
 
     const controller = new AbortController();
     setTimeout(() => controller.abort("Scan cancelado pelo usuário."), 200);
 
-    const outcome = await runScan({ scanId: "scan-cancelado", targetUrl: "https://example.com", signal: controller.signal });
+    const outcome = await runScan({ mode: "REAL", scanId: "scan-cancelado", targetUrl: "https://example.com", signal: controller.signal });
 
     expect(outcome.status).toBe("FAILED");
     expect(outcome.errorMessage).toBe("SCAN_CANCELLED");
     expect(outcome.simulated).toBe(false);
   });
 
-  it("timeout global aborta o scan real e entrega o resultado simulado", async () => {
+  it("timeout global aborta o scan real sem simulação", async () => {
     mockDocker();
-    mockZapApi({ "/JSON/spider/view/status/": { body: JSON.stringify({ status: "10" }) } }); // nunca chega a 100
+    mockZapApi({ "/JSON/pscan/view/recordsToScan/": { body: JSON.stringify({ recordsToScan: "10" }) } }); // nunca chega a 100
 
-    const outcome = await runScan({ scanId: "scan-timeout", targetUrl: "https://example.com", timeoutMs: 500 });
+    const outcome = await runScan({ mode: "REAL", scanId: "scan-timeout", targetUrl: "https://example.com", timeoutMs: 500 });
 
-    expect(outcome.status).toBe("COMPLETED");
-    expect(outcome.simulated).toBe(true);
-    expect(outcome.warningMessage).toContain("tempo máximo");
+    expect(outcome.status).toBe("FAILED");
+    expect(outcome.simulated).toBe(false);
+    expect(outcome.errorMessage).toBe("SCAN_TIMEOUT");
   });
 });
 
@@ -429,14 +508,23 @@ describe("zap-runner.service — limites de recurso do container", () => {
     // OOM vira um "erro estranho" sem pista nenhuma.
     const msg = friendlyFailureReason("ZAP_OOM_KILLED: connect ECONNREFUSED");
     expect(msg).toContain("sem memória");
-    expect(msg).toContain("DAST_ZAP_MEMORY");
+    expect(msg).toContain("memória disponível");
   });
 
   it("friendlyFailureReason traduz os erros conhecidos e não vaza stack no desconhecido", () => {
     expect(friendlyFailureReason("SCAN_TIMEOUT")).toContain("tempo máximo");
-    expect(friendlyFailureReason("ZAP_STARTUP_TIMEOUT")).toContain("subir");
-    expect(friendlyFailureReason(undefined)).toContain("desconhecida");
+    expect(friendlyFailureReason("ZAP_STARTUP_TIMEOUT")).toContain("iniciar");
+    expect(friendlyFailureReason(undefined)).toContain("diagnóstico");
     // Erro não mapeado é truncado — nunca despeja um stack inteiro na tela.
-    expect(friendlyFailureReason("x".repeat(500))).toHaveLength(200);
+    expect(friendlyFailureReason("secret-".repeat(500))).not.toContain("secret-");
   });
+});
+
+
+describe("baseline — limites de navegação antes de enviar tráfego", () => {
+  const target = new URL("https://example.com/app/");
+  it.each(["https://elsewhere.test/app/", "http://example.com/app/", "https://example.com:444/app/", "https://example.com/other", "https://example.com/app/delete", "https://example.com/app/?action=delete", "https://user:pass@example.com/app/"])("rejeita %s", (url) => {
+    expect(isBaselineUrlAllowed(new URL(url), target)).toBe(false);
+  });
+  it("permite página na subárvore", () => expect(isBaselineUrlAllowed(new URL("https://example.com/app/about"), target)).toBe(true));
 });

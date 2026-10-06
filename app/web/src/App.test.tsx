@@ -10,13 +10,21 @@
  *            está logado (decisão do Checkpoint 1, item 4)
  */
 
-import { afterEach, describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
 import { useAuthStore } from "./store/auth.store";
 import { ThemeProvider } from "./design/theme-provider";
+
+// A landing pública carrega `three`, `@react-three/*` e `gsap` (nada roda em
+// jsdom) atrás de um `lazy()`. Estes testes cobrem a ÁRVORE DE ROTAS, não o
+// conteúdo da landing — o stub abaixo mantém o foco nisso. O conteúdo real da
+// landing é testado em `pages/landing-page.test.tsx`.
+vi.mock("./pages/landing-page", () => ({
+  LandingPage: () => <div data-testid="landing-stub">landing</div>,
+}));
 
 function limparAuth(): void {
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
@@ -55,13 +63,28 @@ function renderApp(rotaInicial: string) {
 afterEach(limparAuth);
 
 describe("Roteamento de App", () => {
+  it("permite alternar entre login e cadastro mantendo o cenário de acesso", async () => {
+    limparAuth();
+    renderApp("/login");
+    const logo = screen.getByRole("link", { name: "Vulnera — página inicial" });
+
+    fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
+    expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Nome" })).toBeRequired();
+    expect(screen.getByRole("link", { name: "Vulnera — página inicial" })).toBe(logo);
+
+    fireEvent.click(screen.getByRole("link", { name: "Entrar" }));
+    expect(await screen.findByRole("heading", { name: "Entrar" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Criar conta" })).not.toBeInTheDocument();
+  });
+
   it("ROTA-01 — '/' sem sessão renderiza a landing, sem redirecionar pro login", () => {
     limparAuth();
     renderApp("/");
 
-    // É a landing: tem o link "Entrar" da navbar, não o <h1> "Entrar" do
-    // formulário de login (login-page.tsx).
-    expect(screen.getByRole("link", { name: "Entrar" })).toHaveAttribute("href", "/login");
+    // É a landing (stub), não o formulário de login (login-page.tsx).
+    expect(screen.getByTestId("landing-stub")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
   });
 
@@ -79,16 +102,13 @@ describe("Roteamento de App", () => {
     expect(screen.getByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
   });
 
-  it("ROTA-04 — '/' com sessão continua mostrando a landing, com o atalho pro Dashboard", () => {
+  it("ROTA-04 — '/' com sessão continua mostrando a landing, não expulsa quem já está logado", () => {
     logar("ADMIN");
     renderApp("/");
 
-    // Aparece na navbar (sm) e no hero (lg) — os dois apontam pro dashboard.
-    const dashboard = screen.getAllByRole("link", { name: "Ir para o Dashboard" });
-    expect(dashboard.length).toBeGreaterThan(0);
-    for (const link of dashboard) {
-      expect(link).toHaveAttribute("href", "/dashboard");
-    }
-    expect(screen.getByText("Encontre. Priorize. Remedie.")).toBeInTheDocument();
+    // A landing é pública e renderiza igual com ou sem sessão — não redireciona
+    // pro dashboard.
+    expect(screen.getByTestId("landing-stub")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Olá, Rafael" })).not.toBeInTheDocument();
   });
 });

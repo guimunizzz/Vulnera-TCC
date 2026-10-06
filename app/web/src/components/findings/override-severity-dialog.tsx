@@ -44,7 +44,9 @@ export function OverrideSeverityDialog({
   const mutation = useMutation({
     mutationFn: () => vulnerabilitiesApi.overrideSeverity(vulnerabilityId, newSeverity, justification),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["vulnerabilities", vulnerabilityId] });
+      void queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+      void queryClient.invalidateQueries({ queryKey: ["findings"] });
+      void queryClient.invalidateQueries({ queryKey: ["metrics"] });
       setJustification("");
       onOpenChange(false);
     },

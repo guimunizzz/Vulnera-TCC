@@ -21,7 +21,7 @@
  * Rota `/findings` (App.tsx).
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { useSearchParams } from "react-router-dom";
 import { FindingsTable } from "../components/findings/findings-table";
@@ -40,6 +40,11 @@ export function FindingsPage() {
   const [params] = useSearchParams();
   const [pausado, setPausado] = useState(false);
   const { item, lista, reduzido } = useMotion();
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("vulnera:ambient-pause", { detail: pausado }));
+    return () => { window.dispatchEvent(new CustomEvent("vulnera:ambient-pause", { detail: false })); };
+  }, [pausado]);
 
   // O cabeçalho lê o MESMO recorte que a tabela — é a mesma queryKey do
   // TanStack Query, então não custa uma segunda requisição: o total e as

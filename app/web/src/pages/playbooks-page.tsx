@@ -104,7 +104,8 @@ export function PlaybooksPage() {
     <div className="space-y-6">
       <Breadcrumb itens={[{ rotulo: "Início", para: "/dashboard" }, { rotulo: "Playbooks" }]} />
 
-      <header className="space-y-1">
+      <header data-ops-hero="playbook" className="space-y-1">
+        <p className="font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Base de conhecimento</p>
         <h1 className="text-2xl font-bold tracking-tight text-fg">Playbooks de remediação</h1>
         <p className="text-sm text-fg-secondary">
           O conteúdo oficial do OWASP Top 10 e os playbooks escritos pela sua empresa. O que vem da OWASP é somente
@@ -193,7 +194,7 @@ export function PlaybooksPage() {
             <ul className="grid gap-3 md:grid-cols-2">
               {itens.map((p) => (
                 <li key={p.id}>
-                  <article className="flex h-full flex-col gap-2 rounded-container border border-subtle bg-surface p-4">
+                  <article data-ops-lift className="flex h-full flex-col gap-2 rounded-container border border-subtle bg-surface p-4">
                     <div className="flex items-start justify-between gap-2">
                       <Link
                         to={`/playbooks/${p.id}`}

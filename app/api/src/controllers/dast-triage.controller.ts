@@ -30,6 +30,7 @@ export class DastTriageController {
       });
       return res.status(200).json(finding.toResponse());
     } catch (error: any) {
+      if (error.message === "SIMULATED_SCAN_OPERATION_NOT_ALLOWED") return res.status(422).json({ error: error.message });
       if (error.message === "MISSING_TRIAGE_STATUS") return res.status(400).json({ error: "MISSING_TRIAGE_STATUS" });
       if (error.message === "INVALID_TRIAGE_STATUS") return res.status(400).json({ error: "INVALID_TRIAGE_STATUS" });
       if (error.message === "INVALID_TRIAGE_NOTE") return res.status(400).json({ error: "INVALID_TRIAGE_NOTE" });
@@ -48,6 +49,7 @@ export class DastTriageController {
       const draft = await this.service.getPromotionDraft(actor, req.params.findingId as string);
       return res.status(200).json(draft);
     } catch (error: any) {
+      if (error.message === "SIMULATED_SCAN_OPERATION_NOT_ALLOWED") return res.status(422).json({ error: error.message });
       if (error.message === "FINDING_NOT_FOUND") return res.status(404).json({ error: "FINDING_NOT_FOUND" });
       if (error.message === "SCAN_NOT_FOUND") return res.status(404).json({ error: "SCAN_NOT_FOUND" });
       if (error.message === "FORBIDDEN") return res.status(403).json({ error: "FORBIDDEN" });
@@ -70,6 +72,7 @@ export class DastTriageController {
       });
       return res.status(201).json(vulnerability);
     } catch (error: any) {
+      if (error.message === "SIMULATED_SCAN_OPERATION_NOT_ALLOWED") return res.status(422).json({ error: error.message });
       const msg = error.message as string;
       if (msg?.startsWith("MISSING_")) return res.status(400).json({ error: msg });
       // calculateCvss lança em vetor malformado — é erro de INPUT do usuário
@@ -94,6 +97,7 @@ export class DastTriageController {
       const comparison = await this.service.compare(actor, baseScanId, req.params.id as string);
       return res.status(200).json(comparison);
     } catch (error: any) {
+      if (error.message === "SIMULATED_SCAN_OPERATION_NOT_ALLOWED") return res.status(422).json({ error: error.message });
       const msg = error.message as string;
       if (msg === "CANNOT_COMPARE_SCAN_WITH_ITSELF") return res.status(400).json({ error: msg });
       // 422: os dois scans existem e o ator pode vê-los — o pedido é que não
@@ -113,6 +117,7 @@ export class DastTriageController {
       const scans = await this.service.listComparableScans(actor, req.params.id as string);
       return res.status(200).json(scans);
     } catch (error: any) {
+      if (error.message === "SIMULATED_SCAN_OPERATION_NOT_ALLOWED") return res.status(422).json({ error: error.message });
       if (error.message === "SCAN_NOT_FOUND") return res.status(404).json({ error: "SCAN_NOT_FOUND" });
       if (error.message === "FORBIDDEN") return res.status(403).json({ error: "FORBIDDEN" });
       console.error("DastTriageController.listComparableScans", error);

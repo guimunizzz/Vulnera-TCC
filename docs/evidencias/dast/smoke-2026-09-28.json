@@ -1,0 +1,71 @@
+{
+  "real": {
+    "durationMs": 67649,
+    "version": "2.17.0",
+    "result": {
+      "status": "COMPLETED",
+      "jsonReportPath": "/evidence/smoke-real-mulbwvlw/report.json",
+      "htmlReportPath": "/evidence/smoke-real-mulbwvlw/report.html",
+      "durationMs": 65578,
+      "simulated": false
+    },
+    "requests": [
+      {
+        "method": "GET",
+        "url": "/"
+      },
+      {
+        "method": "GET",
+        "url": "/about"
+      },
+      {
+        "method": "GET",
+        "url": "/redirect"
+      }
+    ],
+    "alerts": [
+      {
+        "name": "Absence of Anti-CSRF Tokens",
+        "riskcode": "2",
+        "count": "2"
+      },
+      {
+        "name": "Content Security Policy (CSP) Header Not Set",
+        "riskcode": "2",
+        "count": "2"
+      },
+      {
+        "name": "Missing Anti-clickjacking Header",
+        "riskcode": "2",
+        "count": "1"
+      },
+      {
+        "name": "Cookie No HttpOnly Flag",
+        "riskcode": "1",
+        "count": "2"
+      },
+      {
+        "name": "Cookie without SameSite Attribute",
+        "riskcode": "1",
+        "count": "2"
+      },
+      {
+        "name": "X-Content-Type-Options Header Missing",
+        "riskcode": "1",
+        "count": "2"
+      }
+    ]
+  },
+  "demo": {
+    "status": "COMPLETED",
+    "simulated": true,
+    "extraTargetRequests": 0
+  },
+  "unreachable": {
+    "status": "FAILED",
+    "errorMessage": "TARGET_UNREACHABLE",
+    "durationMs": 47215,
+    "simulated": false
+  },
+  "_description": "Evidência do smoke local de 2026-09-28: resultado real, métodos recebidos, demonstração e falha em porta fechada. Consumidor: relatório de validação DAST."
+}

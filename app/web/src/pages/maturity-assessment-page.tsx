@@ -154,8 +154,9 @@ export function MaturityAssessmentPage() {
     <div>
       <Breadcrumb itens={[{ rotulo: companyName ?? "Empresa" }, { rotulo: "Maturidade" }]} />
 
-      <div className="flex items-start justify-between gap-4">
+      <div data-ops-hero="maturity" className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Postura de segurança</p>
           <h1 className="text-2xl font-bold text-fg">Avaliação de maturidade</h1>
           <p className="mt-1 text-fg-muted">
             Checklist por domínio — resposta em escala 1 (não implementado) a 5 (maduro/consolidado).

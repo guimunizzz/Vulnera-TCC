@@ -6,6 +6,99 @@
 
 ## Status
 
+✅ **2026-10-02 — Plano de ação SAST HIGH preparado (100% do planejamento).** [Plano com impactos e checkpoints](PLANO-ACAO-SAST-HIGH.md): leitura estática concluiu `needs_review` para ambos os IDs, considerando os controles existentes. Matriz de impactos, CP-0 a CP-4, testes de navegador/filesystem/tenancy e fechamento por correção ou exceção individual documentados. **Execução pendente: 0/5 checkpoints; nenhum teste, build, navegador ou scanner executado nesta tarefa.**
+
+- [x] **SAST-HIGH-PLANO:** documentar ação e impactos para XSS/Path Traversal, sem presumir exploração nem falso positivo. Concluído em 2026-10-02.
+
+✅ **2026-10-01 — Texto de issue SAST preparado (100% da redação).** `output/sast-high-findings-issue.md` reúne dois alertas HIGH e critérios de resolução; abertura manual pelo usuário.
+
+- [ ] **SAST-HIGH-XSS:** validar/resolver `d619f81f-c998-486d-9e0c-cc0752719ae4` no HTML de relatório DAST, considerando CSP sandbox existente e testes em navegador. Seguir CP-0/CP-1/CP-3/CP-4 do [plano de ação](PLANO-ACAO-SAST-HIGH.md); incluir consumidor `srcDoc`, subrecursos e prova de acesso à origem.
+- [ ] **SAST-HIGH-PATH:** validar/resolver `61fbc613-427f-4676-aff9-c9ddfbbe90e0` no download de evidências, considerando autorização e confinamento de caminho existentes. Seguir CP-0/CP-2/CP-3/CP-4 do [plano de ação](PLANO-ACAO-SAST-HIGH.md); incluir confinamento físico, symlinks/junctions, caminho adulterado para outro tenant e Windows/Linux. Confirmar por regressões e nova execução do SAST; exceção apenas se falso positivo fundamentado.
+
+✅ **2026-10-01 — Merge `dev` na `fix/landing-page` (100%).** A landing pública da branch de fix substitui a página antiga de `dev`; login/cadastro da fix permanecem, e as rotas privadas, módulos e infraestrutura de `dev` foram preservados. Web: build, contraste 66/66 e 268/268 testes aprovados; inspeção visual Chrome headless em 1440×900 e 375×812. API: build aprovado após regenerar o Prisma Client; o `check` segue bloqueado pelos dois imports não usados preexistentes em `vulnerability.service.ts:45`. Sem mudança de schema ou migration. Capturas: `output/landing-merge-desktop.png` e `output/landing-merge-mobile.png`.
+✅ **2026-10-01 — Issue #20: criação de Project pela interface (100%; CP-0 a CP-4 validados, 5/5).** Na branch `fix/20-create-project-flow`; PR não aberta, sem commit/push. As regras comerciais usam assinatura ACTIVE e Plan da empresa da Application; `maxProjects` conta PENDING/IN_PROGRESS/IN_REVIEW, não COMPLETED; remediação requer `includesRemediation`; Application deve estar ativa; nome após trim deve conter 1–191 code points. RN05 mantém um Project por Application incluindo COMPLETED. A checagem de duplicidade/capacidade não é serializada com create; corridas permanecem como limitação e hardening concorrente está separado. Web: wizard 32/32, Projects 11/11, Applications 21/21 e suíte final 297/297 em 22 suítes; lint 0 erros/9 avisos preexistentes, contraste 66/66 e build TypeScript/Vite/Docker aprovados. API: Project focal 24/24; cobertura de `project.service`: 100% linhas/funções, 84,31% branches e 93,2% statements; builds host/Docker aprovados. API completa 598/601 em 43 suítes, com 3 falhas ambientais `spawn EPERM` de DAST; repetição isolada/escalada 17/17. `npm run check` global API não está verde por dois imports não usados preexistentes em `vulnerability.service.ts:45`. Smoke CLI real 1/1, sem mocks/trace; duas criações 201, cancelamentos nos passos 1–4 sem POST, cache/lista sem reload, keyboard/foco e mobile 375 sem overflow. Prisma somente leitura confirmou exatamente os dois Projects do marcador e igualdade dos vínculos de empresa esperados; quatro screenshots revisadas e aprovadas. O primeiro smoke encontrou 429 real após burst do dashboard ADMIN; a UI exibiu recuperação e o spec respeita `Retry-After`, sem repetir POST. Sem schema/migration, dependências ou lockfile. Relatório/matriz: `output/issue-20-qa-report.md`; evidência: `output/issue-20/issue20-smoke-evidence.json`.
+
+| CP | Estado | Escopo |
+| --- | --- | --- |
+| CP-0 | ✅ | Baseline da branch e decisão sobre assinatura, capacidade, remediação, Application inativa, nome e concorrência; ADR-044 e notas de domínio registradas. |
+| CP-1 | ✅ | CTA permanente com role em Projetos e estado vazio; `returnTo` restrito às origens Projetos/Aplicações, sem perder a pré-seleção. Focais relatados: Projects 11/11 e Applications 21/21. |
+| CP-2 | ✅ | Wizard compartilhado validado: elegibilidade, nome, Cancelar, foco, origem segura e cache. Focal 32/32; Web final 297/297 em 22 suítes, lint 0 erros/9 warnings preexistentes, contraste 66/66 e build TypeScript/Vite/Docker aprovados. |
+| CP-3 | ✅ | Gates comerciais no service e regras de atualização; API focal 24/24, cobertura `project.service` 100% linhas/funções, 84,31% branches, 93,2% statements; build API host aprovado. Corrida check/count permanece separada e sem garantia de serialização. |
+| CP-4 | ✅ | Web/API builds, smoke CLI 1/1 sem mocks/trace, inspeção visual, evidência JSON/screenshots e confirmação Prisma somente leitura concluídos. API full permanece 598/601 por três `spawn EPERM` ambientais de DAST; repetição isolada/escalada 17/17. O check global API continua bloqueado pelos dois imports não usados preexistentes em `vulnerability.service.ts:45`. |
+
+**Marco intermediário preservado — 2026-10-01 (80%, 4/5), supersedido pelo fechamento acima:** CP-0 a CP-3 estavam validados; o wizard/Web final tinham passado, e o smoke real ainda aguardava. A primeira execução encontrou HTTP 429 no GET de elegibilidade após o burst do dashboard ADMIN. O spec foi ajustado para usar Retry-After e retry real da UI; os resultados finais posteriores constam no fechamento 100% acima, sem remover este histórico.
+
+### Trabalho futuro identificado na Issue #20
+
+- [ ] **Hardening concorrente de Project (RN05 e `maxProjects`):** avaliar os dados existentes e, em tarefa própria, escolher uma estratégia de unicidade/serialização que proteja a regra de um Project por Application e a cota em criações concorrentes. A Issue #20 não escolheu estratégia nem migration; conferir impacto antes de decidir qualquer alteração de schema.
+- [ ] **Consultas de elegibilidade e rate limiter:** avaliar o burst de GETs observado como HTTP 429 após o dashboard ADMIN e se a cadência/recuperação das consultas deve ser ajustada. O smoke final recuperou pelo `Retry-After` e pela ação real da UI; nenhum limite foi desativado ou alterado nesta issue.
+
+**Fechamento — Issue #20 (2026-10-01, 100%).** Smoke Playwright real 1/1 em stack sem mocks/trace; Playwright testou as duas origens, os quatro Cancelamentos, resposta 201, listagem sem reload, focus/keyboard, PENTESTER sem CTA e mobile com URL longa. Prisma somente leitura confirmou os IDs de Company/Application/Project do JSON e exatamente dois Projects com empresa herdada corretamente. Quatro screenshots revisadas/aprovadas. Web 297/297 e builds aprovados; API focal 24/24 e builds aprovados. Full API 598/601 pelas três falhas ambientais `spawn EPERM` do DAST, com repetição isolada/escalada 17/17. Check global da API continua não verde por dois imports antigos de lint. Sem migration/dependências; branch `fix/20-create-project-flow`, PR ainda não aberta.
+✅ **2026-10-01 — Carregamento na navegação (100%; 4/4).** `codex/fix-page-loading` parte de `origin/dev` em `36fcaec`. Causa HTTP comprovada: quatro métricas simultâneas excedem burst três; retry anterior ignora espera de seis segundos. Recuperação central respeita a API, cache fresco 30 s com invalidação e limpeza por sessão, métricas por aba, contexto da transição preservado e spinner depois de 200 ms. Web 286/286, lint 0 erros/9 avisos conhecidos, contraste 66/66 e build no contêiner. Chrome 17/17 contra API real, incluindo retry real de 6,276 s e 375 px. ADR-044 e `output/page-loading-validation.md`; L-16 concluída. Sem mudança de dependências, banco ou rate limiter; sem push/PR.
+
+| Task | Estado | Entrega |
+| --- | --- | --- |
+| NAV-01 | ✅ | Diagnóstico e reprodução HTTP do 429, APIs já assíncronas |
+| NAV-02 | ✅ | Retry/cache central, invalidações e isolamento de sessão |
+| NAV-03 | ✅ | Métricas sob demanda, transição e spinner acessível |
+| NAV-04 | ✅ | 286 testes, contraste/build, Chrome 17 checks e docs |
+
+✅ **2026-09-30 — Issue #19: ADMIN criar Application sem `companyId` próprio (100%; CP-0 a CP-3 concluídos, 4/4).** Baseline da branch `fix/19-admin-create-application` (`fecacab3`) comparado a `dev` (`f301fd0`). ADMIN escolhe a empresa no modal; CLIENT permanece confinado à empresa do banco e `companyId` não pode ser atualizado. Smoke Chrome real passou 44/44 verificações. Web: `npm run check -- -- --maxWorkers=1 --silent` aprovado, 257/257 testes em 21 suítes (54,59 s), lint 0 erros/9 avisos preexistentes, contraste 66/66 e build `tsc + vite` aprovado com aviso conhecido de tamanho de bundle. API: focal 42/42, full 588/588 em 43 suítes, build aprovado e cobertura de `application.service` 100% linhas/funções, 85,71% branches, 94,44% statements. **Ressalva:** o `npm run check` global da API continua falhando somente pelos imports preexistentes não usados `UserEntity`/`UserResponseDTO` em `vulnerability.service.ts:45`; o gate global da API não está verde. O lint da API é fora do escopo e não invalida os testes/build aprovados. O smoke confirmou ADMIN sem vínculo e ADMIN vinculado a A criando em B, CLIENT criando em A mesmo com body forjado com B, além de lista, reset, teclado/foco e responsividade. PR ainda não aberta.
+
+| CP | Estado | Escopo |
+| --- | --- | --- |
+| CP-0 | ✅ | Confirmar branch, HEAD, comparação com `dev` e baseline informado. |
+| CP-1 | ✅ | `CreateApplicationInput` aceita alvo opcional; tipo de update exclui empresa; API web de update usa tipo específico; `MISSING_COMPANY_ID` tem mensagem própria. |
+| CP-2 | ✅ | Modal e estados ADMIN/CLIENT, proteção de resposta tardia/envio duplicado e smoke Chrome real de 44 verificações. |
+| CP-3 | ✅ | API focal 42/42 e full 588/588; Web focal 20/20 e serial 257/257 em 21 suítes; builds Web/API e contraste 66/66 aprovados. Ressalva: `npm run check` global da API acusa somente dois imports preexistentes não usados em `vulnerability.service.ts:45`. |
+
+**Implementação e validação funcional da issue #19 concluídas (100%).** A PR ainda não foi aberta. O resultado serial Web substitui o baseline paralelo de 237/240: Remediação e SLA passaram na execução final; não há causa comprovada para as falhas anteriores.
+
+### Marco intermediário — CP-0 a CP-2 (75%), substituído pelo resultado final acima
+
+O estado intermediário e o baseline paralelo de 237/240 foram registrados antes da validação serial final. As falhas de Remediação/SLA não persistiram na execução final; a causa das falhas paralelas não foi determinada.
+
+### Marco administrativo - 2026-09-30
+
+Commit local `7b847c4` (`7b847c473e10ed1ca93e787704ed9a91dd1f70ab`), mensagem `fix(application): complete admin company selection flow`. O push final ficara com o usuario; nenhum push ocorreu e PR ainda nao foi aberta.
+
+### Registro histórico — estado após CP-1, substituído em 2026-09-30 após CP-2
+
+O snapshot abaixo preserva o progresso inicial de 50% registrado antes da
+implementação e do smoke real do modal.
+
+> 🚧 **2026-09-30 — Issue #19 (50%; CP-0 e CP-1 concluídos, 2/4).** Baseline da branch `fix/19-admin-create-application` (`fecacab3`) comparado a `dev` (`f301fd0`); contratos web de create/update e tradução de `MISSING_COMPANY_ID` alinhados. O agente de CP-1 não executou testes/build. A validação ocorreu depois: duas execuções complementares da API somaram 580/580 testes em 43 suítes, com build API e `tsc` Web aprovados. No baseline Web paralelo, build aprovado, lint 0 erros/9 avisos, contraste 66/66 e testes 237/240, ainda aguardando execução serial.
+
+| CP | Estado naquele marco | Escopo |
+| --- | --- | --- |
+| CP-0 | ✅ | Confirmar branch, HEAD, comparação com `dev` e baseline. |
+| CP-1 | ✅ | Contrato web create/update e mensagem `MISSING_COMPANY_ID`. |
+| CP-2 | 🚧 | Modal e fluxo ADMIN/CLIENT ainda não implementados. |
+| CP-3 | 📋 | Testes, validação final, evidências e fechamento. |
+
+✅ **2026-09-29 — Aceite final DAST:** todos os requisitos solicitados de modo explícito, consentimento, retry, falha tratada e relatório real validados. Fila/watchdog atual mantida; mensageria externa não adicionada. Relatório `docs/DAST-VALIDACAO-2026-09-28.md` e evidências versionadas; pendências técnicas ampliadas abaixo não são apresentadas como concluídas.
+
+**✅ 2026-09-28 — DAST explícito e baseline real (100% do escopo solicitado).** Branch `feat/dast-real-explicit-mode`: escolha Simulado/Real, segundo aviso e confirmação exigida também pela API; demo sem tráfego, falha real sem fallback; GET limitado com análise passiva do ZAP, retries de leitura e diagnóstico de rede/memória. Padrão de um ZAP de 2 GiB/2 CPUs para WSL de 4 GB. Scan real executado em alvo local controlado. Validação, limites e pendências preexistentes em `docs/DAST-VALIDACAO-2026-09-28.md`; decisão ADR-042. Sem migration ou alteração de dependências.
+
+✅ **2026-09-28 — Diagnóstico OWASP ZAP na WSL de 4 GB (100% da análise):** três falhas reais confirmadas nos logs/banco, seguidas de fallback simulado. Configuração permite 2 × 2 GiB; execução isolada também falha, sem prova de OOM. Relatório: `docs/DAST-DIAGNOSTICO-2026-09-28.md`. Registro histórico da análise inicial; as correções posteriores estão na entrega acima.
+
+Pendências derivadas desta análise (não alteram os marcos históricos de entrega do DAST):
+
+- [x] DAST-DIAG-01a — Separar demo explícita de falha real; impedir promoção/comparação operacional de simulado. Inclui segundo aviso e confirmação da API.
+- [x] DAST-DIAG-02 — Baseline sem active scan, sem formulários, com allowlist GET/origem/subárvore e validação local de tráfego/redirects.
+- [x] DAST-DIAG-03a — Perfil WSL 4 GB: um scan, teto de 2 GiB/2 CPUs e crawling limitado; execução real pequena comprovada.
+- [x] DAST-DIAG-04a — Diagnóstico por fase/endpoint, logs e OOM antes da limpeza, retries limitados de leitura e heartbeat durante espera.
+- [x] DAST-DIAG-05a — Drenar fila passiva antes de publicar, falhar explicitamente se não drenar; validar relatório real sem simulação em alvo local.
+- [ ] DAST-DIAG-01b — Preservar/publicar achados reais parciais com cobertura identificada, sem tratá-los como scan completo.
+- [ ] DAST-DIAG-03b — Medir picos contínuos de RAM/CPU por escopo; amostra pontual não dimensiona sites grandes.
+- [ ] DAST-DIAG-04b — Ampliar diagnóstico de encerramento por exit code além de OOM/heap/rede; retenção automática de relatórios/logs.
+- [ ] DAST-DIAG-05b — Fixar versão/digest do ZAP para reprodução; imagem `stable` observada como 2.17.0.
+- [ ] DAST-FUT-01 — Confinamento por IP resolvido/egress contra DNS rebinding; permanece limitação anterior, não resolvida por filtros de URL.
+- [ ] WEB-TEST-REM-01 — Investigar `remediation-page-flow.test.tsx:47`: falha de carregamento/region reproduzida na suíte completa e isolada em 2026-09-28; fora do escopo DAST.
+- [ ] DAST-FUT-02 — Identificar cobertura de baseline versus scans ativos históricos na comparação (sem mudança de schema nesta sessão).
+
+✅ **2026-09-23 — Área autenticada unificada (100%; branch `feat/visual-overhaul-authenticated`):** fundo padrão no `AppLayout` com grade, luz e cena opcional única; identidade de aplicação, projeto, finding, DAST, maturidade, playbook e governança por superfícies semânticas; wizards com transição Motion e redução de movimento; hash CSP do tema corrigido para CRLF. Web versionado 237/237, contraste 66/66, lint 0 erros e build Docker verde. Browser 1440/768/375 px, dark/light/reduced-motion sem overflow/canvas duplicado; detalhe DAST sem scan demo. Suíte completa 237/239 porque dois testes não rastreados preexistentes falham. Ver `docs/FRONTEND_WEB.md`, ADR-041 e `output/frontend-visual-overhaul-report.md`.
+
 ✅ **2026-09-23 — Ajuste visual de Remediação e SLA (100%; commit local em `feat/remediation-sla-visual`):** quadro de três etapas com movimento após confirmação e atribuição lazy; política de quatro severidades com Salvar/Reaplicar separados e histórico responsivo. Web 236/236 em contêiner, contraste 66/66, lint 0 erros e build Docker verde; validação real em desktop/tablet/mobile e dark/light. Sem alterações de API, banco, RBAC, dependências ou lockfile. Ver `output/remediation-sla-visual-report.md`.
 
 ✅ **2026-09-23 — Ajuste visual de Findings (100%)**: hero de triagem, ondas Three.js e órbitas nos resumos com um único canvas lazy; fundo CSS discreto, pausa manual e movimento reduzido. Filtros, tabela canônica e contagens do recorte preservados. Web 231/231, contraste 66/66, lint 0 erros (9 avisos preexistentes) e build Docker verde. Validação visual desktop/mobile 375 px, claro/escuro, pausa e filtro de severidade. Sem alteração de API, banco, RBAC ou dependências.
@@ -338,8 +431,9 @@ Tudo isso entra como **trabalho futuro** no README — e a redução consciente 
 | L-11 | **O risk score da SÉRIE TEMPORAL é aproximado**, diferente do valor exato do `summary`. | Reconstruir o CVSS de cada finding aberto em cada período passado exigiria tabela de snapshot, que o ADR-025 evitou de propósito. | Serve para ver TENDÊNCIA, que é a função da linha. Está comentado no código, dito no ADR-025 e visível na interface. O `summary` — o número que a pessoa lê — é exato. |
 | L-08 | **Uploads ficam em disco local**, não em storage externo com versionamento. | Decisão de infraestrutura do MVP (`UPLOADS_DIR` + volume Docker). | Volume nomeado sobrevive a `docker compose down`; caminho sempre contido sob `UPLOADS_ROOT`. |
 | L-15 | **O donut de severidade não renderiza** — só a legenda aparece, no dashboard do CLIENT e no de aplicação. Recharts avisa `width(0) and height(0)` dentro de um contêiner `h-48 w-48` legítimo. | Pré-existente (provável efeito do upgrade para `recharts@^3.10.1`, major). Encontrado na validação da Fase 9, em componente que a entrega não tocou — §0.2 S6. | A informação não se perde: a legenda lista severidade e contagem em texto, e os KPIs numéricos acima estão corretos. O gráfico é reforço, não portador. |
-| L-16 | **Falha de rede silenciosa em todas as telas fora da Fase 9.** O `networkMode: "online"` padrão do TanStack Query pausa a consulta em vez de errar (`status: pending`, `error: null`), então a tela não mostra erro nem oferece recuperação — e `refetch()` numa consulta pausada também pausa. | Corrigir de vez é trocar o padrão do `queryClient` global, que afeta toda tela do app — grande demais para entrar junto de uma entrega de findings. Marcado `[FUTURO]` em `use-findings.ts`. | As buscas de finding já usam `networkMode: "always"` e mostram erro de verdade com botão de recuperação. As demais telas continuam com o comportamento antigo. |
+| L-16 | **✅ Resolvida em 2026-10-01 — falha de rede silenciosa fora da Fase 9.** Registro histórico: o padrão `online` pausava consultas sem erro ou recuperação. | A correção global antes adiada foi entregue na task de navegação: `networkMode: always`, retries transitórios limitados e feedback de carregamento. | Consulta com onlineManager offline, erro definitivo e recuperação cobertos em `query-client.test.ts`; ADR-044. |
 | L-17 | **Uma queda da API desloga o usuário.** O refresh falha, e o interceptor de `lib/api/client.ts` não distingue "refresh recusado" (401 legítimo) de "refresh não chegou ao servidor" (rede), chamando `clearAuth()` nos dois casos. | Pré-existente; mexer no interceptor de autenticação é risco desproporcional numa entrega de listagem. | A sessão volta com um login; nenhum dado se perde. |
+| L-19 | **O Select customizado não funciona dentro do Dialog.** O painel do Select abre em portal fora do conteúdo do modal; o `Dialog` torna os siblings inertes e trata o clique nesse painel como clique externo. | Corrigir a infraestrutura compartilhada de portal/foco/dismiss ampliaria o escopo da Issue #19. Encontrado durante CP-2 em 2026-09-30; aplicar a regra S6. | Para o seletor de empresa desta issue, usar `<select>` nativo dentro do modal, estilizado com `CLASSES_CONTROLE`; mantém teclado nativo e a interação dentro do foco do diálogo. Evoluir o Select/coordenação de overlays fica como trabalho futuro. |
 
 ---
 

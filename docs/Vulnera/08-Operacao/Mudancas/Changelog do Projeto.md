@@ -1402,3 +1402,98 @@ corte de "toggle de tema"), ADR-025 (métricas). `docs/DESIGN_SYSTEM.md` criado 
 é o que a Fase 7 consome. `PRD_VIVO.md`, `docs/BACKLOG.md`,
 `docs/ROADMAP_PROMPTS.md`, `docs/DECISIONS.md`, `Fora do Escopo` e
 `Contexto Mestre v4` atualizados.
+
+
+## 2026-09-28 — DAST explícito e baseline real em WSL de 4 GB
+
+Escolha Simulado/Real no formulário, segundo aviso com autorização, contrato da API validado e auditado. Removido fallback automático: falha real permanece FAILED, com mensagem tratada e diagnóstico preservado antes da limpeza. Demonstração não consulta Docker/alvo e não promove achados a vulnerabilidades.
+
+ZAP real usa navegação GET limitada e análise passiva, sem formulários/active scan. Default de um container de 2 GiB/2 CPUs; consultas toleram até três tentativas transitórias. Validação com ZAP 2.17.0 em alvo descartável, sem tocar sites externos. JSON/HTML reais, prova de métodos recebidos e falha em porta fechada. Detalhes de testes e ressalvas em `docs/DAST-VALIDACAO-2026-09-28.md`; ADR-042 e `docs/DAST.md` atualizados.
+
+Branch `feat/dast-real-explicit-mode`, entrega por commit local detalhado, sem PR/push. Nenhuma migration, alteração de schema ou dependência.
+
+### Fechamento — 2026-09-29
+
+Aceite de todos os pontos solicitados: scan real da UI concluído em 45,5 s com 11 findings; demonstração em 3 s sem tráfego; falha por porta fechada tratada com zero findings. Artefatos e estados persistidos reconferidos. Mantida fila FIFO/watchdog sem broker externo, conforme escopo confirmado. API focal 81/81, novos testes UI 3/3, builds aprovados; ressalvas dos checks gerais documentadas.
+
+
+## 2026-09-30 — Issue #19: criação de Application por ADMIN (75%, CP-0 a CP-2)
+
+Na branch `fix/19-admin-create-application` (`fecacab3`), a criação web passou a
+representar o contrato administrativo: ADMIN escolhe a empresa explicitamente;
+CLIENT continua enviando sem alvo e a API deriva a própria empresa do banco.
+`companyId` fica fora do contrato de atualização. A seleção tem estados de
+carregamento, erro e lista vazia, e o formulário impede submissão sem um alvo
+ADMIN válido. Respostas tardias de uma sessão anterior não fecham nem alteram
+um formulário novo; a trava impede envio duplicado.
+
+O `Select` customizado usa portal fora do conteúdo do `Dialog`, em conflito
+com `inert` e o tratamento de clique externo do modal. Para esta tela foi
+adotado um `<select>` nativo estilizado com `CLASSES_CONTROLE`. A regra geral
+de overlays fica no backlog como L-19, sem expansão de escopo nesta issue.
+
+Validação reportada: lint focal da página e `tsc` Web passaram; API 580/580
+testes em 43 suítes por duas execuções complementares e build aprovado. Smoke
+Chrome real passou 44 verificações contra API/Web reais e banco `vulnera_test`:
+ADMIN sem `companyId` selecionou empresa B; ADMIN vinculado a A também escolheu
+B; CLIENT criou em A; CLIENT enviando B manualmente permaneceu em A. Três
+vínculos foram conferidos no banco antes da limpeza das fixtures. Também foram
+confirmados invalidação da lista, reset após sucesso, ausência de consulta
+`/subscriptions/current` para ADMIN e de listagem global para CLIENT, seleção
+por teclado, foco no modal e viewport mobile de 375px sem overflow. O
+orquestrador conferiu screenshots em 1440px e 375px; evidências em
+`output/issue-19-smoke-result.json`, `output/issue-19-desktop.png` e
+`output/issue-19-mobile.png`.
+
+**CP-3 continua em andamento:** testes Web finais/seriais e fechamento das
+ressalvas ainda não foram reportados. A Issue #19 permanece aberta; PR não
+aberta, sem commits ou push registrados.
+
+
+## Fechamento — Issue #19: criação de Application por ADMIN (2026-09-30)
+
+CP-0 a CP-3 concluídos; implementação e validação funcional em 100%. Branch `fix/19-admin-create-application`, base `fecacab3`; PR ainda não aberta e commits/push não registrados nesta atualização. O smoke Chrome real passou 44/44 verificações. Web final serial: 257/257 testes em 21 suítes (54,59 s), focal 20/20, lint 0 erros/9 avisos preexistentes, contraste 66/66 e build `tsc + vite` aprovado com aviso conhecido de bundle. API: 588/588 testes em 43 suítes, focal 42/42, build aprovado e cobertura de `application.service` 100% linhas/funções, 85,71% branches e 94,44% statements.
+
+Ressalva mantida: o `npm run check` global da API não está verde devido a `UserEntity` e `UserResponseDTO` não usados em `vulnerability.service.ts:45`; imports preexistentes fora do escopo. No baseline Web paralelo, 237/240; Remediação e SLA passaram na execução serial final. As falhas paralelas não persistiram, sem causa comprovada. O Select nativo no modal é desvio documentado do plano; L-19 mantém o conflito geral entre portal e overlay como trabalho futuro. Relatório: `output/issue-19-validation.md`; decisão: ADR-043.
+
+
+### Marco administrativo posterior - Issue #19 (2026-09-30)
+
+Commit local criado: `7b847c473e10ed1ca93e787704ed9a91dd1f70ab` (`7b847c4`), mensagem `fix(application): complete admin company selection flow`. O push final ficara com o usuario; nenhum push ocorreu e PR ainda nao foi aberta. Os resultados de validacao e a ressalva do lint API acima permanecem inalterados.
+
+
+## Fechamento — Issue #20: criação de Project pela interface (2026-10-01)
+
+**Status:** CP-0 a CP-4 validados, 100%. Branch `fix/20-create-project-flow`; sem commit, push ou PR.
+
+Projetos mantém “Novo projeto” para ADMIN/CLIENT em lista cheia, vazia, carregando e erro; PENTESTER não recebe ação de criação. Aplicações mantêm a pré-seleção e informam origem `/applications`; Projetos usa `/projects`. O wizard compartilhado valida a seleção da Application, o nome após trim (1–191 code points), apresenta a revisão e os erros, e permite cancelar em cada etapa sem enviar Project. Os gates de assinatura ACTIVE/Plan, capacidade simultânea e remediação opt-in são aplicados pelo service/API; o wizard não consulta assinatura/Plan para desabilitar o checkbox de remediação. Após sucesso, a criação atualiza o cache/lista.
+
+Smoke Playwright CLI 1/1 contra stack real, sem mocks nem trace. Confirmados dois POSTs 201, ADMIN sem empresa pessoal criando para a Company da Application, CLIENT criando pela pré-seleção de Aplicações, retorno à lista sem reload, Cancelar 1–4 sem POST, teclado/foco, PENTESTER sem CTA e viewports 1440/375 sem overflow. O root revisou quatro screenshots. Prisma somente leitura confirmou exatamente os dois Projects identificados pelo marcador e a igualdade de seus `companyId` com o da Application e Company esperadas. Evidências em `output/issue-20/issue20-smoke-evidence.json` e screenshots; matriz dos dez critérios em `output/issue-20-qa-report.md`.
+
+**Validação Web:** 297/297 em 22 suítes; wizard 32/32, Projects 11/11, Applications 21/21; lint sem erros (9 avisos preexistentes), contraste 66/66 e builds TypeScript/Vite/Docker aprovados.
+
+**Validação API:** Project focal 24/24; cobertura `project.service` 100% linhas/funções, 84,31% branches e 93,2% statements; builds host/Docker aprovados. Suíte API total 598/601 em 43 suítes por três erros ambientais `spawn EPERM` ao iniciar DAST no sandbox; repetição isolada/escalada DAST 17/17. `npm run check` global não está verde pelos imports `UserEntity`/`UserResponseDTO` preexistentes não usados em `vulnerability.service.ts:45`; não corrigidos fora do escopo.
+
+O smoke inicial recebeu 429 legítimo depois do burst de requisições do dashboard ADMIN; a interface apresentou recuperação e a rodada final seguiu `Retry-After` pelo botão real, sem alterar o limiter ou repetir POST. Limitação preservada: a checagem RN05 e a contagem de `maxProjects` não são serializadas com create; requests concorrentes podem duplicar projeto ou exceder capacidade. Hardening concorrente é trabalho separado. Nenhuma alteração de schema, migration, dependências ou lockfile.
+## Sessão — carregamento na navegação (2026-10-01)
+
+✅ Concluída em 100%, branch `codex/fix-page-loading`, base `origin/dev` em
+`36fcaec`. Perguntas iniciais confirmaram todas as telas, ambiente dev e origem
+dev. A cópia local estava seis commits atrás; nova branch criada do remoto.
+
+Reprodução HTTP confirmou quatro métricas contra burst três: 429 pedindo seis
+segundos, enquanto o frontend tentava uma vez após apenas um segundo. Queries
+agora respeitam o prazo, fazem até duas retentativas transitórias, mantêm cache
+fresco por 30 s e exibem spinner depois de 200 ms. Métricas fechadas não são
+consultadas; a janela não muda só ao trocar aba; transição preserva contexto.
+Invalidações após gravações e limpeza por usuário mantêm os dados consistentes.
+A nova tentativa do finding refaz seu GET.
+
+Web no contêiner: 286/286 em 27 suítes, lint 0 erros/9 avisos preexistentes,
+contraste 66/66 e build aprovado. Chrome com dados/API reais: 17/17; 429
+controlado de dois segundos e 429 real recuperado em 6,276 s, sem clique;
+painel com dados em 375 px/movimento reduzido e nenhuma exceção JavaScript.
+Host tem dependências ausentes preexistentes; nenhum manifesto/lockfile,
+limite de API ou schema mudou. Não foram escritos dados de domínio nem
+executados scans. Commit local; sem push/PR. ADR-044, FRONTEND_WEB e relatório
+`output/page-loading-validation.md` registram decisão, evidências e limites.

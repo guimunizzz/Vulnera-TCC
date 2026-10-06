@@ -1,0 +1,136 @@
+/**
+ * Superfícies editoriais dos módulos autenticados.
+ * Mantêm a mesma linguagem de borda, luz e movimento com composição própria
+ * para cada fluxo. Consumidores: páginas detalhadas dentro do AppLayout.
+ */
+
+[data-ops-hero] {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: var(--space-6);
+  border: 1px solid oklch(var(--color-border-subtle));
+  border-radius: var(--radius-container);
+  background:
+    radial-gradient(ellipse 65% 140% at 98% 0%, oklch(var(--color-accent) / 0.11), transparent 70%),
+    linear-gradient(115deg, oklch(var(--color-bg-surface)), oklch(var(--color-bg-raised) / 0.68));
+  box-shadow: var(--elevation-raised);
+}
+
+[data-ops-hero]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: linear-gradient(to bottom, oklch(var(--color-accent-ink) / 0.8), transparent 82%);
+}
+
+[data-ops-hero] > * { position: relative; z-index: 1; }
+
+[data-ops-hero="application"] {
+  background:
+    radial-gradient(ellipse 48% 180% at 92% 50%, oklch(var(--color-chart-2) / 0.11), transparent 75%),
+    linear-gradient(115deg, oklch(var(--color-bg-surface)), oklch(var(--color-bg-raised) / 0.72));
+}
+
+[data-ops-hero="project"]::after,
+[data-ops-hero="maturity"]::after {
+  content: "";
+  position: absolute;
+  right: -3rem;
+  top: -6rem;
+  width: 19rem;
+  height: 19rem;
+  border: 1px solid oklch(var(--color-accent-ink) / 0.1);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3rem oklch(var(--color-accent) / 0.025), 0 0 0 6rem oklch(var(--color-accent) / 0.012);
+  pointer-events: none;
+}
+
+[data-ops-hero="finding"]::before {
+  width: 3px;
+  background: linear-gradient(to bottom, oklch(var(--color-severity-critical-ink) / 0.75), transparent 85%);
+}
+
+[data-ops-hero="dast"]::after {
+  content: "";
+  position: absolute;
+  right: 3rem;
+  top: 50%;
+  width: 10rem;
+  height: 10rem;
+  transform: translateY(-50%);
+  border: 1px solid oklch(var(--color-accent-ink) / 0.18);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2.5rem oklch(var(--color-accent) / 0.025), 0 0 0 2.5rem oklch(var(--color-accent) / 0.018);
+  pointer-events: none;
+}
+
+[data-ops-hero="playbook"] {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 31px, oklch(var(--color-border-subtle) / 0.3) 32px),
+    linear-gradient(110deg, oklch(var(--color-bg-surface)), oklch(var(--color-bg-raised) / 0.75));
+}
+
+[data-ops-hero="governance"]::before {
+  background: linear-gradient(to bottom, oklch(var(--color-warning-ink) / 0.75), transparent 85%);
+}
+
+[data-ops-surface] {
+  background: oklch(var(--color-bg-surface) / 0.88);
+  box-shadow: var(--elevation-raised);
+}
+
+[data-scan-active] {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-scan-active]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: oklch(var(--color-accent));
+  box-shadow: 0 0 1rem oklch(var(--color-accent) / 0.45);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-ops-hero="dast"]::after {
+    animation: ops-radar-breathe 6s ease-in-out infinite alternate;
+  }
+
+  [data-scan-active]::before {
+    animation: ops-scan-signal 2.4s ease-in-out infinite alternate;
+  }
+
+  [data-ops-lift] {
+    transition: transform var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+  }
+
+  [data-ops-lift]:hover,
+  [data-ops-lift]:focus-within {
+    transform: translateY(-2px);
+    border-color: oklch(var(--color-border-strong));
+    box-shadow: var(--elevation-raised);
+  }
+}
+
+@keyframes ops-radar-breathe {
+  from { opacity: 0.6; transform: translateY(-50%) scale(0.96); }
+  to { opacity: 1; transform: translateY(-50%) scale(1.04); }
+}
+
+@keyframes ops-scan-signal {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [role="progressbar"] > div { transition: none; }
+}
+
+@media (max-width: 767px) {
+  [data-ops-hero] { padding: var(--space-4); }
+  [data-ops-hero]::after { opacity: 0.4; }
+}

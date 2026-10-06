@@ -48,6 +48,7 @@ const MESSAGES: Record<string, string> = {
 
   // application
   APPLICATION_NOT_FOUND: "Aplicação não encontrada.",
+  MISSING_COMPANY_ID: "Selecione a empresa da aplicação.",
   INVALID_URL: "URL inválida. Use o formato https://exemplo.com.",
   INVALID_ENVIRONMENT: "Ambiente inválido.",
   NO_ACTIVE_SUBSCRIPTION: "Sua empresa ainda não tem uma assinatura ativa. Aguarde a aprovação do admin.",
@@ -82,11 +83,15 @@ const MESSAGES: Record<string, string> = {
 
   // project
   PROJECT_NOT_FOUND: "Projeto não encontrado.",
+  INVALID_NAME: "Informe um nome válido.",
   INVALID_APPLICATION_ID: "Selecione uma aplicação válida.",
   INVALID_ANALYSIS_TYPE: "Tipo de análise inválido.",
   INVALID_ANALYSIS_LEVEL: "Nível de análise inválido.",
   INVALID_HAS_REMEDIATION: "Valor inválido para remediação.",
   APPLICATION_ALREADY_HAS_PROJECT: "Esta aplicação já tem um projeto de análise.",
+  APPLICATION_INACTIVE: "Esta aplicação está inativa e não pode receber um novo projeto.",
+  PROJECT_LIMIT_REACHED: "A empresa da aplicação atingiu o limite de projetos simultâneos do plano.",
+  REMEDIATION_NOT_INCLUDED: "O plano da empresa da aplicação não inclui remediação.",
   INVALID_STATUS_TRANSITION: "Essa transição de status não é permitida.",
 
   // project member
@@ -122,6 +127,9 @@ const MESSAGES: Record<string, string> = {
   PROJECT_NOT_READY_FOR_REPORT: "O projeto precisa estar em revisão ou concluído para gerar relatório.",
 
   // DAST (scans via OWASP ZAP)
+  SIMULATED_SCAN_OPERATION_NOT_ALLOWED: "Demonstrações não podem ser promovidas nem comparadas como resultados reais.",
+  INVALID_SCAN_MODE: "Escolha Simulado ou Real antes de continuar.",
+  REAL_SCAN_CONFIRMATION_REQUIRED: "Confirme a autorização para executar o scan real.",
   MISSING_TARGET_URL: "Informe a URL do alvo.",
   INVALID_TARGET_URL: "URL inválida. Use o formato http(s)://exemplo.com.",
   TARGET_NOT_ALLOWED: "Esse alvo não é permitido (endereço local ou de rede privada).",

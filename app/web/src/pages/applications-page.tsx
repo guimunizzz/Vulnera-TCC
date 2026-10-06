@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { applicationsApi } from "../lib/api/applications.api";
+import { companiesApi } from "../lib/api/companies.api";
 import { subscriptionsApi } from "../lib/api/subscriptions.api";
 import { plansApi } from "../lib/api/plans.api";
 import { getApiErrorCode, useApiError } from "../hooks/use-api-error";
@@ -10,13 +11,14 @@ import { Breadcrumb, ScrollArea } from "../components/ui/navigation";
 import { Button, LinkButton } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card, Label, RegiaoCarregando, Skeleton } from "../components/ui/card";
+import { CLASSES_CONTROLE } from "../components/ui/field";
 import { ErrorState } from "../components/ui/empty-state";
 import { Alert } from "../components/ui/alert";
 import { Dialog, DialogDescription, DialogTitle } from "../components/ui/dialog";
 import { RiskContextChips } from "../components/applications/risk-context-chips";
 import { ApplicationRiskForm } from "../components/applications/application-risk-form";
 import { StaggerItem, StaggerList } from "../motion/components";
-import type { Application } from "../types/application.types";
+import type { Application, CreateApplicationInput } from "../types/application.types";
 import "./applications-page.css";
 
 export function ApplicationsPage() {
@@ -28,7 +30,10 @@ export function ApplicationsPage() {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const createFormSession = useRef(0);
+  const createInFlight = useRef<number | null>(null);
 
   const role = useAuthStore((s) => s.user?.role);
   const getErrorMessage = useApiError();
@@ -36,13 +41,24 @@ export function ApplicationsPage() {
   const companyName = useCompanyName(undefined);
 
   const { data: applications, isLoading, isError, refetch } = useQuery({ queryKey: ["applications"], queryFn: applicationsApi.list });
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
+    queryFn: companiesApi.list,
+    enabled: role === "ADMIN",
+    networkMode: "always",
+  });
   const { data: currentSubscription } = useQuery({
     queryKey: ["subscriptions", "current"],
     queryFn: subscriptionsApi.current,
+    enabled: role === "CLIENT",
     retry: false,
   });
-  const { data: plans } = useQuery({ queryKey: ["plans"], queryFn: plansApi.list });
-  const currentPlan = plans?.find((p) => p.id === currentSubscription?.planId);
+  const { data: plans } = useQuery({
+    queryKey: ["plans"],
+    queryFn: plansApi.list,
+    enabled: role === "CLIENT",
+  });
+  const currentPlan = role === "CLIENT" ? plans?.find((p) => p.id === currentSubscription?.planId) : undefined;
 
   const filtered = useMemo(() => {
     if (!applications) return [];
@@ -57,20 +73,45 @@ export function ApplicationsPage() {
     setName("");
     setUrl("");
     setDescription("");
+    setSelectedCompanyId("");
     setFormError(null);
   }
 
+  function closeCreateDialog(): void {
+    createFormSession.current += 1;
+    setIsCreateOpen(false);
+    resetForm();
+  }
+
+  function openCreateDialog(): void {
+    createFormSession.current += 1;
+    resetForm();
+    setIsCreateOpen(true);
+  }
+
   const createMutation = useMutation({
-    mutationFn: () =>
-      applicationsApi.create({ name, url: url.trim() || undefined, description: description.trim() || undefined }),
-    onSuccess: () => {
+    mutationFn: ({ input }: { input: CreateApplicationInput; formSession: number }) => applicationsApi.create(input),
+    onSuccess: (_created, variables) => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
-      setIsCreateOpen(false);
-      resetForm();
+      if (variables.formSession !== createFormSession.current) return;
+      closeCreateDialog();
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, variables) => {
       const code = getApiErrorCode(err);
-      if (code === "PLAN_LIMIT_REACHED" && currentPlan) {
+      if (code === "COMPANY_NOT_FOUND" && role === "ADMIN") {
+        void queryClient.invalidateQueries({ queryKey: ["companies"] });
+        if (variables.formSession !== createFormSession.current) return;
+        setSelectedCompanyId("");
+        setFormError("A empresa selecionada não está mais disponível. Atualizamos a lista; escolha outra empresa.");
+        return;
+      }
+      if (variables.formSession !== createFormSession.current) return;
+
+      if (role === "ADMIN" && code === "NO_ACTIVE_SUBSCRIPTION") {
+        setFormError("A empresa selecionada não tem uma assinatura ativa, necessária para cadastrar aplicações.");
+      } else if (role === "ADMIN" && code === "PLAN_LIMIT_REACHED") {
+        setFormError("A empresa selecionada atingiu o limite de aplicações do plano ativo.");
+      } else if (code === "PLAN_LIMIT_REACHED" && role === "CLIENT" && currentPlan) {
         setFormError(
           `Limite de ${currentPlan.maxApplications} aplicações do plano ${currentPlan.name} atingido. ` +
             "Remova uma aplicação existente ou fale com o admin sobre um upgrade de plano.",
@@ -79,7 +120,16 @@ export function ApplicationsPage() {
         setFormError(getErrorMessage(err));
       }
     },
+    onSettled: (_created, _error, variables) => {
+      if (createInFlight.current === variables.formSession) createInFlight.current = null;
+    },
   });
+
+  const companies = companiesQuery.data ?? [];
+  const selectedCompanyExists = companies.some((company) => company.id === selectedCompanyId);
+  const companyUnavailable =
+    role === "ADMIN" &&
+    (companiesQuery.isLoading || companiesQuery.isFetching || companiesQuery.isError || companies.length === 0 || !selectedCompanyExists);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => applicationsApi.delete(id),
@@ -90,7 +140,7 @@ export function ApplicationsPage() {
   });
 
   const totalAplicacoes = applications?.length ?? 0;
-  const limiteAplicacoes = currentPlan?.maxApplications;
+  const limiteAplicacoes = role === "CLIENT" ? currentPlan?.maxApplications : undefined;
   const ocupacao = applications && limiteAplicacoes && limiteAplicacoes > 0
     ? Math.min(100, (totalAplicacoes / limiteAplicacoes) * 100)
     : null;
@@ -114,7 +164,7 @@ export function ApplicationsPage() {
             <div className="flex items-baseline gap-3">
               <span className="font-mono text-2xl font-semibold text-fg" data-numeric>{applications ? totalAplicacoes : "—"}</span>
               <span className="max-w-36 text-xs leading-5 text-fg-muted">
-                {currentPlan
+                {role === "CLIENT" && currentPlan
                   ? `de ${currentPlan.maxApplications} vagas no plano ${currentPlan.name}`
                   : "alvos registrados"}
               </span>
@@ -148,7 +198,7 @@ export function ApplicationsPage() {
         <p className="text-xs text-fg-muted" aria-live="polite">
           {isLoading ? "Carregando inventário…" : isError ? "Inventário indisponível" : `${filtered.length} ${filtered.length === 1 ? "aplicação encontrada" : "aplicações encontradas"}`}
         </p>
-        {role !== "PENTESTER" && <Button onClick={() => setIsCreateOpen(true)} className="shrink-0">Nova aplicação</Button>}
+        {role !== "PENTESTER" && <Button onClick={openCreateDialog} className="shrink-0">Nova aplicação</Button>}
       </section>
 
       {isLoading && <ApplicationsLoading />}
@@ -162,7 +212,7 @@ export function ApplicationsPage() {
 
       {!isLoading && !isError && filtered.length === 0 && (
         <Card titulo="Nenhuma aplicação encontrada" descricao={filter ? "Ajuste o filtro para procurar outro alvo." : "Cadastre o primeiro alvo que será analisado."}>
-          {role !== "PENTESTER" && !filter && <Button onClick={() => setIsCreateOpen(true)}>Nova aplicação</Button>}
+          {role !== "PENTESTER" && !filter && <Button onClick={openCreateDialog}>Nova aplicação</Button>}
         </Card>
       )}
 
@@ -197,7 +247,14 @@ export function ApplicationsPage() {
                         {role !== "PENTESTER" && (
                           <Button variant="secundario" size="sm" onClick={() => setContextTarget(application)}>Contexto</Button>
                         )}
-                        <LinkButton variant="secundario" size="sm" to={`/new-analysis?applicationId=${application.id}`}>Nova análise</LinkButton>
+                        <LinkButton
+                          variant="secundario"
+                          size="sm"
+                          to={`/new-analysis?applicationId=${application.id}`}
+                          state={{ returnTo: "/applications" }}
+                        >
+                          Nova análise
+                        </LinkButton>
                         {role !== "PENTESTER" && (
                           <Button variant="destrutivo" size="sm" onClick={() => setDeleteTarget(application)}>Remover</Button>
                         )}
@@ -211,7 +268,7 @@ export function ApplicationsPage() {
         </Card>
       )}
 
-      <Dialog aberto={isCreateOpen} aoFechar={() => { setIsCreateOpen(false); resetForm(); }}>
+      <Dialog aberto={isCreateOpen} aoFechar={closeCreateDialog}>
         <>
           <DialogTitle>Nova aplicação</DialogTitle>
           <DialogDescription>Cadastre o alvo que será analisado.</DialogDescription>
@@ -220,11 +277,96 @@ export function ApplicationsPage() {
             className="mt-4 flex flex-col gap-4"
             onSubmit={(e) => {
               e.preventDefault();
+              if (createMutation.isPending || createInFlight.current !== null) return;
+
+              let companyId: string | undefined;
+              if (role === "ADMIN") {
+                if (companiesQuery.isLoading || companiesQuery.isFetching) {
+                  setFormError("Aguarde o carregamento das empresas antes de continuar.");
+                  return;
+                }
+                if (companiesQuery.isError) {
+                  setFormError("Não foi possível carregar as empresas. Tente novamente.");
+                  return;
+                }
+                if (companies.length === 0) {
+                  setFormError("Nenhuma empresa cadastrada. Cadastre uma empresa antes de criar uma aplicação.");
+                  return;
+                }
+                if (!selectedCompanyId || !selectedCompanyExists) {
+                  setFormError("Selecione a empresa da aplicação.");
+                  return;
+                }
+                companyId = selectedCompanyId;
+              }
+
               setFormError(null);
-              createMutation.mutate();
+              const formSession = createFormSession.current;
+              createInFlight.current = formSession;
+              createMutation.mutate({
+                input: {
+                  name,
+                  url: url.trim() || undefined,
+                  description: description.trim() || undefined,
+                  ...(role === "ADMIN" && companyId ? { companyId } : {}),
+                },
+                formSession,
+              });
             }}
           >
             {formError && <Alert>{formError}</Alert>}
+
+            {role === "ADMIN" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="app-company">Empresa <span aria-hidden="true" className="text-danger-ink">*</span></Label>
+                <select
+                  id="app-company"
+                  required
+                  aria-required="true"
+                  value={selectedCompanyId}
+                  onChange={(e) => setSelectedCompanyId(e.target.value)}
+                  disabled={
+                    createMutation.isPending || companiesQuery.isLoading || companiesQuery.isFetching ||
+                    companiesQuery.isError || companies.length === 0
+                  }
+                  className={`${CLASSES_CONTROLE} h-10`}
+                >
+                  <option value="" disabled>
+                    {companiesQuery.isLoading || companiesQuery.isFetching
+                      ? "Carregando empresas…"
+                      : companiesQuery.isError
+                        ? "Lista indisponível"
+                        : companies.length === 0
+                          ? "Nenhuma empresa disponível"
+                          : "Selecione uma empresa"}
+                  </option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>{company.name}</option>
+                  ))}
+                </select>
+                {companiesQuery.isLoading && (
+                  <p role="status" className="text-sm text-fg-muted">Carregando empresas…</p>
+                )}
+                {companiesQuery.isError && (
+                  <div className="flex flex-col items-start gap-2">
+                    <Alert tom="perigo">Não foi possível carregar as empresas.</Alert>
+                    <Button
+                      type="button"
+                      variant="secundario"
+                      onClick={() => void companiesQuery.refetch()}
+                      disabled={companiesQuery.isFetching}
+                    >
+                      {companiesQuery.isFetching ? "Carregando…" : "Tentar novamente"}
+                    </Button>
+                  </div>
+                )}
+                {!companiesQuery.isLoading && !companiesQuery.isError && companies.length === 0 && (
+                  <Alert tom="atencao">
+                    Nenhuma empresa cadastrada. Cadastre uma empresa antes de criar uma aplicação.
+                  </Alert>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="app-name">Nome</Label>
@@ -247,10 +389,10 @@ export function ApplicationsPage() {
             </div>
 
             <div className="mt-2 flex justify-end gap-2">
-              <Button type="button" variant="secundario" onClick={() => setIsCreateOpen(false)}>
+              <Button type="button" variant="secundario" onClick={closeCreateDialog}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button type="submit" disabled={createMutation.isPending || companyUnavailable}>
                 {createMutation.isPending ? "Criando..." : "Criar"}
               </Button>
             </div>

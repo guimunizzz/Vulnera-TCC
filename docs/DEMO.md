@@ -42,7 +42,7 @@
 
 ### 1. Landing + Planos — ~1 min
 
-1. Abra `http://localhost:8086` — sem sessão, redireciona pro login.
+1. Abra `http://localhost:8086` — a landing pública aparece mesmo sem sessão; use **Entrar** para acessar `/login`.
 2. Clique em **Planos** (ou vá direto em `/plans`) — página pública, 3 cards
    (Básico/Pro/Enterprise), sem precisar estar logado.
 3. Narrativa: "aqui é onde qualquer empresa nova entra — vê os planos antes

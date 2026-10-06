@@ -1,0 +1,56 @@
+{
+  "issue": 20,
+  "marker": "E2E20-1790857379051-dgg1z9",
+  "companyId": "cmupi8tnb0025ow018s67pn70",
+  "applications": [
+    {
+      "id": "cmupi8twd002fow01r81r8acg",
+      "name": "E2E20-1790857379051-dgg1z9 Application A",
+      "companyId": "cmupi8tnb0025ow018s67pn70"
+    },
+    {
+      "id": "cmupi8twv002how01iunwy3x8",
+      "name": "E2E20-1790857379051-dgg1z9 Application B",
+      "companyId": "cmupi8tnb0025ow018s67pn70"
+    }
+  ],
+  "projects": [
+    {
+      "id": "cmupi93xj002low01w0huund3",
+      "name": "E2E20-1790857379051-dgg1z9 Project via Projetos",
+      "applicationId": "cmupi8twd002fow01r81r8acg",
+      "companyId": "cmupi8tnb0025ow018s67pn70",
+      "status": "PENDING"
+    },
+    {
+      "id": "cmupi9pm3002pow016ngfsa20",
+      "name": "E2E20-1790857379051-dgg1z9 Project via Aplicações",
+      "applicationId": "cmupi8twv002how01iunwy3x8",
+      "companyId": "cmupi8tnb0025ow018s67pn70",
+      "status": "PENDING"
+    }
+  ],
+  "checks": {
+    "adminHasNoPersonalCompany": true,
+    "projectCreationReturns201": true,
+    "companyIdConfirmedByApiRead": true,
+    "clientApplicationPreselection": true,
+    "cancellationStepsWithoutPost": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "projectsListUpdatedWithoutManualReload": true,
+    "mobile375NoHorizontalOverflow": true,
+    "keyboardSelectionAndFocus": true,
+    "pentesterHasNoCreateAction": true,
+    "invalidProjectNameReturnsFocus": true
+  },
+  "screenshots": [
+    "issue20-projects-1440.png",
+    "issue20-wizard-aplicacao-375.png",
+    "issue20-wizard-passo-3-1440.png",
+    "issue20-wizard-nome-invalido-1440.png"
+  ]
+}

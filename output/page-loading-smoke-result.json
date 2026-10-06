@@ -1,0 +1,129 @@
+{
+  "date": "2026-10-01",
+  "checks": [
+    "Login demo e dashboard carregam",
+    "429 mantém spinner e não exibe erro prematuro",
+    "Nova tentativa respeita a espera de dois segundos",
+    "Projetos recupera automaticamente sem clique",
+    "Retorno recente aos projetos reaproveita cache",
+    "Navegação /findings sem erro de carregamento",
+    "Navegação /remediation sem erro de carregamento",
+    "Navegação /playbooks sem erro de carregamento",
+    "Navegação /dast sem erro de carregamento",
+    "Navegação /settings/sla sem erro de carregamento",
+    "Navegação /admin/subscriptions sem erro de carregamento",
+    "Painel inicial não busca insights nem comparison",
+    "Uma única janela de métricas durante a transição",
+    "Resumo e série recebem respostas 200",
+    "Painel de aplicação abre com dados reais",
+    "Mobile 375px sem overflow horizontal",
+    "Sem exceções de JavaScript"
+  ],
+  "responses": [
+    {
+      "path": "/api/auth/login",
+      "status": 200,
+      "at": 1790858468855
+    },
+    {
+      "path": "/api/saved-queries",
+      "status": 200,
+      "at": 1790858468982
+    },
+    {
+      "path": "/api/subscriptions/active",
+      "status": 200,
+      "at": 1790858468983
+    },
+    {
+      "path": "/api/companies",
+      "status": 200,
+      "at": 1790858468985
+    },
+    {
+      "path": "/api/subscriptions/pending",
+      "status": 200,
+      "at": 1790858468986
+    },
+    {
+      "path": "/api/vulnerabilities",
+      "status": 200,
+      "at": 1790858469008
+    },
+    {
+      "path": "/api/vulnerabilities",
+      "status": 200,
+      "at": 1790858469010
+    },
+    {
+      "path": "/api/projects",
+      "status": 429,
+      "at": 1790858470279
+    },
+    {
+      "path": "/api/applications",
+      "status": 200,
+      "at": 1790858470283
+    },
+    {
+      "path": "/api/projects",
+      "status": 200,
+      "at": 1790858472559
+    },
+    {
+      "path": "/api/vulnerabilities/assignee-candidates",
+      "status": 200,
+      "at": 1790858473452
+    },
+    {
+      "path": "/api/vulnerabilities",
+      "status": 200,
+      "at": 1790858473455
+    },
+    {
+      "path": "/api/playbooks",
+      "status": 200,
+      "at": 1790858474054
+    },
+    {
+      "path": "/api/companies/cmue2b9ey0005pxogfcfrjmw2/sla-policy",
+      "status": 200,
+      "at": 1790858474244
+    },
+    {
+      "path": "/api/companies/cmue2b9ey0005pxogfcfrjmw2/sla-policy/history",
+      "status": 200,
+      "at": 1790858474245
+    },
+    {
+      "path": "/api/plans",
+      "status": 200,
+      "at": 1790858474494
+    },
+    {
+      "path": "/api/applications/cmue2barv002gpxogcmsrxdu3/metrics/timeseries",
+      "query": "?from=2026-07-03T12%3A41%3A15.206Z&to=2026-10-01T12%3A41%3A15.206Z",
+      "status": 429,
+      "at": 1790858475285
+    },
+    {
+      "path": "/api/applications/cmue2barv002gpxogcmsrxdu3",
+      "status": 200,
+      "at": 1790858475290
+    },
+    {
+      "path": "/api/applications/cmue2barv002gpxogcmsrxdu3/metrics/summary",
+      "query": "?from=2026-07-03T12%3A41%3A15.206Z&to=2026-10-01T12%3A41%3A15.206Z",
+      "status": 200,
+      "at": 1790858475305
+    },
+    {
+      "path": "/api/applications/cmue2barv002gpxogcmsrxdu3/metrics/timeseries",
+      "query": "?from=2026-07-03T12%3A41%3A15.206Z&to=2026-10-01T12%3A41%3A15.206Z",
+      "status": 200,
+      "at": 1790858481561
+    }
+  ],
+  "pageErrors": [],
+  "passed": true
+}

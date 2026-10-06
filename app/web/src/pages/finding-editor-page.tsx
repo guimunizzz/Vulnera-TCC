@@ -100,6 +100,13 @@ export function FindingEditorPage() {
     [title, description, impact, recommendation],
   );
 
+  function invalidarFindings(): void {
+    // Listagens, quadro e métricas mantêm caches diferentes do mesmo finding.
+    void queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+    void queryClient.invalidateQueries({ queryKey: ["findings"] });
+    void queryClient.invalidateQueries({ queryKey: ["metrics"] });
+  }
+
   const createMutation = useMutation({
     mutationFn: () =>
       vulnerabilitiesApi.create({
@@ -112,7 +119,7 @@ export function FindingEditorPage() {
         recommendation: recommendation || undefined,
       }),
     onSuccess: (created) => {
-      void queryClient.invalidateQueries({ queryKey: ["vulnerabilities"] });
+      invalidarFindings();
       navigate(`/findings/${created.id}`);
     },
     onError: (err: unknown) => setFormError(getErrorMessage(err)),
@@ -129,7 +136,7 @@ export function FindingEditorPage() {
         recommendation: recommendation || undefined,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["vulnerabilities", id] });
+      invalidarFindings();
       setFormError(null);
     },
     onError: (err: unknown) => setFormError(getErrorMessage(err)),
@@ -137,7 +144,7 @@ export function FindingEditorPage() {
 
   const transitionMutation = useMutation({
     mutationFn: (toStatus: VulnerabilityStatus) => vulnerabilitiesApi.transition(id!, toStatus),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["vulnerabilities", id] }),
+    onSuccess: invalidarFindings,
     onError: (err: unknown) => setFormError(getErrorMessage(err)),
   });
 
@@ -155,8 +162,9 @@ export function FindingEditorPage() {
         ]}
       />
 
-      <div className="flex items-start justify-between gap-4">
+      <div data-ops-hero="finding" className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Registro de ameaça</p>
           <h1 className="text-2xl font-bold text-fg">{isEditMode ? "Editar finding" : "Novo finding"}</h1>
           {isEditMode && existing && (
             <div className="mt-2 flex items-center gap-2">
