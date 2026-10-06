@@ -6,6 +6,10 @@
 
 ## Status
 
+✅ **2026-10-06 — Publicação da correção dos cards para dev (100%).** [PR #55](https://github.com/guimunizzz/Vulnera-TCC/pull/55) aberto de `codex/fix-project-card-contrast` para `dev`. Commit reaplicado sobre `33f6438`, sem levar a revisão anterior do README. Árvore Web idêntica à já validada; somente página do projeto e docs vivos no diff, com `git diff --check` aprovado. Branch publicada; revisão/checks remotos e merge pendentes.
+
+- [x] **UI-PROJECT-OVERVIEW-PR:** publicar a correção visual e abrir o PR para `dev`. Concluído em 2026-10-06.
+
 ✅ **2026-10-06 — Contraste dos cards na Visão geral do projeto (100%).** Branch `codex/fix-project-card-contrast`, base `origin/main` em `a73a926`. Metadados e Pentesters atribuídos usam `Card` com superfície opaca e tokens existentes, preservando textos secundários, controles e decoração externa. Chrome com fixtures locais: escuro desktop/mobile 375 px, estado vazio e claro revisados; alpha 100%, contraste principal 16,60:1/secundário 6,90:1 no escuro, sem overflow mobile ou erros JavaScript. Web `npm run check`: **337/337 em 30 suítes**, lint 0 erros/9 avisos anteriores, contraste 66/66; build TypeScript/Vite aprovado. Sem API, dados, RBAC, entidades, fluxo funcional, manifestos ou lockfile versionado alterados. Validação visual sem banco/API reais; evidências locais preservadas. Host mantém falha npm 10 `edgesOut` e inicialização Docker por socket, contornadas somente para validar com dependências locais/pacotes oficiais.
 
 - [x] **UI-PROJECT-OVERVIEW-CONTRAST:** impedir que linhas/ondas decorativas atravessem Metadados e Pentesters atribuídos, usando superfícies do design system e validando o tema escuro. Concluído em 2026-10-06 (100%).
