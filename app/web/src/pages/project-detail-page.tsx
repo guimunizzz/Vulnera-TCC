@@ -278,7 +278,7 @@ export function ProjectDetailPage() {
             <ul className="flex flex-col gap-2">
               {members?.map((member) => (
                 <li key={member.id} className="flex items-center justify-between rounded-control bg-surface px-3 py-2 text-sm">
-                  <span className="text-fg">{userName(member.userId)}</span>
+                  <span className="min-w-0 break-words text-fg">{member.userName}</span>
                   {role === "ADMIN" && (
                     <button
                       onClick={() => removeMemberMutation.mutate(member.userId)}

@@ -30,7 +30,7 @@ describe("ProjectMember (list/add/remove)", () => {
       companyRole: "OWNER",
     });
     const pentester = await seedUser({
-      name: "Pentester",
+      name: "Rafael Barros",
       email: "pentester@vulnera.local",
       password: PASSWORD,
       role: "PENTESTER",
@@ -57,6 +57,20 @@ describe("ProjectMember (list/add/remove)", () => {
       .get(`/api/projects/${project.id}/members`)
       .set("Authorization", `Bearer ${pentesterToken}`);
     expect(asPentester.status).toBe(403);
+
+    await seedProjectMember(project.id, pentester.id);
+    // O nome chega na mesma resposta autorizada; nenhum dado privado do User.
+    for (const token of [clientToken, pentesterToken]) {
+      const assigned = await request(app)
+        .get(`/api/projects/${project.id}/members`)
+        .set("Authorization", `Bearer ${token}`);
+      expect(assigned.status).toBe(200);
+      expect(assigned.body).toHaveLength(1);
+      expect(assigned.body[0]).toEqual({
+        id: expect.any(String), projectId: project.id, userId: pentester.id,
+        userName: "Rafael Barros", createdAt: expect.any(String),
+      });
+    }
   });
 
   // MEMBER-02
@@ -87,6 +101,10 @@ describe("ProjectMember (list/add/remove)", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ userId: pentester.id });
     expect(added.status).toBe(201);
+    expect(added.body).toEqual({
+      id: expect.any(String), projectId: project.id, userId: pentester.id,
+      userName: pentester.name, createdAt: expect.any(String),
+    });
 
     const duplicate = await request(app)
       .post(`/api/projects/${project.id}/members`)
@@ -100,6 +118,7 @@ describe("ProjectMember (list/add/remove)", () => {
       .set("Authorization", `Bearer ${token}`);
     expect(list.status).toBe(200);
     expect(list.body).toHaveLength(1);
+    expect(list.body[0]).toEqual(added.body);
   });
 
   // MEMBER-03
@@ -129,5 +148,21 @@ describe("ProjectMember (list/add/remove)", () => {
       .set("Authorization", `Bearer ${token}`);
     expect(removeAgain.status).toBe(404);
     expect(removeAgain.body.error).toBe("MEMBER_NOT_FOUND");
+  });
+
+  // TEN-MEMBER-01 — incluir nomes não pode liberar a lista de outra Company.
+  it("CLIENT de outra Company não recebe os nomes dos pentesters atribuídos", async () => {
+    const plan = await seedPlan({ name: "BASIC" });
+    const companyA = await seedCompany({ name: "Company A", planId: plan.id });
+    const companyB = await seedCompany({ name: "Company B", planId: plan.id });
+    const application = await seedApplication({ name: "Portal A", companyId: companyA.id });
+    const project = await seedProject({ name: "Projeto A", applicationId: application.id, companyId: companyA.id });
+    const pentester = await seedUser({ name: "Nome privado do projeto A", email: "pentester-a@example.test", password: PASSWORD, role: "PENTESTER" });
+    await seedProjectMember(project.id, pentester.id);
+    const clientB = await seedUser({ name: "Cliente B", email: "client-b@example.test", password: PASSWORD, role: "CLIENT", companyId: companyB.id, companyRole: "OWNER" });
+    const token = await loginAs(app, clientB.email, PASSWORD);
+    const response = await request(app).get(`/api/projects/${project.id}/members`).set("Authorization", `Bearer ${token}`);
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ error: "FORBIDDEN" });
   });
 });

@@ -6,6 +6,15 @@
 
 ## Status
 
+✅ **2026-10-06 — Publicação dos nomes dos pentesters para dev (100%).** [PR #57](https://github.com/guimunizzz/Vulnera-TCC/pull/57) aberto de `codex/fix-project-pentester-names` para `dev`, com correção, regressões e docs vivos. Oito arquivos no diff; `git diff --check` aprovado. Testes locais, bloqueio preexistente do check global API e ordem de integração documentados na descrição. Sem nova alteração de código nesta publicação; revisão/checks remotos e merge pendentes.
+
+- [x] **BUG-PROJECT-PENTESTER-NAME-PR:** publicar a branch e abrir o PR para `dev`. Concluído em 2026-10-06.
+
+✅ **2026-10-06 — Pentesters atribuídos com nome legível (100%).** Branch `codex/fix-project-pentester-names`, base `origin/dev` em `e5d3411` após PR #56. API de membros resolve somente o nome do User e responde `userName` em GET/POST; o card usa esse campo, sem depender do catálogo administrativo. URLs/IDs de operação e permissões mantidos, sem schema/migration/dependências. Regressões Web falham antes e passam depois; focal 5/5, check **345/345 em 31 suítes**, lint 0 erros/9 avisos anteriores, contraste 66/66 e build aprovado. API Project/ProjectMember **28/28** contra `vulnera_test`, DTO sem dados privados, PENTESTER atribuído/não atribuído e TEN-MEMBER-01 preservados; service com 100% linhas/funções e 90,24% statements. TypeScript API aprovado; check global continua bloqueado somente pelos imports anteriores em `vulnerability.service.ts:45`. Chrome com fixtures HTTP no build de produção confirma navegação lista/detalhe e nomes para CLIENT OWNER/MEMBER, PENTESTER e ADMIN em 1440/375 px, sem overflow/erros JavaScript. Publicação conjunta requer a API com `userName` antes do Web; evidências locais preservadas.
+
+- [x] **BUG-PROJECT-PENTESTER-NAME:** exibir os nomes dos pentesters atribuídos nos detalhes, sem consultar catálogo administrativo para CLIENT/PENTESTER e sem mudar acesso. Concluído em 2026-10-06 (100%).
+- [ ] **PROJECT-REPORT-AUTHOR-NAME:** investigar o autor no histórico de relatórios; a mesma página ainda usa lookup administrativo com fallback `generatedBy` nessa seção. Achado por leitura estática, reprodução pendente e fora do escopo do card de pentesters.
+
 ✅ **2026-10-06 — Publicação do contexto de risco para dev (100%).** [PR #56](https://github.com/guimunizzz/Vulnera-TCC/pull/56) aberto de `codex/fix-client-risk-context` para `dev`, com correção, regressões e docs vivos. Cinco arquivos no diff; `git diff --check` aprovado. Testes locais e bloqueio preexistente do check global API registrados na descrição. Sem nova alteração de código nesta publicação; revisão/checks remotos e merge pendentes.
 
 - [x] **BUG-CLIENT-RISK-CONTEXT-PR:** publicar a branch e abrir o PR para `dev`. Concluído em 2026-10-06.
