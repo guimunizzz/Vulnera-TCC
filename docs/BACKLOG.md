@@ -6,6 +6,10 @@
 
 ## Status
 
+✅ **2026-10-06 — Contraste dos cards na Visão geral do projeto (100%).** Branch `codex/fix-project-card-contrast`, base `origin/main` em `a73a926`. Metadados e Pentesters atribuídos usam `Card` com superfície opaca e tokens existentes, preservando textos secundários, controles e decoração externa. Chrome com fixtures locais: escuro desktop/mobile 375 px, estado vazio e claro revisados; alpha 100%, contraste principal 16,60:1/secundário 6,90:1 no escuro, sem overflow mobile ou erros JavaScript. Web `npm run check`: **337/337 em 30 suítes**, lint 0 erros/9 avisos anteriores, contraste 66/66; build TypeScript/Vite aprovado. Sem API, dados, RBAC, entidades, fluxo funcional, manifestos ou lockfile versionado alterados. Validação visual sem banco/API reais; evidências locais preservadas. Host mantém falha npm 10 `edgesOut` e inicialização Docker por socket, contornadas somente para validar com dependências locais/pacotes oficiais.
+
+- [x] **UI-PROJECT-OVERVIEW-CONTRAST:** impedir que linhas/ondas decorativas atravessem Metadados e Pentesters atribuídos, usando superfícies do design system e validando o tema escuro. Concluído em 2026-10-06 (100%).
+
 ✅ **2026-10-02 — Plano de ação SAST HIGH preparado (100% do planejamento).** [Plano com impactos e checkpoints](PLANO-ACAO-SAST-HIGH.md): leitura estática concluiu `needs_review` para ambos os IDs, considerando os controles existentes. Matriz de impactos, CP-0 a CP-4, testes de navegador/filesystem/tenancy e fechamento por correção ou exceção individual documentados. **Execução pendente: 0/5 checkpoints; nenhum teste, build, navegador ou scanner executado nesta tarefa.**
 
 - [x] **SAST-HIGH-PLANO:** documentar ação e impactos para XSS/Path Traversal, sem presumir exploração nem falso positivo. Concluído em 2026-10-02.
