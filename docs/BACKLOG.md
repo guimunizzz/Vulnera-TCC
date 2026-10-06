@@ -6,6 +6,10 @@
 
 ## Status
 
+✅ **2026-10-06 — Publicação do contexto de risco para dev (100%).** [PR #56](https://github.com/guimunizzz/Vulnera-TCC/pull/56) aberto de `codex/fix-client-risk-context` para `dev`, com correção, regressões e docs vivos. Cinco arquivos no diff; `git diff --check` aprovado. Testes locais e bloqueio preexistente do check global API registrados na descrição. Sem nova alteração de código nesta publicação; revisão/checks remotos e merge pendentes.
+
+- [x] **BUG-CLIENT-RISK-CONTEXT-PR:** publicar a branch e abrir o PR para `dev`. Concluído em 2026-10-06.
+
 ✅ **2026-10-06 — CLIENT editar contexto de risco (100%).** Branch `codex/fix-client-risk-context`, base `origin/dev` em `0638c47` (PR #55 integrada). Select com portal reproduzido atrás do Dialog (`40`/`60`); três controles substituídos por `<select>` nativo com estilo compartilhado. Inputs dos donos e switch preservados e validados. Regressão APP-CTX-01 falha antes e passa depois; edição dos seis campos, salvar/reabrir, bloqueio de redução e recusa FORBIDDEN cobertos. Web focal 24/24, check final **340/340 em 30 suítes**, contraste 66/66, lint 0 erros/9 avisos anteriores e build aprovado. API focal **12/12** em `vulnera_test` isolado confirma persistência real por PUT+GET, OWNER/MEMBER/PENTESTER e TEN-29 com todos os campos de outra Company recusados. Chrome no build de produção com fixtures HTTP: clique/teclado, salvamento/reabertura e mobile 375 px sem overflow/erros JavaScript. Código de produção API/permissões/schema/dependências intactos; check global API segue bloqueado pelos dois imports não usados anteriores em `vulnerability.service.ts:45`. L-19 permanece como evolução da infraestrutura compartilhada.
 
 - [x] **BUG-CLIENT-RISK-CONTEXT:** corrigir interação dos seletores no Dialog e validar os seis campos por CLIENT OWNER, persistência, reabertura e tenancy com regressão. Concluído em 2026-10-06 (100%); regras D2 existentes preservadas.
