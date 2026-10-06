@@ -6,6 +6,10 @@
 
 ## Status
 
+✅ **2026-10-06 — README da main revisado (100% documental).** Base `origin/main` em `3efd1e2` após PR #50; branch `codex/docs-readme-main`. README atualizado com funcionalidades/perfis, oito screenshots recentes, três fotos da equipe e galeria antiga preservada; corrigidas operação DAST, rate limiting, CI e instruções Docker/dev. Links locais 55/55, âncoras 15/15, revisão estática de Markdown/imagens e `git diff --check` aprovados. Sem suíte/build/scan, alterações de código/schema/dependências ou imagens. Integração na main será acompanhada pela PR de documentação.
+
+- [x] **README-MAIN-2026-10:** atualizar apresentação e instruções após a release, reutilizando imagens versionadas e preservando capturas históricas. Revisão documental concluída em 2026-10-06.
+
 ✅ **2026-10-02 — Plano de ação SAST HIGH preparado (100% do planejamento).** [Plano com impactos e checkpoints](PLANO-ACAO-SAST-HIGH.md): leitura estática concluiu `needs_review` para ambos os IDs, considerando os controles existentes. Matriz de impactos, CP-0 a CP-4, testes de navegador/filesystem/tenancy e fechamento por correção ou exceção individual documentados. **Execução pendente: 0/5 checkpoints; nenhum teste, build, navegador ou scanner executado nesta tarefa.**
 
 - [x] **SAST-HIGH-PLANO:** documentar ação e impactos para XSS/Path Traversal, sem presumir exploração nem falso positivo. Concluído em 2026-10-02.
