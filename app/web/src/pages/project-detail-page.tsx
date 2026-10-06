@@ -15,6 +15,7 @@ import { Breadcrumb } from "../components/ui/navigation";
 import { StatusBadge } from "../components/ui/badge";
 import { Button, LinkButton } from "../components/ui/button";
 import { Alert } from "../components/ui/alert";
+import { Card } from "../components/ui/card";
 import { cn } from "../lib/cn";
 import { downloadBlob } from "../lib/pdf/base";
 import { generateExecutivePdf } from "../lib/pdf/executive";
@@ -234,8 +235,7 @@ export function ProjectDetailPage() {
 
       {tab === "overview" && (
         <div className="mt-6 grid gap-6 md:grid-cols-2">
-          <div className="rounded-container border border-subtle p-4">
-            <h2 className="mb-3 font-semibold text-fg">Metadados</h2>
+          <Card titulo="Metadados">
             <dl className="flex flex-col gap-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-fg-muted">Remediação incluída</dt>
@@ -270,11 +270,9 @@ export function ProjectDetailPage() {
                 </div>
               )}
             </dl>
-          </div>
+          </Card>
 
-          <div className="rounded-container border border-subtle p-4">
-            <h2 className="mb-3 font-semibold text-fg">Pentesters atribuídos</h2>
-
+          <Card titulo="Pentesters atribuídos">
             {members?.length === 0 && <p className="text-sm text-fg-muted">Nenhum pentester atribuído ainda.</p>}
 
             <ul className="flex flex-col gap-2">
@@ -316,7 +314,7 @@ export function ProjectDetailPage() {
                 </Button>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       )}
 
