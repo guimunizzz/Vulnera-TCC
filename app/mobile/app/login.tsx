@@ -9,10 +9,11 @@
  * seria pior do que recusar com uma mensagem clara.
  */
 
-import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "expo-router";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Stack, useRouter } from "expo-router";
 import {
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ScrollView,
   StyleSheet,
@@ -25,12 +26,10 @@ import { BlurView } from "expo-blur";
 import { useMutation } from "@tanstack/react-query";
 import Animated, {
   Easing,
-  FadeInDown,
-  FadeInUp,
+  cancelAnimation,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withRepeat,
   withSequence,
   withTiming,
@@ -42,28 +41,30 @@ import { haptics } from "../src/lib/haptics";
 import { Button } from "../src/components/button";
 import { VulneraMark } from "../src/components/vulnera-mark";
 import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../src/theme/tokens";
+import { MotionReveal, SOFT_MOTION, useWorkspaceMotionActive, useWorkspaceReducedMotion, WorkspaceMotionProvider } from "../src/components/workspace-motion";
 
-/** Cursor de terminal piscando ao lado do wordmark — mesmo `@keyframes blink` do Lockup.dc.html (0.15↔1 opacidade, 1.2s, contínuo). */
+/** Cursor com pulsação lenta; para fora da tela e respeita movimento reduzido. */
 function BlinkingCursor() {
-  const opacity = useSharedValue(0.15);
+  const active = useWorkspaceMotionActive();
+  const opacity = useSharedValue(0.65);
 
   useEffect(() => {
-    opacity.value = withDelay(
-      900,
-      withRepeat(
+    if (active) {
+      opacity.value = withRepeat(
         withSequence(
-          withTiming(1, { duration: 600, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.15, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0.45, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
         ),
         -1,
-        true,
-      ),
-    );
-  }, [opacity]);
+        false,
+      );
+    } else { cancelAnimation(opacity); opacity.value = 0.65; }
+    return () => cancelAnimation(opacity);
+  }, [active, opacity]);
 
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
-  return <Animated.View style={[styles.cursor, style]} />;
+  return <Animated.View testID="login-cursor" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.cursor, style]} />;
 }
 
 function FocusField({
@@ -74,6 +75,12 @@ function FocusField({
   children: (props: { onFocus: () => void; onBlur: () => void }) => ReactNode;
 }) {
   const focus = useSharedValue(0);
+  const focused = useRef(false);
+  const reduced = useWorkspaceReducedMotion();
+  useEffect(() => {
+    focus.value = withTiming(focused.current ? 1 : 0, { ...SOFT_MOTION, duration: reduced ? 0 : 180 });
+    return () => cancelAnimation(focus);
+  }, [focus, reduced]);
   const borderStyle = useAnimatedStyle(() => ({
     borderColor: interpolateColor(focus.value, [0, 1], [COLORS.borderDefault, COLORS.accent]),
   }));
@@ -83,17 +90,19 @@ function FocusField({
 
   return (
     <Animated.View style={[styles.fieldWrap, borderStyle]}>
-      <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-      <View style={styles.fieldTint} />
-      <Animated.View style={iconColorStyle}>
+      <BlurView intensity={30} tint="dark" pointerEvents="none" style={StyleSheet.absoluteFill} />
+      <View pointerEvents="none" style={styles.fieldTint} />
+      <Animated.View pointerEvents="none" style={iconColorStyle}>
         <Ionicons name={icon} size={18} color={COLORS.accentInk} />
       </Animated.View>
       {children({
         onFocus: () => {
-          focus.value = withTiming(1, { duration: 180 });
+          focused.current = true;
+          focus.value = withTiming(1, { ...SOFT_MOTION, duration: reduced ? 0 : 180 });
         },
         onBlur: () => {
-          focus.value = withTiming(0, { duration: 180 });
+          focused.current = false;
+          focus.value = withTiming(0, { ...SOFT_MOTION, duration: reduced ? 0 : 180 });
         },
       })}
     </Animated.View>
@@ -101,6 +110,10 @@ function FocusField({
 }
 
 export default function LoginScreen() {
+  return <WorkspaceMotionProvider><LoginContent /></WorkspaceMotionProvider>;
+}
+
+function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -108,9 +121,13 @@ export default function LoginScreen() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const getErrorMessage = useApiError();
+  const passwordInput = useRef<TextInput>(null);
+  const submitting = useRef(false);
+  const reduced = useWorkspaceReducedMotion();
 
   const loginMutation = useMutation({
     mutationFn: () => authApi.login({ email: email.trim(), password }),
+    onMutate: () => setError(null),
     onSuccess: (auth) => {
       if (auth.user.role !== "CLIENT") {
         // Não persiste sessão de ADMIN/PENTESTER — mobile é exclusivo do CLIENT (ADR-004).
@@ -128,10 +145,21 @@ export default function LoginScreen() {
       setError(getErrorMessage(err));
       haptics.warning();
     },
+    onSettled: () => { submitting.current = false; },
   });
+
+  function submitLogin() {
+    if (!email.trim() || !password || submitting.current || loginMutation.isPending) return;
+    // Enter repetido antes do próximo render também não duplica autenticação.
+    submitting.current = true;
+    haptics.tap();
+    Keyboard.dismiss();
+    loginMutation.mutate();
+  }
 
   return (
     <View style={styles.flex}>
+      <Stack.Screen options={{ animation: reduced ? "none" : "fade", animationDuration: 280 }} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           contentContainerStyle={styles.container}
@@ -139,7 +167,7 @@ export default function LoginScreen() {
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeInUp.duration(420)} style={styles.header}>
+          <MotionReveal layout style={styles.header}>
             <View style={styles.lockup}>
               <VulneraMark size={60} />
               <View style={styles.divider} />
@@ -151,16 +179,18 @@ export default function LoginScreen() {
                 <Text style={styles.security}>SECURITY</Text>
               </View>
             </View>
-          </Animated.View>
+          </MotionReveal>
 
-          <Animated.View entering={FadeInDown.duration(420).delay(120)} style={styles.form}>
+          <MotionReveal layout delay={60} style={styles.form}>
             <View style={styles.field}>
               <Text style={styles.label}>E-mail</Text>
               <FocusField icon="mail-outline">
                 {({ onFocus, onBlur }) => (
                   <TextInput
+                    accessibilityLabel="E-mail"
                     style={styles.input}
                     value={email}
+                    editable={!loginMutation.isPending}
                     onChangeText={setEmail}
                     onFocus={onFocus}
                     onBlur={onBlur}
@@ -170,6 +200,10 @@ export default function LoginScreen() {
                     autoCorrect={false}
                     keyboardType="email-address"
                     textContentType="emailAddress"
+                    autoComplete="email"
+                    returnKeyType="next"
+                    submitBehavior="submit"
+                    onSubmitEditing={() => passwordInput.current?.focus()}
                   />
                 )}
               </FocusField>
@@ -180,8 +214,11 @@ export default function LoginScreen() {
               <FocusField icon="lock-closed-outline">
                 {({ onFocus, onBlur }) => (
                   <TextInput
+                    ref={passwordInput}
+                    accessibilityLabel="Senha"
                     style={styles.input}
                     value={password}
+                    editable={!loginMutation.isPending}
                     onChangeText={setPassword}
                     onFocus={onFocus}
                     onBlur={onBlur}
@@ -189,27 +226,33 @@ export default function LoginScreen() {
                     placeholderTextColor={COLORS.textMuted}
                     secureTextEntry
                     textContentType="password"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="current-password"
+                    returnKeyType="go"
+                    onSubmitEditing={submitLogin}
                   />
                 )}
               </FocusField>
             </View>
 
             {error && (
-              <Animated.View entering={FadeInDown.duration(200)} style={styles.errorBox}>
+              <MotionReveal style={styles.errorBox}>
                 <Ionicons name="alert-circle" size={16} color={COLORS.dangerInk} />
-                <Text style={styles.errorText}>{error}</Text>
-              </Animated.View>
+                <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.errorText}>{error}</Text>
+              </MotionReveal>
             )}
 
             <Button
-              onPress={() => loginMutation.mutate()}
-              disabled={!email || !password || loginMutation.isPending}
+              onPress={submitLogin}
+              disabled={!email.trim() || !password || loginMutation.isPending}
               loading={loginMutation.isPending}
               glass
+              soft
             >
               Entrar
             </Button>
-          </Animated.View>
+          </MotionReveal>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -284,7 +327,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING[2],
-    minHeight: 44,
+    minHeight: 52,
     borderWidth: 1.5,
     borderRadius: RADIUS.control,
     paddingHorizontal: SPACING[3],
@@ -299,6 +342,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
+    minHeight: 48,
     color: COLORS.textPrimary,
     fontSize: FONT_SIZE.sm,
     fontFamily: FONT_FAMILY.regular,

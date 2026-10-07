@@ -1,7 +1,7 @@
 /**
- * Movimento compartilhado das telas autenticadas: toque, entrada e rolagem.
+ * Movimento compartilhado do login e das telas autenticadas: toque e entrada.
  * Mantém durações curtas e deslocamentos discretos; respeita acessibilidade.
- * Consumidores: componentes de vidro e telas de acompanhamento do cliente.
+ * Consumidores: login, componentes de vidro e acompanhamento do cliente.
  */
 import { createContext, useCallback, useContext, useEffect, useId, useState, type ReactNode } from "react";
 import { AccessibilityInfo, AppState, Platform, Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
@@ -39,6 +39,18 @@ export function WorkspaceMotionProvider({ children }: { children: ReactNode }) {
 
 export function useWorkspaceReducedMotion() { return useContext(ReducedMotionContext); }
 
+export function useWorkspaceMotionActive() {
+  const reduced = useWorkspaceReducedMotion();
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
+  const [active, setActive] = useState(AppState.currentState === "active");
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => setActive(state === "active"));
+    return () => subscription.remove();
+  }, []);
+  return focused && active && !reduced;
+}
+
 export function SoftPressable({ style, onPressIn, onPressOut, disabled, ...props }: Omit<PressableProps, "style"> & { style?: StyleProp<ViewStyle> }) {
   const reduced = useWorkspaceReducedMotion();
   const progress = useSharedValue(0);
@@ -68,19 +80,13 @@ export function useWorkspaceScroll() {
 export function WorkspaceAtmosphere({ scrollY }: { scrollY?: SharedValue<number> }) {
   const gradientId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const reduced = useWorkspaceReducedMotion();
-  const [focused, setFocused] = useState(false);
-  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
-  const [active, setActive] = useState(AppState.currentState === "active");
+  const active = useWorkspaceMotionActive();
   const drift = useSharedValue(0);
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (state) => setActive(state === "active"));
-    return () => subscription.remove();
-  }, []);
-  useEffect(() => {
-    if (focused && active && !reduced) drift.value = withRepeat(withTiming(1, { duration: 9000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    if (active) drift.value = withRepeat(withTiming(1, { duration: 9000, easing: Easing.inOut(Easing.sin) }), -1, true);
     else { cancelAnimation(drift); drift.value = 0; }
     return () => cancelAnimation(drift);
-  }, [active, focused, reduced, drift]);
+  }, [active, drift]);
   const animated = useAnimatedStyle(() => ({ transform: [
     { translateY: reduced ? 0 : drift.value * 14 - Math.min(scrollY?.value ?? 0, 600) * 0.06 },
     { translateX: reduced ? 0 : drift.value * -10 },

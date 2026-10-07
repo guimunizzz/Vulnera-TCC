@@ -2,6 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 import { BlurView } from "expo-blur";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { COLORS, FONT_FAMILY, FONT_SIZE, MOTION, RADIUS, SHADOW, SPACING, TOUCH_TARGET } from "../theme/tokens";
+import { MotionReveal, SoftPressable } from "./workspace-motion";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -14,8 +15,8 @@ const VARIANTES: Record<Variant, { fundo: string; texto: string; borda?: string 
 };
 
 /**
- * Botão com alvo de toque garantido em 44px (WCAG 2.5.5/2.5.8 — mesmo mínimo
- * do web). CTA primário ganha um brilho sutil na cor do acento; escala anima
+ * Botão com alvo de toque de 44px; `soft` eleva o mínimo para 48px.
+ * CTA primário ganha um brilho sutil na cor do acento; escala anima
  * no toque em todas as variantes. `glass` (só some efeito em cima de
  * `variant="primario"`) troca o preenchimento chapado por vidro fosco —
  * pontual, pedido pra tela de login, o resto do app continua sólido.
@@ -27,6 +28,7 @@ export function Button({
   disabled,
   loading,
   glass = false,
+  soft = false,
 }: {
   children: string;
   onPress: () => void;
@@ -34,11 +36,14 @@ export function Button({
   disabled?: boolean;
   loading?: boolean;
   glass?: boolean;
+  /** Mesmo toque amortecido das telas autenticadas, habilitado pelo login. */
+  soft?: boolean;
 }) {
   const cor = VARIANTES[variant];
   const inativo = disabled || loading;
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const PressTarget = soft ? SoftPressable : AnimatedPressable;
 
   const pressHandlers = {
     onPressIn: () => {
@@ -49,51 +54,57 @@ export function Button({
     },
   };
 
-  const conteudo = loading ? (
+  const label = loading ? (
     <ActivityIndicator color={cor.texto} size="small" />
   ) : (
     <Text style={[styles.texto, { color: cor.texto }]}>{children}</Text>
   );
+  const conteudo = soft ? <MotionReveal key={loading ? "loading" : "label"}>{label}</MotionReveal> : label;
 
   if (variant === "primario" && glass) {
     return (
-      <AnimatedPressable
+      <PressTarget
         onPress={onPress}
         disabled={inativo}
         accessibilityRole="button"
+        accessibilityLabel={children}
         accessibilityState={{ disabled: inativo, busy: loading }}
-        {...pressHandlers}
-        style={[styles.glassOuter, SHADOW.glow, inativo && styles.disabled, animatedStyle]}
+        aria-busy={loading}
+        {...(soft ? {} : pressHandlers)}
+        style={[styles.glassOuter, soft && { minHeight: 48 }, SHADOW.glow, inativo && styles.disabled, !soft && animatedStyle]}
       >
         {/* overflow:"hidden" fica no wrapper interno (não no outer com
             sombra) — mesma regra da tab bar flutuante: sombra + blur
             recortado no mesmo elemento corta a sombra no iOS. */}
         <View style={styles.glassInner}>
-          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={styles.glassTint} />
+          <BlurView intensity={40} tint="dark" pointerEvents="none" style={StyleSheet.absoluteFill} />
+          <View pointerEvents="none" style={styles.glassTint} />
           {conteudo}
         </View>
-      </AnimatedPressable>
+      </PressTarget>
     );
   }
 
   return (
-    <AnimatedPressable
+    <PressTarget
       onPress={onPress}
       disabled={inativo}
       accessibilityRole="button"
+      accessibilityLabel={children}
       accessibilityState={{ disabled: inativo, busy: loading }}
-      {...pressHandlers}
+      aria-busy={loading}
+      {...(soft ? {} : pressHandlers)}
       style={[
         styles.base,
+        soft && { minHeight: 48 },
         { backgroundColor: cor.fundo, borderColor: cor.borda ?? "transparent" },
         variant === "primario" && SHADOW.glow,
         inativo && styles.disabled,
-        animatedStyle,
+        !soft && animatedStyle,
       ]}
     >
       {conteudo}
-    </AnimatedPressable>
+    </PressTarget>
   );
 }
 
