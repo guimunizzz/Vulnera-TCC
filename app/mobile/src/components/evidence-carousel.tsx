@@ -1,130 +1,81 @@
 /**
- * evidence-carousel.tsx
- *
- * Carrossel horizontal com paginação (FlatList + pagingEnabled) — o padrão
- * mobile-nativo pra navegar entre várias imagens num espaço pequeno, com
- * pontinhos indicando posição. Imagem é buscada com <Image source={{uri,
- * headers}}> — o token vai no HEADER Authorization, nunca na query string
- * da URL (mesma regra do resto do produto).
- *
- * PDF/TXT não têm como virar pixel num <Image> — viram um card com nome do
- * arquivo em vez de tentar embutir (mesma decisão do PDF Técnico da Fase 6:
- * "não dá pra virar pixel, então não finge que dá").
+ * Carrossel de evidências reais com dimensões medidas no próprio componente.
+ * Mantém autenticação nos headers e trata falha de arquivo sem simular imagem.
+ * Consumidor: aba Evidências do detalhe de vulnerabilidade do cliente.
  */
-
-import { useState } from "react";
-import { Dimensions, FlatList, Image, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Image, Platform, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
+import { apiClient } from "../api/client";
 import { evidencesApi } from "../api/evidences.api";
 import { useAuthStore } from "../store/auth.store";
-import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
+import { WORKSPACE, workspaceStyles as ui } from "../theme/workspace";
+import { FONT_FAMILY } from "../theme/tokens";
+import { displayBytes, displayDate } from "../lib/display";
+import { ActionButton, GlassSurface } from "./workspace-ui";
 import type { Evidence } from "../types/evidence.types";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SLIDE_WIDTH = SCREEN_WIDTH - SPACING[4] * 2; // largura da Screen menos o padding horizontal dela
-
-function isImage(mimeType: string): boolean {
-  return mimeType === "image/png" || mimeType === "image/jpeg";
+function EvidenceImage({ evidence, vulnerabilityId }: { evidence: Evidence; vulnerabilityId: string }) {
+  const token = useAuthStore((state) => state.accessToken);
+  const [webUrl, setWebUrl] = useState<string>();
+  const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+  async function retryImage() {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      // Image nativa não usa o interceptor; esta leitura renova uma sessão expirada.
+      if (Platform.OS !== "web") await apiClient.get("/users/me");
+      setAttempt((value) => value + 1);
+    } catch { setFailed(true); }
+    finally { setRetrying(false); }
+  }
+  useEffect(() => {
+    setLoading(true); setFailed(false);
+    if (Platform.OS !== "web") return;
+    // No preview web, <img> não envia headers: Axios autentica antes do blob.
+    const controller = new AbortController();
+    let objectUrl: string | undefined;
+    setWebUrl(undefined);
+    void apiClient.get<Blob>(`/vulnerabilities/${vulnerabilityId}/evidences/${evidence.id}`, { responseType: "blob", signal: controller.signal })
+      .then(({ data }) => { if (!controller.signal.aborted) { objectUrl = URL.createObjectURL(data); setWebUrl(objectUrl); } })
+      .catch(() => { if (!controller.signal.aborted) { setFailed(true); setLoading(false); } });
+    return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [vulnerabilityId, evidence.id, token, attempt]);
+  if (failed) return <View style={styles.file}><Ionicons name="image-outline" size={30} color={WORKSPACE.muted} /><Text style={ui.muted}>Não foi possível carregar a imagem.</Text>
+    <ActionButton label={retrying ? "Carregando..." : "Tentar novamente"} disabled={retrying} onPress={() => { void retryImage(); }} /></View>;
+  const uri = Platform.OS === "web" ? webUrl : evidencesApi.downloadUrl(vulnerabilityId, evidence.id);
+  return <View style={styles.imageWrap}>
+    {uri && <Image key={`${evidence.id}-${attempt}`} source={{ uri, headers: Platform.OS !== "web" && token ? { Authorization: `Bearer ${token}` } : undefined }}
+      accessibilityLabel={evidence.proof || evidence.originalName} style={styles.image} resizeMode="contain"
+      onLoad={() => setLoading(false)} onError={() => { setFailed(true); setLoading(false); }} />}
+    {loading && <ActivityIndicator color={WORKSPACE.lavender} style={StyleSheet.absoluteFill} />}
+  </View>;
 }
 
-export function EvidenceCarousel({
-  vulnerabilityId,
-  evidences,
-}: {
-  vulnerabilityId: string;
-  evidences: Evidence[];
-}) {
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  if (evidences.length === 0) return null;
-
-  return (
-    <View style={styles.container}>
-      <FlatList
-        data={evidences}
-        keyExtractor={(e) => e.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(e) => {
-          setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / SLIDE_WIDTH));
-        }}
-        // Alguns swipes de paginação (sobretudo no Android) terminam sem
-        // velocidade residual e nunca disparam onMomentumScrollEnd — sem
-        // isso, o ponto ativo podia ficar preso na página anterior.
-        onScrollEndDrag={(e) => {
-          setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / SLIDE_WIDTH));
-        }}
-        renderItem={({ item }) => (
-          <View style={[styles.slide, { width: SLIDE_WIDTH }]}>
-            {isImage(item.mimeType) ? (
-              <Image
-                source={{
-                  uri: evidencesApi.downloadUrl(vulnerabilityId, item.id),
-                  headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-                }}
-                style={styles.image}
-                resizeMode="contain"
-              />
-            ) : (
-              <View style={styles.fileBox}>
-                <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-                <View style={styles.fileBoxTint} />
-                <Ionicons name="document-text-outline" size={40} color={COLORS.textMuted} />
-                <Text style={styles.fileName} numberOfLines={1}>
-                  {item.originalName}
-                </Text>
-                <Text style={styles.fileHint}>Arquivo {item.mimeType} — abra pelo navegador pra visualizar</Text>
-              </View>
-            )}
-            {!!item.proof && (
-              <Text style={styles.caption} numberOfLines={2}>
-                {item.proof}
-              </Text>
-            )}
-          </View>
-        )}
-      />
-      {evidences.length > 1 && (
-        <View style={styles.dots}>
-          {evidences.map((e, i) => (
-            <View key={e.id} style={[styles.dot, i === activeIndex && styles.dotActive]} />
-          ))}
-        </View>
-      )}
-    </View>
-  );
+export function EvidenceCarousel({ vulnerabilityId, evidences }: { vulnerabilityId: string; evidences: Evidence[] }) {
+  const [width, setWidth] = useState(0);
+  const [active, setActive] = useState(0);
+  if (!evidences.length) return null;
+  return <View style={{ gap: 14 }} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+    {width > 0 && <FlatList key={width} data={evidences} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
+      keyExtractor={(evidence) => evidence.id} getItemLayout={(_data, index) => ({ length: width, offset: width * index, index })}
+      onMomentumScrollEnd={(event) => setActive(Math.max(0, Math.min(evidences.length - 1, Math.round(event.nativeEvent.contentOffset.x / width))))}
+      renderItem={({ item }) => <View style={{ width }}><GlassSurface style={styles.slide}>
+        <View style={ui.spread}><View style={[ui.row, ui.grow, { gap: 8 }]}><Ionicons name="attach-outline" size={18} color={WORKSPACE.lavender} /><Text numberOfLines={2} style={[styles.fileName, ui.grow]}>{item.originalName}</Text></View><Text style={ui.mono}>{displayBytes(item.sizeBytes)}</Text></View>
+        {item.mimeType.startsWith("image/") ? <EvidenceImage vulnerabilityId={vulnerabilityId} evidence={item} /> : <View style={styles.file}>
+          <Ionicons name="document-text-outline" size={36} color={WORKSPACE.lavender} /><Text style={ui.body}>Arquivo anexado</Text><Text style={[ui.muted, { textAlign: "center" }]}>Consulte este documento na plataforma web.</Text>
+        </View>}
+        {!!item.proof && <Text style={ui.body}>{item.proof}</Text>}<Text style={ui.muted}>Enviada em {displayDate(item.createdAt)}</Text>
+      </GlassSurface></View>}
+    />}
+    <View style={ui.spread}><Text style={ui.muted}>Deslize para consultar os arquivos</Text><Text style={ui.mono}>{Math.min(active + 1, evidences.length)} / {evidences.length}</Text></View>
+  </View>;
 }
-
 const styles = StyleSheet.create({
-  container: { gap: SPACING[2] },
-  slide: { gap: SPACING[2] },
-  image: {
-    width: "100%",
-    height: 220,
-    borderRadius: RADIUS.container,
-    backgroundColor: COLORS.inset,
-  },
-  fileBox: {
-    height: 220,
-    borderRadius: RADIUS.container,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING[2],
-    paddingHorizontal: SPACING[4],
-    overflow: "hidden",
-  },
-  fileBoxTint: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: COLORS.inset,
-    opacity: 0.7,
-  },
-  fileName: { color: COLORS.textPrimary, fontSize: FONT_SIZE.sm, fontFamily: FONT_FAMILY.medium },
-  fileHint: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, fontFamily: FONT_FAMILY.regular, textAlign: "center" },
-  caption: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, fontFamily: FONT_FAMILY.regular },
-  dots: { flexDirection: "row", justifyContent: "center", gap: SPACING[1] },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.borderStrong },
-  dotActive: { backgroundColor: COLORS.accentInk, width: 16 },
+  slide: { gap: 16, padding: 16 }, fileName: { color: WORKSPACE.text, fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18 },
+  imageWrap: { height: 235, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.25)", overflow: "hidden" }, image: { width: "100%", height: "100%" },
+  file: { minHeight: 235, padding: 20, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.22)", gap: 12, alignItems: "center", justifyContent: "center" },
 });

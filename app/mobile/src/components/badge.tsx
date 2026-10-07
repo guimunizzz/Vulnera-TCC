@@ -10,7 +10,7 @@
 
 import { StyleSheet, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
-import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
+import { COLORS, FONT_FAMILY, RADIUS, SPACING } from "../theme/tokens";
 
 type Severidade = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
 
@@ -113,13 +113,12 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
   },
   texto: {
-    fontSize: FONT_SIZE.xs,
-    fontFamily: FONT_FAMILY.bold,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.medium,
+    lineHeight: 18,
   },
   cvss: {
-    fontSize: FONT_SIZE.xs,
+    fontSize: 12,
     fontFamily: FONT_FAMILY.mono,
     fontVariant: ["tabular-nums"],
     opacity: 0.85,

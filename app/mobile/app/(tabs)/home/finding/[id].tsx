@@ -1,273 +1,99 @@
 /**
- * FindingDetail — read-only (mobile nunca escreve, ver ADR-004). Badge de
- * severidade, descrição/impacto/recomendação, evidências em carrossel e
- * comentários. Sem botão de transição/override/upload/comentar — isso é
- * escrita, fora do escopo do mobile por decisão explícita da Fase 7.
+ * Consulta de vulnerabilidade com resumo, evidências e comentários reais.
+ * Carrega abas sob demanda, preserva erros de cada recurso e pagina comentários.
+ * Consumidor: cliente autenticado; todas as ações de edição ficam no web.
  */
-
-import type { ComponentProps, ReactNode } from "react";
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { vulnerabilitiesApi } from "../../../../src/api/vulnerabilities.api";
 import { evidencesApi } from "../../../../src/api/evidences.api";
 import { vulnerabilityCommentsApi } from "../../../../src/api/vulnerability-comments.api";
 import { usersApi } from "../../../../src/api/users.api";
 import { useAuthStore } from "../../../../src/store/auth.store";
 import { useApiError } from "../../../../src/hooks/use-api-error";
-import { useTabBarClearance } from "../../../../src/hooks/use-tab-bar-clearance";
 import { SeverityBadge, StatusBadge } from "../../../../src/components/badge";
-import { Card } from "../../../../src/components/card";
-import { IconAvatar } from "../../../../src/components/icon-avatar";
 import { EvidenceCarousel } from "../../../../src/components/evidence-carousel";
-import { ErrorState, LoadingState } from "../../../../src/components/states";
-import { Screen } from "../../../../src/components/screen";
-import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../../../../src/theme/tokens";
-import { OWASP_LABELS } from "../../../../src/types/vulnerability.types";
-
-function Section({
-  icon,
-  label,
-  children,
-  tone = "neutral",
-}: {
-  icon: ComponentProps<typeof IconAvatar>["name"];
-  label: string;
-  children: ReactNode;
-  tone?: ComponentProps<typeof IconAvatar>["tone"];
-}) {
-  return (
-    <Card style={styles.sectionCard}>
-      <View style={styles.sectionHeader}>
-        <IconAvatar name={icon} tone={tone} size={32} />
-        <Text style={styles.sectionLabel}>{label}</Text>
-      </View>
-      {children}
-    </Card>
-  );
-}
+import { ActionButton, DataState, DetailField, FilterChip, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
+import { FONT_FAMILY } from "../../../../src/theme/tokens";
+import { WORKSPACE, workspaceStyles as ui } from "../../../../src/theme/workspace";
+import { OWASP_LABELS, fraseDoSla, VRS_BAND_LABELS } from "../../../../src/types/vulnerability.types";
+import { displayDate } from "../../../../src/lib/display";
+import { CvssRing } from "../../../../src/components/cvss-ring";
+import { MotionReveal } from "../../../../src/components/workspace-motion";
 
 export default function FindingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const getErrorMessage = useApiError();
-  const currentUser = useAuthStore((s) => s.user);
-  const bottomClearance = useTabBarClearance();
-
-  const findingQuery = useQuery({
-    queryKey: ["vulnerabilities", id],
-    queryFn: () => vulnerabilitiesApi.getById(id!),
-    enabled: !!id,
+  const [tab, setTab] = useState<"summary" | "evidence" | "comments">("summary");
+  const currentUser = useAuthStore((state) => state.user);
+  const errorMessage = useApiError();
+  const findingQuery = useQuery({ queryKey: ["vulnerabilities", id], queryFn: ({ signal }) => vulnerabilitiesApi.getById(id!, signal), enabled: !!id });
+  const evidenceQuery = useQuery({ queryKey: ["evidences", id], queryFn: ({ signal }) => evidencesApi.list(id!, signal), enabled: !!id && !!findingQuery.data && tab === "evidence" });
+  const commentsQuery = useInfiniteQuery({ queryKey: ["comments", id, "paged"], initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) => vulnerabilityCommentsApi.list(id!, pageParam, 20, signal),
+    getNextPageParam: (last) => last.page * last.pageSize < last.total ? last.page + 1 : undefined,
+    enabled: !!id && !!findingQuery.data && tab === "comments",
   });
-  const evidencesQuery = useQuery({
-    queryKey: ["evidences", id],
-    queryFn: () => evidencesApi.list(id!),
-    enabled: !!id,
-  });
-  const commentsQuery = useQuery({
-    queryKey: ["comments", id],
-    queryFn: () => vulnerabilityCommentsApi.list(id!),
-    enabled: !!id,
-  });
-  const usersQuery = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
-
-  if (findingQuery.isLoading) {
-    return (
-      <Screen scroll={false}>
-        <LoadingState label="Carregando finding..." />
-      </Screen>
-    );
-  }
-
-  if (findingQuery.isError || !findingQuery.data) {
-    return (
-      <Screen scroll={false}>
-        <ErrorState message={getErrorMessage(findingQuery.error)} onRetry={findingQuery.refetch} />
-      </Screen>
-    );
-  }
-
+  const comments = commentsQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const usersQuery = useQuery({ queryKey: ["users"], queryFn: ({ signal }) => usersApi.list(signal), enabled: tab === "comments" && comments.some((comment) => comment.authorId !== currentUser?.id) });
+  const refresh = () => { void findingQuery.refetch(); if (tab === "evidence") void evidenceQuery.refetch(); if (tab === "comments") void commentsQuery.refetch(); };
+  if (!findingQuery.data) return <WorkspaceScreen><PageHeader label="VULNERABILIDADE" back />
+    {findingQuery.isPending ? <DataState loading title="Abrindo vulnerabilidade" /> : <DataState error title="Vulnerabilidade indisponível" message={errorMessage(findingQuery.error)} onRetry={() => { void findingQuery.refetch(); }} />}
+  </WorkspaceScreen>;
   const finding = findingQuery.data;
-  const authorName = (authorId: string): string =>
-    authorId === currentUser?.id ? "Você" : (usersQuery.data?.find((u) => u.id === authorId)?.name ?? "Usuário");
-  const authorInitial = (authorId: string): string => authorName(authorId).charAt(0).toUpperCase();
-
-  return (
-    <Screen contentBottomPadding={bottomClearance}>
-      <Animated.View entering={FadeInDown.duration(320)} style={styles.headerBlock}>
-        <View style={styles.headerRow}>
-          <SeverityBadge severidade={finding.severityFinal} cvss={finding.cvssScore} />
-          <StatusBadge status={finding.status} />
-        </View>
-        <Text style={styles.title}>{finding.title}</Text>
-        <Text style={styles.owasp}>{OWASP_LABELS[finding.owaspCategory] ?? finding.owaspCategory}</Text>
-      </Animated.View>
-
-      {finding.severityOverrideReason && (
-        <Section icon="swap-vertical-outline" label="SEVERIDADE AJUSTADA MANUALMENTE" tone="medium">
-          <Text style={styles.bodyText}>{finding.severityOverrideReason}</Text>
-        </Section>
-      )}
-
-      <Section icon="document-text-outline" label="DESCRIÇÃO" tone="accent">
-        <Text style={styles.bodyText}>{finding.description}</Text>
-      </Section>
-
-      {finding.impact && (
-        <Section icon="flash-outline" label="IMPACTO" tone="high">
-          <Text style={styles.bodyText}>{finding.impact}</Text>
-        </Section>
-      )}
-
-      {finding.recommendation && (
-        <Section icon="bulb-outline" label="RECOMENDAÇÃO" tone="success">
-          <Text style={styles.bodyText}>{finding.recommendation}</Text>
-        </Section>
-      )}
-
-      <View style={styles.sectionGroup}>
-        <View style={styles.sectionTitleRow}>
-          <IconAvatar name="images-outline" tone="neutral" size={28} />
-          <Text style={styles.sectionTitle}>Evidências</Text>
-        </View>
-        {evidencesQuery.isLoading && <LoadingState label="Carregando evidências..." />}
-        {!evidencesQuery.isLoading && (evidencesQuery.data?.length ?? 0) === 0 && (
-          <Text style={styles.mutedText}>Nenhuma evidência anexada.</Text>
-        )}
-        {!!evidencesQuery.data?.length && (
-          <EvidenceCarousel vulnerabilityId={id!} evidences={evidencesQuery.data} />
-        )}
-      </View>
-
-      <View style={styles.sectionGroup}>
-        <View style={styles.sectionTitleRow}>
-          <IconAvatar name="chatbubbles-outline" tone="neutral" size={28} />
-          <Text style={styles.sectionTitle}>Comentários</Text>
-        </View>
-        {commentsQuery.isLoading && <LoadingState label="Carregando comentários..." />}
-        {!commentsQuery.isLoading && (commentsQuery.data?.items.length ?? 0) === 0 && (
-          <Text style={styles.mutedText}>Nenhum comentário ainda.</Text>
-        )}
-        <View style={styles.commentList}>
-          {commentsQuery.data?.items.map((comment, i) => (
-            <Animated.View key={comment.id} entering={FadeInDown.duration(280).delay(Math.min(i, 6) * 40)}>
-              <Card style={styles.commentCard}>
-                <View style={styles.commentHeader}>
-                  <View style={styles.commentAuthorRow}>
-                    <View style={styles.commentAvatar}>
-                      <Text style={styles.commentAvatarText}>{authorInitial(comment.authorId)}</Text>
-                    </View>
-                    <Text style={styles.commentAuthor}>{authorName(comment.authorId)}</Text>
-                  </View>
-                  <Text style={styles.commentDate}>
-                    {new Date(comment.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-                  </Text>
-                </View>
-                <Text style={styles.bodyText}>{comment.content}</Text>
-              </Card>
-            </Animated.View>
-          ))}
-        </View>
-      </View>
-    </Screen>
-  );
+  const score = finding.cvssScore;
+  const author = (authorId: string) => authorId === currentUser?.id ? currentUser.name : usersQuery.data?.find((user) => user.id === authorId)?.name ?? "Autor não disponível";
+  return <WorkspaceScreen onRefresh={refresh} refreshing={findingQuery.isRefetching || (tab === "evidence" && evidenceQuery.isRefetching) || (tab === "comments" && commentsQuery.isRefetching)}>
+    <PageHeader label="VULNERABILIDADE" back />
+    <View style={{ gap: 14 }}><View style={[ui.row, { flexWrap: "wrap" }]}><SeverityBadge severidade={finding.severityFinal} /><StatusBadge status={finding.status} /></View>
+      <Text accessibilityRole="header" style={[ui.title, { fontSize: 28, lineHeight: 34 }]}>{finding.title}</Text>
+      <Text style={ui.muted}>{OWASP_LABELS[finding.owaspCategory] ?? finding.owaspCategory}</Text></View>
+    {findingQuery.isError && <DataState error title="Não foi possível atualizar" message={errorMessage(findingQuery.error)} onRetry={() => { void findingQuery.refetch(); }} />}
+    <GlassSurface style={styles.scoreCard}>
+      <CvssRing score={score} /><View style={[ui.grow, { gap: 8 }]}><Text style={ui.eyebrow}>SEVERIDADE TÉCNICA</Text><Text style={ui.muted}>Registrada em {displayDate(finding.createdAt)}</Text></View>
+    </GlassSurface>
+    <View style={{ flexDirection: "row", alignItems: "stretch", gap: 8 }}>
+      <FilterChip tab label="Resumo" selected={tab === "summary"} onPress={() => setTab("summary")} />
+      <FilterChip tab label="Evidências" selected={tab === "evidence"} onPress={() => setTab("evidence")} />
+      <FilterChip tab label="Comentários" selected={tab === "comments"} onPress={() => setTab("comments")} />
+    </View>
+    <MotionReveal key={tab} style={{ gap: 20 }}>
+    {tab === "summary" && <>
+      <GlassSurface><DetailField label="DESCRIÇÃO" value={finding.description} /></GlassSurface>
+      {finding.impact && <GlassSurface><DetailField label="IMPACTO" value={finding.impact} /></GlassSurface>}
+      {finding.recommendation && <GlassSurface><DetailField label="RECOMENDAÇÃO" value={finding.recommendation} /></GlassSurface>}
+      {finding.severityOverrideReason && <GlassSurface><DetailField label="JUSTIFICATIVA DA SEVERIDADE AJUSTADA" value={finding.severityOverrideReason} /></GlassSurface>}
+      {(finding.sla?.state && finding.sla.state !== "NO_SLA" || finding.vrs?.score != null) && <GlassSurface>
+        {finding.sla?.state && finding.sla.state !== "NO_SLA" && <DetailField label="PRAZO DE REMEDIAÇÃO" value={fraseDoSla(finding.sla.state, finding.sla.remainingMs)} />}
+        {finding.sla?.dueAt && <Text style={ui.muted}>Prazo em {displayDate(finding.sla.dueAt, true)}</Text>}
+        {finding.vrs?.score != null && <DetailField label="PRIORIDADE CONTEXTUAL / VRS" value={`${finding.vrs.score}/100${finding.vrs.band ? ` · ${VRS_BAND_LABELS[finding.vrs.band]}` : ""}`} />}
+      </GlassSurface>}
+      {finding.cvssVector && <GlassSurface><DetailField label="VETOR CVSS" value={finding.cvssVector} /></GlassSurface>}
+      <Text style={ui.muted}>Atualizada em {displayDate(finding.updatedAt, true)}</Text>
+    </>}
+    {tab === "evidence" && <>
+      <SectionHeading title="Evidências" meta={evidenceQuery.data ? `${evidenceQuery.data.length} arquivo(s)` : undefined} />
+      {evidenceQuery.isPending ? <DataState loading title="Carregando evidências" /> : evidenceQuery.isError ? <DataState error title="Evidências indisponíveis" message={errorMessage(evidenceQuery.error)} onRetry={() => { void evidenceQuery.refetch(); }} />
+        : evidenceQuery.data?.length ? <EvidenceCarousel vulnerabilityId={id!} evidences={evidenceQuery.data} /> : <DataState title="Nenhuma evidência anexada" message="Os arquivos enviados pela equipe aparecerão aqui." />}
+    </>}
+    {tab === "comments" && <>
+      <SectionHeading title="Comentários" meta={commentsQuery.data ? `${commentsQuery.data.pages[0].total} no total` : undefined} />
+      {commentsQuery.isPending && <DataState loading title="Carregando comentários" />}
+      {commentsQuery.isError && <DataState error title="Comentários indisponíveis" message={errorMessage(commentsQuery.error)} onRetry={() => { if (commentsQuery.isFetchNextPageError) void commentsQuery.fetchNextPage(); else void commentsQuery.refetch(); }} />}
+      {usersQuery.isError && <Text style={ui.muted}>Alguns nomes não estão disponíveis. O conteúdo dos comentários permanece abaixo.</Text>}
+      {!commentsQuery.isPending && !commentsQuery.isError && !comments.length && <DataState title="A conversa ainda não começou" message="Os comentários registrados no web aparecerão aqui para consulta." />}
+      {comments.map((comment) => <GlassSurface key={comment.id} style={{ gap: 14 }}><View style={ui.row}>
+        <View style={styles.authorAvatar}><Text style={styles.authorInitial}>{comment.authorId === currentUser?.id || usersQuery.data?.some((user) => user.id === comment.authorId) ? author(comment.authorId).charAt(0).toUpperCase() : "?"}</Text></View>
+        <View style={ui.grow}><Text style={styles.authorName}>{author(comment.authorId)}</Text><Text style={ui.muted}>{displayDate(comment.createdAt, true)}</Text></View>
+      </View><Text style={ui.body}>{comment.content}</Text></GlassSurface>)}
+      {commentsQuery.hasNextPage && !commentsQuery.isFetchNextPageError && <ActionButton icon="add-outline" label={commentsQuery.isFetchingNextPage ? "Carregando..." : "Carregar mais comentários"} disabled={commentsQuery.isFetching} onPress={() => { void commentsQuery.fetchNextPage(); }} />}
+    </>}
+    </MotionReveal>
+  </WorkspaceScreen>;
 }
-
 const styles = StyleSheet.create({
-  headerBlock: {
-    gap: SPACING[2],
-  },
-  headerRow: {
-    flexDirection: "row",
-    gap: SPACING[2],
-  },
-  title: {
-    fontSize: FONT_SIZE.xl,
-    fontFamily: FONT_FAMILY.bold,
-    color: COLORS.textPrimary,
-  },
-  owasp: {
-    fontSize: FONT_SIZE.sm,
-    fontFamily: FONT_FAMILY.regular,
-    color: COLORS.textMuted,
-  },
-  sectionCard: {
-    gap: SPACING[2],
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING[2],
-  },
-  sectionLabel: {
-    fontSize: FONT_SIZE.xs,
-    fontFamily: FONT_FAMILY.semibold,
-    color: COLORS.accentInk,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-  },
-  bodyText: {
-    fontSize: FONT_SIZE.sm,
-    fontFamily: FONT_FAMILY.regular,
-    color: COLORS.textSecondary,
-    lineHeight: FONT_SIZE.sm * 1.5,
-  },
-  sectionGroup: {
-    gap: SPACING[2],
-  },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING[2],
-    marginBottom: SPACING[1],
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.base,
-    fontFamily: FONT_FAMILY.semibold,
-    color: COLORS.textPrimary,
-  },
-  mutedText: {
-    fontSize: FONT_SIZE.sm,
-    fontFamily: FONT_FAMILY.regular,
-    color: COLORS.textMuted,
-  },
-  commentList: {
-    gap: SPACING[2],
-  },
-  commentCard: {
-    gap: SPACING[2],
-  },
-  commentHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  commentAuthorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING[2],
-  },
-  commentAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.accentSurface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  commentAvatarText: {
-    fontSize: FONT_SIZE.xs,
-    fontFamily: FONT_FAMILY.bold,
-    color: COLORS.accentInk,
-  },
-  commentAuthor: {
-    fontSize: FONT_SIZE.sm,
-    fontFamily: FONT_FAMILY.semibold,
-    color: COLORS.textPrimary,
-  },
-  commentDate: {
-    fontSize: FONT_SIZE.xs,
-    fontFamily: FONT_FAMILY.regular,
-    color: COLORS.textMuted,
-  },
+  scoreCard: { flexDirection: "row", alignItems: "center", gap: 16, padding: 16 },
+  authorAvatar: { width: 38, height: 38, borderRadius: 14, backgroundColor: "rgba(124,58,237,0.18)", alignItems: "center", justifyContent: "center" }, authorInitial: { color: WORKSPACE.lavender, fontFamily: FONT_FAMILY.semibold },
+  authorName: { fontFamily: FONT_FAMILY.medium, color: WORKSPACE.text, fontSize: 14 },
 });

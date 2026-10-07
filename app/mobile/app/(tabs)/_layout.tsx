@@ -29,18 +29,27 @@ import { Redirect, Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { useAuthStore } from "../../src/store/auth.store";
-import { usePushRegistration } from "../../src/hooks/use-push-registration";
+import { PushStatusContext, usePushRegistration } from "../../src/hooks/use-push-registration";
 import { TabIcon } from "../../src/components/tab-icon";
 import { haptics } from "../../src/lib/haptics";
 import { LoadingState } from "../../src/components/states";
 import { Screen } from "../../src/components/screen";
-import { COLORS, FONT_FAMILY, RADIUS, SHADOW, TAB_BAR } from "../../src/theme/tokens";
+import { COLORS, FONT_FAMILY, SHADOW, TAB_BAR } from "../../src/theme/tokens";
+import { WORKSPACE } from "../../src/theme/workspace";
+import { useWorkspaceReducedMotion, WorkspaceMotionProvider } from "../../src/components/workspace-motion";
+import { useActiveWorkspaceBlur, WorkspaceBlurProvider } from "../../src/components/workspace-blur";
 
 export default function TabsLayout() {
+  return <WorkspaceMotionProvider><WorkspaceBlurProvider><AuthenticatedTabs /></WorkspaceBlurProvider></WorkspaceMotionProvider>;
+}
+
+function AuthenticatedTabs() {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
   const insets = useSafeAreaInsets();
-  usePushRegistration();
+  const pushStatus = usePushRegistration();
+  const reduced = useWorkspaceReducedMotion();
+  const { target: blurTarget } = useActiveWorkspaceBlur();
 
   if (!hasHydrated) {
     return (
@@ -55,12 +64,14 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs
+    <PushStatusContext.Provider value={pushStatus}><Tabs
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.surface },
         headerTintColor: COLORS.textPrimary,
         headerTitleStyle: { fontFamily: FONT_FAMILY.semibold },
         headerShadowVisible: false,
+        headerShown: false,
+        animation: reduced ? "none" : "fade",
         tabBarStyle: [
           styles.tabBar,
           {
@@ -74,14 +85,14 @@ export default function TabsLayout() {
         // overflow:hidden do vidro — ver nota no styles.backgroundWrap.
         tabBarBackground: () => (
           <View style={styles.backgroundWrap}>
-            <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={45} tint="dark" blurTarget={blurTarget} blurMethod={blurTarget ? "dimezisBlurViewSdk31Plus" : "none"} style={StyleSheet.absoluteFill} />
             <View style={styles.tint} />
           </View>
         ),
         tabBarItemStyle: styles.tabBarItem,
-        tabBarLabelStyle: { fontFamily: FONT_FAMILY.medium, fontSize: 11 },
-        tabBarActiveTintColor: COLORS.accentInk,
-        tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarLabelStyle: { fontFamily: FONT_FAMILY.medium, fontSize: 12 },
+        tabBarActiveTintColor: WORKSPACE.lavender,
+        tabBarInactiveTintColor: WORKSPACE.muted,
       }}
     >
       <Tabs.Screen
@@ -98,23 +109,23 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Configurações",
+          title: "Minha conta",
           tabBarIcon: ({ color, focused, size }) => (
             <TabIcon name={focused ? "settings" : "settings-outline"} color={color} size={size} focused={focused} />
           ),
         }}
         listeners={{ tabPress: () => haptics.tap() }}
       />
-    </Tabs>
+    </Tabs></PushStatusContext.Provider>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
-    borderRadius: RADIUS.full,
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(216,199,255,0.14)",
     backgroundColor: "transparent",
     ...SHADOW.raised,
   },
@@ -123,7 +134,7 @@ const styles = StyleSheet.create({
   // cortaria a sombra no iOS.
   backgroundWrap: {
     ...StyleSheet.absoluteFill,
-    borderRadius: RADIUS.full,
+    borderRadius: 28,
     overflow: "hidden",
   },
   // Tint sólido semi-transparente por cima do blur — o vidro fosco puro
@@ -131,8 +142,8 @@ const styles = StyleSheet.create({
   // garante contraste consistente do ícone/rótulo em qualquer conteúdo.
   tint: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: COLORS.surface,
-    opacity: 0.55,
+    backgroundColor: "#211b30",
+    opacity: 0.70,
   },
   tabBarItem: {
     paddingTop: 8,

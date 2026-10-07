@@ -1,14 +1,17 @@
-import { useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { createContext, useContext, useEffect, useState } from "react";
+import { AppState, Platform } from "react-native";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { notificationsApi } from "../api/notifications.api";
 import { useAuthStore } from "../store/auth.store";
 
 type PushStatus = "verificando" | "ativado" | "negado" | "erro" | "indisponivel";
+// O layout registra uma vez e Configurações lê o mesmo resultado, sem novo POST.
+export const PushStatusContext = createContext<PushStatus>("verificando");
+export function usePushStatus(): PushStatus { return useContext(PushStatusContext); }
 
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-const pushUnsupported = isExpoGo && Platform.OS === "android";
+const pushUnsupported = Platform.OS === "web" || (isExpoGo && Platform.OS === "android");
 
 let notificationHandlerConfigured = false;
 
@@ -28,8 +31,11 @@ export function usePushRegistration(): PushStatus {
     }
 
     let cancelled = false;
+    let registering = false;
 
     async function register(): Promise<void> {
+      if (registering || cancelled) return;
+      registering = true;
       try {
         if (!notificationHandlerConfigured) {
           Notifications.setNotificationHandler({
@@ -74,12 +80,16 @@ export function usePushRegistration(): PushStatus {
         const mensagem = err instanceof Error ? err.message : String(err);
         console.warn("[push] não foi possível registrar o token:", mensagem);
         if (!cancelled) setStatus("erro");
+      } finally {
+        registering = false;
       }
     }
 
     register();
+    const listener = AppState.addEventListener("change", (state) => { if (state === "active") void register(); });
     return () => {
       cancelled = true;
+      listener.remove();
     };
   }, [accessToken]);
 

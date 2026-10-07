@@ -38,8 +38,9 @@ export function useApiError(): (error: unknown) => string {
     const code = getApiErrorCode(error);
     if (code) return messageForCode(code);
     if (axios.isAxiosError(error) && error.code === "ERR_NETWORK") {
-      return "Não foi possível conectar ao servidor. Confira o endereço da API nas Configurações do app e sua conexão.";
+      return "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.";
     }
+    if (axios.isAxiosError(error) && error.code === "ECONNABORTED") return "O servidor demorou para responder. Tente novamente.";
     return "Não foi possível concluir a ação. Tente novamente.";
   }, []);
 }

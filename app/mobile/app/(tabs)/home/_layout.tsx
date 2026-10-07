@@ -7,16 +7,24 @@
 
 import { Stack } from "expo-router";
 import { COLORS } from "../../../src/theme/tokens";
+import { WORKSPACE } from "../../../src/theme/workspace";
+import { useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
 
 export default function HomeStackLayout() {
+  const reduced = useWorkspaceReducedMotion();
   return (
     <Stack
       screenOptions={{
+        headerShown: false,
         headerStyle: { backgroundColor: COLORS.surface },
         headerTintColor: COLORS.textPrimary,
         headerShadowVisible: false,
         headerBackTitle: "Voltar",
-        contentStyle: { backgroundColor: COLORS.canvas },
+        contentStyle: { backgroundColor: WORKSPACE.background },
+        animation: reduced ? "none" : "slide_from_right",
+        animationDuration: 280,
+        gestureEnabled: true,
+        fullScreenGestureEnabled: true,
       }}
     >
       <Stack.Screen name="index" options={{ title: "Meus projetos" }} />

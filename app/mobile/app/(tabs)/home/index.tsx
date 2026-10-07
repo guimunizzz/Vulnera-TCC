@@ -1,199 +1,99 @@
 /**
- * Home — lista de projetos da company do CLIENT logado. GET /projects sem
- * filtro já vem escopado pelo backend (RN16); aqui só lista e navega.
- *
- * Chips de status filtram só no cliente (a lista inteira já veio da API) —
- * não é uma feature nova de backend, é só uma lente sobre o que já chegou,
- * no mesmo espírito das categorias do Mercado Livre.
+ * Home do cliente: portfólio e resumo calculados dos projetos reais da empresa.
+ * Facilita acompanhamento e busca sem criar operações de escrita no mobile.
+ * Consome projectsApi; navega para detalhes e configurações autenticadas.
  */
-
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { BlurView } from "expo-blur";
 import { useQuery } from "@tanstack/react-query";
 import { projectsApi } from "../../../src/api/projects.api";
 import { useApiError } from "../../../src/hooks/use-api-error";
 import { useAuthStore } from "../../../src/store/auth.store";
 import { useTabBarClearance } from "../../../src/hooks/use-tab-bar-clearance";
-import { haptics } from "../../../src/lib/haptics";
 import { ProjectCard } from "../../../src/components/project-card";
-import { ProjectCardSkeleton, SkeletonList } from "../../../src/components/skeleton";
-import { EmptyState, ErrorState } from "../../../src/components/states";
-import { Screen } from "../../../src/components/screen";
-import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../../../src/theme/tokens";
+import { DataState, FilterChip, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
+import { FONT_FAMILY } from "../../../src/theme/tokens";
+import { WORKSPACE, workspaceStyles as ui } from "../../../src/theme/workspace";
 import type { ProjectStatus } from "../../../src/types/project.types";
+import { MotionReveal, SoftPressable as Pressable, useWorkspaceReducedMotion, useWorkspaceScroll } from "../../../src/components/workspace-motion";
 
-type Filtro = "TODOS" | ProjectStatus;
-
-const FILTROS: { valor: Filtro; rotulo: string }[] = [
-  { valor: "TODOS", rotulo: "Todos" },
-  { valor: "PENDING", rotulo: "Pendente" },
-  { valor: "IN_PROGRESS", rotulo: "Em andamento" },
-  { valor: "IN_REVIEW", rotulo: "Em revisão" },
-  { valor: "COMPLETED", rotulo: "Concluído" },
+const FILTERS: { value: "ALL" | ProjectStatus; label: string }[] = [
+  { value: "ALL", label: "Todos" }, { value: "IN_PROGRESS", label: "Em andamento" },
+  { value: "PENDING", label: "Pendentes" }, { value: "IN_REVIEW", label: "Em revisão" }, { value: "COMPLETED", label: "Concluídos" },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const getErrorMessage = useApiError();
-  const userName = useAuthStore((s) => s.user?.name);
-  const [filtro, setFiltro] = useState<Filtro>("TODOS");
-  const listaBottomPadding = useTabBarClearance();
+  const user = useAuthStore((state) => state.user);
+  const bottom = useTabBarClearance();
+  const errorMessage = useApiError();
+  const [filter, setFilter] = useState<"ALL" | ProjectStatus>("ALL");
+  const [search, setSearch] = useState("");
+  const scroll = useWorkspaceScroll();
+  const reduced = useWorkspaceReducedMotion();
+  const searchFocus = useSharedValue(0);
+  const searchStyle = useAnimatedStyle(() => ({ borderColor: interpolateColor(searchFocus.value, [0, 1], [WORKSPACE.line, "rgba(167,139,250,0.5)"]), backgroundColor: interpolateColor(searchFocus.value, [0, 1], ["rgba(255,255,255,0.025)", "rgba(124,58,237,0.065)"]) }));
+  const query = useQuery({ queryKey: ["projects"], queryFn: ({ signal }) => projectsApi.list(signal) });
+  const projects = useMemo(() => query.data ?? [], [query.data]);
+  const visible = useMemo(() => projects.filter((project) =>
+    (filter === "ALL" || project.status === filter) && project.name.toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR"))), [projects, filter, search]);
+  const underway = projects.filter((project) => project.status === "IN_PROGRESS" || project.status === "IN_REVIEW").length;
+  const completed = projects.filter((project) => project.status === "COMPLETED").length;
+  const header = <View style={styles.header}>
+    <PageHeader label="VULNERA">
+      <Pressable onPress={() => router.push("/(tabs)/settings")} accessibilityRole="button" accessibilityLabel="Abrir minha conta" style={styles.avatar}>
+        <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text>
+      </Pressable>
+    </PageHeader>
+    <View style={styles.hero}>
+      <Text accessibilityRole="header" style={ui.title}>Olá, {user?.name?.split(" ")[0] ?? "cliente"}<Text style={{ color: WORKSPACE.lavender }}>.</Text></Text>
+      <Text style={ui.body}>Acompanhe suas análises de segurança.</Text>
+    </View>
+    {!query.isPending && query.data && <MotionReveal delay={60}><GlassSurface style={styles.metrics}>
+      <View style={styles.metric}><View style={ui.row}><Ionicons name="scan-outline" size={20} color={WORKSPACE.lavender} /><Text style={styles.metricNumber}>{underway}</Text></View><Text style={ui.muted}>Em análise ou revisão</Text></View>
+      <View style={styles.metricDivider} />
+      <View style={styles.metric}><View style={ui.row}><Ionicons name="checkmark-done-outline" size={20} color="#8bddb0" /><Text style={styles.metricNumber}>{completed}</Text></View><Text style={ui.muted}>Projetos concluídos</Text></View>
+    </GlassSurface></MotionReveal>}
+    <View style={styles.portfolio}>
+      <SectionHeading title="Seus projetos" meta={query.data ? `${projects.length} no total` : undefined} />
+      <Animated.View style={[styles.search, searchStyle]}>
+        <Ionicons name="search-outline" size={19} color={WORKSPACE.muted} />
+        <TextInput accessibilityLabel="Buscar projetos pelo nome" placeholder="Buscar um projeto" placeholderTextColor={WORKSPACE.muted}
+          value={search} onChangeText={setSearch} style={styles.searchInput} returnKeyType="search"
+          onFocus={() => { searchFocus.value = withTiming(1, { duration: reduced ? 0 : 180 }); }} onBlur={() => { searchFocus.value = withTiming(0, { duration: reduced ? 0 : 220 }); }} />
+        {!!search && <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => setSearch("")} style={styles.clear}><Ionicons name="close-circle" size={18} color={WORKSPACE.muted} /></Pressable>}
+      </Animated.View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+        {FILTERS.map((item) => <FilterChip key={item.value} label={item.label} selected={filter === item.value} onPress={() => setFilter(item.value)} />)}
+      </ScrollView>
+    </View>
+    {query.isError && query.data && <DataState error title="Não foi possível atualizar" message={errorMessage(query.error)} onRetry={() => { void query.refetch(); }} />}
+  </View>;
 
-  const { data: projects, isLoading, isError, error, refetch, isRefetching } = useQuery({
-    queryKey: ["projects"],
-    queryFn: projectsApi.list,
-  });
-
-  const projetosFiltrados = useMemo(() => {
-    if (!projects) return [];
-    if (filtro === "TODOS") return projects;
-    return projects.filter((p) => p.status === filtro);
-  }, [projects, filtro]);
-
-  const primeiroNome = userName?.split(" ")[0];
-
-  if (isLoading) {
-    return (
-      <Screen scroll={false}>
-        <View style={styles.greetingWrap}>
-          <Text style={styles.greeting}>Seus projetos</Text>
-        </View>
-        <SkeletonList Item={ProjectCardSkeleton} />
-      </Screen>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Screen scroll={false}>
-        <ErrorState message={getErrorMessage(error)} onRetry={refetch} />
-      </Screen>
-    );
-  }
-
-  return (
-    <Screen scroll={false}>
-      <FlatList
-        data={projetosFiltrados}
-        keyExtractor={(p) => p.id}
-        contentContainerStyle={[styles.list, { paddingBottom: listaBottomPadding }]}
-        refreshing={isRefetching}
-        onRefresh={() => {
-          haptics.tap();
-          refetch();
-        }}
-        ListHeaderComponent={
-          <View style={styles.headerBlock}>
-            <View style={styles.greetingWrap}>
-              <Text style={styles.greeting}>{primeiroNome ? `Olá, ${primeiroNome}` : "Seus projetos"}</Text>
-              <Text style={styles.greetingSubtitle}>
-                {projects?.length ?? 0} projeto{(projects?.length ?? 0) === 1 ? "" : "s"} ao todo
-              </Text>
-            </View>
-            <FlatList
-              horizontal
-              data={FILTROS}
-              keyExtractor={(f) => f.valor}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipsRow}
-              renderItem={({ item }) => {
-                const ativo = item.valor === filtro;
-                return (
-                  <Pressable
-                    onPress={() => {
-                      haptics.tap();
-                      setFiltro(item.valor);
-                    }}
-                    style={[styles.chip, ativo && styles.chipBordaAtiva]}
-                  >
-                    <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
-                    <View style={[styles.chipTint, ativo && styles.chipTintAtivo]} />
-                    <Text style={[styles.chipText, ativo && styles.chipTextAtivo]}>{item.rotulo}</Text>
-                  </Pressable>
-                );
-              }}
-            />
-          </View>
-        }
-        renderItem={({ item, index }) => (
-          <ProjectCard project={item} index={index} onPress={() => router.push(`/(tabs)/home/project/${item.id}`)} />
-        )}
-        ListEmptyComponent={
-          <EmptyState
-            title={filtro === "TODOS" ? "Nenhum projeto ainda" : "Nenhum projeto nesse status"}
-            subtitle={
-              filtro === "TODOS"
-                ? "Assim que uma análise de segurança for aberta para a sua empresa, ela aparece aqui."
-                : "Tenta outro filtro ali em cima."
-            }
-          />
-        }
-      />
-    </Screen>
-  );
+  return <WorkspaceScreen scroll={false} scrollY={scroll.scrollY}>
+    <Animated.FlatList onScroll={scroll.onScroll} scrollEventThrottle={16} keyboardShouldPersistTaps="handled" data={query.data ? visible : []} keyExtractor={(project) => project.id} showsVerticalScrollIndicator={false}
+      contentContainerStyle={[styles.list, { paddingBottom: bottom + 16 }]} ListHeaderComponent={header}
+      refreshing={query.isRefetching} onRefresh={() => { void query.refetch(); }}
+      renderItem={({ item, index }) => <MotionReveal delay={Math.min(index, 3) * 40}><ProjectCard project={item} onPress={() => router.push(`/(tabs)/home/project/${item.id}`)} /></MotionReveal>}
+      ListEmptyComponent={query.isPending ? <DataState loading title="Buscando seus projetos" message="Carregando as análises da sua empresa." />
+        : query.isError && !query.data ? <DataState error title="Projetos indisponíveis" message={errorMessage(query.error)} onRetry={() => { void query.refetch(); }} />
+        : <DataState title={search || filter !== "ALL" ? "Nenhum resultado" : "Seu próximo projeto começa aqui"}
+          message={search || filter !== "ALL" ? "Experimente outro nome ou selecione Todos." : "Quando uma análise for aberta para sua empresa, você poderá acompanhá-la aqui."} />}
+    />
+  </WorkspaceScreen>;
 }
 
 const styles = StyleSheet.create({
-  list: {
-    paddingHorizontal: SPACING[4],
-    paddingBottom: SPACING[4],
-    gap: SPACING[3],
-    flexGrow: 1,
-  },
-  headerBlock: {
-    gap: SPACING[3],
-    paddingTop: SPACING[2],
-    marginBottom: SPACING[1],
-  },
-  greetingWrap: {
-    paddingHorizontal: SPACING[4],
-    gap: 2,
-  },
-  greeting: {
-    fontSize: FONT_SIZE.xl,
-    fontFamily: FONT_FAMILY.bold,
-    color: COLORS.textPrimary,
-  },
-  greetingSubtitle: {
-    fontSize: FONT_SIZE.sm,
-    fontFamily: FONT_FAMILY.regular,
-    color: COLORS.textMuted,
-  },
-  chipsRow: {
-    gap: SPACING[2],
-    paddingHorizontal: SPACING[4],
-  },
-  chip: {
-    paddingHorizontal: SPACING[4],
-    paddingVertical: SPACING[2],
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.borderSubtle,
-    overflow: "hidden",
-  },
-  // Inativo: tint neutro. Ativo: tint na cor do acento — mesmo espírito do
-  // botão "Entrar" do login, vidro com cor de destaque em vez de virar
-  // cinza quando selecionado.
-  chipTint: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: COLORS.surface,
-    opacity: 0.6,
-  },
-  chipTintAtivo: {
-    backgroundColor: COLORS.accent,
-    opacity: 0.7,
-  },
-  chipBordaAtiva: {
-    borderColor: COLORS.accent,
-  },
-  chipText: {
-    fontSize: FONT_SIZE.xs,
-    fontFamily: FONT_FAMILY.medium,
-    color: COLORS.textSecondary,
-  },
-  chipTextAtivo: {
-    color: COLORS.accentFg,
-  },
+  list: { paddingHorizontal: 20, gap: 12, flexGrow: 1 }, header: { gap: 20, marginBottom: 4 },
+  avatar: { width: 48, height: 48, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(124,58,237,0.12)", borderWidth: 1, borderColor: WORKSPACE.line },
+  avatarText: { fontFamily: FONT_FAMILY.semibold, fontSize: 16, color: WORKSPACE.lavender },
+  hero: { gap: 8, paddingVertical: 4 },
+  metrics: { flexDirection: "row", gap: 16, padding: 16 }, metric: { flex: 1, gap: 6 }, metricDivider: { width: 1, backgroundColor: WORKSPACE.line },
+  metricNumber: { fontFamily: FONT_FAMILY.medium, fontSize: 26, lineHeight: 32, color: WORKSPACE.text },
+  portfolio: { gap: 12 }, search: { flexDirection: "row", alignItems: "center", paddingLeft: 16, paddingRight: 4, minHeight: 52, borderRadius: 18, borderWidth: 1, borderColor: WORKSPACE.line },
+  searchInput: { flex: 1, minWidth: 0, padding: 12, color: WORKSPACE.text, fontFamily: FONT_FAMILY.regular, fontSize: 15 },
+  clear: { width: 48, height: 48, alignItems: "center", justifyContent: "center" }, filters: { gap: 8 },
 });
