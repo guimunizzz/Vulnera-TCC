@@ -172,7 +172,8 @@ export const TOUCH_TARGET = 44;
  * empurra mais como a barra dockada antiga fazia).
  */
 export const TAB_BAR = {
-  height: 64,
+  width: 176,
+  height: 56,
   sideMargin: 16,
   bottomMargin: 16,
 } as const;

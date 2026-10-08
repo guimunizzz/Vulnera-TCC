@@ -86,7 +86,7 @@ export function DataState({ title, message, loading = false, error = false, onRe
 }) {
   return <GlassSurface style={styles.state}>
     <View style={[styles.stateIcon, error && { backgroundColor: "rgba(225,29,72,0.12)" }]}>
-      {loading ? <ActivityIndicator color={WORKSPACE.lavender} /> : <Ionicons name={error ? "cloud-offline-outline" : "layers-outline"} size={25} color={error ? "#fda4af" : WORKSPACE.lavender} />}
+      {loading ? <ActivityIndicator color={WORKSPACE.lavender} /> : <Ionicons name={error ? "cloud-offline-outline" : "layers-outline"} size={25} color={error ? "#fda4af" : WORKSPACE.secondary} />}
     </View><Text accessibilityRole="header" style={[ui.heading, { fontSize: 17, textAlign: "center" }]}>{title}</Text>
     {message && <Text accessibilityLiveRegion={error ? "polite" : "none"} style={[ui.muted, { textAlign: "center" }]}>{message}</Text>}
     {onRetry && <ActionButton label="Tentar novamente" onPress={onRetry} />}
@@ -101,14 +101,14 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: WORKSPACE.background, overflow: "hidden" }, flex: { flex: 1 }, content: { paddingHorizontal: 20, gap: 20 },
   glass: { borderRadius: WORKSPACE.radius, borderWidth: 1, borderColor: WORKSPACE.line, overflow: "hidden", padding: 20, gap: 16 },
   reflection: { position: "absolute", top: 0, left: 22, right: 22, height: 1, backgroundColor: WORKSPACE.shine },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingVertical: 8 }, headerLabel: { flex: 1, color: "#ded4f0", letterSpacing: 0.8 },
+  header: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingVertical: 8 }, headerLabel: { flex: 1, color: WORKSPACE.secondary, letterSpacing: 0.8 },
   brandIcon: { width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 14, borderWidth: 1, borderColor: WORKSPACE.line, backgroundColor: "rgba(124,58,237,0.10)" },
-  headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: WORKSPACE.lavender, marginRight: 8 },
+  headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: WORKSPACE.muted, marginRight: 8 },
   iconButton: { width: 48, height: 48, alignItems: "center", justifyContent: "center", borderRadius: 18, borderWidth: 1, borderColor: WORKSPACE.line, backgroundColor: "rgba(255,255,255,0.035)" },
   chip: { minHeight: 48, minWidth: 48, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: WORKSPACE.line, borderRadius: 18, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.025)" },
   chipActive: { borderRadius: 17, borderWidth: 1, borderColor: "rgba(167,139,250,0.24)" }, chipText: { fontFamily: FONT_FAMILY.medium, fontSize: 14, color: WORKSPACE.muted },
   tabChip: { flex: 1, minWidth: 0, paddingHorizontal: 8, justifyContent: "center" }, tabChipText: { fontSize: 13, textAlign: "center", flexShrink: 1 },
   action: { minHeight: 48, paddingHorizontal: 18, paddingVertical: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, borderRadius: 16, borderWidth: 1, borderColor: "rgba(167,139,250,0.25)", backgroundColor: "rgba(124,58,237,0.12)" },
   actionText: { fontFamily: FONT_FAMILY.medium, fontSize: 14, color: WORKSPACE.lavender, flexShrink: 1, textAlign: "center" }, dangerAction: { borderColor: "rgba(253,164,175,0.18)", backgroundColor: "rgba(225,29,72,0.06)" },
-  state: { alignItems: "center", paddingVertical: 32, gap: 14 }, stateIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: "rgba(124,58,237,0.13)", alignItems: "center", justifyContent: "center" },
+  state: { alignItems: "center", paddingVertical: 32, gap: 14 }, stateIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: WORKSPACE.neutralTint, alignItems: "center", justifyContent: "center" },
 });

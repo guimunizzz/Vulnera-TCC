@@ -14,8 +14,9 @@ import { useApiError } from "../../../src/hooks/use-api-error";
 import { useAuthStore } from "../../../src/store/auth.store";
 import { useTabBarClearance } from "../../../src/hooks/use-tab-bar-clearance";
 import { ProjectCard } from "../../../src/components/project-card";
-import { DataState, FilterChip, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
-import { FONT_FAMILY } from "../../../src/theme/tokens";
+import { DataState, FilterChip, GlassSurface, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
+import { HomeBrand } from "../../../src/components/home-brand";
+import { COLORS, FONT_FAMILY } from "../../../src/theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../../../src/theme/workspace";
 import type { ProjectStatus } from "../../../src/types/project.types";
 import { MotionReveal, SoftPressable as Pressable, useWorkspaceReducedMotion, useWorkspaceScroll } from "../../../src/components/workspace-motion";
@@ -43,17 +44,18 @@ export default function HomeScreen() {
   const underway = projects.filter((project) => project.status === "IN_PROGRESS" || project.status === "IN_REVIEW").length;
   const completed = projects.filter((project) => project.status === "COMPLETED").length;
   const header = <View style={styles.header}>
-    <PageHeader label="VULNERA">
+    <View style={styles.topBar}>
+      <HomeBrand />
       <Pressable onPress={() => router.push("/(tabs)/settings")} accessibilityRole="button" accessibilityLabel="Abrir minha conta" style={styles.avatar}>
         <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text>
       </Pressable>
-    </PageHeader>
+    </View>
     <View style={styles.hero}>
       <Text accessibilityRole="header" style={ui.title}>Olá, {user?.name?.split(" ")[0] ?? "cliente"}<Text style={{ color: WORKSPACE.lavender }}>.</Text></Text>
       <Text style={ui.body}>Acompanhe suas análises de segurança.</Text>
     </View>
     {!query.isPending && query.data && <MotionReveal delay={60}><GlassSurface style={styles.metrics}>
-      <View style={styles.metric}><View style={ui.row}><Ionicons name="scan-outline" size={20} color={WORKSPACE.lavender} /><Text style={styles.metricNumber}>{underway}</Text></View><Text style={ui.muted}>Em análise ou revisão</Text></View>
+      <View style={styles.metric}><View style={ui.row}><Ionicons name="scan-outline" size={20} color={COLORS.severity.lowInk} /><Text style={styles.metricNumber}>{underway}</Text></View><Text style={ui.muted}>Em análise ou revisão</Text></View>
       <View style={styles.metricDivider} />
       <View style={styles.metric}><View style={ui.row}><Ionicons name="checkmark-done-outline" size={20} color="#8bddb0" /><Text style={styles.metricNumber}>{completed}</Text></View><Text style={ui.muted}>Projetos concluídos</Text></View>
     </GlassSurface></MotionReveal>}
@@ -88,8 +90,9 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, gap: 12, flexGrow: 1 }, header: { gap: 20, marginBottom: 4 },
-  avatar: { width: 48, height: 48, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(124,58,237,0.12)", borderWidth: 1, borderColor: WORKSPACE.line },
-  avatarText: { fontFamily: FONT_FAMILY.semibold, fontSize: 16, color: WORKSPACE.lavender },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 64, paddingVertical: 8 },
+  avatar: { width: 48, height: 48, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: WORKSPACE.neutralTint, borderWidth: 1, borderColor: WORKSPACE.line },
+  avatarText: { fontFamily: FONT_FAMILY.semibold, fontSize: 16, color: WORKSPACE.secondary },
   hero: { gap: 8, paddingVertical: 4 },
   metrics: { flexDirection: "row", gap: 16, padding: 16 }, metric: { flex: 1, gap: 6 }, metricDivider: { width: 1, backgroundColor: WORKSPACE.line },
   metricNumber: { fontFamily: FONT_FAMILY.medium, fontSize: 26, lineHeight: 32, color: WORKSPACE.text },

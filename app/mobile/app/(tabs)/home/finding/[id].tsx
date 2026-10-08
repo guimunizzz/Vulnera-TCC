@@ -51,7 +51,7 @@ export default function FindingDetailScreen() {
       <Text style={ui.muted}>{OWASP_LABELS[finding.owaspCategory] ?? finding.owaspCategory}</Text></View>
     {findingQuery.isError && <DataState error title="Não foi possível atualizar" message={errorMessage(findingQuery.error)} onRetry={() => { void findingQuery.refetch(); }} />}
     <GlassSurface style={styles.scoreCard}>
-      <CvssRing score={score} /><View style={[ui.grow, { gap: 8 }]}><Text style={ui.eyebrow}>SEVERIDADE TÉCNICA</Text><Text style={ui.muted}>Registrada em {displayDate(finding.createdAt)}</Text></View>
+      <CvssRing score={score} severity={finding.severityCalculated} /><View style={[ui.grow, { gap: 8 }]}><Text style={ui.eyebrow}>SEVERIDADE TÉCNICA</Text><Text style={ui.muted}>Registrada em {displayDate(finding.createdAt)}</Text></View>
     </GlassSurface>
     <View style={{ flexDirection: "row", alignItems: "stretch", gap: 8 }}>
       <FilterChip tab label="Resumo" selected={tab === "summary"} onPress={() => setTab("summary")} />
@@ -94,6 +94,6 @@ export default function FindingDetailScreen() {
 }
 const styles = StyleSheet.create({
   scoreCard: { flexDirection: "row", alignItems: "center", gap: 16, padding: 16 },
-  authorAvatar: { width: 38, height: 38, borderRadius: 14, backgroundColor: "rgba(124,58,237,0.18)", alignItems: "center", justifyContent: "center" }, authorInitial: { color: WORKSPACE.lavender, fontFamily: FONT_FAMILY.semibold },
+  authorAvatar: { width: 38, height: 38, borderRadius: 14, backgroundColor: WORKSPACE.neutralTint, alignItems: "center", justifyContent: "center" }, authorInitial: { color: WORKSPACE.secondary, fontFamily: FONT_FAMILY.semibold },
   authorName: { fontFamily: FONT_FAMILY.medium, color: WORKSPACE.text, fontSize: 14 },
 });

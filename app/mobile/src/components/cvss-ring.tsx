@@ -10,12 +10,15 @@ import Animated, { cancelAnimation, useAnimatedProps, useSharedValue, withTiming
 import { FONT_FAMILY } from "../theme/tokens";
 import { WORKSPACE } from "../theme/workspace";
 import { SOFT_MOTION, useWorkspaceReducedMotion } from "./workspace-motion";
+import { CORES_SEVERIDADE } from "./badge";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const circumference = 2 * Math.PI * 34;
 
-export function CvssRing({ score }: { score: number | null }) {
+export function CvssRing({ score, severity }: { score: number | null; severity: string }) {
   const reduced = useWorkspaceReducedMotion();
+  // O anel técnico usa a severidade calculada, mesmo quando há override final.
+  const color = (CORES_SEVERIDADE[severity as keyof typeof CORES_SEVERIDADE] ?? CORES_SEVERIDADE.NONE).texto;
   const portion = score == null ? 0 : Math.max(0, Math.min(10, score)) / 10;
   const progress = useSharedValue(reduced ? portion : 0);
   useEffect(() => {
@@ -25,8 +28,8 @@ export function CvssRing({ score }: { score: number | null }) {
   const props = useAnimatedProps(() => ({ strokeDashoffset: circumference * (1 - progress.value) }));
   return <View style={styles.ring} accessible accessibilityLabel={score != null ? `CVSS ${score.toFixed(1)} de 10` : "CVSS não informado"}>
     <Svg width={88} height={88} style={StyleSheet.absoluteFill} accessibilityElementsHidden>
-      <Circle cx={44} cy={44} r={34} fill="none" stroke="rgba(167,139,250,0.10)" strokeWidth={4} />
-      {score != null && <AnimatedCircle cx={44} cy={44} r={34} fill="none" stroke={WORKSPACE.lavender} strokeWidth={4} strokeLinecap="round"
+      <Circle cx={44} cy={44} r={34} fill="none" stroke={WORKSPACE.line} strokeWidth={4} />
+      {score != null && <AnimatedCircle cx={44} cy={44} r={34} fill="none" stroke={color} strokeWidth={4} strokeLinecap="round"
         strokeDasharray={`${circumference} ${circumference}`} animatedProps={props} rotation={-90} origin="44,44" />}
     </Svg>
     <Text style={styles.score}>{score != null ? score.toFixed(1) : "—"}</Text><Text style={styles.label}>CVSS</Text>

@@ -64,9 +64,9 @@ export function EvidenceCarousel({ vulnerabilityId, evidences }: { vulnerability
       keyExtractor={(evidence) => evidence.id} getItemLayout={(_data, index) => ({ length: width, offset: width * index, index })}
       onMomentumScrollEnd={(event) => setActive(Math.max(0, Math.min(evidences.length - 1, Math.round(event.nativeEvent.contentOffset.x / width))))}
       renderItem={({ item }) => <View style={{ width }}><GlassSurface style={styles.slide}>
-        <View style={ui.spread}><View style={[ui.row, ui.grow, { gap: 8 }]}><Ionicons name="attach-outline" size={18} color={WORKSPACE.lavender} /><Text numberOfLines={2} style={[styles.fileName, ui.grow]}>{item.originalName}</Text></View><Text style={ui.mono}>{displayBytes(item.sizeBytes)}</Text></View>
+        <View style={ui.spread}><View style={[ui.row, ui.grow, { gap: 8 }]}><Ionicons name="attach-outline" size={18} color={WORKSPACE.secondary} /><Text numberOfLines={2} style={[styles.fileName, ui.grow]}>{item.originalName}</Text></View><Text style={ui.mono}>{displayBytes(item.sizeBytes)}</Text></View>
         {item.mimeType.startsWith("image/") ? <EvidenceImage vulnerabilityId={vulnerabilityId} evidence={item} /> : <View style={styles.file}>
-          <Ionicons name="document-text-outline" size={36} color={WORKSPACE.lavender} /><Text style={ui.body}>Arquivo anexado</Text><Text style={[ui.muted, { textAlign: "center" }]}>Consulte este documento na plataforma web.</Text>
+          <Ionicons name="document-text-outline" size={36} color={WORKSPACE.secondary} /><Text style={ui.body}>Arquivo anexado</Text><Text style={[ui.muted, { textAlign: "center" }]}>Consulte este documento na plataforma web.</Text>
         </View>}
         {!!item.proof && <Text style={ui.body}>{item.proof}</Text>}<Text style={ui.muted}>Enviada em {displayDate(item.createdAt)}</Text>
       </GlassSurface></View>}

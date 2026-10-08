@@ -58,13 +58,13 @@ export default function SettingsScreen() {
     {profile.isPending && <Text style={ui.muted}>Atualizando os dados da sua conta...</Text>}
     {profile.isError && <DataState error title="Perfil não atualizado" message={errorMessage(profile.error)} onRetry={() => { void profile.refetch(); }} />}
     <SectionHeading title="Notificações" />
-    <GlassSurface><View style={ui.row}><View style={styles.notificationIcon}><Ionicons name={push.icon} size={23} color={pushStatus === "ativado" ? "#6ee7a0" : WORKSPACE.lavender} /></View>
+    <GlassSurface><View style={ui.row}><View style={styles.notificationIcon}><Ionicons name={push.icon} size={23} color={pushStatus === "ativado" ? "#6ee7a0" : WORKSPACE.secondary} /></View>
       <View style={ui.grow}><Text style={[ui.heading, { fontSize: 17 }]}>{push.title}</Text></View></View><Text style={ui.body}>{push.description}</Text>
       {pushStatus === "negado" && Platform.OS !== "web" && <ActionButton icon="settings-outline" label="Abrir configurações do celular" onPress={() => { void Linking.openSettings().catch(() => setSettingsError(true)); }} />}
       {settingsError && <Text style={ui.muted}>Não foi possível abrir as configurações. Use os ajustes do seu celular.</Text>}
     </GlassSurface>
     <SectionHeading title="Sua sessão" />
-    <MotionReveal layout><GlassSurface><View style={ui.row}><Ionicons name="lock-closed-outline" size={20} color={WORKSPACE.lavender} /><Text style={[ui.heading, { fontSize: 17 }]}>Acesso pessoal</Text></View><Text style={ui.body}>Os projetos e as vulnerabilidades exibidos pertencem à sua empresa.</Text>
+    <MotionReveal layout><GlassSurface><View style={ui.row}><Ionicons name="lock-closed-outline" size={20} color={WORKSPACE.secondary} /><Text style={[ui.heading, { fontSize: 17 }]}>Acesso pessoal</Text></View><Text style={ui.body}>Os projetos e as vulnerabilidades exibidos pertencem à sua empresa.</Text>
       {confirming ? <MotionReveal style={{ gap: 12 }}><Text style={ui.body}>Deseja sair? Você precisará entrar novamente para acompanhar seus projetos.</Text><ActionButton danger icon="log-out-outline" label={loggingOut ? "Saindo..." : "Confirmar saída"} disabled={loggingOut} onPress={() => { void logout(); }} /><ActionButton icon="close-outline" label="Continuar no app" disabled={loggingOut} onPress={() => setConfirming(false)} /></MotionReveal>
         : <ActionButton danger icon="log-out-outline" label="Sair da conta" onPress={() => setConfirming(true)} />}
     </GlassSurface></MotionReveal>
@@ -72,7 +72,7 @@ export default function SettingsScreen() {
   </WorkspaceScreen>;
 }
 const styles = StyleSheet.create({
-  avatar: { width: 56, height: 56, borderRadius: 20, backgroundColor: "rgba(124,58,237,0.15)", borderWidth: 1, borderColor: WORKSPACE.line, alignItems: "center", justifyContent: "center" },
-  initial: { fontSize: 24, fontFamily: FONT_FAMILY.medium, color: WORKSPACE.lavender }, notificationIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: "rgba(124,58,237,0.08)", alignItems: "center", justifyContent: "center" },
+  avatar: { width: 56, height: 56, borderRadius: 20, backgroundColor: WORKSPACE.neutralTint, borderWidth: 1, borderColor: WORKSPACE.line, alignItems: "center", justifyContent: "center" },
+  initial: { fontSize: 24, fontFamily: FONT_FAMILY.medium, color: WORKSPACE.secondary }, notificationIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: WORKSPACE.neutralTint, alignItems: "center", justifyContent: "center" },
   footer: { alignItems: "center", gap: 6, paddingVertical: 12 }, wordmark: { fontFamily: FONT_FAMILY.monoBold, fontSize: 14, letterSpacing: 3, color: WORKSPACE.muted },
 });

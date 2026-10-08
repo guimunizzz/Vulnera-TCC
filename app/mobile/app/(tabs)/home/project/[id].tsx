@@ -14,7 +14,7 @@ import { useTabBarClearance } from "../../../../src/hooks/use-tab-bar-clearance"
 import { FindingRow } from "../../../../src/components/finding-row";
 import { StatusBadge } from "../../../../src/components/badge";
 import { ActionButton, DataState, DetailField, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
-import { FONT_FAMILY } from "../../../../src/theme/tokens";
+import { COLORS, FONT_FAMILY } from "../../../../src/theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../../../../src/theme/workspace";
 import { displayDate } from "../../../../src/lib/display";
 import { MotionReveal, useWorkspaceScroll } from "../../../../src/components/workspace-motion";
@@ -53,9 +53,9 @@ export default function ProjectDetailScreen() {
       <Text style={ui.eyebrow}>JORNADA DA ANÁLISE</Text>
       <View style={styles.timeline}>{STAGES.map((item, index) => <View key={item.status} style={styles.stage}>
         <View style={styles.stageLine}>{index > 0 && <View style={[styles.connector, index <= stage && styles.connectorDone]} />}
-          <View style={[styles.stageDot, index <= stage && styles.stageDone, index === stage && styles.stageCurrent]}><Text style={[styles.stageNumber, index <= stage && { color: WORKSPACE.text }]}>{index + 1}</Text></View>
+          <View style={[styles.stageDot, index <= stage && styles.stageDone, index === stage && styles.stageCurrent, index === stage && project.status === "COMPLETED" && styles.stageCompleted]}><Text style={[styles.stageNumber, index <= stage && { color: WORKSPACE.text }]}>{index + 1}</Text></View>
           {index < STAGES.length - 1 && <View style={[styles.connector, { left: "50%", right: 0 }, index < stage && styles.connectorDone]} />}</View>
-        <Text style={[styles.stageLabel, index === stage && { color: WORKSPACE.lavender }]}>{item.label}</Text>
+        <Text style={[styles.stageLabel, index === stage && { color: project.status === "COMPLETED" ? COLORS.successInk : COLORS.severity.lowInk }]}>{item.label}</Text>
       </View>)}</View>
       <View style={ui.divider} /><View style={ui.spread}><Text style={ui.muted}>Solicitado em</Text><Text style={ui.muted}>{displayDate(project.requestedAt)}</Text></View>
     </GlassSurface>
@@ -89,9 +89,10 @@ export default function ProjectDetailScreen() {
 const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, gap: 12 }, header: { gap: 20, marginBottom: 8 }, footer: { gap: 16, paddingTop: 12 }, detailsRow: { flexDirection: "row", gap: 16 },
   timeline: { flexDirection: "row", marginHorizontal: -8 }, stage: { flex: 1, alignItems: "center", gap: 9 }, stageLine: { flexDirection: "row", width: "100%", alignItems: "center", justifyContent: "center" },
-  connector: { position: "absolute", left: 0, right: "50%", height: 1, backgroundColor: WORKSPACE.line }, connectorDone: { backgroundColor: "rgba(167,139,250,0.4)" },
-  stageDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#211a30", borderWidth: 1, borderColor: WORKSPACE.line, alignItems: "center", justifyContent: "center", zIndex: 1 },
-  stageDone: { backgroundColor: "#3a295c", borderColor: "rgba(167,139,250,0.3)" }, stageCurrent: { backgroundColor: "#7651b6", borderColor: WORKSPACE.lavender },
+  connector: { position: "absolute", left: 0, right: "50%", height: 1, backgroundColor: WORKSPACE.line }, connectorDone: { backgroundColor: "rgba(255,255,255,0.28)" },
+  stageDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: WORKSPACE.inset, borderWidth: 1, borderColor: WORKSPACE.line, alignItems: "center", justifyContent: "center", zIndex: 1 },
+  stageDone: { backgroundColor: "#34383e", borderColor: "rgba(255,255,255,0.2)" }, stageCurrent: { backgroundColor: COLORS.severity.lowSurface, borderColor: COLORS.severity.lowInk },
+  stageCompleted: { backgroundColor: COLORS.successSurface, borderColor: COLORS.successInk },
   stageNumber: { fontSize: 12, fontFamily: FONT_FAMILY.medium, color: WORKSPACE.muted }, stageLabel: { fontSize: 12, color: WORKSPACE.muted, fontFamily: FONT_FAMILY.medium, textAlign: "center" },
   severities: { flexDirection: "row", padding: 12, gap: 4 }, severity: { flex: 1, alignItems: "center", gap: 6 }, severityDot: { width: 4, height: 4, borderRadius: 2 },
   severityCount: { fontFamily: FONT_FAMILY.medium, fontSize: 24 }, severityLabel: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: WORKSPACE.muted },

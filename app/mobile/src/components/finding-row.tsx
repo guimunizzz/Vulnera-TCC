@@ -16,7 +16,7 @@ export function FindingRow({ finding, onPress }: { finding: VulnerabilityListIte
   return <GlassSurface onPress={onPress} accessibilityLabel={`${finding.title}, severidade ${severity}. Abrir detalhe.`} style={styles.card}>
     <View style={[ui.spread, { flexWrap: "wrap" }]}><SeverityBadge severidade={finding.severityFinal} cvss={finding.cvssScore} /><StatusBadge status={finding.status} /></View>
     <Text numberOfLines={3} style={styles.title}>{finding.title}</Text>
-    <View style={ui.spread}><Text style={ui.mono}>OWASP / {finding.owaspCategory}</Text><Ionicons name="arrow-forward" size={18} color={WORKSPACE.lavender} /></View>
+    <View style={ui.spread}><Text style={ui.mono}>OWASP / {finding.owaspCategory}</Text><Ionicons name="arrow-forward" size={18} color={WORKSPACE.secondary} /></View>
     {(finding.slaState !== "NO_SLA" || finding.vrsScore != null || finding.hasActiveRiskAcceptance) && <View style={styles.context}>
       {finding.slaState !== "NO_SLA" && <Text style={[ui.muted, finding.slaState === "BREACHED" && styles.danger]}>Prazo · {fraseDoSla(finding.slaState, finding.slaRemainingMs)}</Text>}
       {finding.vrsScore != null && finding.vrsBand && <Text style={ui.muted}>Prioridade · {finding.vrsScore}/100 · {VRS_BAND_LABELS[finding.vrsBand]}</Text>}
