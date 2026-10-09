@@ -182,7 +182,7 @@ export function DastPage() {
         <EmptyState
           className="mt-6"
           titulo="Nenhum scan ainda"
-          descricao="Escolha uma demonstração sem acessar o alvo ou uma análise passiva real pelo OWASP ZAP."
+          descricao="Escolha uma demonstração sem acessar o alvo ou um rastreamento pelo spider do OWASP ZAP com análise passiva real."
           acao={<Button onClick={() => setIsCreateOpen(true)}>Novo scan</Button>}
         />
       )}
@@ -249,7 +249,7 @@ export function DastPage() {
           <DialogDescription>
             {confirmingReal
               ? "Este scan acessará o alvo de verdade. Confirme somente se você tem autorização para testar este endereço."
-              : "Escolha como deseja executar. A demonstração gera um relatório fictício; o modo real analisa respostas do alvo com o OWASP ZAP."}
+              : "Escolha como deseja executar. A demonstração gera um relatório fictício; o modo real descobre URLs com o spider do OWASP ZAP e analisa as respostas."}
           </DialogDescription>
 
           <form
@@ -269,7 +269,7 @@ export function DastPage() {
               <>
                 <Alert tom="atencao" titulo="O alvo receberá requisições reais">
                   <p className="break-all font-mono text-xs">{trimmedUrl}</p>
-                  <p className="mt-2">O ZAP analisará até 30 páginas com GET no mesmo endereço e caminho, sem enviar formulários ou executar testes ativos. A navegação pode ter efeitos em aplicações mal projetadas. Não é uma análise completa de exploração.</p>
+                  <p className="mt-2">O spider tradicional do ZAP descobrirá URLs e recursos no endereço e caminho informado, com limites de tempo e profundidade. As respostas serão analisadas passivamente. Formulários e testes ativos estão desativados. O rastreamento não executa JavaScript nem cobre todas as rotas de uma SPA. A navegação pode causar efeitos em algumas aplicações.</p>
                 </Alert>
                 <label className="flex items-start gap-3 text-sm text-fg">
                   <input type="checkbox" checked={authorized} disabled={createMutation.isPending} onChange={(e) => setAuthorized(e.target.checked)} className="mt-1" />
@@ -286,7 +286,7 @@ export function DastPage() {
                   </label>
                   <label className="flex items-start gap-3 rounded-control border border-subtle bg-surface p-3 text-sm text-fg">
                     <input type="radio" name="scan-mode" value="REAL" checked={mode === "REAL"} onChange={() => setMode("REAL")} className="mt-1" />
-                    <span><strong>Real — análise passiva</strong><span className="block text-fg-muted">Requisições GET limitadas e achados reais do OWASP ZAP. Exige confirmação.</span></span>
+                    <span><strong>Real — análise passiva</strong><span className="block text-fg-muted">O spider do ZAP descobre URLs e recursos; a análise passiva gera achados reais. Exige confirmação.</span></span>
                   </label>
                 </fieldset>
             <Field

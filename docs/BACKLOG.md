@@ -6,6 +6,21 @@
 
 ## Status
 
+✅ **2026-10-09 — Spider DAST e README (100%; 4/4).** Continuação na mesma branch e PR #58. Spider tradicional real, perfil/URLs/limites por execução e PDF sem atribuição retroativa. Fixture: 9 URLs, 14 findings, 26,641 s; 10 GETs sem query/POST/ações sensíveis/outra origem. API focal 104/104 e full final 642/642, web 338/338, contraste 66/66, builds aprovados; lint API global mantém os dois imports antigos. README com div/style, table/tr/th/td e três prints reais. ADR-046; [validação](DAST-SPIDER-VALIDACAO-2026-10-09.md).
+
+- [x] **DAST-SPIDER-01:** iniciar/acompanhar o Spider tradicional com contexto e limites, descoberta robots/sitemap/recursos e queries excluídas antes do tráfego.
+- [x] **DAST-SPIDER-02:** registrar perfil por execução e conservar metodologia histórica no PDF; validar RBAC/ownership e artefatos inválidos.
+- [x] **DAST-SPIDER-03:** comprovar tráfego e endpoints em fixture real, conferir UI/HTML/PDF e executar regressões/builds.
+- [x] **DAST-SPIDER-04:** atualizar README ao fim com HTML semântico, prints atuais, resultados e documentos vivos.
+- [ ] **DAST-SPA-DESCOBERTA:** avaliar em tarefa própria descoberta com navegador/AJAX para rotas exclusivas de JavaScript e autenticação no alvo; o perfil atual não cobre uma SPA completa.
+
+✅ **2026-10-09 — DAST em redes internas e apresentação (100%; 4/4).** Bloqueio de endereço privado/loopback e flag removidos permanentemente, conforme pedido do Rafael. Alvo autorizado `http://10.87.169.107:5173/`: scan REAL concluído em 21,331 s, 5 achados (0H/3M/1L/1I), progresso 100%, sem fallback. UI validou cadastro Application/Project em tenant novo, triagem/nota, promoção, comentário e início de correção; HTML ZAP e PDFs real/demo conferidos. API 617/617 e build; web 338/338, lint 0 erros/9 avisos, contraste 66/66 e build. Check global API segue bloqueado pelos dois imports não usados preexistentes; lint alterado aprovado. ADR-045; relatório `docs/DAST-REDE-VALIDACAO-2026-10-09.md`.
+
+- [x] **DAST-LAN-01:** diagnosticar bloqueio e conectividade do Docker; corrigir endereço para o IP atual informado pelo usuário.
+- [x] **DAST-LAN-02:** aceitar alvos HTTP/HTTPS internos sem flag; retirar erro obsoleto; adicionar regressões de URL e criação Real/RBAC/ownership/confirmação.
+- [x] **DAST-LAN-03:** corrigir metodologia PDF para Real passivo/demonstração e gestão de resultados existente.
+- [x] **DAST-LAN-04:** exercitar scan real e percurso UI Application/Project → triagem/promoção → comentário/correção → HTML/PDF; sincronizar docs.
+- [ ] **DAST-PDF-POLIMENTO:** normalizar sentinelas ZAP `-1` de CWE/WASC como ausência (PDF real hoje exibe `CWE--1 · WASC--1` no finding informativo). Preexistente, sem impacto no fluxo validado.
 ✅ **2026-10-06 — Publicação dos nomes dos pentesters para dev (100%).** [PR #57](https://github.com/guimunizzz/Vulnera-TCC/pull/57) aberto de `codex/fix-project-pentester-names` para `dev`, com correção, regressões e docs vivos. Oito arquivos no diff; `git diff --check` aprovado. Testes locais, bloqueio preexistente do check global API e ordem de integração documentados na descrição. Sem nova alteração de código nesta publicação; revisão/checks remotos e merge pendentes.
 
 - [x] **BUG-PROJECT-PENTESTER-NAME-PR:** publicar a branch e abrir o PR para `dev`. Concluído em 2026-10-06.

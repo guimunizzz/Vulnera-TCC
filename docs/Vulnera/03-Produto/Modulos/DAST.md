@@ -11,7 +11,7 @@ status: ativo
 
 ## Objetivo
 
-Dar ao **pentester** um fluxo de *um campo e um botão*: informa a URL de um alvo, a plataforma sobe um container do OWASP ZAP, roda spider (mapeamento) e active scan (ataques automatizados), normaliza os alertas e devolve findings estruturados dentro do próprio Vulnera.
+Dar ao **pentester** um fluxo com URL, modo e confirmação do Real: a plataforma sobe um container do OWASP ZAP, roda Spider tradicional e análise passiva, normaliza os alertas e devolve findings estruturados dentro do Vulnera. Não executa JavaScript, formulários ou active scan. O Demo gera exemplos locais sem acessar o alvo; falhas reais permanecem falhas ([[ADR-042 - DAST explicito e baseline passivo]], [[ADR-046 - Spider tradicional e perfil por execucao]]).
 
 É o único módulo em que a plataforma **executa** análise em vez de apenas gerenciá-la. Isso põe em tensão o [[ADR-001 - Plataforma foca gestao e nao execucao real]], que segue marcado como vigente e não foi revisado quando o módulo entrou — a execução aqui é contida a um escopo estreito (um alvo por scan, uma ferramenta, dois papéis, container descartável), mas quem defende o trabalho precisa saber que ela existe. Ver o aviso na própria ADR-001.
 
@@ -27,15 +27,15 @@ Até 2026-09-09 o módulo parava no primeiro passo: o scan rodava, mostrava deze
 
 | Componente | O que é |
 |---|---|
-| Novo scan | Um campo de URL. Validação de SSRF antes de qualquer container subir |
-| Banner de estado do motor | Docker disponível?, vagas ocupadas (`rodando=1/2`), tamanho da fila e avisos do watchdog — mostrado **antes** de disparar, não depois de falhar |
-| Acompanhamento | Barra com percentual **real** e nome da fase (`SPIDER`/`PASSIVE`/`ACTIVE`/`REPORT`), cronômetro, posição na fila, botão **Parar** |
+| Novo scan | URL HTTP/HTTPS sem credenciais embutidas, escolha de modo e confirmação no Real. Redes internas/loopback são aceitas conforme ADR-045 |
+| Banner de estado do motor | Docker disponível, vagas ocupadas (padrão uma), fila e avisos do watchdog, antes do disparo |
+| Acompanhamento | Barra por fase (`STARTING`/`SPIDER`/`PASSIVE`/`REPORT`), cronômetro, fila e botão **Parar**; 100% não significa cobertura completa |
 | Tabela de findings | Filtro por risco, busca por título, linha expansível com URL, parâmetro, CWE, evidência, descrição e solução |
 | Triagem | Por triar / Confirmado / Falso-positivo / Risco aceito + nota. Salva no clique; filtro "N por triar" |
 | Promoção | Diálogo que leva o achado para uma [[Vulnerability]] em um [[Project]] real, com rascunho pré-preenchido e revisão humana obrigatória do vetor CVSS |
 | Comparação | Diff entre duas execuções do mesmo alvo: **resolvidos**, **novos**, **continuam abertos** |
 | Saídas | PDF gerado no cliente (mesmo estilo dos relatórios Executivo/Técnico) e o HTML original do ZAP em `<iframe sandbox>` |
-| Selo "simulado" | Quando o resultado veio do gerador de fallback, a tela diz isso e explica o motivo — nunca finge ser scan real |
+| Selo "simulado" | Modo Demo escolhido explicitamente: achados fictícios, sem tráfego nem fallback automático. Triagem disponível; promoção/comparação indisponíveis |
 
 ## Quem usa
 

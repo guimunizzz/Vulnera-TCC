@@ -8,6 +8,12 @@ data: 2026-09-05
 
 # ADR-028 - Execução do ZAP via Docker spawn
 
+> Política de alvo parcialmente substituída em 2026-10-09 pelo
+> [[ADR-045 - DAST aceita alvos de redes internas]]: o bloqueio por faixa de
+> IP/loopback e a flag de liberação foram removidos. A política original
+> abaixo permanece como histórico; isolamento por container e `execFile`
+> continuam vigentes, com pipeline atualizado pelo ADR-042.
+
 ## Contexto
 
 O módulo DAST precisa rodar o OWASP ZAP (`zap-full-scan.py`) contra uma URL arbitrária informada pelo pentester, sem infraestrutura de fila (Redis/BullMQ estão fora de escopo — ver ADR-030) e sem exigir instalação manual de nada além do Docker Desktop que o projeto já usa (`docker-compose.yml` na raiz).

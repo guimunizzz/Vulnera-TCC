@@ -9,6 +9,61 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-10-09 — Spider tradicional, perfil por execução e README
+
+**✅ Concluída — 100% (4/4).** Mesma branch
+`codex/fix-dast-network-targets`, [PR #58](https://github.com/guimunizzz/Vulnera-TCC/pull/58)
+em rascunho para `dev`, sem merge; ADR-046.
+
+- Crawler manual substituído pelo Spider tradicional ZAP: links, recursos,
+  robots e sitemap; contexto por origem/subárvore e exclusão própria de
+  queries, sem forms/POST/JavaScript/active scan. Profundidade 2,
+  30 filhos por nó, uma thread, parsing 1 MB e teto de 1..10 minutos.
+- Perfil/URLs/limites em artefato por execução, lido após ownership. PDF
+  identifica o método novo; legado sem artefato informa perfil não registrado.
+- Fixture real ZAP 2.17.0: 26,641 s, COMPLETED/100%/não simulado,
+  9 URLs e 14 findings (0H/9M/5L/0I). Logs provam 10 GETs sem query,
+  formulários, caminhos sensíveis, outra origem ou profundidade além do limite.
+  Query acessada na primeira prova motivou exclusão direta no Spider.
+- API focal 104/104 e full final 642/642 em 43 suítes; web 338/338 em
+  30 suítes, contraste 66/66, lint 0 erros/9 avisos. Builds aprovados;
+  check API global mantém dois imports antigos. Focal/full final em série.
+- UI/HTML conferidos, PDFs novo/legado renderizados e inspecionados;
+  vulnerabilidade da prova LAN continua em correção com comentário/VRS/SLA.
+- README refeito ao fim com div/style, tabelas HTML, instalação, features,
+  arquitetura, validação atual, limites e três prints reais versionados.
+  Sem schema/migration/dependências/lockfile; trabalho anterior preservado.
+
+Relatório: `docs/DAST-SPIDER-VALIDACAO-2026-10-09.md`. Os registros de crawler
+manual abaixo são históricos; o perfil vigente está no ADR-046.
+
+## 2026-10-09 — DAST em rede interna e apresentação
+
+**✅ Concluída — 100% (4/4 entregas).** Branch
+`codex/fix-dast-network-targets`, base `dev` em `33f6438`; ADR-045.
+Commit de implementação `98ca2e9`; [PR #58](https://github.com/guimunizzz/Vulnera-TCC/pull/58)
+em rascunho para `dev`, sem merge.
+
+- Removido permanentemente o bloqueio de hosts privados/loopback, a flag de
+  liberação e o erro correspondente, a pedido do Rafael. HTTP/HTTPS sem
+  credenciais embutidas continuam sendo o formato aceito.
+- PDF atualizado para descrever GET passivo e separar demonstração: triagem
+  demo disponível; promoção/comparação demo indisponíveis.
+- Scan real do Vite autorizado `10.87.169.107:5173`: ZAP 2.17.0, 21,331 s,
+  cinco achados (0 altos/3 médios/1 baixo/1 informativo), progresso 100%.
+- Navegador validou Application/Project em tenant novo, triagem/nota,
+  promoção, comentário e início da correção. HTML e PDFs conferidos;
+  vínculo tenant/projeto/aplicação/procedência verificado no banco.
+- API 617/617 em 43 suítes, web 338/338 em 30 suítes, contraste 66/66,
+  builds aprovados. Check API mantém dois erros de lint preexistentes;
+  arquivos alterados sem erro. Detalhe de CWE/WASC `-1` registrado no backlog.
+- Sem exclusão de dados anteriores, schema/migration/dependências/lockfile.
+  Documentos vivos sincronizados; evidências em `output/dast-network/` e
+  relato completo em `docs/DAST-REDE-VALIDACAO-2026-10-09.md`.
+
+As políticas antigas de bloqueio, scan ativo e fallback abaixo permanecem
+como histórico das respectivas sessões; o estado vigente é ADR-042/045.
+
 ## 2026-09-14 (sessão 29 — Fase 9: Findings Globais + Query Wizard)
 
 ### Objetivo

@@ -3,8 +3,8 @@
  *
  * Integração do módulo DAST via HTTP (supertest) + banco de teste real.
  * `DAST_FORCE_SIMULATE=true` no .env.test garante que NENHUM teste aqui
- * depende de Docker — todo scan roda o fallback simulado (~3s, 8 alertas
- * representativos, ver zap-runner.service.ts).
+ * executa Docker ou tráfego ao alvo: demonstrações são explícitas e scans
+ * reais terminam FAILED, sem fabricar achados ou trocar o modo solicitado.
  *
  *   DAST-RBAC-01..08  CLIENT recebe 403 em cada uma das 8 rotas
  *   DAST-RBAC-08      PENTESTER não acessa scan de outro PENTESTER
@@ -22,6 +22,7 @@
 
 import request from "supertest";
 import * as path from "path";
+import * as fs from "fs/promises";
 import { app } from "../../src/app";
 import { cleanDatabase } from "../setup";
 import { prisma } from "../../src/database/prisma.database";
@@ -30,6 +31,7 @@ import { loginAs } from "../fixtures/auth.fixture";
 import { DastScanRepository } from "../../src/repositories/dast-scan.repository";
 import { extractFindingsFromReport } from "../../src/services/dast-findings.service";
 import { makeDastScanService } from "../../src/factories/dast-scan.factory";
+import { resolveReportPath } from "../../src/services/zap-runner.service";
 
 const PASSWORD = "senha12345";
 const FIXTURE_PATH = path.resolve(__dirname, "../fixtures/dast/zap-report-example-com.json");
@@ -302,6 +304,7 @@ describe("DAST — fluxo feliz completo", () => {
     expect(reportDataRes.status).toBe(200);
     expect(reportDataRes.body.scan.id).toBe(createRes.body.id);
     expect(reportDataRes.body.topFindings.length).toBeLessThanOrEqual(10);
+    expect(reportDataRes.body.discovery).toBeNull();
 
     const reportHtmlRes = await request(app)
       .get(`/api/dast/scans/${createRes.body.id}/report/html`)
@@ -410,6 +413,101 @@ describe("DAST — modo explícito e confirmação obrigatória", () => {
     } finally {
       if (original === undefined) delete process.env.DAST_FORCE_SIMULATE;
       else process.env.DAST_FORCE_SIMULATE = original;
+    }
+  });
+
+  it("DAST-NET-01 — aceita alvo LAN real confirmado com flag legada false e preserva ownership", async () => {
+    const { pentesterAToken, pentesterBToken, adminToken } = await seedActors();
+    const originalForceSimulate = process.env.DAST_FORCE_SIMULATE;
+    const originalPrivateTargets = process.env.DAST_ALLOW_PRIVATE_TARGETS;
+    // O runner deve parar antes de consultar Docker ou acessar a rede real.
+    process.env.DAST_FORCE_SIMULATE = "true";
+    process.env.DAST_ALLOW_PRIVATE_TARGETS = "false";
+    try {
+      const res = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`)
+        .send({ targetUrl: "http://192.168.0.1:5173/#inicio", mode: "REAL", confirmedRealScan: true });
+      expect(res.status).toBe(201);
+      expect(res.body.targetUrl).toBe("http://192.168.0.1:5173/");
+      expect(res.body.simulated).toBe(false);
+
+      const final = await waitForTerminalStatus(pentesterAToken, res.body.id);
+      expect(final.status).toBe("FAILED");
+      expect(final.simulated).toBe(false);
+      expect(final.errorMessage).toContain("REAL_SCAN_DISABLED");
+      expect(final.warningMessage).toBeNull();
+      expect(await prisma.dastFinding.count({ where: { scanId: res.body.id } })).toBe(0);
+
+      const forbidden = await request(app).get(`/api/dast/scans/${res.body.id}`)
+        .set("Authorization", `Bearer ${pentesterBToken}`);
+      expect(forbidden.status).toBe(403);
+      expect(forbidden.body.error).toBe("FORBIDDEN");
+
+      const admin = await request(app).get(`/api/dast/scans/${res.body.id}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(admin.status).toBe(200);
+      expect(admin.body.id).toBe(res.body.id);
+    } finally {
+      if (originalForceSimulate === undefined) delete process.env.DAST_FORCE_SIMULATE;
+      else process.env.DAST_FORCE_SIMULATE = originalForceSimulate;
+      if (originalPrivateTargets === undefined) delete process.env.DAST_ALLOW_PRIVATE_TARGETS;
+      else process.env.DAST_ALLOW_PRIVATE_TARGETS = originalPrivateTargets;
+    }
+  });
+
+  it("DAST-NET-02 — alvo privado real continua exigindo confirmação literal true", async () => {
+    const { pentesterAToken } = await seedActors();
+    for (const confirmedRealScan of [undefined, false, "true"]) {
+      const res = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`)
+        .send({ targetUrl: "http://192.168.0.1:5173/", mode: "REAL", confirmedRealScan });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("REAL_SCAN_CONFIRMATION_REQUIRED");
+    }
+    expect(await prisma.dastScan.count()).toBe(0);
+  });
+
+  it("DAST-NET-03 — liberar alvos privados preserva autenticação e CLIENT proibido", async () => {
+    const { clientToken } = await seedActors();
+    const body = { targetUrl: "http://192.168.0.1:5173/", mode: "REAL", confirmedRealScan: true };
+    const unauthenticated = await request(app).post("/api/dast/scans").send(body);
+    expect(unauthenticated.status).toBe(401);
+    const client = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${clientToken}`).send(body);
+    expect(client.status).toBe(403);
+    expect(client.body.error).toBe("FORBIDDEN");
+    expect(await prisma.dastScan.count()).toBe(0);
+  });
+});
+
+describe("DAST — procedência da descoberta por execução", () => {
+  it("DAST-DISC-01 — histórico sem artefato não ganha perfil Spider e metadados novos preservam ownership", async () => {
+    const { pentesterA, pentesterAToken, pentesterBToken } = await seedActors();
+    const scan = await prisma.dastScan.create({ data: {
+      targetUrl: "http://192.168.0.1:5173/", requestedById: pentesterA.id, status: "COMPLETED", simulated: false,
+    } });
+    const route = `/api/dast/scans/${scan.id}/report/data`;
+    const legacy = await request(app).get(route).set("Authorization", `Bearer ${pentesterAToken}`);
+    expect(legacy.status).toBe(200);
+    expect(legacy.body.discovery).toBeNull();
+    const artifact = resolveReportPath(scan.id, "discovery.json");
+    await fs.mkdir(path.dirname(artifact), { recursive: true });
+    const metadata = { profile: "TRADITIONAL_SPIDER_PASSIVE", targetUrl: scan.targetUrl,
+      urls: [scan.targetUrl, `${scan.targetUrl}api/status`, "http://outro.test/private", `${scan.targetUrl}logout`],
+      limits: { maxDurationMin: 1, maxDepth: 2, maxChildrenPerNode: 30, threadCount: 1, maxParseSizeBytes: 1000000 },
+      processForms: false, javascript: false, activeScan: false, apiKey: "nao-deve-vazar" };
+    try {
+      await fs.writeFile(artifact, JSON.stringify(metadata), "utf8");
+      const current = await request(app).get(route).set("Authorization", `Bearer ${pentesterAToken}`);
+      expect(current.status).toBe(200);
+      expect(current.body.discovery.profile).toBe("TRADITIONAL_SPIDER_PASSIVE");
+      expect(current.body.discovery.urls).toEqual([scan.targetUrl, `${scan.targetUrl}api/status`]);
+      expect(current.body.discovery).not.toHaveProperty("apiKey");
+      const foreign = await request(app).get(route).set("Authorization", `Bearer ${pentesterBToken}`);
+      expect(foreign.status).toBe(403);
+      expect(foreign.body.discovery).toBeUndefined();
+      await fs.writeFile(artifact, JSON.stringify({ ...metadata, targetUrl: "http://outro.test/" }), "utf8");
+      const invalid = await request(app).get(route).set("Authorization", `Bearer ${pentesterAToken}`);
+      expect(invalid.body.discovery).toBeNull();
+    } finally {
+      await fs.unlink(artifact);
     }
   });
 });

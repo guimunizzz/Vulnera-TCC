@@ -32,7 +32,6 @@ export class DastScanController {
     } catch (error: any) {
       if (error.message === "MISSING_TARGET_URL") return res.status(400).json({ error: "MISSING_TARGET_URL" });
       if (error.message === "INVALID_TARGET_URL") return res.status(400).json({ error: "INVALID_TARGET_URL" });
-      if (error.message === "TARGET_NOT_ALLOWED") return res.status(400).json({ error: "TARGET_NOT_ALLOWED" });
       if (error.message === "SCAN_ALREADY_RUNNING_FOR_TARGET") {
         return res.status(409).json({ error: "SCAN_ALREADY_RUNNING_FOR_TARGET" });
       }

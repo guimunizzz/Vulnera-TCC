@@ -4,7 +4,7 @@
  * Tela de acompanhamento de UM scan DAST. Enquanto QUEUED/RUNNING, faz
  * polling a cada 3s (encerra sozinho ao chegar num estado terminal) e mostra
  * BARRA DE PROGRESSO com percentual real, nome da fase e tempo decorrido —
- * sem isso, minutos de silêncio (spider + active scan do ZAP) parecem
+ * sem isso, minutos de silêncio (spider + análise passiva do ZAP) parecem
  * travamento. Ao concluir, mostra os contadores por risco, a tabela de
  * findings (filtro + busca + linha expansível) e os dois botões de saída: PDF
  * client-side e relatório HTML original do ZAP.
@@ -428,7 +428,7 @@ export function DastScanDetailPage() {
           <p className="mt-3 text-sm text-fg-muted">
             {posicaoNaFila
               ? "Rodamos no máximo alguns scans ao mesmo tempo para não sobrecarregar a máquina. Este começa sozinho assim que uma vaga liberar — pode deixar a tela aberta."
-              : "O modo real visita páginas com GET e analisa as respostas, sem formulários ou testes ativos. Consultas ao ZAP são repetidas quando há falha transitória. Esta tela atualiza sozinha."}
+              : "O spider do ZAP descobre URLs e recursos do alvo, e a análise passiva avalia as respostas. O rastreamento tradicional não executa JavaScript; formulários e testes ativos estão desativados. Consultas ao ZAP são repetidas quando há falha transitória. Esta tela atualiza sozinha."}
           </p>
         </div>
       )}

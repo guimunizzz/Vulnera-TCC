@@ -11,7 +11,6 @@ export enum EnvKeys {
   UPLOADS_DIR = "UPLOADS_DIR",
   // Módulo DAST (scans via OWASP ZAP) — ver zap-runner.service.ts
   DAST_REPORTS_DIR = "DAST_REPORTS_DIR",
-  DAST_ALLOW_PRIVATE_TARGETS = "DAST_ALLOW_PRIVATE_TARGETS",
   DAST_SCAN_TIMEOUT_MS = "DAST_SCAN_TIMEOUT_MS",
   DAST_ZAP_IMAGE = "DAST_ZAP_IMAGE",
   // "true" bloqueia scans reais mesmo com Docker disponível — usado em
