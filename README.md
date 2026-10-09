@@ -332,5 +332,5 @@ PRD_VIVO.md    Memória viva do projeto
 <img width="100%" alt="Registro dos contribuidores em agosto" src="https://github.com/user-attachments/assets/a2c3002f-edd4-4eaf-8ce3-53eabf4c66fb" />
 </details>
 
-Vulnera — TCC de Rafael Guilherme. A documentação descreve o comportamento
+Vulnera — projeto de TCC. A documentação descreve o comportamento
 implementado e mantém separados os resultados atuais e as evidências históricas.
