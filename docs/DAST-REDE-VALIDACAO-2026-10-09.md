@@ -5,6 +5,10 @@
 **✅ Concluída: 100% (4/4 entregas).** Branch
 `codex/fix-dast-network-targets`, base `dev` em `33f6438`.
 
+Implementação em `98ca2e9`; branch publicada e [PR #58](https://github.com/guimunizzz/Vulnera-TCC/pull/58)
+em rascunho para `dev`, sem merge. A abertura usou a autenticação Git existente
+após o conector GitHub retornar 403 por permissão da integração.
+
 ## Comportamento entregue
 
 Rafael autorizou remover permanentemente o bloqueio de endereço privado ou

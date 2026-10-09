@@ -13,6 +13,8 @@ status: ativo
 
 **✅ Concluída — 100% (4/4 entregas).** Branch
 `codex/fix-dast-network-targets`, base `dev` em `33f6438`; ADR-045.
+Commit de implementação `98ca2e9`; [PR #58](https://github.com/guimunizzz/Vulnera-TCC/pull/58)
+em rascunho para `dev`, sem merge.
 
 - Removido permanentemente o bloqueio de hosts privados/loopback, a flag de
   liberação e o erro correspondente, a pedido do Rafael. HTTP/HTTPS sem

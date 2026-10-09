@@ -1134,7 +1134,7 @@ uma nova fase numerada do MVP. Política registrada no ADR-045.
 ## Histórico
 
 - **Branch/base:** `codex/fix-dast-network-targets` ← `dev` em `33f6438`.
-- **Data:** 2026-10-09. Registro de publicação/PR no chat desta entrega.
+- **Data:** 2026-10-09. Commit de implementação `98ca2e9`; branch publicada, [PR #58](https://github.com/guimunizzz/Vulnera-TCC/pull/58) em rascunho para `dev`, sem merge.
 - **Validação:** API 617/617 em 43 suítes e build; web 338/338 em 30 suítes,
   contraste 66/66, lint 0 erros/9 avisos, builds Docker aprovados.
 - **Real:** alvo Vite autorizado na LAN, ZAP 2.17.0, 21,331 s,
