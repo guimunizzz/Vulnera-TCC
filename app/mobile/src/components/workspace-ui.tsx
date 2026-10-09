@@ -16,6 +16,7 @@ import { useTabBarClearance } from "../hooks/use-tab-bar-clearance";
 import { haptics } from "../lib/haptics";
 import { MotionReveal, SoftPressable, SOFT_MOTION, useWorkspaceReducedMotion, useWorkspaceScroll, WorkspaceAtmosphere } from "./workspace-motion";
 import { ScreenBlurTargetContext, useActiveWorkspaceBlur, useScreenBlurTarget } from "./workspace-blur";
+import { HomeBrand } from "./home-brand";
 
 export function GlassSurface({ children, style, onPress, accessibilityLabel, strong = false }: {
   children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string; strong?: boolean;
@@ -54,8 +55,8 @@ export function PageHeader({ label, back = false, children }: { label: string; b
   return <View style={styles.header}>
     {back ? <SoftPressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={() => { haptics.tap(); if (router.canGoBack()) router.back(); else router.replace("/(tabs)/home"); }} style={styles.iconButton}>
       <Ionicons name="arrow-back" size={22} color={WORKSPACE.text} /></SoftPressable>
-      : <View style={styles.brandIcon}><Ionicons name="shield-half-outline" size={22} color={WORKSPACE.lavender} /></View>}
-    <Text style={[ui.eyebrow, styles.headerLabel]}>{label}</Text>{children ?? <View style={styles.headerDot} />}
+      : <HomeBrand />}
+    <Text style={[ui.eyebrow, styles.headerLabel, !back && styles.brandLabel]}>{label}</Text>{children ?? (back ? <View style={styles.headerDot} /> : null)}
   </View>;
 }
 
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
   glass: { borderRadius: WORKSPACE.radius, borderWidth: 1, borderColor: WORKSPACE.line, overflow: "hidden", padding: 20, gap: 16 },
   reflection: { position: "absolute", top: 0, left: 22, right: 22, height: 1, backgroundColor: WORKSPACE.shine },
   header: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingVertical: 8 }, headerLabel: { flex: 1, color: WORKSPACE.secondary, letterSpacing: 0.8 },
-  brandIcon: { width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 14, borderWidth: 1, borderColor: WORKSPACE.line, backgroundColor: "rgba(124,58,237,0.10)" },
+  brandLabel: { textAlign: "right", flexShrink: 1 },
   headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: WORKSPACE.muted, marginRight: 8 },
   iconButton: { width: 48, height: 48, alignItems: "center", justifyContent: "center", borderRadius: 18, borderWidth: 1, borderColor: WORKSPACE.line, backgroundColor: "rgba(255,255,255,0.035)" },
   chip: { minHeight: 48, minWidth: 48, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: WORKSPACE.line, borderRadius: 18, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.025)" },

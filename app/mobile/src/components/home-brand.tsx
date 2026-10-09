@@ -1,7 +1,7 @@
 /**
- * Assinatura compacta da Home, escolhida na opção 4 do comparativo de logos.
+ * Assinatura compacta autenticada, escolhida na opção 4 do comparativo de logos.
  * Preserva a geometria oficial do V do login em uma marca discreta e estática.
- * Consumidor: cabeçalho da Home autenticada; o login mantém sua animação própria.
+ * Consumidores: cabeçalhos da Home e Minha conta; o login mantém sua animação própria.
  */
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Polyline } from "react-native-svg";
