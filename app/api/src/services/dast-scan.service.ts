@@ -96,9 +96,9 @@ export class DastScanService {
 
     if (dto.mode === "REAL" && dto.confirmedRealScan !== true) throw new Error("REAL_SCAN_CONFIRMATION_REQUIRED");
 
-    // validateTargetUrl lança INVALID_TARGET_URL (protocolo) ou
-    // TARGET_NOT_ALLOWED (SSRF) — ver zap-runner.service.ts.
-    const parsed = validateTargetUrl(dto.targetUrl, dto.mode === "SIMULATED" ? true : undefined);
+    // Alvos internos também fazem parte do produto; formato e credenciais
+    // embutidas são validados igualmente nos modos real e simulado.
+    const parsed = validateTargetUrl(dto.targetUrl);
     // .href canonicaliza (ex: adiciona "/" no root) — evita que a mesma URL
     // digitada de duas formas ligeiramente diferentes escape o lock abaixo.
     const targetUrl = parsed.href;

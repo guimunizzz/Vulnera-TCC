@@ -1114,3 +1114,33 @@ partindo de `dev`, com espera visual fluida quando necessária.
   await. Build do host limitado pelas dependências preexistentes ausentes;
   contêiner validou fonte atual sem instalar pacotes. Não é uma nova fase de
   produto; limites da API, schema e dependências foram preservados.
+
+## Correção — DAST em rede interna (2026-10-09)
+
+✅ Concluída em 2026-10-09 — 100% (4/4 entregas).
+
+Pedido direto do Rafael: remover permanentemente o bloqueio de alvo
+privado/local e validar o percurso do produto para a apresentação. Não é
+uma nova fase numerada do MVP. Política registrada no ADR-045.
+
+- DAST-LAN-01: ✅ Diagnóstico de URL/Docker e conectividade da LAN.
+- DAST-LAN-02: ✅ Restrição/flag/erro retirados, regressões de URL,
+  confirmação Real, autenticação, RBAC e ownership.
+- DAST-LAN-03: ✅ PDF coerente com Real passivo/demonstração e gestão de
+  resultados; triagem demo disponível, promoção/comparação demo bloqueadas.
+- DAST-LAN-04: ✅ Scan real e percurso UI cadastro/projeto/triagem/promoção,
+  comentário/correção e relatórios, com evidências e docs sincronizados.
+
+## Histórico
+
+- **Branch/base:** `codex/fix-dast-network-targets` ← `dev` em `33f6438`.
+- **Data:** 2026-10-09. Registro de publicação/PR no chat desta entrega.
+- **Validação:** API 617/617 em 43 suítes e build; web 338/338 em 30 suítes,
+  contraste 66/66, lint 0 erros/9 avisos, builds Docker aprovados.
+- **Real:** alvo Vite autorizado na LAN, ZAP 2.17.0, 21,331 s,
+  `COMPLETED`, `simulated=false`, cinco achados (0H/3M/1L/1I).
+- **Desvios/limites:** IP inicial sem resposta, corrigido pelo usuário.
+  Cenário novo mantido para apresentação. Sem schema/migration/dependências.
+  Check global API continua bloqueado pelos dois imports preexistentes;
+  sentinelas CWE/WASC negativas ficam como polimento futuro.
+- **Relatório:** `docs/DAST-REDE-VALIDACAO-2026-10-09.md`.

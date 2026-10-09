@@ -6,6 +6,14 @@
 
 ## Status
 
+✅ **2026-10-09 — DAST em redes internas e apresentação (100%; 4/4).** Bloqueio de endereço privado/loopback e flag removidos permanentemente, conforme pedido do Rafael. Alvo autorizado `http://10.87.169.107:5173/`: scan REAL concluído em 21,331 s, 5 achados (0H/3M/1L/1I), progresso 100%, sem fallback. UI validou cadastro Application/Project em tenant novo, triagem/nota, promoção, comentário e início de correção; HTML ZAP e PDFs real/demo conferidos. API 617/617 e build; web 338/338, lint 0 erros/9 avisos, contraste 66/66 e build. Check global API segue bloqueado pelos dois imports não usados preexistentes; lint alterado aprovado. ADR-045; relatório `docs/DAST-REDE-VALIDACAO-2026-10-09.md`.
+
+- [x] **DAST-LAN-01:** diagnosticar bloqueio e conectividade do Docker; corrigir endereço para o IP atual informado pelo usuário.
+- [x] **DAST-LAN-02:** aceitar alvos HTTP/HTTPS internos sem flag; retirar erro obsoleto; adicionar regressões de URL e criação Real/RBAC/ownership/confirmação.
+- [x] **DAST-LAN-03:** corrigir metodologia PDF para Real passivo/demonstração e gestão de resultados existente.
+- [x] **DAST-LAN-04:** exercitar scan real e percurso UI Application/Project → triagem/promoção → comentário/correção → HTML/PDF; sincronizar docs.
+- [ ] **DAST-PDF-POLIMENTO:** normalizar sentinelas ZAP `-1` de CWE/WASC como ausência (PDF real hoje exibe `CWE--1 · WASC--1` no finding informativo). Preexistente, sem impacto no fluxo validado.
+
 ✅ **2026-10-02 — Plano de ação SAST HIGH preparado (100% do planejamento).** [Plano com impactos e checkpoints](PLANO-ACAO-SAST-HIGH.md): leitura estática concluiu `needs_review` para ambos os IDs, considerando os controles existentes. Matriz de impactos, CP-0 a CP-4, testes de navegador/filesystem/tenancy e fechamento por correção ou exceção individual documentados. **Execução pendente: 0/5 checkpoints; nenhum teste, build, navegador ou scanner executado nesta tarefa.**
 
 - [x] **SAST-HIGH-PLANO:** documentar ação e impactos para XSS/Path Traversal, sem presumir exploração nem falso positivo. Concluído em 2026-10-02.

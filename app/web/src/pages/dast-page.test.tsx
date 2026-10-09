@@ -19,11 +19,11 @@ beforeEach(() => {
   api.getStatus.mockResolvedValue({ dockerAvailable: true, runningCount: 0, queuedCount: 0, maxConcurrent: 1, queued: [], running: [], alerts: [] });
 });
 
-async function openForm() {
+async function openForm(targetUrl = "https://example.com/") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(<QueryClientProvider client={client}><MemoryRouter><DastPage /></MemoryRouter></QueryClientProvider>);
   fireEvent.click(screen.getAllByRole("button", { name: "Novo scan" })[0]);
-  fireEvent.change(screen.getByLabelText(/URL do alvo/), { target: { value: "https://example.com/" } });
+  fireEvent.change(screen.getByLabelText(/URL do alvo/), { target: { value: targetUrl } });
 }
 
 describe("DAST — escolha do modo", () => {
@@ -55,5 +55,23 @@ describe("DAST — escolha do modo", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar para confirmação" }));
     expect(screen.getByRole("checkbox", { name: /Tenho autorização/ })).not.toBeChecked();
     expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it("aceita alvo de rede privada mantendo a confirmação do scan real", async () => {
+    const targetUrl = "http://192.168.0.1:5173/";
+    await openForm(targetUrl);
+    fireEvent.click(screen.getByRole("radio", { name: /Real — análise passiva/ }));
+    const continuar = screen.getByRole("button", { name: "Continuar para confirmação" });
+    expect(continuar).toBeEnabled();
+    fireEvent.click(continuar);
+    expect(api.create).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText(targetUrl)).toBeVisible());
+    const confirmar = screen.getByRole("button", { name: "Confirmar e iniciar scan real" });
+    expect(confirmar).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Tenho autorização/ }));
+    expect(confirmar).toBeEnabled();
+    fireEvent.click(confirmar);
+    await waitFor(() => expect(api.create).toHaveBeenCalledWith({ targetUrl, mode: "REAL", confirmedRealScan: true }));
+    expect(api.create).toHaveBeenCalledTimes(1);
   });
 });

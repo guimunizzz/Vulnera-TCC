@@ -3,8 +3,8 @@
  *
  * Integração do módulo DAST via HTTP (supertest) + banco de teste real.
  * `DAST_FORCE_SIMULATE=true` no .env.test garante que NENHUM teste aqui
- * depende de Docker — todo scan roda o fallback simulado (~3s, 8 alertas
- * representativos, ver zap-runner.service.ts).
+ * executa Docker ou tráfego ao alvo: demonstrações são explícitas e scans
+ * reais terminam FAILED, sem fabricar achados ou trocar o modo solicitado.
  *
  *   DAST-RBAC-01..08  CLIENT recebe 403 em cada uma das 8 rotas
  *   DAST-RBAC-08      PENTESTER não acessa scan de outro PENTESTER
@@ -411,5 +411,65 @@ describe("DAST — modo explícito e confirmação obrigatória", () => {
       if (original === undefined) delete process.env.DAST_FORCE_SIMULATE;
       else process.env.DAST_FORCE_SIMULATE = original;
     }
+  });
+
+  it("DAST-NET-01 — aceita alvo LAN real confirmado com flag legada false e preserva ownership", async () => {
+    const { pentesterAToken, pentesterBToken, adminToken } = await seedActors();
+    const originalForceSimulate = process.env.DAST_FORCE_SIMULATE;
+    const originalPrivateTargets = process.env.DAST_ALLOW_PRIVATE_TARGETS;
+    // O runner deve parar antes de consultar Docker ou acessar a rede real.
+    process.env.DAST_FORCE_SIMULATE = "true";
+    process.env.DAST_ALLOW_PRIVATE_TARGETS = "false";
+    try {
+      const res = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`)
+        .send({ targetUrl: "http://192.168.0.1:5173/#inicio", mode: "REAL", confirmedRealScan: true });
+      expect(res.status).toBe(201);
+      expect(res.body.targetUrl).toBe("http://192.168.0.1:5173/");
+      expect(res.body.simulated).toBe(false);
+
+      const final = await waitForTerminalStatus(pentesterAToken, res.body.id);
+      expect(final.status).toBe("FAILED");
+      expect(final.simulated).toBe(false);
+      expect(final.errorMessage).toContain("REAL_SCAN_DISABLED");
+      expect(final.warningMessage).toBeNull();
+      expect(await prisma.dastFinding.count({ where: { scanId: res.body.id } })).toBe(0);
+
+      const forbidden = await request(app).get(`/api/dast/scans/${res.body.id}`)
+        .set("Authorization", `Bearer ${pentesterBToken}`);
+      expect(forbidden.status).toBe(403);
+      expect(forbidden.body.error).toBe("FORBIDDEN");
+
+      const admin = await request(app).get(`/api/dast/scans/${res.body.id}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(admin.status).toBe(200);
+      expect(admin.body.id).toBe(res.body.id);
+    } finally {
+      if (originalForceSimulate === undefined) delete process.env.DAST_FORCE_SIMULATE;
+      else process.env.DAST_FORCE_SIMULATE = originalForceSimulate;
+      if (originalPrivateTargets === undefined) delete process.env.DAST_ALLOW_PRIVATE_TARGETS;
+      else process.env.DAST_ALLOW_PRIVATE_TARGETS = originalPrivateTargets;
+    }
+  });
+
+  it("DAST-NET-02 — alvo privado real continua exigindo confirmação literal true", async () => {
+    const { pentesterAToken } = await seedActors();
+    for (const confirmedRealScan of [undefined, false, "true"]) {
+      const res = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`)
+        .send({ targetUrl: "http://192.168.0.1:5173/", mode: "REAL", confirmedRealScan });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("REAL_SCAN_CONFIRMATION_REQUIRED");
+    }
+    expect(await prisma.dastScan.count()).toBe(0);
+  });
+
+  it("DAST-NET-03 — liberar alvos privados preserva autenticação e CLIENT proibido", async () => {
+    const { clientToken } = await seedActors();
+    const body = { targetUrl: "http://192.168.0.1:5173/", mode: "REAL", confirmedRealScan: true };
+    const unauthenticated = await request(app).post("/api/dast/scans").send(body);
+    expect(unauthenticated.status).toBe(401);
+    const client = await request(app).post("/api/dast/scans").set("Authorization", `Bearer ${clientToken}`).send(body);
+    expect(client.status).toBe(403);
+    expect(client.body.error).toBe("FORBIDDEN");
+    expect(await prisma.dastScan.count()).toBe(0);
   });
 });

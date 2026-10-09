@@ -2,11 +2,11 @@
  * zap-runner.service.test.ts
  *
  * Testes de unidade puros do runner — sem Docker, sem banco. Cobre a
- * superfície de segurança (SEC-01..05) descrita no prompt da Fase 5:
+ * validação HTTP/HTTPS e as proteções preservadas na execução do scan:
  *
  *   DAST-SEC-01  file:// rejeitado
- *   DAST-SEC-02  loopback rejeitado com a flag desligada
- *   DAST-SEC-03  faixas privadas rejeitadas
+ *   DAST-SEC-02  loopback aceito para alvos autorizados
+ *   DAST-SEC-03  rede privada aceita, inclusive com configuração legada false
  *   DAST-SEC-04  path traversal no nome do relatório
  *   DAST-SEC-05  URL com metacaractere de shell não executa nada extra
  *
@@ -35,7 +35,6 @@ jest.mock("http", () => ({ get: jest.fn() }));
 import * as fs from "fs/promises";
 import {
   validateTargetUrl,
-  isPrivateOrLoopbackHost,
   resolveReportPath,
   escapeHtml,
   containerNameFor,
@@ -73,49 +72,58 @@ const ZAP_REPORT_MINIMO = {
   ],
 };
 
-describe("zap-runner.service — validação de alvo (SSRF)", () => {
+describe("zap-runner.service — validação de alvo HTTP/HTTPS", () => {
   // DAST-SEC-01
   it("rejeita file:// com INVALID_TARGET_URL", () => {
-    expect(() => validateTargetUrl("file:///etc/passwd", false)).toThrow("INVALID_TARGET_URL");
+    expect(() => validateTargetUrl("file:///etc/passwd")).toThrow("INVALID_TARGET_URL");
   });
 
   it("rejeita protocolo desconhecido (gopher/ftp) com INVALID_TARGET_URL", () => {
-    expect(() => validateTargetUrl("ftp://example.com", false)).toThrow("INVALID_TARGET_URL");
-    expect(() => validateTargetUrl("gopher://example.com", false)).toThrow("INVALID_TARGET_URL");
+    expect(() => validateTargetUrl("ftp://example.com")).toThrow("INVALID_TARGET_URL");
+    expect(() => validateTargetUrl("gopher://example.com")).toThrow("INVALID_TARGET_URL");
   });
 
   it("rejeita string que nem parseia como URL", () => {
-    expect(() => validateTargetUrl("isso-nem-e-url", false)).toThrow("INVALID_TARGET_URL");
+    expect(() => validateTargetUrl("isso-nem-e-url")).toThrow("INVALID_TARGET_URL");
   });
 
-  // DAST-SEC-02
-  it("rejeita loopback (127.0.0.1/localhost/::1) com a flag desligada", () => {
-    expect(() => validateTargetUrl("http://127.0.0.1", false)).toThrow("TARGET_NOT_ALLOWED");
-    expect(() => validateTargetUrl("http://localhost:3000", false)).toThrow("TARGET_NOT_ALLOWED");
-    expect(() => validateTargetUrl("http://[::1]", false)).toThrow("TARGET_NOT_ALLOWED");
+  // DAST-SEC-02/03: a localização do alvo não depende mais de uma flag.
+  it.each([
+    "https://example.com/",
+    "http://8.8.8.8/",
+    "http://192.168.0.1:5173/",
+    "https://10.0.0.5:8443/",
+    "http://172.16.0.1/",
+    "http://172.31.255.255/",
+    "http://169.254.169.254/",
+    "http://127.0.0.1:3000/",
+    "http://localhost:5173/",
+    "http://[::1]:5173/",
+    "http://[fc00::1]:5173/",
+    "http://[fe80::1]:5173/",
+    "http://host.docker.internal:5173/",
+    "http://web:3000/",
+  ])("aceita %s mesmo com DAST_ALLOW_PRIVATE_TARGETS=false legado", (targetUrl) => {
+    const original = process.env.DAST_ALLOW_PRIVATE_TARGETS;
+    process.env.DAST_ALLOW_PRIVATE_TARGETS = "false";
+    try {
+      expect(validateTargetUrl(targetUrl).href).toBe(targetUrl);
+    } finally {
+      if (original === undefined) delete process.env.DAST_ALLOW_PRIVATE_TARGETS;
+      else process.env.DAST_ALLOW_PRIVATE_TARGETS = original;
+    }
   });
 
-  it("aceita loopback com a flag ligada", () => {
-    expect(() => validateTargetUrl("http://127.0.0.1:3000", true)).not.toThrow();
+  it.each([
+    "http://usuario:senha@192.168.0.1:5173/",
+    "https://usuario@example.com/",
+    "http://:senha@localhost:5173/",
+  ])("rejeita credenciais embutidas em %s", (targetUrl) => {
+    expect(() => validateTargetUrl(targetUrl)).toThrow("INVALID_TARGET_URL");
   });
 
-  // DAST-SEC-03
-  it("rejeita faixas privadas (10/8, 172.16/12, 192.168/16, 169.254/16)", () => {
-    expect(() => validateTargetUrl("http://10.0.0.5", false)).toThrow("TARGET_NOT_ALLOWED");
-    expect(() => validateTargetUrl("http://172.16.0.1", false)).toThrow("TARGET_NOT_ALLOWED");
-    expect(() => validateTargetUrl("http://172.31.255.255", false)).toThrow("TARGET_NOT_ALLOWED");
-    expect(() => validateTargetUrl("http://192.168.1.1", false)).toThrow("TARGET_NOT_ALLOWED");
-    expect(() => validateTargetUrl("http://169.254.169.254", false)).toThrow("TARGET_NOT_ALLOWED"); // cloud metadata
-  });
-
-  it("não confunde IP público com faixa privada (172.32.x fora do /12, 11.x fora do 10/8)", () => {
-    expect(isPrivateOrLoopbackHost("172.32.0.1")).toBe(false);
-    expect(isPrivateOrLoopbackHost("11.0.0.1")).toBe(false);
-    expect(isPrivateOrLoopbackHost("8.8.8.8")).toBe(false);
-  });
-
-  it("aceita alvo público http/https normal", () => {
-    expect(validateTargetUrl("https://example.com", false).href).toBe("https://example.com/");
+  it("canonicaliza a URL e remove o fragmento sem alterar a porta", () => {
+    expect(validateTargetUrl("http://192.168.0.1:5173#inicio").href).toBe("http://192.168.0.1:5173/");
   });
 });
 
@@ -161,7 +169,7 @@ describe("zap-runner.service — execFile nunca vira shell (DAST-SEC-05)", () =>
     // URL http válida) — a proteção real é o execFile nunca interpretar
     // shell. Path com `;` é só texto dentro do argumento -t.
     const malicious = "http://example.com/;id;whoami";
-    const parsed = validateTargetUrl(malicious, false);
+    const parsed = validateTargetUrl(malicious);
     expect(parsed.href).toContain(";id;whoami");
     // Se este valor um dia fosse concatenado numa string de shell, ele
     // quebraria o comando — como argumento de array (o que o runner faz),

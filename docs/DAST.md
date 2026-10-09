@@ -1,6 +1,6 @@
 # DAST.md — Módulo de scans dinâmicos automatizados (OWASP ZAP)
 
-## Operação vigente — 2026-09-28 (ADR-042)
+## Operação vigente — 2026-10-09
 
 A UI exige a escolha **Simulado** ou **Real — análise passiva**. Simulado é o padrão do formulário e gera uma demonstração sem acessar o alvo. Real abre um segundo aviso com o endereço e exige marcar a autorização antes de iniciar.
 
@@ -17,6 +17,31 @@ Contrato atual:
 Real usa ZAP daemon em modo Protected, navegação GET conservadora e análise passiva real. Não dispara active scan, não envia formulários, não executa JavaScript nem autentica no alvo. Navega até 30 páginas com profundidade 2, na mesma origem e subárvore; exclui queries e caminhos comuns de ação. Redirects são validados antes de enviar a próxima requisição. É baixo impacto, não garantia de ausência de efeitos em qualquer aplicação. A análise pode concluir corretamente com zero alertas e não equivale à cobertura de testes de exploração.
 
 O campo existente `simulated` guarda a escolha desde `QUEUED`. O resultado real permanece real: erro termina `FAILED`, com código e mensagem tratada, sem demonstração substituta. A API bloqueia promoção/comparação de dados simulados. As execuções antigas mantêm seus registros.
+
+### Alvos públicos, locais e de rede privada
+
+Desde 2026-10-09, alvos HTTP/HTTPS públicos e internos são aceitos permanentemente, conforme solicitação do Rafael. `validateTargetUrl` valida o formato, recusa protocolos diferentes de HTTP/HTTPS e credenciais embutidas (`usuario:senha@host`), e remove o fragmento (`#...`). Não existe bloqueio por hostname ou faixa de IP nem flag para habilitar rede privada. A confirmação de autorização do modo Real, autenticação `ADMIN`/`PENTESTER`, ownership dos scans e escopo conservador do crawler continuam exigidos.
+
+O endereço precisa ser acessível **do container do ZAP**, que executa o GET. Aceitar uma URL não garante conectividade. Para a apresentação em Docker Desktop:
+
+| Onde roda o alvo | URL a informar |
+| --- | --- |
+| Máquina do colega na mesma rede, Vite com `vite --host` | `http://10.87.169.107:5173/` na validação de 09/10/2026; confirmar o IP real da máquina e a porta acessível pela rede Docker |
+| Máquina que executa o Docker Desktop | `http://host.docker.internal:<porta>/` |
+| Outro container na rede `vulnera-net` | `http://<nome-do-container>:<porta-interna>/` |
+
+`localhost`, `127.0.0.1` e `::1` dentro do ZAP apontam para o próprio container do ZAP, mesmo quando a API roda no host. Para a máquina do colega, use o IP dela; `host.docker.internal` aponta para o host do Docker Desktop. Confirme o endereço anunciado pelo Vite, a escuta em `0.0.0.0` e a liberação da porta 5173 no firewall do colega. Se o alvo não responder, o scan real falha com causa tratada; não gera resultados de demonstração.
+
+### Fluxo do produto para a apresentação
+
+1. Cadastre a Application e um Project; vincule o PENTESTER ao Project se ele for o responsável pela promoção dos achados. Esses cadastros não são pré-requisitos para executar o scan isolado, mas são necessários para levar os resultados à gestão de vulnerabilidades.
+2. Entre como `ADMIN` ou `PENTESTER`, abra **DAST → Novo scan**, informe o endereço HTTP/HTTPS acessível do ZAP e selecione **Real — análise passiva**. Confira o alvo no segundo aviso e marque a autorização.
+3. Acompanhe `QUEUED` e as etapas de início, navegação GET, análise passiva e relatório. A fila tem teto padrão de uma execução; **Parar** cancela e remove o container.
+4. Em `COMPLETED`, consulte contadores, filtros e detalhe dos findings; abra o HTML original do ZAP e baixe o PDF. Zero alertas também é um resultado válido.
+5. Faça a triagem e, para um achado real, use **Promover**: revise o rascunho e o vetor CVSS sugerido, selecione o Project e salve. O PENTESTER precisa ser membro do destino; o ADMIN pode escolher qualquer Project. O finding pode originar uma única `Vulnerability`, com `sourceType = DAST_IMPORT` e proveniência registrada.
+6. Continue pelo fluxo normal de vulnerabilidades, com responsáveis, evidências, comentários, remediação e relatórios. Um novo scan real concluído do mesmo alvo permite comparação explícita por fingerprint. A comparação mostra o que foi observado nas duas execuções; não encerra automaticamente vulnerabilidades nem prova cobertura de páginas que o crawler não alcançou.
+
+Os dados simulados servem à demonstração da interface e não podem ser promovidos ou comparados. O módulo não cria `Vulnerability` automaticamente.
 
 Configuração padrão atual:
 
@@ -42,7 +67,7 @@ Validação reproduzível: após `npm run build` da API, executar `app/api/scrip
 
 ### Histórico técnico preservado
 
-**As seções numeradas abaixo documentam a implementação até 09/09/2026.** Os trechos sobre active scan, fallback automático, payload contendo somente URL, `--rm`, percentuais e padrões de recursos foram **substituídos pela operação acima e pelo ADR-042**. Permanecem como histórico; não são instruções para configurar a versão atual.
+**As seções numeradas abaixo documentam a implementação até 09/09/2026.** Os trechos sobre active scan, fallback automático, payload contendo somente URL, `--rm`, percentuais e padrões de recursos foram **substituídos pela operação acima e pelo ADR-042 em 2026-09-28**. Os trechos sobre bloqueio de loopback/rede privada e `DAST_ALLOW_PRIVATE_TARGETS` foram **substituídos pela remoção permanente de 2026-10-09**. A orientação histórica de usar `localhost` com API no host também foi substituída: o GET sempre parte do container do ZAP. Permanecem como histórico; não são instruções para configurar a versão atual.
 
 > Documento vivo (CLAUDE.md §0.1). Escrito pra alguém reproduzir o módulo
 > inteiro sem o autor original por perto — é entregável de TCC.

@@ -12,7 +12,9 @@ Gerados em 2026-09-05, durante a validação end-to-end da Fase 9
 (que fica fora do git, mesmo tratamento de `uploads/`) para cá em 2026-09-06,
 a pedido do Rafael, pra virarem material permanente de evidência do TCC.
 
-## Como foram gerados
+**Evidência histórica.** Os relatórios abaixo preservam a execução de 2026-09-05, feita com o perfil ativo daquele momento. Desde 2026-09-28, o produto oferece modos Simulado/Real explícitos e o Real usa GET limitado com análise passiva; falha real não vira demonstração. Desde 2026-10-09, aceita alvos HTTP/HTTPS públicos e privados sem flag de liberação. As instruções vigentes estão em `docs/DAST.md`; reproduzir hoje não implica obter os mesmos alertas destes relatórios antigos.
+
+## Como foram gerados em 2026-09-05
 
 Não é um `docker run` manual — são a saída exata do fluxo real do produto:
 login como `PENTESTER`/`ADMIN` na UI → **DAST** → **Novo scan** → URL do alvo
@@ -79,21 +81,18 @@ caminhos como um dos desafios OWASP do próprio app. É exatamente o tipo de
 achado que demonstra o scanner funcionando contra uma superfície real, não
 um resultado genérico.
 
-## Reproduzir
+## Executar hoje contra um alvo de laboratório
 
 ```bash
-# alvo controle negativo — qualquer site estático serve
-# (não precisa DAST_ALLOW_PRIVATE_TARGETS)
-
-# alvo controle positivo — Juice Shop local
+# alvo de laboratório autorizado — Juice Shop local
 docker run -d --rm -p 3500:3000 --name juice-shop bkimminich/juice-shop
-# no .env da API: DAST_ALLOW_PRIVATE_TARGETS=true (loopback/rede local)
 ```
 
-Depois, pela UI: **DAST → Novo scan → `http://host.docker.internal:3500`**
-(se a API roda em container) ou `http://localhost:3500` (API rodando local).
-Ver `docs/DAST.md` §8 para outros alvos de laboratório (DVWA, Mutillidae II,
-bWAPP).
+Depois, pela UI: **DAST → Novo scan → `http://host.docker.internal:3500` → Real — análise passiva**, e confirme a autorização. O GET sempre parte do container do ZAP, portanto `localhost` aponta para o próprio ZAP, mesmo se a API estiver no host. Alvos privados não exigem variável de liberação.
+
+Para a aplicação Vite do colega na LAN, use o IP real da máquina e a porta exposta por `vite --host`, por exemplo `http://10.87.169.107:5173/`, desde que estejam acessíveis da rede Docker. Um resultado `COMPLETED` pode ter zero alertas; `FAILED` mantém a causa real. Consulte a seção de operação vigente de `docs/DAST.md` para rede, limites e fluxo de triagem/promoção.
+
+**Histórico substituído em 2026-10-09:** a instrução anterior exigia uma flag de desenvolvimento para loopback/rede privada. O bloqueio e a flag foram removidos; a evidência original não foi alterada.
 
 ## Arquivos
 

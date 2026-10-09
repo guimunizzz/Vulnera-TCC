@@ -9,6 +9,31 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-10-09 — DAST em rede interna e apresentação
+
+**✅ Concluída — 100% (4/4 entregas).** Branch
+`codex/fix-dast-network-targets`, base `dev` em `33f6438`; ADR-045.
+
+- Removido permanentemente o bloqueio de hosts privados/loopback, a flag de
+  liberação e o erro correspondente, a pedido do Rafael. HTTP/HTTPS sem
+  credenciais embutidas continuam sendo o formato aceito.
+- PDF atualizado para descrever GET passivo e separar demonstração: triagem
+  demo disponível; promoção/comparação demo indisponíveis.
+- Scan real do Vite autorizado `10.87.169.107:5173`: ZAP 2.17.0, 21,331 s,
+  cinco achados (0 altos/3 médios/1 baixo/1 informativo), progresso 100%.
+- Navegador validou Application/Project em tenant novo, triagem/nota,
+  promoção, comentário e início da correção. HTML e PDFs conferidos;
+  vínculo tenant/projeto/aplicação/procedência verificado no banco.
+- API 617/617 em 43 suítes, web 338/338 em 30 suítes, contraste 66/66,
+  builds aprovados. Check API mantém dois erros de lint preexistentes;
+  arquivos alterados sem erro. Detalhe de CWE/WASC `-1` registrado no backlog.
+- Sem exclusão de dados anteriores, schema/migration/dependências/lockfile.
+  Documentos vivos sincronizados; evidências em `output/dast-network/` e
+  relato completo em `docs/DAST-REDE-VALIDACAO-2026-10-09.md`.
+
+As políticas antigas de bloqueio, scan ativo e fallback abaixo permanecem
+como histórico das respectivas sessões; o estado vigente é ADR-042/045.
+
 ## 2026-09-14 (sessão 29 — Fase 9: Findings Globais + Query Wizard)
 
 ### Objetivo

@@ -108,54 +108,16 @@ function getTimeoutMs(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_TIMEOUT_MS;
 }
 
-function allowPrivateTargets(): boolean {
-  return EnvVar.getOptional(EnvKeys.DAST_ALLOW_PRIVATE_TARGETS, "false").toLowerCase() === "true";
-}
-
 export function containerNameFor(scanId: string): string {
   return `vulnera-zap-${scanId}`;
 }
 
 // ============================================================================
-// Validação de alvo (SSRF)
+// Validação de formato do alvo
 // ============================================================================
 
-function ipv4ToInt(ip: string): number | null {
-  const parts = ip.split(".");
-  if (parts.length !== 4) return null;
-  let n = 0;
-  for (const part of parts) {
-    if (!/^\d{1,3}$/.test(part)) return null;
-    const value = Number(part);
-    if (value < 0 || value > 255) return null;
-    n = (n << 8) | value;
-  }
-  return n >>> 0;
-}
-
-function isIpInCidr(ipInt: number, cidr: string): boolean {
-  const [base, bitsRaw] = cidr.split("/");
-  const baseInt = ipv4ToInt(base);
-  const bits = Number(bitsRaw);
-  if (baseInt === null || Number.isNaN(bits)) return false;
-  const mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0;
-  return (ipInt & mask) === (baseInt & mask);
-}
-
-// Faixas do prompt (RFC1918 + loopback + link-local). Não cobre IPv6 além de
-// ::1 — bloqueio de ULA/link-local IPv6 fica pra quando o produto precisar.
-const PRIVATE_IPV4_CIDRS = ["127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16"];
-
-export function isPrivateOrLoopbackHost(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, ""); // remove colchetes de literal IPv6 (ex: [::1])
-  if (host === "localhost" || host === "::1") return true;
-  const ipInt = ipv4ToInt(host);
-  if (ipInt === null) return false;
-  return PRIVATE_IPV4_CIDRS.some((cidr) => isIpInCidr(ipInt, cidr));
-}
-
-/** Lança INVALID_TARGET_URL (protocolo/formato) ou TARGET_NOT_ALLOWED (SSRF). */
-export function validateTargetUrl(targetUrl: string, allowPrivate: boolean = allowPrivateTargets()): URL {
+/** Aceita alvos HTTP/HTTPS públicos ou internos; a conectividade é verificada pelo ZAP. */
+export function validateTargetUrl(targetUrl: string): URL {
   let parsed: URL;
   try {
     parsed = new URL(targetUrl);
@@ -164,9 +126,6 @@ export function validateTargetUrl(targetUrl: string, allowPrivate: boolean = all
   }
   if (parsed.username || parsed.password || (parsed.protocol !== "http:" && parsed.protocol !== "https:")) {
     throw new Error("INVALID_TARGET_URL");
-  }
-  if (!allowPrivate && isPrivateOrLoopbackHost(parsed.hostname)) {
-    throw new Error("TARGET_NOT_ALLOWED");
   }
   parsed.hash = "";
   return parsed;
@@ -1148,4 +1107,4 @@ export async function readReportFile(scanId: string, fileName: string): Promise<
   }
 }
 
-export const __internal = { getReportsDir, getTimeoutMs, allowPrivateTargets, getZapNetwork, getZapImage, getStartupTimeoutMs, getSpiderMaxDurationMin };
+export const __internal = { getReportsDir, getTimeoutMs, getZapNetwork, getZapImage, getStartupTimeoutMs, getSpiderMaxDurationMin };
