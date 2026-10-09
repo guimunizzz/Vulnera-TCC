@@ -61,15 +61,16 @@ export async function generateDastReportPdf(data: DastReportData): Promise<Blob>
   }
 
   const ctx = await createReportContext(targetHostname);
+  const spider = !data.scan.simulated && data.discovery?.profile === "TRADITIONAL_SPIDER_PASSIVE";
 
   drawCoverPage(ctx, {
     reportTypeLabel: data.scan.simulated ? "Relatório DAST — demonstração" : "Relatório DAST",
     projectName: data.scan.targetUrl,
     companyName: targetHostname,
-    applicationName: data.scan.simulated ? "Resultado simulado — sem acesso ao alvo" : "Análise passiva — OWASP ZAP",
+    applicationName: data.scan.simulated ? "Resultado simulado — sem acesso ao alvo" : spider ? "Spider + análise passiva — OWASP ZAP" : "Execução real — OWASP ZAP",
     generatedAt: new Date(),
     subtitle:
-      `${data.scan.simulated ? "Demonstração com achados fictícios, sem executar o ZAP ou acessar o alvo." : "Análise passiva de respostas HTTP, com requisições GET limitadas."} ` +
+      `${data.scan.simulated ? "Demonstração com achados fictícios, sem executar o ZAP ou acessar o alvo." : spider ? "Descoberta de URLs pelo spider tradicional e análise passiva das respostas HTTP." : "Perfil desta execução não registrado. Consulte o relatório HTML original."} ` +
       `Solicitado por ${data.requestedByName ?? "—"} · ` +
       `Duração: ${formatDuration(data.scan.durationMs)}.`,
   });
@@ -186,6 +187,7 @@ function drawFindingSection(ctx: ReportContext, cursor: Cursor, finding: DastFin
 }
 
 function drawAppendix(ctx: ReportContext, cursor: Cursor, data: DastReportData): Cursor {
+  const spider = !data.scan.simulated && data.discovery?.profile === "TRADITIONAL_SPIDER_PASSIVE";
   let step = drawLabeledBlock(
     ctx,
     cursor,
@@ -193,10 +195,13 @@ function drawAppendix(ctx: ReportContext, cursor: Cursor, data: DastReportData):
     data.scan.simulated
       ? "Demonstração: os achados são fictícios, gerados pelo Vulnera sem executar o OWASP ZAP nem acessar o alvo. " +
         "Este relatório serve para apresentar a interface e não comprova vulnerabilidades na aplicação informada."
-      : "Análise dinâmica passiva com OWASP ZAP: o Vulnera visita uma quantidade limitada de páginas com GET " +
-        "no mesmo endereço e caminho do alvo. O ZAP analisa as respostas sem enviar formulários nem executar " +
-        "testes ativos de exploração. Os achados são normalizados e persistidos com fingerprint estável, " +
-        "para reconhecer o mesmo achado entre execuções.",
+      : spider ? "O spider tradicional do OWASP ZAP descobre URLs e recursos na origem e subárvore do alvo, com limites " +
+        "de duração, profundidade e quantidade de filhos por nó. As respostas recebidas durante o rastreamento " +
+        "são analisadas pelas regras passivas do ZAP. O processamento e envio de formulários estão desativados, " +
+        "assim como os testes ativos de exploração. Os achados são normalizados e persistidos com fingerprint estável, " +
+        "para reconhecer o mesmo achado entre execuções."
+      : "O perfil de descoberta desta execução histórica não foi registrado. Consulte o relatório HTML original " +
+        "e o registro operacional da época; a metodologia atual não é atribuída retroativamente a este scan.",
   );
 
   step = drawLabeledBlock(
@@ -211,7 +216,16 @@ function drawAppendix(ctx: ReportContext, cursor: Cursor, data: DastReportData):
 
   step = drawLabeledBlock(ctx, step, "Escopo", data.scan.simulated
     ? `Alvo informado para demonstração: ${data.scan.targetUrl}. Nenhuma requisição foi enviada a ele.`
-    : `Alvo: ${data.scan.targetUrl}. Os achados ficam restritos ao endereço e caminho do alvo.`);
+    : spider ? `Alvo: ${data.scan.targetUrl}. O rastreamento fica restrito à origem e subárvore informadas, excluindo URLs com query, credenciais ou caminhos sensíveis.`
+      : `Alvo registrado: ${data.scan.targetUrl}. Os limites históricos devem ser conferidos no registro original.`);
+
+  if (spider && data.discovery) {
+    const limits = data.discovery.limits;
+    step = drawLabeledBlock(ctx, step, "Descoberta registrada",
+      `${data.discovery.urls.length} URLs no escopo. Limites desta execução: ${limits.maxDurationMin} min, ` +
+      `profundidade ${limits.maxDepth}, ${limits.maxChildrenPerNode} filhos por nó e ${limits.threadCount} thread. ` +
+      "A contagem inclui recursos e não comprova cobertura completa da aplicação.");
+  }
 
   step = drawLabeledBlock(
     ctx,
@@ -230,8 +244,9 @@ function drawAppendix(ctx: ReportContext, cursor: Cursor, data: DastReportData):
     ctx,
     step,
     "Limitações conhecidas",
-    "O ZAP não fornece vetor CVSS: o risco do alerta não substitui a avaliação humana. A análise passiva " +
-      "não cobre exploração ativa, envio de formulários ou uma auditoria completa da aplicação. Não há " +
+    "O ZAP não fornece vetor CVSS: o risco do alerta não substitui a avaliação humana. No perfil atual, o spider tradicional " +
+      "não executa JavaScript, portanto rotas de uma SPA que dependem dessa execução podem não ser descobertas. " +
+      "O perfil atual não cobre exploração ativa, envio de formulários ou uma auditoria completa da aplicação. Não há " +
       "agendamento recorrente nem varredura de múltiplos alvos num único scan.",
   );
 

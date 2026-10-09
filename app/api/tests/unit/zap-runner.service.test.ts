@@ -45,6 +45,7 @@ import {
   heapArgForMemoryLimit,
   friendlyFailureReason,
   isBaselineUrlAllowed,
+  buildBaselineScopeRegex,
 } from "../../src/services/zap-runner.service";
 
 /** Menor report.json que o pipeline aceita — mesmo formato do ZAP de verdade. */
@@ -222,8 +223,8 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
    * aqui cada endpoint devolve a resposta REAL observada de um ZAP 2.17
    * (formato conferido à mão contra um container de verdade nesta sessão).
    */
-  function mockZapApi(overrides: Record<string, { status?: number; body: string; error?: string; failTimes?: number }> = {}) {
-    const respostas: Record<string, { status?: number; body: string; error?: string; failTimes?: number }> = {
+  function mockZapApi(overrides: Record<string, { status?: number; body: string; bodies?: string[]; error?: string; failTimes?: number }> = {}) {
+    const respostas: Record<string, { status?: number; body: string; bodies?: string[]; error?: string; failTimes?: number }> = {
       "/JSON/context/action/newContext/": { body: JSON.stringify({ contextId: "1" }) },
       "/JSON/context/action/includeInContext/": { body: JSON.stringify({ Result: "OK" }) },
       "/JSON/context/action/setContextInScope/": { body: JSON.stringify({ Result: "OK" }) },
@@ -231,7 +232,21 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
       "/JSON/core/action/accessUrl/": { body: JSON.stringify({ accessUrl: [{ responseHeader: "HTTP/1.1 200 OK\r\nContent-Type: text/html", responseBody: "<html>local</html>" }] }) },
       "/JSON/core/view/version/": { body: JSON.stringify({ version: "2.17.0" }) },
       "/JSON/spider/action/setOptionMaxDuration/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionMaxDepth/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionMaxChildren/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionThreadCount/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionMaxParseSizeBytes/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionProcessForm/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionPostForm/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionLogoutAvoidance/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionParseRobotsTxt/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionParseSitemapXml/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionParseGit/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionParseSVNEntries/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/setOptionParseDsStore/": { body: JSON.stringify({ Result: "OK" }) },
       "/JSON/spider/action/scan/": { body: JSON.stringify({ scan: "0" }) },
+      "/JSON/spider/action/excludeFromScan/": { body: JSON.stringify({ Result: "OK" }) },
+      "/JSON/spider/action/stop/": { body: JSON.stringify({ Result: "OK" }) },
       "/JSON/spider/view/status/": { body: JSON.stringify({ status: "100" }) },
       "/JSON/spider/view/results/": { body: JSON.stringify({ results: ["https://example.com/"] }) },
       "/JSON/pscan/view/recordsToScan/": { body: JSON.stringify({ recordsToScan: "0" }) },
@@ -260,7 +275,7 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
         const res: any = new EventEmitter();
         res.statusCode = resposta.status ?? 200;
         cb(res);
-        res.emit("data", Buffer.from(resposta.body));
+        res.emit("data", Buffer.from(resposta.bodies?.[Math.min(count - 1, resposta.bodies.length - 1)] ?? resposta.body));
         res.emit("end");
       });
 
@@ -268,7 +283,7 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
     });
   }
 
-  it("fluxo completo (GET limitado -> passivo -> relatório) devolve COMPLETED e NÃO simulado", async () => {
+  it("fluxo completo (Spider tradicional -> passivo -> relatório) devolve COMPLETED e NÃO simulado", async () => {
     mockDocker();
     mockZapApi();
 
@@ -287,6 +302,10 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
 
     const salvo = JSON.parse(await fs.readFile(path.join(REPORTS_DIR, "scan-ok", "report.json"), "utf-8"));
     expect(salvo.site[0].alerts).toHaveLength(1);
+    const discovery = JSON.parse(await fs.readFile(path.join(REPORTS_DIR, "scan-ok", "discovery.json"), "utf-8"));
+    expect(discovery.profile).toBe("TRADITIONAL_SPIDER_PASSIVE");
+    expect(discovery.urls).toEqual(["https://example.com/"]);
+    expect(discovery).not.toHaveProperty("apiKey");
   });
 
   it("demonstração explícita não consulta Docker nem HTTP", async () => {
@@ -320,7 +339,123 @@ describe("zap-runner.service — runScan caminho real (docker + API do ZAP mocka
     expect(result.status).toBe("COMPLETED");
     const calls = (http.get as jest.Mock).mock.calls.map((c) => new URL(c[0]).pathname);
     expect(calls.filter((p) => p === "/JSON/pscan/view/recordsToScan/")).toHaveLength(2);
-    expect(calls.some((p) => p.includes("/ascan/") || p.includes("/spider/action/scan/"))).toBe(false);
+    expect(calls.some((p) => p.includes("/ascan/") || p.includes("/ajaxSpider/") || p.includes("/clientSpider/"))).toBe(false);
+    expect(calls.filter((p) => p === "/JSON/spider/action/scan/")).toHaveLength(1);
+  });
+
+  it("configura descoberta GET com contexto e limites antes de iniciar o Spider", async () => {
+    mockDocker();
+    mockZapApi();
+    const result = await runScan({ mode: "REAL", scanId: "spider-options", targetUrl: "https://example.com/app/" });
+    expect(result.status).toBe("COMPLETED");
+    const calls = (http.get as jest.Mock).mock.calls.map((call) => new URL(call[0]));
+    const startIndex = calls.findIndex((url) => url.pathname === "/JSON/spider/action/scan/");
+    expect(startIndex).toBeGreaterThan(0);
+    const start = calls[startIndex];
+    expect(Object.fromEntries([...start.searchParams].filter(([key]) => key !== "apikey"))).toEqual({
+      url: "https://example.com/app/", contextName: "vulnera-baseline", maxChildren: "30", recurse: "false", subtreeOnly: "true",
+    });
+    const expectedSettings: Record<string, string> = {
+      MaxDepth: "2", MaxChildren: "30", ThreadCount: "1", MaxParseSizeBytes: "1000000",
+      ProcessForm: "false", PostForm: "false", LogoutAvoidance: "true", ParseRobotsTxt: "true", ParseSitemapXml: "true",
+    };
+    for (const [option, value] of Object.entries(expectedSettings)) {
+      const settingIndex = calls.findIndex((url) => url.pathname === `/JSON/spider/action/setOption${option}/`);
+      expect(settingIndex).toBeGreaterThan(0);
+      expect(settingIndex).toBeLessThan(startIndex);
+      const setting = calls[settingIndex];
+      expect(setting.searchParams.get("Integer") ?? setting.searchParams.get("Boolean")).toBe(value);
+    }
+    const inclusion = calls.find((url) => url.pathname === "/JSON/context/action/includeInContext/")!;
+    expect(inclusion.searchParams.get("regex")).toBe(buildBaselineScopeRegex(new URL("https://example.com/app/")));
+    const exclusionIndex = calls.findIndex((url) => url.pathname === "/JSON/spider/action/excludeFromScan/");
+    expect(exclusionIndex).toBeGreaterThan(0);
+    expect(exclusionIndex).toBeLessThan(startIndex);
+    expect(calls[exclusionIndex].searchParams.get("regex")).toBe(".*\\?.*");
+    const access = calls.find((url) => url.pathname === "/JSON/core/action/accessUrl/")!;
+    expect(access.searchParams.get("followRedirects")).toBe("false");
+  });
+
+  it("o Spider descobre outros endpoints e grava somente URLs permitidas na evidência interna", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/spider/view/results/": { body: JSON.stringify({ results: [
+      "https://example.com/app/", "https://example.com/app/api/health", "https://example.com/app/assets/site.css#v1",
+      "https://example.com/app/api/health", "https://elsewhere.test/", "https://example.com/app2/",
+      "https://example.com/app/logout", "https://user:secret@example.com/app/", "https://example.com/app/?action=delete", "not-a-url",
+    ] }) } });
+    const result = await runScan({ mode: "REAL", scanId: "spider-discovery", targetUrl: "https://example.com/app/" });
+    expect(result.status).toBe("COMPLETED");
+    const raw = await fs.readFile(path.join(REPORTS_DIR, "spider-discovery", "discovery.json"), "utf-8");
+    const discovery = JSON.parse(raw);
+    expect(discovery.urls).toEqual(["https://example.com/app/", "https://example.com/app/api/health", "https://example.com/app/assets/site.css"]);
+    expect(discovery.limits).toMatchObject({ maxDepth: 2, maxChildrenPerNode: 30, threadCount: 1, maxParseSizeBytes: 1000000 });
+    expect(discovery).toMatchObject({ processForms: false, javascript: false, activeScan: false });
+    expect(Number.isNaN(Date.parse(discovery.discoveredAt))).toBe(false);
+    expect(raw).not.toMatch(/secret|elsewhere|apikey/i);
+  });
+
+  it("aguarda o Spider com progresso antes da análise passiva e retenta somente leituras", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/spider/view/status/": { body: '{"status":"100"}', bodies: ['{"status":"25"}', '{"status":"25"}', '{"status":"100"}'], error: "ECONNRESET", failTimes: 1 } });
+    const progress: Array<{ phase: string; percent: number }> = [];
+    const result = await runScan({ mode: "REAL", scanId: "spider-progress", targetUrl: "https://example.com/", onProgress: (value) => progress.push(value) });
+    expect(result.status).toBe("COMPLETED");
+    const calls = (http.get as jest.Mock).mock.calls.map((call) => new URL(call[0]));
+    const lastStatusIndex = calls.map((url) => url.pathname).lastIndexOf("/JSON/spider/view/status/");
+    expect(calls.findIndex((url) => url.pathname === "/JSON/pscan/view/recordsToScan/")).toBeGreaterThan(lastStatusIndex);
+    expect(calls.filter((url) => url.pathname === "/JSON/spider/action/scan/")).toHaveLength(1);
+    expect(calls.filter((url) => url.pathname === "/JSON/spider/view/status/")).toHaveLength(3);
+    expect(progress.some((value) => value.phase === "SPIDER" && value.percent > 8 && value.percent < 73)).toBe(true);
+    expect(progress.some((value) => value.phase === "SPIDER" && value.percent > 8)).toBe(true);
+    expect(progress.every((value, index) => index === 0 || value.percent >= progress[index - 1].percent)).toBe(true);
+  });
+
+  it("falha ao iniciar o Spider não repete a ação nem publica relatório ou demonstração", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/spider/action/scan/": { body: "", error: "ZAP_HTTP_TIMEOUT" } });
+    const result = await runScan({ mode: "REAL", scanId: "spider-start-failed", targetUrl: "https://example.com/" });
+    expect(result).toMatchObject({ status: "FAILED", simulated: false, errorMessage: "ZAP_HTTP_TIMEOUT" });
+    expect(result.jsonReportPath).toBeUndefined();
+    const calls = (http.get as jest.Mock).mock.calls.map((call) => new URL(call[0]).pathname);
+    expect(calls.filter((endpoint) => endpoint === "/JSON/spider/action/scan/")).toHaveLength(1);
+    expect(calls).not.toContain("/OTHER/core/other/jsonreport/");
+  });
+
+  it.each([
+    ["scan", "/JSON/spider/action/scan/", '{"scan":"invalid"}'],
+    ["status", "/JSON/spider/view/status/", '{"status":"invalid"}'],
+    ["results", "/JSON/spider/view/results/", '{"results":"invalid"}'],
+  ])("resposta inválida de %s no Spider termina FAILED sem fallback", async (suffix, endpoint, body) => {
+    mockDocker();
+    mockZapApi({ [endpoint]: { body } });
+    const result = await runScan({ mode: "REAL", scanId: `spider-invalid-${suffix}`, targetUrl: "https://example.com/" });
+    expect(result.status).toBe("FAILED");
+    expect(result.simulated).toBe(false);
+    expect(result.errorMessage).toBe(`ZAP_BAD_RESPONSE:spider_${suffix}`);
+    expect(result.jsonReportPath).toBeUndefined();
+  });
+
+  it("prazo do Spider para descoberta interrompe o motor sem publicar relatório parcial", async () => {
+    mockDocker();
+    mockZapApi({ "/JSON/spider/view/status/": { body: '{"status":"0"}' } });
+    const originalDuration = process.env.DAST_ZAP_SPIDER_MAX_DURATION_MIN;
+    process.env.DAST_ZAP_SPIDER_MAX_DURATION_MIN = "1";
+    let fakeNow = Date.now();
+    const clock = jest.spyOn(Date, "now").mockImplementation(() => fakeNow);
+    try {
+      const result = await runScan({ mode: "REAL", scanId: "spider-timeout", targetUrl: "https://example.com/", onProgress: (progress) => {
+        if (progress.message === "Spider tradicional: 0%") fakeNow += 61000;
+      } });
+      expect(result).toMatchObject({ status: "FAILED", simulated: false, errorMessage: "ZAP_SPIDER_TIMEOUT" });
+      const calls = (http.get as jest.Mock).mock.calls.map((call) => new URL(call[0]).pathname);
+      expect(calls).toContain("/JSON/spider/action/stop/");
+      expect(calls).not.toContain("/OTHER/core/other/jsonreport/");
+      expect(friendlyFailureReason(result.errorMessage)).toContain("Spider tradicional");
+    } finally {
+      clock.mockRestore();
+      if (originalDuration === undefined) delete process.env.DAST_ZAP_SPIDER_MAX_DURATION_MIN;
+      else process.env.DAST_ZAP_SPIDER_MAX_DURATION_MIN = originalDuration;
+    }
   });
 
   it("falha persistente de leitura termina após três tentativas", async () => {
@@ -535,4 +670,27 @@ describe("baseline — limites de navegação antes de enviar tráfego", () => {
     expect(isBaselineUrlAllowed(new URL(url), target)).toBe(false);
   });
   it("permite página na subárvore", () => expect(isBaselineUrlAllowed(new URL("https://example.com/app/about"), target)).toBe(true));
+
+  it.each([
+    "https://elsewhere.test/app/", "http://example.com/app/", "https://example.com:444/app/",
+    "https://example.com.evil.test/app/", "https://example.com/app2/", "https://example.com/app/?q=read",
+    "https://example.com/app/logout", "https://example.com/app/DELETE", "https://example.com/app/%64elete",
+    "https://example.com/app/%44%45%4c%45%54%45", "https://user:pass@example.com/app/",
+  ])("a regex de contexto rejeita %s antes da descoberta ZAP", (url) => {
+    expect(new RegExp(buildBaselineScopeRegex(target)).test(url)).toBe(false);
+  });
+
+  it.each([
+    "https://example.com/app/", "https://example.com/app/api/health", "https://example.com/app/assets/site.css",
+    "https://example.com/app/%61bout",
+  ])("a regex de contexto permite %s no escopo", (url) => {
+    expect(new RegExp(buildBaselineScopeRegex(target)).test(url)).toBe(true);
+  });
+
+  it("um alvo sem barra final inclui sua raiz e descendentes, sem incluir prefixo parecido", () => {
+    const expression = new RegExp(buildBaselineScopeRegex(new URL("http://192.168.0.1:5173/app")));
+    expect(expression.test("http://192.168.0.1:5173/app")).toBe(true);
+    expect(expression.test("http://192.168.0.1:5173/app/child")).toBe(true);
+    expect(expression.test("http://192.168.0.1:5173/application")).toBe(false);
+  });
 });

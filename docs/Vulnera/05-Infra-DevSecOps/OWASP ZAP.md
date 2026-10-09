@@ -139,7 +139,7 @@ Exemplos de checks relevantes para o Vulnera:
 ## Como o produto executa o ZAP
 
 - **Um container por scan**, nomeado `vulnera-zap-<scanId>` e destruído ao fim ou no cancelamento (`docker rm -f`). Nunca um daemon compartilhado entre scans — isolamento é o ponto ([[ADR-028 - Execucao do ZAP via Docker spawn]]).
-- **Modo Real com daemon (`zap.sh -daemon`) Protected, conduzido pela API HTTP do ZAP**: início → navegação GET → análise passiva → relatórios. O crawler visita até 30 páginas, profundidade 2, na mesma origem e subárvore; não executa JavaScript, envia formulários ou dispara active scan. Queries e caminhos comuns de ação são excluídos; redirects são validados antes do próximo GET. O progresso indica etapa/quantidade limitada, sem medir cobertura de todo o site ([[ADR-042 - DAST explicito e baseline passivo]]; operação em `docs/DAST.md`).
+- **Modo Real com daemon (`zap.sh -daemon`) Protected, conduzido pela API HTTP do ZAP**: início → Spider tradicional → análise passiva → relatórios. Links, recursos, robots e sitemap entram na descoberta; mesma origem/subárvore, profundidade 2, até 30 filhos por nó, uma thread e teto de 1..10 minutos. Forms/POST, JavaScript e active scan ficam desligados; queries são excluídas diretamente no Spider, além do contexto para origem/caminhos sensíveis. Não há teto global de 30 páginas nem promessa de cobertura completa. O perfil e as URLs descobertas ficam no artefato por execução; PDF antigo sem registro informa método desconhecido ([[ADR-046 - Spider tradicional e perfil por execucao]]; operação em `docs/DAST.md`).
 - **`api.key` aleatória por scan** — nunca `api.disablekey`.
 - **DooD (Docker-out-of-Docker)**: a imagem da API traz `docker-cli` e o socket do host é montado no container. Risco assumido e documentado, não eliminado.
 - **`execFile("docker", [...])`, jamais shell** — imune a command injection.
@@ -153,7 +153,7 @@ Exemplos de checks relevantes para o Vulnera:
 | `DAST_MAX_CONCURRENT_SCANS` | Teto de scans simultâneos (padrão 1); o excedente entra em fila FIFO no watchdog |
 | `DAST_ZAP_MEMORY` / `DAST_ZAP_CPUS` | Padrão de 2 GiB/2 CPUs por ZAP. `--memory`/`--memory-swap`/`--cpus` do container; o runner deriva `-Xmx1331m` de `2g` porque o heap calculado pelo `zap.sh` usa a RAM do host, não o cgroup |
 | `DAST_HEARTBEAT_TIMEOUT_MS` | Silêncio máximo antes de o watchdog abortar um scan (2 min) |
-| `DAST_SCAN_TIMEOUT_MS`, `DAST_ZAP_STARTUP_TIMEOUT_MS`, `DAST_ZAP_SPIDER_MAX_DURATION_MIN` | Padrões de 30 min de execução, 3 min de subida do daemon e 1 min do crawler GET; `SPIDER` é nome legado |
+| `DAST_SCAN_TIMEOUT_MS`, `DAST_ZAP_STARTUP_TIMEOUT_MS`, `DAST_ZAP_SPIDER_MAX_DURATION_MIN` | Padrões de 30 min de execução, 3 min de subida do daemon e 1 min do Spider tradicional (limitado a 1..10, inválido/zero volta a 1) |
 | `DAST_ZAP_HTTP_TIMEOUT_MS` / `DAST_ZAP_HTTP_ATTEMPTS` | 45 s por chamada e até 3 tentativas de leitura de status/relatório; navegação não é repetida |
 | `DAST_FORCE_SIMULATE` | Quando true, recusa Real com `REAL_SCAN_DISABLED`; não altera o modo escolhido. Os testes selecionam Simulado explicitamente |
 | `DAST_ZAP_IMAGE`, `DAST_ZAP_NETWORK`, `DAST_REPORTS_DIR` | Imagem, rede e destino dos relatórios |

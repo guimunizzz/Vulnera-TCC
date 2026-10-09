@@ -14,7 +14,11 @@ Contrato atual:
 { "targetUrl": "https://alvo-autorizado.example/", "mode": "REAL", "confirmedRealScan": true }
 ```
 
-Real usa ZAP daemon em modo Protected, navegação GET conservadora e análise passiva real. Não dispara active scan, não envia formulários, não executa JavaScript nem autentica no alvo. Navega até 30 páginas com profundidade 2, na mesma origem e subárvore; exclui queries e caminhos comuns de ação. Redirects são validados antes de enviar a próxima requisição. É baixo impacto, não garantia de ausência de efeitos em qualquer aplicação. A análise pode concluir corretamente com zero alertas e não equivale à cobertura de testes de exploração.
+Real usa ZAP daemon em modo Protected, **Spider tradicional do ZAP** e análise passiva real. O Spider descobre links, recursos, robots.txt e sitemap, restrito à origem/subárvore por contexto ancorado. Profundidade 2, até 30 filhos por nó (não 30 páginas totais), uma thread, parsing de até 1 MB e duração padrão de 1 minuto, configurável entre 1 e 10. Queries são excluídas também por `spider/action/excludeFromScan`, pois o contexto compara URLs sem parâmetros; credenciais e caminhos comuns de ação ficam fora do escopo. Processamento/envio de formulários, parsers Git/SVN/DS_Store, JavaScript e active scan estão desativados. Não autentica no alvo nem cobre uma SPA completa. A navegação ainda pode causar efeitos em aplicações mal projetadas. Zero alertas não prova ausência de vulnerabilidades.
+
+Cada execução nova grava `discovery.json` com perfil, URLs em escopo e limites, sem chave da API. `/report/data` devolve `discovery` somente depois de validar ownership e o artefato; demo e scans históricos sem metadados retornam `null`. O PDF descreve o perfil registrado, sem atribuir Spider retrospectivamente a scans antigos. A fila passiva precisa drenar antes do relatório. Falha de descoberta não vira demonstração. Ver ADR-046 e [validação do Spider](DAST-SPIDER-VALIDACAO-2026-10-09.md).
+
+**Histórico substituído parcialmente em 09/10/2026:** o perfil anterior do ADR-042 fazia GET via `core/accessUrl`, extraindo apenas `<a href>` entre aspas (30 páginas/profundidade 2). O nome da fase era SPIDER, mas não iniciava o Spider do ZAP. A separação Real/Demo e a análise passiva permanecem; a descoberta foi substituída pelo motor tradicional.
 
 O campo existente `simulated` guarda a escolha desde `QUEUED`. O resultado real permanece real: erro termina `FAILED`, com código e mensagem tratada, sem demonstração substituta. A API bloqueia promoção/comparação de dados simulados. As execuções antigas mantêm seus registros.
 
@@ -36,7 +40,7 @@ O endereço precisa ser acessível **do container do ZAP**, que executa o GET. A
 
 1. Cadastre a Application e um Project; vincule o PENTESTER ao Project se ele for o responsável pela promoção dos achados. Esses cadastros não são pré-requisitos para executar o scan isolado, mas são necessários para levar os resultados à gestão de vulnerabilidades.
 2. Entre como `ADMIN` ou `PENTESTER`, abra **DAST → Novo scan**, informe o endereço HTTP/HTTPS acessível do ZAP e selecione **Real — análise passiva**. Confira o alvo no segundo aviso e marque a autorização.
-3. Acompanhe `QUEUED` e as etapas de início, navegação GET, análise passiva e relatório. A fila tem teto padrão de uma execução; **Parar** cancela e remove o container.
+3. Acompanhe `QUEUED` e as etapas de início, Spider, análise passiva e relatório. A fila tem teto padrão de uma execução; **Parar** cancela e remove o container.
 4. Em `COMPLETED`, consulte contadores, filtros e detalhe dos findings; abra o HTML original do ZAP e baixe o PDF. Zero alertas também é um resultado válido.
 5. Faça a triagem e, para um achado real, use **Promover**: revise o rascunho e o vetor CVSS sugerido, selecione o Project e salve. O PENTESTER precisa ser membro do destino; o ADMIN pode escolher qualquer Project. O finding pode originar uma única `Vulnerability`, com `sourceType = DAST_IMPORT` e proveniência registrada.
 6. Continue pelo fluxo normal de vulnerabilidades, com responsáveis, evidências, comentários, remediação e relatórios. Um novo scan real concluído do mesmo alvo permite comparação explícita por fingerprint. A comparação mostra o que foi observado nas duas execuções; não encerra automaticamente vulnerabilidades nem prova cobertura de páginas que o crawler não alcançou.
@@ -52,7 +56,7 @@ Configuração padrão atual:
 | `DAST_ZAP_CPUS` | `2` | Teto de CPU por container |
 | `DAST_ZAP_HTTP_TIMEOUT_MS` | `45000` | Prazo HTTP, configurável entre 1 e 60 s |
 | `DAST_ZAP_HTTP_ATTEMPTS` | `3` | Entre 1 e 5 tentativas para consultas de status e relatórios |
-| `DAST_ZAP_SPIDER_MAX_DURATION_MIN` | `1` | Nome legado; agora limita o crawler GET, mínimo efetivo 1 minuto |
+| `DAST_ZAP_SPIDER_MAX_DURATION_MIN` | `1` | Duração do Spider tradicional, entre 1 e 10 min; zero/inválido usa 1 |
 | `DAST_ZAP_STARTUP_TIMEOUT_MS` | `180000` | Prazo de início do daemon |
 | `DAST_SCAN_TIMEOUT_MS` | `1800000` | Prazo total da execução |
 | `DAST_FORCE_SIMULATE` | `false` | Quando true, recusa o real com `REAL_SCAN_DISABLED`; não troca o modo |

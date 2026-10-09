@@ -22,6 +22,7 @@
 
 import request from "supertest";
 import * as path from "path";
+import * as fs from "fs/promises";
 import { app } from "../../src/app";
 import { cleanDatabase } from "../setup";
 import { prisma } from "../../src/database/prisma.database";
@@ -30,6 +31,7 @@ import { loginAs } from "../fixtures/auth.fixture";
 import { DastScanRepository } from "../../src/repositories/dast-scan.repository";
 import { extractFindingsFromReport } from "../../src/services/dast-findings.service";
 import { makeDastScanService } from "../../src/factories/dast-scan.factory";
+import { resolveReportPath } from "../../src/services/zap-runner.service";
 
 const PASSWORD = "senha12345";
 const FIXTURE_PATH = path.resolve(__dirname, "../fixtures/dast/zap-report-example-com.json");
@@ -302,6 +304,7 @@ describe("DAST — fluxo feliz completo", () => {
     expect(reportDataRes.status).toBe(200);
     expect(reportDataRes.body.scan.id).toBe(createRes.body.id);
     expect(reportDataRes.body.topFindings.length).toBeLessThanOrEqual(10);
+    expect(reportDataRes.body.discovery).toBeNull();
 
     const reportHtmlRes = await request(app)
       .get(`/api/dast/scans/${createRes.body.id}/report/html`)
@@ -471,5 +474,40 @@ describe("DAST — modo explícito e confirmação obrigatória", () => {
     expect(client.status).toBe(403);
     expect(client.body.error).toBe("FORBIDDEN");
     expect(await prisma.dastScan.count()).toBe(0);
+  });
+});
+
+describe("DAST — procedência da descoberta por execução", () => {
+  it("DAST-DISC-01 — histórico sem artefato não ganha perfil Spider e metadados novos preservam ownership", async () => {
+    const { pentesterA, pentesterAToken, pentesterBToken } = await seedActors();
+    const scan = await prisma.dastScan.create({ data: {
+      targetUrl: "http://192.168.0.1:5173/", requestedById: pentesterA.id, status: "COMPLETED", simulated: false,
+    } });
+    const route = `/api/dast/scans/${scan.id}/report/data`;
+    const legacy = await request(app).get(route).set("Authorization", `Bearer ${pentesterAToken}`);
+    expect(legacy.status).toBe(200);
+    expect(legacy.body.discovery).toBeNull();
+    const artifact = resolveReportPath(scan.id, "discovery.json");
+    await fs.mkdir(path.dirname(artifact), { recursive: true });
+    const metadata = { profile: "TRADITIONAL_SPIDER_PASSIVE", targetUrl: scan.targetUrl,
+      urls: [scan.targetUrl, `${scan.targetUrl}api/status`, "http://outro.test/private", `${scan.targetUrl}logout`],
+      limits: { maxDurationMin: 1, maxDepth: 2, maxChildrenPerNode: 30, threadCount: 1, maxParseSizeBytes: 1000000 },
+      processForms: false, javascript: false, activeScan: false, apiKey: "nao-deve-vazar" };
+    try {
+      await fs.writeFile(artifact, JSON.stringify(metadata), "utf8");
+      const current = await request(app).get(route).set("Authorization", `Bearer ${pentesterAToken}`);
+      expect(current.status).toBe(200);
+      expect(current.body.discovery.profile).toBe("TRADITIONAL_SPIDER_PASSIVE");
+      expect(current.body.discovery.urls).toEqual([scan.targetUrl, `${scan.targetUrl}api/status`]);
+      expect(current.body.discovery).not.toHaveProperty("apiKey");
+      const foreign = await request(app).get(route).set("Authorization", `Bearer ${pentesterBToken}`);
+      expect(foreign.status).toBe(403);
+      expect(foreign.body.discovery).toBeUndefined();
+      await fs.writeFile(artifact, JSON.stringify({ ...metadata, targetUrl: "http://outro.test/" }), "utf8");
+      const invalid = await request(app).get(route).set("Authorization", `Bearer ${pentesterAToken}`);
+      expect(invalid.body.discovery).toBeNull();
+    } finally {
+      await fs.unlink(artifact);
+    }
   });
 });

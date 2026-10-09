@@ -2,6 +2,11 @@
 
 # DAST em rede interna — validação de 09/10/2026
 
+> Continuação no mesmo dia: o crawler manual descrito nesta prova histórica
+> foi substituído pelo Spider tradicional. Novos PDFs identificam o perfil
+> por execução; scans desta primeira rodada não têm esse artefato e indicam
+> método não registrado. Ver [validação do Spider](DAST-SPIDER-VALIDACAO-2026-10-09.md).
+
 **✅ Concluída: 100% (4/4 entregas).** Branch
 `codex/fix-dast-network-targets`, base `dev` em `33f6438`.
 

@@ -9,6 +9,34 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-10-09 — Spider tradicional, perfil por execução e README
+
+**✅ Concluída — 100% (4/4).** Mesma branch
+`codex/fix-dast-network-targets`, [PR #58](https://github.com/guimunizzz/Vulnera-TCC/pull/58)
+em rascunho para `dev`, sem merge; ADR-046.
+
+- Crawler manual substituído pelo Spider tradicional ZAP: links, recursos,
+  robots e sitemap; contexto por origem/subárvore e exclusão própria de
+  queries, sem forms/POST/JavaScript/active scan. Profundidade 2,
+  30 filhos por nó, uma thread, parsing 1 MB e teto de 1..10 minutos.
+- Perfil/URLs/limites em artefato por execução, lido após ownership. PDF
+  identifica o método novo; legado sem artefato informa perfil não registrado.
+- Fixture real ZAP 2.17.0: 26,641 s, COMPLETED/100%/não simulado,
+  9 URLs e 14 findings (0H/9M/5L/0I). Logs provam 10 GETs sem query,
+  formulários, caminhos sensíveis, outra origem ou profundidade além do limite.
+  Query acessada na primeira prova motivou exclusão direta no Spider.
+- API focal 104/104 e full final 642/642 em 43 suítes; web 338/338 em
+  30 suítes, contraste 66/66, lint 0 erros/9 avisos. Builds aprovados;
+  check API global mantém dois imports antigos. Focal/full final em série.
+- UI/HTML conferidos, PDFs novo/legado renderizados e inspecionados;
+  vulnerabilidade da prova LAN continua em correção com comentário/VRS/SLA.
+- README refeito ao fim com div/style, tabelas HTML, instalação, features,
+  arquitetura, validação atual, limites e três prints reais versionados.
+  Sem schema/migration/dependências/lockfile; trabalho anterior preservado.
+
+Relatório: `docs/DAST-SPIDER-VALIDACAO-2026-10-09.md`. Os registros de crawler
+manual abaixo são históricos; o perfil vigente está no ADR-046.
+
 ## 2026-10-09 — DAST em rede interna e apresentação
 
 **✅ Concluída — 100% (4/4 entregas).** Branch

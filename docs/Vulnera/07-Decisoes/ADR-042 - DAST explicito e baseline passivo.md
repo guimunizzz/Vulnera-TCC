@@ -10,6 +10,11 @@ data: 2026-09-28
 
 # ADR-042 — DAST explícito e baseline passivo
 
+> **Atualização de 2026-10-09:** a descoberta manual abaixo foi substituída
+> pelo Spider tradicional em [[ADR-046 - Spider tradicional e perfil por execucao]].
+> Permanecem modos explícitos, confirmação, análise passiva e falha sem fallback.
+> Os limites de 30 páginas totais e intervalo de 250 ms descrevem o método antigo.
+
 ## Contexto
 
 Na WSL de 4 GB, três execuções reais falharam e foram substituídas por demonstrações. O produto marcava essas execuções como concluídas. A política de dois containers de 2 GiB foi dimensionada para outra máquina. O pedido atual exige modo explícito, confirmação antes do real, retries e falhas compreensíveis; o pedido anterior restringe o impacto sobre o alvo.

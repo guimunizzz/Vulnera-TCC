@@ -47,6 +47,7 @@ import {
   getDockerStatus,
   SCAN_PHASE_LABELS,
   friendlyFailureReason,
+  isBaselineUrlAllowed,
   type ScanPhase,
 } from "./zap-runner.service";
 import type { DastWatchdog, WatchdogRunContext, WatchdogSnapshot } from "./dast-watchdog.service";
@@ -71,6 +72,15 @@ export interface DastModuleStatus {
   alerts: WatchdogSnapshot["alerts"];
 }
 
+export interface DastDiscoveryData {
+  profile: "TRADITIONAL_SPIDER_PASSIVE";
+  urls: string[];
+  limits: { maxDurationMin: number; maxDepth: number; maxChildrenPerNode: number; threadCount: number; maxParseSizeBytes: number };
+  processForms: false;
+  javascript: false;
+  activeScan: false;
+}
+
 export interface DastReportData {
   scan: DastScanResponseDTO;
   // Resolvido aqui (não no DastScanResponseDTO — esse é usado por list/getById
@@ -80,6 +90,8 @@ export interface DastReportData {
   counters: { high: number; medium: number; low: number; info: number };
   findings: DastFindingResponseDTO[];
   topFindings: DastFindingResponseDTO[];
+  // Derivado do artefato por execução, sem atribuir o perfil novo a scans históricos.
+  discovery: DastDiscoveryData | null;
 }
 
 export class DastScanService {
@@ -199,7 +211,37 @@ export class DastScanService {
       counters: { high: scan.alertsHigh, medium: scan.alertsMedium, low: scan.alertsLow, info: scan.alertsInfo },
       findings: responses,
       topFindings: responses.slice(0, 10),
+      discovery: await this.getDiscovery(scan),
     };
+  }
+
+  /** Metadados locais só são lidos depois da autorização do scan em getReportData. */
+  private async getDiscovery(scan: DastScan): Promise<DastDiscoveryData | null> {
+    if (scan.simulated || scan.status !== "COMPLETED") return null;
+    try {
+      const data = JSON.parse((await readReportFile(scan.id, "discovery.json")).toString("utf8")) as Record<string, unknown>;
+      if (!data || data.profile !== "TRADITIONAL_SPIDER_PASSIVE" || data.targetUrl !== scan.targetUrl
+        || data.processForms !== false || data.javascript !== false || data.activeScan !== false
+        || !Array.isArray(data.urls) || !data.urls.every((url) => typeof url === "string")) return null;
+      const limits = data.limits as DastDiscoveryData["limits"] | undefined;
+      if (!limits || ![limits.maxDurationMin, limits.maxDepth, limits.maxChildrenPerNode, limits.threadCount, limits.maxParseSizeBytes]
+        .every((value) => Number.isInteger(value) && value > 0)) return null;
+      const target = new URL(scan.targetUrl);
+      const urls = [...new Set(data.urls.flatMap((raw: string) => {
+        try {
+          const url = new URL(raw);
+          url.hash = "";
+          return isBaselineUrlAllowed(url, target) ? [url.href] : [];
+        } catch { return []; }
+      }))].sort();
+      return { profile: "TRADITIONAL_SPIDER_PASSIVE", urls, limits: {
+        maxDurationMin: limits.maxDurationMin, maxDepth: limits.maxDepth, maxChildrenPerNode: limits.maxChildrenPerNode,
+        threadCount: limits.threadCount, maxParseSizeBytes: limits.maxParseSizeBytes,
+      }, processForms: false, javascript: false, activeScan: false };
+    } catch {
+      // Artefatos ausentes/antigos não mudam a procedência nem impedem o PDF histórico.
+      return null;
+    }
   }
 
   /**

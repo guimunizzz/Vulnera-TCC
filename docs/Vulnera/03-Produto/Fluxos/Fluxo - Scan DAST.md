@@ -40,7 +40,7 @@ Pentester (ou Admin). `CLIENT` não participa deste fluxo em momento algum.
 
 ### 2. Acompanhar
 
-5. O ZAP roda em modo daemon Protected e é conduzido pela API HTTP dele: **início → navegação GET → análise passiva → relatórios**. O crawler visita até 30 páginas, profundidade 2, na mesma origem e subárvore, sem queries, formulários, JavaScript ou active scan. Redirects são validados antes do próximo GET. O percentual indica etapa e quantidade limitada; não mede tempo restante nem cobertura do site inteiro.
+5. O ZAP roda em modo daemon Protected e é conduzido pela API HTTP dele: **início → Spider tradicional → análise passiva → relatórios**. O Spider descobre links, recursos, robots e sitemap, na mesma origem/subárvore, profundidade 2, até 30 filhos por nó, uma thread e teto padrão de 1 minuto (1..10). Queries são excluídas diretamente no Spider; formulários, JavaScript e active scan ficam desligados. O percentual indica etapa, sem medir tempo restante ou cobertura completa. O perfil e as URLs descobertas ficam registrados por execução; PDFs antigos sem esse registro indicam método desconhecido ([[ADR-046 - Spider tradicional e perfil por execucao]]).
 6. Polling de 3s. O botão **Parar** destrói o container (`docker rm -f`) e o scan vira `CANCELLED`.
 7. Ao terminar: `COMPLETED` com os quatro contadores (Alto/Médio/Baixo/Info), tabela de [[DastFinding]], HTML original do ZAP e PDF gerado no navegador. Zero alertas é válido. Somente a escolha **Simulado** gera demonstração identificada; falha real termina `FAILED` com a causa tratada.
 
@@ -71,7 +71,7 @@ Pentester (ou Admin). `CLIENT` não participa deste fluxo em momento algum.
 21. O diff é por `fingerprint` (`sha256(pluginId | normalizedUrl | param)`), que **não inclui a evidência** — é o que faz um problema não corrigido aparecer como "continua aberto" em vez de virar um par falso de "sumiu um / surgiu outro".
 22. Alvos diferentes devolvem `422 SCANS_TARGET_MISMATCH`; scan comparado consigo mesmo, `CANNOT_COMPARE_SCAN_WITH_ITSELF`; scan não concluído, `SCAN_NOT_COMPLETED`.
 
-A comparação evidencia o que foi observado em cada execução; não altera automaticamente o estado da `Vulnerability` nem garante cobertura de páginas que o crawler não visitou.
+A comparação evidencia o que foi observado em cada execução; não altera automaticamente o estado da `Vulnerability` nem garante cobertura de páginas que a descoberta não visitou.
 
 ### Alvo na rede local durante a apresentação
 

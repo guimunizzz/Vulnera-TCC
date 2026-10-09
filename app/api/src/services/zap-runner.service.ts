@@ -1,7 +1,7 @@
 /**
  * Executa demonstrações explícitas ou análise passiva real pelo OWASP ZAP.
- * O runner isola um daemon por scan e visita somente URLs GET do escopo,
- * sem formulários, JavaScript, autenticação ou active scan. Retentativas de
+ * O runner isola um daemon por scan e descobre URLs pelo Spider tradicional,
+ * restrito ao escopo e sem formulários, JavaScript, autenticação ou active scan. Retentativas de
  * leitura toleram lentidão sem duplicar comandos. Falha real nunca vira demo.
  * Consumidor: DastScanService. Diagnóstico local é salvo antes da limpeza.
  */
@@ -39,7 +39,8 @@ function getStartupTimeoutMs(): number {
 
 function getSpiderMaxDurationMin(): number {
   const parsed = Number(EnvVar.getOptional(EnvKeys.DAST_ZAP_SPIDER_MAX_DURATION_MIN, "1"));
-  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 1;
+  // Zero significa ilimitado no ZAP; nosso perfil precisa sempre de um teto.
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(10, Math.max(1, Math.floor(parsed))) : 1;
 }
 
 /**
@@ -451,61 +452,114 @@ export function isBaselineUrlAllowed(candidate: URL, target: URL): boolean {
 }
 
 /**
- * Crawler conservador: no máximo 30 páginas, profundidade 2, um GET por vez.
- * O próprio ZAP recebe as respostas e executa suas regras passivas reais.
- * Redirects são resolvidos aqui para validar o destino ANTES de requisitá-lo.
- * Só links HTML com href entre aspas são descobertos; formulários/JS não rodam.
+ * O contexto é um filtro ANTES do tráfego do Spider, não um filtro do relatório.
+ * A regex Java usa âncoras para não confundir origem/porta ou /app com /app2;
+ * ações sensíveis também são excluídas quando escritas com bytes percentuais.
+ * Consumidores: configuração do ZAP e testes de confinamento da descoberta.
  */
-async function runBaselinePhase(ctx: RealScanContext, targetUrl: string): Promise<void> {
+export function buildBaselineScopeRegex(target: URL): string {
+  const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const root = target.pathname.endsWith("/") ? target.pathname : target.pathname + "/";
+  const hexPattern = (value: string) => [...value].map((character) => /[a-f]/.test(character) ? `[${character}${character.toUpperCase()}]` : character).join("");
+  const sensitive = ["logout", "signout", "delete", "remove", "unsubscribe", "checkout", "purchase", "comprar", "excluir", "sair"]
+    .map((word) => [...word].map((letter) => `(?:[${letter}${letter.toUpperCase()}]|%${hexPattern(letter.charCodeAt(0).toString(16))}|%${hexPattern(letter.toUpperCase().charCodeAt(0).toString(16))})`).join(""))
+    .join("|");
+  return `^${escapeRegex(target.origin)}(?![^?#]*(?:${sensitive}))(?:${escapeRegex(target.pathname)}|${escapeRegex(root)}[^?#]*)$`;
+}
+
+/** Checa conectividade antes de iniciar descoberta; redirects não escapam do alvo autorizado. */
+async function checkBaselineTarget(ctx: RealScanContext, target: URL): Promise<void> {
+  const result = await zapCall(ctx, "/JSON/core/action/accessUrl/", { url: target.href, followRedirects: "false" });
+  const messages = result.accessUrl as { responseHeader?: string }[] | undefined;
+  if (!Array.isArray(messages) || !messages.length) throw new Error("TARGET_UNREACHABLE");
+  const header = messages[0].responseHeader ?? "";
+  const status = Number(/^HTTP\/\S+\s+(\d+)/.exec(header)?.[1] ?? 0);
+  if (status < 100 || status >= 400) throw new Error(status ? `TARGET_HTTP_${status}` : "TARGET_UNREACHABLE");
+  if (status >= 300) {
+    const location = /^location:\s*(.+)$/im.exec(header)?.[1]?.trim();
+    if (location) {
+      let allowed = false;
+      try { allowed = isBaselineUrlAllowed(new URL(location, target), target); } catch { /* inválido */ }
+      if (!allowed) throw new Error("TARGET_REDIRECT_OUT_OF_SCOPE");
+    }
+  }
+}
+
+/**
+ * Spider tradicional: usa os parsers do ZAP para links, recursos, robots e sitemap.
+ * Profundidade 2, até 30 filhos POR NÓ, uma thread e prazo de 1..10 minutos;
+ * esses limites não representam um teto global de páginas. Forms/POST desligados.
+ * O Spider resolve redirects pelo filtro do contexto e não executa JavaScript.
+ */
+async function runBaselinePhase(ctx: RealScanContext, targetUrl: string, scanDir: string): Promise<void> {
   const target = new URL(targetUrl);
   if (!isBaselineUrlAllowed(target, target)) throw new Error("TARGET_UNSAFE_PATH");
-  const escaped = target.origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const context = await zapCall(ctx, "/JSON/context/action/newContext/", { contextName: "vulnera-baseline" });
-  await zapCall(ctx, "/JSON/context/action/includeInContext/", { contextName: "vulnera-baseline", regex: escaped + "/.*" });
-  await zapCall(ctx, "/JSON/context/action/setContextInScope/", { contextName: "vulnera-baseline", booleanInScope: "true" });
+  const contextName = "vulnera-baseline";
+  const context = await zapCall(ctx, "/JSON/context/action/newContext/", { contextName });
+  await zapCall(ctx, "/JSON/context/action/includeInContext/", { contextName, regex: buildBaselineScopeRegex(target) });
+  await zapCall(ctx, "/JSON/context/action/setContextInScope/", { contextName, booleanInScope: "true" });
   if (!context.contextId) throw new Error("ZAP_BAD_RESPONSE:context");
   await zapCall(ctx, "/JSON/core/action/setMode/", { mode: "protect" });
-  const queue = [{ url: target.href, depth: 0 }];
-  const seen = new Set<string>();
-  const crawlDeadline = Math.min(ctx.deadline, Date.now() + Math.max(1, getSpiderMaxDurationMin()) * 60000);
-  while (queue.length && seen.size < 30 && Date.now() < crawlDeadline) {
-    assertStillRunning(ctx);
-    const item = queue.shift()!;
-    const current = new URL(item.url);
-    current.hash = "";
-    if (seen.has(current.href) || !isBaselineUrlAllowed(current, target)) continue;
-    seen.add(current.href);
-    ctx.report(8 + Math.min(65, seen.size * 2), "SPIDER", `Visitando páginas com GET (${seen.size}/30)...`);
-    // Ação não é retentada: mesmo um GET pode ter efeitos em um alvo mal projetado.
-    const result = await zapCall(ctx, "/JSON/core/action/accessUrl/", { url: current.href, followRedirects: "false" });
-    const messages = result.accessUrl as { responseHeader?: string; responseBody?: string }[] | undefined;
-    if (!Array.isArray(messages) || !messages.length) throw new Error("TARGET_UNREACHABLE");
-    const message = messages[0];
-    const header = message.responseHeader ?? "";
-    const status = Number(/^HTTP\/\S+\s+(\d+)/.exec(header)?.[1] ?? 0);
-    if (status < 100 || status >= 500) throw new Error(status ? `TARGET_HTTP_${status}` : "TARGET_UNREACHABLE");
-    if (seen.size === 1 && status >= 400) throw new Error(`TARGET_HTTP_${status}`);
-    const addUrl = (raw: string, depth: number) => {
-      try {
-        const next = new URL(raw.replace(/&amp;/g, "&"), current);
-        next.hash = "";
-        if (queue.length < 60 && isBaselineUrlAllowed(next, target) && !seen.has(next.href)) queue.push({ url: next.href, depth });
-      } catch { /* URL malformada não amplia o escopo. */ }
-    };
-    if (status >= 300 && status < 400) {
-      const location = /^location:\s*(.+)$/im.exec(header)?.[1]?.trim();
-      if (location) {
-        let allowed = false;
-        try { allowed = isBaselineUrlAllowed(new URL(location, current), target); } catch { /* inválido */ }
-        if (!allowed && seen.size === 1) throw new Error("TARGET_REDIRECT_OUT_OF_SCOPE");
-        if (allowed) addUrl(location, item.depth);
-      }
-    } else if (/content-type:.*text\/html/i.test(header) && item.depth < 2) {
-      const html = (message.responseBody ?? "").slice(0, 1000000);
-      for (const match of html.matchAll(/<a\b[^>]*\bhref\s*=\s*(["'])(.*?)\1/gi)) addUrl(match[2], item.depth + 1);
-    }
-    await sleep(250);
+  ctx.report(8, "SPIDER", "Verificando acesso ao alvo...");
+  await checkBaselineTarget(ctx, target);
+
+  const durationMin = getSpiderMaxDurationMin();
+  const numericOptions = { MaxDuration: durationMin, MaxDepth: 2, MaxChildren: 30, ThreadCount: 1, MaxParseSizeBytes: 1000000 };
+  for (const [option, value] of Object.entries(numericOptions)) {
+    await zapCall(ctx, `/JSON/spider/action/setOption${option}/`, { Integer: String(value) });
   }
+  // O padrão do Spider submete forms: desabilitar só POST ainda permitiria GET forms.
+  const booleanOptions = { ProcessForm: false, PostForm: false, LogoutAvoidance: true, ParseRobotsTxt: true, ParseSitemapXml: true, ParseGit: false, ParseSVNEntries: false, ParseDsStore: false };
+  for (const [option, value] of Object.entries(booleanOptions)) {
+    await zapCall(ctx, `/JSON/spider/action/setOption${option}/`, { Boolean: String(value) });
+  }
+  const spiderDeadline = Math.min(ctx.deadline, Date.now() + durationMin * 60000);
+  // O contexto do ZAP compara a URL sem query; a exclusão própria do Spider
+  // impede que links com parâmetros sejam requisitados antes de filtrar resultados.
+  await zapCall(ctx, "/JSON/spider/action/excludeFromScan/", { regex: ".*\\?.*" });
+
+  const started = await zapCall(ctx, "/JSON/spider/action/scan/", {
+    url: target.href, contextName, maxChildren: "30", recurse: "false", subtreeOnly: "true",
+  });
+  if (typeof started.scan !== "string" || !/^\d+$/.test(started.scan)) throw new Error("ZAP_BAD_RESPONSE:spider_scan");
+  const scanId = started.scan;
+  ctx.report(8, "SPIDER", "Descobrindo endpoints com o Spider tradicional...");
+  for (;;) {
+    assertStillRunning(ctx);
+    const status = await zapCall(ctx, "/JSON/spider/view/status/", { scanId });
+    const percent = Number(status.status);
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) throw new Error("ZAP_BAD_RESPONSE:spider_status");
+    ctx.report(8 + percent * 0.65, "SPIDER", `Spider tradicional: ${percent}%`);
+    if (percent === 100) break;
+    if (Date.now() >= spiderDeadline) {
+      // Sem resultado completo após o prazo: parar o motor e preservar FAILED.
+      await zapCall(ctx, "/JSON/spider/action/stop/", { scanId });
+      throw new Error("ZAP_SPIDER_TIMEOUT");
+    }
+    await sleep(Math.max(1, Math.min(ZAP_POLL_INTERVAL_MS, spiderDeadline - Date.now())));
+  }
+  const results = await zapCall(ctx, "/JSON/spider/view/results/", { scanId });
+  if (!Array.isArray(results.results) || results.results.some((url) => typeof url !== "string")) throw new Error("ZAP_BAD_RESPONSE:spider_results");
+  const urls = [...new Set((results.results as string[]).flatMap((raw) => {
+    try {
+      const discovered = new URL(raw);
+      discovered.hash = "";
+      return isBaselineUrlAllowed(discovered, target) ? [discovered.href] : [];
+    } catch { return []; }
+  }))].sort();
+  // Evidência interna, sem chave da API ou URLs de terceiros descobertas no HTML.
+  await fs.writeFile(path.join(scanDir, "discovery.json"), JSON.stringify({
+    profile: "TRADITIONAL_SPIDER_PASSIVE",
+    engine: "OWASP_ZAP",
+    targetUrl: target.href,
+    discoveredAt: new Date().toISOString(),
+    urls,
+    limits: { maxDurationMin: durationMin, maxDepth: 2, maxChildrenPerNode: 30, threadCount: 1, maxParseSizeBytes: 1000000 },
+    processForms: false,
+    javascript: false,
+    activeScan: false,
+  }, null, 2), "utf-8");
+  ctx.report(73, "SPIDER", `Spider tradicional concluído: ${urls.length} URLs descobertas no escopo.`);
 }
 
 /** Só publica relatório completo quando a fila passiva esvaziar. */
@@ -723,7 +777,7 @@ async function runRealScan(
   try {
     await waitForZapReady(ctx, Math.min(deadline, started + getStartupTimeoutMs()));
 
-    await runBaselinePhase(ctx, targetUrl);
+    await runBaselinePhase(ctx, targetUrl, scanDir);
     await waitForPassiveScan(ctx);
 
     const { jsonPath, htmlPath } = await downloadReports(ctx, scanDir);
@@ -1055,6 +1109,7 @@ export function friendlyFailureReason(errorMessage: string | undefined): string 
   if (code === "SCAN_TIMEOUT") return "O scan ultrapassou o tempo máximo. Reduza o escopo e verifique os recursos disponíveis antes de tentar novamente.";
   if (code === "SCAN_CANCELLED") return "A execução foi interrompida.";
   if (code === "ZAP_PASSIVE_TIMEOUT") return "A análise passiva não terminou no prazo; nenhum relatório completo foi publicado. Reduza o escopo ou disponibilize mais recursos.";
+  if (code === "ZAP_SPIDER_TIMEOUT") return "O Spider tradicional não concluiu a descoberta no prazo configurado; nenhum relatório completo foi publicado. Reduza o escopo ou aumente o tempo de descoberta.";
   if (code === "ZAP_STARTUP_TIMEOUT") return "O OWASP ZAP não terminou de iniciar no prazo. Confira memória, CPU e a imagem Docker.";
   if (code.startsWith("ZAP_CONTAINER_START_FAILED")) return "O container do OWASP ZAP não subiu. Verifique a imagem, a rede Docker e as permissões da API.";
   if (code === "REPORT_JSON_INVALID") return "O relatório gerado pelo OWASP ZAP veio corrompido. Tente uma nova execução.";
