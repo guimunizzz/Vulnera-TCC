@@ -1,11 +1,15 @@
 import type { PrismaClient } from "@prisma/client";
-import type { ProjectMember } from "../models/project-member.model";
+import type { ProjectMember, ProjectMemberWithUser } from "../models/project-member.model";
 
 export class ProjectMemberRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async findByProject(projectId: string): Promise<ProjectMember[]> {
-    return this.prisma.projectMember.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } });
+  async findByProject(projectId: string): Promise<ProjectMemberWithUser[]> {
+    // A lista autorizada resolve os nomes sem expor o cadastro completo do User.
+    return this.prisma.projectMember.findMany({
+      where: { projectId }, orderBy: { createdAt: "asc" },
+      include: { user: { select: { name: true } } },
+    });
   }
 
   async findOne(projectId: string, userId: string): Promise<ProjectMember | null> {
@@ -14,8 +18,11 @@ export class ProjectMemberRepository {
     });
   }
 
-  async create(projectId: string, userId: string): Promise<ProjectMember> {
-    return this.prisma.projectMember.create({ data: { projectId, userId } });
+  async create(projectId: string, userId: string): Promise<ProjectMemberWithUser> {
+    return this.prisma.projectMember.create({
+      data: { projectId, userId },
+      include: { user: { select: { name: true } } },
+    });
   }
 
   async delete(projectId: string, userId: string): Promise<void> {
