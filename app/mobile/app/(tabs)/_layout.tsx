@@ -17,15 +17,17 @@
  * vez por sessão autenticada, independente de qual aba o usuário está vendo.
  *
  * Modelo 7: luz roxa atravessa o vidro com pulsação e fade de 400 ms.
+ * As telas deslizam pela largura inteira em 280 ms, invertendo o sentido
+ * ao voltar para Projetos e respeitando a preferência de movimento reduzido.
  * O React Navigation mantém rotas/eventos; a cápsula respeita área segura
  * e o respiro compartilhado em TAB_BAR, sem mudar as telas ou consultas.
  */
 
-import { Easing } from "react-native";
+import { Easing, useWindowDimensions } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { useAuthStore } from "../../src/store/auth.store";
 import { PushStatusContext, usePushRegistration } from "../../src/hooks/use-push-registration";
-import { IconGlassTabBar, TAB_TRANSITION_DURATION } from "../../src/components/icon-glass-tab-bar";
+import { IconGlassTabBar } from "../../src/components/icon-glass-tab-bar";
 import { haptics } from "../../src/lib/haptics";
 import { LoadingState } from "../../src/components/states";
 import { Screen } from "../../src/components/screen";
@@ -42,6 +44,7 @@ function AuthenticatedTabs() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const pushStatus = usePushRegistration();
   const reduced = useWorkspaceReducedMotion();
+  const { width } = useWindowDimensions();
 
   if (!hasHydrated) {
     return (
@@ -64,8 +67,21 @@ function AuthenticatedTabs() {
         headerTitleStyle: { fontFamily: FONT_FAMILY.semibold },
         headerShadowVisible: false,
         headerShown: false,
-        animation: reduced ? "none" : "fade",
-        transitionSpec: { animation: "timing", config: { duration: reduced ? 0 : TAB_TRANSITION_DURATION, easing: Easing.bezier(0.22, 1, 0.36, 1) } },
+        animation: reduced ? "none" : "shift",
+        // O progresso da navegação já inverte o sinal entre as duas abas.
+        // Usar a largura real faz ambas se moverem juntas, sem fade ou salto.
+        sceneStyleInterpolator: ({ current }) => ({
+          sceneStyle: {
+            transform: [{
+              translateX: current.progress.interpolate({
+                inputRange: [-1, 0, 1],
+                outputRange: [-width, 0, width],
+                extrapolate: "clamp",
+              }),
+            }],
+          },
+        }),
+        transitionSpec: { animation: "timing", config: { duration: reduced ? 0 : 280, easing: Easing.bezier(0.22, 1, 0.36, 1) } },
       }}
     >
       <Tabs.Screen

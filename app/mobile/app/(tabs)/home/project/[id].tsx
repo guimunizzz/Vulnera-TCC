@@ -13,14 +13,14 @@ import { useApiError } from "../../../../src/hooks/use-api-error";
 import { useTabBarClearance } from "../../../../src/hooks/use-tab-bar-clearance";
 import { FindingRow } from "../../../../src/components/finding-row";
 import { StatusBadge } from "../../../../src/components/badge";
+import { ProjectJourney } from "../../../../src/components/project-journey";
 import { ActionButton, DataState, DetailField, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
-import { COLORS, FONT_FAMILY } from "../../../../src/theme/tokens";
+import { FONT_FAMILY } from "../../../../src/theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../../../../src/theme/workspace";
 import { displayDate } from "../../../../src/lib/display";
 import { MotionReveal, useWorkspaceScroll } from "../../../../src/components/workspace-motion";
 
 const LEVELS: Record<string, string> = { BASIC: "Básico", INTERMEDIATE: "Intermediário", ADVANCED: "Avançado" };
-const STAGES = [{ status: "PENDING", label: "Solicitado" }, { status: "IN_PROGRESS", label: "Em análise" }, { status: "IN_REVIEW", label: "Revisão" }, { status: "COMPLETED", label: "Concluído" }];
 const SEVERITIES = [{ key: "CRITICAL", label: "Críticas", color: "#fda4af" }, { key: "HIGH", label: "Altas", color: "#fdba74" }, { key: "MEDIUM", label: "Médias", color: "#fde68a" }, { key: "LOW", label: "Baixas", color: "#7dd3fc" }, { key: "NONE", label: "Info", color: WORKSPACE.muted }];
 
 export default function ProjectDetailScreen() {
@@ -43,7 +43,6 @@ export default function ProjectDetailScreen() {
     {projectQuery.isPending ? <DataState loading title="Abrindo projeto" /> : <DataState error title="Projeto indisponível" message={errorMessage(projectQuery.error)} onRetry={() => { void projectQuery.refetch(); }} />}
   </WorkspaceScreen>;
   const project = projectQuery.data;
-  const stage = STAGES.findIndex((item) => item.status === project.status);
   const header = <MotionReveal style={styles.header}>
     <PageHeader label="VISÃO DO PROJETO" back />
     <View style={{ gap: 12 }}><View style={ui.spread}><Text style={ui.eyebrow}>ANÁLISE / {project.analysisType}</Text><StatusBadge status={project.status} /></View>
@@ -51,12 +50,7 @@ export default function ProjectDetailScreen() {
     {projectQuery.isError && <DataState error title="Não foi possível atualizar o projeto" message={errorMessage(projectQuery.error)} onRetry={() => { void projectQuery.refetch(); }} />}
     <GlassSurface>
       <Text style={ui.eyebrow}>JORNADA DA ANÁLISE</Text>
-      <View style={styles.timeline}>{STAGES.map((item, index) => <View key={item.status} style={styles.stage}>
-        <View style={styles.stageLine}>{index > 0 && <View style={[styles.connector, index <= stage && styles.connectorDone]} />}
-          <View style={[styles.stageDot, index <= stage && styles.stageDone, index === stage && styles.stageCurrent, index === stage && project.status === "COMPLETED" && styles.stageCompleted]}><Text style={[styles.stageNumber, index <= stage && { color: WORKSPACE.text }]}>{index + 1}</Text></View>
-          {index < STAGES.length - 1 && <View style={[styles.connector, { left: "50%", right: 0 }, index < stage && styles.connectorDone]} />}</View>
-        <Text style={[styles.stageLabel, index === stage && { color: project.status === "COMPLETED" ? COLORS.successInk : COLORS.severity.lowInk }]}>{item.label}</Text>
-      </View>)}</View>
+      <ProjectJourney key={project.id} status={project.status} />
       <View style={ui.divider} /><View style={ui.spread}><Text style={ui.muted}>Solicitado em</Text><Text style={ui.muted}>{displayDate(project.requestedAt)}</Text></View>
     </GlassSurface>
     <GlassSurface>
@@ -88,12 +82,6 @@ export default function ProjectDetailScreen() {
 }
 const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, gap: 12 }, header: { gap: 20, marginBottom: 8 }, footer: { gap: 16, paddingTop: 12 }, detailsRow: { flexDirection: "row", gap: 16 },
-  timeline: { flexDirection: "row", marginHorizontal: -8 }, stage: { flex: 1, alignItems: "center", gap: 9 }, stageLine: { flexDirection: "row", width: "100%", alignItems: "center", justifyContent: "center" },
-  connector: { position: "absolute", left: 0, right: "50%", height: 1, backgroundColor: WORKSPACE.line }, connectorDone: { backgroundColor: "rgba(255,255,255,0.28)" },
-  stageDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: WORKSPACE.inset, borderWidth: 1, borderColor: WORKSPACE.line, alignItems: "center", justifyContent: "center", zIndex: 1 },
-  stageDone: { backgroundColor: "#34383e", borderColor: "rgba(255,255,255,0.2)" }, stageCurrent: { backgroundColor: COLORS.severity.lowSurface, borderColor: COLORS.severity.lowInk },
-  stageCompleted: { backgroundColor: COLORS.successSurface, borderColor: COLORS.successInk },
-  stageNumber: { fontSize: 12, fontFamily: FONT_FAMILY.medium, color: WORKSPACE.muted }, stageLabel: { fontSize: 12, color: WORKSPACE.muted, fontFamily: FONT_FAMILY.medium, textAlign: "center" },
   severities: { flexDirection: "row", padding: 12, gap: 4 }, severity: { flex: 1, alignItems: "center", gap: 6 }, severityDot: { width: 4, height: 4, borderRadius: 2 },
   severityCount: { fontFamily: FONT_FAMILY.medium, fontSize: 24 }, severityLabel: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: WORKSPACE.muted },
 });
