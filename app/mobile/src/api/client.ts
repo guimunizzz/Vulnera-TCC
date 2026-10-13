@@ -19,6 +19,7 @@ const AUTH_PATHS_WITHOUT_REFRESH = ["/auth/login", "/auth/register", "/auth/refr
 
 export const apiClient = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL,
+  timeout: 20000,
 });
 
 // EXPO_PUBLIC_* é embutido no bundle em build time — nada barra um build de
@@ -88,14 +89,18 @@ apiClient.interceptors.response.use(
       const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
         `${process.env.EXPO_PUBLIC_API_URL}/auth/refresh`,
         { refreshToken },
+        { timeout: 20000 },
       );
+      // Um refresh antigo não pode reabrir uma sessão encerrada ou trocada.
+      if (useAuthStore.getState().refreshToken !== refreshToken) throw new axios.CanceledError("SESSION_CHANGED");
       setTokens(data.accessToken, data.refreshToken);
       processQueue(null, data.accessToken);
       originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
       return apiClient(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
-      clearAuth();
+      // Instabilidade de rede não significa que o refresh foi revogado.
+      if (useAuthStore.getState().refreshToken === refreshToken && axios.isAxiosError(refreshError) && (refreshError.response?.status === 401 || refreshError.response?.status === 403)) clearAuth();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

@@ -12,9 +12,10 @@
  */
 
 import { useEffect } from "react";
+import { AppState, Platform } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { focusManager, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import {
@@ -31,6 +32,11 @@ import { COLORS, FONT_FAMILY } from "../src/theme/tokens";
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const listener = AppState.addEventListener("change", (state) => focusManager.setFocused(state === "active"));
+    return () => listener.remove();
+  }, []);
   const [fontsLoaded, fontError] = useFonts({
     Archivo_400Regular,
     Archivo_500Medium,

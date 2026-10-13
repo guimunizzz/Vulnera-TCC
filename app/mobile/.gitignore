@@ -8,6 +8,8 @@ node_modules/
 # Expo
 .expo/
 dist/
+dist-preview/
+dist-android/
 web-build/
 expo-env.d.ts
 
