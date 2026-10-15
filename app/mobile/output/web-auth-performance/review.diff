@@ -1,0 +1,36 @@
+--- PRD_VIVO.md
++++ PRD_VIVO.md
+@@ -15,6 +15,10 @@
+ ---
+ 
+ ## 1. Estado geral do projeto
++
++**✅ 2026-10-15 — Otimização do login e cadastro web (100%).** Branch `refactor/web`: coordenadas do ponteiro restritas às duas camadas decorativas, com um frame pendente; SVG e rótulos estáveis evitam trabalho repetido ao digitar. Circuitos CSS/SMIL pausam após o fade de saída de 550ms e retomam do mesmo ponto; aba oculta pausa os efeitos, toque mantém o fundo visível e movimento reduzido dispensa as atualizações. Envios simultâneos bloqueados antes do próximo render, com nova tentativa liberada após erro. Layout, efeitos visíveis, campos, validações, foco e destinos preservados. Medição local em Chrome, mediana de três sequências de 150 movimentos: tempo de recálculo de estilos de 1.420ms para 145ms (cerca de 90% menor), sem garantia geral de FPS. npm run check aprovado: 348/348 testes em 32 arquivos, contraste 66/66 e lint 0 erros/9 avisos anteriores; build aprovado e navegador 18/18, com revisão visual independente. Relatório: `app/mobile/output/web-auth-performance/report.md`. Sem mudança de API, schema, dependências ou lockfiles.
++
++- [x] Otimizar login/cadastro web mantendo recursos e aparência, com comparação de desempenho e regressão.
+ 
+ **✅ 2026-10-15 — Acesso web só com logo e campos (100%).** Branch `refactor/web`: títulos visuais Entrar/Criar conta removidos do login e cadastro, com seus wrappers e margens; a logo passa diretamente aos campos. Os h1 permanecem com `sr-only`, IDs e `tabIndex=-1`, mantendo nomes acessíveis dos formulários e foco ao alternar rotas. Animações, validação, botões e navegação entre login/cadastro preservados. Esta apresentação substitui os títulos centrais de 24px das entregas anteriores, mantidas como histórico. npm run check aprovado: 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build aprovado e 13/13 verificações no navegador, com revisão visual independente. Evidências: `app/mobile/output/web-auth-brand-fields/`.
+ 
+@@ -671,3 +675,8 @@
+ ### Marco — 2026-10-15: acesso web só com logo e campos
+ 
+ **✅ 2026-10-15 — Acesso web só com logo e campos (100%).** Branch `refactor/web`: títulos visuais Entrar/Criar conta removidos do login e cadastro, com seus wrappers e margens; a logo passa diretamente aos campos. Os h1 permanecem com `sr-only`, IDs e `tabIndex=-1`, mantendo nomes acessíveis dos formulários e foco ao alternar rotas. Animações, validação, botões e navegação entre login/cadastro preservados. Esta apresentação substitui os títulos centrais de 24px das entregas anteriores, mantidas como histórico. npm run check aprovado: 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build aprovado e 13/13 verificações no navegador, com revisão visual independente. Evidências: `app/mobile/output/web-auth-brand-fields/`.
++
++
++### Marco — 2026-10-15: otimização do acesso web
++
++**✅ 2026-10-15 — Otimização do login e cadastro web (100%).** Branch `refactor/web`: coordenadas do ponteiro restritas às duas camadas decorativas, com um frame pendente; SVG e rótulos estáveis evitam trabalho repetido ao digitar. Circuitos CSS/SMIL pausam após o fade de saída de 550ms e retomam do mesmo ponto; aba oculta pausa os efeitos, toque mantém o fundo visível e movimento reduzido dispensa as atualizações. Envios simultâneos bloqueados antes do próximo render, com nova tentativa liberada após erro. Layout, efeitos visíveis, campos, validações, foco e destinos preservados. Medição local em Chrome, mediana de três sequências de 150 movimentos: tempo de recálculo de estilos de 1.420ms para 145ms (cerca de 90% menor), sem garantia geral de FPS. npm run check aprovado: 348/348 testes em 32 arquivos, contraste 66/66 e lint 0 erros/9 avisos anteriores; build aprovado e navegador 18/18, com revisão visual independente. Relatório: `app/mobile/output/web-auth-performance/report.md`. Sem mudança de API, schema, dependências ou lockfiles.
+--- docs/BACKLOG.md
++++ docs/BACKLOG.md
+@@ -5,6 +5,11 @@
+ > **Entrega: 25/10/2026.**
+ 
+ ## Status
++
++**✅ 2026-10-15 — Otimização do login e cadastro web (100%).** Branch `refactor/web`: coordenadas do ponteiro restritas às duas camadas decorativas, com um frame pendente; SVG e rótulos estáveis evitam trabalho repetido ao digitar. Circuitos CSS/SMIL pausam após o fade de saída de 550ms e retomam do mesmo ponto; aba oculta pausa os efeitos, toque mantém o fundo visível e movimento reduzido dispensa as atualizações. Envios simultâneos bloqueados antes do próximo render, com nova tentativa liberada após erro. Layout, efeitos visíveis, campos, validações, foco e destinos preservados. Medição local em Chrome, mediana de três sequências de 150 movimentos: tempo de recálculo de estilos de 1.420ms para 145ms (cerca de 90% menor), sem garantia geral de FPS. npm run check aprovado: 348/348 testes em 32 arquivos, contraste 66/66 e lint 0 erros/9 avisos anteriores; build aprovado e navegador 18/18, com revisão visual independente. Relatório: `app/mobile/output/web-auth-performance/report.md`. Sem mudança de API, schema, dependências ou lockfiles.
++
++- [x] Otimizar login/cadastro web mantendo recursos e aparência, com comparação de desempenho e regressão.
++- [ ] Trabalho futuro — autenticação web: revisar resposta tardia depois de sair do formulário. Comportamento preexistente identificado na revisão: os handlers ainda podem atualizar a sessão e navegar quando o request termina após a saída; não alterado nesta otimização.
+ 
+ **✅ 2026-10-15 — Acesso web só com logo e campos (100%).** Branch `refactor/web`: títulos visuais Entrar/Criar conta removidos do login e cadastro, com seus wrappers e margens; a logo passa diretamente aos campos. Os h1 permanecem com `sr-only`, IDs e `tabIndex=-1`, mantendo nomes acessíveis dos formulários e foco ao alternar rotas. Animações, validação, botões e navegação entre login/cadastro preservados. Esta apresentação substitui os títulos centrais de 24px das entregas anteriores, mantidas como histórico. npm run check aprovado: 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build aprovado e 13/13 verificações no navegador, com revisão visual independente. Evidências: `app/mobile/output/web-auth-brand-fields/`.
+ 

@@ -21,7 +21,13 @@ STAGE = MOBILE / "output" / "web-login-centered"
 LAYOUT = "app/web/src/pages/auth/auth-layout.tsx"
 CSS = "app/web/src/pages/auth/login-page.css"
 LOGIN = "app/web/src/pages/auth/login-page.tsx"
-ALLOWED = {LAYOUT, CSS, LOGIN, "PRD_VIVO.md", "docs/BACKLOG.md"}
+REGISTER = "app/web/src/pages/auth/register-page.tsx"
+ALLOWED = {LAYOUT, CSS, LOGIN, REGISTER, "PRD_VIVO.md", "docs/BACKLOG.md"}
+ALLOWED.update({
+    'app/web/src/components/ui/interactive-label.tsx',
+    'app/web/src/pages/auth/auth-submission.test.tsx',
+    'app/web/src/pages/auth/auth-layout-motion.test.tsx',
+})
 
 
 def replace_once(content, old, new):
@@ -36,12 +42,13 @@ def stage_changes(changes):
     diffs = []
     for relative, updated in changes.items():
         target = ROOT / relative
-        original = target.read_bytes()
+        exists = target.exists()
+        original = target.read_bytes() if exists else b''
         source = original.decode("utf-8").replace("\r\n", "\n")
         newline = "\r\n" if b"\r\n" in original else "\n"
         staged = STAGE / relative.replace("/", "__")
         staged.write_bytes(updated.replace("\n", newline).encode("utf-8"))
-        manifest.append({"target": relative, "sha256": hashlib.sha256(original).hexdigest(), "staged": staged.name})
+        manifest.append({"target": relative, "sha256": hashlib.sha256(original).hexdigest() if exists else None, "staged": staged.name})
         diffs.extend(difflib.unified_diff(source.splitlines(True), updated.splitlines(True), fromfile=relative, tofile=relative))
     (STAGE / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     (STAGE / "review.diff").write_text("".join(diffs), encoding="utf-8")
@@ -147,6 +154,105 @@ def prepare_compact():
     stage_changes({LAYOUT: layout, CSS: css, LOGIN: login})
 
 
+def prepare_brand_fields():
+    changes = {}
+    for relative, title_id, label in [(LOGIN, 'login-title', 'Entrar'), (REGISTER, 'register-title', 'Criar conta')]:
+        content = (ROOT / relative).read_text(encoding='utf-8')
+        old = ('      <div className="vx-login-heading">\n'
+            f'        <h1 id="{title_id}" tabIndex={{-1}}>{label}<span className="vx-login-title-mark" aria-hidden="true">_</span></h1>\n'
+            '      </div>')
+        new = ('      {/* O título mantém o nome acessível e recebe o foco da transição. */}\n'
+            f'      <h1 id="{title_id}" className="sr-only" tabIndex={{-1}}>{label}</h1>')
+        changes[relative] = replace_once(content, old, new)
+    stage_changes(changes)
+
+
+def prepare_brand_fields_docs():
+    report = json.loads((STAGE / 'validation.json').read_text(encoding='utf-8'))
+    note = (
+        '**✅ 2026-10-15 — Acesso web só com logo e campos (100%).** Branch '
+        '`refactor/web`: títulos visuais Entrar/Criar conta removidos do login '
+        'e cadastro, com seus wrappers e margens; a logo passa diretamente aos '
+        'campos. Os h1 permanecem com `sr-only`, IDs e `tabIndex=-1`, mantendo '
+        'nomes acessíveis dos formulários e foco ao alternar rotas. Animações, '
+        'validação, botões e navegação entre login/cadastro preservados. Esta '
+        'apresentação substitui os títulos centrais de 24px das entregas '
+        'anteriores, mantidas como histórico. ' + report['checks'] +
+        ' Evidências: `app/mobile/output/web-auth-brand-fields/`.'
+    )
+    prd = (ROOT / 'PRD_VIVO.md').read_text(encoding='utf-8')
+    backlog = (ROOT / 'docs/BACKLOG.md').read_text(encoding='utf-8')
+    marker = '### Marco — 2026-10-15: acesso web só com logo e campos'
+    if marker in prd:
+        raise RuntimeError('Marco desta apresentação já registrado.')
+    task = '- [x] Deixar login e cadastro só com logo e campos, mantendo títulos acessíveis e foco das transições.\n'
+    prd = replace_once(prd, '## 1. Estado geral do projeto\n', '## 1. Estado geral do projeto\n\n' + note + '\n\n' + task)
+    prd += '\n\n' + marker + '\n\n' + note + '\n'
+    backlog = replace_once(backlog, '## Status\n', '## Status\n\n' + note + '\n\n' + task)
+    stage_changes({'PRD_VIVO.md': prd, 'docs/BACKLOG.md': backlog})
+
+
+def prepare_register():
+    register = (ROOT / REGISTER).read_text(encoding='utf-8')
+    register = replace_once(register, '        <p className="vx-login-eyebrow"><span aria-hidden="true">//</span> COMECE POR AQUI</p>\n', '')
+    register = replace_once(register, '        <p>Crie seu acesso. O próximo passo é cadastrar sua empresa.</p>\n', '')
+    layout = (ROOT / LAYOUT).read_text(encoding='utf-8')
+    layout = replace_once(layout, 'className="vx-login" onPointerMove=', 'className={pathname === "/register" ? "vx-login vx-register" : "vx-login"} onPointerMove=')
+    css = (ROOT / CSS).read_text(encoding='utf-8')
+    css = replace_once(css, '.vx-register-panel .vx-login-form { gap: 16px; }\n', '')
+    css = replace_once(css, '.vx-login-panel:not(.vx-register-panel) .vx-login-heading { margin-bottom: 16px; text-align: center; }', '.vx-login-panel .vx-login-heading { margin-bottom: 16px; text-align: center; }')
+    css = replace_once(css, '.vx-login-panel:not(.vx-register-panel) .vx-login-heading h1 { margin: 0; font-size: 1.5rem; }', '.vx-login-panel .vx-login-heading h1 { margin: 0; font-size: 1.5rem; }')
+    css = replace_once(css, '@media (hover: none) {',
+        '/* Quatro campos continuam legíveis em telas baixas, com alvos de 44px.\n'
+        '   Erros aumentam o conteúdo e permitem rolar, sem cortar o formulário. */\n'
+        '@media (max-height: 700px) {\n'
+        '  .vx-login.vx-register { padding-block: 12px; }\n'
+        '  .vx-register .vx-auth-card { gap: 8px; padding: 14px; }\n'
+        '  .vx-register-panel .vx-login-heading { margin-bottom: 8px; }\n'
+        '  .vx-register-panel .vx-login-form { gap: 8px; }\n'
+        '  .vx-login.vx-register .vx-login-field { gap: 4px; }\n'
+        '  .vx-register .vx-login-submit { margin-top: 0; }\n'
+        '  .vx-register-panel .vx-login-register { margin-top: 8px; padding-top: 0; border-top: 0; }\n'
+        '}\n\n'
+        '@media (hover: none) {')
+    stage_changes({REGISTER: register, LAYOUT: layout, CSS: css})
+
+
+def prepare_register_routes():
+    layout = (ROOT / LAYOUT).read_text(encoding='utf-8')
+    layout = replace_once(layout, '  const direction = pathname === "/register" ? 1 : -1;',
+        '  const isRegister = pathname.replace(/\\/+$/, "").toLowerCase() === "/register";\n'
+        '  const direction = isRegister ? 1 : -1;')
+    layout = replace_once(layout, 'className={pathname === "/register" ? "vx-login vx-register" : "vx-login"}', 'className={isRegister ? "vx-login vx-register" : "vx-login"}')
+    stage_changes({LAYOUT: layout})
+
+
+def prepare_register_docs():
+    report = json.loads((STAGE / 'validation.json').read_text(encoding='utf-8'))
+    note = (
+        '**✅ 2026-10-15 — Cadastro web compacto (100%).** Branch `refactor/web`: '
+        'cadastro com título centralizado de 24px e apresentação curta, seguindo '
+        'o login; logo permanece dentro do card compartilhado, sem rodapé. '
+        'Espaçamentos específicos em telas de até 700px de altura acomodam os '
+        'quatro campos e a dica de senha em 320×568, mantendo controles de 44px. '
+        'Erros podem expandir a página e permitem rolagem. Preservados fundo '
+        'interativo, cursor, decode/glitch, transição login/cadastro, foco, '
+        'movimento reduzido e validação/envio do cadastro. ' + report['checks'] +
+        ' Evidências: `app/mobile/output/web-register-centered/`. Sem mudança de '
+        'API, schema, dependências ou lockfiles nesta tarefa.'
+    )
+    prd = (ROOT / 'PRD_VIVO.md').read_text(encoding='utf-8')
+    backlog = (ROOT / 'docs/BACKLOG.md').read_text(encoding='utf-8')
+    marker = '### Marco — 2026-10-15: cadastro web compacto'
+    if marker in prd:
+        raise RuntimeError('Marco do cadastro já registrado.')
+    task = '- [x] Aplicar ao cadastro web o mesmo visual compacto do login, preservando campos, validação e animações.\n'
+    prd = replace_once(prd, '## 1. Estado geral do projeto\n', '## 1. Estado geral do projeto\n\n' + note + '\n\n' + task)
+    prd += '\n\n' + marker + '\n\n' + note + '\n'
+    backlog = replace_once(backlog, '## Status\n', '## Status\n\n' + note + '\n\n' + task)
+    stage_changes({'PRD_VIVO.md': prd, 'docs/BACKLOG.md': backlog})
+
+
 def prepare_docs():
     report = json.loads((STAGE / "validation.json").read_text(encoding="utf-8"))
     note = (
@@ -177,7 +283,8 @@ def apply():
             raise RuntimeError('Destino fora do escopo autorizado.')
         target = ROOT / item['target']
         staged = STAGE / item['staged']
-        if hashlib.sha256(target.read_bytes()).hexdigest() != item['sha256']:
+        actual = hashlib.sha256(target.read_bytes()).hexdigest() if target.exists() else None
+        if actual != item['sha256']:
             raise RuntimeError(f"Arquivo mudou desde a preparação: {item['target']}")
         if not staged.is_file() or staged.parent.resolve() != STAGE.resolve():
             raise RuntimeError('Arquivo preparado inválido.')
@@ -190,15 +297,39 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--prepare', action='store_true')
     parser.add_argument('--prepare-compact', action='store_true')
+    parser.add_argument('--prepare-register', action='store_true')
+    parser.add_argument('--prepare-register-docs', action='store_true')
+    parser.add_argument('--prepare-register-routes', action='store_true')
+    parser.add_argument('--prepare-brand-fields', action='store_true')
+    parser.add_argument('--prepare-brand-fields-docs', action='store_true')
+    parser.add_argument('--brand-fields', action='store_true')
+    parser.add_argument('--performance', action='store_true')
+    parser.add_argument('--register', action='store_true')
     parser.add_argument('--prepare-docs', action='store_true')
     parser.add_argument('--apply', action='store_true')
     args = parser.parse_args()
-    if sum([args.prepare, args.prepare_compact, args.prepare_docs, args.apply]) != 1:
+    if sum([args.prepare, args.prepare_compact, args.prepare_docs, args.prepare_register, args.prepare_register_docs, args.prepare_register_routes, args.prepare_brand_fields, args.prepare_brand_fields_docs, args.apply]) != 1:
         parser.error('Escolha exatamente um modo.')
+    if args.register or args.prepare_register or args.prepare_register_docs or args.prepare_register_routes:
+        STAGE = MOBILE / 'output' / 'web-register-centered'
+    if args.brand_fields or args.prepare_brand_fields or args.prepare_brand_fields_docs:
+        STAGE = MOBILE / 'output' / 'web-auth-brand-fields'
+    if args.performance:
+        STAGE = MOBILE / 'output' / 'web-auth-performance'
     if args.prepare:
         prepare()
     elif args.prepare_compact:
         prepare_compact()
+    elif args.prepare_register:
+        prepare_register()
+    elif args.prepare_register_docs:
+        prepare_register_docs()
+    elif args.prepare_register_routes:
+        prepare_register_routes()
+    elif args.prepare_brand_fields:
+        prepare_brand_fields()
+    elif args.prepare_brand_fields_docs:
+        prepare_brand_fields_docs()
     elif args.prepare_docs:
         prepare_docs()
     else:
