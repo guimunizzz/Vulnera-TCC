@@ -90,7 +90,15 @@ export class CompanyController {
   async update(req: Request, res: Response): Promise<Response> {
     try {
       const id = req.params.id as string;
-      const body = req.body as UpdateCompanyDTO;
+      if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+        return res.status(400).json({ error: "INVALID_BODY" });
+      }
+      const body = req.body as Record<string, unknown>;
+      // O cast de DTO não filtra JSON: relações Prisma nunca fazem parte desta operação.
+      const allowedFields = ["name", "cnpj", "planId"];
+      if (Object.keys(body).some((field) => !allowedFields.includes(field))) {
+        return res.status(400).json({ error: "INVALID_COMPANY_FIELD" });
+      }
 
       if (
         body.name !== undefined &&
@@ -98,7 +106,7 @@ export class CompanyController {
       ) {
         return res.status(400).json({ error: "INVALID_NAME" });
       }
-      if (body.cnpj !== undefined && !CNPJ_REGEX.test(body.cnpj)) {
+      if (body.cnpj !== undefined && (typeof body.cnpj !== "string" || !CNPJ_REGEX.test(body.cnpj))) {
         return res.status(400).json({ error: "INVALID_CNPJ" });
       }
       if (
@@ -108,8 +116,13 @@ export class CompanyController {
         return res.status(400).json({ error: "INVALID_PLAN_ID" });
       }
 
+      const dto: UpdateCompanyDTO = {
+        name: body.name as string | undefined,
+        cnpj: body.cnpj as string | undefined,
+        planId: body.planId as string | undefined,
+      };
       const actor = req.user!;
-      const company = await this.service.update(actor, id, body);
+      const company = await this.service.update(actor, id, dto);
       return res.status(200).json(company.toResponse());
     } catch (error: any) {
       if (error.message === "COMPANY_NOT_FOUND") {

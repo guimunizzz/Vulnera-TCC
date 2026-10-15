@@ -6,6 +6,7 @@ import { seedUser } from "../fixtures/users.fixture";
 import { seedPlan } from "../fixtures/plans.fixture";
 import { seedCompany } from "../fixtures/companies.fixture";
 import { loginAs } from "../fixtures/auth.fixture";
+import { CompanyRepository } from "../../src/repositories/company.repository";
 
 const PASSWORD = "senha12345";
 
@@ -188,5 +189,127 @@ describe("Company (me/list/getById/create/update/delete)", () => {
       .delete(`/api/companies/${company.id}`)
       .set("Authorization", `Bearer ${adminToken}`);
     expect(deleteAsAdmin.status).toBe(204);
+  });
+
+  // QA-01 / TEN-COMPANY-DTO — um cast TypeScript não pode liberar escrita Prisma aninhada.
+  it("PUT Company rejeita escrita aninhada de usuário sem alterar empresa ou identidade", async () => {
+    const plan = await seedPlan({ name: "BASIC" });
+    const company = await seedCompany({ name: "Empresa original", planId: plan.id });
+    const owner = await seedUser({
+      name: "Responsável original", email: "qa-company-owner@vulnera.local", password: PASSWORD,
+      role: "CLIENT", companyId: company.id, companyRole: "OWNER",
+    });
+    const token = await loginAs(app, owner.email, PASSWORD);
+    const response = await request(app)
+      .put(`/api/companies/${company.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "Empresa adulterada",
+        users: { update: { where: { id: owner.id }, data: { name: "Nome via relação indevida" } } },
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("INVALID_COMPANY_FIELD");
+    expect(await prisma.company.findUnique({ where: { id: company.id } })).toEqual(company);
+    expect(await prisma.user.findUnique({ where: { id: owner.id } })).toEqual(owner);
+  });
+
+  it("PUT Company recusa relações alternativas e campos gerenciados pelo sistema", async () => {
+    const plan = await seedPlan({ name: "BASIC" });
+    const company = await seedCompany({ name: "Empresa QA", planId: plan.id });
+    const owner = await seedUser({
+      name: "Responsável QA", email: "qa-company-fields@vulnera.local", password: PASSWORD,
+      role: "CLIENT", companyId: company.id, companyRole: "OWNER",
+    });
+    const token = await loginAs(app, owner.email, PASSWORD);
+    const payloads = [
+      { users: { updateMany: [{ where: { id: owner.id }, data: { role: "ADMIN" } }] } },
+      { users: { connect: [{ id: owner.id }] } },
+      { subscriptions: { create: { planId: plan.id } } },
+      { plan: { connect: { id: plan.id } } },
+      { id: "company-id-adulterado" },
+      { createdAt: "2000-01-01T00:00:00.000Z" },
+      JSON.parse('{"__proto__":{"users":{"deleteMany":{}}}}'),
+    ];
+
+    for (const payload of payloads) {
+      const response = await request(app)
+        .put(`/api/companies/${company.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        // JSON cru preserva __proto__ como chave própria até o parser HTTP.
+        .set("Content-Type", "application/json")
+        .send(JSON.stringify(payload));
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe("INVALID_COMPANY_FIELD");
+    }
+    expect(await prisma.company.findUnique({ where: { id: company.id } })).toEqual(company);
+    expect(await prisma.user.findUnique({ where: { id: owner.id } })).toEqual(owner);
+    expect(await prisma.subscription.count({ where: { companyId: company.id } })).toBe(0);
+  });
+
+  it("PUT Company valida escalares sem aceitar operações Prisma ou coerção de CNPJ", async () => {
+    const plan = await seedPlan({ name: "BASIC" });
+    const company = await seedCompany({ name: "Empresa QA", planId: plan.id });
+    const owner = await seedUser({
+      name: "Responsável QA", email: "qa-company-types@vulnera.local", password: PASSWORD,
+      role: "CLIENT", companyId: company.id, companyRole: "OWNER",
+    });
+    const token = await loginAs(app, owner.email, PASSWORD);
+    const cases = [
+      { body: { name: { set: "Nome indevido" } }, error: "INVALID_NAME" },
+      { body: { planId: { set: plan.id } }, error: "INVALID_PLAN_ID" },
+      { body: { cnpj: { set: "12345678000199" } }, error: "INVALID_CNPJ" },
+      { body: { cnpj: ["12345678000199"] }, error: "INVALID_CNPJ" },
+      { body: { cnpj: 12345678000199 }, error: "INVALID_CNPJ" },
+      { body: [{ name: "Nome em array" }], error: "INVALID_BODY" },
+    ];
+    for (const scenario of cases) {
+      const response = await request(app)
+        .put(`/api/companies/${company.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send(scenario.body);
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe(scenario.error);
+    }
+    expect(await prisma.company.findUnique({ where: { id: company.id } })).toEqual(company);
+  });
+
+  it("PUT Company preserva atualização legítima parcial e completa dos três campos", async () => {
+    const plan = await seedPlan({ name: "BASIC" });
+    const nextPlan = await seedPlan({ name: "PRO" });
+    const company = await seedCompany({ name: "Empresa QA", cnpj: "12345678000199", planId: plan.id });
+    const owner = await seedUser({
+      name: "Responsável QA", email: "qa-company-control@vulnera.local", password: PASSWORD,
+      role: "CLIENT", companyId: company.id, companyRole: "OWNER",
+    });
+    const token = await loginAs(app, owner.email, PASSWORD);
+    const partial = await request(app).put(`/api/companies/${company.id}`)
+      .set("Authorization", `Bearer ${token}`).send({ name: "Empresa renomeada" });
+    expect(partial.status).toBe(200);
+    expect(partial.body).toMatchObject({ name: "Empresa renomeada", cnpj: company.cnpj, planId: plan.id });
+
+    const complete = await request(app).put(`/api/companies/${company.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Empresa atualizada", cnpj: "98.765.432/0001-00", planId: nextPlan.id });
+    expect(complete.status).toBe(200);
+    expect(complete.body).toMatchObject({ name: "Empresa atualizada", cnpj: "98.765.432/0001-00", planId: nextPlan.id });
+    expect(await prisma.user.findUnique({ where: { id: owner.id } })).toEqual(owner);
+  });
+
+  it("CompanyRepository mantém relações e identidade fora do contrato mesmo em chamada interna", async () => {
+    const plan = await seedPlan({ name: "BASIC" });
+    const company = await seedCompany({ name: "Empresa QA", planId: plan.id });
+    const owner = await seedUser({
+      name: "Responsável QA", email: "qa-company-repository@vulnera.local", password: PASSWORD,
+      role: "CLIENT", companyId: company.id, companyRole: "OWNER",
+    });
+    // Uma futura chamada interna não pode voltar a expor o input genérico do Prisma.
+    const contaminated = {
+      name: "Atualização permitida", id: "id-fora-do-contrato", createdAt: new Date(0),
+      users: { updateMany: { where: { id: owner.id }, data: { name: "Escrita aninhada indevida" } } },
+    };
+    const updated = await new CompanyRepository(prisma).update(company.id, contaminated);
+    expect(updated).toMatchObject({ id: company.id, name: "Atualização permitida", createdAt: company.createdAt });
+    expect(await prisma.user.findUnique({ where: { id: owner.id } })).toEqual(owner);
   });
 });
