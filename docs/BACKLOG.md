@@ -6,6 +6,29 @@
 
 ## Status
 
+✅ **2026-10-15 — Correções seletivas concluídas (4/4 entregas autorizadas).** Branch `codex/fix-qa-company-onboarding` para PR em `dev`: QA-01/02/03 corrigidos; QA-25 recebeu somente “em breve”, conforme Rafael. API 648/648 em 43 suítes e build; Web check 357/357 em 32 suítes, contraste 66/66, lint 0 erros/9 avisos anteriores e build. Focais API29/29 e Web14/14; navegador 10/10 com falhas controladas, retomada, OWNER sem relogin e 375 px. Demais achados não corrigidos. Check global API mantém dois imports não usados antigos. Sem schema/migration/dependências/lockfile. [Estado e validação](QA-APRESENTACAO-2026-10-15.md#atualização--correções-seletivas-autorizadas).
+
+✅ **2026-10-15 — QA pré-apresentação (100% do diagnóstico; correções 0/25).** API 643/643 em 43 suítes; Web 345/346 em 31 (timeout APP-CTX-01 passou isolado em 1,753 s), onze caracterizações dos bugs, contraste 66/66 e builds aprovados. HTTP 192 verificações (177 esperadas/13 inesperadas/2 não avaliadas), smoke 10/10; navegador 80 capturas iniciais em 19 caminhos e complementos por quatro perfis, desktop/mobile/tema/teclado/downloads. Lint API mantém dois imports antigos; check integral Web teve timeout. [Relatório e evidências](QA-APRESENTACAO-2026-10-15.md). Sem correções de produção; novos registros QA mantidos, sem editar demo existente ou excluir dados.
+
+- [x] **QA-APRES-EXEC:** executar suítes, exploração HTTP/UI, inspeção de artefatos e registrar resultados/limites. Concluído em 2026-10-15.
+- [x] **QA-01 (P1):** filtrar DTO do update de Company em runtime e impedir relações/campos fora do contrato; regressões de `users.update`, relações alternativas, campos de sistema, tipos e chamada interna do Repository aprovadas. Concluído em 2026-10-15.
+- [x] **QA-02/03 (P1):** sincronizar perfil OWNER e retomar perfil/assinatura sem recriar Company, inclusive após reentrada e resposta perdida de criação. Concluído em 2026-10-15.
+- [ ] **QA-04 (P2):** validar lote inteiro de maturidade e garantir gravação/recalculo atômicos; 400 não pode persistir parte dos scores.
+- [ ] **QA-05 (P2):** persistir limpeza explícita de Impacto/Recomendação do finding e sinalizar sucesso.
+- [ ] **QA-06 (P2):** quebrar/limitar títulos no Top 5 do PDF Executivo e Sumário do Técnico; evitar corte e colisão com metadados.
+- [ ] **QA-07/18 (P2/P3):** tornar histórico de relatórios legível em 375 px e resolver nome do autor para CLIENT/PENTESTER.
+- [ ] **QA-08 (P2):** compatibilizar bucket de relatórios com histórico+dados+metadata; tratar 429 de gravação sem anunciar falha total após download realizado.
+- [ ] **QA-09/10/11/12 (P2):** mostrar falha/recuperação no dashboard, aprovações, maturidade e editor de finding; não representar erro como zero/vazio.
+- [ ] **QA-13/14 (P2):** permitir upload por teclado e nomear seletor de pentester para tecnologia assistiva.
+- [ ] **QA-15/16/17 (P2):** alinhar links/ações ao papel e à empresa: CLIENT→remediação, breadcrumb PENTESTER→aplicação e duplicação de playbook sem Company.
+- [ ] **QA-19 (P2):** preservar sessão em falha transitória de rede no refresh; diferenciar refresh recusado.
+- [ ] **QA-20/21 (P2):** validar nome/email de perfil e impedir nome Application composto apenas por espaços.
+- [ ] **QA-22/23/24 (P3):** validar tipos de description/login e paginação inteira finita antes do Prisma; responder 400 em vez de 500.
+- [x] **QA-25 (P2):** marcar “Sugestões por IA (em breve)” na landing, conforme solicitação de Rafael; funcionalidade não implementada. Concluído em 2026-10-15.
+- [ ] **ONBOARDING-IDEMPOTENCIA (futuro):** deduplicar pedido de assinatura quando o servidor já persistiu PENDING mas a resposta se perdeu; CLIENT não possui consulta de PENDING. O retry de Company/perfil está corrigido, sem alterar o contrato comercial nesta task.
+
+Os agrupamentos acima representam 25 causas do relatório, não 25 correções prontas. Mobile nativo, push real, exclusões, k6 e DAST real não foram refeitos nesta rodada. Registros/busca fixada QA aparecem no ADMIN e alteram métricas globais; eventual limpeza requer autorização específica e não foi feita.
+
 ✅ **2026-10-09 — Spider DAST e README (100%; 4/4).** Continuação na mesma branch e PR #58. Spider tradicional real, perfil/URLs/limites por execução e PDF sem atribuição retroativa. Fixture: 9 URLs, 14 findings, 26,641 s; 10 GETs sem query/POST/ações sensíveis/outra origem. API focal 104/104 e full final 642/642, web 338/338, contraste 66/66, builds aprovados; lint API global mantém os dois imports antigos. README com div/style, table/tr/th/td e três prints reais. ADR-046; [validação](DAST-SPIDER-VALIDACAO-2026-10-09.md).
 
 - [x] **DAST-SPIDER-01:** iniciar/acompanhar o Spider tradicional com contexto e limites, descoberta robots/sitemap/recursos e queries excluídas antes do tráfego.

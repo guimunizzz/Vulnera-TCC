@@ -17,6 +17,7 @@ interface AuthState {
   user: User | null;
   setAuth: (auth: AuthResponse) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
+  updateUser: (user: User, sessionUser: User) => boolean;
   clearAuth: () => void;
 }
 
@@ -33,6 +34,17 @@ export const useAuthStore = create<AuthState>()(
         set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user });
       },
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+      updateUser: (user, sessionUser) => {
+        // A referência identifica a sessão que iniciou a leitura: novo login
+        // (até da mesma pessoa) invalida uma resposta antiga. Rotação de token
+        // preserva a referência e os tokens atuais nunca são sobrescritos.
+        if (get().user !== sessionUser || user.id !== sessionUser.id) return false;
+        if (user.companyId !== sessionUser.companyId || user.companyRole !== sessionUser.companyRole || user.role !== sessionUser.role) {
+          queryClient.clear();
+        }
+        set({ user });
+        return true;
+      },
       clearAuth: () => {
         queryClient.clear();
         set({ accessToken: null, refreshToken: null, user: null });

@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { plansApi } from "../lib/api/plans.api";
 import { companiesApi } from "../lib/api/companies.api";
 import { subscriptionsApi } from "../lib/api/subscriptions.api";
-import { useApiError } from "../hooks/use-api-error";
+import { usersApi } from "../lib/api/users.api";
+import { getApiErrorCode, useApiError } from "../hooks/use-api-error";
+import { useAuthStore } from "../store/auth.store";
+import type { Company } from "../types/company.types";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/card";
@@ -17,10 +20,19 @@ import "../components/layout/operations-backdrop.css";
 
 const STEPS = ["Empresa", "Plano", "Confirmação"];
 
+async function findExistingCompany(): Promise<Company | null> {
+  try {
+    return await companiesApi.me();
+  } catch (err) {
+    if (getApiErrorCode(err) === "USER_HAS_NO_COMPANY") return null;
+    throw err;
+  }
+}
+
 /**
  * Wizard de onboarding pós-cadastro: cria a Company (o usuário vira dono) e
- * já dispara o request de Subscription pro plano escolhido. Só useState —
- * 3 passos não justificam trazer uma lib de wizard.
+ * solicita a Subscription após atualizar o perfil. Retoma a empresa que já
+ * foi salva para que uma falha parcial não reinicie o cadastro (QA-02/03).
  */
 export function OnboardingPage() {
   const { troca } = useMotion();
@@ -31,9 +43,53 @@ export function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [company, setCompany] = useState<Company | null>(null);
+  const [isCheckingCompany, setIsCheckingCompany] = useState(true);
+  const [isCompanyReady, setIsCompanyReady] = useState(false);
+  const sessionUser = useRef(useAuthStore.getState().user);
+  const operationVersion = useRef(0);
 
   const navigate = useNavigate();
   const getErrorMessage = useApiError();
+
+  const isCurrentSession = useCallback(() => sessionUser.current !== null && useAuthStore.getState().user === sessionUser.current, []);
+
+  const syncProfile = useCallback(async (companyId: string, isActive: () => boolean): Promise<boolean> => {
+    const profile = await usersApi.me();
+    if (!isActive() || !sessionUser.current) return false;
+    if (profile.companyId !== companyId) throw new Error("USER_COMPANY_NOT_READY");
+    if (!useAuthStore.getState().updateUser(profile, sessionUser.current)) return false;
+    sessionUser.current = profile;
+    return true;
+  }, []);
+
+  const restoreCompany = useCallback(async (): Promise<void> => {
+    if (!isCurrentSession()) return;
+    const version = ++operationVersion.current;
+    const isActive = () => version === operationVersion.current && isCurrentSession();
+    setIsCheckingCompany(true);
+    setError(null);
+    try {
+      const existing = await findExistingCompany();
+      if (!isActive()) return;
+      setCompany(existing);
+      if (existing) {
+        setPlanId(existing.planId);
+        setStep(2);
+        if (!await syncProfile(existing.id, isActive)) return;
+      }
+      setIsCompanyReady(true);
+    } catch (err) {
+      if (isActive()) setError(getErrorMessage(err));
+    } finally {
+      if (isActive()) setIsCheckingCompany(false);
+    }
+  }, [getErrorMessage, isCurrentSession, syncProfile]);
+
+  useEffect(() => {
+    void restoreCompany();
+    return () => { operationVersion.current += 1; };
+  }, [restoreCompany]);
 
   const { data: plans } = useQuery({ queryKey: ["plans"], queryFn: plansApi.list });
   const selectedPlan = plans?.find((p) => p.id === planId);
@@ -57,17 +113,47 @@ export function OnboardingPage() {
   }
 
   async function handleSubmit(): Promise<void> {
-    if (!planId) return;
+    if (!planId || isSubmitting || !isCompanyReady || !isCurrentSession()) return;
+    const version = operationVersion.current;
+    const isActive = () => version === operationVersion.current && isCurrentSession();
     setError(null);
     setIsSubmitting(true);
     try {
-      await companiesApi.create({ name, cnpj: cnpj.trim() || undefined, planId });
+      let savedCompany = company;
+      if (!savedCompany) {
+        // Outra aba ou uma resposta perdida pode já ter concluído o POST.
+        // Em caso de dúvida, a próxima tentativa sempre consulta antes de criar.
+        savedCompany = await findExistingCompany();
+        if (!isActive()) return;
+        if (savedCompany) {
+          setCompany(savedCompany);
+          await syncProfile(savedCompany.id, isActive);
+          if (isActive()) setError("Sua empresa já está cadastrada. Confira os dados e confirme a solicitação de assinatura.");
+          return;
+        }
+        try {
+          savedCompany = await companiesApi.create({ name, cnpj: cnpj.trim() || undefined, planId });
+        } catch (createError) {
+          if (!isActive()) return;
+          savedCompany = await findExistingCompany();
+          if (!isActive()) return;
+          if (!savedCompany) throw createError;
+          setCompany(savedCompany);
+          await syncProfile(savedCompany.id, isActive);
+          if (isActive()) setError("Sua empresa já está cadastrada. Confira os dados e confirme a solicitação de assinatura.");
+          return;
+        }
+        if (!isActive()) return;
+        setCompany(savedCompany);
+      }
+      if (!await syncProfile(savedCompany.id, isActive)) return;
       await subscriptionsApi.request({ planId });
+      if (!isActive()) return;
       setDone(true);
     } catch (err) {
-      setError(getErrorMessage(err));
+      if (isActive()) setError(getErrorMessage(err));
     } finally {
-      setIsSubmitting(false);
+      if (isActive()) setIsSubmitting(false);
     }
   }
 
@@ -106,9 +192,17 @@ export function OnboardingPage() {
           ))}
         </div>
 
-        {error && <Alert className="mb-4">{error}</Alert>}
+        {error && <Alert tom="perigo" className="mb-4">{error}</Alert>}
 
-        <AnimatePresence mode="wait" initial={false}>
+        {!isCompanyReady ? (
+          <div className="flex flex-col gap-4">
+            {isCheckingCompany ? (
+              <p role="status" className="text-sm text-fg-muted">Verificando seu cadastro...</p>
+            ) : (
+              <Button variant="secundario" onClick={() => void restoreCompany()}>Tentar novamente</Button>
+            )}
+          </div>
+        ) : <AnimatePresence mode="wait" initial={false}>
           <motion.div key={step} variants={troca} initial="inicial" animate="visivel" exit="saindo">
 
         {step === 1 && (
@@ -149,9 +243,9 @@ export function OnboardingPage() {
               </button>
             ))}
             <div className="flex gap-2">
-              <Button variant="secundario" onClick={() => setStep(1)}>
+              {!company && <Button variant="secundario" onClick={() => setStep(1)}>
                 Voltar
-              </Button>
+              </Button>}
               <Button onClick={goToConfirmation} className="flex-1">
                 Continuar
               </Button>
@@ -163,11 +257,11 @@ export function OnboardingPage() {
           <div className="flex flex-col gap-4">
             <div className="rounded-control border border-subtle p-4 text-sm">
               <p>
-                <span className="text-fg-muted">Empresa:</span> {name}
+                <span className="text-fg-muted">Empresa:</span> {company?.name ?? name}
               </p>
-              {cnpj && (
+              {(company ? company.cnpj : cnpj) && (
                 <p>
-                  <span className="text-fg-muted">CNPJ:</span> {cnpj}
+                  <span className="text-fg-muted">CNPJ:</span> {company ? company.cnpj : cnpj}
                 </p>
               )}
               <p>
@@ -178,14 +272,14 @@ export function OnboardingPage() {
               <Button variant="secundario" onClick={() => setStep(2)} disabled={isSubmitting}>
                 Voltar
               </Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">
-                {isSubmitting ? "Enviando..." : "Confirmar"}
+              <Button onClick={handleSubmit} carregando={isSubmitting} className="flex-1">
+                Confirmar
               </Button>
             </div>
           </div>
         )}
           </motion.div>
-        </AnimatePresence>
+        </AnimatePresence>}
       </Card>
     </div>
   );
