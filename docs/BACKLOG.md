@@ -6,6 +6,8 @@
 
 ## Status
 
+✅ **2026-10-15 — PR de correções aberto para dev.** [PR #60](https://github.com/guimunizzz/Vulnera-TCC/pull/60), de `codex/fix-qa-company-onboarding`, implementação em `c4996e7`. Push e abertura concluídos; revisão/checks remotos e merge pendentes. Escopo continua QA-01/02/03 e texto “em breve” do QA-25.
+
 ✅ **2026-10-15 — Correções seletivas concluídas (4/4 entregas autorizadas).** Branch `codex/fix-qa-company-onboarding` para PR em `dev`: QA-01/02/03 corrigidos; QA-25 recebeu somente “em breve”, conforme Rafael. API 648/648 em 43 suítes e build; Web check 357/357 em 32 suítes, contraste 66/66, lint 0 erros/9 avisos anteriores e build. Focais API29/29 e Web14/14; navegador 10/10 com falhas controladas, retomada, OWNER sem relogin e 375 px. Demais achados não corrigidos. Check global API mantém dois imports não usados antigos. Sem schema/migration/dependências/lockfile. [Estado e validação](QA-APRESENTACAO-2026-10-15.md#atualização--correções-seletivas-autorizadas).
 
 ✅ **2026-10-15 — QA pré-apresentação (100% do diagnóstico; correções 0/25).** API 643/643 em 43 suítes; Web 345/346 em 31 (timeout APP-CTX-01 passou isolado em 1,753 s), onze caracterizações dos bugs, contraste 66/66 e builds aprovados. HTTP 192 verificações (177 esperadas/13 inesperadas/2 não avaliadas), smoke 10/10; navegador 80 capturas iniciais em 19 caminhos e complementos por quatro perfis, desktop/mobile/tema/teclado/downloads. Lint API mantém dois imports antigos; check integral Web teve timeout. [Relatório e evidências](QA-APRESENTACAO-2026-10-15.md). Sem correções de produção; novos registros QA mantidos, sem editar demo existente ou excluir dados.

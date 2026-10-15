@@ -7,6 +7,8 @@ Base: branch `dev`, commit `e9df684`. Stack real `http://localhost:8086`, API `h
 
 ## Atualização — correções seletivas autorizadas
 
+Publicado no [PR #60](https://github.com/guimunizzz/Vulnera-TCC/pull/60), de `codex/fix-qa-company-onboarding` para `dev`; commit de implementação `c4996e7`. Revisão remota/merge pendentes, sem deploy nesta etapa.
+
 **15/10/2026, branch `codex/fix-qa-company-onboarding`, destino do PR `dev`: QA-01, QA-02 e QA-03 corrigidos; QA-25 ajustado para “Sugestões por IA (em breve)”.** As seções seguintes preservam a descoberta original. Os outros 21 achados não foram corrigidos nesta alteração.
 
 | Item | Correção e comprovação |
