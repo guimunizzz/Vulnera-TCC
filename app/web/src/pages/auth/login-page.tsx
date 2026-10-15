@@ -40,9 +40,7 @@ export function LoginPage() {
       <span className="vx-login-panel-tab" aria-hidden="true">VULNERA / ACESSO</span>
       <span className="vx-login-panel-corner" aria-hidden="true" />
       <div className="vx-login-heading">
-        <p className="vx-login-eyebrow"><span aria-hidden="true">//</span> BEM-VINDO DE VOLTA</p>
         <h1 id="login-title" tabIndex={-1}>Entrar<span className="vx-login-title-mark" aria-hidden="true">_</span></h1>
-        <p>Acesse sua conta e continue suas análises.</p>
       </div>
 
       <form onSubmit={enviar} className="vx-login-form" aria-labelledby="login-title">
@@ -100,7 +98,7 @@ export function LoginPage() {
       </form>
 
       <p className="vx-login-register">
-        Primeira vez por aqui? <Link to="/register"><InteractiveLabel effect="glitch">Criar uma conta</InteractiveLabel> <ArrowRight size={14} aria-hidden="true" /></Link>
+        Não tem conta? <Link to="/register"><InteractiveLabel effect="glitch">Criar uma conta</InteractiveLabel> <ArrowRight size={14} aria-hidden="true" /></Link>
       </p>
     </section>
   );

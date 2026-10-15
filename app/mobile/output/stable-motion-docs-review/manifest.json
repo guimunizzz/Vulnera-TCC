@@ -1,0 +1,32 @@
+[
+  {
+    "path": "PRD_VIVO.md",
+    "copy": "PRD_VIVO.md",
+    "sha256": "bdbe0eae431a59a00b88a7c17742e71c1216132775d156c173ae8ada065d7112"
+  },
+  {
+    "path": "docs/BACKLOG.md",
+    "copy": "BACKLOG.md",
+    "sha256": "9d70dca7d0fdd3d03b636f8181dd56f4ca2a6e53c2f49dcf83d5a0b72f0baca0"
+  },
+  {
+    "path": "docs/Vulnera/04-Arquitetura/Mobile Expo.md",
+    "copy": "Mobile Expo.md",
+    "sha256": "0e0cff15586d843f89e4e56a2ca7caf28cfd7093150bb45303fe35600728bd4c"
+  },
+  {
+    "path": "docs/Vulnera/03-Produto/Plataformas/Mobile Cliente.md",
+    "copy": "Mobile Cliente.md",
+    "sha256": "e1215ed4e9c9c3cd98932348eae34aa030833a57e78d4c5d20edcfe51f5d58f3"
+  },
+  {
+    "path": "docs/Vulnera/07-Decisoes/ADR-046 - Transicoes curtas no stack de projetos mobile.md",
+    "copy": "ADR-046.md",
+    "sha256": "72521d82d4d5e43768ef965153510555fed9386ea99bf918cb0311823433e5f8"
+  },
+  {
+    "path": "docs/Vulnera/07-Decisoes/ADR-047 - Navegacao nativa e layout estavel no mobile.md",
+    "copy": "ADR-047.md",
+    "sha256": null
+  }
+]

@@ -18,6 +18,8 @@ import { COLORS, FONT_FAMILY } from "../../../../src/theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../../../../src/theme/workspace";
 import { displayDate } from "../../../../src/lib/display";
 import { MotionReveal, useWorkspaceScroll } from "../../../../src/components/workspace-motion";
+import { WorkspaceSkeleton } from "../../../../src/components/workspace-skeleton";
+import { WorkspaceDisclosure } from "../../../../src/components/workspace-disclosure";
 
 const LEVELS: Record<string, string> = { BASIC: "Básico", INTERMEDIATE: "Intermediário", ADVANCED: "Avançado" };
 const STAGES = [{ status: "PENDING", label: "Solicitado" }, { status: "IN_PROGRESS", label: "Em análise" }, { status: "IN_REVIEW", label: "Revisão" }, { status: "COMPLETED", label: "Concluído" }];
@@ -40,16 +42,16 @@ export default function ProjectDetailScreen() {
   const firstPage = findingsQuery.data?.pages[0];
   const refresh = () => { void projectQuery.refetch(); void findingsQuery.refetch(); };
   if (!projectQuery.data) return <WorkspaceScreen><PageHeader label="PROJETO" back />
-    {projectQuery.isPending ? <DataState loading title="Abrindo projeto" /> : <DataState error title="Projeto indisponível" message={errorMessage(projectQuery.error)} onRetry={() => { void projectQuery.refetch(); }} />}
+    {projectQuery.isPending ? <WorkspaceSkeleton kind="project" label="Abrindo projeto" /> : <DataState error title="Projeto indisponível" message={errorMessage(projectQuery.error)} onRetry={() => { void projectQuery.refetch(); }} />}
   </WorkspaceScreen>;
   const project = projectQuery.data;
   const stage = STAGES.findIndex((item) => item.status === project.status);
-  const header = <MotionReveal style={styles.header}>
+  const header = <View style={styles.header}>
     <PageHeader label="VISÃO DO PROJETO" back />
-    <View style={{ gap: 12 }}><View style={ui.spread}><Text style={ui.eyebrow}>ANÁLISE / {project.analysisType}</Text><StatusBadge status={project.status} /></View>
-      <Text accessibilityRole="header" style={ui.title}>{project.name}</Text><Text style={ui.muted}>Acompanhe cada etapa da sua análise de segurança.</Text></View>
+    <MotionReveal distance={8} style={{ gap: 12 }}><View style={ui.spread}><Text style={ui.eyebrow}>ANÁLISE / {project.analysisType}</Text><StatusBadge status={project.status} /></View>
+      <Text accessibilityRole="header" style={ui.title}>{project.name}</Text><Text style={ui.muted}>Acompanhe cada etapa da sua análise de segurança.</Text></MotionReveal>
     {projectQuery.isError && <DataState error title="Não foi possível atualizar o projeto" message={errorMessage(projectQuery.error)} onRetry={() => { void projectQuery.refetch(); }} />}
-    <GlassSurface>
+    <MotionReveal delay={40} distance={8}><GlassSurface>
       <Text style={ui.eyebrow}>JORNADA DA ANÁLISE</Text>
       <View style={styles.timeline}>{STAGES.map((item, index) => <View key={item.status} style={styles.stage}>
         <View style={styles.stageLine}>{index > 0 && <View style={[styles.connector, index <= stage && styles.connectorDone]} />}
@@ -58,27 +60,26 @@ export default function ProjectDetailScreen() {
         <Text style={[styles.stageLabel, index === stage && { color: project.status === "COMPLETED" ? COLORS.successInk : COLORS.severity.lowInk }]}>{item.label}</Text>
       </View>)}</View>
       <View style={ui.divider} /><View style={ui.spread}><Text style={ui.muted}>Solicitado em</Text><Text style={ui.muted}>{displayDate(project.requestedAt)}</Text></View>
-    </GlassSurface>
-    <GlassSurface>
-      <Text style={ui.eyebrow}>SOBRE A ANÁLISE</Text>
+    </GlassSurface></MotionReveal>
+    <MotionReveal delay={80} distance={8}><WorkspaceDisclosure title="SOBRE A ANÁLISE">
       <View style={styles.detailsRow}><View style={ui.grow}><DetailField label="NÍVEL" value={LEVELS[project.analysisLevel] ?? project.analysisLevel} /></View><View style={ui.grow}><DetailField label="REMEDIAÇÃO" value={project.hasRemediation ? "Incluída" : "Não incluída"} /></View></View>
       {!!project.description && <DetailField label="DESCRIÇÃO" value={project.description} />}
       {!!project.scopeIn && <DetailField label="DENTRO DO ESCOPO" value={project.scopeIn} />}
       {!!project.scopeOut && <DetailField label="FORA DO ESCOPO" value={project.scopeOut} />}
       {project.startedAt && <DetailField label="INÍCIO DA ANÁLISE" value={displayDate(project.startedAt)} />}
       {project.closedAt && <DetailField label="ENCERRAMENTO" value={displayDate(project.closedAt)} />}
-    </GlassSurface>
-    <View style={{ gap: 16 }}><SectionHeading title="Vulnerabilidades" meta={firstPage ? `${firstPage.pagination.total} no total` : undefined} />
+    </WorkspaceDisclosure></MotionReveal>
+    <MotionReveal delay={120} distance={8} style={{ gap: 16 }}><SectionHeading title="Vulnerabilidades" meta={firstPage ? `${firstPage.pagination.total} no total` : undefined} />
       <GlassSurface style={styles.severities}>{SEVERITIES.map((item) => <View key={item.key} style={styles.severity}>
         <View style={[styles.severityDot, { backgroundColor: item.color }]} /><Text style={[styles.severityCount, { color: item.color }]}>{firstPage ? firstPage.facets.severity[item.key] ?? 0 : "—"}</Text><Text style={styles.severityLabel}>{item.label}</Text>
       </View>)}</GlassSurface>
-    </View>
-  </MotionReveal>;
+    </MotionReveal>
+  </View>;
   return <WorkspaceScreen scroll={false} scrollY={scroll.scrollY}><Animated.FlatList onScroll={scroll.onScroll} scrollEventThrottle={16} data={findings} keyExtractor={(finding) => finding.id}
     showsVerticalScrollIndicator={false} contentContainerStyle={[styles.list, { paddingBottom: bottom + 16 }]}
     ListHeaderComponent={header} refreshing={projectQuery.isRefetching || findingsQuery.isRefetching} onRefresh={refresh}
-    renderItem={({ item, index }) => <MotionReveal delay={Math.min(index, 3) * 40}><FindingRow finding={item} onPress={() => router.push(`/(tabs)/home/finding/${item.id}`)} /></MotionReveal>}
-    ListEmptyComponent={findingsQuery.isPending ? <DataState loading title="Buscando vulnerabilidades" /> : findingsQuery.isError ? <DataState error title="Vulnerabilidades indisponíveis" message={errorMessage(findingsQuery.error)} onRetry={() => { void findingsQuery.refetch(); }} /> : <DataState title="Nenhuma vulnerabilidade registrada" message="Os achados da análise aparecerão aqui quando forem disponibilizados." />}
+    renderItem={({ item, index }) => <MotionReveal animate={index < 4} delay={Math.min(index, 2) * 30} distance={4}><FindingRow finding={item} onPress={() => router.push(`/(tabs)/home/finding/${item.id}`)} /></MotionReveal>}
+    ListEmptyComponent={findingsQuery.isPending ? <WorkspaceSkeleton kind="findings" label="Buscando vulnerabilidades" /> : findingsQuery.isError ? <DataState error title="Vulnerabilidades indisponíveis" message={errorMessage(findingsQuery.error)} onRetry={() => { void findingsQuery.refetch(); }} /> : <DataState title="Nenhuma vulnerabilidade registrada" message="Os achados da análise aparecerão aqui quando forem disponibilizados." />}
     ListFooterComponent={findings.length ? <View style={styles.footer}>
       {findingsQuery.isError && <DataState error title={findingsQuery.isFetchNextPageError ? "Não foi possível carregar mais" : "Não foi possível atualizar"} message={errorMessage(findingsQuery.error)} onRetry={() => { if (findingsQuery.isFetchNextPageError) void findingsQuery.fetchNextPage(); else void findingsQuery.refetch(); }} />}
       {findingsQuery.hasNextPage && !findingsQuery.isFetchNextPageError && <ActionButton icon="add-outline" label={findingsQuery.isFetchingNextPage ? "Carregando..." : "Carregar mais vulnerabilidades"} disabled={findingsQuery.isFetching} onPress={() => { void findingsQuery.fetchNextPage(); }} />}

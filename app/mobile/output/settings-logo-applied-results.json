@@ -1,0 +1,38 @@
+{
+  "measurements": [
+    {
+      "width": 320,
+      "brand": {
+        "x": 20,
+        "y": 15,
+        "width": 113.609375,
+        "height": 34
+      },
+      "title": {
+        "x": 145.609375,
+        "y": 23,
+        "width": 154.390625,
+        "height": 18
+      }
+    },
+    {
+      "width": 390,
+      "brand": {
+        "x": 20,
+        "y": 15,
+        "width": 113.609375,
+        "height": 34
+      },
+      "title": {
+        "x": 145.609375,
+        "y": 23,
+        "width": 224.390625,
+        "height": 18
+      }
+    }
+  ],
+  "homeBrand": true,
+  "projectBack": true,
+  "errors": [],
+  "api": "fixtures somente no navegador"
+}

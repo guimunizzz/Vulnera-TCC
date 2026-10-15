@@ -14,7 +14,7 @@ import { FONT_FAMILY } from "../theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../theme/workspace";
 import { useTabBarClearance } from "../hooks/use-tab-bar-clearance";
 import { haptics } from "../lib/haptics";
-import { MotionReveal, SoftPressable, SOFT_MOTION, useWorkspaceReducedMotion, useWorkspaceScroll, WorkspaceAtmosphere } from "./workspace-motion";
+import { WorkspaceContentMotionProvider, SoftPressable, SOFT_MOTION, useWorkspaceReducedMotion, useWorkspaceScroll, WorkspaceAtmosphere } from "./workspace-motion";
 import { ScreenBlurTargetContext, useActiveWorkspaceBlur, useScreenBlurTarget } from "./workspace-blur";
 import { HomeBrand } from "./home-brand";
 
@@ -39,15 +39,15 @@ export function WorkspaceScreen({ children, scroll = true, refreshing = false, o
   const blurTarget = useRef<View | null>(null);
   const { activate, deactivate } = useActiveWorkspaceBlur();
   useFocusEffect(useCallback(() => { activate(blurTarget); return () => deactivate(blurTarget); }, [activate, deactivate]));
-  return <ScreenBlurTargetContext.Provider value={blurTarget}><SafeAreaView edges={["top", "left", "right"]} style={styles.screen}>
+  return <WorkspaceContentMotionProvider><ScreenBlurTargetContext.Provider value={blurTarget}><SafeAreaView edges={["top", "left", "right"]} style={styles.screen}>
     <BlurTargetView ref={blurTarget} pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: WORKSPACE.background }]} collapsable={false}>
       <WorkspaceAtmosphere scrollY={scrollY ?? internalScroll.scrollY} />
     </BlurTargetView>
     {scroll ? <Animated.ScrollView onScroll={internalScroll.onScroll} scrollEventThrottle={16} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: bottom + 16 }}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={WORKSPACE.lavender} colors={[WORKSPACE.purple]} /> : undefined}>
-      <MotionReveal style={styles.content}>{children}</MotionReveal></Animated.ScrollView> : <MotionReveal style={styles.flex}>{children}</MotionReveal>}
-  </SafeAreaView></ScreenBlurTargetContext.Provider>;
+      <View style={styles.content}>{children}</View></Animated.ScrollView> : <View style={styles.flex}>{children}</View>}
+  </SafeAreaView></ScreenBlurTargetContext.Provider></WorkspaceContentMotionProvider>;
 }
 
 export function PageHeader({ label, back = false, children }: { label: string; back?: boolean; children?: ReactNode }) {

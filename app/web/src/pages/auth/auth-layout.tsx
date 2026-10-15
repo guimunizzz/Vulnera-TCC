@@ -107,47 +107,45 @@ export function AuthLayout() {
         </svg>
       </div>
 
-      <header className="vx-login-header">
-        <Link to="/" className="vx-login-brand" aria-label="Vulnera — página inicial">
-          VULNERA<span className="vx-login-cursor" aria-hidden="true" />
-        </Link>
-      </header>
-
       <div className="vx-login-stage">
-        <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
-            key={pathname}
-            className="vx-auth-transition"
-            custom={direction}
-            variants={{
-              enter: (side: number) => ({ opacity: 0, x: reducedMotion ? 0 : side * 24 }),
-              visible: { opacity: 1, x: 0 },
-              exit: (side: number) => ({
-                opacity: 0,
-                x: reducedMotion ? 0 : side * -24,
-                transition: { duration: reducedMotion ? 0 : .18 },
-              }),
-            }}
-            initial="enter"
-            animate="visible"
-            exit="exit"
-            transition={{ duration: reducedMotion ? 0 : .36, ease: [.22, 1, .36, 1] }}
-            onAnimationComplete={(definition) => {
-              if (definition === "visible") {
-                loginRef.current?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
-              }
-            }}
-          >
-            {outlet}
-          </motion.div>
-        </AnimatePresence>
+        <div className="vx-auth-card">
+          <header className="vx-login-header">
+            <Link to="/" className="vx-login-brand" aria-label="Vulnera — página inicial">
+              <span className="vx-login-wordmark">
+                VULNERA<span className="vx-login-cursor" aria-hidden="true" />
+              </span>
+              <span className="vx-login-brand-security">SECURITY</span>
+            </Link>
+          </header>
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={pathname}
+              className="vx-auth-transition"
+              custom={direction}
+              variants={{
+                enter: (side: number) => ({ opacity: 0, x: reducedMotion ? 0 : side * 24 }),
+                visible: { opacity: 1, x: 0 },
+                exit: (side: number) => ({
+                  opacity: 0,
+                  x: reducedMotion ? 0 : side * -24,
+                  transition: { duration: reducedMotion ? 0 : .18 },
+                }),
+              }}
+              initial="enter"
+              animate="visible"
+              exit="exit"
+              transition={{ duration: reducedMotion ? 0 : .36, ease: [.22, 1, .36, 1] }}
+              onAnimationComplete={(definition) => {
+                if (definition === "visible") {
+                  loginRef.current?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
+                }
+              }}
+            >
+              {outlet}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
-
-      <footer className="vx-login-footer">
-        <span className="vx-login-footer-brand"><span aria-hidden="true">//</span> VULNERA SECURITY</span>
-        <span>Gestão de vulnerabilidades</span>
-        <span className="vx-login-footer-decoration" aria-hidden="true">+ + +</span>
-      </footer>
     </main>
   );
 }

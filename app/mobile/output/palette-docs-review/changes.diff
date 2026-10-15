@@ -1,0 +1,35 @@
+--- PRD_VIVO.md
++++ PRD_VIVO.md
+@@ -15,6 +15,10 @@
+ ---
+ 
+ ## 1. Estado geral do projeto
++
++**✅ 2026-10-08 — Paleta grafite do mobile (100% da implementação e revisão em preview).** Branch `mobile/api`: fundo, vidro, bordas, barra inferior, metadados e ícones de apoio neutralizados; violeta mantido nas ações, foco, seleção e marca, com brilho ambiente reduzido. Status Em revisão em azul e Pendente em amarelo; anel CVSS usa a severidade calculada da API, preservando o badge de severidade final quando existe override. Liquid glass e animações suaves mantidos. Typecheck/lint e exports web/Android aprovados; **6/6 verificações visuais** em Chrome, incluindo larguras 320/390 px, cinco níveis de severidade, nota ausente, conta, evidências, comentários e toque. Docker/API desligados: esta revisão usa fixtures somente no script de QA; não comprova conectividade real nem aparência/desempenho em aparelho físico. Código de API, autenticação, dados, dependências e lockfiles sem alterações nesta task. A paleta autenticada anterior fica substituída por esta; registros históricos preservados. Relatório: `app/mobile/output/mobile-palette-report.md`.
++
++- [x] Neutralizar a paleta autenticada e destacar status/severidade mantendo vidro e suavidade.
+ 
+ **✅ 2026-10-06 — Refatoração autenticada do mobile e integração real (100%).** Branch `mobile/api`: Home, ProjectDetail, FindingDetail, Minha conta e navegação redesenhados com violeta/liquid glass, conforme autorização visual do usuário; login e seus tokens/componentes preservados. Projetos, perfil, vulnerabilidades, evidências e comentários usam a API real; paginação de findings/comentários, facetas do servidor, estados de erro separados de vazio e limpeza de cache por sessão. Refresh concorrente/conta trocada e Retry-After tratados. Typecheck/lint aprovados, exports Android/web aprovados, **30/30 checks** (10 API real, 6 cliente HTTP, 14 UI). Sem mudanças na API/schema/migrations ou manifestos/lockfiles. Validação visual em preview 390/320 px; aparência nativa e push no aparelho continuam pendentes. Relatório: `app/mobile/output/mobile-refactor-report.md`; ADR-045.
+ 
+@@ -582,3 +586,8 @@
+ ### Marco — 2026-10-06: mobile autenticado
+ 
+ **✅ 2026-10-06 — Refatoração autenticada do mobile e integração real (100%).** Branch `mobile/api`: Home, ProjectDetail, FindingDetail, Minha conta e navegação redesenhados com violeta/liquid glass, conforme autorização visual do usuário; login e seus tokens/componentes preservados. Projetos, perfil, vulnerabilidades, evidências e comentários usam a API real; paginação de findings/comentários, facetas do servidor, estados de erro separados de vazio e limpeza de cache por sessão. Refresh concorrente/conta trocada e Retry-After tratados. Typecheck/lint aprovados, exports Android/web aprovados, **30/30 checks** (10 API real, 6 cliente HTTP, 14 UI). Sem mudanças na API/schema/migrations ou manifestos/lockfiles. Validação visual em preview 390/320 px; aparência nativa e push no aparelho continuam pendentes. Relatório: `app/mobile/output/mobile-refactor-report.md`; ADR-045.
++
++
++### Marco — 2026-10-08: paleta grafite do mobile
++
++**✅ 2026-10-08 — Paleta grafite do mobile (100% da implementação e revisão em preview).** Branch `mobile/api`: fundo, vidro, bordas, barra inferior, metadados e ícones de apoio neutralizados; violeta mantido nas ações, foco, seleção e marca, com brilho ambiente reduzido. Status Em revisão em azul e Pendente em amarelo; anel CVSS usa a severidade calculada da API, preservando o badge de severidade final quando existe override. Liquid glass e animações suaves mantidos. Typecheck/lint e exports web/Android aprovados; **6/6 verificações visuais** em Chrome, incluindo larguras 320/390 px, cinco níveis de severidade, nota ausente, conta, evidências, comentários e toque. Docker/API desligados: esta revisão usa fixtures somente no script de QA; não comprova conectividade real nem aparência/desempenho em aparelho físico. Código de API, autenticação, dados, dependências e lockfiles sem alterações nesta task. A paleta autenticada anterior fica substituída por esta; registros históricos preservados. Relatório: `app/mobile/output/mobile-palette-report.md`.
+--- docs/BACKLOG.md
++++ docs/BACKLOG.md
+@@ -5,6 +5,10 @@
+ > **Entrega: 25/10/2026.**
+ 
+ ## Status
++
++**✅ 2026-10-08 — Paleta grafite do mobile (100% da implementação e revisão em preview).** Branch `mobile/api`: fundo, vidro, bordas, barra inferior, metadados e ícones de apoio neutralizados; violeta mantido nas ações, foco, seleção e marca, com brilho ambiente reduzido. Status Em revisão em azul e Pendente em amarelo; anel CVSS usa a severidade calculada da API, preservando o badge de severidade final quando existe override. Liquid glass e animações suaves mantidos. Typecheck/lint e exports web/Android aprovados; **6/6 verificações visuais** em Chrome, incluindo larguras 320/390 px, cinco níveis de severidade, nota ausente, conta, evidências, comentários e toque. Docker/API desligados: esta revisão usa fixtures somente no script de QA; não comprova conectividade real nem aparência/desempenho em aparelho físico. Código de API, autenticação, dados, dependências e lockfiles sem alterações nesta task. A paleta autenticada anterior fica substituída por esta; registros históricos preservados. Relatório: `app/mobile/output/mobile-palette-report.md`.
++
++- [x] Neutralizar a paleta autenticada e destacar status/severidade mantendo vidro e suavidade.
+ 
+ **✅ 2026-10-06 — Refatoração autenticada do mobile e integração real (100%).** Branch `mobile/api`: Home, ProjectDetail, FindingDetail, Minha conta e navegação redesenhados com violeta/liquid glass, conforme autorização visual do usuário; login e seus tokens/componentes preservados. Projetos, perfil, vulnerabilidades, evidências e comentários usam a API real; paginação de findings/comentários, facetas do servidor, estados de erro separados de vazio e limpeza de cache por sessão. Refresh concorrente/conta trocada e Retry-After tratados. Typecheck/lint aprovados, exports Android/web aprovados, **30/30 checks** (10 API real, 6 cliente HTTP, 14 UI). Sem mudanças na API/schema/migrations ou manifestos/lockfiles. Validação visual em preview 390/320 px; aparência nativa e push no aparelho continuam pendentes. Relatório: `app/mobile/output/mobile-refactor-report.md`; ADR-045.
+ 

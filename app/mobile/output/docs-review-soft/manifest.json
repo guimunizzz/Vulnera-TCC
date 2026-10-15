@@ -1,0 +1,27 @@
+[
+  {
+    "relative": "PRD_VIVO.md",
+    "original_sha256": "3a99f49c7a10bc60379bc5642222f3f6d57860ea6c49afe82cd454cba70708f1",
+    "staged_sha256": "3de7ef6b345e832111d3bf0ff380cf1c7d5c0ccefc2aabf2492bd7c3b0610bc5"
+  },
+  {
+    "relative": "docs/BACKLOG.md",
+    "original_sha256": "e0d8af04ad770782dbc5b9d3a9e730a847e5a76362514e34271c097b46b64321",
+    "staged_sha256": "dfbefc053007602647e2458e705d1e4fb53285096c17b362323ad76c3c54d75c"
+  },
+  {
+    "relative": "docs/ROADMAP_PROMPTS.md",
+    "original_sha256": "c3ab77b3609293e3bc2fe517708798dd0fffa47ca8a12e0f98783b5d86d9fd21",
+    "staged_sha256": "eeb92a49df7353382d7c02aad7480ff0fd73425e02b69fc6aef4b991f3bf3c62"
+  },
+  {
+    "relative": "docs/Vulnera/08-Operacao/Mudancas/Changelog do Projeto.md",
+    "original_sha256": "d9179df8da3623cdcdc960a8d07dfc384a7a139eb61effb31a07bd91e0323631",
+    "staged_sha256": "9f54bdaf379f8dd8ed2ad03038804c0cc88b7dbd2afa1651e0bf585354e65a10"
+  },
+  {
+    "relative": "docs/Vulnera/04-Arquitetura/Mobile Expo.md",
+    "original_sha256": "8f0a227fa5bf916a9e05e74daaea9271b7a75d53ad5ae5017e3507e8a7838384",
+    "staged_sha256": "e5133d7d40eb36c2dfde3f4af096e41f2b90efc9f0dd1db3022e1d67f1d5b60f"
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "passed": 3,
+  "checks": [
+    "Dependência explícita usa a faixa nativa do SDK instalado",
+    "Stack e drawer resolvem a versão compatível com Expo Go",
+    "Lockfile preserva a matriz nativa sem Gesture Handler 3.x"
+  ],
+  "recommended": "~2.32.0",
+  "resolutions": [
+    {
+      "consumer": "expo-router/js-stack",
+      "version": "2.32.0",
+      "path": "C:\\Users\\43089913828\\Desktop\\M4H\\Vulnera_4\\Vulnera-TCC\\app\\mobile\\node_modules\\react-native-gesture-handler\\package.json"
+    },
+    {
+      "consumer": "react-native-drawer-layout",
+      "version": "2.32.0",
+      "path": "C:\\Users\\43089913828\\Desktop\\M4H\\Vulnera_4\\Vulnera-TCC\\app\\mobile\\node_modules\\react-native-gesture-handler\\package.json"
+    }
+  ],
+  "physicalDevice": "pendente; não executado nesta estação Windows"
+}

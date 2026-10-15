@@ -1,0 +1,12 @@
+[
+  {
+    "target": "PRD_VIVO.md",
+    "sha256": "bdbe0eae431a59a00b88a7c17742e71c1216132775d156c173ae8ada065d7112",
+    "staged": "PRD_VIVO.md"
+  },
+  {
+    "target": "docs/BACKLOG.md",
+    "sha256": "9d70dca7d0fdd3d03b636f8181dd56f4ca2a6e53c2f49dcf83d5a0b72f0baca0",
+    "staged": "docs__BACKLOG.md"
+  }
+]

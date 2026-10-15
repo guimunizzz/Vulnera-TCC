@@ -49,26 +49,26 @@ export default function SettingsScreen() {
   }
   return <WorkspaceScreen refreshing={profile.isRefetching} onRefresh={() => { void profile.refetch(); }}>
     <PageHeader label="MINHA CONTA" />
-    <View style={{ gap: 8 }}><Text style={ui.title}>Seu perfil</Text><Text style={ui.body}>Seus dados e o acesso ao aplicativo.</Text></View>
-    <GlassSurface strong>
+    <MotionReveal distance={8} style={{ gap: 8 }}><Text style={ui.title}>Seu perfil</Text><Text style={ui.body}>Seus dados e o acesso ao aplicativo.</Text></MotionReveal>
+    <MotionReveal delay={40} distance={8}><GlassSurface strong>
       <View style={ui.row}><View style={styles.avatar}><Text style={styles.initial}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></View><View style={[ui.grow, { gap: 4 }]}><Text style={ui.heading}>{user?.name ?? "Carregando perfil"}</Text><Text style={ui.muted}>{user?.email}</Text></View></View>
       <View style={ui.divider} /><DetailField label="TIPO DE CONTA" value="Cliente" />
       {user?.createdAt && <DetailField label="MEMBRO DESDE" value={displayDate(user.createdAt)} />}
-    </GlassSurface>
+    </GlassSurface></MotionReveal>
     {profile.isPending && <Text style={ui.muted}>Atualizando os dados da sua conta...</Text>}
     {profile.isError && <DataState error title="Perfil não atualizado" message={errorMessage(profile.error)} onRetry={() => { void profile.refetch(); }} />}
-    <SectionHeading title="Notificações" />
+    <MotionReveal delay={80} distance={8} style={{ gap: 20 }}><SectionHeading title="Notificações" />
     <GlassSurface><View style={ui.row}><View style={styles.notificationIcon}><Ionicons name={push.icon} size={23} color={pushStatus === "ativado" ? "#6ee7a0" : WORKSPACE.secondary} /></View>
       <View style={ui.grow}><Text style={[ui.heading, { fontSize: 17 }]}>{push.title}</Text></View></View><Text style={ui.body}>{push.description}</Text>
       {pushStatus === "negado" && Platform.OS !== "web" && <ActionButton icon="settings-outline" label="Abrir configurações do celular" onPress={() => { void Linking.openSettings().catch(() => setSettingsError(true)); }} />}
       {settingsError && <Text style={ui.muted}>Não foi possível abrir as configurações. Use os ajustes do seu celular.</Text>}
-    </GlassSurface>
-    <SectionHeading title="Sua sessão" />
-    <MotionReveal layout><GlassSurface><View style={ui.row}><Ionicons name="lock-closed-outline" size={20} color={WORKSPACE.secondary} /><Text style={[ui.heading, { fontSize: 17 }]}>Acesso pessoal</Text></View><Text style={ui.body}>Os projetos e as vulnerabilidades exibidos pertencem à sua empresa.</Text>
+    </GlassSurface></MotionReveal>
+    <MotionReveal delay={120} distance={8} layout style={{ gap: 20 }}><SectionHeading title="Sua sessão" />
+    <GlassSurface><View style={ui.row}><Ionicons name="lock-closed-outline" size={20} color={WORKSPACE.secondary} /><Text style={[ui.heading, { fontSize: 17 }]}>Acesso pessoal</Text></View><Text style={ui.body}>Os projetos e as vulnerabilidades exibidos pertencem à sua empresa.</Text>
       {confirming ? <MotionReveal style={{ gap: 12 }}><Text style={ui.body}>Deseja sair? Você precisará entrar novamente para acompanhar seus projetos.</Text><ActionButton danger icon="log-out-outline" label={loggingOut ? "Saindo..." : "Confirmar saída"} disabled={loggingOut} onPress={() => { void logout(); }} /><ActionButton icon="close-outline" label="Continuar no app" disabled={loggingOut} onPress={() => setConfirming(false)} /></MotionReveal>
         : <ActionButton danger icon="log-out-outline" label="Sair da conta" onPress={() => setConfirming(true)} />}
     </GlassSurface></MotionReveal>
-    <MotionReveal layout style={styles.footer}><Text style={styles.wordmark}>VULNERA</Text><Text style={ui.muted}>Versão {Constants.expoConfig?.version ?? "1.0.0"} · Segurança em acompanhamento</Text></MotionReveal>
+    <MotionReveal delay={160} distance={8} layout style={styles.footer}><Text style={styles.wordmark}>VULNERA</Text><Text style={ui.muted}>Versão {Constants.expoConfig?.version ?? "1.0.0"} · Segurança em acompanhamento</Text></MotionReveal>
   </WorkspaceScreen>;
 }
 const styles = StyleSheet.create({

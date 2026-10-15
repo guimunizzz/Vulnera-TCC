@@ -13,6 +13,12 @@ export const SOFT_MOTION = { duration: 280, easing: Easing.bezier(0.22, 1, 0.36,
 const RELEASE = { damping: 26, stiffness: 260, mass: 0.8, overshootClamping: true };
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const ReducedMotionContext = createContext(true);
+const ContentMotionContext = createContext(false);
+
+// A área autenticada já tem transição de rota; evita apagar seus blocos de novo.
+export function WorkspaceContentMotionProvider({ children }: { children: ReactNode }) {
+  return <ContentMotionContext.Provider value>{children}</ContentMotionContext.Provider>;
+}
 
 function useReducedMotionPreference() {
   const initial = useReducedMotion();
@@ -53,22 +59,24 @@ export function useWorkspaceMotionActive() {
 
 export function SoftPressable({ style, onPressIn, onPressOut, disabled, ...props }: Omit<PressableProps, "style"> & { style?: StyleProp<ViewStyle> }) {
   const reduced = useWorkspaceReducedMotion();
+  const subtle = useContext(ContentMotionContext);
   const progress = useSharedValue(0);
-  const animated = useAnimatedStyle(() => ({ opacity: 1 - progress.value * 0.12, transform: [{ scale: 1 - progress.value * 0.018 }] }));
+  const animated = useAnimatedStyle(() => ({ opacity: 1 - progress.value * (subtle ? 0.04 : 0.12), transform: [{ scale: 1 - progress.value * (subtle ? 0.01 : 0.018) }] }));
   return <AnimatedPressable {...props} disabled={disabled} style={[style, animated, disabled && { opacity: 0.5 }]}
     onPressIn={(event) => { progress.value = reduced ? 0 : withTiming(1, { duration: 100 }); onPressIn?.(event); }}
     onPressOut={(event) => { progress.value = reduced ? 0 : withSpring(0, RELEASE); onPressOut?.(event); }} />;
 }
 
-export function MotionReveal({ children, delay = 0, style, layout = false }: { children: ReactNode; delay?: number; style?: StyleProp<ViewStyle>; layout?: boolean }) {
+export function MotionReveal({ children, delay = 0, distance = 10, style, layout = false, animate = true }: { children: ReactNode; delay?: number; distance?: number; style?: StyleProp<ViewStyle>; layout?: boolean; animate?: boolean }) {
   const reduced = useWorkspaceReducedMotion();
-  const progress = useSharedValue(reduced ? 1 : 0);
+  const subtle = useContext(ContentMotionContext);
+  const progress = useSharedValue(reduced || !animate ? 1 : 0);
   useEffect(() => {
-    progress.value = reduced ? 1 : withDelay(Math.min(delay, 180), withTiming(1, SOFT_MOTION));
+    progress.value = reduced || !animate ? 1 : withDelay(Math.min(delay, subtle ? 60 : 180), withTiming(1, subtle ? { ...SOFT_MOTION, duration: 220 } : SOFT_MOTION));
     return () => cancelAnimation(progress);
-  }, [delay, reduced, progress]);
-  const animated = useAnimatedStyle(() => ({ opacity: progress.value, transform: [{ translateY: (1 - progress.value) * 10 }] }));
-  return <Animated.View layout={layout && !reduced ? LinearTransition.duration(240).easing(SOFT_MOTION.easing) : undefined} style={[style, animated]}>{children}</Animated.View>;
+  }, [delay, reduced, animate, subtle, progress]);
+  const animated = useAnimatedStyle(() => ({ opacity: subtle ? 0.96 + progress.value * 0.04 : progress.value, transform: [{ translateY: (1 - progress.value) * (subtle ? Math.min(distance, 4) : distance) }] }));
+  return <Animated.View layout={layout && !reduced && !subtle ? LinearTransition.duration(240).easing(SOFT_MOTION.easing) : undefined} style={[style, animated]}>{children}</Animated.View>;
 }
 
 export function useWorkspaceScroll() {

@@ -1,0 +1,37 @@
+--- PRD_VIVO.md
++++ PRD_VIVO.md
+@@ -15,6 +15,11 @@
+ ---
+ 
+ ## 1. Estado geral do projeto
++
++**✅ 2026-10-08 — Comparativo de logos da Home entregue (100% da exploração visual).** A pedido do usuário, três estilos para cada marca: wordmark VULNERA SECURITY da Home web e V geométrico do login mobile, totalizando seis opções (compacta, cápsula glass e editorial). Capturas somente da Home, reunidas em `app/mobile/output/comparativo-logos-home.png`; HTML e capturas individuais na mesma pasta. Adaptações renderizadas no DOM do preview, sem gerar uma marca diferente ou alterar arquivos de produção. Conferidas seis opções em 320/390 px, sem sobrepor avatar ou deslocar o conteúdo; dados isolados no navegador. **Pendente: usuário escolher a versão para aplicação na Home mobile.**
++
++- [x] Comparar três estilos para cada uma das duas logos na Home mobile.
++- [ ] Aplicar a logo escolhida pelo usuário no topo da Home mobile.
+ 
+ **✅ 2026-10-08 — Modelo 7, animação 2 entregue (100% desta etapa).** Branch `mobile/api`: luz roxa radial atravessa a cápsula até a aba selecionada e se dissipa, com pulsação de 12% que retorna ao tamanho original e fade da tela; duração total de **400 ms**. Substitui a animação 1. Cápsula, ícones e divisória preservados. Não anima na montagem ou no toque da aba já aberta; trocas rápidas retomam o brilho da posição atual. Movimento reduzido remove brilho, pulsação e fade. Seleção acompanha a navegação real, incluindo avatar e pilha do projeto. Conteúdo das telas e API preservados. Typecheck/lint e exports web/Android aprovados; **7/7 verificações de interação** com fixtures isoladas no navegador, incluindo luz/pulsação nos dois sentidos, fade, teclado, trocas rápidas, logout e ausência de exceções. Capturas somente da Home em 320/390 px. Avaliação de suavidade e blur em aparelho físico continua pendente. Relatório: `app/mobile/output/light-navigation-report.md`.
+ 
+@@ -608,3 +613,8 @@
+ ### Marco — 2026-10-08: luz atravessando o vidro, opção 2
+ 
+ **✅ 2026-10-08 — Modelo 7, animação 2 entregue (100% desta etapa).** Branch `mobile/api`: luz roxa radial atravessa a cápsula até a aba selecionada e se dissipa, com pulsação de 12% que retorna ao tamanho original e fade da tela; duração total de **400 ms**. Substitui a animação 1. Cápsula, ícones e divisória preservados. Não anima na montagem ou no toque da aba já aberta; trocas rápidas retomam o brilho da posição atual. Movimento reduzido remove brilho, pulsação e fade. Seleção acompanha a navegação real, incluindo avatar e pilha do projeto. Conteúdo das telas e API preservados. Typecheck/lint e exports web/Android aprovados; **7/7 verificações de interação** com fixtures isoladas no navegador, incluindo luz/pulsação nos dois sentidos, fade, teclado, trocas rápidas, logout e ausência de exceções. Capturas somente da Home em 320/390 px. Avaliação de suavidade e blur em aparelho físico continua pendente. Relatório: `app/mobile/output/light-navigation-report.md`.
++
++
++### Marco — 2026-10-08: comparativo de logos da Home
++
++**✅ 2026-10-08 — Comparativo de logos da Home entregue (100% da exploração visual).** A pedido do usuário, três estilos para cada marca: wordmark VULNERA SECURITY da Home web e V geométrico do login mobile, totalizando seis opções (compacta, cápsula glass e editorial). Capturas somente da Home, reunidas em `app/mobile/output/comparativo-logos-home.png`; HTML e capturas individuais na mesma pasta. Adaptações renderizadas no DOM do preview, sem gerar uma marca diferente ou alterar arquivos de produção. Conferidas seis opções em 320/390 px, sem sobrepor avatar ou deslocar o conteúdo; dados isolados no navegador. **Pendente: usuário escolher a versão para aplicação na Home mobile.**
+--- docs/BACKLOG.md
++++ docs/BACKLOG.md
+@@ -5,6 +5,11 @@
+ > **Entrega: 25/10/2026.**
+ 
+ ## Status
++
++**✅ 2026-10-08 — Comparativo de logos da Home entregue (100% da exploração visual).** A pedido do usuário, três estilos para cada marca: wordmark VULNERA SECURITY da Home web e V geométrico do login mobile, totalizando seis opções (compacta, cápsula glass e editorial). Capturas somente da Home, reunidas em `app/mobile/output/comparativo-logos-home.png`; HTML e capturas individuais na mesma pasta. Adaptações renderizadas no DOM do preview, sem gerar uma marca diferente ou alterar arquivos de produção. Conferidas seis opções em 320/390 px, sem sobrepor avatar ou deslocar o conteúdo; dados isolados no navegador. **Pendente: usuário escolher a versão para aplicação na Home mobile.**
++
++- [x] Comparar três estilos para cada uma das duas logos na Home mobile.
++- [ ] Aplicar a logo escolhida pelo usuário no topo da Home mobile.
+ 
+ **✅ 2026-10-08 — Modelo 7, animação 2 entregue (100% desta etapa).** Branch `mobile/api`: luz roxa radial atravessa a cápsula até a aba selecionada e se dissipa, com pulsação de 12% que retorna ao tamanho original e fade da tela; duração total de **400 ms**. Substitui a animação 1. Cápsula, ícones e divisória preservados. Não anima na montagem ou no toque da aba já aberta; trocas rápidas retomam o brilho da posição atual. Movimento reduzido remove brilho, pulsação e fade. Seleção acompanha a navegação real, incluindo avatar e pilha do projeto. Conteúdo das telas e API preservados. Typecheck/lint e exports web/Android aprovados; **7/7 verificações de interação** com fixtures isoladas no navegador, incluindo luz/pulsação nos dois sentidos, fade, teclado, trocas rápidas, logout e ausência de exceções. Capturas somente da Home em 320/390 px. Avaliação de suavidade e blur em aparelho físico continua pendente. Relatório: `app/mobile/output/light-navigation-report.md`.
+ 
