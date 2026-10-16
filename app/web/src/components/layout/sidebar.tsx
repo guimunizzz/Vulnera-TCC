@@ -2,7 +2,9 @@
  * sidebar.tsx
  *
  * O QUE FAZ
- * Navegação principal, filtrada por papel.
+ * Navegação principal agrupada por finalidade e filtrada por papel.
+ * A marca e o indicador violeta seguem a prévia aprovada da barra lateral;
+ * cores e estados continuam usando os tokens dos dois temas.
  *
  * CONTRATO DE ACESSIBILIDADE
  *   - `<nav aria-label="Navegação principal">` — nomeada, porque uma página
@@ -18,126 +20,105 @@
 
 import { NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Check, Clock3, FileText, Folder, LayoutDashboard, Monitor, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { savedQueriesApi } from "../../lib/api/saved-queries.api";
 import type { UserRole } from "../../types/auth.types";
+import "./sidebar.css";
 
 interface ItemNav {
   para: string;
   rotulo: string;
-  icone: JSX.Element;
+  icone: LucideIcon;
   /** Se definido, só esses papéis veem o item. */
   papeis?: UserRole[];
 }
 
-const ITENS: ItemNav[] = [
+interface GrupoNav {
+  rotulo: string;
+  itens: ItemNav[];
+}
+
+const GRUPOS: GrupoNav[] = [
   {
-    para: "/dashboard",
-    rotulo: "Dashboard",
-    icone: <path d="M2 2h5v5H2V2Zm7 0h5v3H9V2ZM2 9h5v5H2V9Zm7-2h5v7H9V7Z" />,
+    rotulo: "Visão geral",
+    itens: [{ para: "/dashboard", rotulo: "Dashboard", icone: LayoutDashboard }],
   },
   {
-    para: "/applications",
-    rotulo: "Aplicações",
-    papeis: ["ADMIN", "CLIENT"],
-    icone: <path d="M2 3.5h12v9H2v-9Zm1.5 1.5v6h9V5h-9Z" />,
+    rotulo: "Operação",
+    itens: [
+      { para: "/applications", rotulo: "Aplicações", papeis: ["ADMIN", "CLIENT"], icone: Monitor },
+      { para: "/projects", rotulo: "Projetos", icone: Folder },
+      // Os papéis são os mesmos das rotas; agrupar não amplia o acesso.
+      { para: "/findings", rotulo: "Findings", papeis: ["ADMIN", "PENTESTER"], icone: Search },
+      { para: "/remediation", rotulo: "Remediação", papeis: ["ADMIN", "PENTESTER"], icone: ShieldCheck },
+      { para: "/dast", rotulo: "DAST", papeis: ["ADMIN", "PENTESTER"], icone: ScanLine },
+      { para: "/playbooks", rotulo: "Playbooks", icone: FileText },
+    ],
   },
   {
-    para: "/projects",
-    rotulo: "Projetos",
-    icone: <path d="M2 4h4l1 1.5h7V13H2V4Z" />,
-  },
-  {
-    // Varredura entre projetos — ferramenta de quem analisa. O CLIENT não vê
-    // o item e é barrado na rota; ver o comentário em `App.tsx`.
-    para: "/findings",
-    rotulo: "Findings",
-    papeis: ["ADMIN", "PENTESTER"],
-    icone: <path d="M7 2a5 5 0 1 0 3.1 8.9l3 3 1.4-1.4-3-3A5 5 0 0 0 7 2Zm0 1.8a3.2 3.2 0 1 1 0 6.4 3.2 3.2 0 0 1 0-6.4Z" />,
-  },
-  {
-    // SLA de remediação (CP-2) — governança da empresa. PENTESTER não define
-    // prazo de ninguém; CLIENT OWNER define o da sua; ADMIN, de qualquer uma.
-    para: "/settings/sla",
-    rotulo: "SLA",
-    papeis: ["ADMIN", "CLIENT"],
-    icone: <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 1.5a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm-.75 2v3.6l2.6 1.55.75-1.3-1.85-1.1V5h-1.5Z" />,
-  },
-  {
-    para: "/admin/subscriptions",
-    rotulo: "Aprovações",
-    papeis: ["ADMIN"],
-    icone: <path d="M8 1.5 14 5v6l-6 3.5L2 11V5l6-3.5Zm-.8 8.7 4-4.2-1-1-3 3.2-1.4-1.5-1 1 2.4 2.5Z" />,
-  },
-  {
-    // Quadro de remediação (CP-7) — operação do dia a dia de quem corrige.
-    // Mover e atribuir são escrita em finding: mesmo recorte da listagem.
-    para: "/remediation",
-    rotulo: "Remediação",
-    papeis: ["ADMIN", "PENTESTER"],
-    icone: <path d="M2 2h3.5v12H2V2Zm4.5 0H10v8H6.5V2Zm4.5 0h3.5v5H11V2Z" />,
-  },
-  {
-    // Catálogo de remediação (CP-5). Todos os papéis leem: o CLIENT precisa
-    // saber o que foi pedido para corrigir, e o catálogo System é global.
-    para: "/playbooks",
-    rotulo: "Playbooks",
-    icone: <path d="M3 2h7l3 3v9H3V2Zm1.5 1.5v9h7V6H9.5V3.5h-5Zm1.5 4h5V9H6V7.5Zm0 2.5h5v1.5H6V10Z" />,
-  },
-  {
-    para: "/dast",
-    rotulo: "DAST",
-    papeis: ["ADMIN", "PENTESTER"],
-    icone: <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm-.75 2v3h3v-1.5H8.75V5.5h-1.5Z" />,
+    rotulo: "Administração",
+    itens: [
+      { para: "/settings/sla", rotulo: "Políticas de SLA", papeis: ["ADMIN", "CLIENT"], icone: Clock3 },
+      { para: "/admin/subscriptions", rotulo: "Aprovações", papeis: ["ADMIN"], icone: Check },
+    ],
   },
 ];
 
 export function Sidebar({ aoNavegar, embutida }: { aoNavegar?: () => void; embutida?: boolean }) {
   const papel = useAuthStore((s) => s.user?.role);
-  const itens = ITENS.filter((i) => !i.papeis || (papel && i.papeis.includes(papel)));
+  const grupos = GRUPOS.map((grupo) => ({
+    ...grupo,
+    itens: grupo.itens.filter((item) => !item.papeis || (papel && item.papeis.includes(papel))),
+  })).filter((grupo) => grupo.itens.length > 0);
 
   return (
     <nav
       id="navegacao-principal"
       aria-label="Navegação principal"
-      className={cn(
-        "flex flex-col gap-1",
-        !embutida && "h-dvh w-56 shrink-0 border-r border-subtle bg-surface p-4",
-      )}
+      className={cn("app-sidebar", embutida && "app-sidebar--embedded")}
     >
       {!embutida && (
-        <span className="mb-6 px-3 text-lg font-bold tracking-tight text-accent-ink">Vulnera</span>
+        <div className="app-sidebar-brand" role="img" aria-label="Vulnera Security">
+          <span className="app-sidebar-mark" aria-hidden="true">V</span>
+          <span className="app-sidebar-wordmark" aria-hidden="true">
+            VULNERA
+            <span className="app-sidebar-security">SECURITY</span>
+          </span>
+        </div>
       )}
 
-      {itens.map((item) => (
-        <NavLink
-          key={item.para}
-          to={item.para}
-          onClick={aoNavegar}
-          // `aria-current="page"` é o que comunica "você está aqui" para quem
-          // não vê a cor de fundo.
-          className={({ isActive }) =>
-            cn(
-              "flex min-h-touch items-center gap-3 rounded-control px-3 py-2 text-sm",
-              "transition-colors duration-fast ease-out",
-              isActive ? "bg-accent-surface font-medium text-accent-ink" : "text-fg-muted hover:bg-hovered hover:text-fg",
-            )
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <svg viewBox="0 0 16 16" className="h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true">
-                {item.icone}
-              </svg>
-              <span>{item.rotulo}</span>
-              {isActive && <span className="sr-only">(página atual)</span>}
-            </>
-          )}
-        </NavLink>
-      ))}
+      <div className="app-sidebar-scroll">
+        {grupos.map((grupo) => (
+          <section key={grupo.rotulo} className="app-sidebar-group" aria-label={grupo.rotulo}>
+            <h2 className="app-sidebar-caption">{grupo.rotulo}</h2>
+            <ul className="app-sidebar-list">
+              {grupo.itens.map(({ icone: Icone, ...item }) => (
+                <li key={item.para}>
+                  <NavLink to={item.para} onClick={aoNavegar} className="app-sidebar-link">
+                    {({ isActive }) => (
+                      <>
+                        <Icone size={18} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+                        <span>{item.rotulo}</span>
+                        {isActive && <span className="sr-only">(página atual)</span>}
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+        <WatchlistsFixadas aoNavegar={aoNavegar} />
+      </div>
 
-      <WatchlistsFixadas aoNavegar={aoNavegar} />
+      {!embutida && (
+        <div className="app-sidebar-footer">
+          <span className="app-sidebar-footer-dot" aria-hidden="true" />
+          <span>Vulnera · Security workspace</span>
+        </div>
+      )}
     </nav>
   );
 }
@@ -165,10 +146,10 @@ function WatchlistsFixadas({ aoNavegar }: { aoNavegar?: () => void }) {
   if (!fixadas.data || fixadas.data.length === 0) return null;
 
   return (
-    <div className="mt-6">
-      <h2 className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">Watchlists</h2>
+    <div className="app-sidebar-group">
+      <h2 className="app-sidebar-caption">Watchlists</h2>
 
-      <ul className="flex flex-col gap-1">
+      <ul className="app-sidebar-list">
         {fixadas.data.map((q) => (
           <li key={q.id}>
             {/* Abrir é NAVEGAR: a listagem busca de novo, com o escopo de quem
@@ -177,13 +158,7 @@ function WatchlistsFixadas({ aoNavegar }: { aoNavegar?: () => void }) {
               to={`/findings?${q.queryString}`}
               onClick={aoNavegar}
               title={q.description ?? q.name}
-              className={({ isActive }) =>
-                cn(
-                  "flex min-h-touch items-center gap-2 rounded-control px-3 py-2 text-sm",
-                  "transition-colors duration-fast ease-out",
-                  isActive ? "bg-accent-surface font-medium text-accent-ink" : "text-fg-muted hover:bg-hovered hover:text-fg",
-                )
-              }
+              className="app-sidebar-link"
             >
               <span aria-hidden="true" className="text-xs">
                 ◆

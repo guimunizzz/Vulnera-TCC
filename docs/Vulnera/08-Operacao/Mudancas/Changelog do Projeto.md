@@ -1497,3 +1497,10 @@ Host tem dependências ausentes preexistentes; nenhum manifesto/lockfile,
 limite de API ou schema mudou. Não foram escritos dados de domínio nem
 executados scans. Commit local; sem push/PR. ADR-044, FRONTEND_WEB e relatório
 `output/page-loading-validation.md` registram decisão, evidências e limites.
+
+
+## Sessão — mobile autenticado e API real (2026-10-06)
+
+**✅ 2026-10-06 — Refatoração autenticada do mobile e integração real (100%).** Branch `mobile/api`: Home, ProjectDetail, FindingDetail, Minha conta e navegação redesenhados com violeta/liquid glass, conforme autorização visual do usuário; login e seus tokens/componentes preservados. Projetos, perfil, vulnerabilidades, evidências e comentários usam a API real; paginação de findings/comentários, facetas do servidor, estados de erro separados de vazio e limpeza de cache por sessão. Refresh concorrente/conta trocada e Retry-After tratados. Typecheck/lint aprovados, exports Android/web aprovados, **30/30 checks** (10 API real, 6 cliente HTTP, 14 UI). Sem mudanças na API/schema/migrations ou manifestos/lockfiles. Validação visual em preview 390/320 px; aparência nativa e push no aparelho continuam pendentes. Relatório: `app/mobile/output/mobile-refactor-report.md`; ADR-045.
+
+A refatoração tem estilo próprio, sem alterar a aparência do login. Home usa projetos reais, ProjectDetail preserva a paginação/facetas do backend, FindingDetail carrega abas de evidências/comentários sob demanda e Minha conta consulta `/users/me`. O cache é limpo em logout/nova autenticação e refresh de conta anterior não reabre nem encerra uma nova sessão. Os testes controlados não introduzem fixtures no produto. O backend e seus dados de domínio não foram modificados nesta refatoração; as leituras autenticadas usam as contas de demonstração já existentes. A instalação temporária para preview não alterou manifestos/lockfiles. Conferência nativa e chegada de push no aparelho continuam pendentes.

@@ -1114,3 +1114,15 @@ partindo de `dev`, com espera visual fluida quando necessária.
   await. Build do host limitado pelas dependências preexistentes ausentes;
   contêiner validou fonte atual sem instalar pacotes. Não é uma nova fase de
   produto; limites da API, schema e dependências foram preservados.
+
+
+## Histórico — refatoração autenticada do mobile (2026-10-06)
+
+**✅ 2026-10-06 — Refatoração autenticada do mobile e integração real (100%).** Branch `mobile/api`: Home, ProjectDetail, FindingDetail, Minha conta e navegação redesenhados com violeta/liquid glass, conforme autorização visual do usuário; login e seus tokens/componentes preservados. Projetos, perfil, vulnerabilidades, evidências e comentários usam a API real; paginação de findings/comentários, facetas do servidor, estados de erro separados de vazio e limpeza de cache por sessão. Refresh concorrente/conta trocada e Retry-After tratados. Typecheck/lint aprovados, exports Android/web aprovados, **30/30 checks** (10 API real, 6 cliente HTTP, 14 UI). Sem mudanças na API/schema/migrations ou manifestos/lockfiles. Validação visual em preview 390/320 px; aparência nativa e push no aparelho continuam pendentes. Relatório: `app/mobile/output/mobile-refactor-report.md`; ADR-045.
+
+- Branch: `mobile/api`; sem commit, push ou PR.
+- Escopo: continuidade da Fase 7; não cria uma fase nova nem altera seu histórico de conclusão.
+- Desvio autorizado: visual livre nas telas após o login; roxo/liquid glass preservados.
+- Detalhes da API, autorização e fluxo read-only seguem a documentação funcional vigente.
+- As menções antigas a testar push no Expo Go Android são históricas: o código atual trata esse ambiente como indisponível. O teste de push exige um build compatível e aparelho.
+- Evidências e limites: `app/mobile/output/mobile-refactor-report.md`.
