@@ -100,7 +100,7 @@ do projeto usam Node 22; a primeira execução DAST também precisa baixar a
 imagem do ZAP e pode demorar mais.
 
 ```bash
-git clone https://github.com/guimunizzz/Vulnera-TCC.git
+git clone --branch main https://github.com/guimunizzz/Vulnera-TCC.git
 cd Vulnera-TCC
 docker compose up -d --build
 docker compose ps
