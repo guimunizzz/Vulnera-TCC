@@ -1,188 +1,103 @@
-<!--
-O QUE FAZ: apresenta o Vulnera, suas telas, funcionalidades e formas de execução.
-POR QUE EXISTE: oferece uma entrada atualizada para avaliação do TCC e colaboração.
-QUEM CONSOME: visitantes do repositório, banca, equipe e contribuidores.
--->
+<!-- Apresenta o produto, sua execução local e as evidências verificadas; consumido pela banca e pelos colaboradores. -->
 
-# Vulnera
+<div align="center" style="padding: 24px; border-radius: 16px; border: 1px solid #7c3aed;">
+  <h1>Vulnera</h1>
+  <p><strong>Da descoberta ao acompanhamento da correção.</strong></p>
+  <p>Plataforma de gestão de vulnerabilidades, análises DAST e remediação com isolamento por empresa.</p>
+  <p>
+    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+    <img alt="React" src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB" />
+    <img alt="Node.js" src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white" />
+    <img alt="OWASP ZAP" src="https://img.shields.io/badge/OWASP-ZAP-00549E?style=flat-square" />
+    <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" />
+  </p>
+  <p><a href="#executar-localmente">Executar</a> · <a href="#fluxo-do-produto">Funcionalidades</a> · <a href="#dast-e-descoberta-de-endpoints">DAST</a> · <a href="#evidências-da-interface">Evidências</a> · <a href="#documentação">Documentação</a></p>
+</div>
 
-**Gestão de vulnerabilidades, análises de segurança e remediação em uma plataforma multi-tenant.**
+Projeto de TCC. O Vulnera reúne inventário de aplicações, projetos de análise,
+findings revisados por profissionais e acompanhamento da remediação. O ZAP
+automatiza a descoberta e a análise passiva; a triagem e a classificação CVSS
+continuam exigindo revisão humana.
 
-[![CI da main](https://github.com/guimunizzz/Vulnera-TCC/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/guimunizzz/Vulnera-TCC/actions/workflows/build.yml)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
-![React](https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
-![DAST](https://img.shields.io/badge/DAST-OWASP%20ZAP-F97316)
+> O GitHub sanitiza o HTML dos READMEs e pode remover atributos `style`. Os
+> blocos abaixo usam também estrutura semântica, alinhamento e tabelas para
+> permanecerem legíveis sem CSS inline. [Referência do GitHub](https://github.com/github/markup#github-markup).
 
-Projeto de TCC do curso Técnico em Desenvolvimento de Sistemas do SENAI, desenvolvido por **Rafael, Guilherme e Iann**. Empresas cadastram aplicações e solicitam projetos de análise; pentesters registram achados e evidências; clientes acompanham prioridades, prazos, responsáveis e relatórios.
+## Fluxo do produto
 
-O Vulnera reúne CVSS 3.1, contexto de risco, SLA, Vulnera Risk Score, aceite formal de risco, playbooks OWASP e scans DAST. A execução real usa um baseline passivo do ZAP com autorização explícita; seus resultados continuam sujeitos à revisão humana antes da promoção para uma vulnerabilidade do projeto.
+```mermaid
+flowchart LR
+    A[Empresa e assinatura] --> B[Aplicação]
+    B --> C[Projeto e equipe]
+    C --> D[Scan DAST autorizado]
+    D --> E[Triagem dos achados]
+    E --> F[Promoção manual + revisão CVSS]
+    F --> G[SLA, prioridade e remediação]
+    G --> H[Relatórios e acompanhamento]
+```
 
-**Estado deste README:** experiência integrada na `main` após a release de 06/10/2026. A stack descrita abaixo é destinada a desenvolvimento e demonstração local.
+<table>
+  <thead><tr><th>Área</th><th>O que o produto oferece</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Inventário e projetos</strong></td><td>Aplicações por empresa, limites de plano, wizard de criação de projeto e equipe de pentesters.</td></tr>
+    <tr><td><strong>Findings</strong></td><td>Busca global, filtros e consultas salvas; CVSS 3.1, severidade calculada e override justificado com auditoria.</td></tr>
+    <tr><td><strong>DAST</strong></td><td>Modo Real explícito, Spider tradicional do ZAP, análise passiva, progresso, fila, cancelamento, HTML original e PDF.</td></tr>
+    <tr><td><strong>Gestão dos achados</strong></td><td>Triagem com nota, promoção manual para vulnerabilidade de um projeto e comparação entre execuções reais do mesmo alvo.</td></tr>
+    <tr><td><strong>Remediação</strong></td><td>Responsável, comentários e evidências; quadro de correção, SLA por severidade e Vulnera Risk Score com contexto da aplicação.</td></tr>
+    <tr><td><strong>Aceite e playbooks</strong></td><td>Aceite formal de risco com revisão e validade; catálogo OWASP Top 10 e playbooks personalizados por empresa.</td></tr>
+    <tr><td><strong>Relatórios e maturidade</strong></td><td>PDFs executivo, técnico e DAST gerados no navegador; avaliação de maturidade por domínio.</td></tr>
+    <tr><td><strong>Mobile</strong></td><td>Aplicativo Expo de consulta para CLIENT e infraestrutura de notificações push. Celular físico não foi validado nesta rodada.</td></tr>
+  </tbody>
+</table>
 
-## Sumário
+<table>
+  <thead><tr><th>Perfil</th><th>Atuação principal</th></tr></thead>
+  <tbody>
+    <tr><td>ADMIN</td><td>Gestão administrativa, aprovação de assinaturas e acesso global aos scans.</td></tr>
+    <tr><td>PENTESTER</td><td>Execução e triagem dos próprios scans; promoção para projetos dos quais é membro.</td></tr>
+    <tr><td>CLIENT</td><td>Acompanhamento e operações autorizadas dentro da própria empresa; sem acesso ao módulo DAST.</td></tr>
+  </tbody>
+</table>
 
-- [O problema e a solução](#o-problema-e-a-solução)
-- [Funcionalidades](#funcionalidades)
-- [Perfis e casos de uso](#perfis-e-casos-de-uso)
-- [Screenshots](#screenshots)
-- [Stack](#stack)
-- [Arquitetura](#arquitetura)
-- [Setup do zero](#setup-do-zero)
-- [DAST: demonstração e execução real](#dast-demonstração-e-execução-real)
-- [Demo guiada](#demo-guiada)
-- [Qualidade e segurança](#qualidade-e-segurança)
-- [Documentação técnica](#documentação-técnica)
-- [Estrutura do repositório](#estrutura-do-repositório)
-- [Limitações conhecidas](#limitações-conhecidas)
-- [Trabalho futuro](#trabalho-futuro)
-- [Equipe](#equipe)
+## Evidências da interface
 
-## O problema e a solução
+Capturas de **09/10/2026**, na stack Docker real. O scan com Spider usa uma
+fixture local controlada para comprovar descoberta; seus achados não descrevem
+a aplicação do colega. O cenário LAN anterior foi preservado e está no
+[relatório da primeira validação](docs/DAST-REDE-VALIDACAO-2026-10-09.md).
 
-Resultados de pentest distribuídos entre planilhas, e-mails e PDFs dificultam a priorização, o acompanhamento das correções e a preservação do histórico. O Vulnera centraliza esse processo: cada finding de projeto está vinculado a uma aplicação e uma empresa, com permissões por papel e trilha de auditoria.
+<div align="center" style="margin: 16px 0; padding: 12px; border-radius: 12px;">
+  <a href="docs/evidencias/screenshots/2026-10-09-dast-spider-result.jpg"><img src="docs/evidencias/screenshots/2026-10-09-dast-spider-result.jpg" alt="Execução real do Spider concluída, com contadores e URLs nos achados" width="100%" /></a>
+  <p><strong>Spider real + análise passiva.</strong> Resultado observado, sem fallback para demonstração.</p>
+</div>
 
-O fluxo vai do cadastro da empresa à análise e à remediação. A severidade técnica vem do CVSS; o contexto da aplicação ajuda a priorizar o risco; políticas de SLA definem prazos; responsáveis, comentários, evidências e relatórios tornam o trabalho acompanhável.
-
-## Funcionalidades
-
-| Área | O que a plataforma oferece |
-| --- | --- |
-| Apresentação pública | Landing com introdução 3D, seções do produto, equipe e preview interativo com dados fictícios locais. |
-| Identidade e acesso | Cadastro, login, JWT com access de 15 minutos e refresh rotativo de 7 dias, papéis e isolamento por empresa. |
-| Empresas e planos | Onboarding, catálogo de planos e aprovação administrativa da assinatura. |
-| Aplicações | Inventário por empresa, contexto de risco e criação administrativa com seleção explícita do cliente. |
-| Projetos | Wizard de análise, seleção de aplicação elegível, nome e escopo, limites do plano, remediação opcional e atribuição de pentesters. |
-| Findings | CVSS 3.1, severidade, estados, responsável, comentários, evidências e histórico de auditoria. |
-| Busca global | Filtros, paginação, facetas, query wizard, buscas salvas e watchlists. |
-| Priorização | Vulnera Risk Score explicável, combinando CVSS e contexto da aplicação. |
-| SLA e risco | Prazos por severidade e aceite formal de risco com revisão, segregação de função e validade. |
-| Remediação | Quadro operável por menu/teclado, responsáveis e catálogo OWASP Top 10 com origem e licença. |
-| DAST | Demonstração sem tráfego ou baseline real autorizado, progresso, diagnóstico, triagem, promoção e comparação de resultados reais. |
-| Dashboards e relatórios | Métricas por perfil/aplicação e PDFs Executivo/Técnico gerados no navegador. |
-| Maturidade | Checklist por domínio, respostas de 1 a 5 e visualização por radar. |
-| Mobile | Aplicativo Expo de consulta para CLIENT, com registro de token de push para findings críticos. |
-| Experiência web | Temas claro/escuro, atmosfera compartilhada, layouts responsivos, cache e recuperação limitada de consultas transitórias. |
-
-O preview da landing não acessa a API nem grava dados. Os planos apresentados nessa seção pública são conteúdo fixo; pagamento real e geração de achados por IA não fazem parte do MVP.
-
-## Perfis e casos de uso
-
-| Perfil | Casos de uso |
-| --- | --- |
-| Visitante | Conhecer a solução, explorar o preview, consultar a apresentação dos planos e criar acesso. |
-| ADMIN | Aprovar assinaturas, escolher a empresa ao cadastrar aplicações, criar projetos, atribuir pentesters, acompanhar indicadores globais e executar DAST. |
-| CLIENT | Cadastrar aplicações e solicitar análises da própria empresa, acompanhar findings, remediação e relatórios. Ações de aceite de risco respeitam a alçada OWNER. |
-| PENTESTER | Trabalhar nos projetos aos quais está vinculado, registrar findings/evidências e executar/triá-los no DAST; não cria aplicações ou projetos. |
-| CLIENT no mobile | Consultar projetos e findings da empresa e receber notificações quando o ambiente/aparelho estiver configurado. |
-
-Na criação de Project, a empresa é derivada da Application. A assinatura deve estar `ACTIVE`; `PENDING`, `IN_PROGRESS` e `IN_REVIEW` consomem capacidade simultânea. Um projeto `COMPLETED` libera essa capacidade, mas a regra de um Project por Application permanece, inclusive após a conclusão. Remediação depende de `includesRemediation` no plano.
-
-## Screenshots
-
-Capturas versionadas da interface integrada em setembro/outubro de 2026. As telas autenticadas usam dados de demonstração ou fixtures de validação; nomes como `E2E20-*` identificam registros de teste.
-
-### Landing e dashboards
-
-| Landing pública | Dashboard administrativo — tema escuro |
-| --- | --- |
-| ![Landing pública atual do Vulnera](output/landing-merge-desktop.png) | ![Dashboard administrativo com dados de demonstração e tema escuro](output/visual-qa/dashboard-loaded-dark.png) |
-
-| Dashboard administrativo — tema claro | Portfólio de projetos |
-| --- | --- |
-| ![Dashboard administrativo com tema claro](output/visual-qa/dashboard-loaded-light.png) | ![Portfólio com estados, listagem e ação Novo projeto](output/issue-20/issue20-projects-1440.png) |
-
-### Criação de aplicações e projetos
-
-| ADMIN seleciona a empresa da aplicação | Wizard de projeto: nome, nível e escopo |
-| --- | --- |
-| ![Modal de criação administrativa de aplicação com seleção de empresa](output/issue-19-desktop.png) | ![Etapa de dados do projeto com nome, nível, escopo e Cancelar](output/issue-20/issue20-wizard-passo-3-1440.png) |
-
-### Interface em telas estreitas
-
-| Landing — 375 px | Criação de aplicação — 375 px |
-| --- | --- |
-| <img src="output/landing-merge-mobile.png" width="280" alt="Landing pública em viewport de 375 pixels" /> | <img src="output/issue-19-mobile.png" width="280" alt="Criação administrativa de aplicação em viewport de 375 pixels" /> |
-
-Outras evidências: [painel móvel carregado](output/page-loading-mobile.png), [elegibilidade de aplicações no wizard móvel](output/issue-20/issue20-wizard-aplicacao-375.png) e [matriz de QA do fluxo de projetos](output/issue-20-qa-report.md).
+<table>
+  <thead><tr><th>Relatório original do ZAP</th><th>Vulnerabilidade promovida e em correção</th></tr></thead>
+  <tbody><tr>
+    <td><a href="docs/evidencias/screenshots/2026-10-09-dast-spider-zap.jpg"><img src="docs/evidencias/screenshots/2026-10-09-dast-spider-zap.jpg" alt="Relatório HTML original gerado pelo ZAP no scan da fixture" width="600" /></a></td>
+    <td><a href="docs/evidencias/screenshots/2026-10-09-dast-vulnerability.jpg"><img src="docs/evidencias/screenshots/2026-10-09-dast-vulnerability.jpg" alt="Vulnerabilidade de origem DAST com comentário e status em correção no cenário LAN" width="600" /></a></td>
+  </tr></tbody>
+</table>
 
 <details>
-<summary>Capturas históricas do produto — preservadas do README anterior</summary>
+<summary>Galeria histórica — agosto de 2026</summary>
 
-Estas imagens registram as interfaces das fases anteriores. O login e os dashboards abaixo não representam o visual atual.
+Capturas da TechNova usadas na apresentação original; não representam o visual mais recente.
 
-| Login anterior | Planos públicos |
-| --- | --- |
-| ![Login da fase anterior](docs/evidencias/screenshots/01-login.png) | ![Página pública de planos capturada em uma fase anterior](docs/evidencias/screenshots/02-plans.png) |
-
-| Dashboard ADMIN anterior | Dashboard CLIENT anterior |
-| --- | --- |
-| ![Dashboard ADMIN histórico](docs/evidencias/screenshots/03-dashboard-admin.png) | ![Dashboard CLIENT histórico](docs/evidencias/screenshots/07-dashboard-client.png) |
-
-| Projetos | Detalhe de projeto |
-| --- | --- |
-| ![Listagem histórica de projetos](docs/evidencias/screenshots/05-projects.png) | ![Detalhe histórico de projeto](docs/evidencias/screenshots/06-project-detail.png) |
-
-| Avaliação de maturidade | Quadro de remediação |
-| --- | --- |
-| ![Checklist de maturidade e pontuações por domínio](docs/evidencias/screenshots/04-maturidade.png) | ![Quadro de remediação da entrega de setembro](docs/evidencias/exposure-remediation/screenshots/04-quadro-remediacao.png) |
-
-Capturas feitas contra a stack local, com a base fictícia TechNova Solutions. O histórico e os roteiros estão em [DEMO.md](docs/DEMO.md) e nas [evidências de remediação](docs/evidencias/exposure-remediation/README.md).
+<table>
+  <tr><th>Login</th><th>Dashboard ADMIN</th></tr>
+  <tr><td><img src="docs/evidencias/screenshots/01-login.png" alt="Login histórico" width="600" /></td><td><img src="docs/evidencias/screenshots/03-dashboard-admin.png" alt="Dashboard histórico" width="600" /></td></tr>
+  <tr><th>Projetos</th><th>Maturidade</th></tr>
+  <tr><td><img src="docs/evidencias/screenshots/05-projects.png" alt="Projetos históricos" width="600" /></td><td><img src="docs/evidencias/screenshots/04-maturidade.png" alt="Avaliação de maturidade histórica" width="600" /></td></tr>
+</table>
 
 </details>
 
-## Stack
+## Executar localmente
 
-| Camada | Tecnologia |
-| --- | --- |
-| Backend | Node.js 22 nas imagens Docker, Express 5 e TypeScript; camadas e montagem por Factory Method. |
-| Banco | MySQL 8 e Prisma ORM. |
-| Web | React 18, Vite, TanStack Query, Zustand, Tailwind e design system próprio. |
-| Movimento e visual | Motion, Three.js, React Three Fiber/Drei e GSAP, com carregamento lazy da landing/cena. |
-| PDF | pdf-lib; relatórios montados no navegador. |
-| DAST | OWASP ZAP em container por execução real, com runner e watchdog na API. |
-| Mobile | Expo, React Native, Expo Router e Expo Notifications. |
-| Autenticação | JWT HS256, refresh persistido como hash SHA-256 e senhas com bcrypt cost 12. |
-| Infra local | Docker Compose: MySQL, API, Web e MailHog. |
-| Testes | Jest/Supertest, Vitest/Testing Library/axe-core e Playwright. |
-| CI | GitHub Actions: testes/cobertura da API e análise SonarQube em push/PR para `main`. |
-
-As versões e os scripts detalhados estão nos manifestos de [API](app/api/package.json), [Web](app/web/package.json) e [Mobile](app/mobile/package.json).
-
-## Arquitetura
-
-```mermaid
-flowchart TB
-    Browser["Navegador: React / PDFs client-side"] --> Web["Web: localhost:8086"]
-    Browser -->|HTTP + JWT| API["API: localhost:3001/api"]
-    Mobile["Expo: CLIENT"] -->|HTTP + JWT| API
-    API --> Routes["Routes + middlewares"]
-    Factory["Factory Method"] -.-> Controller["Controllers"]
-    Routes --> Controller
-    Controller --> Service["Services: negócio e ownership"]
-    Service --> Repo["Repositories"]
-    Repo --> DB[("Prisma / MySQL 8")]
-    API --> Uploads[("Volume de evidências")]
-    API --> Reports[("Volume de relatórios DAST")]
-    Service --> Watchdog["Fila / watchdog DAST"]
-    Watchdog --> ZAP["Container ZAP: baseline passivo"]
-    ZAP --> Target["Alvo autorizado: GET limitado"]
-    API -.-> Push["Expo Push Service"]
-    Push -.-> Mobile
-```
-
-Controllers adaptam HTTP; services aplicam regras de negócio e ownership; repositories concentram o acesso a dados dos recursos. As factories montam as dependências. O módulo DAST mantém scans separados do tenant até a promoção de um achado para um projeto autorizado.
-
-## Setup do zero
-
-### Pré-requisitos
-
-- Git, Docker e Docker Compose.
-- Node.js 22 para desenvolvimento local de API/Web, alinhado às imagens Docker.
-- Para o mobile, o ambiente Expo e um aparelho/emulador compatível.
-
-### Stack completa no Docker
+Docker Desktop com Docker Compose é o caminho usado na validação. As imagens
+do projeto usam Node 22; a primeira execução DAST também precisa baixar a
+imagem do ZAP e pode demorar mais.
 
 ```bash
 git clone --branch main https://github.com/guimunizzz/Vulnera-TCC.git
@@ -191,47 +106,53 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Aguarde MySQL e API ficarem saudáveis. A API aplica as migrations versionadas no boot. Em uma base local nova, prepare a demonstração e o catálogo:
+Quando a API estiver saudável, prepare os dados de demonstração em uma
+instalação nova:
 
 ```bash
 docker compose exec api npm run db:seed
 docker compose exec api npm run db:seed:playbooks
 ```
 
-O catálogo OWASP vem de um snapshot versionado e não precisa de acesso à Internet para o seed. Os volumes preservam banco, evidências e relatórios entre reinícios da stack.
+Migrations pendentes são aplicadas no início da API. Os seeds são manuais;
+não é necessário repeti-los para testar o Spider em uma instalação existente.
+O catálogo OWASP usa um snapshot versionado e funciona sem acesso à Internet.
 
-| Serviço | Endereço no host |
-| --- | --- |
-| Web — entrada do produto | [localhost:8086](http://localhost:8086) |
-| API | [localhost:3001/api](http://localhost:3001/api) |
-| Health da API | [localhost:3001/api/health](http://localhost:3001/api/health) |
-| MySQL | `localhost:3307` |
-| MailHog — infraestrutura local | [localhost:8025](http://localhost:8025) |
+<table>
+  <thead><tr><th>Serviço</th><th>Endereço no host</th><th>Uso</th></tr></thead>
+  <tbody>
+    <tr><td>Web</td><td><a href="http://localhost:8086">localhost:8086</a></td><td>Entrada do produto</td></tr>
+    <tr><td>API</td><td><a href="http://localhost:3001/api/health">localhost:3001/api</a></td><td>Express e healthcheck</td></tr>
+    <tr><td>MySQL</td><td>localhost:3307</td><td>Porta externa; a API em Docker usa db:3306</td></tr>
+    <tr><td>Mailhog</td><td><a href="http://localhost:8025">localhost:8025</a></td><td>Caixa local para desenvolvimento</td></tr>
+  </tbody>
+</table>
 
-As credenciais da base fictícia estão em [DEMO.md](docs/DEMO.md). MailHog está disponível na stack; e-mail transacional não foi implementado.
+Credenciais e roteiro: [DEMO.md](docs/DEMO.md). Para acompanhar problemas:
+`docker compose logs --tail=100 api web`. A stack e o socket Docker são
+destinados ao desenvolvimento e à demonstração; não constituem um deploy
+de produção.
 
-**Configuração:** o Compose define o ambiente da API e usa a rede `vulnera-net`. O endereço `VITE_API_URL` entra no bundle Web durante o build; trocar esse endereço exige reconstruir a imagem. Editar apenas `app/api/.env` não substitui valores definidos pelo Compose.
-
-### Desenvolvimento com hot reload
-
-Na raiz, instale os workspaces API/Web e inicie somente a infraestrutura:
+<details>
+<summary>Desenvolvimento no host com hot reload</summary>
 
 ```bash
-npm install
 docker compose up -d db mailhog
+npm install
 ```
 
-Copie `app/api/.env.example` para `app/api/.env`. Para usar o MySQL do Compose, configure:
+Copie `app/api/.env.example` para `app/api/.env`. Para usar o banco do Compose
+e o servidor atual, ajuste explicitamente:
 
 ```dotenv
 PORT=3001
 DATABASE_URL=mysql://vulnera:vulnera@localhost:3307/vulnera
 CORS_ORIGIN=http://localhost:3000
+DAST_ZAP_NETWORK=
 ```
 
-O exemplo versionado ainda usa `SERVER_PORT`; substitua essa chave por `PORT`, que é a chave lida pelo servidor. Mantenha as demais variáveis do exemplo e ajuste os segredos para seu ambiente.
-
-**Terminal da API:**
+O exemplo legado contém `SERVER_PORT`; a API atual lê `PORT`. Configure os
+segredos JWT locais e não versione o `.env`.
 
 ```bash
 cd app/api
@@ -242,159 +163,174 @@ npm run db:seed:playbooks
 npm run dev
 ```
 
-**Terminal da Web:** copie `app/web/.env.example` para `app/web/.env`, confirmando `VITE_API_URL=http://localhost:3001/api`.
-
-```bash
-cd app/web
-npm run dev
-```
-
-A Web de desenvolvimento abre em `http://localhost:3000`. Não execute API/Web locais e os serviços equivalentes do Compose disputando as mesmas portas.
-
-**Terminal opcional do Mobile:** copie `app/mobile/.env.example` para `app/mobile/.env`. Em aparelho físico, use `EXPO_PUBLIC_API_URL=http://<IP-da-maquina-na-LAN>:3001/api`; no emulador Android, use `10.0.2.2` no lugar do IP.
-
-```bash
-cd app/mobile
-npm install
-npx expo start
-```
-
-Mobile não participa dos workspaces npm da raiz. As configurações de acesso por rede local estão comentadas em seu [.env.example](app/mobile/.env.example).
-
-## DAST: demonstração e execução real
-
-ADMIN e PENTESTER escolhem o modo ao criar o scan:
-
-| Modo | Comportamento |
-| --- | --- |
-| Simulado | Gera dados fictícios identificados, sem Docker nem tráfego ao alvo. Promoção e comparação ficam bloqueadas; triagem permanece disponível. |
-| Real | Exige segundo aviso e autorização explícita; executa GETs limitados e análise passiva, preservando resultados e falhas reais. |
-
-O baseline real visita até **30 páginas**, com **profundidade 2**, na mesma origem/subárvore, sem queries, formulários, JavaScript, login ou active scan. O padrão operacional é um ZAP por vez, com **2 GiB e 2 CPUs**. Falha não é convertida em demonstração: o scan fica `FAILED` com diagnóstico.
-
-O alvo precisa ser autorizado e alcançável pelo container. GET ainda gera tráfego e pode causar efeitos em sistemas mal projetados; o resultado passivo não substitui um pentest completo. `localhost` dentro do ZAP representa o próprio container. O Compose mantém alvos privados bloqueados por padrão.
-
-Consumidores da API devem enviar `mode: "REAL" | "SIMULATED"` no `POST /api/dast/scans`; o modo Real também exige `confirmedRealScan: true`. `DAST_FORCE_SIMULATE=true` bloqueia execuções reais.
-
-Operação, limites e evidências: [DAST.md](docs/DAST.md) e [validação de 28–29/09/2026](docs/DAST-VALIDACAO-2026-09-28.md). A stack usa o socket Docker do host para criar o ZAP e deve permanecer em ambiente local de avaliação.
-
-## Demo guiada
-
-O roteiro de aproximadamente dez minutos está em [docs/DEMO.md](docs/DEMO.md), com contas fictícias para ADMIN, CLIENT OWNER/MEMBER e PENTESTER.
-
-Uma sequência de avaliação: conhecer a landing → registrar/onboardar empresa → aprovar assinatura → criar Application e Project → atribuir pentester → registrar finding/evidência → consultar VRS/SLA/playbook → acompanhar remediação → exportar relatório. O DAST pode ser demonstrado sem tráfego ou executado em um alvo controlado e autorizado.
-
-## Qualidade e segurança
-
-| Componente | Comando / mecanismo |
-| --- | --- |
-| API | `npm run check --workspace=app/api`: ESLint + Jest. `npm run build --workspace=app/api`: TypeScript. |
-| Cobertura da API | `npm run test:coverage --workspace=app/api`. |
-| Web | `npm run check --workspace=app/web`: ESLint + contraste + Vitest. `npm run build --workspace=app/web`: typecheck + Vite. |
-| E2E | `npm run test:e2e --workspace=app/web`: Playwright contra uma stack configurada. O E2E DAST requer `E2E_DAST_TARGET_URL` explícito. |
-| CI da main | MySQL de teste, migrations, cobertura da API e análise SonarQube. Não executa os gates Web, build Docker ou E2E. |
-
-Os testes API usam `.env.test` e um banco separado `vulnera_test`; esse arquivo não é versionado. `cleanDatabase()` apaga registros do banco apontado, portanto nunca direcione essa configuração para a base da demonstração.
-
-Os controles incluem canários `TEN-*` de isolamento, validação de CVSS, evidências por conteúdo/magic number, auditoria, sanitização de Markdown, CSP no `vite preview` e rate limiting por Token Bucket em camadas. O workflow executa o scanner SonarQube, mas não aguarda/verifica seu Quality Gate separadamente.
-
-### Evidências de entregas
-
-| Data / entrega | Resultado registrado | Fonte |
-| --- | --- | --- |
-| 30/09 — criação de Application | Web 257/257; API 588/588; smoke 44/44. | [Validação da Issue #19](output/issue-19-validation.md) |
-| 01/10 — criação de Project | Web 297/297; API focal 24/24; smoke real 1/1. A suíte API completa registrou 598/601 e o grupo DAST passou 17/17 na repetição isolada. | [QA da Issue #20](output/issue-20-qa-report.md) |
-| 01/10 — carregamento | Web 286/286; smoke de navegação 17/17 e recuperação real de HTTP 429. | [Validação de carregamento](output/page-loading-validation.md) |
-| 28–29/09 — DAST | API focal 81/81; scan real concluído com 11 findings na validação de navegador; demonstração sem tráfego e falha sem fallback. | [Validação DAST](docs/DAST-VALIDACAO-2026-09-28.md) |
-
-São snapshots históricos por entrega, não uma execução única atual ou números somáveis. O check global da API tem falha de lint documentada por dois imports não usados em `vulnerability.service.ts`; não se declara gate global verde. O badge do início consulta o workflow da `main`.
-
-Também estão preservadas as [evidências ZAP de agosto](docs/evidencias/zap/README.md) e as [notas históricas de SonarQube](docs/evidencias/sonarqube/README.md). Algumas observações desses documentos foram substituídas pelas entregas posteriores, como a implementação da CSP.
-
-## Documentação técnica
-
-| Documento | Conteúdo |
-| --- | --- |
-| [AGENTS.md](AGENTS.md) | Convenções de código, camadas, factories e protocolo de documentação viva. |
-| [PRD_VIVO.md](PRD_VIVO.md) | Estado de implementação e histórico. |
-| [BACKLOG.md](docs/BACKLOG.md) | Pendências, fases e limitações. |
-| [ROADMAP_PROMPTS.md](docs/ROADMAP_PROMPTS.md) | Prompts e histórico de checkpoints. |
-| [FRONTEND_WEB.md](docs/FRONTEND_WEB.md) | Layout compartilhado, movimento, temas e recuperação de navegação. |
-| [DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Tokens, componentes e acessibilidade. |
-| [FINDINGS_QUERY.md](docs/FINDINGS_QUERY.md) | Linguagem de busca global. |
-| [EXPOSURE_REMEDIATION.md](docs/EXPOSURE_REMEDIATION.md) | SLA, VRS, aceite de risco, playbooks, buscas salvas e quadro. |
-| [DAST.md](docs/DAST.md) | Operação vigente e histórico do módulo ZAP. |
-| [RATE_LIMITING.md](docs/RATE_LIMITING.md) | Limites HTTP, configuração e carga. |
-| [DECISIONS.md](docs/DECISIONS.md) | Decisões de projeto. |
-| [ADRs](docs/Vulnera/07-Decisoes/) | Contexto, decisões arquiteturais e consequências. |
-| [CLAUDE.md](CLAUDE.md) / [GOTCHA.md](GOTCHA.md) | Guias operacionais e armadilhas recorrentes. |
-
-## Estrutura do repositório
-
-```text
-app/
-├── api/        # Express, Prisma, MySQL, testes e runner DAST
-├── web/        # React, landing, design system e E2E
-└── mobile/     # Expo: consulta para CLIENT
-docs/
-├── DEMO.md
-├── BACKLOG.md
-├── ROADMAP_PROMPTS.md
-├── EXPOSURE_REMEDIATION.md
-├── DAST.md
-├── evidencias/ # screenshots e relatórios de entregas
-└── Vulnera/    # domínio, jornadas, ADRs e material acadêmico
-output/        # evidências recentes e relatórios de validação
-AGENTS.md      # guia de escrita e manutenção do projeto
-PRD_VIVO.md    # memória viva de implementação
-```
-
-## Limitações conhecidas
-
-| Limitação | Estado atual |
-| --- | --- |
-| Lint global da API | Dois imports não usados seguem registrados; resultados de testes não equivalem a `check` verde. |
-| Concorrência de Project | Verificação de duplicidade e cota não é serializada com a criação; requests concorrentes podem violar RN05/`maxProjects`. |
-| DAST | Baseline limitado, sem exploração ativa; DNS rebinding/egress por IP resolvido, retenção automática e fixação da imagem por digest permanecem pendentes. |
-| Rate limiting | Implementado em memória para uma instância; não compartilha estado entre réplicas. |
-| Builds | Lockfiles não são versionados e as imagens usam `npm install`; não há árvore de dependências travada. Aviso histórico de bundle grande permanece. |
-| Sessão e rede | Falha de rede durante refresh pode deslogar; cache fresco pode aguardar 30 s para refletir alterações feitas por outra pessoa. |
-| Evidências | A API não oferece exclusão de Evidence. |
-| CSP | Política de scripts aplicada no preview/build servido pelo Docker, não no servidor de hot reload. |
-| Push mobile | A validação física em aparelho permanece pendente na documentação. |
-| SAST | Dois alertas HIGH sobre relatório HTML DAST e download de evidências seguem `needs_review`; exploração, falso positivo ou correção não são afirmados aqui. |
-
-As credenciais locais e o socket Docker do Compose não constituem configuração de produção. A lista completa, com histórico e acompanhamento, está em [docs/BACKLOG.md](docs/BACKLOG.md).
-
-## Trabalho futuro
-
-- Exposure Graph / Cadeias de Exposição — CP-8 adiado.
-- Garantias de concorrência para criação de projetos e limites do plano.
-- Builds com lockfile, verificações completas de CI e observabilidade.
-- Hardening e expansão de cobertura do DAST.
-- Pagamento real, e-mail transacional e recuperação de senha.
-- Chat em tempo real, tickets de suporte e i18n.
-- Pesos de VRS configuráveis por empresa.
-
-IA/Gemini foi retirada do escopo em 03/08/2026. Não há geração automática de findings por IA no MVP.
-
-## Equipe
-
-Fotos e funções utilizadas também na landing pública do projeto.
-
-| Rafael | Guilherme | Iann |
-| --- | --- | --- |
-| <img src="app/web/src/assets/landing/team/rafael.jpg" width="150" alt="Foto de Rafael" /> | <img src="app/web/src/assets/landing/team/guilherme.jpg" width="150" alt="Foto de Guilherme" /> | <img src="app/web/src/assets/landing/team/iann.jpg" width="150" alt="Foto de Iann" /> |
-| Tech Lead & Scrum Master | Back-end | Front-end |
-| [LinkedIn](https://www.linkedin.com/in/rafael-augusto-barros-51a919233/) | [LinkedIn](https://www.linkedin.com/in/guilherme-muniz-claro/) | [LinkedIn](https://www.linkedin.com/in/iannarthur/) |
-
-<details>
-<summary>Contribuidores — registro histórico de agosto de 2026</summary>
-
-Imagem preservada do README anterior; representa o registro daquele período.
-
-<img width="1623" height="825" alt="Registro histórico dos contribuidores do Vulnera em agosto de 2026" src="https://github.com/user-attachments/assets/a2c3002f-edd4-4eaf-8ce3-53eabf4c66fb" />
+Em outro terminal, `cd app/web` e `npm run dev` (porta 3000).
+Para mobile, instale as dependências em `app/mobile`, configure o IP da API
+na rede local e execute `npx expo start`; consulte o roteiro antes de usar
+um dispositivo físico.
 
 </details>
 
-*Vulnera — TCC de Rafael, Guilherme e Iann. Consulte [AGENTS.md](AGENTS.md) para contribuir e [PRD_VIVO.md](PRD_VIVO.md) para acompanhar a implementação.*
+## DAST e descoberta de endpoints
+
+1. Cadastre a aplicação e o projeto para depois gerenciar os achados.
+2. Entre como ADMIN/PENTESTER, abra **DAST → Novo scan** e informe o alvo autorizado.
+3. Escolha **Real — análise passiva**, confira a URL e marque a autorização.
+4. Acompanhe **início → Spider → análise passiva → relatórios**.
+5. Revise os achados, registre a triagem e promova manualmente os relevantes;
+   revise o CVSS antes de salvar. Continue pelo fluxo de remediação.
+
+<table>
+  <thead><tr><th>Real</th><th>Simulado</th></tr></thead>
+  <tbody><tr>
+    <td>Container ZAP por execução; Spider tradicional descobre links, recursos, robots.txt e sitemap; regras passivas analisam as respostas. Falha termina FAILED.</td>
+    <td>Gera achados fictícios sem executar ZAP ou enviar tráfego ao alvo. Permite demonstrar triagem; promoção e comparação operacional ficam bloqueadas.</td>
+  </tr></tbody>
+</table>
+
+Alvos HTTP/HTTPS internos e públicos são aceitos sem flag de rede privada.
+Credenciais embutidas e outros protocolos são recusados. O alvo precisa ser
+alcançável **do ZAP**, não apenas do navegador do usuário.
+
+<table>
+  <tr><th>Onde roda o alvo</th><th>Endereço a informar</th></tr>
+  <tr><td>Outra máquina na LAN</td><td>http://&lt;ip-da-máquina&gt;:&lt;porta&gt;/ — Vite precisa escutar na rede e o firewall permitir a porta</td></tr>
+  <tr><td>Host do Docker Desktop</td><td>http://host.docker.internal:&lt;porta&gt;/</td></tr>
+  <tr><td>Container na vulnera-net</td><td>http://&lt;nome-do-container&gt;:&lt;porta-interna&gt;/</td></tr>
+</table>
+
+`localhost` dentro do ZAP aponta para o próprio container. O Spider fica na
+origem e subárvore informadas, exclui queries e caminhos sensíveis e não
+processa/envia formulários. Ele não executa JavaScript: rotas exclusivamente
+dinâmicas de uma SPA podem permanecer fora da descoberta. Não há active scan.
+
+<table>
+  <tr><th>Limite padrão</th><th>Valor</th></tr>
+  <tr><td>Scans concorrentes / recursos por ZAP</td><td>1 / 2 GiB / 2 CPUs</td></tr>
+  <tr><td>Spider</td><td>1 minuto; profundidade 2; 30 filhos por nó; 1 thread; parsing até 1 MB</td></tr>
+  <tr><td>Prazo global do scan</td><td>30 minutos; watchdog e cancelamento cooperativo</td></tr>
+</table>
+
+30 filhos por nó não é um teto global de 30 páginas. O tempo do Spider pode
+ser configurado por `DAST_ZAP_SPIDER_MAX_DURATION_MIN` (1–10 min).
+Zero achados ou conclusão do Spider não comprovam ausência de vulnerabilidades
+nem cobertura completa. O PDF identifica o perfil registrado por execução;
+scans históricos sem metadados não recebem a metodologia nova retroativamente.
+
+## Stack e arquitetura
+
+<table>
+  <tr><th>Camada</th><th>Tecnologias e organização</th></tr>
+  <tr><td>API</td><td>Node.js, Express 5, TypeScript; controllers, services e repositories montados por Factory Method</td></tr>
+  <tr><td>Banco</td><td>Prisma ORM e MySQL 8</td></tr>
+  <tr><td>Web</td><td>React, Vite, TanStack Query, Zustand, Tailwind e design system próprio</td></tr>
+  <tr><td>PDF</td><td>pdf-lib no navegador; apenas metadados persistidos na API</td></tr>
+  <tr><td>Mobile</td><td>Expo / React Native / Expo Notifications</td></tr>
+  <tr><td>DAST</td><td>ZAP daemon efêmero, Spider tradicional e scanner passivo</td></tr>
+  <tr><td>Testes</td><td>Jest + Supertest na API; Vitest + Testing Library + axe-core no web; cenários Playwright disponíveis</td></tr>
+  <tr><td>CI atual</td><td>GitHub Actions: testes/cobertura API e SonarQube em pushes/PRs para main; não executa o check web completo</td></tr>
+</table>
+
+```mermaid
+flowchart TB
+    Browser[Navegador] --> Web[Web :8086]
+    Browser --> API[API :3001]
+    Mobile[Mobile CLIENT] --> API
+    API --> DB[(MySQL)]
+    API --> Files[(Evidências e relatórios)]
+    API -->|Docker socket / rede vulnera-net| ZAP[ZAP por scan]
+    ZAP -->|Spider autorizado| Target[Alvo HTTP/HTTPS]
+    ZAP --> Passive[Análise passiva]
+    Passive -->|JSON e HTML| API
+    Browser --> PDF[PDF gerado no cliente]
+```
+
+Autenticação JWT com access de 15 minutos e refresh rotativo de 7 dias,
+senhas bcrypt, ownership no service e isolamento por empresa. Uploads passam
+por validação de conteúdo; relatórios HTML do ZAP recebem CSP sandbox.
+O rate limiting usa Token Bucket em memória com camadas global, tenant,
+usuário, escrita e endpoints específicos.
+
+## Validação atual
+
+**09/10/2026 — Spider, relatórios e documentação conferidos na stack Docker.**
+
+<table>
+  <tr><th>Verificação</th><th>Resultado desta entrega</th></tr>
+  <tr><td>API</td><td>642/642 testes em 43 suítes; focal DAST 104/104; build e lint dos fontes alterados aprovados.</td></tr>
+  <tr><td>Web</td><td>338/338 testes em 30 suítes; lint 0 erros/9 avisos anteriores; contraste 66/66; build Docker aprovado.</td></tr>
+  <tr><td>Docker e scan real</td><td>ZAP 2.17.0; scan real concluído em 26,641 s, 9 URLs descobertas e 14 findings (0H/9M/5L/0I). Tráfego da fixture: 10 GETs, sem query, formulários ou outra origem.</td></tr>
+  <tr><td>Interface e PDF</td><td>Formulário, confirmação, acompanhamento, resultados e HTML original conferidos. PDFs novo (9 páginas) e histórico (5 páginas) exportados e inspecionados. Vulnerabilidade promovida no cenário LAN com status em andamento, comentário, VRS e SLA.</td></tr>
+</table>
+
+O `npm run check` global da API permanece bloqueado por dois imports não
+usados preexistentes em `vulnerability.service.ts:45`; testes são executados
+separadamente e o lint dos fontes alterados é conferido. A evidência atual
+não substitui testes manuais de mobile nem uma reanálise dos alertas SAST.
+
+```bash
+# Em app/api — exige o banco de teste separado configurado em .env.test
+npm run check
+npm run test -- --silent
+npm run build
+
+# Em app/web
+npm run check -- -- --maxWorkers=1
+npm run build
+```
+
+Evidências históricas de [ZAP](docs/evidencias/zap/README.md),
+[SonarQube](docs/evidencias/sonarqube/) e [remediação](docs/EXPOSURE_REMEDIATION.md)
+mantêm suas próprias datas e limites. Relatório desta atualização:
+[Spider e README](docs/DAST-SPIDER-VALIDACAO-2026-10-09.md).
+
+## Limites e próximos passos
+
+<table>
+  <tr><th>Área</th><th>Limite atual</th></tr>
+  <tr><td>DAST</td><td>Sem autenticação no alvo, execução JavaScript/AJAX ou exploração ativa. Queries e caminhos sensíveis são excluídos; não garante descoberta completa.</td></tr>
+  <tr><td>Rede e execução</td><td>Sem bloqueio SSRF por faixa de endereço, conforme ADR-045. Contas de scan alcançam serviços HTTP acessíveis ao ZAP. Socket Docker é adequado à demonstração local.</td></tr>
+  <tr><td>Fila e rate limiting</td><td>Estado em memória por instância; não há cotas distribuídas nem retomada de scans após restart.</td></tr>
+  <tr><td>Builds</td><td>Dockerfiles resolvem ranges com npm install; a árvore não é totalmente fixada pelo lockfile do workspace. Split web é parcial e o bundle principal ainda é grande.</td></tr>
+  <tr><td>Qualidade</td><td>Lint API preexistente pendente, alertas SAST em revisão e revisão de dependências no backlog. CWE/WASC -1 ainda aparecem como sentinelas no PDF.</td></tr>
+  <tr><td>Produto</td><td>Sem exclusão de Evidence; pagamento e aprovação comercial não integram cobrança real; push em celular físico não validado nesta rodada.</td></tr>
+</table>
+
+<details>
+<summary>Fora do MVP / trabalho futuro</summary>
+
+IA, chat em tempo real, tickets de suporte, e-mail transacional, pagamento
+real, reset de senha, i18n, filas distribuídas e deploy de produção ficam
+fora do MVP. Exposure Graph e pesos de VRS por empresa permanecem planejados.
+Consulte o [backlog](docs/BACKLOG.md) antes de iniciar novas features.
+
+</details>
+
+## Documentação
+
+<table>
+  <tr><th>Documento</th><th>Conteúdo</th></tr>
+  <tr><td><a href="AGENTS.md">AGENTS.md</a> / <a href="PRD_VIVO.md">PRD_VIVO.md</a></td><td>Convenções e estado de implementação</td></tr>
+  <tr><td><a href="docs/DEMO.md">Demo</a></td><td>Credenciais e roteiro de apresentação</td></tr>
+  <tr><td><a href="docs/DAST.md">DAST</a></td><td>Modos, execução, configuração e diagnóstico</td></tr>
+  <tr><td><a href="docs/EXPOSURE_REMEDIATION.md">Exposure &amp; Remediation</a></td><td>SLA, VRS, aceite de risco, playbooks e quadro</td></tr>
+  <tr><td><a href="docs/FINDINGS_QUERY.md">Findings query</a> / <a href="docs/DESIGN_SYSTEM.md">Design system</a></td><td>Busca, componentes e acessibilidade</td></tr>
+  <tr><td><a href="docs/Vulnera/07-Decisoes/">ADRs</a></td><td>Contexto, decisões arquiteturais e consequências</td></tr>
+  <tr><td><a href="docs/BACKLOG.md">Backlog</a> / <a href="docs/ROADMAP_PROMPTS.md">Roadmap</a></td><td>Planejamento e histórico de entregas</td></tr>
+</table>
+
+```text
+app/api/       Backend, Prisma, seeds e testes
+app/web/       Produto web e PDFs
+app/mobile/    Aplicativo Expo
+docs/          Operação, evidências, roteiro e vault do domínio
+AGENTS.md      Guia de implementação
+PRD_VIVO.md    Memória viva do projeto
+```
+
+<details>
+<summary>Contribuidores — registro histórico de agosto</summary>
+<img width="100%" alt="Registro dos contribuidores em agosto" src="https://github.com/user-attachments/assets/a2c3002f-edd4-4eaf-8ce3-53eabf4c66fb" />
+</details>
+
+Vulnera — projeto de TCC. A documentação descreve o comportamento
+implementado e mantém separados os resultados atuais e as evidências históricas.

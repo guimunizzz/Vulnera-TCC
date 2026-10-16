@@ -1114,3 +1114,66 @@ partindo de `dev`, com espera visual fluida quando necessária.
   await. Build do host limitado pelas dependências preexistentes ausentes;
   contêiner validou fonte atual sem instalar pacotes. Não é uma nova fase de
   produto; limites da API, schema e dependências foram preservados.
+
+## Correção — DAST em rede interna (2026-10-09)
+
+✅ Concluída em 2026-10-09 — 100% (4/4 entregas).
+
+Pedido direto do Rafael: remover permanentemente o bloqueio de alvo
+privado/local e validar o percurso do produto para a apresentação. Não é
+uma nova fase numerada do MVP. Política registrada no ADR-045.
+
+- DAST-LAN-01: ✅ Diagnóstico de URL/Docker e conectividade da LAN.
+- DAST-LAN-02: ✅ Restrição/flag/erro retirados, regressões de URL,
+  confirmação Real, autenticação, RBAC e ownership.
+- DAST-LAN-03: ✅ PDF coerente com Real passivo/demonstração e gestão de
+  resultados; triagem demo disponível, promoção/comparação demo bloqueadas.
+- DAST-LAN-04: ✅ Scan real e percurso UI cadastro/projeto/triagem/promoção,
+  comentário/correção e relatórios, com evidências e docs sincronizados.
+
+## Histórico
+
+- **Branch/base:** `codex/fix-dast-network-targets` ← `dev` em `33f6438`.
+- **Data:** 2026-10-09. Commit de implementação `98ca2e9`; branch publicada, [PR #58](https://github.com/guimunizzz/Vulnera-TCC/pull/58) em rascunho para `dev`, sem merge.
+- **Validação:** API 617/617 em 43 suítes e build; web 338/338 em 30 suítes,
+  contraste 66/66, lint 0 erros/9 avisos, builds Docker aprovados.
+- **Real:** alvo Vite autorizado na LAN, ZAP 2.17.0, 21,331 s,
+  `COMPLETED`, `simulated=false`, cinco achados (0H/3M/1L/1I).
+- **Desvios/limites:** IP inicial sem resposta, corrigido pelo usuário.
+  Cenário novo mantido para apresentação. Sem schema/migration/dependências.
+  Check global API continua bloqueado pelos dois imports preexistentes;
+  sentinelas CWE/WASC negativas ficam como polimento futuro.
+- **Relatório:** `docs/DAST-REDE-VALIDACAO-2026-10-09.md`.
+
+## Continuação — Spider DAST e README (2026-10-09)
+
+✅ Concluída em 2026-10-09 — 100% (4/4 entregas).
+
+Pedido do Rafael: acrescentar Spider para descobrir outros endpoints e,
+ao fim, melhorar o README com div/style, tabelas HTML e prints de evidência,
+mantendo a mesma branch.
+
+- DAST-SPIDER-01: ✅ Spider tradicional, contexto por origem/subárvore,
+  queries excluídas antes do tráfego, GET sem forms e limites explícitos.
+- DAST-SPIDER-02: ✅ Perfil/URLs/limites registrados por execução, endpoint
+  autorizado e PDF histórico sem metodologia nova atribuída retroativamente.
+- DAST-SPIDER-03: ✅ Fixture real, UI/HTML/PDF, regressões e builds.
+- DAST-SPIDER-04: ✅ README, três prints versionados, ADR e docs vivos.
+
+## Histórico
+
+- **Data/branch/PR:** 2026-10-09, `codex/fix-dast-network-targets`,
+  [PR #58](https://github.com/guimunizzz/Vulnera-TCC/pull/58), rascunho para `dev`.
+- **Validação final:** API focal 104/104, full 642/642 em 43 suítes; web
+  338/338 em 30 suítes, contraste 66/66, lint 0 erros/9 avisos. Builds
+  host API/Docker API/web aprovados. Check API global mantém dois erros antigos.
+- **Real:** ZAP 2.17.0, 26,641 s, COMPLETED/100%/não simulado,
+  9 URLs, 14 achados (0H/9M/5L/0I), 10 GETs sem query/POST/outra origem.
+- **Desvios:** URL anterior do colega inacessível; prova atual em fixture
+  controlada. A primeira prova revelou query acessada apesar do contexto;
+  exclusão própria do Spider corrigiu o tráfego na repetição. Focal/full
+  foram executados sequencialmente após colisão no banco de teste.
+- **Limites:** sem JavaScript/AJAX/active scan; 30 filhos por nó não são
+  30 páginas totais; estilo inline pode ser removido pelo GitHub. Sem schema,
+  migration, dependências, lockfile ou descarte das alterações do usuário.
+- **Decisão/relatório:** ADR-046; `docs/DAST-SPIDER-VALIDACAO-2026-10-09.md`.

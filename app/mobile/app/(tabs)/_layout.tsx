@@ -16,31 +16,35 @@
  * Também é onde o registro de push dispara (usePushRegistration) — roda uma
  * vez por sessão autenticada, independente de qual aba o usuário está vendo.
  *
- * Tab bar flutuante com glassmorphism: `tabBarStyle` posiciona o container
- * como um pill absoluto (não dockado — por isso as telas dentro das abas
- * reservam espaço extra no rodapé, ver TAB_BAR em theme/tokens.ts) e
- * `tabBarBackground` desenha o vidro fosco (BlurView + tint) atrás dos
- * ícones — é o mecanismo nativo do React Navigation pra isso, não uma tab
- * bar reimplementada do zero.
+ * Modelo 7: luz roxa atravessa o vidro com pulsação e fade de 400 ms.
+ * As telas deslizam pela largura inteira em 280 ms, invertendo o sentido
+ * ao voltar para Projetos e respeitando a preferência de movimento reduzido.
+ * O React Navigation mantém rotas/eventos; a cápsula respeita área segura
+ * e o respiro compartilhado em TAB_BAR, sem mudar as telas ou consultas.
  */
 
-import { StyleSheet, View } from "react-native";
+import { Easing, useWindowDimensions } from "react-native";
 import { Redirect, Tabs } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
 import { useAuthStore } from "../../src/store/auth.store";
-import { usePushRegistration } from "../../src/hooks/use-push-registration";
-import { TabIcon } from "../../src/components/tab-icon";
+import { PushStatusContext, usePushRegistration } from "../../src/hooks/use-push-registration";
+import { IconGlassTabBar } from "../../src/components/icon-glass-tab-bar";
 import { haptics } from "../../src/lib/haptics";
 import { LoadingState } from "../../src/components/states";
 import { Screen } from "../../src/components/screen";
-import { COLORS, FONT_FAMILY, RADIUS, SHADOW, TAB_BAR } from "../../src/theme/tokens";
+import { COLORS, FONT_FAMILY } from "../../src/theme/tokens";
+import { useWorkspaceReducedMotion, WorkspaceMotionProvider } from "../../src/components/workspace-motion";
+import { WorkspaceBlurProvider } from "../../src/components/workspace-blur";
 
 export default function TabsLayout() {
+  return <WorkspaceMotionProvider><WorkspaceBlurProvider><AuthenticatedTabs /></WorkspaceBlurProvider></WorkspaceMotionProvider>;
+}
+
+function AuthenticatedTabs() {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
-  const insets = useSafeAreaInsets();
-  usePushRegistration();
+  const pushStatus = usePushRegistration();
+  const reduced = useWorkspaceReducedMotion();
+  const { width } = useWindowDimensions();
 
   if (!hasHydrated) {
     return (
@@ -55,33 +59,29 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs
+    <PushStatusContext.Provider value={pushStatus}><Tabs
+      tabBar={(props) => <IconGlassTabBar {...props} />}
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.surface },
         headerTintColor: COLORS.textPrimary,
         headerTitleStyle: { fontFamily: FONT_FAMILY.semibold },
         headerShadowVisible: false,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            left: TAB_BAR.sideMargin,
-            right: TAB_BAR.sideMargin,
-            bottom: insets.bottom + TAB_BAR.bottomMargin,
-            height: TAB_BAR.height,
+        headerShown: false,
+        animation: reduced ? "none" : "shift",
+        // O progresso da navegação já inverte o sinal entre as duas abas.
+        // Usar a largura real faz ambas se moverem juntas, sem fade ou salto.
+        sceneStyleInterpolator: ({ current }) => ({
+          sceneStyle: {
+            transform: [{
+              translateX: current.progress.interpolate({
+                inputRange: [-1, 0, 1],
+                outputRange: [-width, 0, width],
+                extrapolate: "clamp",
+              }),
+            }],
           },
-        ],
-        // Sombra vai no container (transparente) pra não ser cortada pelo
-        // overflow:hidden do vidro — ver nota no styles.backgroundWrap.
-        tabBarBackground: () => (
-          <View style={styles.backgroundWrap}>
-            <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
-            <View style={styles.tint} />
-          </View>
-        ),
-        tabBarItemStyle: styles.tabBarItem,
-        tabBarLabelStyle: { fontFamily: FONT_FAMILY.medium, fontSize: 11 },
-        tabBarActiveTintColor: COLORS.accentInk,
-        tabBarInactiveTintColor: COLORS.textMuted,
+        }),
+        transitionSpec: { animation: "timing", config: { duration: reduced ? 0 : 280, easing: Easing.bezier(0.22, 1, 0.36, 1) } },
       }}
     >
       <Tabs.Screen
@@ -89,52 +89,16 @@ export default function TabsLayout() {
         options={{
           headerShown: false,
           title: "Projetos",
-          tabBarIcon: ({ color, focused, size }) => (
-            <TabIcon name={focused ? "folder" : "folder-outline"} color={color} size={size} focused={focused} />
-          ),
         }}
         listeners={{ tabPress: () => haptics.tap() }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Configurações",
-          tabBarIcon: ({ color, focused, size }) => (
-            <TabIcon name={focused ? "settings" : "settings-outline"} color={color} size={size} focused={focused} />
-          ),
+          title: "Minha conta",
         }}
         listeners={{ tabPress: () => haptics.tap() }}
       />
-    </Tabs>
+    </Tabs></PushStatusContext.Provider>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    position: "absolute",
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "transparent",
-    ...SHADOW.raised,
-  },
-  // overflow:"hidden" fica aqui (não em `tabBar`) — é o que recorta o blur
-  // nas pontas arredondadas do pill; se fosse no container de fora, também
-  // cortaria a sombra no iOS.
-  backgroundWrap: {
-    ...StyleSheet.absoluteFill,
-    borderRadius: RADIUS.full,
-    overflow: "hidden",
-  },
-  // Tint sólido semi-transparente por cima do blur — o vidro fosco puro
-  // varia demais de legibilidade dependendo do que rola atrás; isso
-  // garante contraste consistente do ícone/rótulo em qualquer conteúdo.
-  tint: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: COLORS.surface,
-    opacity: 0.55,
-  },
-  tabBarItem: {
-    paddingTop: 8,
-  },
-});

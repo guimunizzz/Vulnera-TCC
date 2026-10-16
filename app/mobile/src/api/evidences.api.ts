@@ -12,8 +12,8 @@ import { apiClient } from "./client";
 import type { Evidence } from "../types/evidence.types";
 
 export const evidencesApi = {
-  list: (vulnerabilityId: string) =>
-    apiClient.get<Evidence[]>(`/vulnerabilities/${vulnerabilityId}/evidences`).then((res) => res.data),
+  list: (vulnerabilityId: string, signal?: AbortSignal) =>
+    apiClient.get<Evidence[]>(`/vulnerabilities/${vulnerabilityId}/evidences`, { signal }).then((res) => res.data),
 
   downloadUrl: (vulnerabilityId: string, evidenceId: string): string =>
     `${apiClient.defaults.baseURL}/vulnerabilities/${vulnerabilityId}/evidences/${evidenceId}`,

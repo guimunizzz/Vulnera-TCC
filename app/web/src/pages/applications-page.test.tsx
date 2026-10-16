@@ -15,6 +15,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "../design/theme-provider";
@@ -27,6 +28,7 @@ const api = vi.hoisted(() => ({
   applications: vi.fn(),
   createApplication: vi.fn(),
   deleteApplication: vi.fn(),
+  updateApplication: vi.fn(),
   companies: vi.fn(),
   subscription: vi.fn(),
   plans: vi.fn(),
@@ -37,6 +39,7 @@ vi.mock("../lib/api/applications.api", () => ({
     list: api.applications,
     create: api.createApplication,
     delete: api.deleteApplication,
+    update: api.updateApplication,
   },
 }));
 vi.mock("../lib/api/companies.api", () => ({ companiesApi: { list: api.companies } }));
@@ -160,6 +163,7 @@ beforeEach(() => {
   api.applications.mockReset();
   api.createApplication.mockReset();
   api.deleteApplication.mockReset();
+  api.updateApplication.mockReset();
   api.companies.mockReset();
   api.subscription.mockReset();
   api.plans.mockReset();
@@ -176,6 +180,69 @@ afterEach(() => {
 });
 
 describe("ApplicationsPage", () => {
+  it("APP-CTX-01 — CLIENT OWNER edita os seis campos, salva e reabre o contexto atualizado", async () => {
+    entrarComo("CLIENT");
+    useAuthStore.setState({ user: { ...useAuthStore.getState().user!, companyRole: "OWNER" } });
+    const user = userEvent.setup();
+    let applications = APLICACOES.map((application) => ({ ...application }));
+    api.applications.mockImplementation(async () => applications);
+    api.updateApplication.mockImplementation(async (id, input) => {
+      applications = applications.map((application) => application.id === id ? { ...application, ...input } : application);
+      return applications.find((application) => application.id === id);
+    });
+    renderizarPagina();
+    await screen.findByText("Painel interno");
+    const abrirContexto = () => user.click(within(screen.getByRole("row", { name: /Painel interno/ })).getByRole("button", { name: "Contexto" }));
+    await abrirContexto();
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Criticidade" }), "HIGH");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Ambiente" }), "PROD");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sensibilidade do dado" }), "CONFIDENTIAL");
+    await user.type(screen.getByRole("textbox", { name: "Dono de negócio" }), "Diretoria Comercial");
+    await user.type(screen.getByRole("textbox", { name: "Dono técnico" }), "Squad Checkout");
+    await user.click(screen.getByRole("switch", { name: "Exposta à internet" }));
+    await user.click(screen.getByRole("button", { name: "Salvar contexto" }));
+
+    const input = { criticality: "HIGH", environment: "PROD", dataSensitivity: "CONFIDENTIAL", internetFacing: true, businessOwner: "Diretoria Comercial", technicalOwner: "Squad Checkout" };
+    await waitFor(() => expect(api.updateApplication).toHaveBeenCalledExactlyOnceWith("app-2", input));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(api.applications).toHaveBeenCalledTimes(2));
+    await abrirContexto();
+    expect(screen.getByRole("combobox", { name: "Criticidade" })).toHaveValue("HIGH");
+    expect(screen.getByRole("combobox", { name: "Ambiente" })).toHaveValue("PROD");
+    expect(screen.getByRole("combobox", { name: "Sensibilidade do dado" })).toHaveValue("CONFIDENTIAL");
+    expect(screen.getByRole("textbox", { name: "Dono de negócio" })).toHaveValue("Diretoria Comercial");
+    expect(screen.getByRole("textbox", { name: "Dono técnico" })).toHaveValue("Squad Checkout");
+    expect(screen.getByRole("switch", { name: "Exposta à internet" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("APP-CTX-02 — CLIENT continua impedido de salvar uma redução de risco", async () => {
+    entrarComo("CLIENT");
+    const user = userEvent.setup();
+    renderizarPagina();
+    await screen.findByText("Portal do Cliente");
+    await user.click(within(screen.getByRole("row", { name: /Portal do Cliente/ })).getByRole("button", { name: "Contexto" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Criticidade" }), "LOW");
+    expect(screen.getByRole("button", { name: "Salvar contexto" })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Só um administrador");
+    expect(api.updateApplication).not.toHaveBeenCalled();
+  });
+
+  it("APP-CTX-03 — recusa de ownership da API mantém o formulário e informa o CLIENT", async () => {
+    entrarComo("CLIENT");
+    const user = userEvent.setup();
+    api.updateApplication.mockRejectedValue(erroDaApi("FORBIDDEN"));
+    renderizarPagina();
+    await screen.findByText("Painel interno");
+    await user.click(within(screen.getByRole("row", { name: /Painel interno/ })).getByRole("button", { name: "Contexto" }));
+    await user.type(screen.getByRole("textbox", { name: "Dono técnico" }), "Squad QA");
+    await user.click(screen.getByRole("button", { name: "Salvar contexto" }));
+    expect(await screen.findByText("Você não tem permissão para fazer isso.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Dono técnico" })).toHaveValue("Squad QA");
+    expect(api.applications).toHaveBeenCalledTimes(1);
+  });
+
   it("APP-VIS-01 — CLIENT vê inventário e capacidade da própria assinatura", async () => {
     entrarComo("CLIENT");
     renderizarPagina();

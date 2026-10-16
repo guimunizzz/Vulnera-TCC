@@ -10,9 +10,18 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import type { AuthResponse, User } from "../types/auth.types";
+import { queryClient } from "../lib/query-client";
 
-const secureStorage: StateStorage = {
+// Preview web usa apenas memória: nenhum token é gravado em storage do navegador.
+// Em Android/iOS, a persistência continua exclusivamente no SecureStore.
+const previewSession = new Map<string, string>();
+const secureStorage: StateStorage = Platform.OS === "web" ? {
+  getItem: async (name) => previewSession.get(name) ?? null,
+  setItem: async (name, value) => { previewSession.set(name, value); },
+  removeItem: async (name) => { previewSession.delete(name); },
+} : {
   getItem: async (name: string) => (await SecureStore.getItemAsync(name)) ?? null,
   setItem: async (name: string, value: string) => SecureStore.setItemAsync(name, value),
   removeItem: async (name: string) => SecureStore.deleteItemAsync(name),
@@ -40,10 +49,16 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       hasHydrated: false,
-      setAuth: (auth) =>
-        set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user }),
+      setAuth: (auth) => {
+        // Cancela consultas da sessão anterior antes de expor a nova identidade.
+        queryClient.clear();
+        set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user });
+      },
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
-      clearAuth: () => set({ accessToken: null, refreshToken: null, user: null }),
+      clearAuth: () => {
+        queryClient.clear();
+        set({ accessToken: null, refreshToken: null, user: null });
+      },
       setHasHydrated: (value) => set({ hasHydrated: value }),
     }),
     {

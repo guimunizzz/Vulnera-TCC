@@ -132,7 +132,6 @@ const MESSAGES: Record<string, string> = {
   REAL_SCAN_CONFIRMATION_REQUIRED: "Confirme a autorização para executar o scan real.",
   MISSING_TARGET_URL: "Informe a URL do alvo.",
   INVALID_TARGET_URL: "URL inválida. Use o formato http(s)://exemplo.com.",
-  TARGET_NOT_ALLOWED: "Esse alvo não é permitido (endereço local ou de rede privada).",
   SCAN_ALREADY_RUNNING_FOR_TARGET: "Já existe um scan em andamento para esse alvo.",
   SCAN_NOT_FOUND: "Scan não encontrado.",
   REPORT_NOT_FOUND: "Relatório ainda não disponível para este scan.",

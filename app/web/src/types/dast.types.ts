@@ -192,6 +192,15 @@ export interface DastReportData {
   counters: { high: number; medium: number; low: number; info: number };
   findings: DastFinding[];
   topFindings: DastFinding[];
+  /** Artefato por execução; ausente em scans antigos, sem inferir seu método. */
+  discovery?: {
+    profile: "TRADITIONAL_SPIDER_PASSIVE";
+    urls: string[];
+    limits: { maxDurationMin: number; maxDepth: number; maxChildrenPerNode: number; threadCount: number; maxParseSizeBytes: number };
+    processForms: false;
+    javascript: false;
+    activeScan: false;
+  } | null;
 }
 
 export interface CreateDastScanInput {

@@ -87,9 +87,8 @@ services:
       DAST_ZAP_SPIDER_MAX_DURATION_MIN: "${DAST_ZAP_SPIDER_MAX_DURATION_MIN:-1}"
       DAST_ZAP_STARTUP_TIMEOUT_MS: "${DAST_ZAP_STARTUP_TIMEOUT_MS:-180000}"
       DAST_FORCE_SIMULATE: "false"
-      # ⚠️ SSRF: "true" só pra escanear alvo local (Juice Shop na própria
-      # máquina) durante a demonstração. Padrão continua bloqueando.
-      DAST_ALLOW_PRIVATE_TARGETS: "false"
+      # Alvos HTTP/HTTPS internos e públicos são aceitos. O endereço precisa
+      # ser alcançável pela rede do container do ZAP (ver docs/DAST.md).
     ports:
       - "3001:3001"
     volumes:

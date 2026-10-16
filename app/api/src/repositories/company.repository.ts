@@ -25,7 +25,11 @@ export class CompanyRepository {
   }
 
   async update(id: string, data: UpdateCompanyDTO): Promise<Company> {
-    return this.prisma.company.update({ where: { id }, data });
+    // Projeta o contrato também no acesso a dados para não expor relações do Prisma.
+    return this.prisma.company.update({
+      where: { id },
+      data: { name: data.name, cnpj: data.cnpj, planId: data.planId },
+    });
   }
 
   async delete(id: string): Promise<void> {

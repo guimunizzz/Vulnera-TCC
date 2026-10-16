@@ -9,8 +9,9 @@
 import { useEffect } from "react";
 import { StyleSheet, View, type ColorValue } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { COLORS, RADIUS } from "../theme/tokens";
+import { SOFT_MOTION, useWorkspaceReducedMotion } from "./workspace-motion";
 
 export function TabIcon({
   name,
@@ -24,14 +25,15 @@ export function TabIcon({
   size: number;
 }) {
   const progress = useSharedValue(focused ? 1 : 0);
+  const reduced = useWorkspaceReducedMotion();
 
   useEffect(() => {
-    progress.value = withSpring(focused ? 1 : 0, { damping: 14, stiffness: 180 });
-  }, [focused, progress]);
+    progress.value = withTiming(focused ? 1 : 0, { ...SOFT_MOTION, duration: reduced ? 0 : 220 });
+  }, [focused, progress, reduced]);
 
   const pillStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ scale: 0.7 + progress.value * 0.3 }],
+    transform: [{ scale: reduced ? 1 : 0.92 + progress.value * 0.08 }],
   }));
 
   return (

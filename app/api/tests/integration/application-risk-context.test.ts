@@ -13,7 +13,7 @@
  *   CTX-01  defaults da migration
  *   CTX-02  validação dos valores → 400
  *   CTX-03  ADMIN sobe E desce
- *   CTX-04  CLIENT OWNER sobe
+ *   CTX-04  CLIENT OWNER salva seis campos e GET confirma persistência
  *   CTX-05  CLIENT OWNER tenta descer → 403 RISK_CONTEXT_REDUCTION_REQUIRES_ADMIN
  *   CTX-06  CLIENT MEMBER não altera contexto (nem subir) → 403
  *   CTX-07  PENTESTER não altera → 403
@@ -163,7 +163,7 @@ describe("Application — contexto de risco (CP-1)", () => {
     });
   });
 
-  it("CTX-04: CLIENT OWNER sobe o risco (MEDIUM→HIGH, false→true, INTERNAL→CONFIDENTIAL, HOMOL→PROD)", async () => {
+  it("CTX-04: CLIENT OWNER salva os seis campos e GET retorna o contexto persistido", async () => {
     const c = await montarCenario();
     await put(c.admin, c.appAId, { environment: "HOMOL" });
     const res = await put(c.ownerA, c.appAId, {
@@ -171,6 +171,8 @@ describe("Application — contexto de risco (CP-1)", () => {
       internetFacing: true,
       dataSensitivity: "CONFIDENTIAL",
       environment: "PROD",
+      businessOwner: "Diretoria Comercial",
+      technicalOwner: "Squad Checkout",
     });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
@@ -178,6 +180,14 @@ describe("Application — contexto de risco (CP-1)", () => {
       internetFacing: true,
       dataSensitivity: "CONFIDENTIAL",
       environment: "PROD",
+      businessOwner: "Diretoria Comercial",
+      technicalOwner: "Squad Checkout",
+    });
+    const leitura = await request(app).get(`/api/applications/${c.appAId}`).set("Authorization", `Bearer ${c.ownerA}`);
+    expect(leitura.status).toBe(200);
+    expect(leitura.body).toMatchObject({
+      criticality: "HIGH", environment: "PROD", internetFacing: true,
+      dataSensitivity: "CONFIDENTIAL", businessOwner: "Diretoria Comercial", technicalOwner: "Squad Checkout",
     });
   });
 
@@ -293,13 +303,17 @@ describe("Application — contexto de risco (CP-1)", () => {
 
   it("TEN-29: CLIENT OWNER da empresa B não altera contexto de app da empresa A → 403, sem revelar nada", async () => {
     const c = await montarCenario();
-    const res = await put(c.ownerB, c.appAId, { criticality: "CRITICAL" });
+    const res = await put(c.ownerB, c.appAId, {
+      criticality: "CRITICAL", environment: "PROD", internetFacing: true,
+      dataSensitivity: "RESTRICTED", businessOwner: "Empresa B", technicalOwner: "Squad B",
+    });
     expect(res.status).toBe(403);
     expect(res.body.error).toBe("FORBIDDEN");
     const leitura = await request(app).get(`/api/applications/${c.appAId}`).set("Authorization", `Bearer ${c.ownerB}`);
     expect(leitura.status).toBe(403);
     const atual = await prisma.application.findUniqueOrThrow({ where: { id: c.appAId } });
     expect(atual.criticality).toBe("MEDIUM");
+    expect(atual).toMatchObject({ internetFacing: false, dataSensitivity: "INTERNAL", businessOwner: null, technicalOwner: null });
   });
 
   it("CTX-11: na criação, CLIENT OWNER pode definir contexto; CLIENT MEMBER só os campos de sempre", async () => {

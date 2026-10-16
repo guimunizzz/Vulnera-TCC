@@ -10,7 +10,7 @@
 
 import { StyleSheet, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
-import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
+import { COLORS, FONT_FAMILY, RADIUS, SPACING } from "../theme/tokens";
 
 type Severidade = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
 
@@ -28,7 +28,7 @@ export const ROTULO_SEVERIDADE: Record<Severidade, string> = {
   NONE: "Informativa",
 };
 
-const CORES_SEVERIDADE: Record<Severidade, { fundo: string; texto: string; ponto: string }> = {
+export const CORES_SEVERIDADE: Record<Severidade, { fundo: string; texto: string; ponto: string }> = {
   CRITICAL: { fundo: COLORS.severity.criticalSurface, texto: COLORS.severity.criticalInk, ponto: COLORS.severity.critical },
   HIGH: { fundo: COLORS.severity.highSurface, texto: COLORS.severity.highInk, ponto: COLORS.severity.high },
   MEDIUM: { fundo: COLORS.severity.mediumSurface, texto: COLORS.severity.mediumInk, ponto: COLORS.severity.medium },
@@ -51,11 +51,11 @@ export function SeverityBadge({ severidade, cvss }: { severidade: string; cvss?:
   );
 }
 
-type TomBadge = "neutro" | "acento" | "sucesso" | "atencao" | "perigo";
+type TomBadge = "neutro" | "informacao" | "sucesso" | "atencao" | "perigo";
 
 const TONS: Record<TomBadge, { fundo: string; texto: string }> = {
   neutro: { fundo: COLORS.severity.infoSurface, texto: COLORS.severity.infoInk },
-  acento: { fundo: COLORS.accentSurface, texto: COLORS.accentInk },
+  informacao: { fundo: COLORS.severity.lowSurface, texto: COLORS.severity.lowInk },
   sucesso: { fundo: COLORS.successSurface, texto: COLORS.successInk },
   atencao: { fundo: COLORS.severity.mediumSurface, texto: COLORS.severity.mediumInk },
   perigo: { fundo: COLORS.dangerSurface, texto: COLORS.dangerInk },
@@ -71,8 +71,8 @@ export const ROTULO_ESTADO: Record<string, { texto: string; tom: TomBadge }> = {
   IN_PROGRESS: { texto: "Em andamento", tom: "atencao" },
   FIXED: { texto: "Corrigido", tom: "sucesso" },
   CLOSED: { texto: "Fechado", tom: "neutro" },
-  PENDING: { texto: "Pendente", tom: "neutro" },
-  IN_REVIEW: { texto: "Em revisão", tom: "acento" },
+  PENDING: { texto: "Pendente", tom: "atencao" },
+  IN_REVIEW: { texto: "Em revisão", tom: "informacao" },
   COMPLETED: { texto: "Concluído", tom: "sucesso" },
 };
 
@@ -113,13 +113,12 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
   },
   texto: {
-    fontSize: FONT_SIZE.xs,
-    fontFamily: FONT_FAMILY.bold,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.medium,
+    lineHeight: 18,
   },
   cvss: {
-    fontSize: FONT_SIZE.xs,
+    fontSize: 12,
     fontFamily: FONT_FAMILY.mono,
     fontVariant: ["tabular-nums"],
     opacity: 0.85,
