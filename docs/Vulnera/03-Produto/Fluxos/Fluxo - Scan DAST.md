@@ -7,6 +7,9 @@ status: ativo
 > [!info] Nota criada em 2026-09-10
 > Fluxo do módulo [[DAST]]. Passo a passo operacional detalhado (com comandos e troubleshooting) em `docs/DAST.md`.
 
+> [!info] Operação atualizada em 2026-10-09
+> Modos explícitos e análise passiva real desde 2026-09-28 (ADR-042). Alvos locais e de rede privada são aceitos permanentemente desde 2026-10-09; não há flag de liberação. A execução depende do acesso do container do ZAP ao alvo.
+
 # Fluxo - Scan DAST
 
 ## Objetivo
@@ -20,7 +23,8 @@ Pentester (ou Admin). `CLIENT` não participa deste fluxo em momento algum.
 ## Pré-condições
 
 - usuário autenticado com role `PENTESTER` ou `ADMIN`;
-- Docker disponível para a API (o banner da tela diz se está — se não estiver, o scan roda em modo **simulado** e a tela declara isso);
+- para o modo **Real**, Docker disponível para a API e alvo acessível do container do ZAP; indisponibilidade termina em falha, sem fallback;
+- escolha explícita de **Simulado** ou **Real — análise passiva**; Real exige confirmação de autorização;
 - para **promover** um achado: existir um [[Project]] em que o ator seja [[ProjectMember]] — `ADMIN` é exceção e promove para qualquer projeto.
 
 ---
@@ -30,15 +34,15 @@ Pentester (ou Admin). `CLIENT` não participa deste fluxo em momento algum.
 ### 1. Disparar o scan
 
 1. Pentester abre **DAST** no menu e clica em **Novo scan**.
-2. Informa a URL do alvo. O backend valida contra **SSRF** antes de qualquer container subir — loopback e faixas privadas são bloqueados por padrão (liberáveis só em dev via `DAST_ALLOW_PRIVATE_TARGETS`).
+2. Informa a URL HTTP/HTTPS do alvo, sem credenciais embutidas. O backend remove o fragmento e aceita tanto endereços públicos quanto locais/privados. Seleciona **Real — análise passiva** e confirma a autorização no segundo aviso, ou **Simulado** para demonstrar a interface sem acessar o alvo.
 3. O [[DastScan]] nasce `QUEUED` e a tela vai direto para o acompanhamento.
-4. O watchdog tira da fila FIFO quando há vaga (teto de 2 simultâneos) e o runner sobe `vulnera-zap-<scanId>`.
+4. O watchdog tira da fila FIFO quando há vaga (teto padrão de 1 simultâneo). Para o modo Real, o runner sobe `vulnera-zap-<scanId>`.
 
 ### 2. Acompanhar
 
-5. O ZAP roda em modo daemon e é conduzido pela API HTTP dele: **spider → scan passivo → scan ativo → relatórios**. O percentual e o nome da fase na tela são **medição**, não estimativa de tempo.
+5. O ZAP roda em modo daemon Protected e é conduzido pela API HTTP dele: **início → Spider tradicional → análise passiva → relatórios**. O Spider descobre links, recursos, robots e sitemap, na mesma origem/subárvore, profundidade 2, até 30 filhos por nó, uma thread e teto padrão de 1 minuto (1..10). Queries são excluídas diretamente no Spider; formulários, JavaScript e active scan ficam desligados. O percentual indica etapa, sem medir tempo restante ou cobertura completa. O perfil e as URLs descobertas ficam registrados por execução; PDFs antigos sem esse registro indicam método desconhecido ([[ADR-046 - Spider tradicional e perfil por execucao]]).
 6. Polling de 3s. O botão **Parar** destrói o container (`docker rm -f`) e o scan vira `CANCELLED`.
-7. Ao terminar: `COMPLETED` com os quatro contadores (Alto/Médio/Baixo/Info) e a tabela de [[DastFinding]]. Se o resultado veio do fallback, o selo **simulado** e a explicação aparecem junto.
+7. Ao terminar: `COMPLETED` com os quatro contadores (Alto/Médio/Baixo/Info), tabela de [[DastFinding]], HTML original do ZAP e PDF gerado no navegador. Zero alertas é válido. Somente a escolha **Simulado** gera demonstração identificada; falha real termina `FAILED` com a causa tratada.
 
 ### 3. Triar
 
@@ -48,7 +52,7 @@ Pentester (ou Admin). `CLIENT` não participa deste fluxo em momento algum.
 
 ### 4. Promover para Vulnerability
 
-11. No achado, **Promover**. O backend devolve um **rascunho**: título, descrição já com a proveniência do scan, categoria OWASP deduzida do CWE e vetor CVSS **sugerido** pela faixa de risco.
+11. No achado de um scan **real**, **Promover**. O backend devolve um **rascunho**: título, descrição já com a proveniência do scan, categoria OWASP deduzida do CWE e vetor CVSS **sugerido** pela faixa de risco. Dados simulados não podem ser promovidos.
 12. ⚠️ A tela marca o vetor como **sugestão**. O pentester revisa e confirma — só então `calculateCvss` roda, sobre o vetor revisado ([[RN10 - Severidade via CVSS com override justificado]] intacta).
 13. Escolhe o [[Project]] de destino. Pentester que não seja membro dele recebe `403 FORBIDDEN` — promover não é porta lateral para escrever em projeto alheio. `ADMIN` não passa por essa checagem, como no `create` normal de [[Vulnerability]].
 14. A [[Vulnerability]] nasce `OPEN`, com `sourceType = "DAST_IMPORT"` e `sourceDastFindingId` apontando para o achado; `applicationId` e `companyId` são herdados do Project ([[RN09 - Vulnerability pertence a um Project]]).
@@ -62,20 +66,31 @@ Pentester (ou Admin). `CLIENT` não participa deste fluxo em momento algum.
 
 ### 6. Comparar e provar a correção
 
-19. Depois da remediação, rodar um **novo scan do mesmo alvo**.
+19. Depois da remediação, rodar um **novo scan real do mesmo alvo**. A comparação exige duas execuções reais concluídas e recusa dados simulados.
 20. Na aba **Comparar com execução anterior**, escolher a execução mais antiga. O resultado sai em três grupos: **Resolvidos**, **Novos** e **Continuam abertos**.
 21. O diff é por `fingerprint` (`sha256(pluginId | normalizedUrl | param)`), que **não inclui a evidência** — é o que faz um problema não corrigido aparecer como "continua aberto" em vez de virar um par falso de "sumiu um / surgiu outro".
 22. Alvos diferentes devolvem `422 SCANS_TARGET_MISMATCH`; scan comparado consigo mesmo, `CANNOT_COMPARE_SCAN_WITH_ITSELF`; scan não concluído, `SCAN_NOT_COMPLETED`.
+
+A comparação evidencia o que foi observado em cada execução; não altera automaticamente o estado da `Vulnerability` nem garante cobertura de páginas que a descoberta não visitou.
+
+### Alvo na rede local durante a apresentação
+
+Para o Vite do colega com `vite --host`, informe `http://10.87.169.107:5173/` se esse for o IP real da máquina. A porta precisa responder pela rede Docker, além de estar acessível no navegador do Rafael. Para um alvo no host do Docker Desktop, use `host.docker.internal:<porta>`. `localhost` dentro do container do ZAP aponta para o próprio ZAP.
 
 ---
 
 ## Pós-condições
 
-- `DastScan` em `COMPLETED`/`FAILED`/`CANCELLED`, com contadores e relatórios (JSON + HTML) no disco da API;
+- `DastScan` em `COMPLETED`/`FAILED`/`CANCELLED`; execuções reais concluídas têm contadores e relatórios JSON + HTML no disco da API;
 - findings triados, com autor e data;
-- os achados confirmados existem como `Vulnerability` de `sourceType = "DAST_IMPORT"`, dentro de um Project;
+- os achados reais promovidos explicitamente existem como `Vulnerability` de `sourceType = "DAST_IMPORT"`, dentro de um Project;
 - `AuditLog` de cada triagem e de cada promoção;
 - comparação entre execuções disponível como evidência de correção.
+
+## Histórico preservado
+
+- **2026-09-10 — desenho inicial, substituído em 2026-09-28:** daemon conduzido por spider, scan passivo e active scan; até 2 execuções simultâneas; falhas reais podiam gerar fallback simulado. ADR-042 introduziu modos explícitos, navegação GET limitada, análise passiva e falha real sem fallback.
+- **2026-09-10 — restrição de rede, substituída em 2026-10-09:** loopback e faixas privadas eram bloqueados por padrão, com liberação de desenvolvimento por variável. O bloqueio e a variável foram removidos por solicitação do Rafael.
 
 ## Regras de negócio relacionadas
 

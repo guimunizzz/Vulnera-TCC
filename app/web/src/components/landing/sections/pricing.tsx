@@ -41,7 +41,7 @@ const PLANS: Plan[] = [
       "5 aplicações",
       "3 projetos simultâneos",
       "Serviço de remediação incluso",
-      "Sugestões por IA",
+      "Sugestões por IA (em breve)",
       "Relatórios PDF",
       "Suporte prioritário",
     ],

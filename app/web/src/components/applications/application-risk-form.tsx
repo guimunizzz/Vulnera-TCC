@@ -35,9 +35,8 @@ import { useApiError } from "../../hooks/use-api-error";
 import { useAuthStore } from "../../store/auth.store";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Select } from "../ui/select";
 import { Switch } from "../ui/switch";
-import { Field } from "../ui/field";
+import { CLASSES_CONTROLE, Field } from "../ui/field";
 import { Alert } from "../ui/alert";
 import {
   CRITICALITIES,
@@ -131,36 +130,44 @@ export function ApplicationRiskForm({ application, aoSalvar, aoCancelar }: Appli
       {erro && <Alert>{erro}</Alert>}
 
       <div className="grid gap-4 sm:grid-cols-2">
+        {/* O popup do Select com portal fica abaixo do Dialog. O select
+            nativo mantém interação e foco dentro deste formulário modal. */}
         <Field rotulo="Criticidade" dica={dicaReducao("criticidade")}>
           {(attrs) => (
-            <Select
+            <select
               {...attrs}
-              valor={criticality}
-              aoMudar={setCriticality}
-              opcoes={CRITICALITIES.map((c) => ({ valor: c, rotulo: CRITICALITY_LABELS[c] }))}
-            />
+              value={criticality}
+              onChange={(e) => setCriticality(e.target.value)}
+              className={`${CLASSES_CONTROLE} h-10`}
+            >
+              {CRITICALITIES.map((c) => <option key={c} value={c}>{CRITICALITY_LABELS[c]}</option>)}
+            </select>
           )}
         </Field>
 
         <Field rotulo="Ambiente" dica={dicaReducao("ambiente")}>
           {(attrs) => (
-            <Select
+            <select
               {...attrs}
-              valor={environment}
-              aoMudar={setEnvironment}
-              opcoes={ENVIRONMENTS.map((e) => ({ valor: e, rotulo: ENVIRONMENT_LABELS[e] }))}
-            />
+              value={environment}
+              onChange={(e) => setEnvironment(e.target.value)}
+              className={`${CLASSES_CONTROLE} h-10`}
+            >
+              {ENVIRONMENTS.map((e) => <option key={e} value={e}>{ENVIRONMENT_LABELS[e]}</option>)}
+            </select>
           )}
         </Field>
 
         <Field rotulo="Sensibilidade do dado" dica={dicaReducao("sensibilidade")}>
           {(attrs) => (
-            <Select
+            <select
               {...attrs}
-              valor={dataSensitivity}
-              aoMudar={setDataSensitivity}
-              opcoes={DATA_SENSITIVITIES.map((d) => ({ valor: d, rotulo: DATA_SENSITIVITY_LABELS[d] }))}
-            />
+              value={dataSensitivity}
+              onChange={(e) => setDataSensitivity(e.target.value)}
+              className={`${CLASSES_CONTROLE} h-10`}
+            >
+              {DATA_SENSITIVITIES.map((d) => <option key={d} value={d}>{DATA_SENSITIVITY_LABELS[d]}</option>)}
+            </select>
           )}
         </Field>
 

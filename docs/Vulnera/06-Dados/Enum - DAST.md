@@ -27,7 +27,7 @@ Ciclo de vida de uma execução ([[DastScan]]).
 | Valor | Descrição |
 |---|---|
 | `QUEUED` | Criado e **na fila FIFO** do watchdog. Ainda não há container. É o estado inicial de todo scan |
-| `RUNNING` | Container de pé; o runner conduz spider → passivo → ativo pela API HTTP do ZAP e escreve `progress`/`phase` |
+| `RUNNING` | No Real, container de pé e fluxo Spider tradicional → passivo → relatório; no Demo, geração local. O runner escreve `progress`/`phase`, sem active scan |
 | `COMPLETED` | Relatório JSON obtido e parseado. Pode ter `warningMessage` (tipicamente `simulated: true`) |
 | `FAILED` | Erro, timeout, abort do watchdog por falta de pulso, ou órfão de restart detectado no boot da API |
 | `CANCELLED` | Interrompido pelo usuário (`POST /:id/cancel`) — o container é destruído com `docker rm -f <containerName>` |

@@ -1,11 +1,11 @@
 /**
  * Conta do cliente: perfil real, estado compartilhado do push e saída segura.
+ * Mostra apenas os dados essenciais para reduzir a leitura antes das ações.
  * Mantém o escopo da Fase 7, sem preferências fictícias nem edição de cadastro.
  * Consome /users/me e o registro único do layout; limpa consultas ao sair.
  */
 import { useState } from "react";
 import { Linking, Platform, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
@@ -14,18 +14,17 @@ import { authApi } from "../../src/api/auth.api";
 import { useAuthStore } from "../../src/store/auth.store";
 import { usePushStatus } from "../../src/hooks/use-push-registration";
 import { useApiError } from "../../src/hooks/use-api-error";
-import { ActionButton, DataState, DetailField, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../src/components/workspace-ui";
+import { ActionButton, DataState, GlassSurface, PageHeader, WorkspaceScreen } from "../../src/components/workspace-ui";
 import { FONT_FAMILY } from "../../src/theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../../src/theme/workspace";
-import { displayDate } from "../../src/lib/display";
 import { MotionReveal } from "../../src/components/workspace-motion";
 
 const PUSH_LABELS = {
-  verificando: { title: "Verificando notificações", description: "Confirmando a permissão e o registro deste dispositivo.", icon: "time-outline" },
-  ativado: { title: "Notificações ativadas", description: "Você recebe alertas de novas vulnerabilidades críticas nos projetos da sua empresa.", icon: "notifications-outline" },
-  negado: { title: "Permissão desativada", description: "Permita notificações nas configurações do celular para receber alertas críticos.", icon: "notifications-off-outline" },
-  erro: { title: "Registro não confirmado", description: "Não foi possível ativar os alertas deste dispositivo. Confira a conexão e tente ao reabrir o aplicativo.", icon: "cloud-offline-outline" },
-  indisponivel: { title: "Alertas indisponíveis aqui", description: "Você pode continuar acompanhando seus projetos normalmente neste ambiente.", icon: "notifications-off-outline" },
+  verificando: { label: "Verificando", description: "Confirmando os alertas deste dispositivo." },
+  ativado: { label: "Ativadas", description: "Alertas de vulnerabilidades críticas." },
+  negado: { label: "Desativadas", description: "Ative a permissão nos ajustes do celular para receber alertas críticos." },
+  erro: { label: "Não confirmado", description: "Não foi possível ativar os alertas. Confira a conexão e reabra o aplicativo." },
+  indisponivel: { label: "Indisponíveis", description: "Alertas indisponíveis neste ambiente." },
 } as const;
 
 export default function SettingsScreen() {
@@ -73,6 +72,10 @@ export default function SettingsScreen() {
 }
 const styles = StyleSheet.create({
   avatar: { width: 56, height: 56, borderRadius: 20, backgroundColor: WORKSPACE.neutralTint, borderWidth: 1, borderColor: WORKSPACE.line, alignItems: "center", justifyContent: "center" },
-  initial: { fontSize: 24, fontFamily: FONT_FAMILY.medium, color: WORKSPACE.secondary }, notificationIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: WORKSPACE.neutralTint, alignItems: "center", justifyContent: "center" },
-  footer: { alignItems: "center", gap: 6, paddingVertical: 12 }, wordmark: { fontFamily: FONT_FAMILY.monoBold, fontSize: 14, letterSpacing: 3, color: WORKSPACE.muted },
+  initial: { fontSize: 24, fontFamily: FONT_FAMILY.medium, color: WORKSPACE.secondary },
+  notificationHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 },
+  notificationStatus: { maxWidth: "100%", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: WORKSPACE.inset, color: WORKSPACE.secondary, fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18 },
+  notificationActive: { backgroundColor: "#052e16", color: "#6ee7a0" },
+  notificationError: { backgroundColor: "#2f0a0a", color: "#fca5a5" },
+  version: { color: WORKSPACE.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18 },
 });
