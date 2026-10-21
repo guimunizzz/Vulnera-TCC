@@ -7,7 +7,7 @@
 
 # Frontend web do Vulnera
 
-**Estado em 2026-10-01.** O frontend está em `app/web/` e é uma SPA React +
+**Estado em 2026-10-16.** O frontend está em `app/web/` e é uma SPA React +
 TypeScript construída com Vite. Tailwind usa os tokens próprios em
 `src/styles/tokens.css`; os componentes de interface ficam em
 `src/components/ui/`. Motion anima transições de interface. Three.js só desenha
@@ -27,6 +27,25 @@ autenticadas passam por `ProtectedRoute`; quase todas usam `AppLayout`, que
 fornece navegação, cabeçalho, alternância de tema, área principal e transição
 entre rotas. `/onboarding` usa um fluxo protegido de tela inteira.
 `/dast/scans/:id/report` também é uma tela cheia separada do layout.
+
+A barra lateral segue a prévia aprovada em 2026-10-16: marca VULNERA SECURITY,
+ícones de traço fino e grupos Visão geral, Operação e Administração. Os grupos
+sem links permitidos ao papel são omitidos; os destinos e permissões continuam
+os mesmos. O item ativo usa fundo violeta suave, indicador lateral e
+`aria-current="page"`, inclusive nos detalhes de um recurso. Watchlists fixadas
+continuam acessíveis. O desktop usa largura de 216px e rolagem interna em
+telas baixas; no celular, os grupos usam o Drawer existente e fecham após
+navegar. Inter e estilos são restritos a `sidebar.tsx`/`sidebar.css`, com cores
+dos tokens existentes para os dois temas. As demais propostas dos comparativos
+de Dashboard, Aplicações e Projetos permanecem estudos visuais.
+
+No Docker Compose, o frontend de `http://localhost:8086` serve o `dist/`
+compilado dentro da imagem. Alterar `src/` ou gerar o build no host não
+atualiza esse container. Para disponibilizar uma alteração no endereço local,
+execute `docker compose up -d --build --no-deps web` e confira os arquivos
+JavaScript/CSS efetivamente servidos antes de informar que a mudança está
+disponível. O servidor Vite temporário usado em validação é uma execução
+separada do frontend Docker.
 
 As páginas chamam módulos em `src/lib/api/`. O `apiClient` Axios anexa o access
 token, centraliza o refresh e põe requisições simultâneas em uma fila enquanto

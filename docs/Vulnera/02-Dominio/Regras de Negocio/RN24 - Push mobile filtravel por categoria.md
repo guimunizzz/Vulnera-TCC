@@ -8,6 +8,8 @@ criticidade: baixa
 
 # RN24 - Push mobile filtravel por categoria
 
+> **Requisito futuro — esclarecimento em 2026-10-06.** A regra abaixo descreve a evolução desejada, não uma função implementada no MVP. A Fase 7 oferece somente status de notificações e alertas de novas vulnerabilidades CRITICAL; não possui armazenamento nem controles de preferências por categoria. PROJECT_STATUS, CHAT_MESSAGE e FINDING_COMMENT não são gatilhos de push no mobile atual. Ver Contexto Mestre v4 e o recorte explícito da Fase 7 em `docs/ROADMAP_PROMPTS.md`.
+
 ## Enunciado
 As push notifications mobile são filtráveis por categoria nas configurações do usuário.
 

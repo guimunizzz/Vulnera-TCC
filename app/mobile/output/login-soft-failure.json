@@ -1,0 +1,23 @@
+{
+  "checks": [
+    "estado inicial e áreas de toque",
+    "Enter do e-mail avança para senha",
+    "foco muda gradualmente e retorna"
+  ],
+  "measurements": {
+    "emailFocused": {
+      "active": true,
+      "parent": "DIV"
+    },
+    "focus": {
+      "focused": "rgb(124, 58, 237)",
+      "idle": "rgb(45, 45, 55)"
+    },
+    "busy": {
+      "busy": null,
+      "disabled": "true"
+    }
+  },
+  "errors": [],
+  "message": "Expected values to be strictly equal:\n\nnull !== 'true'\n"
+}

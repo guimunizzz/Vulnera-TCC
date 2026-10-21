@@ -10,7 +10,7 @@
  *   navegador oferecer uma senha forte em vez de preencher a antiga.
  */
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { authApi } from "../../lib/api/auth.api";
@@ -26,6 +26,7 @@ export function RegisterPage() {
   const [confirmacao, setConfirmacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const envioPendente = useRef(false);
 
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
@@ -37,9 +38,12 @@ export function RegisterPage() {
 
   async function enviar(event: FormEvent): Promise<void> {
     event.preventDefault();
+    // Enter repetido também passa por esta trava antes do próximo render.
+    if (envioPendente.current) return;
     setErro(null);
     if (erroConfirmacao) return;
 
+    envioPendente.current = true;
     setEnviando(true);
     try {
       const auth = await authApi.register({ name: nome, email, password: senha });
@@ -48,6 +52,7 @@ export function RegisterPage() {
     } catch (err) {
       setErro(mensagemDeErro(err));
     } finally {
+      envioPendente.current = false;
       setEnviando(false);
     }
   }
@@ -56,11 +61,8 @@ export function RegisterPage() {
     <section className="vx-login-panel vx-register-panel" aria-labelledby="register-title">
       <span className="vx-login-panel-tab" aria-hidden="true">VULNERA / CADASTRO</span>
       <span className="vx-login-panel-corner" aria-hidden="true" />
-      <div className="vx-login-heading">
-        <p className="vx-login-eyebrow"><span aria-hidden="true">//</span> COMECE POR AQUI</p>
-        <h1 id="register-title" tabIndex={-1}>Criar conta<span className="vx-login-title-mark" aria-hidden="true">_</span></h1>
-        <p>Crie seu acesso. O próximo passo é cadastrar sua empresa.</p>
-      </div>
+      {/* O título mantém o nome acessível e recebe o foco da transição. */}
+      <h1 id="register-title" className="sr-only" tabIndex={-1}>Criar conta</h1>
       <form onSubmit={enviar} className="vx-login-form" aria-labelledby="register-title">
 
         {erro && (

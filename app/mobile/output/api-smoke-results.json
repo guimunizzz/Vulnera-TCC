@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-07T13:09:34.558Z",
+  "passed": 10,
+  "checks": [
+    "login CLIENT",
+    "perfil atualizado por /users/me",
+    "lista e isolamento da empresa",
+    "detalhes dos projetos e paginação real",
+    "facetas incluem todas as páginas",
+    "detalhe de vulnerabilidade",
+    "lista de evidências",
+    "download autenticado de evidência",
+    "envelope de comentários",
+    "autores limitados à empresa"
+  ],
+  "projectCount": 5
+}

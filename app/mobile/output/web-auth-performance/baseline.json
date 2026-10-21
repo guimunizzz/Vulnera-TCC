@@ -1,0 +1,202 @@
+{
+  "phase": "baseline",
+  "viewport": "1440x900",
+  "pointerEvents": 150,
+  "idleSeconds": 2,
+  "samples": [
+    {
+      "name": "idle-0",
+      "delta": {
+        "TaskDuration": 0.093433,
+        "ScriptDuration": 0.000093,
+        "RecalcStyleDuration": 0.022271,
+        "LayoutDuration": 0,
+        "RecalcStyleCount": 122,
+        "LayoutCount": 0
+      },
+      "state": {
+        "updates": {
+          "main": 0,
+          "background": 0,
+          "glow": 0
+        },
+        "running": "running",
+        "smilPaused": false,
+        "fieldCoordinate": "60px",
+        "mainCoordinate": "60px"
+      }
+    },
+    {
+      "name": "pointer-0",
+      "delta": {
+        "TaskDuration": 2.164189,
+        "ScriptDuration": 0.077259,
+        "RecalcStyleDuration": 1.713996,
+        "LayoutDuration": 0,
+        "RecalcStyleCount": 324,
+        "LayoutCount": 0
+      },
+      "state": {
+        "updates": {
+          "main": 300,
+          "background": 0,
+          "glow": 0
+        },
+        "running": "running",
+        "smilPaused": false,
+        "fieldCoordinate": "1262px",
+        "mainCoordinate": "1262px"
+      }
+    },
+    {
+      "name": "idle-1",
+      "delta": {
+        "TaskDuration": 0.142835,
+        "ScriptDuration": 0,
+        "RecalcStyleDuration": 0.034101,
+        "LayoutDuration": 0.001513,
+        "RecalcStyleCount": 131,
+        "LayoutCount": 27
+      },
+      "state": {
+        "updates": {
+          "main": 0,
+          "background": 0,
+          "glow": 0
+        },
+        "running": "running",
+        "smilPaused": false,
+        "fieldCoordinate": "1262px",
+        "mainCoordinate": "1262px"
+      }
+    },
+    {
+      "name": "pointer-1",
+      "delta": {
+        "TaskDuration": 2.009556,
+        "ScriptDuration": 0.067312,
+        "RecalcStyleDuration": 1.419916,
+        "LayoutDuration": 0.014778,
+        "RecalcStyleCount": 321,
+        "LayoutCount": 167
+      },
+      "state": {
+        "updates": {
+          "main": 300,
+          "background": 0,
+          "glow": 0
+        },
+        "running": "running",
+        "smilPaused": false,
+        "fieldCoordinate": "1262px",
+        "mainCoordinate": "1262px"
+      }
+    },
+    {
+      "name": "idle-2",
+      "delta": {
+        "TaskDuration": 0.232411,
+        "ScriptDuration": 0.000049,
+        "RecalcStyleDuration": 0.044939,
+        "LayoutDuration": 0.007874,
+        "RecalcStyleCount": 153,
+        "LayoutCount": 121
+      },
+      "state": {
+        "updates": {
+          "main": 0,
+          "background": 0,
+          "glow": 0
+        },
+        "running": "running",
+        "smilPaused": false,
+        "fieldCoordinate": "1262px",
+        "mainCoordinate": "1262px"
+      }
+    },
+    {
+      "name": "pointer-2",
+      "delta": {
+        "TaskDuration": 2.30861,
+        "ScriptDuration": 0.093998,
+        "RecalcStyleDuration": 1.127471,
+        "LayoutDuration": 0.030464,
+        "RecalcStyleCount": 441,
+        "LayoutCount": 272
+      },
+      "state": {
+        "updates": {
+          "main": 300,
+          "background": 0,
+          "glow": 0
+        },
+        "running": "running",
+        "smilPaused": false,
+        "fieldCoordinate": "1262px",
+        "mainCoordinate": "1262px"
+      }
+    },
+    {
+      "name": "typing",
+      "delta": {
+        "TaskDuration": 0.281149,
+        "ScriptDuration": 0.093258,
+        "RecalcStyleDuration": 0.028798,
+        "LayoutDuration": 0.01223,
+        "RecalcStyleCount": 111,
+        "LayoutCount": 121
+      },
+      "state": {
+        "updates": {
+          "main": 0,
+          "background": 0,
+          "glow": 0
+        },
+        "running": "running",
+        "smilPaused": false,
+        "fieldCoordinate": "1262px",
+        "mainCoordinate": "1262px"
+      }
+    },
+    {
+      "name": "reduced-pointer",
+      "delta": {
+        "TaskDuration": 0.323681,
+        "ScriptDuration": 0.015947,
+        "RecalcStyleDuration": 0.218873,
+        "LayoutDuration": 0.003206,
+        "RecalcStyleCount": 63,
+        "LayoutCount": 61
+      },
+      "state": {
+        "updates": {
+          "main": 120,
+          "background": 0,
+          "glow": 0
+        },
+        "running": "running",
+        "smilPaused": false,
+        "fieldCoordinate": "788px",
+        "mainCoordinate": "788px"
+      }
+    }
+  ],
+  "median": {
+    "idle": {
+      "TaskDuration": 0.142835,
+      "ScriptDuration": 0.000049,
+      "RecalcStyleDuration": 0.034101,
+      "LayoutDuration": 0.001513,
+      "RecalcStyleCount": 131,
+      "LayoutCount": 27
+    },
+    "pointer": {
+      "TaskDuration": 2.164189,
+      "ScriptDuration": 0.077259,
+      "RecalcStyleDuration": 1.419916,
+      "LayoutDuration": 0.014778,
+      "RecalcStyleCount": 324,
+      "LayoutCount": 167
+    }
+  }
+}

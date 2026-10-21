@@ -1,0 +1,41 @@
+{
+  "choices": [
+    {
+      "source": "web",
+      "name": "1 · Assinatura compacta",
+      "caption": "Marca direta, sem moldura. SECURITY em segundo plano."
+    },
+    {
+      "source": "web",
+      "name": "2 · Cápsula glass",
+      "caption": "Marca sobre vidro grafite, com uma borda roxa discreta."
+    },
+    {
+      "source": "web",
+      "name": "3 · Assinatura editorial",
+      "caption": "Nome maior, mais espaço e um pequeno detalhe roxo."
+    },
+    {
+      "source": "mark",
+      "name": "4 · Assinatura compacta",
+      "caption": "Marca direta, sem moldura. SECURITY em segundo plano."
+    },
+    {
+      "source": "mark",
+      "name": "5 · Cápsula glass",
+      "caption": "Marca sobre vidro grafite, com uma borda roxa discreta."
+    },
+    {
+      "source": "mark",
+      "name": "6 · Assinatura editorial",
+      "caption": "Nome maior, mais espaço e um pequeno detalhe roxo."
+    }
+  ],
+  "widths": [
+    320,
+    390
+  ],
+  "errors": [],
+  "api": "fixtures somente no navegador",
+  "appChanged": false
+}

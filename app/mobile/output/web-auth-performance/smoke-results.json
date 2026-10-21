@@ -1,0 +1,721 @@
+{
+  "checks": [
+    "logo dentro do card, sem rodapé e login inteiro em telas de 568px ou mais",
+    "login e cadastro mostram somente logo e campos, mantendo título acessível e foco",
+    "cadastro centralizado cabe inteiro em 320×568 com quatro campos de 44px",
+    "barra final e maiúsculas mantêm o cadastro compacto",
+    "validação de senha e erro da API continuam acessíveis, sem cadastro real",
+    "cursor, deriva e sinais mantêm as animações da web",
+    "ponteiro continua revelando o fundo interativo",
+    "coordenadas do mouse ficam isoladas do formulário e do SVG estático",
+    "fundo invisível pausa após o fade e retoma do mesmo ponto",
+    "ocultação simulada da aba pausa cursor, glitch e SMIL sem gravar coordenadas",
+    "toque mantém o fundo visível animado sem deslocar a revelação",
+    "revelação acompanha o ponteiro após rolar um formulário alto",
+    "teclado e efeito de foco continuam funcionando",
+    "decode do botão e glitch do link preservados",
+    "login/cadastro mantém logo, fundo, deslize e foco no título",
+    "erro de autenticação aparece sem sobreposição",
+    "movimento reduzido e navegação continuam acessíveis",
+    "sem exceções JavaScript"
+  ],
+  "errors": [],
+  "measurements": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 1430,
+          "height": 900,
+          "bottom": 900
+        },
+        "card": {
+          "x": 515,
+          "y": 246.5,
+          "width": 400,
+          "height": 407,
+          "bottom": 653.5
+        },
+        "brand": {
+          "x": 647,
+          "y": 275.5,
+          "width": 136,
+          "height": 44,
+          "bottom": 319.5
+        },
+        "panel": {
+          "x": 544,
+          "y": 339.5,
+          "width": 342,
+          "height": 285,
+          "bottom": 624.5
+        },
+        "stage": {
+          "x": 57.59375,
+          "y": 24,
+          "width": 1314.8125,
+          "height": 852,
+          "bottom": 876
+        },
+        "email": {
+          "x": 544,
+          "y": 363.5,
+          "width": 342,
+          "height": 44,
+          "bottom": 407.5
+        },
+        "width": 1440,
+        "height": 900,
+        "scroll": 1430,
+        "scrollHeight": 900
+      }
+    },
+    {
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 1356,
+          "height": 768,
+          "bottom": 768
+        },
+        "card": {
+          "x": 478,
+          "y": 180.5,
+          "width": 400,
+          "height": 407,
+          "bottom": 587.5
+        },
+        "brand": {
+          "x": 610,
+          "y": 209.5,
+          "width": 136,
+          "height": 44,
+          "bottom": 253.5
+        },
+        "panel": {
+          "x": 507,
+          "y": 273.5,
+          "width": 342,
+          "height": 285,
+          "bottom": 558.5
+        },
+        "stage": {
+          "x": 54.625,
+          "y": 16,
+          "width": 1246.75,
+          "height": 736,
+          "bottom": 752
+        },
+        "email": {
+          "x": 507,
+          "y": 297.5,
+          "width": 342,
+          "height": 44,
+          "bottom": 341.5
+        },
+        "width": 1366,
+        "height": 768,
+        "scroll": 1356,
+        "scrollHeight": 768
+      }
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 380,
+          "height": 844,
+          "bottom": 844
+        },
+        "card": {
+          "x": 16,
+          "y": 228.5,
+          "width": 348,
+          "height": 387,
+          "bottom": 615.5
+        },
+        "brand": {
+          "x": 122,
+          "y": 249.5,
+          "width": 136,
+          "height": 44,
+          "bottom": 293.5
+        },
+        "panel": {
+          "x": 37,
+          "y": 309.5,
+          "width": 306,
+          "height": 285,
+          "bottom": 594.5
+        },
+        "stage": {
+          "x": 16,
+          "y": 16,
+          "width": 348,
+          "height": 812,
+          "bottom": 828
+        },
+        "email": {
+          "x": 37,
+          "y": 333.5,
+          "width": 306,
+          "height": 44,
+          "bottom": 377.5
+        },
+        "width": 390,
+        "height": 844,
+        "scroll": 380,
+        "scrollHeight": 844
+      }
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 310,
+          "height": 568,
+          "bottom": 568
+        },
+        "card": {
+          "x": 16,
+          "y": 90.5,
+          "width": 278,
+          "height": 387,
+          "bottom": 477.5
+        },
+        "brand": {
+          "x": 87,
+          "y": 111.5,
+          "width": 136,
+          "height": 44,
+          "bottom": 155.5
+        },
+        "panel": {
+          "x": 37,
+          "y": 171.5,
+          "width": 236,
+          "height": 285,
+          "bottom": 456.5
+        },
+        "stage": {
+          "x": 16,
+          "y": 16,
+          "width": 278,
+          "height": 536,
+          "bottom": 552
+        },
+        "email": {
+          "x": 37,
+          "y": 195.5,
+          "width": 236,
+          "height": 44,
+          "bottom": 239.5
+        },
+        "width": 320,
+        "height": 568,
+        "scroll": 310,
+        "scrollHeight": 568
+      }
+    },
+    {
+      "viewport": {
+        "width": 568,
+        "height": 320
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 558,
+          "height": 419,
+          "bottom": 419
+        },
+        "card": {
+          "x": 79,
+          "y": 16,
+          "width": 400,
+          "height": 387,
+          "bottom": 403
+        },
+        "brand": {
+          "x": 211,
+          "y": 37,
+          "width": 136,
+          "height": 44,
+          "bottom": 81
+        },
+        "panel": {
+          "x": 100,
+          "y": 97,
+          "width": 358,
+          "height": 285,
+          "bottom": 382
+        },
+        "stage": {
+          "x": 16,
+          "y": 16,
+          "width": 526,
+          "height": 387,
+          "bottom": 403
+        },
+        "email": {
+          "x": 100,
+          "y": 121,
+          "width": 358,
+          "height": 44,
+          "bottom": 165
+        },
+        "width": 568,
+        "height": 320,
+        "scroll": 558,
+        "scrollHeight": 419
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 1430,
+          "height": 900,
+          "bottom": 900
+        },
+        "card": {
+          "x": 515,
+          "y": 151.75,
+          "width": 400,
+          "height": 596.5,
+          "bottom": 748.25
+        },
+        "brand": {
+          "x": 647,
+          "y": 180.75,
+          "width": 136,
+          "height": 44,
+          "bottom": 224.75
+        },
+        "form": {
+          "x": 544,
+          "y": 244.75,
+          "width": 342,
+          "height": 401.5,
+          "bottom": 646.25
+        },
+        "heading": {
+          "size": "14px",
+          "align": "start"
+        },
+        "fields": [
+          {
+            "name": "name",
+            "height": 44
+          },
+          {
+            "name": "email",
+            "height": 44
+          },
+          {
+            "name": "password",
+            "height": 44
+          },
+          {
+            "name": "password-confirmation",
+            "height": 44
+          },
+          {
+            "name": "Criar contaCCrriiaarr  ccoonnttaa",
+            "height": 44
+          },
+          {
+            "name": "EntrarEntrarEntrar",
+            "height": 44
+          }
+        ],
+        "width": 1440,
+        "height": 900,
+        "scroll": 1430,
+        "scrollHeight": 900
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 1356,
+          "height": 768,
+          "bottom": 768
+        },
+        "card": {
+          "x": 478,
+          "y": 85.75,
+          "width": 400,
+          "height": 596.5,
+          "bottom": 682.25
+        },
+        "brand": {
+          "x": 610,
+          "y": 114.75,
+          "width": 136,
+          "height": 44,
+          "bottom": 158.75
+        },
+        "form": {
+          "x": 507,
+          "y": 178.75,
+          "width": 342,
+          "height": 401.5,
+          "bottom": 580.25
+        },
+        "heading": {
+          "size": "14px",
+          "align": "start"
+        },
+        "fields": [
+          {
+            "name": "name",
+            "height": 44
+          },
+          {
+            "name": "email",
+            "height": 44
+          },
+          {
+            "name": "password",
+            "height": 44
+          },
+          {
+            "name": "password-confirmation",
+            "height": 44
+          },
+          {
+            "name": "Criar contaCCrriiaarr  ccoonnttaa",
+            "height": 44
+          },
+          {
+            "name": "EntrarEntrarEntrar",
+            "height": 44
+          }
+        ],
+        "width": 1366,
+        "height": 768,
+        "scroll": 1356,
+        "scrollHeight": 768
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 380,
+          "height": 844,
+          "bottom": 844
+        },
+        "card": {
+          "x": 16,
+          "y": 133.75,
+          "width": 348,
+          "height": 576.5,
+          "bottom": 710.25
+        },
+        "brand": {
+          "x": 122,
+          "y": 154.75,
+          "width": 136,
+          "height": 44,
+          "bottom": 198.75
+        },
+        "form": {
+          "x": 37,
+          "y": 214.75,
+          "width": 306,
+          "height": 401.5,
+          "bottom": 616.25
+        },
+        "heading": {
+          "size": "14px",
+          "align": "start"
+        },
+        "fields": [
+          {
+            "name": "name",
+            "height": 44
+          },
+          {
+            "name": "email",
+            "height": 44
+          },
+          {
+            "name": "password",
+            "height": 44
+          },
+          {
+            "name": "password-confirmation",
+            "height": 44
+          },
+          {
+            "name": "Criar contaCCrriiaarr  ccoonnttaa",
+            "height": 44
+          },
+          {
+            "name": "EntrarEntrarEntrar",
+            "height": 44
+          }
+        ],
+        "width": 390,
+        "height": 844,
+        "scroll": 380,
+        "scrollHeight": 844
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 310,
+          "height": 640,
+          "bottom": 640
+        },
+        "card": {
+          "x": 16,
+          "y": 71.25,
+          "width": 278,
+          "height": 497.5,
+          "bottom": 568.75
+        },
+        "brand": {
+          "x": 87,
+          "y": 86.25,
+          "width": 136,
+          "height": 44,
+          "bottom": 130.25
+        },
+        "form": {
+          "x": 31,
+          "y": 138.25,
+          "width": 248,
+          "height": 363.5,
+          "bottom": 501.75
+        },
+        "heading": {
+          "size": "14px",
+          "align": "start"
+        },
+        "fields": [
+          {
+            "name": "name",
+            "height": 44
+          },
+          {
+            "name": "email",
+            "height": 44
+          },
+          {
+            "name": "password",
+            "height": 44
+          },
+          {
+            "name": "password-confirmation",
+            "height": 44
+          },
+          {
+            "name": "Criar contaCCrriiaarr  ccoonnttaa",
+            "height": 44
+          },
+          {
+            "name": "EntrarEntrarEntrar",
+            "height": 44
+          }
+        ],
+        "width": 320,
+        "height": 640,
+        "scroll": 310,
+        "scrollHeight": 640
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 310,
+          "height": 568,
+          "bottom": 568
+        },
+        "card": {
+          "x": 16,
+          "y": 35.25,
+          "width": 278,
+          "height": 497.5,
+          "bottom": 532.75
+        },
+        "brand": {
+          "x": 87,
+          "y": 50.25,
+          "width": 136,
+          "height": 44,
+          "bottom": 94.25
+        },
+        "form": {
+          "x": 31,
+          "y": 102.25,
+          "width": 248,
+          "height": 363.5,
+          "bottom": 465.75
+        },
+        "heading": {
+          "size": "14px",
+          "align": "start"
+        },
+        "fields": [
+          {
+            "name": "name",
+            "height": 44
+          },
+          {
+            "name": "email",
+            "height": 44
+          },
+          {
+            "name": "password",
+            "height": 44
+          },
+          {
+            "name": "password-confirmation",
+            "height": 44
+          },
+          {
+            "name": "Criar contaCCrriiaarr  ccoonnttaa",
+            "height": 44
+          },
+          {
+            "name": "EntrarEntrarEntrar",
+            "height": 44
+          }
+        ],
+        "width": 320,
+        "height": 568,
+        "scroll": 310,
+        "scrollHeight": 568
+      }
+    },
+    {
+      "route": "register",
+      "viewport": {
+        "width": 568,
+        "height": 320
+      },
+      "geometry": {
+        "page": {
+          "x": 0,
+          "y": 0,
+          "width": 558,
+          "height": 521.5,
+          "bottom": 521.5
+        },
+        "card": {
+          "x": 79,
+          "y": 12,
+          "width": 400,
+          "height": 497.5,
+          "bottom": 509.5
+        },
+        "brand": {
+          "x": 211,
+          "y": 27,
+          "width": 136,
+          "height": 44,
+          "bottom": 71
+        },
+        "form": {
+          "x": 94,
+          "y": 79,
+          "width": 370,
+          "height": 363.5,
+          "bottom": 442.5
+        },
+        "heading": {
+          "size": "14px",
+          "align": "start"
+        },
+        "fields": [
+          {
+            "name": "name",
+            "height": 44
+          },
+          {
+            "name": "email",
+            "height": 44
+          },
+          {
+            "name": "password",
+            "height": 44
+          },
+          {
+            "name": "password-confirmation",
+            "height": 44
+          },
+          {
+            "name": "Criar contaCCrriiaarr  ccoonnttaa",
+            "height": 44
+          },
+          {
+            "name": "EntrarEntrarEntrar",
+            "height": 44
+          }
+        ],
+        "width": 568,
+        "height": 320,
+        "scroll": 558,
+        "scrollHeight": 522
+      }
+    }
+  ]
+}

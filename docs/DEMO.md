@@ -31,7 +31,7 @@
 
 | Perfil | E-mail | Senha |
 | --- | --- | --- |
-| ADMIN | `admin@vulnera.local` | `admin12345` |
+| ADMIN | `admin@vulnera.local ` | `admin12345` |
 | CLIENT (owner, TechNova) | `owner@technova.demo` | `demo12345` |
 | CLIENT (membro, TechNova) | `fernanda@technova.demo` | `demo12345` |
 | PENTESTER | `bruno.pentester@vulnera.local` ou `camila.pentester@vulnera.local` | `senha12345` |

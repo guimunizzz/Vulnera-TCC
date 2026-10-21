@@ -1,0 +1,103 @@
+{
+  "passed": 9,
+  "checks": [
+    "fundo apresenta movimento discreto",
+    "toque comprime e retorna sem salto",
+    "atmosfera da tela anterior para ao trocar de aba",
+    "áreas de toque têm no mínimo 48 px no preview",
+    "rolagem move fundo sem deslocar conteúdo de toque",
+    "movimento reduzido desliga fundo e compressão ao vivo",
+    "Home se adapta a 320 e 430 px",
+    "detalhes legíveis em 320 px",
+    "sem exceções de execução"
+  ],
+  "measurements": {
+    "ambient": {
+      "start": {
+        "scale": 1,
+        "x": -0.336616,
+        "y": 0.471262
+      },
+      "end": {
+        "scale": 1,
+        "x": -1.29305,
+        "y": 1.81027
+      }
+    },
+    "press": {
+      "pressed": {
+        "scale": 0.982,
+        "x": 0,
+        "y": 0
+      },
+      "released": {
+        "scale": 1,
+        "x": 0,
+        "y": 0
+      }
+    },
+    "homeControls": [
+      {
+        "label": "Abrir minha conta",
+        "width": 48,
+        "height": 48
+      },
+      {
+        "label": "Todos",
+        "width": 73.21875,
+        "height": 48
+      },
+      {
+        "label": "Em andamento",
+        "width": 130.125,
+        "height": 48
+      },
+      {
+        "label": "Pendentes",
+        "width": 102.234375,
+        "height": 48
+      },
+      {
+        "label": "Em revisão",
+        "width": 104.5625,
+        "height": 48
+      },
+      {
+        "label": "Concluídos",
+        "width": 106.0625,
+        "height": 48
+      },
+      {
+        "label": "Abrir projeto Pentest Web — Portal do Cliente",
+        "width": 350,
+        "height": 163
+      },
+      {
+        "label": "Abrir projeto Auditoria Interna — Sistema de Gestão",
+        "width": 350,
+        "height": 163
+      },
+      {
+        "label": "Abrir projeto Pentest API — Integração B2B",
+        "width": 350,
+        "height": 163
+      },
+      {
+        "label": "Abrir projeto Análise Mobile — App TechNova",
+        "width": 350,
+        "height": 163
+      },
+      {
+        "label": "Abrir projeto Pentest Web — Portal E-commerce",
+        "width": 350,
+        "height": 163
+      }
+    ],
+    "scrolled": {
+      "scale": 1,
+      "x": -0.0161756,
+      "y": -14.9774
+    }
+  },
+  "errors": []
+}

@@ -1,0 +1,11 @@
+{
+  "passed": 6,
+  "checks": [
+    "401 concorrentes renovam apenas uma vez",
+    "queda de rede no refresh preserva a sessão",
+    "refresh recusado encerra somente a sessão correspondente",
+    "refresh antigo não sobrescreve a nova conta",
+    "refresh antigo recusado não limpa a nova conta",
+    "429 aguarda Retry-After e erros de permissão não repetem"
+  ]
+}

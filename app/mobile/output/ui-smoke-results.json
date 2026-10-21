@@ -1,0 +1,86 @@
+{
+  "passed": 14,
+  "checks": [
+    "login e projetos reais",
+    "busca vazia distinguida de erro",
+    "filtro de status",
+    "detalhe de projeto e facetas reais",
+    "paginação com segunda página real",
+    "detalhe de vulnerabilidade e CVSS",
+    "aba de comentários reais",
+    "erro de evidência não aparece como vazio",
+    "conta atualizada pela API",
+    "layout em 320 px",
+    "confirmação e cancelamento do logout",
+    "logout retorna ao login",
+    "troca de conta consulta projetos novamente",
+    "nenhuma exceção de execução"
+  ],
+  "responses": [
+    {
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "path": "/api/projects",
+      "status": 200
+    },
+    {
+      "path": "/api/projects/cmuwmowjm002qqgnya0qmoft2",
+      "status": 200
+    },
+    {
+      "path": "/api/vulnerabilities",
+      "status": 200
+    },
+    {
+      "path": "/api/vulnerabilities",
+      "status": 200
+    },
+    {
+      "path": "/api/vulnerabilities/cmuwmowtu004aqgnyd029ujjh",
+      "status": 200
+    },
+    {
+      "path": "/api/vulnerabilities/cmuwmowtu004aqgnyd029ujjh/comments",
+      "status": 200
+    },
+    {
+      "path": "/api/users",
+      "status": 200
+    },
+    {
+      "path": "/api/vulnerabilities/cmuwmowtu004aqgnyd029ujjh/evidences",
+      "status": 503
+    },
+    {
+      "path": "/api/vulnerabilities/cmuwmowtu004aqgnyd029ujjh/evidences",
+      "status": 503
+    },
+    {
+      "path": "/api/vulnerabilities/cmuwmowtu004aqgnyd029ujjh/evidences",
+      "status": 200
+    },
+    {
+      "path": "/api/users/me",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/logout",
+      "status": 204
+    },
+    {
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "path": "/api/projects",
+      "status": 200
+    },
+    {
+      "path": "/api/users/me",
+      "status": 200
+    }
+  ],
+  "exceptions": []
+}

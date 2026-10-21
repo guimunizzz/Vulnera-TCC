@@ -1,0 +1,3 @@
+{
+  "checks": "Suíte geral 337/337 em 30 arquivos com threads após timeout de inicialização de um worker por forks; depois da compactação, rotas 5/5 e navegador 9/9 aprovados. Lint com 0 erros e 9 avisos anteriores, contraste 66/66 e build TypeScript/Vite aprovados."
+}

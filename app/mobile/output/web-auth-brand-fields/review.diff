@@ -1,0 +1,35 @@
+--- PRD_VIVO.md
++++ PRD_VIVO.md
+@@ -15,6 +15,10 @@
+ ---
+ 
+ ## 1. Estado geral do projeto
++
++**✅ 2026-10-15 — Acesso web só com logo e campos (100%).** Branch `refactor/web`: títulos visuais Entrar/Criar conta removidos do login e cadastro, com seus wrappers e margens; a logo passa diretamente aos campos. Os h1 permanecem com `sr-only`, IDs e `tabIndex=-1`, mantendo nomes acessíveis dos formulários e foco ao alternar rotas. Animações, validação, botões e navegação entre login/cadastro preservados. Esta apresentação substitui os títulos centrais de 24px das entregas anteriores, mantidas como histórico. npm run check aprovado: 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build aprovado e 13/13 verificações no navegador, com revisão visual independente. Evidências: `app/mobile/output/web-auth-brand-fields/`.
++
++- [x] Deixar login e cadastro só com logo e campos, mantendo títulos acessíveis e foco das transições.
+ 
+ **✅ 2026-10-15 — Cadastro web compacto (100%).** Branch `refactor/web`: cadastro com título centralizado de 24px e apresentação curta, seguindo o login; logo permanece dentro do card compartilhado, sem rodapé. Espaçamentos específicos em telas de até 700px de altura acomodam os quatro campos e a dica de senha em 320×568, mantendo controles de 44px. Erros podem expandir a página e permitem rolagem. Preservados fundo interativo, cursor, decode/glitch, transição login/cadastro, foco, movimento reduzido e validação/envio do cadastro. npm run check aprovado com 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build TypeScript/Vite aprovado e 12/12 verificações de navegador aprovadas, com revisão visual independente. Evidências: `app/mobile/output/web-register-centered/`. Sem mudança de API, schema, dependências ou lockfiles nesta tarefa.
+ 
+@@ -662,3 +666,8 @@
+ ### Marco — 2026-10-15: cadastro web compacto
+ 
+ **✅ 2026-10-15 — Cadastro web compacto (100%).** Branch `refactor/web`: cadastro com título centralizado de 24px e apresentação curta, seguindo o login; logo permanece dentro do card compartilhado, sem rodapé. Espaçamentos específicos em telas de até 700px de altura acomodam os quatro campos e a dica de senha em 320×568, mantendo controles de 44px. Erros podem expandir a página e permitem rolagem. Preservados fundo interativo, cursor, decode/glitch, transição login/cadastro, foco, movimento reduzido e validação/envio do cadastro. npm run check aprovado com 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build TypeScript/Vite aprovado e 12/12 verificações de navegador aprovadas, com revisão visual independente. Evidências: `app/mobile/output/web-register-centered/`. Sem mudança de API, schema, dependências ou lockfiles nesta tarefa.
++
++
++### Marco — 2026-10-15: acesso web só com logo e campos
++
++**✅ 2026-10-15 — Acesso web só com logo e campos (100%).** Branch `refactor/web`: títulos visuais Entrar/Criar conta removidos do login e cadastro, com seus wrappers e margens; a logo passa diretamente aos campos. Os h1 permanecem com `sr-only`, IDs e `tabIndex=-1`, mantendo nomes acessíveis dos formulários e foco ao alternar rotas. Animações, validação, botões e navegação entre login/cadastro preservados. Esta apresentação substitui os títulos centrais de 24px das entregas anteriores, mantidas como histórico. npm run check aprovado: 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build aprovado e 13/13 verificações no navegador, com revisão visual independente. Evidências: `app/mobile/output/web-auth-brand-fields/`.
+--- docs/BACKLOG.md
++++ docs/BACKLOG.md
+@@ -5,6 +5,10 @@
+ > **Entrega: 25/10/2026.**
+ 
+ ## Status
++
++**✅ 2026-10-15 — Acesso web só com logo e campos (100%).** Branch `refactor/web`: títulos visuais Entrar/Criar conta removidos do login e cadastro, com seus wrappers e margens; a logo passa diretamente aos campos. Os h1 permanecem com `sr-only`, IDs e `tabIndex=-1`, mantendo nomes acessíveis dos formulários e foco ao alternar rotas. Animações, validação, botões e navegação entre login/cadastro preservados. Esta apresentação substitui os títulos centrais de 24px das entregas anteriores, mantidas como histórico. npm run check aprovado: 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build aprovado e 13/13 verificações no navegador, com revisão visual independente. Evidências: `app/mobile/output/web-auth-brand-fields/`.
++
++- [x] Deixar login e cadastro só com logo e campos, mantendo títulos acessíveis e foco das transições.
+ 
+ **✅ 2026-10-15 — Cadastro web compacto (100%).** Branch `refactor/web`: cadastro com título centralizado de 24px e apresentação curta, seguindo o login; logo permanece dentro do card compartilhado, sem rodapé. Espaçamentos específicos em telas de até 700px de altura acomodam os quatro campos e a dica de senha em 320×568, mantendo controles de 44px. Erros podem expandir a página e permitem rolagem. Preservados fundo interativo, cursor, decode/glitch, transição login/cadastro, foco, movimento reduzido e validação/envio do cadastro. npm run check aprovado com 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build TypeScript/Vite aprovado e 12/12 verificações de navegador aprovadas, com revisão visual independente. Evidências: `app/mobile/output/web-register-centered/`. Sem mudança de API, schema, dependências ou lockfiles nesta tarefa.
+ 

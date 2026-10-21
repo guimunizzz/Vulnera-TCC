@@ -1,0 +1,50 @@
+[
+  {
+    "path": "PRD_VIVO.md",
+    "original_sha256": "8c0e998ca610fb6bde12c410374ba71ccb67e657cf2960ee050ebcf26e45542a",
+    "new_sha256": "3a99f49c7a10bc60379bc5642222f3f6d57860ea6c49afe82cd454cba70708f1",
+    "existed": true
+  },
+  {
+    "path": "docs/BACKLOG.md",
+    "original_sha256": "a4055e79a11048fee2ea251a0b07f1e021296798fa950731281959fb5c094a24",
+    "new_sha256": "e0d8af04ad770782dbc5b9d3a9e730a847e5a76362514e34271c097b46b64321",
+    "existed": true
+  },
+  {
+    "path": "docs/ROADMAP_PROMPTS.md",
+    "original_sha256": "cc01f1d4f3ecc97d10b5b24b9a3220d5adec86d35fc88ddd271efa12f239b4c6",
+    "new_sha256": "c3ab77b3609293e3bc2fe517708798dd0fffa47ca8a12e0f98783b5d86d9fd21",
+    "existed": true
+  },
+  {
+    "path": "docs/Vulnera/08-Operacao/Mudancas/Changelog do Projeto.md",
+    "original_sha256": "ebb37987ff50bce9ddcf6684a900d71d7775927fd65cba009a02194c0d8e8ed8",
+    "new_sha256": "d9179df8da3623cdcdc960a8d07dfc384a7a139eb61effb31a07bd91e0323631",
+    "existed": true
+  },
+  {
+    "path": "docs/Vulnera/04-Arquitetura/Mobile Expo.md",
+    "original_sha256": "c81c71da0890fd0c223b8aa9f4e010a8a7797414102794b12932898d50090e2a",
+    "new_sha256": "8f0a227fa5bf916a9e05e74daaea9271b7a75d53ad5ae5017e3507e8a7838384",
+    "existed": true
+  },
+  {
+    "path": "docs/Vulnera/03-Produto/Plataformas/Mobile Cliente.md",
+    "original_sha256": "ce0182fa4766732e36b69a7b13969d5d28d8dfe3c1b62111f77ab98f9da47153",
+    "new_sha256": "b22b53eb568b1b5bf3362456e57166bebb9de1b1e94ecc35633b71d77446fc2a",
+    "existed": true
+  },
+  {
+    "path": "docs/Vulnera/02-Dominio/Regras de Negocio/RN24 - Push mobile filtravel por categoria.md",
+    "original_sha256": "19f127082ec78d78c2013ee14515d17ec294ec8fd8fbe09523faf1b4c24e1b23",
+    "new_sha256": "6e552d92ed70f966696dd6a15535821a968c34375ed7370a255f220f948af310",
+    "existed": true
+  },
+  {
+    "path": "docs/Vulnera/07-Decisoes/ADR-045 - Consulta mobile paginada e isolamento de sessao.md",
+    "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "new_sha256": "5c6d2f34f36675d0ee647d5189c26ddb59ea685208df7b848d5de68c3eb424b8",
+    "existed": false
+  }
+]

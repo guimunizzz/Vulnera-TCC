@@ -16,6 +16,7 @@ import { useTabBarClearance } from "../../../src/hooks/use-tab-bar-clearance";
 import { ProjectCard } from "../../../src/components/project-card";
 import { DataState, FilterChip, GlassSurface, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { HomeBrand } from "../../../src/components/home-brand";
+import { WorkspaceSkeleton } from "../../../src/components/workspace-skeleton";
 import { COLORS, FONT_FAMILY } from "../../../src/theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../../../src/theme/workspace";
 import type { ProjectStatus } from "../../../src/types/project.types";
@@ -50,16 +51,17 @@ export default function HomeScreen() {
         <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text>
       </Pressable>
     </View>
-    <View style={styles.hero}>
+    <MotionReveal distance={8} style={styles.hero}>
       <Text accessibilityRole="header" style={ui.title}>Olá, {user?.name?.split(" ")[0] ?? "cliente"}<Text style={{ color: WORKSPACE.lavender }}>.</Text></Text>
       <Text style={ui.body}>Acompanhe suas análises de segurança.</Text>
-    </View>
-    {!query.isPending && query.data && <MotionReveal delay={60}><GlassSurface style={styles.metrics}>
+    </MotionReveal>
+    {query.isPending && !query.data && <WorkspaceSkeleton kind="metrics" label="Carregando resumo dos projetos" />}
+    {!!query.data && <MotionReveal delay={40} distance={8}><GlassSurface style={styles.metrics}>
       <View style={styles.metric}><View style={ui.row}><Ionicons name="scan-outline" size={20} color={COLORS.severity.lowInk} /><Text style={styles.metricNumber}>{underway}</Text></View><Text style={ui.muted}>Em análise ou revisão</Text></View>
       <View style={styles.metricDivider} />
       <View style={styles.metric}><View style={ui.row}><Ionicons name="checkmark-done-outline" size={20} color="#8bddb0" /><Text style={styles.metricNumber}>{completed}</Text></View><Text style={ui.muted}>Projetos concluídos</Text></View>
     </GlassSurface></MotionReveal>}
-    <View style={styles.portfolio}>
+    <MotionReveal delay={80} distance={8} style={styles.portfolio}>
       <SectionHeading title="Seus projetos" meta={query.data ? `${projects.length} no total` : undefined} />
       <Animated.View style={[styles.search, searchStyle]}>
         <Ionicons name="search-outline" size={19} color={WORKSPACE.muted} />
@@ -71,7 +73,7 @@ export default function HomeScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {FILTERS.map((item) => <FilterChip key={item.value} label={item.label} selected={filter === item.value} onPress={() => setFilter(item.value)} />)}
       </ScrollView>
-    </View>
+    </MotionReveal>
     {query.isError && query.data && <DataState error title="Não foi possível atualizar" message={errorMessage(query.error)} onRetry={() => { void query.refetch(); }} />}
   </View>;
 
@@ -79,8 +81,8 @@ export default function HomeScreen() {
     <Animated.FlatList onScroll={scroll.onScroll} scrollEventThrottle={16} keyboardShouldPersistTaps="handled" data={query.data ? visible : []} keyExtractor={(project) => project.id} showsVerticalScrollIndicator={false}
       contentContainerStyle={[styles.list, { paddingBottom: bottom + 16 }]} ListHeaderComponent={header}
       refreshing={query.isRefetching} onRefresh={() => { void query.refetch(); }}
-      renderItem={({ item, index }) => <MotionReveal delay={Math.min(index, 3) * 40}><ProjectCard project={item} onPress={() => router.push(`/(tabs)/home/project/${item.id}`)} /></MotionReveal>}
-      ListEmptyComponent={query.isPending ? <DataState loading title="Buscando seus projetos" message="Carregando as análises da sua empresa." />
+      renderItem={({ item, index }) => <MotionReveal animate={index < 4} delay={Math.min(index, 2) * 30} distance={4}><ProjectCard project={item} onPress={() => router.push(`/(tabs)/home/project/${item.id}`)} /></MotionReveal>}
+      ListEmptyComponent={query.isPending ? <WorkspaceSkeleton kind="projects" label="Buscando seus projetos" />
         : query.isError && !query.data ? <DataState error title="Projetos indisponíveis" message={errorMessage(query.error)} onRetry={() => { void query.refetch(); }} />
         : <DataState title={search || filter !== "ALL" ? "Nenhum resultado" : "Seu próximo projeto começa aqui"}
           message={search || filter !== "ALL" ? "Experimente outro nome ou selecione Todos." : "Quando uma análise for aberta para sua empresa, você poderá acompanhá-la aqui."} />}

@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import "./interactive-label.css";
 
 /** Public-page button labels: decode for CTAs, sliced glitch for text links.
  * Fixed character slots hold the layout; the full label remains accessible.
  */
-export function InteractiveLabel({ children, effect = "decode" }: {
+export const InteractiveLabel = memo(function InteractiveLabel({ children, effect = "decode" }: {
   children: string;
   effect?: "decode" | "glitch";
 }) {
@@ -19,6 +19,8 @@ export function InteractiveLabel({ children, effect = "decode" }: {
     if (!label || !output || !control) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const letters = Array.from(children);
+    // A classificação não muda entre frames do mesmo texto.
+    const animatable = letters.map((letter) => /\p{L}/u.test(letter));
     const displayed = Array.from(output.querySelectorAll<HTMLElement>(".vx-label-decoded-char"));
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     let frame: number | undefined;
@@ -27,7 +29,9 @@ export function InteractiveLabel({ children, effect = "decode" }: {
       if (frame !== undefined) cancelAnimationFrame(frame);
       frame = undefined;
       delete label.dataset.decoding;
-      displayed.forEach((char, index) => { char.textContent = letters[index]; });
+      displayed.forEach((char, index) => {
+        if (char.textContent !== letters[index]) char.textContent = letters[index];
+      });
     };
     const blocked = () => control.matches(':disabled, [aria-disabled="true"], [aria-busy="true"]');
     const start = () => {
@@ -45,8 +49,9 @@ export function InteractiveLabel({ children, effect = "decode" }: {
           lastTick = step;
           const revealed = Math.floor((elapsed / duration) * letters.length);
           displayed.forEach((char, index) => {
+            if (settled[index]) return;
             const letter = letters[index];
-            if (index < revealed || !/\p{L}/u.test(letter)) {
+            if (index < revealed || !animatable[index]) {
               if (!settled[index]) char.textContent = letter;
               settled[index] = true;
             } else {
@@ -104,4 +109,4 @@ export function InteractiveLabel({ children, effect = "decode" }: {
       )}
     </span>
   );
-}
+});

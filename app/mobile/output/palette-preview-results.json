@@ -1,0 +1,13 @@
+{
+  "passed": 6,
+  "checks": [
+    "Home grafite em 390 e 320 px",
+    "projeto com status e severidades em destaque",
+    "CVSS com cores de todos os níveis e nota ausente",
+    "conta com vidro e ícones neutros",
+    "movimento preservado fora do modo reduzido",
+    "sem exceções de execução"
+  ],
+  "dataSource": "fixtures de revisão visual; Docker e API indisponíveis",
+  "exceptions": []
+}

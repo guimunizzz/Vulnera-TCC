@@ -1,6 +1,6 @@
 /** Login centralizado, com identidade visual e animações restritas a esta rota. */
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { authApi } from "../../lib/api/auth.api";
@@ -14,6 +14,7 @@ export function LoginPage() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const envioPendente = useRef(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
 
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -22,7 +23,10 @@ export function LoginPage() {
 
   async function enviar(event: FormEvent): Promise<void> {
     event.preventDefault();
+    // Enter repetido também passa por esta trava antes do próximo render.
+    if (envioPendente.current) return;
     setErro(null);
+    envioPendente.current = true;
     setEnviando(true);
     try {
       const auth = await authApi.login({ email, password: senha });
@@ -31,6 +35,7 @@ export function LoginPage() {
     } catch (err) {
       setErro(mensagemDeErro(err));
     } finally {
+      envioPendente.current = false;
       setEnviando(false);
     }
   }
@@ -39,11 +44,8 @@ export function LoginPage() {
     <section className="vx-login-panel" aria-labelledby="login-title">
       <span className="vx-login-panel-tab" aria-hidden="true">VULNERA / ACESSO</span>
       <span className="vx-login-panel-corner" aria-hidden="true" />
-      <div className="vx-login-heading">
-        <p className="vx-login-eyebrow"><span aria-hidden="true">//</span> BEM-VINDO DE VOLTA</p>
-        <h1 id="login-title" tabIndex={-1}>Entrar<span className="vx-login-title-mark" aria-hidden="true">_</span></h1>
-        <p>Acesse sua conta e continue suas análises.</p>
-      </div>
+      {/* O título mantém o nome acessível e recebe o foco da transição. */}
+      <h1 id="login-title" className="sr-only" tabIndex={-1}>Entrar</h1>
 
       <form onSubmit={enviar} className="vx-login-form" aria-labelledby="login-title">
         {erro && (
@@ -100,7 +102,7 @@ export function LoginPage() {
       </form>
 
       <p className="vx-login-register">
-        Primeira vez por aqui? <Link to="/register"><InteractiveLabel effect="glitch">Criar uma conta</InteractiveLabel> <ArrowRight size={14} aria-hidden="true" /></Link>
+        Não tem conta? <Link to="/register"><InteractiveLabel effect="glitch">Criar uma conta</InteractiveLabel> <ArrowRight size={14} aria-hidden="true" /></Link>
       </p>
     </section>
   );

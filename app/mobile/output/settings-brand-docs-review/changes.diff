@@ -1,0 +1,35 @@
+--- PRD_VIVO.md
++++ PRD_VIVO.md
+@@ -15,6 +15,10 @@
+ ---
+ 
+ ## 1. Estado geral do projeto
++
++**✅ 2026-10-09 — Assinatura compacta em Configurações (100%).** Auditoria dos cabeçalhos confirmou: Home já usa a logo escolhida; Minha conta era a única tela com o escudo anterior. `PageHeader` reutiliza `HomeBrand` quando não há botão de voltar, com MINHA CONTA alinhado à direita. Projeto e vulnerabilidade mantêm botão de retorno/título; login e rodapé textual preservados. Cabeçalho com altura mínima de 64 px e mesma assinatura da Home. A aplicação inicialmente limitada à Home foi ampliada para Configurações; registros da etapa anterior são históricos. Typecheck, lint e export web aprovados; preview em 320/390 px sem sobreposição, navegação à Home e retorno do projeto conferidos, sem exceções. Dados isolados somente no roteiro do navegador; API e aparência nativa não validadas nesta tarefa. Capturas e medidas em `app/mobile/output/settings-logo-aplicada-*.png` e `app/mobile/output/settings-logo-applied-results.json`.
++
++- [x] Aplicar a mesma assinatura compacta da Home em Configurações.
+ 
+ **✅ 2026-10-08 — Logo da Home, opção 4 aplicada (100%).** Usuário escolheu a assinatura compacta: V geométrico roxo de 28 px, VULNERA em JetBrains Mono bold de 15 px e SECURITY menor abaixo, sem moldura. Componente `HomeBrand` usado somente no topo da Home; preserva o cabeçalho de 64 px, avatar de 48 px e geometria oficial do símbolo do login. Marca com rótulo acessível único. Login, demais cabeçalhos, barra inferior, API e conteúdo preservados. Typecheck, lint e export web aprovados; conferência visual em 320/390 px e navegação pelo avatar aprovadas, com dados isolados apenas no roteiro do navegador. Capturas: `app/mobile/output/home-logo-aplicada-320.png` e `app/mobile/output/home-logo-aplicada-390.png`. Aparência nativa ainda não validada em aparelho.
+ 
+@@ -625,3 +629,8 @@
+ ### Marco — 2026-10-08: assinatura compacta aplicada na Home
+ 
+ **✅ 2026-10-08 — Logo da Home, opção 4 aplicada (100%).** Usuário escolheu a assinatura compacta: V geométrico roxo de 28 px, VULNERA em JetBrains Mono bold de 15 px e SECURITY menor abaixo, sem moldura. Componente `HomeBrand` usado somente no topo da Home; preserva o cabeçalho de 64 px, avatar de 48 px e geometria oficial do símbolo do login. Marca com rótulo acessível único. Login, demais cabeçalhos, barra inferior, API e conteúdo preservados. Typecheck, lint e export web aprovados; conferência visual em 320/390 px e navegação pelo avatar aprovadas, com dados isolados apenas no roteiro do navegador. Capturas: `app/mobile/output/home-logo-aplicada-320.png` e `app/mobile/output/home-logo-aplicada-390.png`. Aparência nativa ainda não validada em aparelho.
++
++
++### Marco — 2026-10-09: logo compacta em Configurações
++
++**✅ 2026-10-09 — Assinatura compacta em Configurações (100%).** Auditoria dos cabeçalhos confirmou: Home já usa a logo escolhida; Minha conta era a única tela com o escudo anterior. `PageHeader` reutiliza `HomeBrand` quando não há botão de voltar, com MINHA CONTA alinhado à direita. Projeto e vulnerabilidade mantêm botão de retorno/título; login e rodapé textual preservados. Cabeçalho com altura mínima de 64 px e mesma assinatura da Home. A aplicação inicialmente limitada à Home foi ampliada para Configurações; registros da etapa anterior são históricos. Typecheck, lint e export web aprovados; preview em 320/390 px sem sobreposição, navegação à Home e retorno do projeto conferidos, sem exceções. Dados isolados somente no roteiro do navegador; API e aparência nativa não validadas nesta tarefa. Capturas e medidas em `app/mobile/output/settings-logo-aplicada-*.png` e `app/mobile/output/settings-logo-applied-results.json`.
+--- docs/BACKLOG.md
++++ docs/BACKLOG.md
+@@ -5,6 +5,10 @@
+ > **Entrega: 25/10/2026.**
+ 
+ ## Status
++
++**✅ 2026-10-09 — Assinatura compacta em Configurações (100%).** Auditoria dos cabeçalhos confirmou: Home já usa a logo escolhida; Minha conta era a única tela com o escudo anterior. `PageHeader` reutiliza `HomeBrand` quando não há botão de voltar, com MINHA CONTA alinhado à direita. Projeto e vulnerabilidade mantêm botão de retorno/título; login e rodapé textual preservados. Cabeçalho com altura mínima de 64 px e mesma assinatura da Home. A aplicação inicialmente limitada à Home foi ampliada para Configurações; registros da etapa anterior são históricos. Typecheck, lint e export web aprovados; preview em 320/390 px sem sobreposição, navegação à Home e retorno do projeto conferidos, sem exceções. Dados isolados somente no roteiro do navegador; API e aparência nativa não validadas nesta tarefa. Capturas e medidas em `app/mobile/output/settings-logo-aplicada-*.png` e `app/mobile/output/settings-logo-applied-results.json`.
++
++- [x] Aplicar a mesma assinatura compacta da Home em Configurações.
+ 
+ **✅ 2026-10-08 — Logo da Home, opção 4 aplicada (100%).** Usuário escolheu a assinatura compacta: V geométrico roxo de 28 px, VULNERA em JetBrains Mono bold de 15 px e SECURITY menor abaixo, sem moldura. Componente `HomeBrand` usado somente no topo da Home; preserva o cabeçalho de 64 px, avatar de 48 px e geometria oficial do símbolo do login. Marca com rótulo acessível único. Login, demais cabeçalhos, barra inferior, API e conteúdo preservados. Typecheck, lint e export web aprovados; conferência visual em 320/390 px e navegação pelo avatar aprovadas, com dados isolados apenas no roteiro do navegador. Capturas: `app/mobile/output/home-logo-aplicada-320.png` e `app/mobile/output/home-logo-aplicada-390.png`. Aparência nativa ainda não validada em aparelho.
+ 

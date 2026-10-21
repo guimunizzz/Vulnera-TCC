@@ -1,0 +1,174 @@
+/**
+ * Define a barra lateral aprovada na prévia, com marca, grupos e seleção violeta.
+ * Mantém o acabamento restrito à navegação e usa os tokens dos temas existentes.
+ * Consumidor: Sidebar, tanto na área desktop quanto no Drawer do celular.
+ */
+@import "@fontsource-variable/inter";
+
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 13.5rem;
+  height: 100dvh;
+  padding: var(--space-6) var(--space-4) var(--space-5);
+  border-right: var(--border-width) solid oklch(var(--color-border-subtle));
+  background: color-mix(in oklch, oklch(var(--color-bg-canvas)) 68%, oklch(var(--color-bg-surface)));
+  color: oklch(var(--color-text-primary));
+  font-family: "Inter Variable", var(--font-sans);
+}
+
+.app-sidebar-brand {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 var(--space-2) var(--space-12);
+  min-height: var(--size-touch-target);
+}
+
+.app-sidebar-mark {
+  color: oklch(var(--color-accent-ink));
+  font-size: var(--text-3xl);
+  font-weight: 850;
+  line-height: 1;
+  transform: skew(-8deg);
+}
+
+.app-sidebar-wordmark {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+}
+
+.app-sidebar-security {
+  display: block;
+  margin-top: var(--space-1);
+  color: oklch(var(--color-text-muted));
+  font-size: 0.5em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.4em;
+}
+
+.app-sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  margin: calc(-1 * var(--space-1));
+  padding: var(--space-1);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app-sidebar-group + .app-sidebar-group {
+  margin-top: var(--space-6);
+}
+
+.app-sidebar-caption {
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-3);
+  color: oklch(var(--color-text-muted));
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.app-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.app-sidebar-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--size-touch-target);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  color: oklch(var(--color-text-secondary));
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  text-decoration: none;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.app-sidebar-link > svg {
+  flex-shrink: 0;
+  color: oklch(var(--color-text-muted));
+}
+
+.app-sidebar-link:hover {
+  background: var(--color-bg-hover);
+  color: oklch(var(--color-text-primary));
+}
+
+.app-sidebar-link[aria-current="page"] {
+  background: color-mix(in oklch, oklch(var(--color-accent-surface)) 62%, oklch(var(--color-bg-surface)));
+  color: oklch(var(--color-accent-ink));
+  font-weight: var(--weight-medium);
+}
+
+.app-sidebar-link[aria-current="page"]::before {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  width: var(--border-width-strong);
+  height: var(--space-6);
+  border-radius: var(--radius-full);
+  background: oklch(var(--color-accent-ink));
+  content: "";
+  transform: translateY(-50%);
+}
+
+.app-sidebar-link[aria-current="page"] > svg {
+  color: inherit;
+}
+
+.app-sidebar-footer {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding: var(--space-4) var(--space-2) 0;
+  border-top: var(--border-width) solid oklch(var(--color-border-subtle));
+  color: oklch(var(--color-text-muted));
+  font-size: var(--text-xs);
+  line-height: var(--leading-sm);
+}
+
+.app-sidebar-footer-dot {
+  flex-shrink: 0;
+  width: var(--space-1);
+  height: var(--space-1);
+  border-radius: var(--radius-full);
+  background: oklch(var(--color-success-ink));
+}
+
+.app-sidebar--embedded {
+  position: static;
+  width: 100%;
+  height: auto;
+  padding: var(--space-2) var(--space-2) var(--space-4);
+  border: 0;
+  background: transparent;
+}
+
+.app-sidebar--embedded .app-sidebar-scroll {
+  flex: none;
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar-link {
+    transition: none;
+  }
+}

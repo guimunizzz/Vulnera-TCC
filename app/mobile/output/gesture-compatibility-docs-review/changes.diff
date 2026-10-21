@@ -1,0 +1,89 @@
+--- PRD_VIVO.md
++++ PRD_VIVO.md
+@@ -15,6 +15,15 @@
+ ---
+ 
+ ## 1. Estado geral do projeto
++
++**✅ 2026-10-09 — Compatibilidade de gestos com Expo Go (100% da correção; confirmação no aparelho pendente).** O usuário reportou crash iOS em `RNGestureHandlerModule.installUIRuntimeBindings` após a troca para o stack JS. A resolução transitiva carregava Gesture Handler **3.3.0**, enquanto o Expo SDK 57 instalado e sua documentação indicam **~2.32.0**. A exportação anterior não detectou essa incompatibilidade de ABI; o fechamento visual anterior não comprovava execução nativa. `npx expo install react-native-gesture-handler` adicionou a faixa compatível como dependência direta e regenerou o lockfile pelo npm. Stack JS, deslize de 28 px/fade em 320 ms, skeletons, expansão e API mantidos. Verificação de matriz/resolução/lockfile **3/3**, UI **10/10**, navegação **7/7**, typecheck, lint e exports iOS/web aprovados. Limitações de notificações no Expo Go são avisos separados e permanecem sem alteração nesta correção. Para aplicar no aparelho: parar Metro, fechar Expo Go e reiniciar com `npx expo start --clear`. Relatório: `app/mobile/output/gesture-compatibility-report.md`; complemento do ADR-046.
++
++**Dependência do preview web:** a reinstalação expôs `react-native-web` ausente do manifesto, embora o preview anterior o utilizasse como pacote opcional instalado. O export web falhou por módulo ausente; `npx expo install react-native-web` declarou `^0.21.2` e atualizou o lockfile para tornar o preview e a regressão reproduzíveis. Essa dependência não é a causa do crash iOS.
++
++- [x] Diagnosticar a incompatibilidade Gesture Handler JS 3.x × módulo nativo 2.x.
++- [x] Declarar a faixa do SDK e atualizar o lockfile pelo instalador oficial.
++- [x] Conferir resolução do stack/drawer, bundle iOS e regressão das animações.
++- [ ] Confirmar abertura, retorno e ausência do crash no Expo Go iOS do usuário após limpar Metro.
+ 
+ **✅ 2026-10-09 — Movimento suave em projetos e detalhes (100%; 5/5 melhorias).** Branch `mobile/api`: projeto e vulnerabilidade entram pela direita e a tela anterior retorna pela esquerda, com deslize de **28 px**, fade e duração de **320 ms**. Home, Minha conta e detalhes apresentam blocos em sequência com subida de **8 px**, entrada de 280 ms e atrasos limitados a 180 ms. Skeletons com brilho discreto cobrem a primeira carga de métricas, projetos, vulnerabilidade, evidências e comentários; conteúdos carregados entram por fade. Informações e comentários expandem/recolhem altura e opacidade em **260 ms**, medindo o texto real e anunciando o estado do controle. Comentários começam abertos; vetor CVSS começa recolhido. Movimento reduzido remove essas animações; o brilho para fora do foco ou com app inativo. Consultas, paginação, retentativas e distinção entre erro/vazio continuam iguais. Apenas o stack aninhado de projetos usa `expo-router/js-stack`, já fornecido pelo Expo Router instalado, para controlar o deslocamento exato (ADR-046). Typecheck, lint e exports web/Android aprovados; **10/10 verificações de interação** no navegador e **7/7 de regressão da barra/abas**, com fixtures isoladas, sem validar API real ou desempenho em aparelho nesta tarefa. Relatório: `app/mobile/output/detail-motion-report.md`.
+ 
+@@ -644,3 +653,9 @@
+ **✅ 2026-10-09 — Movimento suave em projetos e detalhes (100%; 5/5 melhorias).** Branch `mobile/api`: projeto e vulnerabilidade entram pela direita e a tela anterior retorna pela esquerda, com deslize de **28 px**, fade e duração de **320 ms**. Home, Minha conta e detalhes apresentam blocos em sequência com subida de **8 px**, entrada de 280 ms e atrasos limitados a 180 ms. Skeletons com brilho discreto cobrem a primeira carga de métricas, projetos, vulnerabilidade, evidências e comentários; conteúdos carregados entram por fade. Informações e comentários expandem/recolhem altura e opacidade em **260 ms**, medindo o texto real e anunciando o estado do controle. Comentários começam abertos; vetor CVSS começa recolhido. Movimento reduzido remove essas animações; o brilho para fora do foco ou com app inativo. Consultas, paginação, retentativas e distinção entre erro/vazio continuam iguais. Apenas o stack aninhado de projetos usa `expo-router/js-stack`, já fornecido pelo Expo Router instalado, para controlar o deslocamento exato (ADR-046). Typecheck, lint e exports web/Android aprovados; **10/10 verificações de interação** no navegador e **7/7 de regressão da barra/abas**, com fixtures isoladas, sem validar API real ou desempenho em aparelho nesta tarefa. Relatório: `app/mobile/output/detail-motion-report.md`.
+ 
+ **Estado visual vigente das entregas anteriores:** Configurações usa a assinatura compacta da Home com MINHA CONTA à direita. A barra está novamente na **opção 1**, com indicador deslizante e ícone selecionado em 1,1×, 320 ms; substitui a luz da opção 2. Home ↔ Configurações usa deslize de 28 px com fade em 320 ms, inclusive pelo avatar. Os registros de 2026-10-08 são históricos e permanecem preservados.
++
++### Marco — 2026-10-09: compatibilidade de gestos com Expo Go
++
++**✅ 2026-10-09 — Compatibilidade de gestos com Expo Go (100% da correção; confirmação no aparelho pendente).** O usuário reportou crash iOS em `RNGestureHandlerModule.installUIRuntimeBindings` após a troca para o stack JS. A resolução transitiva carregava Gesture Handler **3.3.0**, enquanto o Expo SDK 57 instalado e sua documentação indicam **~2.32.0**. A exportação anterior não detectou essa incompatibilidade de ABI; o fechamento visual anterior não comprovava execução nativa. `npx expo install react-native-gesture-handler` adicionou a faixa compatível como dependência direta e regenerou o lockfile pelo npm. Stack JS, deslize de 28 px/fade em 320 ms, skeletons, expansão e API mantidos. Verificação de matriz/resolução/lockfile **3/3**, UI **10/10**, navegação **7/7**, typecheck, lint e exports iOS/web aprovados. Limitações de notificações no Expo Go são avisos separados e permanecem sem alteração nesta correção. Para aplicar no aparelho: parar Metro, fechar Expo Go e reiniciar com `npx expo start --clear`. Relatório: `app/mobile/output/gesture-compatibility-report.md`; complemento do ADR-046.
++
++**Dependência do preview web:** a reinstalação expôs `react-native-web` ausente do manifesto, embora o preview anterior o utilizasse como pacote opcional instalado. O export web falhou por módulo ausente; `npx expo install react-native-web` declarou `^0.21.2` e atualizou o lockfile para tornar o preview e a regressão reproduzíveis. Essa dependência não é a causa do crash iOS.
+--- docs/BACKLOG.md
++++ docs/BACKLOG.md
+@@ -5,6 +5,15 @@
+ > **Entrega: 25/10/2026.**
+ 
+ ## Status
++
++**✅ 2026-10-09 — Compatibilidade de gestos com Expo Go (100% da correção; confirmação no aparelho pendente).** O usuário reportou crash iOS em `RNGestureHandlerModule.installUIRuntimeBindings` após a troca para o stack JS. A resolução transitiva carregava Gesture Handler **3.3.0**, enquanto o Expo SDK 57 instalado e sua documentação indicam **~2.32.0**. A exportação anterior não detectou essa incompatibilidade de ABI; o fechamento visual anterior não comprovava execução nativa. `npx expo install react-native-gesture-handler` adicionou a faixa compatível como dependência direta e regenerou o lockfile pelo npm. Stack JS, deslize de 28 px/fade em 320 ms, skeletons, expansão e API mantidos. Verificação de matriz/resolução/lockfile **3/3**, UI **10/10**, navegação **7/7**, typecheck, lint e exports iOS/web aprovados. Limitações de notificações no Expo Go são avisos separados e permanecem sem alteração nesta correção. Para aplicar no aparelho: parar Metro, fechar Expo Go e reiniciar com `npx expo start --clear`. Relatório: `app/mobile/output/gesture-compatibility-report.md`; complemento do ADR-046.
++
++**Dependência do preview web:** a reinstalação expôs `react-native-web` ausente do manifesto, embora o preview anterior o utilizasse como pacote opcional instalado. O export web falhou por módulo ausente; `npx expo install react-native-web` declarou `^0.21.2` e atualizou o lockfile para tornar o preview e a regressão reproduzíveis. Essa dependência não é a causa do crash iOS.
++
++- [x] Diagnosticar a incompatibilidade Gesture Handler JS 3.x × módulo nativo 2.x.
++- [x] Declarar a faixa do SDK e atualizar o lockfile pelo instalador oficial.
++- [x] Conferir resolução do stack/drawer, bundle iOS e regressão das animações.
++- [ ] Confirmar abertura, retorno e ausência do crash no Expo Go iOS do usuário após limpar Metro.
+ 
+ **✅ 2026-10-09 — Movimento suave em projetos e detalhes (100%; 5/5 melhorias).** Branch `mobile/api`: projeto e vulnerabilidade entram pela direita e a tela anterior retorna pela esquerda, com deslize de **28 px**, fade e duração de **320 ms**. Home, Minha conta e detalhes apresentam blocos em sequência com subida de **8 px**, entrada de 280 ms e atrasos limitados a 180 ms. Skeletons com brilho discreto cobrem a primeira carga de métricas, projetos, vulnerabilidade, evidências e comentários; conteúdos carregados entram por fade. Informações e comentários expandem/recolhem altura e opacidade em **260 ms**, medindo o texto real e anunciando o estado do controle. Comentários começam abertos; vetor CVSS começa recolhido. Movimento reduzido remove essas animações; o brilho para fora do foco ou com app inativo. Consultas, paginação, retentativas e distinção entre erro/vazio continuam iguais. Apenas o stack aninhado de projetos usa `expo-router/js-stack`, já fornecido pelo Expo Router instalado, para controlar o deslocamento exato (ADR-046). Typecheck, lint e exports web/Android aprovados; **10/10 verificações de interação** no navegador e **7/7 de regressão da barra/abas**, com fixtures isoladas, sem validar API real ou desempenho em aparelho nesta tarefa. Relatório: `app/mobile/output/detail-motion-report.md`.
+ 
+--- docs/Vulnera/04-Arquitetura/Mobile Expo.md
++++ docs/Vulnera/04-Arquitetura/Mobile Expo.md
+@@ -42,3 +42,10 @@
+ `MotionReveal` aceita distância opcional: as telas autenticadas usam 8 px com atraso máximo de 180 ms e duração de 280 ms. O padrão anterior continua para consumidores existentes. `WorkspaceSkeleton` compartilha um relógio de brilho por grupo, pausado por foco, estado do app e movimento reduzido. `WorkspaceDisclosure` mede o conteúdo real para animar altura/opacidade em 260 ms, com controles de pelo menos 48 px e conteúdo recolhido oculto à acessibilidade. Skeletons só representam espera; não adicionam dados de demonstração ou consultas.
+ 
+ A barra vigente é o indicador deslizante da opção 1 (320 ms), e Home/Configurações usam fade com deslize de 28 px. A assinatura compacta está nos cabeçalhos Home e Minha conta; detalhes preservam retorno e título. Ver [[ADR-046 - Transicoes curtas no stack de projetos mobile]]. Exports web/Android e QA no navegador aprovados; avaliação nativa permanece pendente.
++
++
++## Correção de compatibilidade Expo Go — 2026-10-09
++
++A entrega inicial do stack JS usava uma dependência transitiva de gestos sem verificar a ABI do Expo Go. A resolução 3.3.0 chamava um método ausente no módulo nativo 2.x, causando o crash iOS reportado pelo usuário. O pacote `react-native-gesture-handler` agora é dependência direta em `~2.32.0`, alinhada ao `expo/bundledNativeModules.json` instalado e à [documentação SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/gesture-handler/). Manifesto e lockfile foram atualizados pelo instalador, substituindo a afirmação anterior de que bastava a dependência transitiva. Navegadores e transições continuam iguais. Export iOS e QA estático/web passaram; confirmação no aparelho pendente. Os avisos de `expo-notifications` no Expo Go são separados desta falha e não foram ocultados.
++
++O preview web também passou a declarar `react-native-web` (`^0.21.2`), instalado pelo Expo após o export detectar módulo ausente na reinstalação. Antes era um peer opcional presente em `node_modules`, sem dependência direta. Essa correção permite repetir o QA existente e usar o script web de forma reproduzível; não introduz uma nova plataforma distribuída.
+--- docs/Vulnera/03-Produto/Plataformas/Mobile Cliente.md
++++ docs/Vulnera/03-Produto/Plataformas/Mobile Cliente.md
+@@ -28,3 +28,8 @@
+ ## Comportamento visual vigente — 2026-10-09
+ 
+ Home e Configurações compartilham a assinatura compacta; a barra usa o indicador roxo deslizante da opção 1. Abrir projeto/vulnerabilidade e alternar Home/Configurações aplica deslize curto com fade de 320 ms, com direção invertida no retorno. Blocos entram em sequência, skeletons indicam a primeira espera da API e informações/comentários permitem expansão suave. Comentários são mostrados inicialmente; o vetor CVSS é expansível. A preferência por movimento reduzido aplica estados diretamente. O escopo continua de consulta, com contratos reais, paginação e erros separados de vazio. Aparência e desempenho nativos ainda precisam de validação em aparelho.
++
++
++## Compatibilidade da prévia no Expo Go — 2026-10-09
++
++A resolução do módulo de gestos foi fixada na faixa nativa do SDK 57 para corrigir o crash iOS após a mudança de navegador. As animações e funções de consulta seguem as mesmas. É necessário reiniciar o Metro com cache limpo e reabrir o Expo Go para carregar a versão corrigida. A confirmação no aparelho do usuário continua pendente; avisos de limitações de push no Expo Go permanecem separados do crash.
+--- docs/Vulnera/07-Decisoes/ADR-046 - Transicoes curtas no stack de projetos mobile.md
++++ docs/Vulnera/07-Decisoes/ADR-046 - Transicoes curtas no stack de projetos mobile.md
+@@ -14,7 +14,7 @@
+ 
+ ## Decisão
+ 
+-- Usar `Stack` de `expo-router/js-stack` somente no fluxo Home → projeto → vulnerabilidade. O Expo Router instalado já disponibiliza esse navegador e seus módulos de gestos; não adicionar dependências nem alterar os outros navegadores.
++- Usar `Stack` de `expo-router/js-stack` somente no fluxo Home → projeto → vulnerabilidade. O Expo Router instalado disponibiliza esse navegador; declarar `react-native-gesture-handler` diretamente na faixa nativa `~2.32.0` do SDK 57, evitando a resolução transitiva 3.x incompatível com Expo Go. Demais navegadores permanecem iguais.
+ - Combinar `current.progress` e `next.progress` no interpolador, com posições 28/0/−28 px e opacidades 0/1/0. Aplicar timing de 320 ms e curva Bézier (0.22, 1, 0.36, 1), também no retorno. Manter gesto horizontal de borda, sem a antiga opção nativa de gesto na tela inteira.
+ - Reutilizar `MotionReveal` com distância de 8 px, duração de 280 ms e atrasos até 180 ms. Valores padrão continuam para outros consumidores.
+ - Mostrar skeleton apenas na primeira carga, com um relógio por grupo e brilho pausado quando fora de foco, app inativo ou movimento reduzido. Não acrescentar dados fictícios à aplicação.
+@@ -32,3 +32,7 @@
+ - [[ADR-045 - Consulta mobile paginada e isolamento de sessao]]
+ - `app/mobile/app/(tabs)/home/_layout.tsx`
+ - `app/mobile/output/detail-motion-report.md`
++
++## Complemento — 2026-10-09: ABI de gestos no Expo Go
++
++A decisão inicial dispensava dependência direta porque o módulo já estava instalado. O crash iOS reportado pelo usuário mostrou que presença na árvore não garante compatibilidade nativa: a versão JS 3.3.0 chamava `installUIRuntimeBindings`, ausente no Expo Go com módulo 2.x. Essa parte da decisão fica substituída pela dependência explícita `~2.32.0`, instalada com `npx expo install` e lockfile gerado pelo npm. As transições permanecem no stack JS. A matriz instalada, a resolução e o lockfile foram conferidos, além de export iOS e regressão web; confirmação física permanece pendente. Export bem-sucedido não testa ABI ou execução nativa.

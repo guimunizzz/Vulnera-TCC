@@ -16,9 +16,9 @@
  * Também é onde o registro de push dispara (usePushRegistration) — roda uma
  * vez por sessão autenticada, independente de qual aba o usuário está vendo.
  *
- * Modelo 7: luz roxa atravessa o vidro com pulsação e fade de 400 ms.
- * As telas deslizam pela largura inteira em 280 ms, invertendo o sentido
- * ao voltar para Projetos e respeitando a preferência de movimento reduzido.
+ * Modelo 7: indicador roxo deslizante e ícone com escala leve em 320 ms.
+ * O conteúdo acompanha com fade e deslocamento lateral de 28 px: Configurações
+ * entra pela direita e Home pela esquerda, seguindo a ordem real das abas.
  * O React Navigation mantém rotas/eventos; a cápsula respeita área segura
  * e o respiro compartilhado em TAB_BAR, sem mudar as telas ou consultas.
  */
@@ -68,20 +68,13 @@ function AuthenticatedTabs() {
         headerShadowVisible: false,
         headerShown: false,
         animation: reduced ? "none" : "shift",
-        // O progresso da navegação já inverte o sinal entre as duas abas.
-        // Usar a largura real faz ambas se moverem juntas, sem fade ou salto.
-        sceneStyleInterpolator: ({ current }) => ({
+        sceneStyleInterpolator: reduced ? undefined : ({ current }) => ({
           sceneStyle: {
-            transform: [{
-              translateX: current.progress.interpolate({
-                inputRange: [-1, 0, 1],
-                outputRange: [-width, 0, width],
-                extrapolate: "clamp",
-              }),
-            }],
+            opacity: current.progress.interpolate({ inputRange: [-1, 0, 1], outputRange: [0.96, 1, 0.96], extrapolate: "clamp" }),
+            transform: [{ translateX: current.progress.interpolate({ inputRange: [-1, 0, 1], outputRange: [-28, 0, 28], extrapolate: "clamp" }) }],
           },
         }),
-        transitionSpec: { animation: "timing", config: { duration: reduced ? 0 : 280, easing: Easing.bezier(0.22, 1, 0.36, 1) } },
+        transitionSpec: { animation: "timing", config: { duration: reduced ? 0 : TAB_TRANSITION_DURATION, easing: Easing.bezier(0.22, 1, 0.36, 1) } },
       }}
     >
       <Tabs.Screen

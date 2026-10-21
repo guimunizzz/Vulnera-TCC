@@ -1,0 +1,3 @@
+{
+  "checks": "npm run check aprovado com 337/337 testes em 30 arquivos, contraste 66/66 e lint com 0 erros/9 avisos anteriores. Build TypeScript/Vite aprovado e 12/12 verificações de navegador aprovadas, com revisão visual independente."
+}

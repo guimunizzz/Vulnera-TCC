@@ -1,0 +1,27 @@
+[
+  {
+    "path": "PRD_VIVO.md",
+    "copy": "PRD_VIVO.md",
+    "sha256": "026ad0b4112ecdd0396c92554e4d9855d90e424bfdd2cbf61939dae6c6f39497"
+  },
+  {
+    "path": "docs/BACKLOG.md",
+    "copy": "BACKLOG.md",
+    "sha256": "317a5b2eb8b59fa983d51dff1c07efb9a5183c2f3902b27e04e8c5964c39ffbc"
+  },
+  {
+    "path": "docs/Vulnera/04-Arquitetura/Mobile Expo.md",
+    "copy": "Mobile Expo.md",
+    "sha256": "8f0a227fa5bf916a9e05e74daaea9271b7a75d53ad5ae5017e3507e8a7838384"
+  },
+  {
+    "path": "docs/Vulnera/03-Produto/Plataformas/Mobile Cliente.md",
+    "copy": "Mobile Cliente.md",
+    "sha256": "b22b53eb568b1b5bf3362456e57166bebb9de1b1e94ecc35633b71d77446fc2a"
+  },
+  {
+    "path": "docs/Vulnera/07-Decisoes/ADR-046 - Transicoes curtas no stack de projetos mobile.md",
+    "copy": "ADR-046.md",
+    "sha256": null
+  }
+]

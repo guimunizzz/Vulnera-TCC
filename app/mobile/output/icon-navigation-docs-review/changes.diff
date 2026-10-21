@@ -1,0 +1,37 @@
+--- PRD_VIVO.md
++++ PRD_VIVO.md
+@@ -15,6 +15,11 @@
+ ---
+ 
+ ## 1. Estado geral do projeto
++
++**✅ 2026-10-08 — Modelo 7, animação 1 entregue (100% desta etapa).** Branch `mobile/api`: cápsula glass central de 176×56, somente ícones e divisória fina; linha de seleção desliza 79 px em 320 ms, ícones mudam de cor por opacidade e crescem 10%, com fade da tela. Seleção segue o estado real de navegação, preservando tabPress/tabLongPress, teclado, rotas aninhadas, acesso pelo avatar e logout. Movimento reduzido aplica estados imediatamente e mantém ícones sem escala. Área segura e respiro inferior compartilhados; apenas o respiro inferior acompanha a nova altura. Conteúdo e identidade das telas, API, autenticação, dependências e lockfiles preservados. Typecheck/lint e exports web/Android aprovados; **7/7 verificações de interação** em Chrome, com capturas somente da Home em 320/390 px. API local sem containers ativos: fixtures apenas no roteiro de QA; desempenho/blur/leitor de tela em aparelho físico pendentes. A tentativa inicial de animar Ionicons diretamente foi substituída por camadas de opacidade após erro setNativeProps no preview. **Próximo: mostrar animação 2 após o usuário experimentar a opção 1**, conforme a sequência solicitada. Relatório: `app/mobile/output/icon-navigation-report.md`.
++
++- [x] Aplicar modelo 7 com indicador deslizante e fade (opção 1).
++- [ ] Apresentar animação 2 após avaliação da opção 1 pelo usuário.
+ 
+ **✅ 2026-10-08 — Paleta grafite do mobile (100% da implementação e revisão em preview).** Branch `mobile/api`: fundo, vidro, bordas, barra inferior, metadados e ícones de apoio neutralizados; violeta mantido nas ações, foco, seleção e marca, com brilho ambiente reduzido. Status Em revisão em azul e Pendente em amarelo; anel CVSS usa a severidade calculada da API, preservando o badge de severidade final quando existe override. Liquid glass e animações suaves mantidos. Typecheck/lint e exports web/Android aprovados; **6/6 verificações visuais** em Chrome, incluindo larguras 320/390 px, cinco níveis de severidade, nota ausente, conta, evidências, comentários e toque. Docker/API desligados: esta revisão usa fixtures somente no script de QA; não comprova conectividade real nem aparência/desempenho em aparelho físico. Código de API, autenticação, dados, dependências e lockfiles sem alterações nesta task. A paleta autenticada anterior fica substituída por esta; registros históricos preservados. Relatório: `app/mobile/output/mobile-palette-report.md`.
+ 
+@@ -591,3 +596,8 @@
+ ### Marco — 2026-10-08: paleta grafite do mobile
+ 
+ **✅ 2026-10-08 — Paleta grafite do mobile (100% da implementação e revisão em preview).** Branch `mobile/api`: fundo, vidro, bordas, barra inferior, metadados e ícones de apoio neutralizados; violeta mantido nas ações, foco, seleção e marca, com brilho ambiente reduzido. Status Em revisão em azul e Pendente em amarelo; anel CVSS usa a severidade calculada da API, preservando o badge de severidade final quando existe override. Liquid glass e animações suaves mantidos. Typecheck/lint e exports web/Android aprovados; **6/6 verificações visuais** em Chrome, incluindo larguras 320/390 px, cinco níveis de severidade, nota ausente, conta, evidências, comentários e toque. Docker/API desligados: esta revisão usa fixtures somente no script de QA; não comprova conectividade real nem aparência/desempenho em aparelho físico. Código de API, autenticação, dados, dependências e lockfiles sem alterações nesta task. A paleta autenticada anterior fica substituída por esta; registros históricos preservados. Relatório: `app/mobile/output/mobile-palette-report.md`.
++
++
++### Marco — 2026-10-08: modelo 7 e animação 1
++
++**✅ 2026-10-08 — Modelo 7, animação 1 entregue (100% desta etapa).** Branch `mobile/api`: cápsula glass central de 176×56, somente ícones e divisória fina; linha de seleção desliza 79 px em 320 ms, ícones mudam de cor por opacidade e crescem 10%, com fade da tela. Seleção segue o estado real de navegação, preservando tabPress/tabLongPress, teclado, rotas aninhadas, acesso pelo avatar e logout. Movimento reduzido aplica estados imediatamente e mantém ícones sem escala. Área segura e respiro inferior compartilhados; apenas o respiro inferior acompanha a nova altura. Conteúdo e identidade das telas, API, autenticação, dependências e lockfiles preservados. Typecheck/lint e exports web/Android aprovados; **7/7 verificações de interação** em Chrome, com capturas somente da Home em 320/390 px. API local sem containers ativos: fixtures apenas no roteiro de QA; desempenho/blur/leitor de tela em aparelho físico pendentes. A tentativa inicial de animar Ionicons diretamente foi substituída por camadas de opacidade após erro setNativeProps no preview. **Próximo: mostrar animação 2 após o usuário experimentar a opção 1**, conforme a sequência solicitada. Relatório: `app/mobile/output/icon-navigation-report.md`.
+--- docs/BACKLOG.md
++++ docs/BACKLOG.md
+@@ -5,6 +5,11 @@
+ > **Entrega: 25/10/2026.**
+ 
+ ## Status
++
++**✅ 2026-10-08 — Modelo 7, animação 1 entregue (100% desta etapa).** Branch `mobile/api`: cápsula glass central de 176×56, somente ícones e divisória fina; linha de seleção desliza 79 px em 320 ms, ícones mudam de cor por opacidade e crescem 10%, com fade da tela. Seleção segue o estado real de navegação, preservando tabPress/tabLongPress, teclado, rotas aninhadas, acesso pelo avatar e logout. Movimento reduzido aplica estados imediatamente e mantém ícones sem escala. Área segura e respiro inferior compartilhados; apenas o respiro inferior acompanha a nova altura. Conteúdo e identidade das telas, API, autenticação, dependências e lockfiles preservados. Typecheck/lint e exports web/Android aprovados; **7/7 verificações de interação** em Chrome, com capturas somente da Home em 320/390 px. API local sem containers ativos: fixtures apenas no roteiro de QA; desempenho/blur/leitor de tela em aparelho físico pendentes. A tentativa inicial de animar Ionicons diretamente foi substituída por camadas de opacidade após erro setNativeProps no preview. **Próximo: mostrar animação 2 após o usuário experimentar a opção 1**, conforme a sequência solicitada. Relatório: `app/mobile/output/icon-navigation-report.md`.
++
++- [x] Aplicar modelo 7 com indicador deslizante e fade (opção 1).
++- [ ] Apresentar animação 2 após avaliação da opção 1 pelo usuário.
+ 
+ **✅ 2026-10-08 — Paleta grafite do mobile (100% da implementação e revisão em preview).** Branch `mobile/api`: fundo, vidro, bordas, barra inferior, metadados e ícones de apoio neutralizados; violeta mantido nas ações, foco, seleção e marca, com brilho ambiente reduzido. Status Em revisão em azul e Pendente em amarelo; anel CVSS usa a severidade calculada da API, preservando o badge de severidade final quando existe override. Liquid glass e animações suaves mantidos. Typecheck/lint e exports web/Android aprovados; **6/6 verificações visuais** em Chrome, incluindo larguras 320/390 px, cinco níveis de severidade, nota ausente, conta, evidências, comentários e toque. Docker/API desligados: esta revisão usa fixtures somente no script de QA; não comprova conectividade real nem aparência/desempenho em aparelho físico. Código de API, autenticação, dados, dependências e lockfiles sem alterações nesta task. A paleta autenticada anterior fica substituída por esta; registros históricos preservados. Relatório: `app/mobile/output/mobile-palette-report.md`.
+ 

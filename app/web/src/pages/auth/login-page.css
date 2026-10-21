@@ -1,12 +1,12 @@
 @property --login-mouse-x {
   syntax: "<length>";
-  inherits: true;
+  inherits: false;
   initial-value: 50vw;
 }
 
 @property --login-mouse-y {
   syntax: "<length>";
-  inherits: true;
+  inherits: false;
   initial-value: 50vh;
 }
 
@@ -33,7 +33,7 @@
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr;
   gap: 16px;
   min-height: 100dvh;
   padding: 24px clamp(20px, 4vw, 64px);
@@ -42,8 +42,7 @@
   font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
-.vx-login::before {
-  content: "";
+.vx-login-glow {
   position: absolute;
   z-index: -1;
   inset: 0;
@@ -53,7 +52,7 @@
   transition: opacity .55s var(--login-ease-soft);
 }
 
-.vx-login[data-reveal-active="true"]::before { opacity: 1; }
+.vx-login[data-reveal-active="true"] .vx-login-glow { opacity: 1; }
 
 .vx-login-background {
   position: absolute;
@@ -134,40 +133,57 @@
   opacity: .78;
 }
 
+/* Sem exposição, CSS e SMIL pausam juntos; a retomada preserva o tempo. */
+.vx-login:not([data-background-running="true"]) .vx-login-circuit,
+.vx-login:not([data-background-running="true"]) .vx-login-signals path,
+.vx-login[data-page-visible="false"] .vx-login-header,
+.vx-login[data-page-visible="false"] .vx-login-cursor { animation-play-state: paused; }
+/* O glitch possui seletores de foco/hover com maior especificidade. */
+.vx-login[data-page-visible="false"] .vx-label-slice { animation-play-state: paused !important; }
+
 .vx-login-header {
   display: flex;
   min-height: 44px;
   align-items: center;
+  justify-content: center;
   animation: vx-login-enter .8s var(--login-ease) .05s both;
 }
 
 .vx-login-brand {
   display: inline-flex;
   min-height: 44px;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--login-text);
-  font: 700 1rem/1 var(--font-mono);
+  font: 700 1.5rem/1 var(--font-mono);
   letter-spacing: .15em;
   text-decoration: none;
 }
 
+.vx-login-wordmark { display: inline-flex; align-items: center; gap: 6px; }
+
+.vx-login-brand-security {
+  color: var(--login-muted);
+  font: 400 .625rem/1 var(--font-mono);
+  letter-spacing: .4em;
+}
+
 .vx-login-cursor {
   width: 4px;
-  height: 14px;
+  height: 20px;
   background: var(--login-accent);
   animation: vx-login-cursor 3s ease-in-out infinite;
 }
 
+/* O card reúne marca e formulário sem reservar uma faixa para o rodapé. */
 .vx-login-stage {
   display: grid;
   place-items: center;
   min-width: 0;
-  padding: 16px 0;
 }
 
-.vx-auth-transition { width: min(100%, 480px); min-width: 0; }
-.vx-register-panel .vx-login-form { gap: 16px; }
+.vx-auth-transition { width: 100%; min-width: 0; }
 /* A dica vem abaixo do controle para manter rótulo e campo sempre juntos. */
 .vx-login-field > p:not([role="alert"]) { order: 1; color: var(--login-muted); }
 .vx-login-field > p { font-size: .8125rem; line-height: 1.5; overflow-wrap: anywhere; }
@@ -175,12 +191,16 @@
 .vx-login-field > p[role="alert"] { order: 2; color: #fda4af; }
 .vx-login-heading h1:focus { outline: none; }
 
-.vx-login-panel {
+.vx-login-panel { min-width: 0; }
+
+.vx-auth-card {
   position: relative;
   isolation: isolate;
-  width: 100%;
+  display: grid;
+  gap: 20px;
+  width: min(100%, 400px);
   min-width: 0;
-  padding: 40px var(--login-panel-padding) 32px;
+  padding: 28px;
   border: 1px solid rgb(167 139 250 / 16%);
   border-radius: 16px;
   background: linear-gradient(145deg, rgb(20 17 31 / 94%), rgb(8 8 13 / 97%));
@@ -220,6 +240,8 @@
 .vx-login-eyebrow > span { margin-right: 6px; }
 
 .vx-login-heading { margin-bottom: 26px; }
+.vx-login-panel .vx-login-heading { margin-bottom: 16px; text-align: center; }
+.vx-login-panel .vx-login-heading h1 { margin: 0; font-size: 1.5rem; }
 
 .vx-login-heading .vx-login-eyebrow {
   margin: 0 0 8px;
@@ -259,13 +281,13 @@
 .vx-login-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
 .vx-login .vx-login-field { min-width: 0; gap: 6px; }
-.vx-login-field label { color: var(--login-text); font-size: .875rem; font-weight: 500; line-height: 1.5; }
+.vx-login-field label { color: var(--login-text); font-size: .75rem; font-weight: 500; line-height: 1.5; }
 .vx-login .vx-login-input {
-  height: 48px;
+  height: 44px;
   min-width: 0;
   padding-left: 42px;
   border: 1px solid #393247;
@@ -302,9 +324,9 @@
 .vx-login-password-toggle:hover { background: rgb(var(--login-line-rgb) / 10%); color: var(--login-text); }
 
 .vx-login .vx-login-submit {
-  min-height: 48px;
+  min-height: 44px;
   height: auto;
-  padding-block: 12px;
+  padding-block: 10px;
   margin-top: 4px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -327,37 +349,18 @@
   align-items: center;
   justify-content: center;
   gap: 0 6px;
-  margin: 20px 0 0;
+  margin: 16px 0 0;
   padding-top: 12px;
   border-top: 1px solid var(--login-border);
   color: var(--login-muted);
   text-align: center;
-  font-size: .875rem;
+  font-size: .8125rem;
   line-height: 1.5;
 }
 
 .vx-login-register a { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 6px; color: var(--login-text); font-weight: 500; text-underline-offset: 4px; transition: color .3s var(--login-ease-soft); }
 .vx-login-register a:hover { color: var(--login-accent); text-decoration: underline; }
 
-.vx-login-footer {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  min-height: 44px;
-  padding-block: 12px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--login-muted);
-  text-align: center;
-  font: .75rem/1.5 var(--font-mono);
-  letter-spacing: .025em;
-  border-top: 1px solid var(--login-border);
-  animation: vx-login-enter .8s var(--login-ease) .25s both;
-}
-
-.vx-login-footer-brand > span, .vx-login-footer-decoration { color: var(--login-accent); }
-.vx-login-footer-brand { justify-self: start; text-align: left; }
-.vx-login-footer-decoration { justify-self: end; letter-spacing: .4em; }
 .vx-login :focus-visible { outline-color: var(--login-accent); }
 
 @keyframes vx-login-enter {
@@ -388,16 +391,24 @@
 
 @media (max-width: 600px) {
   .vx-login { gap: 12px; padding: 16px; }
-  .vx-login-stage { padding: 8px 0; }
-  .vx-login-panel { padding-block: 32px 24px; }
-  .vx-login-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; }
-  .vx-login-footer-decoration { display: none; }
+  .vx-auth-card { gap: 16px; padding: 20px; }
 }
 
 /* Menos espaço externo em notebooks baixos e com o teclado virtual aberto. */
 @media (max-height: 800px) {
   .vx-login { padding-block: 16px; gap: 12px; }
-  .vx-login-stage { padding-block: 8px; }
+}
+
+/* Quatro campos continuam legíveis em telas baixas, com alvos de 44px.
+   Erros aumentam o conteúdo e permitem rolar, sem cortar o formulário. */
+@media (max-height: 700px) {
+  .vx-login.vx-register { padding-block: 12px; }
+  .vx-register .vx-auth-card { gap: 8px; padding: 14px; }
+  .vx-register-panel .vx-login-heading { margin-bottom: 8px; }
+  .vx-register-panel .vx-login-form { gap: 8px; }
+  .vx-login.vx-register .vx-login-field { gap: 4px; }
+  .vx-register .vx-login-submit { margin-top: 0; }
+  .vx-register-panel .vx-login-register { margin-top: 8px; padding-top: 0; border-top: 0; }
 }
 
 @media (hover: none) {
@@ -410,7 +421,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .vx-login, .vx-login::before, .vx-login *, .vx-login *::before, .vx-login *::after { animation: none; transition: none; }
-  .vx-login[data-reveal-active="true"]::before { opacity: 0; }
+  .vx-login[data-reveal-active="true"] .vx-login-glow { opacity: 0; }
   .vx-login-pulses { display: none; }
   .vx-login-background, .vx-login[data-reveal-active="true"] .vx-login-background {
     opacity: .18;
@@ -427,5 +438,4 @@
 .vx-login-panel-tab,
 .vx-login-panel-corner,
 .vx-login-title-mark,
-.vx-login-heading::after,
-.vx-login-footer-decoration { display: none; }
+.vx-login-heading::after { display: none; }
