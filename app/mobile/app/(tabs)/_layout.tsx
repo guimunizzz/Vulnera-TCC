@@ -23,11 +23,11 @@
  * e o respiro compartilhado em TAB_BAR, sem mudar as telas ou consultas.
  */
 
-import { Easing, useWindowDimensions } from "react-native";
+import { Easing } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { useAuthStore } from "../../src/store/auth.store";
 import { PushStatusContext, usePushRegistration } from "../../src/hooks/use-push-registration";
-import { IconGlassTabBar } from "../../src/components/icon-glass-tab-bar";
+import { IconGlassTabBar, TAB_TRANSITION_DURATION } from "../../src/components/icon-glass-tab-bar";
 import { haptics } from "../../src/lib/haptics";
 import { LoadingState } from "../../src/components/states";
 import { Screen } from "../../src/components/screen";
@@ -44,7 +44,6 @@ function AuthenticatedTabs() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const pushStatus = usePushRegistration();
   const reduced = useWorkspaceReducedMotion();
-  const { width } = useWindowDimensions();
 
   if (!hasHydrated) {
     return (
