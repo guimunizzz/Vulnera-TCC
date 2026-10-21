@@ -45,7 +45,6 @@ export default function ProjectDetailScreen() {
     {projectQuery.isPending ? <WorkspaceSkeleton kind="project" label="Abrindo projeto" /> : <DataState error title="Projeto indisponível" message={errorMessage(projectQuery.error)} onRetry={() => { void projectQuery.refetch(); }} />}
   </WorkspaceScreen>;
   const project = projectQuery.data;
-  const stage = STAGES.findIndex((item) => item.status === project.status);
   const header = <View style={styles.header}>
     <PageHeader label="VISÃO DO PROJETO" back />
     <MotionReveal distance={8} style={{ gap: 12 }}><View style={ui.spread}><Text style={ui.eyebrow}>ANÁLISE / {project.analysisType}</Text><StatusBadge status={project.status} /></View>

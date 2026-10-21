@@ -6,6 +6,7 @@
  */
 import { useState } from "react";
 import { Linking, Platform, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
@@ -14,17 +15,18 @@ import { authApi } from "../../src/api/auth.api";
 import { useAuthStore } from "../../src/store/auth.store";
 import { usePushStatus } from "../../src/hooks/use-push-registration";
 import { useApiError } from "../../src/hooks/use-api-error";
-import { ActionButton, DataState, GlassSurface, PageHeader, WorkspaceScreen } from "../../src/components/workspace-ui";
+import { ActionButton, DataState, DetailField, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../src/components/workspace-ui";
 import { FONT_FAMILY } from "../../src/theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../../src/theme/workspace";
+import { displayDate } from "../../src/lib/display";
 import { MotionReveal } from "../../src/components/workspace-motion";
 
 const PUSH_LABELS = {
-  verificando: { label: "Verificando", description: "Confirmando os alertas deste dispositivo." },
-  ativado: { label: "Ativadas", description: "Alertas de vulnerabilidades críticas." },
-  negado: { label: "Desativadas", description: "Ative a permissão nos ajustes do celular para receber alertas críticos." },
-  erro: { label: "Não confirmado", description: "Não foi possível ativar os alertas. Confira a conexão e reabra o aplicativo." },
-  indisponivel: { label: "Indisponíveis", description: "Alertas indisponíveis neste ambiente." },
+  verificando: { label: "Verificando", description: "Confirmando os alertas deste dispositivo.", icon: "time-outline" },
+  ativado: { label: "Ativadas", description: "Alertas de vulnerabilidades críticas.", icon: "notifications-outline" },
+  negado: { label: "Desativadas", description: "Ative a permissão nos ajustes do celular para receber alertas críticos.", icon: "notifications-off-outline" },
+  erro: { label: "Não confirmado", description: "Não foi possível ativar os alertas. Confira a conexão e reabra o aplicativo.", icon: "cloud-offline-outline" },
+  indisponivel: { label: "Indisponíveis", description: "Alertas indisponíveis neste ambiente.", icon: "notifications-off-outline" },
 } as const;
 
 export default function SettingsScreen() {
@@ -58,7 +60,7 @@ export default function SettingsScreen() {
     {profile.isError && <DataState error title="Perfil não atualizado" message={errorMessage(profile.error)} onRetry={() => { void profile.refetch(); }} />}
     <MotionReveal delay={80} distance={8} style={{ gap: 20 }}><SectionHeading title="Notificações" />
     <GlassSurface><View style={ui.row}><View style={styles.notificationIcon}><Ionicons name={push.icon} size={23} color={pushStatus === "ativado" ? "#6ee7a0" : WORKSPACE.secondary} /></View>
-      <View style={ui.grow}><Text style={[ui.heading, { fontSize: 17 }]}>{push.title}</Text></View></View><Text style={ui.body}>{push.description}</Text>
+      <View style={ui.grow}><Text accessibilityLiveRegion="polite" style={[ui.heading, { fontSize: 17 }]}>{push.label}</Text></View></View><Text style={ui.body}>{push.description}</Text>
       {pushStatus === "negado" && Platform.OS !== "web" && <ActionButton icon="settings-outline" label="Abrir configurações do celular" onPress={() => { void Linking.openSettings().catch(() => setSettingsError(true)); }} />}
       {settingsError && <Text style={ui.muted}>Não foi possível abrir as configurações. Use os ajustes do seu celular.</Text>}
     </GlassSurface></MotionReveal>
@@ -73,9 +75,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   avatar: { width: 56, height: 56, borderRadius: 20, backgroundColor: WORKSPACE.neutralTint, borderWidth: 1, borderColor: WORKSPACE.line, alignItems: "center", justifyContent: "center" },
   initial: { fontSize: 24, fontFamily: FONT_FAMILY.medium, color: WORKSPACE.secondary },
-  notificationHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 },
-  notificationStatus: { maxWidth: "100%", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: WORKSPACE.inset, color: WORKSPACE.secondary, fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18 },
-  notificationActive: { backgroundColor: "#052e16", color: "#6ee7a0" },
-  notificationError: { backgroundColor: "#2f0a0a", color: "#fca5a5" },
-  version: { color: WORKSPACE.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18 },
+  notificationIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: WORKSPACE.neutralTint, alignItems: "center", justifyContent: "center" },
+  footer: { alignItems: "center", gap: 6, paddingVertical: 12 },
+  wordmark: { fontFamily: FONT_FAMILY.monoBold, fontSize: 14, letterSpacing: 3, color: WORKSPACE.muted },
 });
