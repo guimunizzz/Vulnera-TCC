@@ -31,6 +31,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^25.9.1",
+    "@types/nodemailer": "^8.0.2",
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
@@ -52,6 +53,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
     "mysql2": "^3.22.3",
+    "nodemailer": "^10.2.0",
     "prisma": "^6.19.3"
   },
   "prisma": {

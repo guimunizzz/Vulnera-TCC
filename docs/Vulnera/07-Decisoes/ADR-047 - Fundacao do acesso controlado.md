@@ -11,14 +11,16 @@ data: 2026-10-22
 ## Contexto
 
 A Issue #51 determina substituir o cadastro público por solicitação, verificação
-de e-mail, revisão administrativa e convite. A entrega atual cobre somente as
-Etapas 0 e 1. O fluxo antigo continua operacional até a implementação posterior
-dos serviços, das proteções públicas e da ativação. O banco real é MySQL, com
-Prisma 6.19.3; `AuditLog.actorId` é obrigatório e referencia `User`.
+de e-mail, revisão administrativa e convite. As Etapas 0, 1 e 1.1 estabeleceram
+e endureceram o domínio; a Etapa 2 adicionou emissão/reenvio e confirmação de
+e-mail, sem HTTP, proteção do cadastro, revisão, convite ou ativação. Portanto o
+fluxo público antigo continua operacional até etapas futuras. O banco real é
+MySQL, com Prisma 6.19.3; `AuditLog.actorId` é obrigatório e referencia `User`.
 
-> **Atualização de 2026-10-22:** a decisão operacional vigente é a seção
-> **Etapa 1.1** abaixo. As decisões das Etapas 0–1 permanecem como histórico;
-> lifecycle, reserva, collation e contratos de tokens foram substituídos.
+> **Atualização de 2026-10-22:** o lifecycle, a reserva, a collation e as
+> primitivas de tokens da Etapa 1.1 permanecem a base vigente do domínio; o
+> contrato e o resultado da verificação por e-mail estão na seção **Etapa 2**.
+> Decisões das Etapas 0–1 permanecem históricas onde foram substituídas.
 
 ## Decisão inicial — Etapas 0–1 (substituída pela Etapa 1.1)
 
@@ -238,6 +240,45 @@ tokens, preservando valores anteriores e sem expirar pedidos silenciosamente.
 Users, RefreshTokens e AuditLogs existentes não são modificados.
 
 As validações e os casos A–G constam em `docs/SECURITY-AUTH-ETAPAS-0-1.md`.
+
+## Etapa 2 — verificação de e-mail (contrato vigente desta etapa)
+
+- Escopo: emissão inicial, reenvio e confirmação de e-mail para `AccessRequest`.
+  Esta decisão não habilita endpoints, cadastro público, revisão administrativa,
+  convite/ativação, criação de User, JWT, Company ou Subscription.
+- O serviço persiste hash e evento na mesma transação antes de enviar SMTP.
+  O token cru só existe durante a chamada; tem 32 bytes aleatórios, SHA-256 no
+  banco, validade máxima de 1 hora limitada pelo pedido e link no fragmento
+  `/verify-email#token=...`. Reenvio não estende o prazo do pedido.
+- Confirmação consome o token e muda `PENDING_EMAIL_VERIFICATION` para
+  `PENDING_REVIEW` com evento na mesma transação. Pedido vencido passa a EXPIRED;
+  pedido ausente, estado inválido, token inválido ou expirado não confirma.
+- API interna do serviço: `issueVerification` / `resendVerification` retornam
+  `SENT`, `DELIVERY_FAILED`, `NOT_ELIGIBLE` ou `CONFLICT`; `confirmEmail` retorna
+  booleano. Após falha SMTP, o hash da tentativa é revogado e evento genérico
+  registrado; falha de cleanup sobe código seguro. Sem outbox, fila ou retry.
+- `SENT` indica aceitação SMTP do destinatário pelo servidor, não entrega na
+  caixa. Crash após commit pode deixar envio sem mensagem; reenvio manual recupera.
+  Emissões concorrentes podem terminar fora de ordem, mas só o hash persistido
+  por último é válido. Logs não devem conter token, hash, credenciais ou conteúdo.
+- SMTP é lazy; a configuração exige TLS em produção e HTTPS na origem pública.
+  Variáveis novas não são obrigatórias para o fluxo antigo. O envio foi exercitado
+  por fixture SMTP local, inclusive auth, recusa, timeout e exigência de TLS. Não
+  houve uso de provedor externo com credenciais reais, confirmação de inbox nem
+  teste de certificado público. Sem outbox, retry automático ou scheduler; após
+  falha/crash o reenvio recupera, e mensagens concorrentes podem chegar fora de
+  ordem. O relatório [Etapa 2](../../SECURITY-AUTH-ETAPA-2.md) contém resultados.
+
+### Validação da Etapa 2
+
+Concluída em 2026-10-22: `npm test -- --silent` passou **46/46 suítes e 844/844
+testes**, em 415,437 s, exit 0. TypeScript build (duas execuções), lint focal,
+Prisma validate/generate 6.19.3 e diff do schema passaram. As 17 migrations
+estavam up-to-date no MySQL 8.4.11 descartável; 11 CHECKs aparecem como enforced.
+`npm run check` ainda para no lint global por `UserEntity` e `UserResponseDTO`
+não usados em `vulnerability.service.ts:45`; Jest daquele script não executa,
+mas a suíte completa separada passou. A etapa está pronta para revisão e
+consolidação, sem commit/push. Etapa 3 não iniciada.
 
 ## Relacionado
 

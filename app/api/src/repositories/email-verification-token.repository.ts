@@ -1,6 +1,6 @@
 /**
  * Persistência do token de verificação. Aceita o client de uma transação para
- * combinar consumo e mudança do pedido no futuro; consumido pela stack interna.
+ * combinar consumo e mudança do pedido; consumido pela stack interna de acesso.
  */
 import type { EmailVerificationToken, CreateEmailVerificationTokenDTO } from "../models/email-verification-token.model";
 import { canIssueAccessToken, canUseAccessToken, type RotateAccessTokenDTO, type RevokeAccessTokenDTO } from "../models/access-token.model";
@@ -19,6 +19,19 @@ export class EmailVerificationTokenRepository {
 
   findByHash(tokenHash: string): Promise<EmailVerificationToken | null> {
     return this.prisma.emailVerificationToken.findUnique({ where: { tokenHash } });
+  }
+
+  /** Lê o slot atual com leitura bloqueante, sempre após travar o pedido. */
+  async findByAccessRequestIdForUpdate(accessRequestId: string): Promise<EmailVerificationToken | null> {
+    if ("$transaction" in this.prisma) {
+      throw new Error("EMAIL_VERIFICATION_TOKEN_LOCK_REQUIRES_TRANSACTION");
+    }
+    const rows = await this.prisma.$queryRaw<EmailVerificationToken[]>`
+      SELECT * FROM EmailVerificationToken
+      WHERE accessRequestId = ${accessRequestId}
+      FOR UPDATE
+    `;
+    return rows[0] ?? null;
   }
 
   rotateIfAvailable(data: RotateAccessTokenDTO, now: Date): Promise<boolean> {

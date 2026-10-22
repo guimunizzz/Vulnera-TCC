@@ -1,6 +1,6 @@
 /**
  * Persistência de pedidos e trilha anônima. Criação e transição gravam histórico
- * atomicamente. Consumido pela futura camada de serviços, sem endpoints nesta etapa.
+ * atomicamente. Consumido pelos services internos de acesso, ainda sem endpoints.
  * O índice UNIQUE + CHECKs da migration, e não uma consulta prévia, arbitra criação.
  */
 import {
@@ -9,6 +9,7 @@ import {
   type AccessRequest, type AccessRequestEvent, type AccessRequestTransitionDTO,
   type CreateAccessRequestDTO,
 } from "../models/access-request.model";
+import type { EmailVerificationEventType } from "../models/email-verification.model";
 import { AccessInvitationRepository } from "./access-invitation.repository";
 import { EmailVerificationTokenRepository } from "./email-verification-token.repository";
 import { inAccessTransaction, lockAccessRequest, type AccessDatabaseClient } from "./access-transaction.repository";
@@ -60,6 +61,14 @@ export class AccessRequestRepository {
     return this.prisma.accessRequest.findUnique({ where: { id } });
   }
 
+  /** A leitura bloqueante só pode ser chamada pelo escopo de transaction. */
+  async findByIdForUpdate(id: string): Promise<AccessRequest | null> {
+    if ("$transaction" in this.prisma) {
+      throw new Error("ACCESS_REQUEST_LOCK_REQUIRES_TRANSACTION");
+    }
+    return lockAccessRequest(this.prisma, id);
+  }
+
   findActiveByEmail(email: string): Promise<AccessRequest | null> {
     return this.prisma.accessRequest.findUnique({ where: { activeEmail: normalizeAccessRequestEmail(email) } });
   }
@@ -74,6 +83,28 @@ export class AccessRequestRepository {
   findEvents(accessRequestId: string): Promise<AccessRequestEvent[]> {
     return this.prisma.accessRequestEvent.findMany({
       where: { accessRequestId }, orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+  }
+
+  /** Registra evento genérico de verificação junto à escrita do mesmo tx. */
+  async createVerificationEvent(
+    accessRequestId: string,
+    eventType: EmailVerificationEventType,
+    createdAt: Date,
+  ): Promise<AccessRequestEvent> {
+    if ("$transaction" in this.prisma) {
+      throw new Error("ACCESS_REQUEST_EVENT_REQUIRES_TRANSACTION");
+    }
+    return this.prisma.accessRequestEvent.create({
+      data: {
+        accessRequestId,
+        eventType,
+        fromStatus: "PENDING_EMAIL_VERIFICATION",
+        toStatus: "PENDING_EMAIL_VERIFICATION",
+        actorId: null,
+        reason: null,
+        createdAt,
+      },
     });
   }
 

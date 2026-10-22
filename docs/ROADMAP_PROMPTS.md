@@ -8,6 +8,34 @@
 
 ---
 
+## Issue #51 — Etapa 2 · ✅ Concluída em 2026-10-22
+
+Recorte atual: emissão/reenvio e confirmação de e-mail de `AccessRequest`, com
+configuração SMTP, adapter e eventos de entrega. Não inclui endpoints HTTP,
+frontend, revisão administrativa, convite/ativação, criação de User/JWT, nem
+mudança no cadastro público. Consulte [relatório e ownership](SECURITY-AUTH-ETAPA-2.md).
+
+Emissão inicial, reenvio e confirmação de e-mail de `AccessRequest`, com
+configuração e adapter SMTP. Não inclui endpoints HTTP, frontend, revisão
+administrativa, convite/ativação, criação de User/JWT nem mudança do cadastro
+público. Suíte completa API **46/46 suítes, 844/844 testes PASS**; build,
+lint focal, Prisma e migrations também aprovados em banco descartável. `npm run
+check` continua bloqueado por dois imports antigos; o Jest desse script não
+rodou. Veja [relatório e ownership](SECURITY-AUTH-ETAPA-2.md).
+
+## Histórico — Issue #51, Etapa 2 (2026-10-22)
+
+- Branch: `refactor/security-auth-gated-access`, HEAD inicial `0e0c59b`.
+- PR/commit/push: não realizados; pronta para revisão e consolidação.
+- Ownership exclusivo por agente, contratos, resultados e limites:
+  `docs/SECURITY-AUTH-ETAPA-2.md`.
+- Validação: 46/46 suítes, 844/844 testes, exit 0; instalação inicial resolvida
+  pelo diagnóstico do Arborist e `--prefer-dedupe`.
+- Desvios/limites: check global ainda aponta dois imports anteriores; SMTP
+  exercitado apenas por fixture local, sem provedor externo ou inbox real.
+
+---
+
 ## Issue #51 — Etapa 1.1 · ✅ Concluída em 2026-10-22
 
 Hardening limitado ao domínio/persistência: lifecycle com EXPIRED/ACTIVATED,

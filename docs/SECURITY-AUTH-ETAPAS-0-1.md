@@ -1,8 +1,12 @@
 # Issue #51 — Fundação e hardening do domínio de acesso
 
+> **Histórico das Etapas 0, 1 e 1.1.** A Etapa 2 foi concluída em execução
+> posterior; resultado e contratos estão em [SECURITY-AUTH-ETAPA-2.md](SECURITY-AUTH-ETAPA-2.md).
+
 Registro técnico de 2026-10-22. Consumidores: Rafael, revisores e próximas sessões.
-O estado vigente é a Etapa 1.1 abaixo; a entrega inicial foi preservada como
-histórico, incluindo seus resultados de testes e decisões posteriormente substituídas.
+No encerramento deste relatório, o estado vigente era a Etapa 1.1 abaixo. A Etapa
+2 foi concluída depois e seu relatório separado preserva resultados, contratos
+e limites. A entrega inicial foi mantida como histórico.
 
 ## Etapa 1.1 — estado vigente
 
@@ -120,10 +124,10 @@ focal aprovados novamente. Não houve falha funcional remanescente nesses result
 
 ### Limites e prontidão
 
-Primitivas preparadas para a Etapa 2; nenhuma implementação de e-mail iniciada.
-A futura orquestração deve aplicar recuperação, enviar somente após commit,
-tratar erros neutros e abortar transações em falha obrigatória. Não existem
-SMTP, sender, endpoints, agendamento de expiração ou ativação com User.
+Primitivas preparadas para a Etapa 2; nesta entrega não havia implementação de
+e-mail. A implementação posterior de verificação é descrita no relatório da
+Etapa 2. Permanecem fora deste recorte endpoints, agendamento de expiração,
+revisão administrativa, convite/ativação e criação de User.
 
 O register antigo continua podendo criar User em paralelo ou depois da consulta
 de disponibilidade; não existe índice único global entre tabelas. A futura

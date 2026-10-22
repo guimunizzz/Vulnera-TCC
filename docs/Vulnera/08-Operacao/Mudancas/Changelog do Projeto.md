@@ -9,6 +9,48 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-10-22 — Issue #51: Etapa 2 concluída
+
+**✅ 100% do recorte; pronta para revisão e consolidação.** Emissão, reenvio e
+confirmação de e-mail de `AccessRequest`, com configuração/factory lazy e adapter
+SMTP. Não adiciona rotas, frontend, revisão administrativa, convite/ativação,
+User/JWT ou mudança do cadastro público. `npm test -- --silent`: **46/46 suítes,
+844/844 testes PASS, 415,437 s, exit 0**. Build TypeScript passou duas vezes;
+lint focal, Prisma validate/generate, diff sem diferenças e 17 migrations
+up-to-date passaram. MySQL 8.4.11 reportou 11 CHECKs enforced. `npm run check`
+continua parando no lint por dois imports preexistentes em
+`vulnerability.service.ts:45`; a suíte completa foi executada separadamente.
+Validação SMTP usou fixtures locais para auth, recusa, timeout e TLS obrigatório;
+nenhum provedor externo, credencial real, certificado público ou inbox foi
+exercitado. Sem outbox/retry automático ou scheduler. Branch
+`refactor/security-auth-gated-access`; sem PR, commit ou push. Etapa 3 não
+iniciada. Detalhes e falhas transitórias no [relatório](../../../SECURITY-AUTH-ETAPA-2.md).
+
+Ownership: A/B/C/D/E/H em arquivos exclusivos; os seis subagentes usaram
+`gpt-6-luna` (A/C/H reasoning HIGH, B/E XHIGH, D MAX). 26 arquivos versionáveis
+(13 alterados, 13 novos) mais lockfile raiz ignorado gerado localmente; seis
+arquivos alheios foram preservados. O container `vulnera-issue51-email-test`
+com label `vulnera.purpose=issue51-email-tests` foi parado após os testes.
+
+### Registro durante a execução — histórico
+
+O texto abaixo registra o estado intermediário antes da suíte completa; foi
+superado pela conclusão documentada acima.
+
+**🚧 Validação pendente; não concluída.** Contratos de emissão, reenvio e
+confirmação de e-mail registrados em [relatório da Etapa 2](../../../SECURITY-AUTH-ETAPA-2.md)
+e ADR-047. Ownership exclusivo A/B/C/D/E/H. Nodemailer 10.2.0 e types 8.0.2
+instalaram; build TypeScript passou duas vezes, regressões/domínio 144/144,
+testes novos 83/83 após revisão SQL, lint focal e Prisma validate/generate
+passaram. As 17 migrations aplicaram só no container descartável. Check global
+parou no lint em dois imports preexistentes antes de Jest. Infraestrutura SMTP
+passou 58/58; o caso integrado factory→SMTP+banco foi acrescentado e sua fixture
+ajustada para decodificar quoted-printable após uma asserção MIME transitória
+falhar. A suíte completa de 46 arquivos está em execução; etapa segue pendente.
+Sem commit/push, banco real, reset ou seed. O lockfile raiz continua ignorado e
+não rastreado, atualizado localmente pelo npm. Ver resultados e limites no
+relatório da Etapa 2.
+
 ## 2026-10-22 — Issue #51: consolidação em commit local
 
 A pedido do usuário, consolidadas as Etapas 0, 1 e 1.1 em um commit local na
@@ -20,7 +62,7 @@ a ausência de commit representam o estado no encerramento daquelas execuções.
 
 ## 2026-10-22 — Issue #51: Etapa 1.1, hardening do domínio
 
-**✅ Concluída — 100% do recorte autorizado; Etapa 2 não iniciada.**
+**✅ Concluída — 100% do recorte autorizado; Etapa 2 ainda não iniciada naquele marco.**
 Branch `refactor/security-auth-gated-access`, base `28c48ef`, sem commit/push/PR.
 Seis arquivos não rastreados anteriores preservados e fora da entrega.
 
@@ -70,7 +112,8 @@ anteriores preservados. Decisão ADR-047.
   finais: `docs/SECURITY-AUTH-ETAPAS-0-1.md`.
 - Cadastro público, login/refresh/logout, landing, CompanyService, SubscriptionService
   e onboarding preservados. Nenhuma rota nova, envio de e-mail, CAPTCHA, ativação
-  ou User pelo novo domínio. Etapa 2 não iniciada; revisão é o próximo passo.
+  ou User pelo novo domínio. Naquele marco histórico, Etapa 2 ainda não iniciada;
+  a revisão foi seguida pela implementação e conclusão registradas acima.
 
 ## 2026-10-09 — Spider tradicional, perfil por execução e README
 

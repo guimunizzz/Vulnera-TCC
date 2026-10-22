@@ -183,6 +183,7 @@ model AccessInvitation {
 model AccessRequestEvent {
   id              String   @id @default(cuid())
   accessRequestId String
+  eventType       String   @default("STATUS_TRANSITION")
   actorId         String?
   fromStatus      String?
   toStatus        String
