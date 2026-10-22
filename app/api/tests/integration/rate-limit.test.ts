@@ -33,6 +33,7 @@ function makeLimitedApp(policies: Partial<Record<string, TokenBucketPolicy>> = {
       write: HIGH,
       expensive: HIGH,
       report: HIGH,
+      export: HIGH,
       dast: HIGH,
       "auth-login-ip": HIGH,
       "auth-login-account": HIGH,
@@ -191,6 +192,24 @@ describe("Rate limiting HTTP multi-tenant", () => {
     const pentesterAuth = bearer(pentester.id, "PENTESTER");
     expect((await request(setup.app).post("/api/dast/scans").set("Authorization", pentesterAuth).send({})).status).toBe(400);
     expect((await request(setup.app).post("/api/dast/scans").set("Authorization", pentesterAuth).send({})).status).toBe(429);
+  });
+
+  it("limita a exportação Excel por usuário (escopo export) sem consumir o bucket da listagem", async () => {
+    const admin = await seedUser({ name: "Admin export", email: "export@limit.local", password: "senha12345", role: "ADMIN" });
+    const outro = await seedUser({ name: "Outro admin", email: "export2@limit.local", password: "senha12345", role: "ADMIN" });
+    const setup = makeLimitedApp({ export: { ratePerSecond: 0.001, burst: 1 } });
+    service = setup.service;
+
+    const auth = bearer(admin.id, "ADMIN");
+    expect((await request(setup.app).get("/api/vulnerabilities/export.xlsx").set("Authorization", auth)).status).toBe(200);
+    const bloqueada = await request(setup.app).get("/api/vulnerabilities/export.xlsx").set("Authorization", auth);
+    expect(bloqueada.status).toBe(429);
+    expect(bloqueada.body).toMatchObject({ code: "RATE_LIMITED" });
+    expect(bloqueada.headers["retry-after"]).toBeDefined();
+
+    // O bucket é por USUÁRIO e só da exportação: a listagem do mesmo usuário e a exportação de outro seguem livres.
+    expect((await request(setup.app).get("/api/vulnerabilities").set("Authorization", auth)).status).toBe(200);
+    expect((await request(setup.app).get("/api/vulnerabilities/export.xlsx").set("Authorization", bearer(outro.id, "ADMIN"))).status).toBe(200);
   });
 
   it("limita register, refresh rotativo e reembolsa login bem-sucedido", async () => {
