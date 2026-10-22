@@ -32,6 +32,8 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^25.9.1",
     "@types/supertest": "^6.0.2",
+    "@types/yauzl": "^3.4.0",
+    "@types/yazl": "^3.3.1",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.57.1",
@@ -47,12 +49,15 @@
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
     "expo-server-sdk": "^7.1.0",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
     "mysql2": "^3.22.3",
-    "prisma": "^6.19.3"
+    "prisma": "^6.19.3",
+    "yauzl": "^3.4.0",
+    "yazl": "^3.3.1"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

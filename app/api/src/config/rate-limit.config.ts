@@ -17,6 +17,7 @@ export type RateLimitScope =
   | "expensive"
   | "report"
   | "dast"
+  | "export"
   | "auth-login-ip"
   | "auth-login-account"
   | "auth-register-ip"
@@ -96,6 +97,8 @@ export function loadRateLimitConfig(): RateLimitConfig {
       expensive: perMinute(optionalNumber(EnvKeys.RATE_LIMIT_EXPENSIVE_PER_MINUTE, 10, 1), 3),
       report: perMinute(optionalNumber(EnvKeys.RATE_LIMIT_REPORT_PER_MINUTE, 3, 1), 2),
       dast: perMinute(optionalNumber(EnvKeys.RATE_LIMIT_DAST_PER_MINUTE, 2, 1), 2),
+      // Exportação Excel: lê até EXPORT_MAX_ROWS findings e monta um arquivo — mais pesada que uma busca.
+      export: perMinute(optionalNumber(EnvKeys.RATE_LIMIT_EXPORT_PER_MINUTE, 6, 1), 2),
       "auth-login-ip": {
         ratePerSecond: optionalNumber(EnvKeys.RATE_LIMIT_LOGIN_IP_MAX, 20, 1) / authWindowSeconds,
         burst: optionalNumber(EnvKeys.RATE_LIMIT_LOGIN_IP_MAX, 20, 1),
@@ -130,6 +133,7 @@ export function createRateLimitConfig(overrides: RateLimitConfigOverrides = {}):
       expensive: perMinute(10, 3),
       report: perMinute(3, 2),
       dast: perMinute(2, 2),
+      export: perMinute(6, 2),
       "auth-login-ip": perMinute(4, 20),
       "auth-login-account": perMinute(1, 5),
       "auth-register-ip": perMinute(1, 5),

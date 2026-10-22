@@ -4,7 +4,7 @@
  * A canonização da query de uma busca salva (CP-6). Funções puras.
  *
  * O teste que mais importa aqui é o SQ-U-08: ele prende este utilitário ao
- * `vulnerability.controller.ts`. Sem ele, a falha típica da feature seria
+ * parse da listagem (`vulnerability-query.util.ts`, antes dentro do controller). Sem ele, a falha típica da feature seria
  * silenciosa — alguém acrescenta um filtro na listagem, esquece de acrescentar
  * aqui, e a partir daí toda busca salva com esse filtro o PERDE ao ser salva,
  * passando a devolver mais findings do que a pessoa pediu.
@@ -16,7 +16,7 @@
  *   SQ-U-05  lista: duplicata some, ordem é estável, teto é respeitado
  *   SQ-U-06  busca vazia e busca gigante são recusadas
  *   SQ-U-07  mesmaQuery compara pela forma canônica
- *   SQ-U-08  o vocabulário aceito bate com o do vulnerability.controller.ts
+ *   SQ-U-08  o vocabulário aceito bate com o parse da listagem (vulnerability-query.util.ts)
  */
 
 import { readFileSync } from "node:fs";
@@ -123,17 +123,16 @@ describe("saved-query.util (CP-6)", () => {
     expect(canonicalizarQuery("severity=HIGH&assignedTo=x").descartados[0]!.param).toBe("assignedTo=x");
   });
 
-  it("SQ-U-08 o vocabulário aceito acompanha o vulnerability.controller.ts", () => {
+  it("SQ-U-08 o vocabulário aceito acompanha o parse da listagem (vulnerability-query.util.ts)", () => {
     // 🎯 Este teste existe para falhar quando alguém acrescentar um filtro na
     // listagem e esquecer de acrescentá-lo aqui. O sintoma sem ele seria mudo:
     // buscas salvas perderiam o filtro novo e passariam a devolver demais.
-    const controller = readFileSync(
-      join(__dirname, "..", "..", "src", "controllers", "vulnerability.controller.ts"),
-      "utf-8",
-    );
+    // O parse da query saiu do controller para o util compartilhado com a
+    // exportação Excel; é lá que os parâmetros da listagem são lidos agora.
+    const fonte = readFileSync(join(__dirname, "..", "..", "src", "utils", "vulnerability-query.util.ts"), "utf-8");
 
-    // Os parâmetros que o controller lê de `q.` dentro do método list.
-    const trecho = controller.slice(controller.indexOf("async list("), controller.indexOf("const resultado"));
+    // Os parâmetros que `parseVulnerabilityQuery` lê de `q.`.
+    const trecho = fonte.slice(fonte.indexOf("export function parseVulnerabilityQuery"));
     const lidos = new Set<string>();
     for (const m of trecho.matchAll(/\bq\.([A-Za-z]+)\b/g)) lidos.add(m[1]!);
     for (const m of trecho.matchAll(/\bq\["([A-Za-z]+)\[\]"\]/g)) lidos.add(m[1]!);
