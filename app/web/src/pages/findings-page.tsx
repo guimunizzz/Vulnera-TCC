@@ -154,7 +154,7 @@ export function FindingsPage() {
       </section>
 
       <div className="findings-console relative mt-5">
-        <FindingsTable syncToUrl exportavel />
+        <FindingsTable syncToUrl exportavel exportavelExcel />
       </div>
     </div>
   );
