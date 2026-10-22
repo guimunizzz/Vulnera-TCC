@@ -8,6 +8,50 @@
 
 ---
 
+## Issue #51 — Etapa 1.1 · ✅ Concluída em 2026-10-22
+
+Hardening limitado ao domínio/persistência: lifecycle com EXPIRED/ACTIVATED,
+prazos e recuperação, reserva Unicode compatível com User, rotação/revogação
+dos tokens e concorrência transacional. Sem envio, endpoints ou ativação com User.
+
+## Histórico — Issue #51, Etapa 1.1 (2026-10-22)
+
+- Branch: `refactor/security-auth-gated-access`; base `28c48ef`.
+- Data: 2026-10-22. PR/commit/push: não realizados por instrução explícita.
+- Migration incremental `20261022160000_harden_access_request_lifecycle`;
+  inicial intacta. Upgrade, pré-check de collation e preservação de dados
+  comprovados somente em MySQL descartável identificado, sem reset/seed.
+- Domínio final 112/112; regressões Auth/User/Company/Subscription 32/32.
+  Prisma validate/generate, build, lint focal e diff do schema aprovados.
+- Pendências: check global bloqueado pelos dois imports preexistentes de
+  vulnerability.service.ts:45; suíte global não reexecutada nesta etapa.
+  Expiração automática, envio e transação de ativação continuam futuros.
+- Decisões, contratos e falhas transitórias: ADR-047 e relatório da fundação.
+  Sem avanço para Etapa 2. O lifecycle inicial abaixo é histórico, substituído
+  pela decisão vigente da Etapa 1.1; seus resultados não representam esta rodada.
+
+## Issue #51 — Etapas 0 e 1 · ✅ Concluída em 2026-10-22
+
+Recorte adicional ao cronograma original: preflight/baseline e fundação do
+domínio de acesso controlado. Máquina de quatro estados, reserva de e-mail
+protegida no MySQL, tokens por hash e trilha anônima própria. Sem endpoints,
+serviços de fluxo ou mudança de register. Próximas etapas aguardam revisão.
+
+## Histórico — Issue #51 (2026-10-22)
+
+- Branch: `refactor/security-auth-gated-access`; base `origin/dev` em `28c48ef`,
+  atualizada por fast-forward durante o preflight a pedido do usuário.
+- Data: 2026-10-22. PR/commit/push: não realizados, por instrução explícita.
+- Migration: `20261022120000_add_access_request_foundation`, somente em MySQL
+  descartável identificado; sem ALTER em tabelas anteriores ou backfill de User.
+- Decisões, validações e limites: ADR-047 e `docs/SECURITY-AUTH-ETAPAS-0-1.md`.
+- Validação: domínio 49/49; baseline 32/32; suíte completa 692/697, com cinco
+  falhas DAST ambientais/configuração local aprovadas na repetição 104/104.
+  Prisma validate/generate, migration isolada, build e lint focal aprovados.
+- Desvios/pendências: lint global anterior ainda falha em dois imports não usados
+  de `vulnerability.service.ts:45`; testes globais executados separadamente.
+  Nenhuma Etapa 2 iniciada e nenhuma promessa de jornada completa concorrente.
+
 ## Cronograma
 
 | Fase  | Escopo                                         | Semanas | Período       | Status         |

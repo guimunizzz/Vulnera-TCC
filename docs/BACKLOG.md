@@ -6,6 +6,19 @@
 
 ## Status
 
+**✅ 2026-10-22 — Consolidação local da Issue #51.** Commit das Etapas 0, 1 e 1.1 autorizado pelo usuário, limitado aos 20 arquivos da entrega; os seis arquivos alheios anteriores permanecem fora. Sem push, mudanças adicionais de código ou avanço para Etapa 2. Resultados e pendências do hardening preservados abaixo; notas anteriores de ausência de commit são históricas.
+
+**✅ 2026-10-22 — Issue #51: Etapa 1.1 concluída (100% do hardening).** Seis estados e prazos de 7/30/7 dias, reserva liberada nos três estados terminais, collation igual a User.email, recuperação e rotação/revogação dos slots com lock/CAS. Migration incremental preserva a inicial e os dados anteriores; testes somente em MySQL descartável. Domínio 112/112 e regressões Auth/User/Company/Subscription 32/32; Prisma/build/lint focal aprovados. Check global permanece bloqueado pelos dois imports antigos; suíte global não reexecutada. ADR-047 e [relatório](SECURITY-AUTH-ETAPAS-0-1.md) detalham garantias e limites. Sem endpoints, e-mail, criação de User, commit ou push. O registro inicial abaixo permanece histórico; lifecycle vigente é o da Etapa 1.1.
+
+**✅ 2026-10-22 — Issue #51: fundação Security/Auth (100% das Etapas 0–1; 2/2 deste recorte).** Base sincronizada com `origin/dev` em `28c48ef`, arquivos anteriores preservados. Quatro tabelas novas, reserva de e-mail ativa com UNIQUE+CHECK, histórico anônimo separado do AuditLog, hashes/validade/uso de tokens e primitivas de CAS/transação. Migration somente em banco descartável; três Users, RefreshToken e AuditLog anteriores preservados. Baseline focal 32/32, domínio 49/49, Prisma/build/lint focal aprovados. Suíte completa 692/697; cinco falhas DAST ambientais/configuração local passaram na repetição das duas suítes (104/104) fora do sandbox com timeout padrão. Gate global segue bloqueado pelos dois imports anteriores de `vulnerability.service.ts:45`. Nenhum fluxo público novo, User criado pelo domínio ou mudança de register/onboarding. [Relatório](SECURITY-AUTH-ETAPAS-0-1.md), ADR-047; sem commit/push.
+
+- [x] **SEC-AUTH-0:** preflight e baseline isolada da Issue #51.
+- [x] **SEC-AUTH-1:** fundação AccessRequest, tokens, convite, eventos, constraints e testes concorrentes das primitivas.
+- [x] **SEC-AUTH-1.1:** hardening de lifecycle, collation, reserva, recuperação e tokens, com matriz independente de estados, concorrência, rollback e upgrade real.
+- [x] **SEC-AUTH-LIFECYCLE:** política inicialmente adiada resolvida na Etapa 1.1: EXPIRED/ACTIVATED terminais, reserva liberada e histórico mantido; APPROVED reserva apenas até encerramento, com convite reemitível dentro de sua janela. Rotação/revogação disponíveis nas primitivas.
+- [ ] **SEC-AUTH-2+:** aguardar revisão do hardening; depois implementar verificação/revisão/convite/ativação e proteções públicas em etapas próprias. Nenhum avanço automático.
+- [ ] **SEC-AUTH-ORQUESTRACAO:** integrar expiração/recuperação e envio após commit; na ativação futura, criar User e consumir convite/transicionar/liberar reserva na mesma transação, tratando conflito do índice User.email. Não implementado na Etapa 1.1.
+
 **✅ 2026-10-16 — Frontend Docker atualizado para exibir a barra lateral (100%).** Corrigida a divergência entre a validação via Vite e a versão servida em `http://localhost:8086`: reconstruído e recriado somente `web` com `docker compose up -d --build --no-deps web`. HTML/JS/CSS retornam HTTP 200 e contêm a nova marca, grupos e estilos. API/MySQL seguem saudáveis sem reinicialização. Evidência: `output/sidebar-applied/served-check.md`; procedimento registrado em `docs/FRONTEND_WEB.md`.
 
 - [x] Disponibilizar a alteração da barra lateral no frontend Docker acessado pelo Rafael.

@@ -8,6 +8,12 @@ import * as path from "path";
 // testes (e ela vira screenshot de evidência do TCC).
 dotenv.config({ path: path.resolve(__dirname, "../.env.test"), quiet: true });
 
+// A suíte apaga registros: recusar explicitamente qualquer alvo não identificado.
+const testDatabase = new URL(process.env.DATABASE_URL ?? "invalid:");
+if (process.env.NODE_ENV !== "test" || testDatabase.pathname !== "/vulnera_test") {
+  throw new Error("UNSAFE_TEST_DATABASE: exige NODE_ENV=test e banco vulnera_test");
+}
+
 import { prisma } from "../src/database/prisma.database";
 
 /**
@@ -15,6 +21,11 @@ import { prisma } from "../src/database/prisma.database";
  * (filhos antes dos pais). Chamar em beforeEach/afterEach pra isolar testes.
  */
 export async function cleanDatabase(): Promise<void> {
+  // Histórico e tokens antes do pedido; pedido/eventos antes dos Users revisores.
+  await prisma.accessRequestEvent.deleteMany();
+  await prisma.emailVerificationToken.deleteMany();
+  await prisma.accessInvitation.deleteMany();
+  await prisma.accessRequest.deleteMany();
   // DastFinding antes de DastScan (FK cascade cuidaria disso, mas explícito é
   // mais seguro); DastScan antes de User — requestedById é RESTRICT, não
   // CASCADE (deletar user com scan pendurado quebraria a constraint).

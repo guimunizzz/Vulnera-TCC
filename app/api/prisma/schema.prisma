@@ -83,6 +83,8 @@ model User {
   riskAcceptancesReviewed  RiskAcceptance[]       @relation("RiskAcceptanceReviewer") // CP-4
   riskAcceptancesRevoked   RiskAcceptance[]       @relation("RiskAcceptanceRevoker") // CP-4
   savedQueries             SavedQuery[] // CP-6 — buscas salvas e watchlists
+  accessRequestsReviewed   AccessRequest[]      @relation("AccessRequestReviewer")
+  accessRequestEvents      AccessRequestEvent[]
 
   @@index([companyId])
 }
@@ -114,6 +116,84 @@ model PasswordResetToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Solicitação pública não é identidade autenticada. Não tem vínculo com Company.
+// CHECKs da migration protegem estado, normalização e activeEmail; não usar db push.
+model AccessRequest {
+  id              String    @id @default(cuid())
+  name            String
+  email           String
+  companyName     String
+  phone           String?
+  status          String    @default("PENDING_EMAIL_VERIFICATION")
+  // NULL em REJECTED, EXPIRED e ACTIVATED; CHECK garante consistência.
+  activeEmail     String?   @unique
+  expiresAt       DateTime // prazo da etapa atual, independente dos tokens
+  emailVerifiedAt DateTime?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  rejectionReason String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  reviewedBy        User?                    @relation("AccessRequestReviewer", fields: [reviewedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  verificationToken EmailVerificationToken?
+  invitation        AccessInvitation?
+  events            AccessRequestEvent[]
+
+  @@index([email, createdAt])
+  @@index([status, createdAt])
+  @@index([reviewedById])
+  @@index([status, expiresAt])
+}
+
+// Um slot por pedido: futura reemissão rotaciona o hash, invalidando o anterior.
+// O token bruto nunca é persistido. Consumidores: repositório e futura verificação.
+model EmailVerificationToken {
+  id              String    @id @default(cuid())
+  accessRequestId String    @unique
+  tokenHash       String    @unique @db.Char(64)
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  issuedAt        DateTime  @default(now()) // emissão atual; createdAt é o slot original
+  createdAt       DateTime  @default(now())
+
+  accessRequest AccessRequest @relation(fields: [accessRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+// Convite separado da verificação; aprovação não cria User.
+// O consumo atômico é uma primitiva interna, ainda sem fluxo de ativação.
+model AccessInvitation {
+  id              String    @id @default(cuid())
+  accessRequestId String    @unique
+  tokenHash       String    @unique @db.Char(64)
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  issuedAt        DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+
+  accessRequest AccessRequest @relation(fields: [accessRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+// Trilha própria permite visitante (actorId NULL), sem enfraquecer AuditLog.
+// Append-only nos repositories; FKs RESTRICT preservam pedido e ator históricos.
+model AccessRequestEvent {
+  id              String   @id @default(cuid())
+  accessRequestId String
+  actorId         String?
+  fromStatus      String?
+  toStatus        String
+  reason          String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  accessRequest AccessRequest @relation(fields: [accessRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor         User?         @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([accessRequestId, createdAt])
+  @@index([actorId])
 }
 
 // ============================================================================

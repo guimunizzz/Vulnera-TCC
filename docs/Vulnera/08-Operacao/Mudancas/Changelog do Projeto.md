@@ -9,6 +9,69 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-10-22 — Issue #51: consolidação em commit local
+
+A pedido do usuário, consolidadas as Etapas 0, 1 e 1.1 em um commit local na
+branch `refactor/security-auth-gated-access`, com os 20 arquivos relacionados.
+Os cinco documentos das Issues #19/#20 e o dump repomix anterior ficaram fora.
+Sem push, nova alteração de código, dependências ou execução da Etapa 2.
+Validações e limitações mantidas conforme a entrega abaixo; as menções anteriores
+a ausência de commit representam o estado no encerramento daquelas execuções.
+
+## 2026-10-22 — Issue #51: Etapa 1.1, hardening do domínio
+
+**✅ Concluída — 100% do recorte autorizado; Etapa 2 não iniciada.**
+Branch `refactor/security-auth-gated-access`, base `28c48ef`, sem commit/push/PR.
+Seis arquivos não rastreados anteriores preservados e fora da entrega.
+
+- Lifecycle com EXPIRED e ACTIVATED terminais; reserva liberada junto ao evento
+  e revogação dos tokens abertos, com rollback único. Janelas de 7/30/7 dias;
+  recuperação e reemissão não prorrogam o prazo do pedido.
+- Collation da reserva/e-mail igual a User.email, sem ALTER de User. Banco
+  arbitra equivalências Unicode; conta existente impede criar novo pedido pelo
+  repository, sem afirmar unicidade global entre tabelas.
+- Slots com issuedAt/revokedAt, rotação por hash/revogação esperados, consumo
+  único e serialização pelo pedido; convite expirado pode ser reemitido dentro
+  da aprovação válida. Nenhum segredo cru persistido ou envio implementado.
+- Migration incremental, inicial intacta; pré-check de colisões antes de DDL
+  permanente. Upgrade real com fixtures preservou todos os valores anteriores.
+  Aplicação somente em MySQL descartável, sem reset/seed ou banco compartilhado.
+- Domínio final 112/112; regressões Auth/User/Company/Subscription 32/32.
+  Prisma validate/generate, build, lint focal e diff aprovados. Check global
+  permanece bloqueado pelos dois imports antigos; suíte global não reexecutada.
+- ADR-047, relatório, PRD, BACKLOG e ROADMAP sincronizados. Sem alterações de
+  Auth/register, Company/Subscription, permissões, tenants, seeds ou frontend.
+  Sem novos endpoints, EmailSender, SMTP ou User via convite. Próximo: revisão
+  desta entrega; orquestração de e-mail somente em execução posterior.
+
+O marco inicial abaixo conserva as decisões e resultados da entrega 0–1;
+o lifecycle vigente foi substituído pela Etapa 1.1, conforme ADR-047.
+
+## 2026-10-22 — Issue #51: preflight e fundação de acesso controlado
+
+**✅ Etapas 0 e 1 concluídas — 100% deste recorte (2/2); épica em andamento.**
+Branch `refactor/security-auth-gated-access` sincronizada com `origin/dev` em
+`28c48ef` por fast-forward, sem novo commit/push/PR; seis arquivos não rastreados
+anteriores preservados. Decisão ADR-047.
+
+- Novas tabelas AccessRequest, EmailVerificationToken, AccessInvitation e
+  AccessRequestEvent; User recebe só relações virtuais, sem coluna/default novo.
+- UNIQUE+CHECK para e-mail ativo, histórico de rejeições, hashes/datas e FKs
+  RESTRICT. Trilha anônima não altera o AuditLog existente.
+- Repositories com transições condicionais e histórico transacional, consumo
+  condicional de tokens e escopo de transação compartilhado para etapas futuras.
+- Baseline focal 32/32; domínio 49/49, incluindo concorrência e rollback.
+  Suíte completa 692/697; cinco falhas DAST de sandbox/timeout local aprovadas
+  na repetição das duas suítes (104/104), fora do sandbox e com timeout padrão.
+  Prisma validate/generate, build e lint focal aprovados; check global ainda
+  bloqueado pelos dois imports não usados preexistentes em vulnerability.service.
+- Migration aplicada somente em MySQL descartável e comprovadamente preservou
+  três Users, um RefreshToken e um AuditLog anteriores. Relatório com resultados
+  finais: `docs/SECURITY-AUTH-ETAPAS-0-1.md`.
+- Cadastro público, login/refresh/logout, landing, CompanyService, SubscriptionService
+  e onboarding preservados. Nenhuma rota nova, envio de e-mail, CAPTCHA, ativação
+  ou User pelo novo domínio. Etapa 2 não iniciada; revisão é o próximo passo.
+
 ## 2026-10-09 — Spider tradicional, perfil por execução e README
 
 **✅ Concluída — 100% (4/4).** Mesma branch
