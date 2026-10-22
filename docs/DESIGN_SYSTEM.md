@@ -258,7 +258,7 @@ Todos em `app/web/src/components/ui/`, exportados por `index.ts`.
 | `Popover` | `gatilho` (elemento) · `lado` · `alinhamento`. **Não** é modal |
 | `Tooltip` | `conteudo` · `lado`. ⚠️ nunca para informação essencial |
 | `DropdownMenu` / `ContextMenu` | `itens: ItemDeMenu[]` (`{id, rotulo, aoEscolher, icone?, desabilitado?, destrutivo?, atalho?}`) |
-| `ToastProvider` + `useToast()` | `.sucesso()` · `.erro()` · `.mostrar()`. Erro **não** expira |
+| `ToastProvider` + `useToast()` | `.sucesso()` · `.erro(titulo, descricao?, acao?)` · `.mostrar()`. Erro **não** expira. `acao` = `{ rotulo, aoClicar }`, **só** para falha assíncrona sem lugar natural na tela (ex.: "Tentar novamente" na exportação Excel); clicar executa e fecha o aviso |
 
 ### Layout e dados
 
