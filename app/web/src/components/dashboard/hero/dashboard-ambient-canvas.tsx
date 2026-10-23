@@ -14,16 +14,13 @@
  */
 
 import { useRef, useState } from "react";
-import { useTheme } from "../../../design/theme-provider";
 import { useDashboardScene } from "./use-dashboard-scene";
 
 function DashboardAmbientCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pronto, setPronto] = useState(false);
-  const { resolvido } = useTheme();
-
+  // A troca de tema é observada pelo kit (`observarTema`), não por prop.
   useDashboardScene(canvasRef, {
-    theme: resolvido,
     onReady: () => setPronto(true),
     onLost: () => setPronto(false),
   });

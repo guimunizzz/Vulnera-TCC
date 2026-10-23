@@ -27,6 +27,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { gammaDecodifica, oklchParaSrgbNormalizado } from "../src/design/oklch.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const TOKENS_CSS = resolve(AQUI, "../src/styles/tokens.css");
@@ -36,55 +37,19 @@ const TOKENS_CSS = resolve(AQUI, "../src/styles/tokens.css");
 // ---------------------------------------------------------------------------
 
 /**
- * OKLCH → OKLab. H em graus.
- * A matemática vem do artigo original do Björn Ottosson (2020); reimplementada
- * aqui à mão de propósito, para não trazer uma dependência de cor só pra isso.
- */
-function oklchParaOklab(L, C, H) {
-  const rad = (H * Math.PI) / 180;
-  return { L, a: C * Math.cos(rad), b: C * Math.sin(rad) };
-}
-
-/** OKLab → sRGB linear (ainda sem gamma, ainda podendo estourar o gamut). */
-function oklabParaLinearSrgb({ L, a, b }) {
-  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
-  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
-  const s_ = L - 0.0894841775 * a - 1.291485548 * b;
-
-  const l = l_ * l_ * l_;
-  const m = m_ * m_ * m_;
-  const s = s_ * s_ * s_;
-
-  return {
-    r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    b: -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
-  };
-}
-
-const gammaCodifica = (x) => (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
-const gammaDecodifica = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
-
-/**
- * OKLCH → sRGB 8-bit.
+ * OKLCH → sRGB 8-bit, mais a luminância relativa do que é EXIBIDO (pós-clamp).
  *
- * O clamp importa e é reportado: uma cor OKLCH fora do gamut sRGB é exibida
- * pelo navegador em outra cor que não a pedida. Se medíssemos o contraste da
- * cor teórica em vez da exibida, a medição seria mentira. `foraDeGamut` avisa.
+ * A conversão em si vive em `src/design/oklch.mjs`, compartilhada com a paleta
+ * das cenas three.js — a régua do contraste e a cor pintada no WebGL são a
+ * mesma conta. Se medíssemos a cor teórica em vez da exibida, a medição seria
+ * mentira; `foraDeGamut` avisa quando o navegador clampa.
  */
 function oklchParaSrgb(L, C, H) {
-  const linear = oklabParaLinearSrgb(oklchParaOklab(L, C, H));
-  const cru = [linear.r, linear.g, linear.b].map(gammaCodifica);
-  const foraDeGamut = cru.some((v) => v < -0.0005 || v > 1.0005);
-  const clamped = cru.map((v) => Math.min(1, Math.max(0, v)));
+  const { rgb, foraDeGamut } = oklchParaSrgbNormalizado(L, C, H);
   return {
-    rgb: clamped.map((v) => Math.round(v * 255)),
+    rgb: rgb.map((v) => Math.round(v * 255)),
     foraDeGamut,
-    // luminância relativa é calculada a partir do que É EXIBIDO (pós-clamp)
-    luminancia:
-      0.2126 * gammaDecodifica(clamped[0]) +
-      0.7152 * gammaDecodifica(clamped[1]) +
-      0.0722 * gammaDecodifica(clamped[2]),
+    luminancia: 0.2126 * gammaDecodifica(rgb[0]) + 0.7152 * gammaDecodifica(rgb[1]) + 0.0722 * gammaDecodifica(rgb[2]),
   };
 }
 

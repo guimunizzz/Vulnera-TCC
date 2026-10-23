@@ -34,6 +34,20 @@ function renderComProviders(ui: ReactNode, rota: string) {
   );
 }
 
+/**
+ * Erros de render esperados: o React em dev os relança num evento global e o
+ * jsdom os imprimiria, poluindo a saída da suíte com falhas que são o cenário.
+ */
+function silenciarErrosEsperados(): () => void {
+  const console_ = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const engolir = (evento: ErrorEvent) => evento.preventDefault();
+  window.addEventListener("error", engolir);
+  return () => {
+    window.removeEventListener("error", engolir);
+    console_.mockRestore();
+  };
+}
+
 class CapturaDeErro extends Component<{ children: ReactNode }, { erro: string | null }> {
   state = { erro: null as string | null };
   static getDerivedStateFromError(erro: Error) { return { erro: erro.message }; }
@@ -74,7 +88,7 @@ describe("Limite de rota lazy", () => {
   });
 
   it("LAZY-02 — falha ao baixar o chunk mostra ErrorState com Tentar novamente", async () => {
-    const silencio = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const restaurar = silenciarErrosEsperados();
     const Pagina = paginaLazy(() => Promise.reject(new TypeError("Failed to fetch dynamically imported module")), "Pagina");
 
     renderComProviders(<LimiteDeRota variante="tela"><Pagina /></LimiteDeRota>, "/");
@@ -82,11 +96,11 @@ describe("Limite de rota lazy", () => {
     const alerta = await screen.findByRole("alert");
     expect(within(alerta).getByText("Não foi possível abrir esta tela")).toBeInTheDocument();
     expect(within(alerta).getByRole("button", { name: "Tentar novamente" })).toBeInTheDocument();
-    silencio.mockRestore();
+    restaurar();
   });
 
   it("LAZY-03 — erro de render da página sobe para fora do limite", async () => {
-    const silencio = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const restaurar = silenciarErrosEsperados();
     function Quebrada(): JSX.Element { throw new Error("bug da página"); }
     const Pagina = paginaLazy(() => Promise.resolve({ Pagina: Quebrada }), "Pagina");
 
@@ -97,6 +111,6 @@ describe("Limite de rota lazy", () => {
 
     expect(await screen.findByText("Capturado fora: bug da página")).toBeInTheDocument();
     expect(screen.queryByText("Não foi possível abrir esta tela")).not.toBeInTheDocument();
-    silencio.mockRestore();
+    restaurar();
   });
 });

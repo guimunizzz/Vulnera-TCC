@@ -446,6 +446,14 @@
   --color-chart-grid: var(--neutral-800);
   --color-chart-axis: var(--neutral-500);
 
+  /* --- Atmosfera decorativa (WebGL) ---------------------------------------
+     Traço das cenas three.js — ondas, órbitas, pontos. É DECORAÇÃO: não é ação
+     (violeta de botão), nem série de gráfico, nem severidade, e não carrega
+     dado. Sem par de contraste: nunca é texto nem a única forma de informar
+     algo. Lidos em runtime por `src/three/palette.ts`. */
+  --color-ambient-ink: var(--iris-400);
+  --color-ambient-muted: var(--neutral-400);
+
   /* --- Tokens com alpha embutido ----------------------------------------
      ⚠️ Guardam a cor INTEIRA (não só L C H). Não aceitam `/opacidade` do
      Tailwind — se precisar de outra opacidade, crie outro token. */
@@ -542,6 +550,9 @@
   --color-chart-6: var(--red-600);
   --color-chart-grid: var(--neutral-200);
   --color-chart-axis: var(--neutral-500);
+
+  --color-ambient-ink: var(--iris-700);
+  --color-ambient-muted: var(--neutral-600);
 
   --color-scrim: oklch(0.218 0.015 255 / 0.44);
   --color-bg-hover: oklch(0.218 0.015 255 / 0.05);

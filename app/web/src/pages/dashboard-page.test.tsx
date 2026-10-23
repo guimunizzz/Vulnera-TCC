@@ -31,6 +31,10 @@ vi.mock("../motion/use-motion", async () => {
   };
 });
 
+// O contrato aqui é o da PÁGINA (canvas decorativo, único, gate). A cena em si
+// é coberta por use-dashboard-scene.test.tsx e pelos testes de src/three/.
+vi.mock("../components/dashboard/hero/use-dashboard-scene", () => ({ useDashboardScene: () => undefined }));
+
 vi.mock("../components/dashboard/admin-dashboard", () => ({
   AdminDashboard: () => <p>Conteúdo ADMIN</p>,
 }));
@@ -92,6 +96,11 @@ function instalarMatchMedia(resultado: (query: string) => boolean): void {
   });
 }
 
+/** O gate só monta o canvas com WebGL2; o jsdom não o expõe. */
+function simularWebGL2(): void {
+  vi.stubGlobal("WebGL2RenderingContext", class {});
+}
+
 function simularViewportMovel(): void {
   definirLarguraDaJanela(375);
   instalarMatchMedia((query) => query.includes("max-width: 767px"));
@@ -106,6 +115,7 @@ afterEach(() => {
   preferenciaMovimento.reduzido = false;
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   definirLarguraDaJanela(1024);
   instalarMatchMedia(() => false);
 });
@@ -134,6 +144,7 @@ describe("DashboardPage", () => {
   });
 
   it("DASH-VIS-04 — canvas lazy é estritamente decorativo", async () => {
+    simularWebGL2();
     renderDashboard("ADMIN");
 
     await waitFor(() => {
@@ -163,6 +174,7 @@ describe("DashboardPage", () => {
   });
 
   it("DASH-VIS-07 — canvas único sobrevive a rerender e remount sem duplicação", async () => {
+    simularWebGL2();
     const view = renderDashboard("ADMIN");
 
     await waitFor(() => {
@@ -182,17 +194,18 @@ describe("DashboardPage", () => {
     remount.unmount();
   });
 
-  it("DASH-VIS-08 — mantém o fallback quando WebGL2 não está disponível", async () => {
+  it("DASH-VIS-08 — sem WebGL2 mantém o fallback e não monta canvas", async () => {
     // jsdom não expõe WebGL2: este é o caminho normal de degradação da cena.
+    // Desde o kit (Fase 2), o gate decide antes do lazy: sem WebGL2 o chunk de
+    // three nem é pedido, então não existe canvas vazio por cima do fallback.
     expect("WebGL2RenderingContext" in window).toBe(false);
     renderDashboard("ADMIN");
 
     expect(screen.getByTestId("dashboard-hero-fallback")).toBeInTheDocument();
-    await waitFor(() => {
-      const canvas = document.querySelector("canvas[data-dashboard-ambient='true']");
-      expect(canvas).toBeInTheDocument();
-      expect(canvas).toHaveAttribute("data-ready", "false");
-    });
+    expect(screen.getByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
+    // Dá tempo a um eventual lazy resolver antes de afirmar a ausência.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.querySelector("canvas[data-dashboard-ambient='true']")).not.toBeInTheDocument();
   });
 
   it("DASH-VIS-09 — compartilha a mesma abertura visual entre os três papéis", () => {

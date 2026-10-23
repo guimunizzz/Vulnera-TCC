@@ -3,21 +3,23 @@
  * nos KPIs. Um renderer e um RAF servem todos os recortes (viewport/scissor).
  * Consumido somente pelo canvas lazy; não atualiza estado React por frame.
  * Observers acompanham KPIs que chegam após as queries e mudanças de layout.
+ * Renderer, loop, pausas, contexto perdido, descarte e cores vêm do kit
+ * `src/three/`; aqui fica só o que é desta cena.
  */
 import { useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
-import type { ThemeResolvido } from "../../../design/theme";
-import { DASHBOARD_SCENE_PALETTE } from "./dashboard-scene-palette";
+import { montarCena, type CenaMontada } from "../../../three/scene-host";
+import { descartarCena } from "../../../three/dispose";
+import { lerCorDoToken, observarTema, temaAtual } from "../../../three/palette";
 
 interface Options {
-  theme: ThemeResolvido;
   onReady?: () => void;
   onLost?: () => void;
 }
 
 const CURVAS = 18;
 const AMOSTRAS = 72;
-const FRAME_MS = 1000 / 30;
+const FPS = 30;
 const MAX_DPR = 1.5;
 // O mesmo canvas atende aos KPIs do dashboard e aos resumos de findings.
 const CARD_SELECTOR = "[data-dashboard-kpi], [data-ambient-card]";
@@ -25,31 +27,24 @@ const CARD_SELECTOR = "[data-dashboard-kpi], [data-ambient-card]";
 export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>, options: Options): void {
   const callbacks = useRef(options);
   callbacks.current = options;
-  const aplicarTema = useRef<((theme: ThemeResolvido) => void) | null>(null);
 
   useEffect(() => {
     const element = canvasRef.current;
-    if (!element || !("WebGL2RenderingContext" in window)) return;
+    if (!element) return;
     const canvas: HTMLCanvasElement = element;
     const root = canvas.parentElement;
     if (!root) return;
     const host: HTMLElement = root;
-    let renderer: THREE.WebGLRenderer | undefined;
-    let raf = 0;
+    let cena: CenaMontada | null = null;
     let stopped = false;
-    let lost = false;
-    let visible = true;
     let width = 1;
     let height = 1;
-    let previous = 0;
     let time = 0;
     let layoutDirty = true;
     let cards: { x: number; y: number; w: number; h: number }[] = [];
     let resize: ResizeObserver | undefined;
     let mutations: MutationObserver | undefined;
-    let intersection: IntersectionObserver | undefined;
-    const geometries: THREE.BufferGeometry[] = [];
-    const materials: THREE.Material[] = [];
+    let pararDeObservarTema: (() => void) | undefined;
     const pointer = new THREE.Vector2();
     const smoothPointer = new THREE.Vector2();
     const scene = new THREE.Scene();
@@ -61,32 +56,17 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
     const orbital = new THREE.Group();
     orbitalScene.add(orbital);
 
-    const geometry = <T extends THREE.BufferGeometry>(value: T): T => {
-      geometries.push(value);
-      return value;
-    };
-    const material = <T extends THREE.Material>(value: T): T => {
-      materials.push(value);
-      return value;
-    };
-
     function cleanup(): void {
       if (stopped) return;
       stopped = true;
-      cancelAnimationFrame(raf);
       resize?.disconnect();
       mutations?.disconnect();
-      intersection?.disconnect();
-      document.removeEventListener("visibilitychange", visibility);
+      pararDeObservarTema?.();
       host.removeEventListener("pointermove", move);
       host.removeEventListener("pointerleave", leave);
-      canvas.removeEventListener("webglcontextlost", contextLost);
-      aplicarTema.current = null;
       delete host.dataset.sceneReady;
-      geometries.forEach((value) => value.dispose());
-      materials.forEach((value) => value.dispose());
-      renderer?.dispose();
-      renderer?.forceContextLoss();
+      descartarCena(scene, orbitalScene);
+      cena?.descartar();
     }
 
     function move(event: PointerEvent): void {
@@ -95,21 +75,8 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
       pointer.set(event.clientX / window.innerWidth - 0.5, event.clientY / window.innerHeight - 0.5);
     }
     function leave(): void { pointer.set(0, 0); }
-    function contextLost(event: Event): void {
-      event.preventDefault();
-      lost = true;
-      callbacks.current.onLost?.();
-      cleanup();
-    }
-    function visibility(): void {
-      cancelAnimationFrame(raf);
-      raf = 0;
-      previous = 0;
-      if (!stopped && !lost && visible && !document.hidden) raf = requestAnimationFrame(draw);
-    }
 
-    function measure(): void {
-      if (!renderer) return;
+    function measure(renderer: THREE.WebGLRenderer): void {
       // No layout global o conteúdo pode ter milhares de pixels de altura.
       // O buffer WebGL segue o tamanho visível do canvas, nunca a página toda.
       width = Math.max(1, canvas.clientWidth);
@@ -134,18 +101,51 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
 
     // Posições persistentes: apenas Y muda; nenhum objeto é criado por vértice.
     const positions = new Float32Array(CURVAS * AMOSTRAS * 3);
-    let wave: THREE.BufferGeometry;
     const waveGroup = new THREE.Group();
     scene.add(waveGroup);
 
-    function draw(now: number): void {
-      if (stopped || lost || !renderer || document.hidden || !visible) return;
-      raf = requestAnimationFrame(draw);
-      if (previous && now - previous < FRAME_MS) return;
-      const delta = previous ? Math.min((now - previous) / 1000, 0.06) : 0;
-      previous = now;
+    const indices: number[] = [];
+    for (let row = 0; row < CURVAS; row += 1) {
+      for (let column = 0; column < AMOSTRAS; column += 1) {
+        positions[(row * AMOSTRAS + column) * 3] = column / (AMOSTRAS - 1) * 2.4 - 1.2;
+        if (column < AMOSTRAS - 1) indices.push(row * AMOSTRAS + column, row * AMOSTRAS + column + 1);
+      }
+    }
+    const wave = new THREE.BufferGeometry();
+    wave.setAttribute("position", new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+    wave.setIndex(indices);
+    const waveInk = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.38, depthWrite: false });
+    const waves = new THREE.LineSegments(wave, waveInk);
+    waves.frustumCulled = false;
+    waveGroup.add(waves);
+
+    const orbitInk = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.75, depthWrite: false });
+    for (let ring = 0; ring < 3; ring += 1) {
+      const points = Array.from({ length: 80 }, (_, index) => {
+        const angle = index / 80 * Math.PI * 2;
+        return new THREE.Vector3(Math.cos(angle) * (0.85 + ring * 0.09), Math.sin(angle) * (0.85 + ring * 0.09), 0);
+      });
+      const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), orbitInk);
+      line.rotation.set(ring * 0.95, ring * 0.6, 0);
+      orbital.add(line);
+    }
+    // A icosaédrica só serve de molde para as arestas e nunca entra na cena,
+    // então `descartarCena` não a alcançaria.
+    const core = new THREE.IcosahedronGeometry(0.3, 0);
+    const coreInk = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 });
+    orbital.add(new THREE.LineSegments(new THREE.EdgesGeometry(core), coreInk));
+    core.dispose();
+
+    function aplicarPaleta(): void {
+      lerCorDoToken(canvas, "--color-ambient-ink", waveInk.color);
+      lerCorDoToken(canvas, "--color-ambient-ink", orbitInk.color);
+      lerCorDoToken(canvas, "--color-ambient-muted", coreInk.color);
+      waveInk.opacity = temaAtual() === "dark" ? 0.3 : 0.2;
+    }
+
+    function draw(renderer: THREE.WebGLRenderer, delta: number): void {
       time += delta;
-      if (layoutDirty) measure();
+      if (layoutDirty) measure(renderer);
       smoothPointer.lerp(pointer, 0.035);
       for (let row = 0; row < CURVAS; row += 1) {
         for (let column = 0; column < AMOSTRAS; column += 1) {
@@ -164,13 +164,13 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
       renderer.render(scene, camera);
       renderer.setScissorTest(true);
       cards.forEach((card, index) => {
-        renderer!.setViewport(card.x, card.y, card.w, card.h);
-        renderer!.setScissor(card.x, card.y, card.w, card.h);
-        renderer!.clearDepth();
+        renderer.setViewport(card.x, card.y, card.w, card.h);
+        renderer.setScissor(card.x, card.y, card.w, card.h);
+        renderer.clearDepth();
         orbitalCamera.aspect = card.w / card.h;
         orbitalCamera.updateProjectionMatrix();
         orbital.rotation.set(0.45 + Math.sin(time * 0.16 + index) * 0.12, time * 0.12 + index * 0.7, -0.3);
-        renderer!.render(orbitalScene, orbitalCamera);
+        renderer.render(orbitalScene, orbitalCamera);
       });
       renderer.setScissorTest(false);
       if (host.dataset.sceneReady !== "true") {
@@ -180,49 +180,22 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
     }
 
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "low-power" });
-      if (renderer.getContext().isContextLost()) throw new Error("Contexto WebGL indisponível");
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
-      renderer.setClearAlpha(0);
-      renderer.autoClear = false;
-
-      const indices: number[] = [];
-      for (let row = 0; row < CURVAS; row += 1) {
-        for (let column = 0; column < AMOSTRAS; column += 1) {
-          positions[(row * AMOSTRAS + column) * 3] = column / (AMOSTRAS - 1) * 2.4 - 1.2;
-          if (column < AMOSTRAS - 1) indices.push(row * AMOSTRAS + column, row * AMOSTRAS + column + 1);
-        }
-      }
-      wave = geometry(new THREE.BufferGeometry());
-      wave.setAttribute("position", new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
-      wave.setIndex(indices);
-      const waveInk = material(new THREE.LineBasicMaterial({ transparent: true, opacity: 0.38, depthWrite: false }));
-      const waves = new THREE.LineSegments(wave, waveInk);
-      waves.frustumCulled = false;
-      waveGroup.add(waves);
-
-      const orbitInk = material(new THREE.LineBasicMaterial({ transparent: true, opacity: 0.75, depthWrite: false }));
-      for (let ring = 0; ring < 3; ring += 1) {
-        const points = Array.from({ length: 80 }, (_, index) => {
-          const angle = index / 80 * Math.PI * 2;
-          return new THREE.Vector3(Math.cos(angle) * (0.85 + ring * 0.09), Math.sin(angle) * (0.85 + ring * 0.09), 0);
-        });
-        const line = new THREE.LineLoop(geometry(new THREE.BufferGeometry().setFromPoints(points)), orbitInk);
-        line.rotation.set(ring * 0.95, ring * 0.6, 0);
-        orbital.add(line);
-      }
-      const core = geometry(new THREE.IcosahedronGeometry(0.3, 0));
-      const coreInk = material(new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 }));
-      orbital.add(new THREE.LineSegments(geometry(new THREE.EdgesGeometry(core)), coreInk));
-
-      aplicarTema.current = (theme) => {
-        const palette = DASHBOARD_SCENE_PALETTE[theme];
-        waveInk.color.set(palette.accent);
-        waveInk.opacity = theme === "dark" ? 0.3 : 0.2;
-        orbitInk.color.set(palette.accent);
-        coreInk.color.set(palette.neutral);
-      };
-      aplicarTema.current(callbacks.current.theme);
+      cena = montarCena({
+        canvas,
+        alvo: host,
+        fps: FPS,
+        maxDpr: MAX_DPR,
+        aoQuadro: draw,
+        aoPerderContexto: () => {
+          callbacks.current.onLost?.();
+          cleanup();
+        },
+      });
+      if (!cena) throw new Error("WebGL indisponível");
+      // Ondas e órbitas dividem o mesmo buffer: a limpeza é manual por recorte.
+      cena.renderer.autoClear = false;
+      aplicarPaleta();
+      pararDeObservarTema = observarTema(aplicarPaleta);
       resize = new ResizeObserver(() => { layoutDirty = true; });
       resize.observe(host);
       resize.observe(canvas);
@@ -233,15 +206,9 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
       mutations = new MutationObserver(observeCards);
       mutations.observe(host, { childList: true, subtree: true });
       observeCards();
-      if (typeof IntersectionObserver !== "undefined") {
-        intersection = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; visibility(); });
-        intersection.observe(host);
-      }
       host.addEventListener("pointermove", move, { passive: true });
       host.addEventListener("pointerleave", leave);
-      canvas.addEventListener("webglcontextlost", contextLost);
-      document.addEventListener("visibilitychange", visibility);
-      visibility();
+      cena.iniciar();
     } catch {
       // O fallback já está pintado: falha da GPU nunca afeta queries ou rotas.
       callbacks.current.onLost?.();
@@ -249,6 +216,4 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
     }
     return cleanup;
   }, [canvasRef]);
-
-  useEffect(() => { aplicarTema.current?.(options.theme); }, [options.theme]);
 }

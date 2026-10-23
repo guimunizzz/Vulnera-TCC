@@ -10,7 +10,7 @@
  *            está logado (decisão do Checkpoint 1, item 4)
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -60,9 +60,18 @@ function renderApp(rotaInicial: string) {
   );
 }
 
-// As páginas são lazy: o primeiro `import()` de cada uma no vitest transforma a
-// árvore inteira da página e pode passar do 1 s padrão do `findBy`.
-const ESPERA_CHUNK = { timeout: 5000 };
+// As páginas são lazy. Com o cache do vitest frio, o primeiro `import()` de
+// uma página transforma a árvore inteira dela e já levou mais que o timeout do
+// teste. Pré-carregar os módulos tira o tempo de transformação da asserção: o
+// `lazy()` continua chamando `import()` e suspendendo, só que resolve do cache.
+beforeAll(async () => {
+  await Promise.all([
+    import("./pages/auth/auth-layout"),
+    import("./pages/auth/login-page"),
+    import("./pages/auth/register-page"),
+    import("./pages/dashboard-page"),
+  ]);
+}, 60_000);
 
 afterEach(limparAuth);
 
@@ -71,7 +80,7 @@ describe("Roteamento de App", () => {
     limparAuth();
     renderApp("/login");
     // Cenário e páginas de acesso são lazy (um lote só): espera o primeiro paint.
-    const logo = await screen.findByRole("link", { name: "Vulnera — página inicial" }, ESPERA_CHUNK);
+    const logo = await screen.findByRole("link", { name: "Vulnera — página inicial" });
 
     fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
     expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
@@ -97,14 +106,14 @@ describe("Roteamento de App", () => {
     limparAuth();
     renderApp("/dashboard");
 
-    expect(await screen.findByRole("heading", { name: "Entrar" }, ESPERA_CHUNK)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entrar" })).toBeInTheDocument();
   });
 
   it("ROTA-03 — rota privada com sessão renderiza normalmente", async () => {
     logar("CLIENT");
     renderApp("/dashboard");
 
-    expect(await screen.findByRole("heading", { name: "Olá, Rafael" }, ESPERA_CHUNK)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
   });
 
   it("ROTA-04 — '/' com sessão continua mostrando a landing, não expulsa quem já está logado", () => {
