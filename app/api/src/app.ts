@@ -14,7 +14,16 @@ export function createApp(options: { rateLimitService?: RateLimitService } = {})
   // jamais usamos `true`, que aceitaria uma cadeia arbitrária enviada pelo cliente.
   app.set("trust proxy", rateLimitService.config.trustProxyHops);
   app.locals.rateLimitService = rateLimitService;
-  app.use(cors({ origin: EnvVar.getOptional(EnvKeys.CORS_ORIGIN, "http://localhost:3000"), credentials: true }));
+  // Cabeçalhos que a web precisa LER. Como ela é outra origem, o navegador esconde tudo que não for
+  // exposto aqui: sem Content-Disposition a exportação Excel perde o nome do arquivo (escopo e
+  // carimbo); sem Retry-After o aviso de rate limit não consegue dizer quantos segundos esperar.
+  app.use(
+    cors({
+      origin: EnvVar.getOptional(EnvKeys.CORS_ORIGIN, "http://localhost:3000"),
+      credentials: true,
+      exposedHeaders: ["Content-Disposition", "Retry-After"],
+    }),
+  );
   app.use(express.json());
   app.use("/api", globalRateLimitMiddleware, apiRoutes);
   return app;

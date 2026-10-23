@@ -10,6 +10,13 @@
  *   - informação que a pessoa vai precisar reler → mostre na página
  * Toast é confirmação efêmera: "salvo", "copiado", "relatório gerado".
  *
+ * ÚNICA EXCEÇÃO — AÇÃO NO TOAST (`acao`):
+ * falha de uma operação ASSÍNCRONA que a pessoa disparou e que não tem um
+ * lugar natural na tela para mostrar o erro (a exportação Excel: o clique já
+ * terminou, o formulário não existe). Aí o toast de erro carrega UM botão —
+ * "Tentar novamente" — que executa a ação e fecha o aviso. Erro já não expira
+ * sozinho, então o botão não some enquanto a pessoa decide.
+ *
  * ==========================================================================
  * CONTRATO DE ACESSIBILIDADE
  * ==========================================================================
@@ -46,17 +53,24 @@ import { useMotion } from "../../motion/use-motion";
 
 export type TipoToast = "sucesso" | "erro" | "info";
 
+/** Um botão no toast. Clicar executa `aoClicar` e fecha o aviso. */
+export interface AcaoDoToast {
+  rotulo: string;
+  aoClicar: () => void;
+}
+
 export interface Toast {
   id: string;
   tipo: TipoToast;
   titulo: string;
   descricao?: string;
+  acao?: AcaoDoToast;
 }
 
 interface ContextoToast {
   mostrar: (t: Omit<Toast, "id">) => void;
   sucesso: (titulo: string, descricao?: string) => void;
-  erro: (titulo: string, descricao?: string) => void;
+  erro: (titulo: string, descricao?: string, acao?: AcaoDoToast) => void;
 }
 
 const Contexto = createContext<ContextoToast | null>(null);
@@ -126,7 +140,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     () => ({
       mostrar,
       sucesso: (titulo, descricao) => mostrar({ tipo: "sucesso", titulo, descricao }),
-      erro: (titulo, descricao) => mostrar({ tipo: "erro", titulo, descricao }),
+      erro: (titulo, descricao, acao) => mostrar({ tipo: "erro", titulo, descricao, acao }),
     }),
     [mostrar],
   );
@@ -190,6 +204,18 @@ function ListaDeToasts({
             <div className="flex flex-1 flex-col gap-1">
               <p className="text-sm font-medium text-fg">{t.titulo}</p>
               {t.descricao && <p className="text-xs text-fg-muted">{t.descricao}</p>}
+              {t.acao && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    t.acao?.aoClicar();
+                    aoFechar(t.id);
+                  }}
+                  className="alvo-estendido mt-1 w-fit rounded-control px-1 text-xs font-medium text-accent-ink underline underline-offset-2 transition-colors duration-fast hover:text-fg"
+                >
+                  {t.acao.rotulo}
+                </button>
+              )}
             </div>
             <button
               type="button"

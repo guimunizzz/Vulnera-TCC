@@ -119,7 +119,7 @@ async function applyAuthenticatedLimits(req: Request, res: Response, next: NextF
 }
 
 /** Política adicional para query/agregação, report e criação de DAST. */
-export function endpointRateLimitMiddleware(scope: "expensive" | "report" | "dast") {
+export function endpointRateLimitMiddleware(scope: "expensive" | "report" | "dast" | "export") {
   return (req: Request, res: Response, next: NextFunction): void => {
     const actor = req.user;
     if (!actor || !consume(req, res, scope, actor.userId)) return;

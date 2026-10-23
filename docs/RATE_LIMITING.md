@@ -17,6 +17,15 @@ Os valores padrão estão em `app/api/.env.example`. São configuração inicial
 não medição de capacidade. O limiter só escreve hashes de chaves sensíveis e
 o estado é limitado por TTL e quantidade máxima de chaves.
 
+| Escopo | Onde | Padrão | Variável |
+|---|---|---|---|
+| `export` | `GET /api/vulnerabilities/export.xlsx` (exportação Excel de findings), **por usuário** | 6/min, rajada de 2 | `RATE_LIMIT_EXPORT_PER_MINUTE` |
+
+> A resposta `429` traz `Retry-After`, e a API o **expõe por CORS** para a web mostrar quantos segundos
+> esperar. O carregamento de uma página como `/findings` já consome o bucket geral por usuário (1 req/s,
+> rajada de 10): um clique em *Exportar* colado no carregamento pode cair nele (`scope=user` no log).
+> Detalhes: [FINDINGS_EXCEL_EXPORT.md](FINDINGS_EXCEL_EXPORT.md).
+
 ## Execução reproduzível
 
 Pré-requisito: stack local na porta 3001 e, nos cenários autenticados, token

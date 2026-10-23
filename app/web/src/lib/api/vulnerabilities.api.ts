@@ -59,4 +59,20 @@ export const vulnerabilitiesApi = {
       .post<Vulnerability>(`/vulnerabilities/${id}/override-severity`, { newSeverity, justification })
       .then((res) => res.data),
   delete: (id: string) => apiClient.delete<void>(`/vulnerabilities/${id}`).then((res) => res.data),
+
+  /**
+   * Exporta o recorte como planilha Excel.
+   *
+   * Recebe os MESMOS parâmetros da listagem (`URLSearchParams` pronto): a
+   * filtragem acontece no servidor, sobre o recorte inteiro — nunca sobre a
+   * página carregada. `responseType: "blob"` mantém o binário intacto; o
+   * download vai pelo axios (e não por um link) porque a rota exige o token.
+   *
+   * Sem timeout de propósito: gerar 50 mil linhas leva dezenas de segundos.
+   * `Content-Disposition` só chega ao navegador porque a API o expõe via CORS.
+   */
+  exportXlsx: (params: URLSearchParams) =>
+    apiClient
+      .get<Blob>(`/vulnerabilities/export.xlsx?${params.toString()}`, { responseType: "blob" })
+      .then((res) => ({ blob: res.data, contentDisposition: res.headers["content-disposition"] as string | undefined })),
 };

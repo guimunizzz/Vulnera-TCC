@@ -251,6 +251,20 @@ aspa simples antes. Sem isso, um finding intitulado `=cmd|...` seria executado
 como **fórmula** por quem abrisse a planilha — a classe de ataque conhecida
 como *CSV injection*. O conteúdo continua legível; só deixa de ser executável.
 
+### Baixar em Excel
+
+Ao lado do CSV há o botão **Exportar Excel** (e também na aba Findings de um projeto, inclusive para o
+CLIENT). Ele baixa uma planilha **formatada** — resumo, dados, dashboard com gráficos nativos e
+acompanhamento de remediação — do **mesmo recorte** da tela.
+
+| | CSV | Excel |
+|---|---|---|
+| Montado | no navegador | no servidor |
+| Limite | 10.000 linhas | `EXPORT_MAX_ROWS` (50.000), com erro claro |
+| Uso | BI, importação, `PROCV` | apresentação e acompanhamento da correção |
+
+Guia completo, limites e segurança: [FINDINGS_EXCEL_EXPORT.md](FINDINGS_EXCEL_EXPORT.md).
+
 ---
 
 ## 11. Limitações conhecidas

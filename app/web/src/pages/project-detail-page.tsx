@@ -328,6 +328,7 @@ export function ProjectDetailPage() {
             hiddenFields={["projeto", "empresa", "aplicacao"]}
             hiddenColumns={["project", "company", "application"]}
             syncToUrl={false}
+            exportavelExcel
             onSelect={(findingId) => navigate(`/findings/${findingId}`)}
             acoes={
               role !== "CLIENT" ? (
