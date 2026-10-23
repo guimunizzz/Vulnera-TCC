@@ -1,6 +1,7 @@
 import { memo, useEffect, useId, useRef, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import { Link, useLocation, useOutlet } from "react-router-dom";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { usePrefereMovimentoReduzido } from "../../motion/use-prefere-movimento-reduzido";
 import "@fontsource-variable/inter";
 import "./login-page.css";
 
@@ -82,7 +83,7 @@ export function AuthLayout() {
   const patternId = useId();
   const { pathname } = useLocation();
   const outlet = useOutlet();
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = usePrefereMovimentoReduzido();
   const isRegister = pathname.replace(/\/+$/, "").toLowerCase() === "/register";
   const direction = isRegister ? 1 : -1;
 

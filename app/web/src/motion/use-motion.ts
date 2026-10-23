@@ -22,8 +22,8 @@
  * listas com escalonamento, o contador de KPI e a transição de rota.
  */
 
-import { useReducedMotion } from "motion/react";
 import type { Transition, Variants } from "motion/react";
+import { usePrefereMovimentoReduzido } from "./use-prefere-movimento-reduzido";
 import { DESLOCAMENTO, DURACAO, EASE, SPRING, STAGGER, STAGGER_MAX_ITENS } from "./tokens";
 
 export interface Movimento {
@@ -50,10 +50,9 @@ export interface Movimento {
 }
 
 export function useMotion(): Movimento {
-  // `useReducedMotion` do motion já observa a media query e re-renderiza.
-  // Devolve `null` antes de resolver — tratamos null como "não reduzido",
-  // que é o comportamento padrão do navegador.
-  const reduzido = useReducedMotion() ?? false;
+  // Hook próprio, e não o `useReducedMotion` do motion: o dele lê a media
+  // query uma vez só e ignora a troca da preferência com a página aberta.
+  const reduzido = usePrefereMovimentoReduzido();
 
   const saida: Transition = { duration: reduzido ? DURACAO.instant : DURACAO.fast, ease: EASE.out };
   const entrada: Transition = reduzido

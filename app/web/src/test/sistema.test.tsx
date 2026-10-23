@@ -20,7 +20,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import axe from "axe-core";
@@ -130,28 +130,25 @@ function SondaDeMovimento() {
 }
 
 /**
- * O `useReducedMotion` do `motion` resolve a media query UMA VEZ e memoriza —
- * reinstalar o `matchMedia` depois disso não muda o valor. Por isso a
- * preferência é mockada na fonte: o que este projeto POSSUI (e portanto o que
- * precisa de teste) é o MAPEAMENTO de "reduzido" para as variantes; se a
- * biblioteca lê a media query corretamente é responsabilidade dela.
+ * A preferência vem do `matchMedia` real (instalado pelo setup), lido por
+ * `usePrefereMovimentoReduzido`. Antes ela era mockada no `motion`, porque o
+ * `useReducedMotion` dele memoriza a primeira leitura — e foi exatamente esse
+ * o defeito corrigido: a troca com a página aberta não chegava à interface.
  */
-vi.mock("motion/react", async (original) => {
-  const real = await original<typeof import("motion/react")>();
-  return { ...real, useReducedMotion: () => reduzidoMockado };
-});
-let reduzidoMockado = false;
+function preferirMovimentoReduzido(reduzido: boolean): void {
+  instalarMatchMedia(reduzido ? ["prefers-reduced-motion: reduce"] : []);
+}
 
 describe("Movimento reduzido", () => {
   it("MOV-01 — remove deslocamento e escala, e zera o desenho de gráfico", () => {
-    reduzidoMockado = false;
+    preferirMovimentoReduzido(false);
     const { unmount } = render(<SondaDeMovimento />);
     expect(screen.getByTestId("reduzido")).toHaveTextContent("false");
     expect(screen.getByTestId("item-y")).toHaveTextContent("10");
     expect(screen.getByTestId("overlay-escala")).toHaveTextContent("0.96");
     unmount();
 
-    reduzidoMockado = true;
+    preferirMovimentoReduzido(true);
     render(<SondaDeMovimento />);
     expect(screen.getByTestId("reduzido")).toHaveTextContent("true");
     // Deslocamento vira ZERO e a escala vira 1 — sobra a opacidade. Movimento
@@ -162,14 +159,37 @@ describe("Movimento reduzido", () => {
   });
 
   it("MOV-02 — o contador de KPI não conta, apenas mostra o valor", () => {
-    reduzidoMockado = true;
+    preferirMovimentoReduzido(true);
     render(<NumeroAnimado valor={1234} />);
 
     // Sem movimento reduzido haveria DOIS nós (o animado `aria-hidden` e o
     // `.sr-only`); com ele, um só — contar É movimento.
     expect(screen.getByText("1.234")).toBeInTheDocument();
     expect(document.querySelectorAll("[aria-hidden='true']")).toHaveLength(0);
-    reduzidoMockado = false;
+    preferirMovimentoReduzido(false);
+  });
+
+  it("MOV-03 — a troca da preferência com a página aberta chega aos componentes", () => {
+    // Uma media query controlável: o teste muda `matches` e dispara "change",
+    // como o navegador faz quando a pessoa liga "reduzir movimento".
+    let reduzido = false;
+    const ouvintes = new Set<() => void>();
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      get matches() { return query.includes("prefers-reduced-motion: reduce") && reduzido; },
+      media: query,
+      addEventListener: (_: string, ouvinte: () => void) => ouvintes.add(ouvinte),
+      removeEventListener: (_: string, ouvinte: () => void) => ouvintes.delete(ouvinte),
+    }));
+    render(<SondaDeMovimento />);
+    expect(screen.getByTestId("reduzido")).toHaveTextContent("false");
+
+    act(() => { reduzido = true; ouvintes.forEach((ouvinte) => ouvinte()); });
+    expect(screen.getByTestId("reduzido")).toHaveTextContent("true");
+    expect(screen.getByTestId("item-y")).toHaveTextContent("0");
+
+    act(() => { reduzido = false; ouvintes.forEach((ouvinte) => ouvinte()); });
+    expect(screen.getByTestId("reduzido")).toHaveTextContent("false");
+    preferirMovimentoReduzido(false);
   });
 });
 
