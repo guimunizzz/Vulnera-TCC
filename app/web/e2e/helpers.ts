@@ -15,6 +15,8 @@ import { expect, type Page, type APIRequestContext } from "@playwright/test";
 export const CREDENCIAIS = {
   pentester: { email: "bruno.pentester@vulnera.local", senha: "senha12345" },
   admin: { email: "admin@vulnera.local", senha: "admin12345" },
+  // CLIENT da TechNova (docs/DEMO.md): a empresa com histórico rico de findings.
+  cliente: { email: "owner@technova.demo", senha: "demo12345" },
 };
 
 export const API_URL = process.env.E2E_API_URL ?? "http://localhost:3001/api";
@@ -30,7 +32,9 @@ export async function login(page: Page, quem: keyof typeof CREDENCIAIS = "pentes
   const { email, senha } = CREDENCIAIS[quem];
   await page.goto("/login");
   await page.getByLabel(/e-mail/i).fill(email);
-  await page.getByLabel(/senha/i).fill(senha);
+  // Pelo `name`, não pelo rótulo: a tela de login tem também o botão "Mostrar senha", então
+  // getByLabel(/senha/i) casa com dois elementos.
+  await page.locator('input[name="password"]').fill(senha);
   await page.getByRole("button", { name: /entrar/i }).click();
   // A guarda de rota redireciona pro dashboard — é o sinal de que o token valeu.
   await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 30_000 });

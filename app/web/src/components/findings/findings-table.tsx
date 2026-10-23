@@ -63,6 +63,7 @@ import {
 } from "../../lib/finding-query";
 import { QuerySuggestions, type EntidadesSugeriveis, type Sugestao } from "./query-suggestions";
 import { useFindingsExport } from "../../hooks/use-findings-export";
+import { BotaoExportarExcel } from "./botao-exportar-excel";
 import { useEntidadesSugeriveis } from "../../hooks/use-entidades-sugeriveis";
 import { Alert } from "../ui/alert";
 import { OWASP_CATEGORIES, OWASP_LABELS, type OwaspCategory } from "../../types/vulnerability.types";
@@ -100,6 +101,14 @@ export interface FindingsTableProps {
    * (a página global), não em toda tabela que exista. Ligar é uma palavra.
    */
   exportavel?: boolean;
+  /**
+   * Oferece o botão "Exportar Excel": planilha formatada (resumo, dados, dashboard e
+   * acompanhamento), gerada no servidor com o MESMO recorte da tabela.
+   *
+   * Independente de `exportavel`: o CSV é para BI/importação e continua só onde estava;
+   * o Excel vai também para a aba Findings do projeto, para os três papéis.
+   */
+  exportavelExcel?: boolean;
 }
 
 const ROTULO_STATUS: Record<string, string> = {
@@ -127,6 +136,7 @@ export function FindingsTable({
   onSelect,
   acoes,
   exportavel = false,
+  exportavelExcel = false,
 }: FindingsTableProps) {
   const navigate = useNavigate();
   const { reduzido } = useMotion();
@@ -278,6 +288,7 @@ export function FindingsTable({
         acoes={
           <>
             {exportavel && <BotaoDeExportacao exportacao={exportacao} total={total} temDados={Boolean(dados)} />}
+            {exportavelExcel && <BotaoExportarExcel params={filtros.paramsDaApi} total={total} temDados={Boolean(dados) && !erro} />}
             {acoes}
           </>
         }

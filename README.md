@@ -40,7 +40,7 @@ flowchart LR
   <thead><tr><th>Área</th><th>O que o produto oferece</th></tr></thead>
   <tbody>
     <tr><td><strong>Inventário e projetos</strong></td><td>Aplicações por empresa, limites de plano, wizard de criação de projeto e equipe de pentesters.</td></tr>
-    <tr><td><strong>Findings</strong></td><td>Busca global, filtros e consultas salvas; CVSS 3.1, severidade calculada e override justificado com auditoria.</td></tr>
+    <tr><td><strong>Findings</strong></td><td>Busca global, filtros e consultas salvas; exportação em CSV e em <strong>Excel formatado</strong> (dashboard, acompanhamento); CVSS 3.1, severidade calculada e override justificado com auditoria.</td></tr>
     <tr><td><strong>DAST</strong></td><td>Modo Real explícito, Spider tradicional do ZAP, análise passiva, progresso, fila, cancelamento, HTML original e PDF.</td></tr>
     <tr><td><strong>Gestão dos achados</strong></td><td>Triagem com nota, promoção manual para vulnerabilidade de um projeto e comparação entre execuções reais do mesmo alvo.</td></tr>
     <tr><td><strong>Remediação</strong></td><td>Responsável, comentários e evidências; quadro de correção, SLA por severidade e Vulnera Risk Score com contexto da aplicação.</td></tr>
@@ -314,6 +314,7 @@ Consulte o [backlog](docs/BACKLOG.md) antes de iniciar novas features.
   <tr><td><a href="docs/DAST.md">DAST</a></td><td>Modos, execução, configuração e diagnóstico</td></tr>
   <tr><td><a href="docs/EXPOSURE_REMEDIATION.md">Exposure &amp; Remediation</a></td><td>SLA, VRS, aceite de risco, playbooks e quadro</td></tr>
   <tr><td><a href="docs/FINDINGS_QUERY.md">Findings query</a> / <a href="docs/DESIGN_SYSTEM.md">Design system</a></td><td>Busca, componentes e acessibilidade</td></tr>
+  <tr><td><a href="docs/FINDINGS_EXCEL_EXPORT.md">Exportação Excel</a></td><td>Como usar, limites, segurança, decisões e validação</td></tr>
   <tr><td><a href="docs/Vulnera/07-Decisoes/">ADRs</a></td><td>Contexto, decisões arquiteturais e consequências</td></tr>
   <tr><td><a href="docs/BACKLOG.md">Backlog</a> / <a href="docs/ROADMAP_PROMPTS.md">Roadmap</a></td><td>Planejamento e histórico de entregas</td></tr>
 </table>
