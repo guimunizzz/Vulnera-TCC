@@ -60,13 +60,18 @@ function renderApp(rotaInicial: string) {
   );
 }
 
+// As páginas são lazy: o primeiro `import()` de cada uma no vitest transforma a
+// árvore inteira da página e pode passar do 1 s padrão do `findBy`.
+const ESPERA_CHUNK = { timeout: 5000 };
+
 afterEach(limparAuth);
 
 describe("Roteamento de App", () => {
   it("permite alternar entre login e cadastro mantendo o cenário de acesso", async () => {
     limparAuth();
     renderApp("/login");
-    const logo = screen.getByRole("link", { name: "Vulnera — página inicial" });
+    // Cenário e páginas de acesso são lazy (um lote só): espera o primeiro paint.
+    const logo = await screen.findByRole("link", { name: "Vulnera — página inicial" }, ESPERA_CHUNK);
 
     fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
     expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
@@ -88,18 +93,18 @@ describe("Roteamento de App", () => {
     expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
   });
 
-  it("ROTA-02 — rota privada sem sessão ainda redireciona pra /login", () => {
+  it("ROTA-02 — rota privada sem sessão ainda redireciona pra /login", async () => {
     limparAuth();
     renderApp("/dashboard");
 
-    expect(screen.getByRole("heading", { name: "Entrar" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entrar" }, ESPERA_CHUNK)).toBeInTheDocument();
   });
 
-  it("ROTA-03 — rota privada com sessão renderiza normalmente", () => {
+  it("ROTA-03 — rota privada com sessão renderiza normalmente", async () => {
     logar("CLIENT");
     renderApp("/dashboard");
 
-    expect(screen.getByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Olá, Rafael" }, ESPERA_CHUNK)).toBeInTheDocument();
   });
 
   it("ROTA-04 — '/' com sessão continua mostrando a landing, não expulsa quem já está logado", () => {
