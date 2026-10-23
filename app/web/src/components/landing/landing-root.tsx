@@ -8,12 +8,13 @@
  * todas as seções FORA do bundle principal do app.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import Intro3D from "./intro-3d";
 import CustomCursor from "./custom-cursor";
 import Nav from "./nav";
 import { ScrollProgress } from "./ui";
+import { useRecalculoDoScroll } from "./motion/use-landing-motion";
 import Hero from "./sections/hero";
 import Problem from "./sections/problem";
 import HowItWorks from "./sections/how-it-works";
@@ -37,8 +38,12 @@ function hasSeenIntro(): boolean {
 }
 
 function LandingSections() {
+  const raiz = useRef<HTMLDivElement>(null);
+  // Fontes e mudanças de altura (FAQ, demo) desalinhariam os ScrollTriggers.
+  useRecalculoDoScroll(raiz);
+
   return (
-    <div className="font-sans text-[var(--vx-text)]">
+    <div ref={raiz} className="font-sans text-[var(--vx-text)]">
       <ScrollProgress />
       <CustomCursor />
       <Nav />

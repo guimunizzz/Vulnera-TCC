@@ -5,8 +5,11 @@
  * `motion/react` (mesma API para o que usamos aqui); o resto é só tipagem.
  */
 
-import type { ElementType, ReactNode } from "react";
-import { motion, useScroll, useSpring } from "motion/react";
+import { useRef, type ElementType, type ReactNode } from "react";
+import { motion } from "motion/react";
+import { gsap } from "./motion/gsap";
+import { useMovimentoLanding } from "./motion/use-landing-motion";
+import { EASE_LANDING, SCRUB_LANDING } from "./motion/tokens";
 
 type RevealTag = "div" | "li" | "span" | "section" | "p";
 
@@ -64,16 +67,33 @@ export function GlitchHeading({ children, className = "", as: Tag = "h2" }: Glit
 }
 
 /**
- * ScrollProgress — barra neon no topo dirigida por `useScroll` + spring.
+ * ScrollProgress — barra neon no topo que acompanha a rolagem da página.
+ *
+ * Efeito guiado por scroll, então é GSAP (ScrollTrigger com scrub), não
+ * Motion. O scrub curto substitui a spring que existia antes. Sob movimento
+ * reduzido a barra continua — ela informa a posição, como uma barra de
+ * rolagem —, mas colada ao scroll, sem a suavização que a faz "deslizar".
  */
 export function ScrollProgress() {
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 28, mass: 0.4 });
+  const barra = useRef<HTMLDivElement>(null);
+
+  useMovimentoLanding(barra, ({ reduzido }) => {
+    gsap.fromTo(
+      barra.current,
+      { scaleX: 0 },
+      {
+        scaleX: 1,
+        ease: EASE_LANDING.linear,
+        scrollTrigger: { start: 0, end: "max", scrub: reduzido ? true : SCRUB_LANDING.barra },
+      },
+    );
+  });
 
   return (
-    <motion.div
+    <div
+      ref={barra}
       className="fixed left-0 right-0 top-0 z-[45] h-[2px] origin-left bg-[var(--vx-accent)]"
-      style={{ scaleX, boxShadow: "0 0 8px rgba(var(--vx-accent-rgb),0.8)" }}
+      style={{ transform: "scaleX(0)", boxShadow: "0 0 8px rgba(var(--vx-accent-rgb),0.8)" }}
       aria-hidden="true"
     />
   );

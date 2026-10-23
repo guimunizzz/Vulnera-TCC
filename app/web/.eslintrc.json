@@ -25,6 +25,10 @@
           {
             "name": "three",
             "message": "three só entra no kit src/three/ e nos hooks de cena carregados por lazy() — em outro lugar põe ~690 kB no bundle principal."
+          },
+          {
+            "name": "gsap",
+            "message": "GSAP é da landing e entra só por components/landing/motion/ (registro único dos plugins). O app autenticado usa Motion."
           }
         ],
         "patterns": [
@@ -35,6 +39,10 @@
           {
             "group": ["**/three/*", "!**/three/gate"],
             "message": "Do kit de cena, só three/gate (que não importa three) pode ser usado fora dos módulos lazy."
+          },
+          {
+            "group": ["gsap/*", "@gsap/*"],
+            "message": "GSAP é da landing e entra só por components/landing/motion/ (registro único dos plugins). O app autenticado usa Motion."
           },
           {
             "group": ["**/dashboard-ambient-canvas", "**/landing-root"],
@@ -52,6 +60,10 @@
         "src/components/landing/intro-3d.tsx",
         "src/components/landing/ambient-particles.tsx"
       ],
+      "rules": { "no-restricted-imports": "off" }
+    },
+    {
+      "files": ["src/components/landing/motion/**"],
       "rules": { "no-restricted-imports": "off" }
     },
     {

@@ -7,11 +7,19 @@
 
 import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion, useScroll, useTransform } from "motion/react";
+import { motion } from "motion/react";
 import { GlitchHeading } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
+import { gsap } from "../motion/gsap";
+import { useMovimentoLanding } from "../motion/use-landing-motion";
+import { DESLOCAMENTO_LANDING, EASE_LANDING } from "../motion/tokens";
 
 const MotionLink = motion.create(Link);
+
+// Frações do trecho de scroll (seção entrando → centro da seção no centro da
+// tela): a opacidade completa em 60% dele; a escala usa o trecho inteiro.
+const FIM_DA_OPACIDADE = 0.6;
+const TRECHO_COMPLETO = 1;
 
 const FOOTER_LINKS = [
   { label: "Como funciona", href: "#como-funciona" },
@@ -22,11 +30,25 @@ const FOOTER_LINKS = [
 
 export default function FinalCTA() {
   const ref = useRef<HTMLElement>(null);
+  const titulo = useRef<HTMLDivElement>(null);
 
-  // Parallax sutil: o headline cresce levemente conforme a seção entra
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "center center"] });
-  const scale = useTransform(scrollYProgress, [0, 1], [0.92, 1]);
-  const opacity = useTransform(scrollYProgress, [0, 0.6], [0, 1]);
+  // O headline aparece e cresce levemente conforme a seção entra (scrub, sem
+  // suavização: segue o scroll como fazia o `useTransform`). Movimento
+  // reduzido: só a opacidade acompanha o scroll; a escala sai.
+  useMovimentoLanding(ref, ({ reduzido }) => {
+    const linha = gsap.timeline({
+      defaults: { ease: EASE_LANDING.linear },
+      scrollTrigger: { trigger: ref.current, start: "top bottom", end: "center center", scrub: true },
+    });
+    linha.fromTo(titulo.current, { opacity: 0 }, { opacity: 1, duration: FIM_DA_OPACIDADE }, 0);
+    if (!reduzido) {
+      linha.fromTo(titulo.current, { scale: DESLOCAMENTO_LANDING.escalaChamadaFinal }, { scale: 1, duration: TRECHO_COMPLETO }, 0);
+    } else {
+      // Tween vazio do trecho inteiro: a opacidade termina no mesmo ponto do
+      // scroll que termina com escala.
+      linha.to({}, { duration: TRECHO_COMPLETO }, 0);
+    }
+  });
 
   return (
     <>
@@ -34,7 +56,7 @@ export default function FinalCTA() {
         ref={ref}
         className="vx-grid-bg flex min-h-screen flex-col items-center justify-center bg-[var(--vx-bg)] px-6 py-24 text-center"
       >
-        <motion.div style={{ scale, opacity }}>
+        <div ref={titulo}>
           <GlitchHeading
             as="h2"
             className="text-4xl font-bold leading-tight text-[var(--vx-text)] sm:text-[3.75rem] md:text-[4.5rem]"
@@ -53,7 +75,7 @@ export default function FinalCTA() {
           >
             <InteractiveLabel>ORGANIZAR MINHA PRIMEIRA ANÁLISE →</InteractiveLabel>
           </MotionLink>
-        </motion.div>
+        </div>
       </section>
 
       <footer className="border-t border-[rgba(var(--vx-accent-rgb),0.15)] bg-[var(--vx-bg-3)] px-6 py-14">

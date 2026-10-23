@@ -3,16 +3,15 @@
  * ScrollTrigger.
  *
  * Portado de `vulnera-landing/src/components/sections/HowItWorks.jsx`.
+ * Movimento: setup e escala em `../motion/` (Fase 3 do refactor web-motion-3d).
  */
 
 import { useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
 import { CreditCard, Globe, Activity, FileText, type LucideIcon } from "lucide-react";
 import { Reveal, GlitchHeading } from "../ui";
-
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+import { gsap } from "../motion/gsap";
+import { useMovimentoLanding } from "../motion/use-landing-motion";
+import { DESLOCAMENTO_LANDING, DURACAO_LANDING, EASE_LANDING, ESCALONAMENTO_LANDING, SCRUB_LANDING } from "../motion/tokens";
 
 interface Step {
   num: string;
@@ -51,40 +50,38 @@ const STEPS: Step[] = [
 export default function HowItWorks() {
   const scope = useRef<HTMLElement>(null);
 
-  useGSAP(
-    () => {
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (reduced) return;
+  useMovimentoLanding(scope, ({ reduzido, desktop }) => {
+    // Passos aparecem em sequência. Movimento reduzido: só o fade, curto e
+    // sem escalonamento.
+    gsap.from(".vx-step", {
+      opacity: 0,
+      y: reduzido ? 0 : DESLOCAMENTO_LANDING.entrada,
+      duration: reduzido ? DURACAO_LANDING.reduzida : DURACAO_LANDING.entrada,
+      ease: EASE_LANDING.saida,
+      stagger: reduzido ? 0 : ESCALONAMENTO_LANDING.passos,
+      scrollTrigger: { trigger: scope.current, start: "top 70%", once: true },
+    });
 
-      // Passos aparecem em sequência (stagger 200ms)
-      gsap.from(".vx-step", {
-        opacity: 0,
-        y: 24,
-        duration: 0.6,
-        ease: "power2.out",
-        stagger: 0.2,
-        scrollTrigger: { trigger: scope.current, start: "top 70%", once: true },
-      });
-
-      // Linha pontilhada "desenha" conforme o scroll (scrub)
-      gsap.fromTo(
-        ".vx-flow-line",
-        { scaleX: 0 },
-        {
-          scaleX: 1,
-          transformOrigin: "left center",
-          ease: "none",
-          scrollTrigger: {
-            trigger: scope.current,
-            start: "top 75%",
-            end: "top 25%",
-            scrub: 0.5,
-          },
+    // Linha pontilhada "desenha" conforme o scroll (scrub). É escala: some
+    // sob movimento reduzido (a linha fica inteira) e abaixo de md, onde ela
+    // nem é exibida.
+    if (reduzido || !desktop) return;
+    gsap.fromTo(
+      ".vx-flow-line",
+      { scaleX: 0 },
+      {
+        scaleX: 1,
+        transformOrigin: "left center",
+        ease: EASE_LANDING.linear,
+        scrollTrigger: {
+          trigger: scope.current,
+          start: "top 75%",
+          end: "top 25%",
+          scrub: SCRUB_LANDING.linha,
         },
-      );
-    },
-    { scope },
-  );
+      },
+    );
+  });
 
   return (
     <section

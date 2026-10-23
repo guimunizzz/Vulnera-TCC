@@ -45,7 +45,7 @@ vi.mock("gsap", () => ({
     utils: { toArray: () => [] },
   },
 }));
-vi.mock("gsap/ScrollTrigger", () => ({ ScrollTrigger: { create: () => undefined } }));
+vi.mock("gsap/ScrollTrigger", () => ({ ScrollTrigger: { create: () => undefined, refresh: () => undefined } }));
 vi.mock("@gsap/react", () => ({ useGSAP: () => undefined }));
 
 beforeEach(() => {
