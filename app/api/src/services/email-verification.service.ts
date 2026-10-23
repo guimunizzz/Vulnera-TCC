@@ -7,7 +7,10 @@ import type { EmailVerificationToken } from "../models/email-verification-token.
 import type { EmailSender } from "../models/email.model";
 import type { VerificationDeliveryResult } from "../models/email-verification.model";
 import { accessTokenDeadline } from "../models/access-token.model";
-import type { AccessRequestRepository } from "../repositories/access-request.repository";
+import type {
+  AccessRequestRepository,
+  AccessRepositories,
+} from "../repositories/access-request.repository";
 import { generateAccessToken, hashAccessToken } from "../utils/access-token.util";
 import { buildEmailVerificationMessage } from "../utils/email-verification-message.util";
 
@@ -40,43 +43,59 @@ export class EmailVerificationService {
     return this.deliver(id, true);
   }
 
+  /** Caminho público: issue/rotação com cooldown persistido no slot bloqueado. */
+  requestVerification(id: string, cooldownMs: number): Promise<VerificationDeliveryResult> {
+    if (!Number.isSafeInteger(cooldownMs) || cooldownMs < 0) {
+      throw new Error("INVALID_ACCESS_REQUEST_RESEND_COOLDOWN_MS");
+    }
+    return this.deliver(id, true, cooldownMs, true);
+  }
+
   async confirmEmail(rawToken: string): Promise<boolean> {
     if (!isCanonicalVerificationToken(rawToken)) return false;
     const tokenHash = hashAccessToken(rawToken);
 
-    return this.withPersistence(async () => this.requests.transaction(async ({ requests, verificationTokens }) => {
-      // O hash encontra o pedido; o slot é relido com FOR UPDATE após travá-lo.
-      const indexedToken = await verificationTokens.findByHash(tokenHash);
-      if (!indexedToken) return false;
+    return this.withPersistence(() => this.requests.transactionWithRetry(
+      async ({ requests, verificationTokens }) => {
+        // O hash encontra o pedido; o slot é relido com FOR UPDATE após travá-lo.
+        const indexedToken = await verificationTokens.findByHash(tokenHash);
+        if (!indexedToken) return false;
 
-      const parent = await requests.findByIdForUpdate(indexedToken.accessRequestId);
-      if (!parent) return false;
+        const parent = await requests.findByIdForUpdate(indexedToken.accessRequestId);
+        if (!parent) return false;
 
-      const now = this.clock();
-      if (parent.status !== "PENDING_EMAIL_VERIFICATION") return false;
-      if (now.getTime() >= parent.expiresAt.getTime()) {
-        const expiration = new AccessRequestEntity(parent).transitionTo("EXPIRED", undefined, undefined, now);
-        if (!await requests.transitionIfCurrent(parent.id, expiration)) {
+        const now = this.clock();
+        if (parent.status !== "PENDING_EMAIL_VERIFICATION") return false;
+        if (now.getTime() >= parent.expiresAt.getTime()) {
+          const expiration = new AccessRequestEntity(parent).transitionTo("EXPIRED", undefined, undefined, now);
+          if (!await requests.transitionIfCurrent(parent.id, expiration)) {
+            throw new Error("ACCESS_VERIFICATION_TRANSITION_CONFLICT");
+          }
+          return false;
+        }
+
+        const currentToken = await verificationTokens.findByAccessRequestIdForUpdate(parent.id);
+        if (!isCurrentUsableToken(currentToken, tokenHash, now)) return false;
+        if (!await verificationTokens.consumeIfAvailable(tokenHash, now)) return false;
+
+        const transition = new AccessRequestEntity(parent).transitionTo("PENDING_REVIEW", undefined, undefined, now);
+        if (!await requests.transitionIfCurrent(parent.id, transition)) {
+          // Obriga rollback do consumo se a transição não aconteceu.
           throw new Error("ACCESS_VERIFICATION_TRANSITION_CONFLICT");
         }
-        return false;
-      }
-
-      const currentToken = await verificationTokens.findByAccessRequestIdForUpdate(parent.id);
-      if (!isCurrentUsableToken(currentToken, tokenHash, now)) return false;
-      if (!await verificationTokens.consumeIfAvailable(tokenHash, now)) return false;
-
-      const transition = new AccessRequestEntity(parent).transitionTo("PENDING_REVIEW", undefined, undefined, now);
-      if (!await requests.transitionIfCurrent(parent.id, transition)) {
-        // Obriga rollback do consumo se a transição não aconteceu.
-        throw new Error("ACCESS_VERIFICATION_TRANSITION_CONFLICT");
-      }
-      return true;
-    }));
+        return true;
+      },
+      false,
+    ));
   }
 
-  private async deliver(id: string, allowResend: boolean): Promise<VerificationDeliveryResult> {
-    const preparation = await this.withPersistence<PreparationResult>(async () => this.requests.transaction(async ({ requests, verificationTokens }) => {
+  private async deliver(
+    id: string,
+    allowResend: boolean,
+    cooldownMs?: number,
+    retryTransaction = false,
+  ): Promise<VerificationDeliveryResult> {
+    const prepare = async ({ requests, verificationTokens }: AccessRepositories) => {
       const parent = await requests.findByIdForUpdate(id);
       if (!parent || parent.status !== "PENDING_EMAIL_VERIFICATION") {
         return { kind: "RESULT", result: "NOT_ELIGIBLE" } as const;
@@ -92,10 +111,16 @@ export class EmailVerificationService {
       }
 
       const currentToken = await verificationTokens.findByAccessRequestIdForUpdate(parent.id);
-      if (!allowResend && currentToken) {
+      if (allowResend && currentToken?.usedAt) {
         return { kind: "RESULT", result: "CONFLICT" } as const;
       }
-      if (allowResend && currentToken?.usedAt) {
+      if (cooldownMs !== undefined && currentToken
+        && currentToken.issuedAt.getTime() + cooldownMs > now.getTime()) {
+        // issuedAt é consultado sob os locks do pedido e do slot: aliases e
+        // chamadas simultâneas compartilham a mesma janela persistida.
+        return { kind: "RESULT", result: "CONFLICT" } as const;
+      }
+      if (!allowResend && currentToken) {
         return { kind: "RESULT", result: "CONFLICT" } as const;
       }
 
@@ -138,7 +163,11 @@ export class EmailVerificationService {
           expiresAt,
         },
       } as const;
-    }));
+    };
+
+    const preparation = await this.withPersistence<PreparationResult>(() => retryTransaction
+      ? this.requests.transactionWithRetry(prepare, true)
+      : this.requests.transaction(prepare));
 
     if (preparation.kind === "RESULT") return preparation.result;
 
@@ -159,7 +188,7 @@ export class EmailVerificationService {
 
   private async invalidateFailedDelivery(delivery: PreparedDelivery): Promise<void> {
     try {
-      await this.requests.transaction(async ({ requests, verificationTokens }) => {
+      await this.requests.transactionWithRetry(async ({ requests, verificationTokens }) => {
         const now = this.clock();
         const revoked = await verificationTokens.revokeIfAvailable({
           accessRequestId: delivery.accessRequestId,
@@ -172,7 +201,7 @@ export class EmailVerificationService {
             now,
           );
         }
-      });
+      }, false);
     } catch {
       // Cleanup incompleto nunca pode ser apresentado como envio concluído.
       throw new Error("ACCESS_VERIFICATION_CLEANUP_FAILED");

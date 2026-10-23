@@ -486,9 +486,7 @@ describe("AccessRequest — Etapas 0, 1 e 1.1", () => {
     expect(await prisma.user.findUnique({ where: { id: legacy.id } })).toEqual(legacy);
   });
 
-  it("não monta endpoints de solicitação ou ativação", async () => {
-    for (const path of ["/api/access-requests", "/api/access-requests/verify-email", "/api/account-activation/activate"]) {
-      expect((await request(app).post(path).send(INPUT)).status).toBe(404);
-    }
+  it("mantém o endpoint futuro de ativação fora da Etapa 3", async () => {
+    await request(app).post("/api/account-activation/activate").send(INPUT).expect(404);
   });
 });

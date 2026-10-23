@@ -9,6 +9,74 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-10-23 — Issue #51: Etapa 4 concluída
+
+**✅ 100% do recorte, aprovada com ressalvas e pronta para revisão.**
+Concluída a fila administrativa de AccessRequest, autorização pelo papel ADMIN
+persistido, decisões de aprovação/rejeição e emissão/reenvio de convites. Sem
+schema/migration; transições de estado ficam em `AccessRequestEvent` e eventos
+de convite em `AuditLog`. Sem consumo de convite, criação de User/JWT ou cutover
+do cadastro legado. A Etapa 5+ continua futura.
+
+Suíte completa: **57/57 suítes, 995/995 testes PASS, 454,05 s**. Build,
+lint focal, Prisma validate/generate aprovados. Coverage dos quatro services:
+88,26% statements, 68,49% branches, 96,77% functions e 95,03% lines.
+`npm run check` termina com exit 1 apenas por dois imports não usados anteriores em
+`vulnerability.service.ts:46`, antes de Jest; a suíte passou separadamente.
+Testes SMTP usaram FakeEmailSender. Testes de integração/DB foram executados
+pelo orquestrador em `vulnera_test`, MySQL descartável em tmpfs na porta 33354;
+o banco de app na 3307 não foi tocado.
+
+Branch `refactor/security-auth-gated-access`; merge de `origin/dev` concluído em
+`9f7e23a`. Etapas 2–4 foram consolidadas em um commit local separado, sem push
+ou PR; os três outputs das Issues #19/#20 ficaram fora. Dos 35 hashes protegidos
+do premerge, 25 permaneceram iguais e 10 mudaram por owners autorizados; seis
+itens alheios permaneceram inalterados. Limites: não há outbox; o cadastro legado segue ativo
+e há corrida cross-table até cutover; não há ativação nesta etapa. Ownership,
+contratos e detalhes de validação em
+[`SECURITY-AUTH-ETAPA-4.md`](../../../SECURITY-AUTH-ETAPA-4.md).
+
+## 2026-10-23 — Issue #51: início da Etapa 4
+
+Registro histórico do início da etapa, substituído pelo fechamento acima.
+Os resultados e a conclusão abaixo ainda não estavam disponíveis neste marco.
+
+O merge com `origin/dev` foi concluído localmente em `9f7e23a`. Do inventário
+local de 35 hashes, 25 permaneceram iguais; 10 mudaram somente pelos owners
+autorizados, e seis itens alheios permaneceram inalterados. Etapa 4 em andamento:
+fila de AccessRequest, autorização ADMIN atual, decisões transacionais e convites de
+uso único. Não inicia ativação, criação de User/JWT ou migração do cadastro
+legado. Baseline antes do recorte: build aprovado, 176/176 em cinco suítes e
+Prisma validate/generate aprovados. Validação focal atual: build, lint e Prisma
+aprovados; quatro suítes novas 35/35, regressões selecionadas 245/245. Coverage
+dos quatro services: 88,26% statements, 68,49% branches, 96,77% functions e
+95,03% lines. A suíte completa ainda está em execução; ainda não há fechamento.
+Ownership e contratos em
+[`SECURITY-AUTH-ETAPA-4.md`](../../../SECURITY-AUTH-ETAPA-4.md).
+
+## 2026-10-23 — Issue #51: Etapa 3 concluída
+
+**✅ 100% do recorte; pronta para revisão/consolidação.** Publicados os endpoints
+de solicitação, reenvio e confirmação de e-mail com Turnstile fail-closed,
+rate limits Token Bucket independentes, respostas neutras e composição lazy por
+Factory Method. Build aprovado; Jest completo **53/53 suítes, 960/960 testes**.
+Coverage agregado dos três services do recorte: 91,52% statements, 80% branches,
+93,33% functions e 94,87% lines. Smoke SMTP real contra MailHog: duas rodadas
+11/11, total de 24 mensagens confirmado. Os 11 CHECKs foram confirmados como
+enforced nos dois bancos descartáveis; contagens de domínio zero referem-se
+somente a `issue51_smoke`. Nenhuma chamada real à Cloudflare.
+
+`npm run check` continua exit 1 no lint, antes de Jest, somente pelos imports
+antigos `UserEntity` e `UserResponseDTO` em `vulnerability.service.ts:46`; Jest
+completo passou em comando separado. Branch `refactor/security-auth-gated-access`;
+no fechamento da Etapa 3, merge `origin/dev` permanecia sem commit/push/PR. Foi
+concluído posteriormente na Etapa 4 em `9f7e23a`. Limites:
+cadastro legado ainda ativo, corrida possível entre tabelas até cutover,
+latência não constante e envio SMTP síncrono sem outbox. Ownership, evidências e
+ressalvas em [relatório da Etapa 3](../../../SECURITY-AUTH-ETAPA-3.md); decisão
+em ADR-047, cuja colisão numérica com o ADR Excel de `dev` foi mantida sem
+renumeração.
+
 ## 2026-10-22 — Issue #51: Etapa 2 concluída
 
 **✅ 100% do recorte; pronta para revisão e consolidação.** Emissão, reenvio e

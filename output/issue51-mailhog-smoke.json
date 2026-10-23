@@ -1,0 +1,99 @@
+{
+  "artifact": "issue51-mailhog-smoke",
+  "createdAt": "2026-10-23T11:57:04.634Z",
+  "target": {
+    "environment": "test",
+    "databaseHost": "127.0.0.1",
+    "databasePort": 33354,
+    "schema": "issue51_smoke",
+    "smtp": "127.0.0.1:1025",
+    "mailhogApi": "loopback:8025"
+  },
+  "retainedFixtures": true,
+  "baselineCounts": {
+    "users": 0,
+    "companies": 0,
+    "subscriptions": 0,
+    "refreshTokens": 0,
+    "invitations": 0
+  },
+  "finalCounts": {
+    "users": 0,
+    "companies": 0,
+    "subscriptions": 0,
+    "refreshTokens": 0,
+    "invitations": 0
+  },
+  "scenarios": [
+    {
+      "scenario": "emissão, commit pré-SMTP, hash e mensagem MailHog",
+      "expected": "SENT; commit visível no adapter antes do SMTP; hash/TTL/evento persistidos; MIME correto",
+      "obtained": "SENT; hash+TTL+evento e commit pré-SMTP confirmados; remetente, destino, assunto, text/html e fragmento validados",
+      "pass": true
+    },
+    {
+      "scenario": "token inválido e confirmação com replay",
+      "expected": "inválido=false; confirmação válida=true; replay=false; PENDING_REVIEW e emailVerifiedAt",
+      "obtained": "inválido=false; válido=true; replay=false; estado, horário, consumo e trilha confirmados",
+      "pass": true
+    },
+    {
+      "scenario": "token expirado",
+      "expected": "confirmEmail=false sem consumo; pedido continua aguardando verificação",
+      "obtained": "false; token não consumido e pedido preservado",
+      "pass": true
+    },
+    {
+      "scenario": "reenvio e rotação",
+      "expected": "SENT; token anterior recusado; token atual aceito",
+      "obtained": "dois envios; hash aponta ao reenvio; token antigo recusado e atual consumido",
+      "pass": true
+    },
+    {
+      "scenario": "confirmações concorrentes",
+      "expected": "uma confirmação verdadeira e outra falsa; PENDING_REVIEW",
+      "obtained": "uma confirmação aceita e uma recusada; estado final PENDING_REVIEW",
+      "pass": true
+    },
+    {
+      "scenario": "confirmação concorrente com reenvio",
+      "expected": "uma única ordem serial válida; pedido termina em PENDING_REVIEW",
+      "obtained": "reenvio serializado primeiro; token anterior recusado, atual aceito",
+      "pass": true
+    },
+    {
+      "scenario": "reenvios concorrentes",
+      "expected": "dois reenvios serializados; apenas hash atual utilizável",
+      "obtained": "dois reenvios aceitos; somente o hash persistido confirmou; dois eventos de rotação",
+      "pass": true
+    },
+    {
+      "scenario": "falha SMTP real e recuperação",
+      "expected": "porta loopback fechada => DELIVERY_FAILED+revogação+evento; MailHog reenvia e confirma",
+      "obtained": "falha capturada e hash revogado; evento gravado; reenvio MailHog confirmado",
+      "pass": true
+    },
+    {
+      "scenario": "pedido já expirado",
+      "expected": "issueVerification=NOT_ELIGIBLE; estado EXPIRED; sem token ou e-mail",
+      "obtained": "inelegível; EXPIRED; nenhum token ou e-mail",
+      "pass": true
+    },
+    {
+      "scenario": "pedido já verificado",
+      "expected": "reenvio=NOT_ELIGIBLE e contagem de mensagem não aumenta",
+      "obtained": "reenvio inelegível; nenhum e-mail adicional",
+      "pass": true
+    },
+    {
+      "scenario": "isolamento sem criação de identidade ou assinatura",
+      "expected": "contagens User, Company, Subscription, RefreshToken e AccessInvitation inalteradas",
+      "obtained": "contagens das cinco tabelas idênticas ao início",
+      "pass": true
+    }
+  ],
+  "summary": {
+    "passed": 11,
+    "failed": 0
+  }
+}

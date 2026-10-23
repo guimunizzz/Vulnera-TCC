@@ -10,11 +10,12 @@ import {
   type CreateAccessRequestDTO,
 } from "../models/access-request.model";
 import type { EmailVerificationEventType } from "../models/email-verification.model";
+import type { AccessInvitationAuditAction } from "../models/access-invitation.model";
 import { AccessInvitationRepository } from "./access-invitation.repository";
 import { EmailVerificationTokenRepository } from "./email-verification-token.repository";
 import { inAccessTransaction, lockAccessRequest, type AccessDatabaseClient } from "./access-transaction.repository";
 
-type AccessRepositories = {
+export type AccessRepositories = {
   requests: AccessRequestRepository;
   verificationTokens: EmailVerificationTokenRepository;
   invitations: AccessInvitationRepository;
@@ -30,6 +31,20 @@ export class AccessRequestRepository {
       verificationTokens: new EmailVerificationTokenRepository(client),
       invitations: new AccessInvitationRepository(client),
     }));
+  }
+
+  /** Reabre a operação inteira após deadlock ou colisão do índice ativo. */
+  transactionWithRetry<T>(
+    operation: (repositories: AccessRepositories) => Promise<T>,
+    retryUniqueConflict = true,
+  ): Promise<T> {
+    return retryPublicTransaction(() => this.transaction(operation), retryUniqueConflict);
+  }
+
+  /** Consulta com a collation real de User.email, sem aproximá-la em JavaScript. */
+  async existsUserByEmail(email: string): Promise<boolean> {
+    const normalized = normalizeAccessRequestEmail(email);
+    return (await this.prisma.user.findUnique({ where: { email: normalized }, select: { id: true } })) !== null;
   }
 
   createIfEmailAvailable(dto: CreateAccessRequestDTO, now: Date = new Date()): Promise<AccessRequest | null> {
@@ -73,6 +88,18 @@ export class AccessRequestRepository {
     return this.prisma.accessRequest.findUnique({ where: { activeEmail: normalizeAccessRequestEmail(email) } });
   }
 
+  /** A leitura por e-mail com lock só pode ocorrer dentro da transação. */
+  async findActiveByEmailForUpdate(email: string): Promise<AccessRequest | null> {
+    if ("$transaction" in this.prisma) {
+      throw new Error("ACCESS_REQUEST_LOCK_REQUIRES_TRANSACTION");
+    }
+    const normalized = normalizeAccessRequestEmail(email);
+    const rows = await this.prisma.$queryRaw<AccessRequest[]>`
+      SELECT * FROM AccessRequest WHERE activeEmail = ${normalized} FOR UPDATE
+    `;
+    return rows[0] ?? null;
+  }
+
   findHistoryByEmail(email: string): Promise<AccessRequest[]> {
     return this.prisma.accessRequest.findMany({
       where: { email: normalizeAccessRequestEmail(email) },
@@ -104,6 +131,29 @@ export class AccessRequestRepository {
         actorId: null,
         reason: null,
         createdAt,
+      },
+    });
+  }
+
+  /** Mantém a auditoria de convite no AuditLog sem alargar o CHECK de eventos anônimos. */
+  async createInvitationAuditEvent(
+    accessRequestId: string,
+    action: AccessInvitationAuditAction,
+    actorId: string,
+    now: Date,
+  ): Promise<void> {
+    if ("$transaction" in this.prisma) {
+      throw new Error("ACCESS_INVITATION_AUDIT_REQUIRES_TRANSACTION");
+    }
+    await this.prisma.auditLog.create({
+      data: {
+        actorId,
+        companyId: null,
+        entityType: "AccessRequest",
+        entityId: accessRequestId,
+        action,
+        diffJson: null,
+        createdAt: now,
       },
     });
   }
@@ -144,4 +194,26 @@ export class AccessRequestRepository {
       return true;
     });
   }
+}
+
+async function retryPublicTransaction<T>(
+  operation: () => Promise<T>,
+  retryUniqueConflict = true,
+): Promise<T> {
+  const maxAttempts = 3;
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= maxAttempts || !isRetryablePublicWrite(error, retryUniqueConflict)) throw error;
+    }
+  }
+}
+
+function isRetryablePublicWrite(error: unknown, retryUniqueConflict: boolean): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const candidate = error as { code?: unknown; meta?: { code?: unknown; errno?: unknown } };
+  if (candidate.code === "P2034" || (retryUniqueConflict && candidate.code === "P2002")) return true;
+  const databaseCode = String(candidate.meta?.code ?? candidate.meta?.errno ?? "");
+  return candidate.code === "P2010" && ["1213", "1205", "40001"].includes(databaseCode);
 }

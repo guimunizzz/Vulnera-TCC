@@ -6,6 +6,10 @@
 
 ## Status
 
+**✅ 2026-10-23 — Issue #51: Etapa 4 concluída (100% do recorte; aprovada com ressalvas).** Merge `origin/dev` em `9f7e23a`; Etapas 2–4 consolidadas em um commit local separado, sem push. Os três outputs das Issues #19/#20 ficaram fora. Fila administrativa, autorização ADMIN atual, decisões e convites concluídos. Build, lint focal, Prisma validate/generate e Jest completo passaram: **57/57 suítes, 995/995 testes, 454,05 s**. Coverage dos quatro services: 88,26% statements, 68,49% branches, 96,77% functions, 95,03% lines. `npm run check` ainda falha no lint por dois imports anteriores antes do Jest; execução completa separada passou. [Ownership e ressalvas](SECURITY-AUTH-ETAPA-4.md).
+
+**✅ 2026-10-23 — Issue #51: Etapa 3 concluída (100% do recorte).** Endpoints públicos, Turnstile fail-closed, limites independentes e wiring lazy concluídos. Build aprovado; Jest completo **53/53 suítes, 960/960 testes**. Cobertura agregada dos três services do recorte: 91,52% statements, 80% branches, 93,33% functions e 94,87% lines. `npm run check` ainda para antes do Jest por dois imports antigos em `vulnerability.service.ts:46`; suíte completa passou separadamente. Smoke MailHog 11/11 em duas rodadas, total de 24 mensagens confirmado. Cloudflare real não exercitada. No fechamento da Etapa 3, merge ainda aberto; concluído depois na Etapa 4 em `9f7e23a`. [Relatório/ownership](SECURITY-AUTH-ETAPA-3.md).
+
 **✅ 2026-10-22 — Issue #51: Etapa 2 concluída (100% do recorte).** Build, lint focal, Prisma validate/generate e MySQL descartável aprovados; API completa **46/46 suítes, 844/844 testes**. `npm run check` permanece bloqueado por dois imports antigos em `vulnerability.service.ts:45`, sem executar Jest nesse script. Implementação não adiciona endpoints nem inicia ativação. Detalhes, ownership e limites em [relatório](SECURITY-AUTH-ETAPA-2.md). Pronta para revisão/consolidação, sem commit/push.
 
 **✅ 2026-10-22 — Consolidação local da Issue #51.** Commit das Etapas 0, 1 e 1.1 autorizado pelo usuário, limitado aos 20 arquivos da entrega; os seis arquivos alheios anteriores permanecem fora. Esse registro descreve o estado no momento da consolidação; a Etapa 2 foi concluída depois no marco acima. Resultados e pendências do hardening preservados abaixo.
@@ -19,8 +23,9 @@
 - [x] **SEC-AUTH-1.1:** hardening de lifecycle, collation, reserva, recuperação e tokens, com matriz independente de estados, concorrência, rollback e upgrade real.
 - [x] **SEC-AUTH-LIFECYCLE:** política inicialmente adiada resolvida na Etapa 1.1: EXPIRED/ACTIVATED terminais, reserva liberada e histórico mantido; APPROVED reserva apenas até encerramento, com convite reemitível dentro de sua janela. Rotação/revogação disponíveis nas primitivas.
 - [x] **SEC-AUTH-2 — verificação por e-mail:** serviço, configuração, adapter, factory e testes concluídos; 844/844 em 46 suítes.
-- [ ] **SEC-AUTH-3+:** endpoints HTTP, proteções públicas, revisão administrativa, convite e ativação em etapas futuras; não iniciadas.
-- [ ] **SEC-AUTH-ORQUESTRACAO:** expiração agendada/recuperação operacional e ativação futura com consumo de convite, criação de User, transição e liberação da reserva em uma transação, tratando conflito de User.email. Parte de emissão/verificação após commit está na Etapa 2; resto pendente.
+- [x] **SEC-AUTH-3:** endpoints HTTP para pedido, reenvio e confirmação com CAPTCHA e rate limits independentes; suíte completa 960/960 e build aprovados. [Relatório](SECURITY-AUTH-ETAPA-3.md).
+- [x] **SEC-AUTH-4:** fila e revisão administrativa, decisões e emissão/reenvio de convites concluídos; 995/995 na suíte completa. [Relatório](SECURITY-AUTH-ETAPA-4.md).
+- [ ] **SEC-AUTH-5+ / ORQUESTRACAO:** ativação com consumo de convite e criação de User/transição/liberação da reserva em transação, expiração/recuperação operacional e cutover do cadastro legado. Não iniciado.
 
 **✅ 2026-10-16 — Frontend Docker atualizado para exibir a barra lateral (100%).** Corrigida a divergência entre a validação via Vite e a versão servida em `http://localhost:8086`: reconstruído e recriado somente `web` com `docker compose up -d --build --no-deps web`. HTML/JS/CSS retornam HTTP 200 e contêm a nova marca, grupos e estilos. API/MySQL seguem saudáveis sem reinicialização. Evidência: `output/sidebar-applied/served-check.md`; procedimento registrado em `docs/FRONTEND_WEB.md`.
 

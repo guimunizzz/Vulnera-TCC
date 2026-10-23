@@ -21,6 +21,23 @@ export class AccessInvitationRepository {
     return this.prisma.accessInvitation.findUnique({ where: { tokenHash } });
   }
 
+  findByAccessRequestId(accessRequestId: string): Promise<AccessInvitation | null> {
+    return this.prisma.accessInvitation.findUnique({ where: { accessRequestId } });
+  }
+
+  /** Lê o slot atual com lock, sempre depois de bloquear o pedido. */
+  async findByAccessRequestIdForUpdate(accessRequestId: string): Promise<AccessInvitation | null> {
+    if ("$transaction" in this.prisma) {
+      throw new Error("ACCESS_INVITATION_LOCK_REQUIRES_TRANSACTION");
+    }
+    const rows = await this.prisma.$queryRaw<AccessInvitation[]>`
+      SELECT * FROM AccessInvitation
+      WHERE accessRequestId = ${accessRequestId}
+      FOR UPDATE
+    `;
+    return rows[0] ?? null;
+  }
+
   rotateIfAvailable(data: RotateAccessTokenDTO, now: Date): Promise<boolean> {
     return inAccessTransaction(this.prisma, async tx => {
       const parent = await lockAccessRequest(tx, data.accessRequestId);

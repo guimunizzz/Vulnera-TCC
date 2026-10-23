@@ -8,6 +8,73 @@
 
 ---
 
+## Issue #51 — Etapa 4 · ✅ Concluída em 2026-10-23
+
+Implementar fila administrativa de `AccessRequest`, decisões de aprovação/rejeição
+e reenvio de convite. Rotas somente para ADMIN com JWT, limiter autenticado,
+`requireRole("ADMIN")` e revalidação do papel persistido. Factory Method e
+`routes/routes.ts` como único ponto de registro. Sanitizar todos os DTOs; nunca
+retornar token/hash. Aprovação e preparo do convite devem compartilhar a
+transação; SMTP ocorre após commit. Consultas/rejeição não podem exigir env SMTP.
+
+Não criar User/JWT/Company/Subscription, não consumir convite nem migrar o
+cadastro legado. Sem schema/migration: registrar transições de estado em
+`AccessRequestEvent` e eventos `ISSUED`/`REISSUED`/`DELIVERY_FAILED` no AuditLog,
+pois o CHECK de `AccessRequestEvent` não permite os eventos de convite. Validar
+com suites de consulta/autorização, decisões, convite e HTTP, build/lint e banco
+descartável identificado conforme ownership. Relatório inicial e contratos em
+`SECURITY-AUTH-ETAPA-4.md`; build, lint focal, Prisma e Jest completo passaram:
+57/57 suítes, 995/995 testes, 454,05 s. Coverage dos quatro services: 88,26%
+statements, 68,49% branches, 96,77% functions e 95,03% lines.
+
+### Histórico — Issue #51, Etapa 4 (2026-10-23)
+
+- Branch: `refactor/security-auth-gated-access`; PR não aberta. Merge de
+  `origin/dev` concluído em `9f7e23a` (pais `c9f731f` e `44f9c58`); Etapas 2–4
+  reunidas em commit local separado, sem push. Os três outputs das Issues #19/#20
+  ficaram fora da consolidação.
+- Ownership, contratos e desvios: [relatório](SECURITY-AUTH-ETAPA-4.md).
+- Validação: 57/57 suítes, 995/995 testes, exit 0; build, lint focal e Prisma
+  validate/generate também aprovados. `npm run check` continua exit 1 por dois
+  imports anteriores antes de Jest; a suíte passou separadamente.
+- Ressalvas: branches dos quatro services 68,49%; sem outbox; cadastro legado
+  permanece ativo e cutover/ativação estão na Etapa 5+.
+
+---
+
+## Issue #51 — Etapa 3 · ✅ Concluída em 2026-10-23
+
+Expor o fluxo de solicitação pública por `POST /api/access-requests`, reenvio
+por `POST /api/access-requests/resend-verification` e confirmação por
+`POST /api/access-requests/verify-email`. Usar Factory Method e o centralizador
+de rotas; exigir Turnstile fail-closed em solicitação/reenvio e limites próprios
+que continuem ativos com o limiter global desligado. Pedido/reenvio precisam
+ter status/corpo neutros idênticos; confirmação nunca retorna detalhes do pedido.
+Não alterar cadastro/login existentes, schema ou endpoints admin/ativação.
+
+Antes de código, registrar o Ownership Registry em
+`SECURITY-AUTH-ETAPA-3.md`. Conferir schema e contratos dos services existentes;
+validar SMTP por harness local autorizado, nunca inferir inbox real. Encerrar
+com testes HTTP/service/proteção, build/lint e banco descartável identificado;
+documentar os resultados observados, falhas ambientais e limites. Manter a
+colisão de numeração ADR-047 registrada e sem renumeração nesta etapa.
+
+### Histórico — Issue #51, Etapa 3 (2026-10-23)
+
+- Branch: `refactor/security-auth-gated-access`; no encerramento da Etapa 3,
+  merge local de `origin/dev` permanecia aberto (`MERGE_HEAD=44f9c58`). Foi
+  concluído posteriormente na Etapa 4 em `9f7e23a`; sem push ou PR.
+- Ownership exclusivo, decisões e limitações: [relatório da Etapa 3](SECURITY-AUTH-ETAPA-3.md).
+- Validação: build aprovado; Jest completo **53/53 suítes, 960/960 testes**.
+  Coverage dos três services do recorte: 91,52% statements, 80% branches,
+  93,33% functions e 94,87% lines. Smoke MailHog executado duas vezes,
+  11/11 por rodada e 24 mensagens confirmadas.
+- Desvios/limites: `npm run check` para no lint por dois imports antigos em
+  `vulnerability.service.ts:46` e não executa Jest; a suíte passou separada.
+  Não houve chamada real à Cloudflare. Cadastro legado e corrida entre tabelas,
+  tempo constante e outbox permanecem fora do recorte. Colisão ADR-047 mantida
+  sem renumeração. Etapa 4 não iniciada.
+
 ## Issue #51 — Etapa 2 · ✅ Concluída em 2026-10-22
 
 Recorte atual: emissão/reenvio e confirmação de e-mail de `AccessRequest`, com

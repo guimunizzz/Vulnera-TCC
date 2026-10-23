@@ -280,6 +280,111 @@ não usados em `vulnerability.service.ts:45`; Jest daquele script não executa,
 mas a suíte completa separada passou. A etapa está pronta para revisão e
 consolidação, sem commit/push. Etapa 3 não iniciada.
 
+## Etapa 3 — endpoints públicos de verificação (vigente; concluída em 2026-10-23)
+
+### Contexto
+
+A etapa passa a expor solicitação, reenvio e confirmação por HTTP. O cadastro
+público legado ainda existe e não compartilha uma constraint única com a tabela
+de `AccessRequest`; a integração precisa limitar dados públicos sem criar User,
+Company, Subscription, sessão ou privilégio.
+
+### Decisão
+
+- Registrar `POST /api/access-requests`, `/resend-verification` e
+  `/verify-email` somente pelo centralizador `routes/routes.ts`. Services não
+  recebem `req`/`res`; cada stack é montada por Factory Method.
+- Request e resend exigem CAPTCHA Turnstile Siteverify com segredo obrigatório,
+  destino oficial fixo, timeout e checagem opcional de hostname/action. Falha,
+  timeout ou resposta incoerente falha fechado. Verificação de e-mail usa o
+  token de 32 bytes enviado no link e recebe somente limite por IP.
+- Limites específicos usam buckets Token Bucket separados do limiter geral:
+  request/IP burst 5 com refill 5/h, resend/IP burst 10 com refill 10/h,
+  verify/IP burst 30 com refill 30/min, e e-mail burst 5 tentativas com refill
+  5/dia. Não são janelas fixas nem cotas absolutas móveis. Tentativas válidas
+  consomem quota por e-mail mesmo sem pedido elegível ou envio SMTP. O cooldown
+  de 60 s é separado e há teto finito de chaves. Não há env de bypass.
+- Chave IP usa `req.ip`/socket e respeita `TRUST_PROXY_HOPS`; o default 0 não
+  confia em XFF. Aumentar hops só é correto atrás do ingresso confiável
+  correspondente. Nenhum header de proxy é interpretado manualmente.
+- O cooldown persistente do pedido usa o relógio injetável do service e `issuedAt`
+  sob lock; o bucket local por IP/e-mail usa o relógio do processo e se limita à
+  instância atual. Cooldown não substitui a serialização transacional.
+- Request e resend devolvem status 202 e mensagem neutra idênticos quando a
+  operação chega ao service, inclusive quando a entrega SMTP é recusada e o
+  token/evento de falha são tratados pelo service. Erro de persistência ou
+  cleanup que sobe ao controller retorna 500 genérico. Isso não promete tempo
+  constante: a chamada SMTP ainda é síncrona após commit e não há outbox.
+- O controller monta um DTO a partir de `name`, `email`, `companyName` e
+  `phone`; IDs, papel e estado fornecidos no body são ignorados. Tokens e
+  credenciais nunca entram em logs ou respostas.
+- Configuração e adapter permanecem lazy: importar `app` e criar aplicações
+  antigas não exige env SMTP/CAPTCHA. Testes injetam service, verifier e limiter
+  por `createApp`, sem rotas de teste.
+
+### Consequências e limites
+
+A reserva de email reduz duplicidade dentro do domínio AccessRequest, mas o
+fluxo de cadastro legado continua independente. Sem constraint cruzada entre
+`User.email` e `AccessRequest.activeEmail`, uma corrida entre cadastro e
+solicitação segue possível até a migração do cadastro público. Request/resend
+não afirmam aceitação ou entrega SMTP; 202 é deliberadamente neutro. A segurança
+temporal contra enumeração não é garantida por latência constante. A entrega está
+validada para revisão, com as ressalvas registradas no [relatório da Etapa 3](../../../SECURITY-AUTH-ETAPA-3.md).
+
+### Validação registrada em 2026-10-23
+
+- Build aprovado e Jest completo **53/53 suítes, 960/960 testes**. Coverage dos
+  três services do recorte: 91,52% statements, 80% branches, 93,33% functions e
+  94,87% lines; os branches individuais variam de 65% a 86,79%.
+- Harness SMTP real contra MailHog: duas rodadas de 11/11, 24 mensagens
+  confirmadas. Testes Turnstile usam `fetch` simulado e HTTP usa fake CAPTCHA;
+  não houve chamada real à Cloudflare.
+- `npm run check` continua exit 1 antes do Jest por dois imports antigos não
+  usados em `vulnerability.service.ts:46`; a suíte completa passou separada.
+- Limites preservados: cadastro legado e possível corrida cross-table, SMTP
+  síncrono sem garantia de tempo constante e ausência de outbox. Sem cutover do
+  onboarding. Na conclusão desse marco, a Etapa 4 ainda não havia iniciado.
+- A numeração ADR-047 colide com o ADR de exportação Excel trazido por `dev`;
+  a colisão foi documentada e nenhum arquivo foi renumerado.
+
+## Etapa 4 — revisão administrativa e convites (concluída, 2026-10-23)
+
+### Contexto e decisão vigente
+
+A fila administrativa passa a expor listagem, detalhe, eventos, aprovação,
+rejeição e reenvio de convite sob autenticação e autorização atual. Cada request
+exige JWT, `requireRole("ADMIN")` e conferência do papel ADMIN no banco, pois
+uma role antiga no token não deve manter privilégio após rebaixamento/remoção.
+Services reutilizam essa conferência para chamadas que não passam pelo HTTP.
+
+A aprovação e o preparo do convite (hash/slot/auditoria) ocorrem no mesmo
+transaction context; envio SMTP acontece depois do commit. Factory lazy carrega
+SMTP e `PUBLIC_WEB_URL` apenas em approve/resend, sem bloquear consulta e
+rejeição. Rejeição mantém motivo opcional/null com validação HTTP. Respostas são
+allowlist: detalhe inclui somente datas do convite; evento não inclui hashes;
+decisão não expõe credencial preparada. Link do convite leva token no fragmento
+`/activate-account#token=...`, mas ativação continua futura.
+
+Não haverá migration nesta etapa. Transições de aprovação, rejeição e expiração
+ficam como `STATUS_TRANSITION` em `AccessRequestEvent`. Os eventos de convite
+`ISSUED`, `REISSUED` e `DELIVERY_FAILED` usam o `AuditLog` existente com ator
+ADMIN, pois o CHECK de `AccessRequestEvent` os rejeita. A validação final
+passou: 57/57 suítes e 995/995 testes; build,
+lint focal e Prisma validate/generate também passaram. Coverage dos quatro
+services: 88,26% statements, 68,49% branches, 96,77% functions e 95,03% lines.
+`npm run check` ainda termina com exit 1 antes do Jest por dois imports antigos
+em `vulnerability.service.ts:46`; a suíte Jest completa passou separadamente.
+Consultar [`SECURITY-AUTH-ETAPA-4.md`](../../../SECURITY-AUTH-ETAPA-4.md) para
+ownership, resultados e limitações.
+
+Sem outbox, uma falha de processo entre commit e entrega SMTP pode deixar um
+convite preparado sem mensagem; o ADMIN pode recuperá-lo por reenvio. O cadastro
+legado continua ativo, e a corrida de unicidade entre `User` e `AccessRequest`
+segue até o cutover futuro. Ativação, consumo do convite e criação de User/JWT
+não fazem parte desta etapa. A Etapa 4 está concluída; a Etapa 5+ permanece
+futura.
+
 ## Relacionado
 
 - [Issue #51](https://github.com/guimunizzz/Vulnera-TCC/issues/51)
