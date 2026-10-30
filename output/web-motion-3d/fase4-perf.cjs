@@ -9,7 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const BASE = 'http://localhost:8086';
-const OUT = path.join(__dirname, 'landing');
+const OUT = path.join(__dirname, 'landing-ascii');
 const RUNS = Number(process.argv[2] ?? 2);
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -107,7 +107,8 @@ async function runScroll(browser, index) {
   await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
   const gpu = await gpuInfo(page);
-  const tracePath = path.join(OUT, `landing-scroll-trace-fase4-${index}.json`);
+  // Traces passam de 50 MB: fora do repositório quando TRACE_DIR é passado.
+  const tracePath = path.join(process.env.TRACE_DIR || OUT, `landing-scroll-trace-fase4-${index}.json`);
   await browser.startTracing(page, { path: tracePath, categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline.frame', 'blink.user_timing', 'gpu'] });
   await page.evaluate(() => { window.__longTasks = []; });
   await page.mouse.move(720, 450);

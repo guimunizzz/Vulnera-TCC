@@ -1,0 +1,210 @@
+{
+  "maquina": "i7-1165G7 (8 threads), Iris Xe + MX350, 15,7 GB, Windows 11, Chrome 156",
+  "startedAt": "2026-10-30T13:16:43.484Z",
+  "scroll": [
+    {
+      "gpu": {
+        "renderer": "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "dpr": 1,
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+      },
+      "maxScroll": 9124,
+      "fpsMedioRolando": 57.2,
+      "fpsMinimoTrecho": 49.1,
+      "longTasks": [],
+      "canvases": [
+        {
+          "id": "c0",
+          "inViewport": true,
+          "w": 1430,
+          "h": 900
+        }
+      ],
+      "rodape3s": {
+        "heroNaViewport": true,
+        "drawsHero": 23,
+        "quadrosRenderizados": 23,
+        "fps": 56.6
+      },
+      "trechosForaDaViewportComDraw": 0,
+      "trechosForaDaViewport": 0,
+      "segments": [
+        {
+          "scrollY": 800,
+          "fps": 49.1,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 17
+        },
+        {
+          "scrollY": 1600,
+          "fps": 58.6,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 17
+        },
+        {
+          "scrollY": 2400,
+          "fps": 53.5,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 17
+        },
+        {
+          "scrollY": 3200,
+          "fps": 60.2,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 17
+        },
+        {
+          "scrollY": 4000,
+          "fps": 59.9,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 18
+        },
+        {
+          "scrollY": 4700,
+          "fps": 58.5,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 17
+        },
+        {
+          "scrollY": 5500,
+          "fps": 55.2,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 18
+        },
+        {
+          "scrollY": 6300,
+          "fps": 57.2,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 18
+        },
+        {
+          "scrollY": 7100,
+          "fps": 60,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 18
+        },
+        {
+          "scrollY": 7900,
+          "fps": 57.3,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 8
+        },
+        {
+          "scrollY": 8700,
+          "fps": 59.1,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 6
+        },
+        {
+          "scrollY": 9124,
+          "fps": 58.4,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 7
+        }
+      ],
+      "trace": "landing-scroll-trace-fase4-1.json"
+    },
+    {
+      "gpu": {
+        "renderer": "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "dpr": 1,
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+      },
+      "maxScroll": 9124,
+      "fpsMedioRolando": 57.7,
+      "fpsMinimoTrecho": 49.6,
+      "longTasks": [],
+      "canvases": [
+        {
+          "id": "c0",
+          "inViewport": true,
+          "w": 1430,
+          "h": 900
+        }
+      ],
+      "rodape3s": {
+        "heroNaViewport": true,
+        "drawsHero": 24,
+        "quadrosRenderizados": 24,
+        "fps": 60.1
+      },
+      "trechosForaDaViewportComDraw": 0,
+      "trechosForaDaViewport": 0,
+      "segments": [
+        {
+          "scrollY": 800,
+          "fps": 58.5,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 18
+        },
+        {
+          "scrollY": 1600,
+          "fps": 49.6,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 18
+        },
+        {
+          "scrollY": 2400,
+          "fps": 57.7,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 16
+        },
+        {
+          "scrollY": 3200,
+          "fps": 60.4,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 20
+        },
+        {
+          "scrollY": 4000,
+          "fps": 59.9,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 18
+        },
+        {
+          "scrollY": 4700,
+          "fps": 59.4,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 18
+        },
+        {
+          "scrollY": 5500,
+          "fps": 57.8,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 17
+        },
+        {
+          "scrollY": 6300,
+          "fps": 55,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 17
+        },
+        {
+          "scrollY": 7100,
+          "fps": 60,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 18
+        },
+        {
+          "scrollY": 7900,
+          "fps": 60.1,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 9
+        },
+        {
+          "scrollY": 8700,
+          "fps": 55.5,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 6
+        },
+        {
+          "scrollY": 9124,
+          "fps": 58.7,
+          "heroNaViewport": true,
+          "drawsHeroNoTrecho": 6
+        }
+      ],
+      "trace": "landing-scroll-trace-fase4-2.json"
+    }
+  ]
+}
