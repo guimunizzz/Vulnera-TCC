@@ -43,10 +43,17 @@ export interface CelulaDoPoster {
   destaque: boolean;
 }
 
-/** Hash inteiro por célula (reprodutível em qualquer navegador), em [0, 1). */
+/**
+ * Hash inteiro por célula (reprodutível em qualquer navegador), em [0, 1).
+ * Termina com o fmix32 do MurmurHash3: sem avalanche completa, sais vizinhos
+ * davam sorteios correlacionados (o binário saía 98% "0").
+ */
 function hash(x: number, y: number, sal: number): number {
-  let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(sal, 2147483647);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  let h = Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1) ^ Math.imul(sal + 1, 0x9e3779b1);
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
   h ^= h >>> 16;
   return (h >>> 0) / 4294967296;
 }

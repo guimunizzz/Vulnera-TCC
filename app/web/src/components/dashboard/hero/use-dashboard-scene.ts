@@ -28,8 +28,12 @@ const MAX_DPR = 1.5;
 const CELULA_PX = 14;
 /** Poucos tiques: o campo muda devagar e a GPU fica quase ociosa. */
 const TIQUES_POR_SEGUNDO = 4;
-/** Rampa calma e binário; nada de alerta ou severidade no fundo do produto. */
-const GLIFOS = " .·:-+01";
+/**
+ * Rampa calma e o traço dos fluxos. Sem dígitos: no produto número é dado, e
+ * um "0" ou "1" solto ao lado de um KPI, rótulo ou aba seria lido como tal.
+ * Nada de alerta ou severidade no fundo do produto.
+ */
+export const GLIFOS_ATMOSFERA = " .·:-+|";
 /** Opacidade máxima dos glifos por tema (o claro precisa de menos). */
 const OPACIDADE = { dark: 0.24, light: 0.16 } as const;
 
@@ -53,11 +57,11 @@ void main() {
   float r = hashCelula(celula);
 
   // Campo estático esparso (≈ 12% das células), com cintilar raro por tique.
+  // Rampa puxada para os glifos leves (. · :).
   float presente = step(0.88, r);
   float cintila = step(0.92, hashCelula(celula + vec2(uTique, 0.0)));
   float sorteio = mix(hashCelula(celula + 29.0), hashCelula(celula + vec2(uTique, 5.0)), cintila);
-  float binario = step(0.6, hashCelula(celula + 61.0));
-  float indice = binario > 0.5 ? mix(6.0, 7.0, step(0.5, sorteio)) : 1.0 + floor(sorteio * sorteio * 5.0);
+  float indice = 1.0 + floor(sorteio * sorteio * 5.0);
 
   // Fluxos de dados: poucas colunas (≈ 6%) com um rastro descendo devagar.
   float coluna = hashCelula(vec2(celula.x, 1.0));
@@ -66,7 +70,8 @@ void main() {
   float cabeca = mod(uTique * (0.6 + coluna) + coluna * ciclo * 7.0, ciclo);
   float distancia = cabeca - (grade.y - 1.0 - celula.y);
   float rastro = ativa * step(0.0, distancia) * (1.0 - smoothstep(0.0, 9.0, distancia));
-  if (rastro > 0.01) indice = mix(6.0, 7.0, step(0.5, hashCelula(celula + vec2(uTique, 9.0))));
+  // O rastro alterna ":" e "|": chuva de terminal, sem caractere legível.
+  if (rastro > 0.01) indice = mix(3.0, 6.0, step(0.5, hashCelula(celula + vec2(uTique, 9.0))));
 
   float alfa = max(presente * 0.55, rastro) * uAlfa;
   // Mais presente no topo (atrás do cabeçalho da página), some para baixo.
@@ -101,7 +106,7 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
 
     const uniformes = {
       uAtlas: { value: null as THREE.Texture | null },
-      uTotalGlifos: { value: Array.from(GLIFOS).length },
+      uTotalGlifos: { value: Array.from(GLIFOS_ATMOSFERA).length },
       uCelula: { value: new THREE.Vector2(CELULA_PX, CELULA_PX * 2) },
       uResolucao: { value: new THREE.Vector2(1, 1) },
       uTique: { value: 0 },
@@ -165,7 +170,7 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
 
     async function montar(): Promise<void> {
       try {
-        atlas = await criarAtlasAscii(GLIFOS);
+        atlas = await criarAtlasAscii(GLIFOS_ATMOSFERA);
       } catch {
         falhar();
         return;

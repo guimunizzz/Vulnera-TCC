@@ -12,6 +12,8 @@
  *   NAR-07  varredura só no ato 2, no meio, em blocos
  *   NAR-08  grupos só nas laterais, fora da coluna de texto
  *   NAR-09  corrigir: alta/crítica somem dos grupos e viram "✓" na grade
+ *   NAR-10  regra de correção pelo mais grave
+ *   NAR-11  sorteios independentes: o binário do campo divide "0" e "1"
  */
 
 import { describe, expect, it } from "vitest";
@@ -137,5 +139,13 @@ describe("Regra das células", () => {
     expect(eCorrigivel(2, 0.7)).toBe(true);
     expect(eCorrigivel(2, 0.2)).toBe(false);
     expect(eCorrigivel(1, 0.99)).toBe(false);
+  });
+
+  it("NAR-11 — sorteios independentes: '0' e '1' se dividem no campo", () => {
+    const zeros = varrer(0, (c) => c.glifo === "0").length;
+    const uns = varrer(0, (c) => c.glifo === "1").length;
+    expect(zeros + uns).toBeGreaterThan(100);
+    expect(zeros / (zeros + uns)).toBeGreaterThan(0.4);
+    expect(zeros / (zeros + uns)).toBeLessThan(0.6);
   });
 });

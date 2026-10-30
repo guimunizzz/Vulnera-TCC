@@ -10,6 +10,7 @@
  *   CENA-03  sem WebGL avisa onLost e não deixa observer
  *   CENA-04  contexto perdido avisa onLost e limpa o resto do hook
  *   CENA-05  desmontado antes do atlas: nada é montado e a textura é descartada
+ *   CENA-06  nenhum dígito nos glifos: no produto, número é dado
  */
 
 import { useRef } from "react";
@@ -44,7 +45,7 @@ vi.mock("../../../three/ascii", () => ({
   GLSL_ASCII: "",
 }));
 
-import { useDashboardScene } from "./use-dashboard-scene";
+import { GLIFOS_ATMOSFERA, useDashboardScene } from "./use-dashboard-scene";
 
 const observadores: { disconnect: ReturnType<typeof vi.fn> }[] = [];
 
@@ -116,5 +117,9 @@ describe("useDashboardScene (atmosfera ASCII) sobre o kit", () => {
     liberar({ textura, total: 8, proporcao: 0.5 });
     await waitFor(() => expect(textura.dispose).toHaveBeenCalled());
     expect(falso.montar).not.toHaveBeenCalled();
+  });
+
+  it("CENA-06 — nenhum dígito nos glifos da atmosfera", () => {
+    expect(GLIFOS_ATMOSFERA).not.toMatch(/\d/);
   });
 });
