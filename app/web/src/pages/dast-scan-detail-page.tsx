@@ -46,10 +46,8 @@ import {
   type DastTriageStatus,
 } from "../types/dast.types";
 
-// `three` só é baixado quando a aba do grafo é aberta.
-const SecurityGraph3D = lazy(() => import("../features/security-graph/security-graph-3d"));
-// Sem WebGL a aba nem aparece: um canvas vazio pareceria "scan sem exposição".
-const TEM_WEBGL = typeof window !== "undefined" && "WebGL2RenderingContext" in window;
+// O CyberGraph só é baixado quando a aba abre; o `three` do modo 3D, só quando a pessoa escolhe o 3D.
+const CyberGraph = lazy(() => import("../features/security-graph/cyber-graph"));
 
 function formatElapsed(totalSeconds: number): string {
   const min = Math.floor(totalSeconds / 60);
@@ -319,6 +317,19 @@ export function DastScanDetailPage() {
     [findingsQuery.data, findingParaPromover],
   );
 
+  // Do CyberGraph para a lista: limpa os filtros (que poderiam esconder o
+  // finding), abre a linha dele e a traz para a tela, onde ficam triagem e promoção.
+  function verNaLista(findingId: string): void {
+    setRiskFilter("");
+    setTriageFilter("");
+    setSearch("");
+    setExpandedId(findingId);
+    setAba("findings");
+    window.setTimeout(() => {
+      document.getElementById(`finding-detalhe-${findingId}`)?.scrollIntoView({ block: "center" });
+    }, 0);
+  }
+
   async function handleDownloadPdf(): Promise<void> {
     if (!id) return;
     setIsGeneratingPdf(true);
@@ -474,7 +485,7 @@ export function DastScanDetailPage() {
               [
                 ["findings", `Achados (${findingsQuery.data?.length ?? 0})`],
                 ["comparacao", "Comparar com execução anterior"],
-                ...(TEM_WEBGL ? ([["grafo", "Grafo 3D"]] as const) : []),
+                ["grafo", "CyberGraph"],
               ] as const
             ).map(([chave, rotulo]) => (
               <button
@@ -499,7 +510,7 @@ export function DastScanDetailPage() {
 
           {aba === "grafo" && findingsQuery.data && (
             <Suspense fallback={<Skeleton className="mt-4 h-[28rem] w-full bg-inset" />}>
-              <SecurityGraph3D targetUrl={scan.targetUrl} findings={findingsQuery.data} />
+              <CyberGraph targetUrl={scan.targetUrl} findings={findingsQuery.data} aoVerNaLista={verNaLista} />
             </Suspense>
           )}
 

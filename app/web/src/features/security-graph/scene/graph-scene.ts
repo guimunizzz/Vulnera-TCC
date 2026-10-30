@@ -8,7 +8,9 @@
  *   - pós-processamento: MSAA → contorno de hover/seleção → bloom → saída;
  *   - arestas em arco com cor por vértice e partículas de fluxo instanciadas;
  *   - OrbitControls com amortecimento, giro automático e foco no selecionado;
- *   - destaque de caminho: o que está fora do contexto do nó fica translúcido.
+ *   - destaque de caminho: o que está fora do contexto do nó fica translúcido;
+ *   - nomes fixos abaixo de cada objeto (CSS2DRenderer, texto nítido em DOM);
+ *   - nós arrastáveis num plano de frente para a câmera, com as arestas seguindo.
  *
  * POR QUE EXISTE
  * Manter o three fora do React deixa o componente só com estado de UI e garante
@@ -27,14 +29,21 @@ import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { chaveDaAresta, contextoDoNo, type GraphNode, type GraphNodeKind, type SecurityGraph } from "../graph-model";
 import { KitDeMalhas, type NoVisual } from "./node-meshes";
 import type { GraphPalette } from "./palette";
 
+export type Posicao3D = { x: number; y: number; z: number };
+
 export interface GraphSceneOptions {
   paleta: GraphPalette;
   reduzido: boolean;
+  /** Nós que a pessoa já arrastou (sobrevivem à troca de tema e de modo). */
+  posicoesSalvas: ReadonlyMap<string, Posicao3D>;
   aoSelecionar(node: GraphNode | null): void;
+  /** Fim de um arrasto: posição nova do nó. */
+  aoMoverNo(id: string, posicao: Posicao3D): void;
   aoPerderContexto(): void;
 }
 
@@ -91,6 +100,8 @@ type ComMaterial = THREE.Mesh | THREE.LineSegments;
 
 interface Aresta {
   chave: string;
+  de: string;
+  para: string;
   curva: THREE.QuadraticBezierCurve3;
   inicio: number;
 }
@@ -114,6 +125,13 @@ export class GraphScene {
   private readonly originais = new Map<ComMaterial, THREE.Material>();
   private readonly arestas: Aresta[] = [];
   private readonly coresArestas: THREE.BufferAttribute;
+  private readonly pontosArestas: THREE.BufferAttribute;
+  private readonly posicoesPadrao: Map<string, THREE.Vector3>;
+  private readonly rotulos: CSS2DRenderer;
+  private readonly elementosRotulo = new Map<string, HTMLElement>();
+  private readonly planoArrasto = new THREE.Plane();
+  private readonly auxNormal = new THREE.Vector3();
+  private arrastando: { id: string; deslocamento: THREE.Vector3; moveu: boolean } | null = null;
   private readonly particulas: THREE.InstancedMesh;
 
   private readonly corBase: THREE.Color;
@@ -147,7 +165,7 @@ export class GraphScene {
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
-    private readonly tooltip: HTMLElement,
+    private readonly camadaRotulos: HTMLElement,
     private readonly grafo: SecurityGraph,
     private readonly opcoes: GraphSceneOptions,
   ) {
@@ -177,12 +195,18 @@ export class GraphScene {
 
     this.montarLuzes();
     this.kit = new KitDeMalhas(paleta);
-    const posicoes = posicoesDoGrafo(grafo);
+    this.posicoesPadrao = posicoesDoGrafo(grafo);
+    const posicoes = new Map(this.posicoesPadrao);
+    opcoes.posicoesSalvas.forEach((p, id) => {
+      if (posicoes.has(id)) posicoes.set(id, new THREE.Vector3(p.x, p.y, p.z));
+    });
+    this.rotulos = new CSS2DRenderer({ element: camadaRotulos });
     this.montarNos(posicoes);
-    this.coresArestas = this.montarArestas(posicoes);
+    [this.coresArestas, this.pontosArestas] = this.montarArestas(posicoes);
     this.particulas = this.montarParticulas();
     // Margem do tamanho de um nó em volta das posições (os centros não bastam).
-    this.caixa.setFromPoints([...posicoes.values()]).expandByScalar(0.8);
+    // A caixa é a do layout padrão: arrastar um nó não muda o enquadramento.
+    this.caixa.setFromPoints([...this.posicoesPadrao.values()]).expandByScalar(0.8);
     this.montarPiso();
     this.scene.fog = new THREE.Fog(paleta.fundo, 20, 60);
 
@@ -216,7 +240,8 @@ export class GraphScene {
     canvas.addEventListener("pointermove", this.aoMover);
     canvas.addEventListener("pointerenter", this.aoEntrar);
     canvas.addEventListener("pointerleave", this.aoSair);
-    canvas.addEventListener("pointerdown", this.aoApertar);
+    // Captura: roda antes do OrbitControls, que assim não orbita quando o arrasto é de um nó.
+    canvas.addEventListener("pointerdown", this.aoApertar, { capture: true });
     canvas.addEventListener("pointerup", this.aoSoltar);
     canvas.addEventListener("webglcontextlost", this.aoPerderContexto);
     canvas.addEventListener("focus", this.aoFocar);
@@ -263,6 +288,7 @@ export class GraphScene {
       const visual = this.kit.criar(node);
       visual.raiz.position.copy(posicoes.get(node.id) ?? new THREE.Vector3());
       this.scene.add(visual.raiz);
+      this.montarRotulo(visual);
       this.nos.set(node.id, visual);
       for (const alvo of visual.alvos) {
         this.alvos.push(alvo);
@@ -276,27 +302,80 @@ export class GraphScene {
     }
   }
 
-  private montarArestas(posicoes: Map<string, THREE.Vector3>): THREE.BufferAttribute {
+  /** Nome sempre visível abaixo do objeto; DOM para o texto ficar nítido em qualquer zoom. */
+  private montarRotulo(visual: NoVisual): void {
+    const el = document.createElement("div");
+    // Findings são muitos e próximos: rótulo menor e mais discreto que o da estrutura.
+    el.className =
+      visual.node.kind === "FINDING"
+        ? "pointer-events-none max-w-[8.5rem] truncate whitespace-nowrap rounded bg-canvas/70 px-1 py-px text-[10px] leading-tight text-fg-secondary transition-opacity"
+        : "pointer-events-none max-w-[11rem] truncate whitespace-nowrap rounded bg-canvas/70 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-fg transition-opacity";
+    el.textContent = visual.node.label;
+    const rotulo = new CSS2DObject(el);
+    // Logo abaixo da base do objeto, medida antes de qualquer animação de escala.
+    const caixa = new THREE.Box3().setFromObject(visual.raiz);
+    rotulo.position.set(0, caixa.min.y - visual.raiz.position.y - 0.04, 0);
+    rotulo.center.set(0.5, 0);
+    visual.raiz.add(rotulo);
+    this.elementosRotulo.set(visual.node.id, el);
+  }
+
+  /** Arco suave para cima entre dois nós: lê melhor que reta e separa arestas paralelas. */
+  private static arco(curva: THREE.QuadraticBezierCurve3, a: THREE.Vector3, b: THREE.Vector3): void {
+    curva.v0.copy(a);
+    curva.v2.copy(b);
+    curva.v1.copy(a).lerp(b, 0.5).y += a.distanceTo(b) * 0.14;
+  }
+
+  private montarArestas(posicoes: Map<string, THREE.Vector3>): [THREE.BufferAttribute, THREE.BufferAttribute] {
     const pontos: THREE.Vector3[] = [];
     for (const edge of this.grafo.edges) {
       const a = posicoes.get(edge.source);
       const b = posicoes.get(edge.target);
       if (!a || !b) continue;
-      // Arco suave para cima: lê melhor que reta e separa arestas paralelas.
-      const meio = a.clone().lerp(b, 0.5).add(new THREE.Vector3(0, a.distanceTo(b) * 0.14, 0));
-      const curva = new THREE.QuadraticBezierCurve3(a, meio, b);
-      this.arestas.push({ chave: chaveDaAresta(edge), curva, inicio: pontos.length });
+      const curva = new THREE.QuadraticBezierCurve3();
+      GraphScene.arco(curva, a, b);
+      this.arestas.push({ chave: chaveDaAresta(edge), de: edge.source, para: edge.target, curva, inicio: pontos.length });
       const amostras = curva.getPoints(SEGMENTOS_ARESTA);
       for (let i = 0; i < SEGMENTOS_ARESTA; i += 1) pontos.push(amostras[i], amostras[i + 1]);
     }
     const geo = new THREE.BufferGeometry().setFromPoints(pontos);
+    const posicaoAttr = geo.getAttribute("position") as THREE.BufferAttribute;
+    posicaoAttr.setUsage(THREE.DynamicDrawUsage);
     const cores = new THREE.BufferAttribute(new Float32Array(pontos.length * 3), 3);
     geo.setAttribute("color", cores);
     const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9 });
     this.scene.add(new THREE.LineSegments(geo, mat));
     this.descartaveis.push(geo, mat);
     this.pintarArestas(cores);
-    return cores;
+    return [cores, posicaoAttr];
+  }
+
+  /** Refaz o arco das arestas ligadas aos nós informados (sem filtro: todas). */
+  private atualizarArestas(ids?: Set<string>): void {
+    const amostra = new THREE.Vector3();
+    for (const aresta of this.arestas) {
+      if (ids && !ids.has(aresta.de) && !ids.has(aresta.para)) continue;
+      const a = this.nos.get(aresta.de)?.raiz.position;
+      const b = this.nos.get(aresta.para)?.raiz.position;
+      if (!a || !b) continue;
+      GraphScene.arco(aresta.curva, a, b);
+      for (let i = 0; i < SEGMENTOS_ARESTA; i += 1) {
+        aresta.curva.getPoint(i / SEGMENTOS_ARESTA, amostra);
+        this.pontosArestas.setXYZ(aresta.inicio + i * 2, amostra.x, amostra.y, amostra.z);
+        aresta.curva.getPoint((i + 1) / SEGMENTOS_ARESTA, amostra);
+        this.pontosArestas.setXYZ(aresta.inicio + i * 2 + 1, amostra.x, amostra.y, amostra.z);
+      }
+    }
+    this.pontosArestas.needsUpdate = true;
+  }
+
+  /** Volta todos os nós para o layout calculado. */
+  restaurarLayout(): void {
+    this.nos.forEach((visual, id) => visual.raiz.position.copy(this.posicoesPadrao.get(id) ?? visual.raiz.position));
+    this.atualizarArestas();
+    const visual = this.selecionado ? this.nos.get(this.selecionado) : null;
+    if (visual) this.focoAlvo.copy(visual.raiz.position);
   }
 
   private montarParticulas(): THREE.InstancedMesh {
@@ -349,6 +428,9 @@ export class GraphScene {
     this.contexto = this.selecionado ? contextoDoNo(this.grafo, this.selecionado) : null;
     this.nos.forEach((visual, id) => {
       const ativo = !this.contexto || this.contexto.nos.has(id);
+      const rotulo = this.elementosRotulo.get(id);
+      // Com um caminho em destaque, só os nomes dele ficam: o resto viraria ruído.
+      if (rotulo) rotulo.style.opacity = ativo ? "1" : "0";
       visual.raiz.traverse((obj) => {
         if (!(obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments)) return;
         const original = this.originais.get(obj);
@@ -369,10 +451,7 @@ export class GraphScene {
   private definirHover(id: string | null): void {
     if (id === this.hover) return;
     this.hover = id;
-    this.canvas.style.cursor = id ? "pointer" : "";
-    const node = id ? this.nos.get(id)?.node : null;
-    this.tooltip.textContent = node ? node.label : "";
-    this.tooltip.hidden = !node;
+    if (!this.arrastando) this.canvas.style.cursor = id ? "grab" : "";
     this.atualizarContorno();
   }
 
@@ -397,6 +476,18 @@ export class GraphScene {
     const rect = this.canvas.getBoundingClientRect();
     this.ponteiro.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.ponteiroSujo = true;
+    const arrasto = this.arrastando;
+    const inicio = this.apertou;
+    if (!arrasto || !inicio) return;
+    if (!arrasto.moveu && Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) <= 5) return;
+    arrasto.moveu = true;
+    this.raycaster.setFromCamera(this.ponteiro, this.camera);
+    if (!this.raycaster.ray.intersectPlane(this.planoArrasto, this.auxVetor)) return;
+    const visual = this.nos.get(arrasto.id);
+    if (!visual) return;
+    visual.raiz.position.copy(this.auxVetor).add(arrasto.deslocamento);
+    if (arrasto.id === this.selecionado) this.focoAlvo.copy(visual.raiz.position);
+    this.atualizarArestas(new Set([arrasto.id]));
   };
   private readonly aoFocar = (): void => {
     this.controls.enableZoom = true;
@@ -413,11 +504,35 @@ export class GraphScene {
   };
   private readonly aoApertar = (e: PointerEvent): void => {
     this.apertou = { x: e.clientX, y: e.clientY };
+    if (e.button !== 0) return;
+    this.aoMover(e);
+    const id = this.pegar();
+    const visual = id ? this.nos.get(id) : null;
+    if (!id || !visual) return;
+    // Nó sob o ponteiro: arrasta o nó num plano de frente para a câmera, sem orbitar.
+    this.controls.enabled = false;
+    this.camera.getWorldDirection(this.auxNormal);
+    this.planoArrasto.setFromNormalAndCoplanarPoint(this.auxNormal, visual.raiz.position);
+    this.raycaster.setFromCamera(this.ponteiro, this.camera);
+    const ponto = this.raycaster.ray.intersectPlane(this.planoArrasto, new THREE.Vector3()) ?? visual.raiz.position.clone();
+    this.arrastando = { id, deslocamento: visual.raiz.position.clone().sub(ponto), moveu: false };
+    this.canvas.setPointerCapture(e.pointerId);
+    this.canvas.style.cursor = "grabbing";
   };
   private readonly aoSoltar = (e: PointerEvent): void => {
     const inicio = this.apertou;
+    const arrasto = this.arrastando;
     this.apertou = null;
-    // Arrastar orbita; só um clique parado seleciona.
+    this.arrastando = null;
+    this.controls.enabled = true;
+    if (this.canvas.hasPointerCapture(e.pointerId)) this.canvas.releasePointerCapture(e.pointerId);
+    this.canvas.style.cursor = this.hover ? "grab" : "";
+    if (arrasto?.moveu) {
+      const p = this.nos.get(arrasto.id)?.raiz.position;
+      if (p) this.opcoes.aoMoverNo(arrasto.id, { x: p.x, y: p.y, z: p.z });
+      return;
+    }
+    // Arrastar o fundo orbita; só um clique parado seleciona.
     if (!inicio || Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 5) return;
     this.aoMover(e);
     this.selecionar(this.pegar());
@@ -444,6 +559,7 @@ export class GraphScene {
     const h = Math.max(1, this.canvas.clientHeight);
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
+    this.rotulos.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (!this.usuarioMexeu) this.enquadrar();
@@ -509,19 +625,10 @@ export class GraphScene {
     this.controls.target.lerp(this.focoAlvo, reduzido ? 1 : 0.06);
     this.controls.update();
 
-    if (this.hover) {
-      const visual = this.nos.get(this.hover);
-      if (visual) {
-        visual.raiz.getWorldPosition(this.auxVetor).project(this.camera);
-        const x = ((this.auxVetor.x + 1) / 2) * this.canvas.clientWidth;
-        const y = ((1 - this.auxVetor.y) / 2) * this.canvas.clientHeight;
-        this.tooltip.style.transform = `translate(${x}px, ${y - 22}px) translate(-50%, -100%)`;
-      }
-    }
-
     this.quadro += 1;
     if (this.quadro % 2 === 0 || reduzido) this.renderer.shadowMap.needsUpdate = true;
     this.composer.render();
+    this.rotulos.render(this.scene, this.camera);
   };
 
   private parar(): void {
@@ -534,7 +641,7 @@ export class GraphScene {
     this.canvas.removeEventListener("pointermove", this.aoMover);
     this.canvas.removeEventListener("pointerenter", this.aoEntrar);
     this.canvas.removeEventListener("pointerleave", this.aoSair);
-    this.canvas.removeEventListener("pointerdown", this.aoApertar);
+    this.canvas.removeEventListener("pointerdown", this.aoApertar, { capture: true });
     this.canvas.removeEventListener("pointerup", this.aoSoltar);
     this.canvas.removeEventListener("webglcontextlost", this.aoPerderContexto);
     this.canvas.removeEventListener("focus", this.aoFocar);
@@ -543,6 +650,8 @@ export class GraphScene {
     this.observadorTamanho.disconnect();
     this.observadorVisivel.disconnect();
     this.canvas.style.cursor = "";
+    // Os rótulos são DOM na camada do componente: a próxima cena começa limpa.
+    this.camadaRotulos.replaceChildren();
     this.controls.removeEventListener("start", this.aoMexerNaCamera);
     this.controls.dispose();
     this.kit.dispose();

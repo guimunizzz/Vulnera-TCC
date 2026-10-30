@@ -97,7 +97,7 @@ export const chaveDaAresta = (edge: GraphEdge): string => `${edge.source}->${edg
  * abaixo dele (descendentes). Selecionar um endpoint acende os findings dele;
  * selecionar um finding acende o caminho de exposição até a Internet.
  */
-export function contextoDoNo(grafo: SecurityGraph, nodeId: string): { nos: Set<string>; arestas: Set<string> } {
+export function contextoDoNo(grafo: { edges: GraphEdge[] }, nodeId: string): { nos: Set<string>; arestas: Set<string> } {
   const nos = new Set<string>([nodeId]);
   const arestas = new Set<string>();
   const subir = (id: string) => {
@@ -119,4 +119,18 @@ export function contextoDoNo(grafo: SecurityGraph, nodeId: string): { nos: Set<s
   subir(nodeId);
   descer(nodeId);
   return { nos, arestas };
+}
+
+/** Caminho de exposição em ordem: da Internet até o nó (inclusive). Cada nó tem um único pai. */
+export function caminhoAte<N extends { id: string }>(grafo: { nodes: N[]; edges: GraphEdge[] }, nodeId: string): N[] {
+  const porId = new Map(grafo.nodes.map((n) => [n.id, n]));
+  const caminho: N[] = [];
+  let atual = porId.get(nodeId);
+  while (atual && !caminho.includes(atual)) {
+    caminho.unshift(atual);
+    const id: string = atual.id;
+    const pai = grafo.edges.find((e) => e.target === id);
+    atual = pai ? porId.get(pai.source) : undefined;
+  }
+  return caminho;
 }
