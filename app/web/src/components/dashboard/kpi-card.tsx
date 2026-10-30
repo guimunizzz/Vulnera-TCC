@@ -49,7 +49,7 @@ export function KpiCard({ label, value, accentClassName, icon, tone = "accent" }
   const estilo = TOM[tone];
 
   return (
-    <article aria-label={label} data-dashboard-kpi className="h-full">
+    <article aria-label={label} className="h-full">
       <Card semPadding className="dashboard-kpi group relative h-full overflow-hidden bg-transparent transition-colors duration-base hover:border-strong">
         <span aria-hidden="true" className={cn("absolute inset-y-0 left-0 w-px", estilo.line)} />
         <div className="relative flex min-h-[8rem] flex-col justify-between gap-5 p-5">

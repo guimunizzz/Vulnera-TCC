@@ -86,10 +86,11 @@ export default function HowItWorks() {
   return (
     <section
       id="como-funciona"
+      data-ato="2"
       ref={scope}
-      className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24"
+      className="vx-grid-bg flex min-h-screen items-center px-6 py-24"
     >
-      <div className="mx-auto w-full max-w-6xl">
+      <div className="vx-superficie mx-auto w-full max-w-6xl">
         <Reveal className="text-center">
           <GlitchHeading className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Como funciona

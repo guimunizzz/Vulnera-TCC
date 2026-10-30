@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { Reveal, GlitchHeading } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
+import { DESLOCAMENTO_MOTION_LANDING, ESCALA_LANDING, MOLA_LANDING } from "../motion/tokens";
 
 const MotionLink = motion.create(Link);
 
@@ -61,8 +62,8 @@ const PLANS: Plan[] = [
 
 export default function Pricing() {
   return (
-    <section id="planos" className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24">
-      <div className="mx-auto w-full max-w-6xl">
+    <section id="planos" data-ato="5" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
+      <div className="vx-superficie mx-auto w-full max-w-6xl">
         <Reveal className="text-center">
           <GlitchHeading className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Planos que cabem na sua empresa.
@@ -72,10 +73,10 @@ export default function Pricing() {
 
         <div className="mt-16 grid grid-cols-1 items-stretch gap-8 md:grid-cols-3">
           {PLANS.map((plan, i) => (
-            <Reveal key={plan.name} delay={i * 150} className="flex">
+            <Reveal key={plan.name} ordem={i} className="flex">
               <motion.div
-                whileHover={{ y: -6 }}
-                transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                whileHover={{ y: -DESLOCAMENTO_MOTION_LANDING.elevacao }}
+                transition={MOLA_LANDING.cartao}
                 className={`relative flex w-full flex-col rounded-[6px] bg-[var(--vx-bg-2)] p-8 transition-shadow duration-[300ms] ${
                   plan.highlight
                     ? "border-2 border-[var(--vx-accent)] shadow-[0_0_36px_rgba(var(--vx-accent-rgb),0.25)] md:scale-105"
@@ -108,7 +109,7 @@ export default function Pricing() {
 
                 <MotionLink
                   to="/register"
-                  whileTap={{ scale: 0.97 }}
+                  whileTap={{ scale: ESCALA_LANDING.toque }}
                   className={`mt-10 rounded-[6px] px-6 py-3 text-center font-mono text-sm font-bold tracking-wide transition-all duration-[300ms] ${
                     plan.highlight
                       ? "bg-[var(--vx-accent)] text-[var(--vx-on-accent)] hover:shadow-[0_0_24px_rgba(var(--vx-accent-rgb),0.6)]"

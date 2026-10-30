@@ -23,8 +23,8 @@ export default function Problem() {
   const cells = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
 
   return (
-    <section className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24">
-      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-16 md:grid-cols-5">
+    <section data-ato="1" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
+      <div className="vx-superficie mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-16 md:grid-cols-5">
         {/* Coluna esquerda (60%) */}
         <div className="md:col-span-3">
           <Reveal>
@@ -41,7 +41,7 @@ export default function Problem() {
               <Reveal
                 key={pain}
                 as="li"
-                delay={i * 100}
+                ordem={i}
                 className="flex items-start gap-3 font-mono text-sm text-[var(--vx-text)] md:text-base"
               >
                 <span
@@ -57,7 +57,7 @@ export default function Problem() {
         </div>
 
         {/* Coluna direita (40%) — planilha caótica */}
-        <Reveal className="md:col-span-2" delay={200}>
+        <Reveal className="md:col-span-2" ordem={2}>
           <div
             className="rounded-[6px] border border-[rgba(var(--vx-danger-rgb),0.25)] bg-[var(--vx-bg-2)] p-4"
             aria-hidden="true"

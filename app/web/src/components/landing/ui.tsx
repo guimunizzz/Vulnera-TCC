@@ -9,33 +9,42 @@ import { useRef, type ElementType, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { gsap } from "./motion/gsap";
 import { useMovimentoLanding } from "./motion/use-landing-motion";
-import { EASE_LANDING, SCRUB_LANDING } from "./motion/tokens";
+import {
+  DESLOCAMENTO_MOTION_LANDING,
+  DURACAO_MOTION_LANDING,
+  EASE_LANDING,
+  EASE_MOTION_LANDING,
+  ESCALONAMENTO_MOTION_LANDING,
+  SCRUB_LANDING,
+} from "./motion/tokens";
 
 type RevealTag = "div" | "li" | "span" | "section" | "p";
 
 interface RevealProps {
   children: ReactNode;
-  /** Atraso em ms antes do fade-in. */
-  delay?: number;
+  /** Posição na sequência: o atraso é `ordem × ESCALONAMENTO_MOTION_LANDING.revelacao`. */
+  ordem?: number;
   className?: string;
   as?: RevealTag;
-  /** Deslocamento vertical inicial em px. */
-  y?: number;
 }
 
 /**
  * Reveal — fade-in + slide-up quando o elemento entra na viewport
  * (`whileInView`, dispara uma vez).
  */
-export function Reveal({ children, delay = 0, className = "", as = "div", y = 20 }: RevealProps) {
+export function Reveal({ children, ordem = 0, className = "", as = "div" }: RevealProps) {
   const Comp = (motion[as] ?? motion.div) as typeof motion.div;
   return (
     <Comp
       className={className}
-      initial={{ opacity: 0, y }}
+      initial={{ opacity: 0, y: DESLOCAMENTO_MOTION_LANDING.revelacao }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.15 }}
-      transition={{ duration: 0.6, ease: "easeOut", delay: delay / 1000 }}
+      transition={{
+        duration: DURACAO_MOTION_LANDING.entrada,
+        ease: EASE_MOTION_LANDING.saida,
+        delay: ordem * ESCALONAMENTO_MOTION_LANDING.revelacao,
+      }}
     >
       {children}
     </Comp>

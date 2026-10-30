@@ -126,10 +126,11 @@ export default function Maturity() {
   return (
     <section
       id="maturidade"
+      data-ato="4"
       ref={scope}
-      className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24"
+      className="vx-grid-bg flex min-h-screen items-center px-6 py-24"
     >
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="vx-superficie mx-auto w-full max-w-5xl">
         <Reveal className="text-center">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">
             {"// MATURIDADE DE SEGURANÇA"}
@@ -144,7 +145,7 @@ export default function Maturity() {
         </Reveal>
 
         <div className="mt-16 grid grid-cols-1 items-center gap-12 md:grid-cols-2">
-          <Reveal delay={150} className="flex flex-col items-center">
+          <Reveal ordem={1} className="flex flex-col items-center">
             <svg
               viewBox="0 0 260 260"
               className="w-full max-w-[320px]"
@@ -216,10 +217,14 @@ export default function Maturity() {
               >
                 {LEVEL}
               </span>
+              {/* R2: números de amostra precisam dizer que são amostra. */}
+              <p className="mt-3 font-mono text-sm text-[var(--vx-text-2)]">
+                Exemplo ilustrativo — não é a avaliação de uma empresa real.
+              </p>
             </div>
           </Reveal>
 
-          <Reveal delay={250}>
+          <Reveal ordem={2}>
             <ul className="space-y-4">
               {DOMAINS.map((d) => (
                 <li key={d.label}>

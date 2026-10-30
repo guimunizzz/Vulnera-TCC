@@ -1,0 +1,112 @@
+[
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/robots.txt"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/sitemap.xml"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/page"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/search?q=teste"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/iframe-only"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/assets/site.js"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/robots-only"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/sitemap-only"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/deep/a"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/robots.txt"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/sitemap.xml"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/page"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/iframe-only"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/assets/site.js"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/robots-only"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/sitemap-only"
+  },
+  {
+    "origin": "target",
+    "method": "GET",
+    "url": "/deep/a"
+  }
+]

@@ -18,7 +18,7 @@ import { App } from "./App";
 import { useAuthStore } from "./store/auth.store";
 import { ThemeProvider } from "./design/theme-provider";
 
-// A landing pública carrega `three`, `@react-three/*` e `gsap` (nada roda em
+// A landing pública carrega `gsap` e, por lazy, a cena `three` (nada roda em
 // jsdom) atrás de um `lazy()`. Estes testes cobrem a ÁRVORE DE ROTAS, não o
 // conteúdo da landing — o stub abaixo mantém o foco nisso. O conteúdo real da
 // landing é testado em `pages/landing-page.test.tsx`.

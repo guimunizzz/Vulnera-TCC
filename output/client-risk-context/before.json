@@ -1,0 +1,27 @@
+{
+  "inputs": {
+    "disabled": false,
+    "readOnly": false,
+    "inert": false
+  },
+  "diagnostic": {
+    "panels": [
+      {
+        "inert": false,
+        "zIndex": "40",
+        "rect": {
+          "x": 521,
+          "y": 399.796875,
+          "width": 181,
+          "height": 151,
+          "top": 399.796875,
+          "right": 702,
+          "bottom": 550.796875,
+          "left": 521
+        }
+      }
+    ],
+    "dialogZ": "60",
+    "active": "<div tabindex=\"-1\" class=\"z-dropdown overflow-auto rounded-overlay border border-subtle bg-overlay p-1 shadow-overlay\" style=\"position: fixed; top: 394.797px; left: 516px; opacity: 1; transform: none; width: 191px; max-height: 597.203px;\"><"
+  }
+}

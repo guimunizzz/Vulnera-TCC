@@ -13,9 +13,12 @@
  * Apenas os componentes em `components/dashboard/hero/`.
  */
 
+/* Superfícies quase opacas até a borda: a atmosfera ASCII aparece nos vãos e
+   margens, nunca atrás de texto ou número. O brilho do canto vem do fallback
+   do próprio hero, não do que está atrás dele. */
 .dashboard-hero-surface {
   background:
-    linear-gradient(110deg, oklch(var(--color-bg-surface)) 0%, oklch(var(--color-bg-surface) / 0.95) 36%, oklch(var(--color-bg-surface) / 0.25) 100%);
+    linear-gradient(110deg, oklch(var(--color-bg-surface)) 0%, oklch(var(--color-bg-surface) / 0.95) 36%, oklch(var(--color-bg-surface) / 0.88) 100%);
   box-shadow:
     var(--elevation-raised),
     inset 0 1px 0 oklch(var(--color-text-primary) / 0.035);
@@ -69,17 +72,14 @@
     radial-gradient(ellipse at 8% 72%, oklch(var(--color-accent) / 0.09), transparent 45%);
 }
 
+/* Mesma regra do hero (o canto do card mostrava as antigas órbitas). */
 .dashboard-kpi {
-  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 46%, oklch(var(--color-bg-surface) / 0.96) 62%, oklch(var(--color-bg-surface) / 0.2));
+  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 46%, oklch(var(--color-bg-surface) / 0.96) 62%, oklch(var(--color-bg-surface) / 0.88));
 }
 
 .dashboard-kpi-orbit-fallback {
   transform: rotate(-28deg) scaleY(0.5);
   box-shadow: 0 0 0 10px oklch(var(--color-accent) / 0.035);
-}
-
-.dashboard-workspace[data-scene-ready="true"] .dashboard-kpi-orbit-fallback {
-  opacity: 0;
 }
 
 @media (max-width: 767px) {

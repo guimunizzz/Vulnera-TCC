@@ -1,0 +1,158 @@
+{
+  "marker": "QA-20261015-UI-mv9hhdmd",
+  "startedAt": "2026-10-15T11:57:02.389Z",
+  "checks": [
+    {
+      "name": "cadastro mostra senhas divergentes",
+      "ok": true
+    },
+    {
+      "name": "cadastro UI HTTP 201",
+      "ok": true
+    },
+    {
+      "name": "onboarding exige nome empresa",
+      "ok": true
+    },
+    {
+      "name": "onboarding exige plano",
+      "ok": false
+    },
+    {
+      "name": "onboarding cria empresa e pedido",
+      "ok": true,
+      "detail": {
+        "company": 201,
+        "subscription": 201
+      }
+    },
+    {
+      "name": "login qa-20261015-ui-mv9hhdmd",
+      "ok": true
+    },
+    {
+      "name": "OWNER recebe edição SLA imediatamente após onboarding",
+      "ok": false,
+      "detail": {
+        "before": {
+          "save": 0,
+          "readonly": true
+        },
+        "after": {
+          "save": 1,
+          "companyRole": "OWNER"
+        }
+      }
+    },
+    {
+      "name": "login admin",
+      "ok": true
+    },
+    {
+      "name": "ADMIN deve selecionar empresa",
+      "ok": true
+    },
+    {
+      "name": "criar aplicação UI",
+      "ok": false
+    },
+    {
+      "name": "DAST exige URL",
+      "ok": true
+    },
+    {
+      "name": "DAST invalida URL incorreta",
+      "ok": true
+    },
+    {
+      "name": "DAST real exige consentimento",
+      "ok": true
+    },
+    {
+      "name": "DAST simulado criado UI",
+      "ok": true
+    },
+    {
+      "name": "DAST terminou com selo simulado",
+      "ok": false
+    }
+  ],
+  "observations": [
+    {
+      "name": "session-after-onboarding",
+      "user": {
+        "id": "cmv9hhhjc001tph0164bvsnz9",
+        "name": "QA-20261015-UI-mv9hhdmd",
+        "email": "qa-20261015-ui-mv9hhdmd@example.test",
+        "role": "CLIENT",
+        "companyId": null,
+        "companyRole": null,
+        "createdAt": "2026-10-15T11:57:07.464Z"
+      }
+    },
+    {
+      "name": "onboarding-owner-role-stale",
+      "before": {
+        "save": 0,
+        "readonly": true
+      },
+      "after": {
+        "save": 1,
+        "companyRole": "OWNER"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "flow": "aprovar-assinatura",
+      "error": "page.waitForResponse: Timeout 15000ms exceeded while waiting for event \"response\""
+    },
+    {
+      "flow": "nova-aplicacao-wizard",
+      "error": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: 'Nova aplicação' }) to be hidden\u001b[22m\n\u001b[2m    32 × locator resolved to visible <div role=\"dialog\" aria-modal=\"true\" aria-labelledby=\":r5:-titulo\" aria-describedby=\":r5:-descricao\" class=\"w-full rounded-overlay border border-subtle bg-overlay p-6 shadow-modal max-w-md\">…</div>\u001b[22m\n"
+    },
+    {
+      "flow": "logout",
+      "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Conta', exact: true })\u001b[22m\n"
+    }
+  ],
+  "created": {
+    "company": {
+      "id": "cmv9hhigg001xph01p3d3rv8q",
+      "name": "QA-20261015-UI-mv9hhdmd Empresa",
+      "cnpj": null,
+      "planId": "cmue2b97i0001pxognd2mxpg2",
+      "createdAt": "2026-10-15T11:57:08.656Z",
+      "updatedAt": "2026-10-15T11:57:08.656Z"
+    },
+    "user": {
+      "id": "cmv9hhhjc001tph0164bvsnz9",
+      "email": "qa-20261015-ui-mv9hhdmd@example.test"
+    },
+    "application": {
+      "error": "NO_ACTIVE_SUBSCRIPTION"
+    },
+    "scan": {
+      "id": "cmv9hiqrg002hph01773rvvoj",
+      "targetUrl": "http://localhost:8086/qa-QA-20261015-UI-mv9hhdmd",
+      "status": "QUEUED",
+      "requestedById": "cmue2b9em0003pxogpar7imm9",
+      "containerName": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "durationMs": null,
+      "errorMessage": null,
+      "progress": 0,
+      "phase": null,
+      "simulated": true,
+      "warningMessage": null,
+      "alertsHigh": 0,
+      "alertsMedium": 0,
+      "alertsLow": 0,
+      "alertsInfo": 0,
+      "createdAt": "2026-10-15T11:58:06.055Z",
+      "updatedAt": "2026-10-15T11:58:06.200Z"
+    }
+  },
+  "finishedAt": "2026-10-15T11:58:29.873Z"
+}

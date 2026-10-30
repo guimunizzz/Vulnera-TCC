@@ -31,8 +31,8 @@ const ROWS = [
 
 export default function Comparison() {
   return (
-    <section className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24">
-      <div className="mx-auto w-full max-w-4xl">
+    <section className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
+      <div className="vx-superficie mx-auto w-full max-w-4xl">
         <Reveal className="text-center">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">{"// DIFERENCIAIS"}</p>
           <GlitchHeading className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
@@ -44,7 +44,7 @@ export default function Comparison() {
           </p>
         </Reveal>
 
-        <Reveal delay={150} className="mt-16">
+        <Reveal ordem={1} className="mt-16">
           <div className="hidden grid-cols-[1.2fr_1fr_1fr] gap-4 border-b border-[rgba(var(--vx-accent-rgb),0.15)] pb-3 font-mono text-xs tracking-widest text-[var(--vx-text-3)] md:grid">
             <span>ASPECTO</span>
             <span className="text-[var(--vx-accent)]">VULNERA</span>
@@ -71,7 +71,7 @@ export default function Comparison() {
           ))}
         </Reveal>
 
-        <Reveal delay={300} className="mt-12 text-center">
+        <Reveal ordem={2} className="mt-12 text-center">
           <a
             href="#planos"
             className="inline-block rounded-[6px] border border-[rgba(var(--vx-neutral-rgb),0.4)] px-8 py-3 font-mono text-sm font-bold tracking-wide text-[var(--vx-text)] transition-all duration-[300ms] hover:border-[var(--vx-accent)] hover:text-[var(--vx-accent)]"

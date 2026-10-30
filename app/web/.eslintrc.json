@@ -45,7 +45,7 @@
             "message": "GSAP é da landing e entra só por components/landing/motion/ (registro único dos plugins). O app autenticado usa Motion."
           },
           {
-            "group": ["**/dashboard-ambient-canvas", "**/landing-root"],
+            "group": ["**/dashboard-ambient-canvas", "**/landing-root", "**/landing-scene-canvas"],
             "message": "Módulo de cena: carregue com lazy(() => import(...)), nunca com import estático."
           }
         ]
@@ -57,8 +57,8 @@
       "files": [
         "src/three/**",
         "src/components/dashboard/hero/use-dashboard-scene.ts",
-        "src/components/landing/intro-3d.tsx",
-        "src/components/landing/ambient-particles.tsx"
+        "src/components/landing/scene/use-landing-scene.ts",
+        "src/components/landing/scene/shaders.ts"
       ],
       "rules": { "no-restricted-imports": "off" }
     },

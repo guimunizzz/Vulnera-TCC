@@ -9,6 +9,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { Calculator, FileBarChart, Smartphone, Sparkles, X, type LucideIcon } from "lucide-react";
 import { Reveal, GlitchHeading } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
+import { DURACAO } from "../../../motion/tokens";
+import { DESLOCAMENTO_MOTION_LANDING, EASE_MOTION_LANDING, ESCALA_LANDING } from "../motion/tokens";
 
 interface Feature {
   icon: LucideIcon;
@@ -66,10 +68,10 @@ function ReportPreviewModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+        initial={{ opacity: 0, y: DESLOCAMENTO_MOTION_LANDING.overlay, scale: ESCALA_LANDING.overlay }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 16, scale: 0.98 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
+        exit={{ opacity: 0, y: DESLOCAMENTO_MOTION_LANDING.overlay, scale: ESCALA_LANDING.overlay }}
+        transition={{ duration: DURACAO.base, ease: EASE_MOTION_LANDING.saida }}
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-md rounded-[6px] border border-[rgba(var(--vx-accent-rgb),0.3)] bg-[var(--vx-bg-2)] p-8 shadow-[0_0_50px_rgba(var(--vx-accent-rgb),0.15)]"
       >
@@ -124,8 +126,8 @@ export default function Features() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
-    <section id="recursos" className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24">
-      <div className="mx-auto w-full max-w-5xl">
+    <section id="recursos" data-ato="3" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
+      <div className="vx-superficie mx-auto w-full max-w-5xl">
         <Reveal className="text-center">
           <GlitchHeading className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Killer features
@@ -136,7 +138,7 @@ export default function Features() {
           {FEATURES.map((feature, i) => {
             const Icon = feature.icon;
             return (
-              <Reveal key={feature.title} delay={i * 120}>
+              <Reveal key={feature.title} ordem={i}>
                 <div className="group relative flex h-full flex-col rounded-[6px] border border-[rgba(var(--vx-accent-rgb),0.15)] bg-[var(--vx-bg-2)] p-8 transition-all duration-[300ms] hover:-translate-y-[2px] hover:border-[rgba(var(--vx-accent-rgb),0.5)] hover:shadow-[0_0_28px_rgba(var(--vx-accent-rgb),0.18)]">
                   <Icon
                     size={40}

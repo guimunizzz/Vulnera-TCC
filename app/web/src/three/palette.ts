@@ -30,14 +30,17 @@ export function temaAtual(): TemaDaCena {
 }
 
 /**
- * Cor exibida de um token "L C H" no contexto de `elemento`. Escreve em
- * `destino` quando informado — materiais existentes trocam de cor sem alocar.
+ * Cor exibida de um token no contexto de `elemento`. Aceita os dois formatos
+ * de paleta do projeto: "L C H" (tokens do design system, `tokens.css`) e hex
+ * (paleta própria da landing, `landing.css`). Escreve em `destino` quando
+ * informado — materiais existentes trocam de cor sem alocar.
  */
 export function lerCorDoToken(elemento: Element, token: string, destino = new THREE.Color()): THREE.Color {
   const valor = getComputedStyle(elemento).getPropertyValue(token).trim();
+  if (/^#[0-9a-f]{6}$/i.test(valor)) return destino.setStyle(valor, THREE.SRGBColorSpace);
   const [L, C, H] = valor.split(/\s+/).map(Number);
   if ([L, C, H].some((parte) => parte === undefined || Number.isNaN(parte))) {
-    throw new Error(`Token ${token} fora do formato "L C H": "${valor}"`);
+    throw new Error(`Token ${token} fora do formato "L C H" ou hex: "${valor}"`);
   }
   const { rgb } = oklchParaSrgbNormalizado(L, C, H);
   return destino.setRGB(rgb[0], rgb[1], rgb[2], THREE.SRGBColorSpace);

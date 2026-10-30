@@ -12,7 +12,7 @@ import { GlitchHeading } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
 import { gsap } from "../motion/gsap";
 import { useMovimentoLanding } from "../motion/use-landing-motion";
-import { DESLOCAMENTO_LANDING, EASE_LANDING } from "../motion/tokens";
+import { DESLOCAMENTO_LANDING, EASE_LANDING, ESCALA_LANDING } from "../motion/tokens";
 
 const MotionLink = motion.create(Link);
 
@@ -54,9 +54,9 @@ export default function FinalCTA() {
     <>
       <section
         ref={ref}
-        className="vx-grid-bg flex min-h-screen flex-col items-center justify-center bg-[var(--vx-bg)] px-6 py-24 text-center"
+        className="vx-grid-bg flex min-h-screen flex-col items-center justify-center px-6 py-24 text-center"
       >
-        <div ref={titulo}>
+        <div ref={titulo} className="vx-superficie">
           <GlitchHeading
             as="h2"
             className="text-4xl font-bold leading-tight text-[var(--vx-text)] sm:text-[3.75rem] md:text-[4.5rem]"
@@ -68,8 +68,8 @@ export default function FinalCTA() {
           </p>
           <MotionLink
             to="/register"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
+            whileHover={{ scale: ESCALA_LANDING.hover }}
+            whileTap={{ scale: ESCALA_LANDING.toque }}
             className="mt-12 inline-block rounded-[6px] bg-[var(--vx-accent)] px-12 py-4 font-mono text-base font-bold tracking-wider text-[var(--vx-on-accent)] transition-shadow duration-[300ms] hover:shadow-[0_0_44px_rgba(var(--vx-accent-rgb),0.8)]"
             style={{ boxShadow: "0 0 20px rgba(var(--vx-accent-rgb),0.45)" }}
           >

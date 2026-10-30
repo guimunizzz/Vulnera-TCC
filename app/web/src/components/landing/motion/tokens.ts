@@ -87,6 +87,64 @@ export const SCRUB_LANDING = {
   barra: 0.3,
   /** Desenho de linha acompanhando a seção. */
   linha: 0.5,
+  /** Progresso da cena narrativa: segue o scroll com um pouco de inércia. */
+  cena: 0.6,
+} as const;
+
+/* --------------------------------------------------------------------------
+   Micro-interações em Motion (entrada ao aparecer, hover, toque, acordeão).
+   Motion recebe segundos e curvas no formato dele, não strings do GSAP.
+   -------------------------------------------------------------------------- */
+
+/** Curvas no formato do Motion. */
+export const EASE_MOTION_LANDING = {
+  /** Entradas: desacelera ao chegar. */
+  saida: "easeOut",
+  /** Abre e fecha (acordeão): simétrica. */
+  alternancia: "easeInOut",
+} as const;
+
+/** Durações em Motion que não existem no app. */
+export const DURACAO_MOTION_LANDING = {
+  /** Bloco aparecendo ao entrar na tela (`Reveal`, hero). */
+  entrada: DURACAO_LANDING.entrada,
+  /** Acordeão do FAQ abrindo ou fechando. */
+  alternancia: 0.25,
+} as const;
+
+/** Escalas de resposta ao ponteiro e de entrada de overlay. */
+export const ESCALA_LANDING = {
+  hover: 1.04,
+  toque: 0.97,
+  /** Cartão do modal antes de entrar. */
+  overlay: 0.98,
+} as const;
+
+/** Deslocamentos de micro-interação, em px. */
+export const DESLOCAMENTO_MOTION_LANDING = {
+  /** Bloco revelado ao entrar na tela. */
+  revelacao: 20,
+  /** Card do modal entrando. */
+  overlay: 16,
+  /** Cartão de plano subindo no hover. */
+  elevacao: 6,
+  /** Dropdown da navbar. */
+  menu: 6,
+} as const;
+
+/** Escalonamento em Motion, em segundos. */
+export const ESCALONAMENTO_MOTION_LANDING = {
+  /** Entre blocos revelados em sequência (cards, itens de lista). */
+  revelacao: 0.15,
+  /** Itens do hero, depois de um respiro inicial. */
+  hero: 0.15,
+  /** Respiro antes do primeiro item do hero. */
+  inicioHero: 0.2,
+} as const;
+
+/** Mola do cartão de plano (hover): firme, com um leve assentamento. */
+export const MOLA_LANDING = {
+  cartao: { type: "spring", stiffness: 300, damping: 22 },
 } as const;
 
 /** Breakpoint `md` do Tailwind — abaixo dele, efeitos decorativos de layout largo somem. */

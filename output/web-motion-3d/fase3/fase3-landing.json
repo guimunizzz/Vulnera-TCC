@@ -1,0 +1,166 @@
+{
+  "execucoes": [
+    {
+      "modo": "normal",
+      "largura": 1440,
+      "barraNoTopo": "matrix(0, 0, 0, 1, 0, 0)",
+      "fim": {
+        "score": "63",
+        "pontos": [
+          "4",
+          "4",
+          "4",
+          "4",
+          "4",
+          "4",
+          "4"
+        ],
+        "barras": [
+          "80%=80%",
+          "80%=80%",
+          "60%=60%",
+          "60%=60%",
+          "40%=40%",
+          "40%=40%",
+          "80%=80%"
+        ],
+        "areaRadar": "0.16",
+        "barraProgresso": "matrix(1, 0, 0, 1, 0, 0)",
+        "tituloFinal": {
+          "opacity": "1",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)"
+        }
+      },
+      "tituloCentralizado": {
+        "opacity": "1",
+        "transform": "matrix(0.99, 0, 0, 0.99, 0, 0)"
+      },
+      "erros": []
+    },
+    {
+      "modo": "normal",
+      "largura": 375,
+      "barraNoTopo": "matrix(0, 0, 0, 1, 0, 0)",
+      "fim": {
+        "score": "63",
+        "pontos": [
+          "4",
+          "4",
+          "4",
+          "4",
+          "4",
+          "4",
+          "4"
+        ],
+        "barras": [
+          "80%=80%",
+          "80%=80%",
+          "60%=60%",
+          "60%=60%",
+          "40%=40%",
+          "40%=40%",
+          "80%=80%"
+        ],
+        "areaRadar": "0.16",
+        "barraProgresso": "matrix(1, 0, 0, 1, 0, 0)",
+        "tituloFinal": {
+          "opacity": "1",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)"
+        }
+      },
+      "tituloCentralizado": {
+        "opacity": "1",
+        "transform": "matrix(0.9888, 0, 0, 0.9888, 0, 0)"
+      },
+      "erros": []
+    },
+    {
+      "modo": "reduce",
+      "largura": 1440,
+      "barraNoTopo": "matrix(0, 0, 0, 1, 0, 0)",
+      "fim": {
+        "score": "63",
+        "pontos": [
+          "4",
+          "4",
+          "4",
+          "4",
+          "4",
+          "4",
+          "4"
+        ],
+        "barras": [
+          "80%=80%",
+          "80%=80%",
+          "60%=60%",
+          "60%=60%",
+          "40%=40%",
+          "40%=40%",
+          "80%=80%"
+        ],
+        "areaRadar": "0.16",
+        "barraProgresso": "matrix(1, 0, 0, 1, 0, 0)",
+        "tituloFinal": {
+          "opacity": "1",
+          "transform": "none"
+        }
+      },
+      "tituloCentralizado": {
+        "opacity": "1",
+        "transform": "none"
+      },
+      "erros": []
+    },
+    {
+      "modo": "reduce",
+      "largura": 375,
+      "barraNoTopo": "matrix(0, 0, 0, 1, 0, 0)",
+      "fim": {
+        "score": "63",
+        "pontos": [
+          "4",
+          "4",
+          "4",
+          "4",
+          "4",
+          "4",
+          "4"
+        ],
+        "barras": [
+          "80%=80%",
+          "80%=80%",
+          "60%=60%",
+          "60%=60%",
+          "40%=40%",
+          "40%=40%",
+          "80%=80%"
+        ],
+        "areaRadar": "0.16",
+        "barraProgresso": "matrix(1, 0, 0, 1, 0, 0)",
+        "tituloFinal": {
+          "opacity": "1",
+          "transform": "none"
+        }
+      },
+      "tituloCentralizado": {
+        "opacity": "1",
+        "transform": "none"
+      },
+      "erros": []
+    }
+  ],
+  "trocaAoVivo": {
+    "antes": {
+      "opacity": "0.7759",
+      "transform": "matrix(0.9572, 0, 0, 0.9572, 0, 0)"
+    },
+    "depois": {
+      "opacity": "0.7759",
+      "transform": "none"
+    },
+    "deVolta": {
+      "opacity": "0.7759",
+      "transform": "matrix(0.9572, 0, 0, 0.9572, 0, 0)"
+    }
+  }
+}

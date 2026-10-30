@@ -40,8 +40,8 @@ const TEAM = [
 
 export default function Team() {
   return (
-    <section id="equipe" className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24">
-      <div className="mx-auto w-full max-w-5xl">
+    <section id="equipe" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
+      <div className="vx-superficie mx-auto w-full max-w-5xl">
         <Reveal className="text-center">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">{"// QUEM CONSTRÓI"}</p>
           <GlitchHeading className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
@@ -51,7 +51,7 @@ export default function Team() {
 
         <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
           {TEAM.map((member, i) => (
-            <Reveal key={member.name} delay={i * 150}>
+            <Reveal key={member.name} ordem={i}>
               <div className="flex h-full flex-col rounded-[6px] border border-[rgba(var(--vx-accent-rgb),0.15)] bg-[var(--vx-bg-2)] p-8 text-center transition-all duration-[300ms] hover:border-[rgba(var(--vx-accent-rgb),0.4)] hover:shadow-[0_0_24px_rgba(var(--vx-accent-rgb),0.12)]">
                 <img
                   src={member.photo}

@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "spider",
+    "pages": 9,
+    "checks": {
+      "all_text_in_page": true,
+      "method": true,
+      "discovery": true,
+      "limits": true
+    },
+    "overflow": []
+  },
+  {
+    "kind": "legacy",
+    "pages": 5,
+    "checks": {
+      "all_text_in_page": true,
+      "legacy_unknown": true,
+      "no_current_discovery": true
+    },
+    "overflow": []
+  }
+]

@@ -9,6 +9,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { Plus } from "lucide-react";
 import { Reveal, GlitchHeading } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
+import { DURACAO } from "../../../motion/tokens";
+import { DURACAO_MOTION_LANDING, EASE_MOTION_LANDING } from "../motion/tokens";
 
 interface QA {
   q: string;
@@ -52,7 +54,7 @@ function FAQItem({ item, open, onToggle }: FAQItemProps) {
         <span className="font-mono text-sm text-[var(--vx-text)] md:text-base"><InteractiveLabel effect="glitch">{item.q}</InteractiveLabel></span>
         <motion.span
           animate={{ rotate: open ? 45 : 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: DURACAO.base }}
           className="shrink-0 text-[var(--vx-accent)]"
           aria-hidden="true"
         >
@@ -65,7 +67,7 @@ function FAQItem({ item, open, onToggle }: FAQItemProps) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
+            transition={{ duration: DURACAO_MOTION_LANDING.alternancia, ease: EASE_MOTION_LANDING.alternancia }}
             className="overflow-hidden"
           >
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--vx-text-2)]">{item.a}</p>
@@ -80,8 +82,8 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
-    <section className="vx-grid-bg bg-[var(--vx-bg)] px-6 py-24">
-      <div className="mx-auto w-full max-w-2xl">
+    <section className="vx-grid-bg px-6 py-24">
+      <div className="vx-superficie mx-auto w-full max-w-2xl">
         <Reveal className="text-center">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">
             {"// PERGUNTAS FREQUENTES"}
@@ -91,7 +93,7 @@ export default function FAQ() {
           </GlitchHeading>
         </Reveal>
 
-        <Reveal delay={150} className="mt-12">
+        <Reveal ordem={1} className="mt-12">
           {QUESTIONS.map((item, i) => (
             <FAQItem
               key={item.q}

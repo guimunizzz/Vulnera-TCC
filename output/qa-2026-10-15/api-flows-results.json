@@ -1,0 +1,1511 @@
+{
+  "marker": "QA-20261015-mv9hcuic",
+  "base": "http://localhost:3001/api",
+  "resources": {
+    "marker": "QA-20261015-mv9hcuic",
+    "accounts": [
+      {
+        "id": "cmv9hd71o000bph01ggsu0pru",
+        "email": "qa-20261015-mv9hcuic-tenanta@qa.invalid",
+        "role": "CLIENT"
+      },
+      {
+        "id": "cmv9hdc38000rph01s0ffh4ao",
+        "email": "qa-20261015-mv9hcuic-tenantb@qa.invalid",
+        "role": "CLIENT"
+      }
+    ],
+    "plan": {
+      "id": "cmue2b97t0002pxogt92g8h8p",
+      "name": "Enterprise",
+      "maxApplications": 999,
+      "maxProjects": 999,
+      "includesRemediation": true,
+      "price": 0,
+      "isActive": true,
+      "createdAt": "2026-09-23T12:11:31.049Z"
+    },
+    "admin": {
+      "id": "cmue2b9em0003pxogpar7imm9",
+      "role": "ADMIN",
+      "companyId": null
+    },
+    "pentester": {
+      "id": "cmue2bah00021pxogddrlvrbq",
+      "role": "PENTESTER",
+      "companyId": null
+    },
+    "pentester2": {
+      "id": "cmue2bahl0022pxogx2omuva0",
+      "role": "PENTESTER",
+      "companyId": null
+    },
+    "demoOwner": {
+      "id": "cmue2b9pj0009pxog1a70dp6u",
+      "role": "CLIENT",
+      "companyId": "cmue2b9ey0005pxogfcfrjmw2"
+    },
+    "demoMember": {
+      "id": "cmue2bapv0024pxogwfkf9vqp",
+      "role": "CLIENT",
+      "companyId": "cmue2b9ey0005pxogfcfrjmw2"
+    },
+    "tenantA": {
+      "userId": "cmv9hd71o000bph01ggsu0pru",
+      "companyId": "cmv9hd79c000fph012iomwajn",
+      "subscriptionId": "cmv9hd8r8000hph01t2ajx882",
+      "applicationId": "cmv9hda2r000nph012g2hu7q9",
+      "projectId": "cmv9hdb8i000pph01zb0tb5c4",
+      "vulnerabilityId": "cmv9hdgf60019ph01d1q43fuf",
+      "savedQueryId": "cmv9hg2cw001pph01oo421xi8"
+    },
+    "tenantB": {
+      "userId": "cmv9hdc38000rph01s0ffh4ao",
+      "companyId": "cmv9hdc8j000vph01tez6ofrk",
+      "subscriptionId": "cmv9hdddh000xph010mzntt2f",
+      "applicationId": "cmv9hdejx0013ph01xv8n6x1l",
+      "projectId": "cmv9hdfne0015ph01lswcu2pf"
+    }
+  },
+  "results": [
+    {
+      "id": "health",
+      "method": "GET",
+      "endpoint": "/health",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 216,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "plans-public",
+      "method": "GET",
+      "endpoint": "/plans",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 13,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "login-admin",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 892,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "no-password-admin",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Auth user projection omits password/hash"
+    },
+    {
+      "id": "login-pentester",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 1358,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "no-password-pentester",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Auth user projection omits password/hash"
+    },
+    {
+      "id": "login-pentester2",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 1162,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "no-password-pentester2",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Auth user projection omits password/hash"
+    },
+    {
+      "id": "login-demoOwner",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 1119,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "no-password-demoOwner",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Auth user projection omits password/hash"
+    },
+    {
+      "id": "login-demoMember",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 854,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "no-password-demoMember",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Auth user projection omits password/hash"
+    },
+    {
+      "id": "register-tenantA",
+      "method": "POST",
+      "endpoint": "/auth/register",
+      "actor": "anonymous",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 1267,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "register-role-tenantA",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Role sent in registration does not elevate privileges"
+    },
+    {
+      "id": "company-create-tenantA",
+      "method": "POST",
+      "endpoint": "/companies",
+      "actor": "tenantA",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 512,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "subscription-request-tenantA",
+      "method": "POST",
+      "endpoint": "/subscriptions",
+      "actor": "tenantA",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 376,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "subscription-approve-tenantA",
+      "method": "POST",
+      "endpoint": "/subscriptions/cmv9hd8r8000hph01t2ajx882/approve",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 375,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "application-create-tenantA",
+      "method": "POST",
+      "endpoint": "/applications",
+      "actor": "tenantA",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 157,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-injection-tenantA",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Client-supplied companyId does not select demo tenant"
+    },
+    {
+      "id": "project-create-tenantA",
+      "method": "POST",
+      "endpoint": "/projects",
+      "actor": "tenantA",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 138,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "project-inheritance-tenantA",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Project inherits tenant/application"
+    },
+    {
+      "id": "register-tenantB",
+      "method": "POST",
+      "endpoint": "/auth/register",
+      "actor": "anonymous",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 1198,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "register-role-tenantB",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Role sent in registration does not elevate privileges"
+    },
+    {
+      "id": "company-create-tenantB",
+      "method": "POST",
+      "endpoint": "/companies",
+      "actor": "tenantB",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 60,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "subscription-request-tenantB",
+      "method": "POST",
+      "endpoint": "/subscriptions",
+      "actor": "tenantB",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 145,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "subscription-approve-tenantB",
+      "method": "POST",
+      "endpoint": "/subscriptions/cmv9hdddh000xph010mzntt2f/approve",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 180,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "application-create-tenantB",
+      "method": "POST",
+      "endpoint": "/applications",
+      "actor": "tenantB",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 35,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-injection-tenantB",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Client-supplied companyId does not select demo tenant"
+    },
+    {
+      "id": "project-create-tenantB",
+      "method": "POST",
+      "endpoint": "/projects",
+      "actor": "tenantB",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 217,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "project-inheritance-tenantB",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Project inherits tenant/application"
+    },
+    {
+      "id": "assign-pentester",
+      "method": "POST",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4/members",
+      "actor": "admin",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 339,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "assigned-member-name",
+      "method": "GET",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4/members",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 15,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "member-name-present",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Assigned pentester has human-readable userName"
+    },
+    {
+      "id": "vulnerability-create",
+      "method": "POST",
+      "endpoint": "/vulnerabilities",
+      "actor": "pentester",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 670,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "cvss-derived",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Derived CVSS 5.4/MEDIUM"
+    },
+    {
+      "id": "unauthenticated-user",
+      "method": "GET",
+      "endpoint": "/users/me",
+      "actor": "anonymous",
+      "status": 401,
+      "expected": 401,
+      "pass": true,
+      "durationMs": 5,
+      "retries": 0,
+      "response": {
+        "code": "UNAUTHORIZED",
+        "message": "Token ausente ou mal formado"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "invalid-bearer",
+      "method": "GET",
+      "endpoint": "/users/me",
+      "actor": "invalid-token",
+      "status": 401,
+      "expected": 401,
+      "pass": true,
+      "durationMs": 5,
+      "retries": 0,
+      "response": {
+        "code": "INVALID_TOKEN",
+        "message": "Token inválido ou expirado"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "anonymous-project",
+      "method": "GET",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4",
+      "actor": "anonymous",
+      "status": 401,
+      "expected": 401,
+      "pass": true,
+      "durationMs": 17,
+      "retries": 0,
+      "response": {
+        "code": "UNAUTHORIZED",
+        "message": "Token ausente ou mal formado"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-isolation-application",
+      "method": "GET",
+      "endpoint": "/applications/cmv9hda2r000nph012g2hu7q9",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 40,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-isolation-project",
+      "method": "GET",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 13,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-isolation-vulnerability",
+      "method": "GET",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 20,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-isolation-comments",
+      "method": "GET",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/comments",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 64,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-isolation-evidence",
+      "method": "GET",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/evidences",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 45,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-isolation-project-members",
+      "method": "GET",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4/members",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 20,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-isolation-report",
+      "method": "GET",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4/report-data",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 38,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-isolation-sla",
+      "method": "GET",
+      "endpoint": "/companies/cmv9hd79c000fph012iomwajn/sla-policy",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 9,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-isolation-maturity",
+      "method": "GET",
+      "endpoint": "/maturity/assessments/cmv9hd79c000fph012iomwajn/latest",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 80,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-list-applications",
+      "method": "GET",
+      "endpoint": "/applications",
+      "actor": "tenantB",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 13,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-list-no-leak",
+      "type": "assertion",
+      "pass": true,
+      "detail": "All listed applications belong to caller tenant"
+    },
+    {
+      "id": "tenant-list-vulnerabilities",
+      "method": "GET",
+      "endpoint": "/vulnerabilities",
+      "actor": "tenantB",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 149,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-findings-empty",
+      "type": "assertion",
+      "pass": null,
+      "detail": "Fresh tenant B must see no findings from A/demo",
+      "reviewNote": "Asserção original usou items[] mas contrato é data[]; não avaliada, sem inferência de falha de produto. Segunda rodada valida escopo usando data[]."
+    },
+    {
+      "id": "client-company-list-denied",
+      "method": "GET",
+      "endpoint": "/companies",
+      "actor": "tenantA",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 5,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "client-users-list-denied",
+      "method": "GET",
+      "endpoint": "/users",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 20,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8",
+      "originalExpected": 403,
+      "reviewNote": "CLIENT /users é permitido e limitado à própria Company (UserService.list)."
+    },
+    {
+      "id": "client-other-user-denied",
+      "method": "GET",
+      "endpoint": "/users/cmue2bah00021pxogddrlvrbq",
+      "actor": "tenantA",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 100,
+      "retries": 0,
+      "response": {
+        "code": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "client-dast-denied",
+      "method": "GET",
+      "endpoint": "/dast/scans",
+      "actor": "tenantA",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 5,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "client-subscriptions-list-denied",
+      "method": "GET",
+      "endpoint": "/subscriptions/pending",
+      "actor": "tenantA",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 5,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "client-playbook-create-denied",
+      "method": "POST",
+      "endpoint": "/playbooks",
+      "actor": "tenantA",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 6,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "pentester-application-list-denied",
+      "method": "GET",
+      "endpoint": "/applications",
+      "actor": "pentester",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 6,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "pentester-unassigned-project-denied",
+      "method": "GET",
+      "endpoint": "/projects/cmv9hdfne0015ph01lswcu2pf",
+      "actor": "pentester",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 12,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "pentester-assigned-project",
+      "method": "GET",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 10,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "pentester-assigned-vulnerability",
+      "method": "GET",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 34,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "pentester2-unassigned-vulnerability",
+      "method": "GET",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf",
+      "actor": "pentester2",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 13,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-cross-write-app",
+      "method": "PUT",
+      "endpoint": "/applications/cmv9hda2r000nph012g2hu7q9",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 16,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-cross-write-project",
+      "method": "PUT",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 12,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "tenant-cross-write-vulnerability",
+      "method": "PUT",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf",
+      "actor": "tenantB",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 65,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "client-create-vuln-denied",
+      "method": "POST",
+      "endpoint": "/vulnerabilities",
+      "actor": "tenantA",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 61,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "duplicate-project-denied",
+      "method": "POST",
+      "endpoint": "/projects",
+      "actor": "tenantA",
+      "status": 409,
+      "expected": 409,
+      "pass": true,
+      "durationMs": 60,
+      "retries": 0,
+      "response": {
+        "error": "APPLICATION_ALREADY_HAS_PROJECT"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "duplicate-assignment-denied",
+      "method": "POST",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4/members",
+      "actor": "admin",
+      "status": 409,
+      "expected": 409,
+      "pass": true,
+      "durationMs": 33,
+      "retries": 0,
+      "response": {
+        "error": "MEMBER_ALREADY_EXISTS"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "client-risk-increase",
+      "method": "PUT",
+      "endpoint": "/applications/cmv9hda2r000nph012g2hu7q9",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 185,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "client-risk-reduction-denied",
+      "method": "PUT",
+      "endpoint": "/applications/cmv9hda2r000nph012g2hu7q9",
+      "actor": "tenantA",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "durationMs": 12,
+      "retries": 0,
+      "response": {
+        "error": "RISK_CONTEXT_REDUCTION_REQUIRES_ADMIN"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "client-risk-invalid-enum",
+      "method": "PUT",
+      "endpoint": "/applications/cmv9hda2r000nph012g2hu7q9",
+      "actor": "tenantA",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 7,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_ENVIRONMENT"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "app-blank-name-validation",
+      "method": "PUT",
+      "endpoint": "/applications/cmv9hda2r000nph012g2hu7q9",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 59,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "app-restore-name",
+      "method": "PUT",
+      "endpoint": "/applications/cmv9hda2r000nph012g2hu7q9",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 81,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "app-description-type",
+      "method": "PUT",
+      "endpoint": "/applications/cmv9hda2r000nph012g2hu7q9",
+      "actor": "tenantA",
+      "status": 500,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 23,
+      "retries": 0,
+      "response": {
+        "error": "INTERNAL_ERROR"
+      },
+      "request": {
+        "description": {
+          "test": true
+        }
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "app-url-invalid",
+      "method": "PUT",
+      "endpoint": "/applications/cmv9hda2r000nph012g2hu7q9",
+      "actor": "tenantA",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 6,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_URL"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "project-blank-name-validation",
+      "method": "PUT",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4",
+      "actor": "admin",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 6,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_NAME"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "project-description-type",
+      "method": "PUT",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4",
+      "actor": "admin",
+      "status": 500,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 16,
+      "retries": 0,
+      "response": {
+        "error": "INTERNAL_ERROR"
+      },
+      "request": {
+        "description": {
+          "test": true
+        }
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "login-type-email",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "actor": "anonymous",
+      "status": 500,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 15,
+      "retries": 0,
+      "response": {
+        "code": "INTERNAL_ERROR",
+        "message": "Erro interno"
+      },
+      "request": {
+        "email": {
+          "bad": true
+        },
+        "password": "qa-not-a-password"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "login-type-password",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "actor": "anonymous",
+      "status": 401,
+      "expected": [
+        400,
+        401
+      ],
+      "pass": true,
+      "durationMs": 9,
+      "retries": 0,
+      "response": {
+        "code": "INVALID_CREDENTIALS",
+        "message": "Email ou senha incorretos"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "login-missing",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "actor": "anonymous",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 6,
+      "retries": 0,
+      "response": {
+        "code": "MISSING_CREDENTIALS",
+        "message": "Email e senha são obrigatórios"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "refresh-invalid",
+      "method": "POST",
+      "endpoint": "/auth/refresh",
+      "actor": "anonymous",
+      "status": 401,
+      "expected": 401,
+      "pass": true,
+      "durationMs": 7,
+      "retries": 0,
+      "response": {
+        "code": "INVALID_TOKEN",
+        "message": "Refresh token inválido ou revogado"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "user-update-invalid-email",
+      "method": "PATCH",
+      "endpoint": "/users/cmv9hd71o000bph01ggsu0pru",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 211,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "user-restore-email",
+      "method": "PATCH",
+      "endpoint": "/users/cmv9hd71o000bph01ggsu0pru",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 103,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "user-update-empty-name",
+      "method": "PATCH",
+      "endpoint": "/users/cmv9hd71o000bph01ggsu0pru",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 63,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "user-restore-name",
+      "method": "PATCH",
+      "endpoint": "/users/cmv9hd71o000bph01ggsu0pru",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 289,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-filter-badSeverity",
+      "method": "GET",
+      "endpoint": "/vulnerabilities?severity=INVALID",
+      "actor": "tenantA",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 10,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_SEVERITY"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-filter-badStatus",
+      "method": "GET",
+      "endpoint": "/vulnerabilities?status=INVALID",
+      "actor": "tenantA",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 46,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_STATUS"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-filter-badVrs",
+      "method": "GET",
+      "endpoint": "/vulnerabilities?vrsMin=90&vrsMax=20",
+      "actor": "tenantA",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 42,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_VRS_RANGE"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-filter-decimalPage",
+      "method": "GET",
+      "endpoint": "/vulnerabilities?page=1.5",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 127,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-filter-decimalSize",
+      "method": "GET",
+      "endpoint": "/vulnerabilities?pageSize=1.5",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 78,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-filter-infinitePage",
+      "method": "GET",
+      "endpoint": "/vulnerabilities?page=Infinity",
+      "actor": "tenantA",
+      "status": 500,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 64,
+      "retries": 0,
+      "response": {
+        "error": "INTERNAL_ERROR"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-search-marker",
+      "method": "GET",
+      "endpoint": "/vulnerabilities?search=QA-20261015-mv9hcuic&severity=MEDIUM&status=OPEN",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 80,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-search-result",
+      "type": "assertion",
+      "pass": null,
+      "detail": "Combined filters return own marker finding",
+      "reviewNote": "Asserção original usou items[] mas contrato é data[]; não avaliada, sem inferência de falha de produto. Segunda rodada valida escopo usando data[]."
+    },
+    {
+      "id": "finding-client-comment",
+      "method": "POST",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/comments",
+      "actor": "tenantA",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 49,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-empty-comment",
+      "method": "POST",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/comments",
+      "actor": "tenantA",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 9,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_CONTENT"
+      },
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-comment-pagination",
+      "method": "GET",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/comments?page=1.5",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 400,
+      "pass": false,
+      "durationMs": 17,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-transition-invalid",
+      "method": "POST",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/transition",
+      "actor": "pentester",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 30,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_STATUS_TRANSITION"
+      },
+      "contentType": "application/json; charset=utf-8",
+      "originalExpected": 422,
+      "reviewNote": "Controller atual recusa transição inválida em 400; regra funcional aplicada."
+    },
+    {
+      "id": "finding-transition-progress",
+      "method": "POST",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/transition",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 368,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-transition-fixed",
+      "method": "POST",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/transition",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 382,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-transition-closed",
+      "method": "POST",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/transition",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 125,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-audit-log",
+      "method": "GET",
+      "endpoint": "/vulnerabilities/cmv9hdgf60019ph01d1q43fuf/audit-log",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 56,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "finding-report-data",
+      "method": "GET",
+      "endpoint": "/projects/cmv9hdb8i000pph01zb0tb5c4/report-data",
+      "actor": "tenantA",
+      "status": 422,
+      "expected": 422,
+      "pass": true,
+      "durationMs": 18,
+      "retries": 0,
+      "response": {
+        "error": "PROJECT_NOT_READY_FOR_REPORT"
+      },
+      "contentType": "application/json; charset=utf-8",
+      "originalExpected": 200,
+      "reviewNote": "Project PENDING deve bloquear geração; esperado 422."
+    },
+    {
+      "id": "finding-report-list",
+      "method": "GET",
+      "endpoint": "/reports?projectId=cmv9hdb8i000pph01zb0tb5c4",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 378,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "maturity-catalog",
+      "method": "GET",
+      "endpoint": "/maturity/catalog",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 56,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "playbooks-catalog",
+      "method": "GET",
+      "endpoint": "/playbooks",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 50,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "playbooks-category",
+      "method": "GET",
+      "endpoint": "/playbooks/for-category/A03",
+      "actor": "tenantA",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 6,
+      "retries": 0,
+      "response": {
+        "error": "MISSING_COMPANY_ID"
+      },
+      "contentType": "application/json; charset=utf-8",
+      "originalExpected": 200,
+      "reviewNote": "Chamada omitiu companyId obrigatório; validação correta."
+    },
+    {
+      "id": "notifications-list",
+      "method": "GET",
+      "endpoint": "/notifications",
+      "actor": "tenantA",
+      "status": 404,
+      "expected": 404,
+      "pass": true,
+      "durationMs": 5,
+      "retries": 0,
+      "response": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /api/notifications</pre>\n</body>\n</html>\n",
+      "contentType": "text/html; charset=utf-8",
+      "originalExpected": 200,
+      "reviewNote": "Não existe endpoint GET /notifications no contrato atual."
+    },
+    {
+      "id": "dast-status",
+      "method": "GET",
+      "endpoint": "/dast/scans/status",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 5,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "dast-list",
+      "method": "GET",
+      "endpoint": "/dast/scans",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 57,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "saved-query-create",
+      "method": "POST",
+      "endpoint": "/saved-queries",
+      "actor": "tenantA",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "durationMs": 183,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "saved-query-list",
+      "method": "GET",
+      "endpoint": "/saved-queries",
+      "actor": "tenantA",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "durationMs": 38,
+      "retries": 0,
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "saved-query-cross-tenant-denied",
+      "method": "GET",
+      "endpoint": "/saved-queries/cmv9hg2cw001pph01oo421xi8",
+      "actor": "tenantB",
+      "status": 404,
+      "expected": 404,
+      "pass": true,
+      "durationMs": 35,
+      "retries": 0,
+      "response": {
+        "error": "SAVED_QUERY_NOT_FOUND"
+      },
+      "contentType": "application/json; charset=utf-8",
+      "originalExpected": 403,
+      "reviewNote": "Buscas alheias são ocultadas por 404, como previsto no service."
+    },
+    {
+      "id": "saved-query-invalid",
+      "method": "POST",
+      "endpoint": "/saved-queries",
+      "actor": "tenantA",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "durationMs": 10,
+      "retries": 0,
+      "response": {
+        "error": "EMPTY_QUERY"
+      },
+      "contentType": "application/json; charset=utf-8"
+    }
+  ]
+}

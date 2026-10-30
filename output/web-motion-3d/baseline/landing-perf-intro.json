@@ -1,0 +1,48 @@
+{
+  "maquina": "i7-1165G7 (8 threads), Iris Xe + MX350, 15,7 GB, Windows 11, Chrome 156",
+  "startedAt": "2026-10-23T11:50:39.912Z",
+  "intro": {
+    "ateBotaoPularMs": 903,
+    "duracaoIntroMs": 7366,
+    "introVisivelMs": 8298,
+    "fpsMedio": 55.9,
+    "drawsDuranteIntro": {
+      "c0": 406
+    },
+    "longTasks": [
+      {
+        "start": 423,
+        "duration": 136
+      },
+      {
+        "start": 564,
+        "duration": 61
+      },
+      {
+        "start": 935,
+        "duration": 53
+      },
+      {
+        "start": 1019,
+        "duration": 74
+      },
+      {
+        "start": 7806,
+        "duration": 171
+      },
+      {
+        "start": 8077,
+        "duration": 189
+      }
+    ],
+    "canvasesAposIntro": [
+      {
+        "id": null,
+        "inViewport": true,
+        "w": 1430,
+        "h": 900
+      }
+    ]
+  },
+  "scroll": []
+}

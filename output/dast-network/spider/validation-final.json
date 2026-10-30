@@ -1,0 +1,90 @@
+{
+  "scanId": "cmv0z426m0001mj01c12vh7mx",
+  "traffic": [
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/"
+    },
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/"
+    },
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/robots.txt"
+    },
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/sitemap.xml"
+    },
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/page"
+    },
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/iframe-only"
+    },
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/assets/site.js"
+    },
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/robots-only"
+    },
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/sitemap-only"
+    },
+    {
+      "origin": "target",
+      "method": "GET",
+      "url": "/deep/a"
+    }
+  ],
+  "discovery": {
+    "profile": "TRADITIONAL_SPIDER_PASSIVE",
+    "engine": "OWASP_ZAP",
+    "targetUrl": "http://host.docker.internal:18173/",
+    "discoveredAt": "2026-10-09T13:01:01.445Z",
+    "urls": [
+      "http://host.docker.internal:18173/",
+      "http://host.docker.internal:18173/assets/site.js",
+      "http://host.docker.internal:18173/deep/a",
+      "http://host.docker.internal:18173/iframe-only",
+      "http://host.docker.internal:18173/page",
+      "http://host.docker.internal:18173/robots-only",
+      "http://host.docker.internal:18173/robots.txt",
+      "http://host.docker.internal:18173/sitemap-only",
+      "http://host.docker.internal:18173/sitemap.xml"
+    ],
+    "limits": {
+      "maxDurationMin": 1,
+      "maxDepth": 2,
+      "maxChildrenPerNode": 30,
+      "threadCount": 1,
+      "maxParseSizeBytes": 1000000
+    },
+    "processForms": false,
+    "javascript": false,
+    "activeScan": false
+  },
+  "checks": {
+    "onlyGet": true,
+    "noQueries": true,
+    "noOutside": true,
+    "noSensitive": true,
+    "depthBound": true,
+    "resources": true
+  }
+}
