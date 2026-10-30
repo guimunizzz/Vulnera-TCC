@@ -16,7 +16,7 @@
  * (docs/DAST-DOCKER-GAP.md §5).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dastApi } from "../lib/api/dast.api";
@@ -45,6 +45,11 @@ import {
   type DastRisk,
   type DastTriageStatus,
 } from "../types/dast.types";
+
+// `three` só é baixado quando a aba do grafo é aberta.
+const SecurityGraph3D = lazy(() => import("../features/security-graph/security-graph-3d"));
+// Sem WebGL a aba nem aparece: um canvas vazio pareceria "scan sem exposição".
+const TEM_WEBGL = typeof window !== "undefined" && "WebGL2RenderingContext" in window;
 
 function formatElapsed(totalSeconds: number): string {
   const min = Math.floor(totalSeconds / 60);
@@ -237,7 +242,7 @@ export function DastScanDetailPage() {
   // Aba ativa da área de resultado: a lista de achados ou o diff com uma
   // execução anterior. Comparação é uma pergunta diferente ("a correção
   // funcionou?") e merece o próprio espaço em vez de disputar a mesma tabela.
-  const [aba, setAba] = useState<"findings" | "comparacao">("findings");
+  const [aba, setAba] = useState<"findings" | "comparacao" | "grafo">("findings");
   const [findingParaPromover, setFindingParaPromover] = useState<DastFinding | null>(null);
 
   const scanQuery = useQuery({
@@ -469,6 +474,7 @@ export function DastScanDetailPage() {
               [
                 ["findings", `Achados (${findingsQuery.data?.length ?? 0})`],
                 ["comparacao", "Comparar com execução anterior"],
+                ...(TEM_WEBGL ? ([["grafo", "Grafo 3D"]] as const) : []),
               ] as const
             ).map(([chave, rotulo]) => (
               <button
@@ -490,6 +496,12 @@ export function DastScanDetailPage() {
           </div>
 
           {aba === "comparacao" && <DastComparePanel scanId={scan.id} />}
+
+          {aba === "grafo" && findingsQuery.data && (
+            <Suspense fallback={<Skeleton className="mt-4 h-[28rem] w-full bg-inset" />}>
+              <SecurityGraph3D targetUrl={scan.targetUrl} findings={findingsQuery.data} />
+            </Suspense>
+          )}
 
           {aba === "findings" && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
