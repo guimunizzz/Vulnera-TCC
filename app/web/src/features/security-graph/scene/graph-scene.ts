@@ -30,6 +30,7 @@ import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
+import type { DastRisk } from "../../../types/dast.types";
 import { chaveDaAresta, contextoDoNo, type GraphNode, type GraphNodeKind, type SecurityGraph } from "../graph-model";
 import { KitDeMalhas, type NoVisual } from "./node-meshes";
 import type { GraphPalette } from "./palette";
@@ -47,56 +48,92 @@ export interface GraphSceneOptions {
   aoPerderContexto(): void;
 }
 
-const CAMADA_X: Record<GraphNodeKind, number> = { INTERNET: -4.2, ASSET: -1.7, ENDPOINT: 0.9, FINDING: 3.6 };
+// Camadas e aglomerados espaçados para os nomes fixos não se sobreporem (findings são o grosso dos nós).
+const CAMADA_X: Record<GraphNodeKind, number> = { INTERNET: -6.6, ASSET: -3.2, ENDPOINT: 0.6, FINDING: 5.2 };
 const MAX_DPR = 1.5;
 const SEGMENTOS_ARESTA = 24;
 const ESCALA_HOVER = 1.18;
 const ESCALA_SELECIONADO = 1.28;
 
-/** Ponto i de n numa esfera de Fibonacci: distribuição uniforme sem sobreposição. */
-function fibonacci(i: number, n: number, raio: number): THREE.Vector3 {
-  if (n === 1) return new THREE.Vector3();
-  const y = 1 - (i / (n - 1)) * 2;
-  const r = Math.sqrt(1 - y * y);
-  const theta = i * Math.PI * (3 - Math.sqrt(5));
-  return new THREE.Vector3(Math.cos(theta) * r * raio * 0.6, y * raio, Math.sin(theta) * r * raio);
-}
+/** Espaço entre findings do mesmo endpoint: largura de um nome de ~20 caracteres e altura de objeto + nome. */
+const GRADE_DX = 2.2;
+const GRADE_DY = 0.9;
 
 /**
- * Camadas da esquerda para a direita. Endpoints num anel vertical; os findings
- * de cada endpoint formam um aglomerado próprio à frente dele, para que 100
- * findings no mesmo endpoint não se empilhem.
+ * Ponto i de n numa grade de frente para a câmera (plano x-y), centrada no aglomerado.
+ * Grade em vez de esfera: na esfera os findings se sobrepõem em profundidade e os nomes encavalam.
+ */
+/** Grade mais larga que alta: com muitos findings, o grafo cresce para o lado, que é onde há tela. */
+const colunasDe = (n: number): number => Math.max(1, Math.ceil(Math.sqrt(n * 2)));
+const linhasDe = (n: number): number => Math.ceil(n / colunasDe(n));
+
+function grade(i: number, n: number): THREE.Vector3 {
+  const colunas = colunasDe(n);
+  const linhas = linhasDe(n);
+  const coluna = i % colunas;
+  const linha = Math.floor(i / colunas);
+  return new THREE.Vector3((coluna - (colunas - 1) / 2) * GRADE_DX, ((linhas - 1) / 2 - linha) * GRADE_DY, 0);
+}
+
+/** Folga vertical entre a grade de um endpoint e a do próximo. */
+const FOLGA_ENDPOINT = 0.9;
+/** Curvatura da pilha de endpoints em profundidade: dá volume sem esconder um atrás do outro. */
+const CURVA_Z = 0.035;
+
+/**
+ * Camadas da esquerda para a direita. Endpoints empilhados na vertical, cada um
+ * reservando a altura da grade dos seus findings, com leve curva em profundidade;
+ * os findings de cada endpoint formam uma grade à frente dele. Pilha e não anel:
+ * no anel, dois endpoints na mesma altura (um na frente, outro atrás) caem no
+ * mesmo lugar da tela e os nomes se sobrepõem.
  */
 export function posicoesDoGrafo(grafo: SecurityGraph): Map<string, THREE.Vector3> {
   const saida = new Map<string, THREE.Vector3>();
   const pai = new Map(grafo.edges.map((edge) => [edge.target, edge.source]));
-  const endpoints = grafo.nodes.filter((node) => node.kind === "ENDPOINT");
-  const raioAnel = endpoints.length <= 1 ? 0 : THREE.MathUtils.clamp((endpoints.length * 1.1) / (Math.PI * 2), 1.3, 4.2);
-
-  for (const node of grafo.nodes) {
-    if (node.kind === "INTERNET" || node.kind === "ASSET") saida.set(node.id, new THREE.Vector3(CAMADA_X[node.kind], 0, 0));
-  }
-  endpoints.forEach((node, i) => {
-    const angulo = (i / endpoints.length) * Math.PI * 2 + Math.PI / 2;
-    saida.set(node.id, new THREE.Vector3(CAMADA_X.ENDPOINT, Math.sin(angulo) * raioAnel, Math.cos(angulo) * raioAnel));
-  });
-
   const filhos = new Map<string, GraphNode[]>();
   for (const node of grafo.nodes) {
     if (node.kind !== "FINDING") continue;
     const origem = pai.get(node.id) ?? "asset";
     filhos.set(origem, [...(filhos.get(origem) ?? []), node]);
   }
+
+  for (const node of grafo.nodes) {
+    if (node.kind === "INTERNET" || node.kind === "ASSET") saida.set(node.id, new THREE.Vector3(CAMADA_X[node.kind], 0, 0));
+  }
+
+  const endpoints = grafo.nodes.filter((node) => node.kind === "ENDPOINT");
+  const alturas = endpoints.map((node) => Math.max(linhasDe(filhos.get(node.id)?.length ?? 0), 1) * GRADE_DY + FOLGA_ENDPOINT);
+  let topo = alturas.reduce((soma, h) => soma + h, 0) / 2;
+  endpoints.forEach((node, i) => {
+    const y = topo - alturas[i] / 2;
+    topo -= alturas[i];
+    saida.set(node.id, new THREE.Vector3(CAMADA_X.ENDPOINT, y, -CURVA_Z * y * y));
+  });
+
   filhos.forEach((lista, origem) => {
     const base = saida.get(origem) ?? new THREE.Vector3();
-    const centro = new THREE.Vector3(CAMADA_X.FINDING, base.y * 1.18, base.z * 1.18);
-    const raio = lista.length === 1 ? 0 : 0.25 + Math.sqrt(lista.length) * 0.17;
-    lista.forEach((node, i) => saida.set(node.id, centro.clone().add(fibonacci(i, lista.length, raio))));
+    // A grade cresce para a direita: a primeira coluna fica na camada dos findings.
+    const centro = new THREE.Vector3(CAMADA_X.FINDING + ((colunasDe(lista.length) - 1) / 2) * GRADE_DX, base.y, base.z);
+    lista.forEach((node, i) => saida.set(node.id, centro.clone().add(grade(i, lista.length))));
   });
   return saida;
 }
 
 type ComMaterial = THREE.Mesh | THREE.LineSegments;
+
+interface Rotulo3D {
+  id: string;
+  el: HTMLElement;
+  obj: CSS2DObject;
+  /** Menor ganha a disputa por espaço na tela. */
+  prioridade: number;
+  largura: number;
+  altura: number;
+  visivel: boolean;
+}
+
+const PRIORIDADE_TIPO: Record<GraphNodeKind, number> = { INTERNET: 0, ASSET: 1, ENDPOINT: 2, FINDING: 3 };
+const PRIORIDADE_RISCO: Record<DastRisk, number> = { HIGH: 0, MEDIUM: 0.1, LOW: 0.2, INFO: 0.3 };
 
 interface Aresta {
   chave: string;
@@ -128,7 +165,8 @@ export class GraphScene {
   private readonly pontosArestas: THREE.BufferAttribute;
   private readonly posicoesPadrao: Map<string, THREE.Vector3>;
   private readonly rotulos: CSS2DRenderer;
-  private readonly elementosRotulo = new Map<string, HTMLElement>();
+  private readonly rotulos3d: Rotulo3D[] = [];
+  private readonly auxRotulo = new THREE.Vector3();
   private readonly planoArrasto = new THREE.Plane();
   private readonly auxNormal = new THREE.Vector3();
   private arrastando: { id: string; deslocamento: THREE.Vector3; moveu: boolean } | null = null;
@@ -268,10 +306,10 @@ export class GraphScene {
     key.position.set(6, 10, 8);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
-    key.shadow.camera.left = -10;
-    key.shadow.camera.right = 10;
-    key.shadow.camera.top = 10;
-    key.shadow.camera.bottom = -10;
+    key.shadow.camera.left = -14;
+    key.shadow.camera.right = 14;
+    key.shadow.camera.top = 14;
+    key.shadow.camera.bottom = -14;
     key.shadow.camera.far = 40;
     key.shadow.bias = -0.0004;
     key.shadow.normalBias = 0.02;
@@ -317,7 +355,55 @@ export class GraphScene {
     rotulo.position.set(0, caixa.min.y - visual.raiz.position.y - 0.04, 0);
     rotulo.center.set(0.5, 0);
     visual.raiz.add(rotulo);
-    this.elementosRotulo.set(visual.node.id, el);
+    const { kind, risk } = visual.node;
+    this.rotulos3d.push({ id: visual.node.id, el, obj: rotulo, prioridade: PRIORIDADE_TIPO[kind] + (risk ? PRIORIDADE_RISCO[risk] : 0), largura: 0, altura: 0, visivel: true });
+  }
+
+  /**
+   * Esconde o nome que colide na tela com um de prioridade maior (selecionado/hover,
+   * depois estrutura, depois findings do mais grave ao mais leve, e o mais próximo
+   * da câmera no empate). Com um caminho em destaque, só os nomes dele concorrem.
+   * Roda a cada poucos quadros: 300 nomes são ~45 mil comparações de retângulos.
+   */
+  private resolverColisoes(): void {
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+    const candidatos: { r: Rotulo3D; x: number; y: number; z: number; chave: number }[] = [];
+    for (const r of this.rotulos3d) {
+      const ativo = !this.contexto || this.contexto.nos.has(r.id);
+      r.obj.getWorldPosition(this.auxRotulo).project(this.camera);
+      if (!ativo || this.auxRotulo.z > 1) {
+        this.mostrarRotulo(r, false);
+        continue;
+      }
+      // Largura medida uma vez: o rótulo é truncado, então não muda depois de montado.
+      if (!r.largura) {
+        r.largura = r.el.offsetWidth;
+        r.altura = r.el.offsetHeight;
+      }
+      const foco = r.id === this.selecionado || r.id === this.hover;
+      candidatos.push({
+        r,
+        x: ((this.auxRotulo.x + 1) / 2) * w,
+        y: ((1 - this.auxRotulo.y) / 2) * h,
+        z: this.auxRotulo.z,
+        chave: foco ? -1 : r.prioridade,
+      });
+    }
+    candidatos.sort((a, b) => a.chave - b.chave || a.z - b.z);
+    const aceitos: { x0: number; y0: number; x1: number; y1: number }[] = [];
+    for (const c of candidatos) {
+      const caixa = { x0: c.x - c.r.largura / 2 - 2, y0: c.y - 1, x1: c.x + c.r.largura / 2 + 2, y1: c.y + c.r.altura + 1 };
+      const colide = aceitos.some((a) => caixa.x0 < a.x1 && caixa.x1 > a.x0 && caixa.y0 < a.y1 && caixa.y1 > a.y0);
+      if (!colide) aceitos.push(caixa);
+      this.mostrarRotulo(c.r, !colide);
+    }
+  }
+
+  private mostrarRotulo(r: Rotulo3D, visivel: boolean): void {
+    if (r.visivel === visivel) return;
+    r.visivel = visivel;
+    r.el.style.opacity = visivel ? "1" : "0";
   }
 
   /** Arco suave para cima entre dois nós: lê melhor que reta e separa arestas paralelas. */
@@ -428,9 +514,6 @@ export class GraphScene {
     this.contexto = this.selecionado ? contextoDoNo(this.grafo, this.selecionado) : null;
     this.nos.forEach((visual, id) => {
       const ativo = !this.contexto || this.contexto.nos.has(id);
-      const rotulo = this.elementosRotulo.get(id);
-      // Com um caminho em destaque, só os nomes dele ficam: o resto viraria ruído.
-      if (rotulo) rotulo.style.opacity = ativo ? "1" : "0";
       visual.raiz.traverse((obj) => {
         if (!(obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments)) return;
         const original = this.originais.get(obj);
@@ -629,6 +712,8 @@ export class GraphScene {
     if (this.quadro % 2 === 0 || reduzido) this.renderer.shadowMap.needsUpdate = true;
     this.composer.render();
     this.rotulos.render(this.scene, this.camera);
+    // `=== 1`: já no primeiro quadro, para os nomes não nascerem encavalados.
+    if (this.quadro % 4 === 1 || reduzido) this.resolverColisoes();
   };
 
   private parar(): void {

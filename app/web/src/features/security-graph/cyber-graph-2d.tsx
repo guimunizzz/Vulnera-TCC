@@ -17,10 +17,10 @@
  */
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Bug, Earth, Globe, ScanSearch, Server, type LucideIcon } from "lucide-react";
 import { DAST_RISK_LABELS } from "../../types/dast.types";
 import type { Kind2D, No2D, Visao2D } from "./graph-2d-layout";
 import { contextoDoNo, chaveDaAresta } from "./graph-model";
+import { cor, ICONE_DO_TIPO, ROTULO_TIPO, tokenDoNo } from "./node-visual";
 
 export interface CyberGraph2DHandle {
   recentralizar(): void;
@@ -36,24 +36,8 @@ interface Props {
   aoMover(id: string, x: number, y: number): void;
 }
 
-const ICONE: Record<Kind2D, LucideIcon> = { INTERNET: Earth, ASSET: Server, ENDPOINT: Globe, GROUP: ScanSearch, FINDING: Bug };
+const ICONE = ICONE_DO_TIPO;
 const RAIO: Record<Kind2D, number> = { INTERNET: 40, ASSET: 28, ENDPOINT: 25, GROUP: 25, FINDING: 21 };
-const ROTULO_TIPO: Record<Kind2D, string> = {
-  INTERNET: "Exposição",
-  ASSET: "Alvo",
-  ENDPOINT: "Endpoint",
-  GROUP: "Grupo de findings",
-  FINDING: "Finding",
-};
-
-/** Variável de cor do token: tipo para a estrutura, severidade para o que é achado. */
-function tokenDoNo(no: Pick<No2D, "kind" | "risk">): string {
-  if (no.kind === "INTERNET") return "--color-chart-2";
-  if (no.kind === "ASSET") return "--color-accent";
-  if (no.kind === "ENDPOINT") return "--color-chart-3";
-  return `--color-severity-${(no.risk ?? "INFO").toLowerCase()}`;
-}
-const cor = (token: string, alfa = 1) => `oklch(var(${token}) / ${alfa})`;
 const encurtar = (texto: string, max: number) => (texto.length > max ? `${texto.slice(0, max - 1)}…` : texto);
 
 function subtitulo(no: No2D): string {

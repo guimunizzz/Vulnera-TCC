@@ -53,4 +53,20 @@ describe("posicoesDoGrafo", () => {
     expect(pos.get("endpoint:http://x/a")!.x).toBeLessThan(pos.get("finding:a")!.x);
     expect(pos.get("finding:a")!.distanceTo(pos.get("finding:b")!)).toBeGreaterThan(0.2);
   });
+
+  it("não deixa dois nós no mesmo lugar do plano da câmera, onde os nomes se sobreporiam", () => {
+    const muitos = Array.from({ length: 40 }, (_, i) => ({
+      id: `f${i}`,
+      risk: "LOW",
+      normalizedUrl: `http://x/e${i % 7}`,
+      title: `F${i}`,
+    })) as DastFinding[];
+    const pos = [...posicoesDoGrafo(buildSecurityGraph("http://x/", muitos)).values()];
+    for (let i = 0; i < pos.length; i += 1) {
+      for (let j = i + 1; j < pos.length; j += 1) {
+        const juntos = Math.abs(pos[i].x - pos[j].x) < 1 && Math.abs(pos[i].y - pos[j].y) < 0.6;
+        expect(juntos).toBe(false);
+      }
+    }
+  });
 });

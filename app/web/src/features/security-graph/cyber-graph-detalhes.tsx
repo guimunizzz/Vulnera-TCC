@@ -3,8 +3,9 @@
  *
  * O QUE FAZ
  * O que o CyberGraph mostra sobre o nó selecionado: o painel lateral resumido
- * (tipo, severidade, caminho de exposição) e o modal com tudo o que o scan
- * sabe do nó (descrição, solução, evidência, findings abaixo dele).
+ * (tipo, severidade, caminho de exposição em linha do tempo) e o modal com tudo
+ * o que o scan sabe do nó (descrição, solução, evidência, findings abaixo dele).
+ * Os dois usam o ícone e a cor do nó no grafo, para a ligação ser imediata.
  *
  * POR QUE EXISTE
  * O 2D e o 3D compartilham a mesma seleção; o detalhe não depende do modo.
@@ -15,27 +16,40 @@
  * `cyber-graph.tsx`.
  */
 
-import { ListChecks, Maximize2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { motion } from "motion/react";
+import {
+  BookOpen,
+  Braces,
+  CalendarClock,
+  ChevronRight,
+  ClipboardCheck,
+  Code2,
+  ExternalLink,
+  FileText,
+  Gauge,
+  Hash,
+  Link2,
+  ListChecks,
+  Maximize2,
+  ShieldAlert,
+  Tag,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import { Badge, SeverityBadge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogClose, DialogFooter, DialogTitle } from "../../components/ui/dialog";
-import type { ReactNode } from "react";
+import { useMotion } from "../../motion/use-motion";
 import {
+  DAST_RISK_LABELS,
   DAST_TRIAGE_LABELS,
   DAST_TRIAGE_TONES,
   type DastFinding,
   type DastRisk,
 } from "../../types/dast.types";
-import type { Kind2D } from "./graph-2d-layout";
 import type { DetalheDoNo } from "./node-detail";
-
-const ROTULO_TIPO: Record<Kind2D, string> = {
-  INTERNET: "Exposição",
-  ASSET: "Alvo",
-  ENDPOINT: "Endpoint",
-  GROUP: "Grupo de findings",
-  FINDING: "Finding",
-};
+import { cor, ICONE_DO_TIPO, ROTULO_TIPO, tokenDoNo } from "./node-visual";
 
 const RISCOS: DastRisk[] = ["HIGH", "MEDIUM", "LOW", "INFO"];
 /** O SeverityBadge usa o vocabulário de Vulnerability; INFO do ZAP é o NONE de lá. */
@@ -47,18 +61,26 @@ function contarPorRisco(findings: DastFinding[]): Record<DastRisk, number> {
   return contagem;
 }
 
-function ContagemPorRisco({ findings }: { findings: DastFinding[] }) {
+/** Um bloco por risco, com a borda superior na cor da severidade. */
+function ContagemPorRisco({ findings, compacta }: { findings: DastFinding[]; compacta?: boolean }) {
   const contagem = contarPorRisco(findings);
   return (
-    <ul className="flex flex-wrap gap-2" aria-label="Findings por risco">
-      {RISCOS.filter((r) => contagem[r] > 0).map((r) => (
-        <li key={r}>
-          <SeverityBadge severidade={SEVERIDADE_DO_RISCO[r]} />
-          <span className="ml-1 font-mono text-xs text-fg" data-numeric>
-            {contagem[r]}
-          </span>
-        </li>
-      ))}
+    <ul className={`grid gap-2 ${compacta ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`} aria-label="Findings por risco">
+      {RISCOS.map((r) => {
+        const token = tokenDoNo({ kind: "FINDING", risk: r });
+        return (
+          <li
+            key={r}
+            className="rounded-control border border-subtle bg-inset/60 px-3 py-2"
+            style={{ borderTopColor: cor(token), borderTopWidth: 2, opacity: contagem[r] ? 1 : 0.5 }}
+          >
+            <span className="block text-[11px] font-medium uppercase tracking-wide text-fg-muted">{DAST_RISK_LABELS[r]}</span>
+            <span className="font-mono text-lg font-semibold text-fg" data-numeric>
+              {contagem[r]}
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -91,11 +113,31 @@ function Selos({ detalhe }: { detalhe: DetalheDoNo }) {
   );
 }
 
-function Campo({ rotulo, children, largo }: { rotulo: string; children: ReactNode; largo?: boolean }) {
+/** Ícone do nó num disco tingido com a cor dele: o mesmo símbolo que a pessoa clicou no grafo. */
+function IconeDoNo({ detalhe, tamanho }: { detalhe: DetalheDoNo; tamanho: "md" | "lg" }) {
+  const token = tokenDoNo(detalhe);
+  const Icone = ICONE_DO_TIPO[detalhe.kind];
+  const lado = tamanho === "lg" ? "h-12 w-12" : "h-10 w-10";
   return (
-    <div className={largo ? "sm:col-span-2" : undefined}>
-      <dt className="text-xs font-medium uppercase text-fg-muted">{rotulo}</dt>
-      <dd className="mt-1 text-sm text-fg">{children}</dd>
+    <span
+      aria-hidden="true"
+      className={`grid ${lado} shrink-0 place-items-center rounded-full border-2`}
+      style={{ borderColor: cor(token), background: cor(token, 0.14), boxShadow: `0 0 18px ${cor(token, 0.35)}` }}
+    >
+      <Icone className={tamanho === "lg" ? "h-6 w-6" : "h-5 w-5"} style={{ color: cor(token) }} strokeWidth={1.8} />
+    </span>
+  );
+}
+
+/** Ficha curta de metadado: ícone, rótulo e valor. */
+function Ficha({ icone: Icone, rotulo, children }: { icone: LucideIcon; rotulo: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-start gap-2 rounded-control border border-subtle bg-inset/60 px-3 py-2">
+      <Icone className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
+      <div className="min-w-0">
+        <dt className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">{rotulo}</dt>
+        <dd className="mt-0.5 break-words text-sm font-medium text-fg">{children}</dd>
+      </div>
     </div>
   );
 }
@@ -119,76 +161,119 @@ export function PainelDoNo({
   aoExpandir(): void;
   aoVerNaLista(findingId: string): void;
 }) {
-  if (!detalhe) {
-    return (
-      <aside className="flex flex-col gap-3 rounded-container border border-subtle bg-surface p-4" aria-label="Detalhes do nó">
-        <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Nenhum nó selecionado</p>
-        <p className="text-sm text-fg-secondary">
-          Clique num nó para ver o caminho de exposição dele. Duplo clique (ou <kbd className="font-mono">Shift+Enter</kbd>) abre os detalhes.
-        </p>
-        <ContagemPorRisco findings={totalFindings} />
-      </aside>
-    );
-  }
+  const { troca } = useMotion();
+  const token = detalhe ? tokenDoNo(detalhe) : "--color-accent";
+  const f = detalhe?.finding;
 
-  const f = detalhe.finding;
   return (
-    <aside className="flex flex-col gap-3 rounded-container border border-subtle bg-surface p-4" aria-label="Detalhes do nó" aria-live="polite">
-      <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">{ROTULO_TIPO[detalhe.kind]}</p>
-      <h3 className="break-words text-lg font-semibold leading-snug text-fg">{detalhe.label}</h3>
-      <Selos detalhe={detalhe} />
-      <p className="text-sm text-fg-secondary">{resumo(detalhe, targetUrl)}</p>
+    <aside
+      className="relative overflow-hidden rounded-container border bg-surface shadow-raised transition-colors duration-300"
+      style={{ borderColor: cor(token, detalhe ? 0.5 : 0.2) }}
+      aria-label="Detalhes do nó"
+      aria-live="polite"
+    >
+      {/* Faixa na cor do nó: liga o painel ao que está selecionado no grafo. */}
+      <div aria-hidden="true" className="h-1 transition-colors duration-300" style={{ background: cor(token, detalhe ? 1 : 0.3) }} />
+      <motion.div key={detalhe?.id ?? "vazio"} variants={troca} initial="inicial" animate="visivel" className="flex flex-col gap-4 p-4">
+        {!detalhe ? (
+          <>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Nenhum nó selecionado</p>
+              <p className="mt-2 text-sm text-fg-secondary">
+                Clique num nó para ver o caminho de exposição dele. Duplo clique (ou{" "}
+                <kbd className="rounded border border-subtle bg-inset px-1 font-mono text-xs">Shift+Enter</kbd>) abre os detalhes.
+              </p>
+            </div>
+            <ContagemPorRisco findings={totalFindings} compacta />
+          </>
+        ) : (
+          <>
+            <div
+              className="-m-4 mb-0 flex items-start gap-3 p-4"
+              style={{ background: `radial-gradient(120% 140% at 0% 0%, ${cor(token, 0.16)}, transparent 70%)` }}
+            >
+              <IconeDoNo detalhe={detalhe} tamanho="md" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: cor(token) }}>
+                  {ROTULO_TIPO[detalhe.kind]}
+                </p>
+                <h3 className="mt-0.5 break-words text-lg font-semibold leading-snug text-fg">{detalhe.label}</h3>
+                <div className="mt-2">
+                  <Selos detalhe={detalhe} />
+                </div>
+              </div>
+            </div>
 
-      {f && (
-        <dl className="grid grid-cols-2 gap-3">
-          <Campo rotulo="CWE">{f.cweId ? `CWE-${f.cweId}` : "—"}</Campo>
-          <Campo rotulo="Confiança">{f.confidence}</Campo>
-          <Campo rotulo="Observado em">{dataBr(f.createdAt)}</Campo>
-          <Campo rotulo="Parâmetro">
-            <span className="break-all font-mono text-xs">{f.param ?? "—"}</span>
-          </Campo>
-        </dl>
-      )}
-      {detalhe.url && (
-        <dl>
-          <Campo rotulo="URL">
-            <span className="break-all font-mono text-xs">{detalhe.url}</span>
-          </Campo>
-        </dl>
-      )}
-      {!f && detalhe.findings.length > 0 && <ContagemPorRisco findings={detalhe.findings} />}
+            <p className="text-sm leading-relaxed text-fg-secondary">{resumo(detalhe, targetUrl)}</p>
 
-      <div>
-        <p className="text-xs font-medium uppercase text-fg-muted">Caminho de exposição</p>
-        <ol className="mt-2 flex flex-col gap-1">
-          {detalhe.caminho.map((passo, i) => (
-            <li key={passo.id}>
-              <button
-                type="button"
-                onClick={() => aoSelecionar(passo.id)}
-                aria-current={passo.id === detalhe.id ? "step" : undefined}
-                className="flex w-full items-center gap-2 rounded-control px-1 py-1 text-left text-sm text-fg hover:bg-hovered"
-              >
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent-surface font-mono text-xs text-accent-ink">
-                  {i + 1}
-                </span>
-                <span className={`truncate ${passo.id === detalhe.id ? "font-semibold" : ""}`}>{passo.label}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      </div>
+            {f && (
+              <dl className="grid grid-cols-2 gap-2">
+                <Ficha icone={ShieldAlert} rotulo="CWE">{f.cweId ? `CWE-${f.cweId}` : "—"}</Ficha>
+                <Ficha icone={Gauge} rotulo="Confiança">{f.confidence}</Ficha>
+                <Ficha icone={CalendarClock} rotulo="Observado">{new Date(f.createdAt).toLocaleDateString("pt-BR")}</Ficha>
+                <Ficha icone={Braces} rotulo="Parâmetro">
+                  <span className="font-mono text-xs">{f.param ?? "—"}</span>
+                </Ficha>
+              </dl>
+            )}
+            {detalhe.url && (
+              <dl>
+                <Ficha icone={Link2} rotulo="URL">
+                  <span className="break-all font-mono text-xs">{detalhe.url}</span>
+                </Ficha>
+              </dl>
+            )}
+            {!f && detalhe.findings.length > 0 && <ContagemPorRisco findings={detalhe.findings} compacta />}
 
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={aoExpandir} iconeInicio={<Maximize2 className="h-4 w-4" aria-hidden="true" />}>
-          Expandir detalhes
-        </Button>
-        {f && (
-          <Button size="sm" variant="secundario" onClick={() => aoVerNaLista(f.id)} iconeInicio={<ListChecks className="h-4 w-4" aria-hidden="true" />}>
-            Triar em Achados
-          </Button>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Caminho de exposição</p>
+              {/* Linha do tempo: cada passo é um nó clicável, na cor dele no grafo. */}
+              <ol className="relative mt-3 flex flex-col gap-1 before:absolute before:bottom-3 before:left-[11px] before:top-3 before:w-px before:bg-[oklch(var(--color-border-default))]">
+                {detalhe.caminho.map((passo) => {
+                  const atual = passo.id === detalhe.id;
+                  const tokenPasso = tokenDoNo({ kind: passo.kind, risk: atual ? detalhe.risk : undefined });
+                  const Icone = ICONE_DO_TIPO[passo.kind];
+                  return (
+                    <li key={passo.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => aoSelecionar(passo.id)}
+                        aria-current={atual ? "step" : undefined}
+                        className="flex w-full items-center gap-3 rounded-control py-1 pr-2 text-left text-sm text-fg transition-colors hover:bg-hovered"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="relative grid h-6 w-6 shrink-0 place-items-center rounded-full border bg-surface"
+                          style={{ borderColor: cor(tokenPasso), boxShadow: atual ? `0 0 0 3px ${cor(tokenPasso, 0.25)}` : undefined }}
+                        >
+                          <Icone className="h-3.5 w-3.5" style={{ color: cor(tokenPasso) }} />
+                        </span>
+                        <span className={`truncate ${atual ? "font-semibold" : "text-fg-secondary"}`}>{passo.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+
+            <div className="flex flex-wrap gap-2 border-t border-subtle pt-4">
+              <Button size="sm" onClick={aoExpandir} iconeInicio={<Maximize2 className="h-4 w-4" aria-hidden="true" />}>
+                Expandir detalhes
+              </Button>
+              {f && (
+                <Button
+                  size="sm"
+                  variant="secundario"
+                  onClick={() => aoVerNaLista(f.id)}
+                  iconeInicio={<ListChecks className="h-4 w-4" aria-hidden="true" />}
+                >
+                  Triar em Achados
+                </Button>
+              )}
+            </div>
+          </>
         )}
-      </div>
+      </motion.div>
     </aside>
   );
 }
@@ -199,11 +284,17 @@ export function PainelDoNo({
 function Referencias({ texto }: { texto: string }) {
   const linhas = texto.split(/\s+/).filter(Boolean);
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex flex-col gap-1.5">
       {linhas.map((linha, i) => (
         <li key={`${linha}-${i}`} className="break-all">
           {/^https?:\/\//i.test(linha) ? (
-            <a href={linha} target="_blank" rel="noopener noreferrer" className="text-accent-ink underline underline-offset-2">
+            <a
+              href={linha}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-start gap-1.5 text-accent-ink underline-offset-2 hover:underline"
+            >
+              <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               {linha}
             </a>
           ) : (
@@ -212,6 +303,36 @@ function Referencias({ texto }: { texto: string }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Seção do modal: título com ícone e conteúdo num cartão; entra escalonada com as outras. */
+function Secao({
+  icone: Icone,
+  titulo,
+  children,
+  destaque,
+}: {
+  icone: LucideIcon;
+  titulo: string;
+  children: ReactNode;
+  /** Token da borda esquerda (ex.: solução em verde). */
+  destaque?: string;
+}) {
+  const { item } = useMotion();
+  return (
+    <motion.section variants={item}>
+      <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
+        <Icone className="h-4 w-4" aria-hidden="true" />
+        {titulo}
+      </h3>
+      <div
+        className="mt-2 rounded-control border border-subtle bg-surface/60 p-3 text-sm leading-relaxed text-fg"
+        style={destaque ? { borderLeftColor: cor(destaque), borderLeftWidth: 3 } : undefined}
+      >
+        {children}
+      </div>
+    </motion.section>
   );
 }
 
@@ -230,110 +351,140 @@ export function ModalDoNo({
   aoSelecionar(id: string): void;
   aoVerNaLista(findingId: string): void;
 }) {
+  const { lista, item } = useMotion();
   const f = detalhe?.finding;
+  const token = detalhe ? tokenDoNo(detalhe) : "--color-accent";
+
   return (
-    <Dialog aberto={aberto && !!detalhe} aoFechar={aoFechar} tamanho="lg" className="relative">
+    // p-0: o padding vai para dentro, para a borda e o brilho na cor do nó irem até a margem.
+    <Dialog aberto={aberto && !!detalhe} aoFechar={aoFechar} tamanho="lg" className="relative overflow-hidden border-0 p-0">
       {detalhe && (
-        <>
+        <div className="rounded-overlay border" style={{ borderColor: cor(token, 0.55), boxShadow: `0 0 40px -12px ${cor(token, 0.45)}` }}>
+          <div aria-hidden="true" className="h-1" style={{ background: `linear-gradient(90deg, ${cor(token)}, ${cor(token, 0.15)})` }} />
           {/* Wrapper posicionado: a classe `press` do Button redefine `position`. */}
-          <div className="absolute right-4 top-4">
+          <div className="absolute right-4 top-5 z-10">
             <DialogClose />
           </div>
-          <p className="pr-10 text-xs font-medium uppercase tracking-wide text-fg-muted">{ROTULO_TIPO[detalhe.kind]}</p>
-          <DialogTitle className="mt-1 break-words pr-10">{detalhe.label}</DialogTitle>
-          <div className="mt-2">
-            <Selos detalhe={detalhe} />
-          </div>
-          <p className="mt-3 text-sm text-fg-secondary">
-            {f ? "Detalhes do alerta como o ZAP reportou. Triagem e promoção ficam na aba Achados." : resumo(detalhe, targetUrl)}
-          </p>
 
-          <div className="mt-4 max-h-[60vh] overflow-y-auto pr-1">
-            {f ? (
-              <dl className="grid gap-4 sm:grid-cols-2">
-                <Campo rotulo="URL" largo>
-                  <span className="break-all font-mono text-xs">{f.url}</span>
-                </Campo>
-                <Campo rotulo="Parâmetro">
-                  <span className="break-all font-mono text-xs">{f.param ?? "—"}</span>
-                </Campo>
-                <Campo rotulo="Confiança do ZAP">{f.confidence}</Campo>
-                <Campo rotulo="CWE">{f.cweId ? `CWE-${f.cweId}` : "—"}</Campo>
-                <Campo rotulo="WASC">{f.wascId ?? "—"}</Campo>
-                <Campo rotulo="Regra do ZAP">
-                  <span className="font-mono text-xs">{f.pluginId}</span>
-                </Campo>
-                <Campo rotulo="Observado em">{dataBr(f.createdAt)}</Campo>
-                <Campo rotulo="Triagem" largo>
-                  {DAST_TRIAGE_LABELS[f.triageStatus]}
-                  {f.triagedByName && f.triagedAt && ` · por ${f.triagedByName} em ${dataBr(f.triagedAt)}`}
-                  {f.triageNote && <span className="mt-1 block whitespace-pre-wrap text-fg-secondary">{f.triageNote}</span>}
-                </Campo>
-                {f.promotedVulnerability && (
-                  <Campo rotulo="Vulnerabilidade" largo>
-                    Promovido · severidade {f.promotedVulnerability.severityFinal}, situação {f.promotedVulnerability.status}
-                  </Campo>
-                )}
-                {f.evidence && (
-                  <Campo rotulo="Evidência" largo>
-                    <span className="block max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-control bg-inset p-2 font-mono text-xs">
-                      {f.evidence}
-                    </span>
-                  </Campo>
-                )}
-                {f.description && (
-                  <Campo rotulo="Descrição" largo>
-                    <span className="whitespace-pre-wrap">{f.description}</span>
-                  </Campo>
-                )}
-                {f.solution && (
-                  <Campo rotulo="Solução" largo>
-                    <span className="whitespace-pre-wrap">{f.solution}</span>
-                  </Campo>
-                )}
-                {f.reference && (
-                  <Campo rotulo="Referências" largo>
-                    <Referencias texto={f.reference} />
-                  </Campo>
-                )}
-              </dl>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {detalhe.url && (
-                  <dl>
-                    <Campo rotulo="URL">
-                      <span className="break-all font-mono text-xs">{detalhe.url}</span>
-                    </Campo>
-                  </dl>
-                )}
-                {detalhe.findings.length > 0 && <ContagemPorRisco findings={detalhe.findings} />}
-                {detalhe.findings.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium uppercase text-fg-muted">Findings ({detalhe.findings.length})</p>
-                    <ul className="mt-2 divide-y divide-subtle rounded-control border border-subtle">
-                      {detalhe.findings.map((finding) => (
-                        <li key={finding.id}>
-                          <button
-                            type="button"
-                            onClick={() => aoSelecionar(`finding:${finding.id}`)}
-                            className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-hovered"
-                          >
-                            <SeverityBadge severidade={SEVERIDADE_DO_RISCO[finding.risk]} className="shrink-0" />
-                            <span className="min-w-0 flex-1 truncate text-fg">{finding.title}</span>
-                            <span className="hidden max-w-[40%] truncate font-mono text-xs text-fg-muted sm:block">
-                              {finding.normalizedUrl}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+          {/* A troca de nó dentro do modal (lista de findings → finding) reanima o conteúdo pela `key`. */}
+          <motion.div key={detalhe.id} variants={lista} initial="inicial" animate="visivel">
+            <motion.header
+              variants={item}
+              className="flex items-start gap-4 px-6 pb-4 pt-5"
+              style={{ background: `radial-gradient(120% 160% at 0% 0%, ${cor(token, 0.18)}, transparent 65%)` }}
+            >
+              <IconeDoNo detalhe={detalhe} tamanho="lg" />
+              <div className="min-w-0 pr-10">
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: cor(token) }}>
+                  {ROTULO_TIPO[detalhe.kind]}
+                </p>
+                <DialogTitle className="mt-0.5 break-words text-xl leading-snug">{detalhe.label}</DialogTitle>
+                <div className="mt-2">
+                  <Selos detalhe={detalhe} />
+                </div>
               </div>
-            )}
-          </div>
+            </motion.header>
 
-          <DialogFooter>
+            <div className="max-h-[60vh] overflow-y-auto border-t border-subtle px-6 py-5">
+              {f ? (
+                <div className="flex flex-col gap-5">
+                  <motion.dl variants={item} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <Ficha icone={ShieldAlert} rotulo="CWE">{f.cweId ? `CWE-${f.cweId}` : "—"}</Ficha>
+                    <Ficha icone={Tag} rotulo="WASC">{f.wascId ?? "—"}</Ficha>
+                    <Ficha icone={Gauge} rotulo="Confiança do ZAP">{f.confidence}</Ficha>
+                    <Ficha icone={Hash} rotulo="Regra do ZAP">
+                      <span className="font-mono text-xs">{f.pluginId}</span>
+                    </Ficha>
+                    <Ficha icone={Braces} rotulo="Parâmetro">
+                      <span className="break-all font-mono text-xs">{f.param ?? "—"}</span>
+                    </Ficha>
+                    <Ficha icone={CalendarClock} rotulo="Observado em">{dataBr(f.createdAt)}</Ficha>
+                  </motion.dl>
+
+                  <Secao icone={Link2} titulo="URL">
+                    <span className="break-all font-mono text-xs">{f.url}</span>
+                  </Secao>
+                  {f.description && (
+                    <Secao icone={FileText} titulo="Descrição">
+                      <span className="whitespace-pre-wrap">{f.description}</span>
+                    </Secao>
+                  )}
+                  {f.solution && (
+                    <Secao icone={Wrench} titulo="Solução" destaque="--color-success">
+                      <span className="whitespace-pre-wrap">{f.solution}</span>
+                    </Secao>
+                  )}
+                  {f.evidence && (
+                    <Secao icone={Code2} titulo="Evidência">
+                      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-inset p-2 font-mono text-xs">{f.evidence}</pre>
+                    </Secao>
+                  )}
+                  <Secao icone={ClipboardCheck} titulo="Triagem">
+                    <span className="font-medium">{DAST_TRIAGE_LABELS[f.triageStatus]}</span>
+                    {f.triagedByName && f.triagedAt && (
+                      <span className="text-fg-secondary">{` · por ${f.triagedByName} em ${dataBr(f.triagedAt)}`}</span>
+                    )}
+                    {f.triageNote && <span className="mt-1 block whitespace-pre-wrap text-fg-secondary">{f.triageNote}</span>}
+                    {f.promotedVulnerability && (
+                      <span className="mt-1 block text-fg-secondary">
+                        Promovido · severidade {f.promotedVulnerability.severityFinal}, situação {f.promotedVulnerability.status}
+                      </span>
+                    )}
+                  </Secao>
+                  {f.reference && (
+                    <Secao icone={BookOpen} titulo="Referências">
+                      <Referencias texto={f.reference} />
+                    </Secao>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-5">
+                  <motion.p variants={item} className="text-sm leading-relaxed text-fg-secondary">
+                    {resumo(detalhe, targetUrl)}
+                  </motion.p>
+                  {detalhe.url && (
+                    <Secao icone={Link2} titulo="URL">
+                      <span className="break-all font-mono text-xs">{detalhe.url}</span>
+                    </Secao>
+                  )}
+                  {detalhe.findings.length > 0 && (
+                    <motion.div variants={item}>
+                      <ContagemPorRisco findings={detalhe.findings} />
+                    </motion.div>
+                  )}
+                  {detalhe.findings.length > 0 && (
+                    <motion.div variants={item}>
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Findings ({detalhe.findings.length})</h3>
+                      <ul className="mt-2 overflow-hidden rounded-control border border-subtle">
+                        {detalhe.findings.map((finding) => (
+                          <li key={finding.id} className="border-b border-subtle last:border-b-0">
+                            <button
+                              type="button"
+                              onClick={() => aoSelecionar(`finding:${finding.id}`)}
+                              className="group flex w-full items-center gap-3 border-l-[3px] px-3 py-2.5 text-left text-sm transition-colors hover:bg-hovered"
+                              style={{ borderLeftColor: cor(tokenDoNo({ kind: "FINDING", risk: finding.risk })) }}
+                            >
+                              <SeverityBadge severidade={SEVERIDADE_DO_RISCO[finding.risk]} className="shrink-0" />
+                              <span className="min-w-0 flex-1 truncate text-fg">{finding.title}</span>
+                              <span className="hidden max-w-[35%] truncate font-mono text-xs text-fg-muted sm:block">
+                                {finding.normalizedUrl}
+                              </span>
+                              <ChevronRight
+                                className="h-4 w-4 shrink-0 text-fg-muted transition-transform group-hover:translate-x-0.5"
+                                aria-hidden="true"
+                              />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </motion.div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          <DialogFooter className="mt-0 border-t border-subtle bg-inset/40 px-6 py-4">
             <Button variant="secundario" onClick={aoFechar}>
               Fechar
             </Button>
@@ -343,9 +494,8 @@ export function ModalDoNo({
               </Button>
             )}
           </DialogFooter>
-        </>
+        </div>
       )}
     </Dialog>
   );
 }
-
