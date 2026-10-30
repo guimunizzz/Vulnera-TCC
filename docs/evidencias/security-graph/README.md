@@ -28,3 +28,35 @@ Os prints 02–05 foram feitos antes de a legenda ir para a base da cena; o rest
 | Console | sem erros da cena |
 
 Máquina de desenvolvimento, monitor 60 Hz: o FPS é o teto do monitor, não uma garantia em GPU fraca.
+
+## CyberGraph (2D/3D, painel, modal, arraste e nomes fixos) — 2026-10-30
+
+A aba passou a se chamar **CyberGraph** e ganhou o modo 2D (padrão), a alternância 2D/3D, o painel do
+nó, o modal de detalhes, o arraste livre de nós com **Restaurar layout** e, no 3D, os nomes fixos
+abaixo de cada objeto (antes só no hover, print 02). Mesmo scan simulado, viewport 1440×900, salvo
+quando indicado.
+
+| Arquivo | O que mostra |
+| --- | --- |
+| `07-cybergraph-2d-escuro.jpg` | 2D: Internet → alvo → endpoints → grupos "Findings (N)" com contagem, arestas em degradê, grade de pontos, barra com Recentralizar · Restaurar layout · 2D/3D |
+| `08-cybergraph-2d-caminho-e-painel.jpg` | Grupo de `/login` expandido e "SQL Injection" selecionado: caminho aceso com fluxo, resto esmaecido, painel com CWE, confiança e caminho numerado |
+| `09-cybergraph-modal-finding.jpg` | Modal do finding (só leitura): URL, parâmetro, CWE/WASC, regra do ZAP, triagem, descrição, solução, referência e "Triar em Achados" |
+| `10-cybergraph-3d-nomes-fixos.jpg` | 3D com o nome de cada objeto logo abaixo dele, sem hover; nomes de finding menores e truncados |
+| `11-cybergraph-3d-selecao-mantida.jpg` | Seleção feita no 2D mantida ao trocar para o 3D: só os nomes do caminho ficam visíveis |
+| `12-cybergraph-3d-tema-claro.jpg` | 3D no tema claro (cena recriada: 24 nomes, sem duplicar) |
+| `13-cybergraph-2d-claro-grupo-expandido.jpg` | 2D no tema claro com o grupo de `/` expandido e o painel do grupo |
+| `14-cybergraph-modal-grupo-claro.jpg` | Modal de um grupo: contagem por risco e lista de findings (clicar abre o finding) |
+| `15-cybergraph-mobile-375px.jpg` | 375 px: barra quebra em duas linhas, zoom mínimo legível com arraste para ver o resto, sem overflow horizontal |
+| `16-cybergraph-2d-nos-arrastados.jpg` | 2D com o alvo e `/api/status` arrastados; arestas seguem e "Restaurar layout" habilitado |
+| `17-cybergraph-3d-nos-arrastados.jpg` | 3D com globo e rack arrastados; arestas, partículas e nomes seguem |
+
+| Verificação (navegador) | Resultado |
+| --- | --- |
+| Arrastar nó no 2D (mouse real) | nó move, arestas seguem, não seleciona; "Restaurar layout" habilita e volta ao padrão |
+| Arrastar nó no 3D (mouse real) | nó move num plano de frente para a câmera, sem orbitar; arestas e partículas seguem |
+| Trocar 2D → 3D → 2D | posições arrastadas de cada modo e seleção mantidas; 1 canvas do grafo no DOM |
+| "Restaurar layout" no 3D | nós voltam ao layout calculado; botão volta a desabilitar |
+| "Triar em Achados" | abre a aba Achados, limpa filtros, expande a linha do finding e rola até ela |
+| Modo 2D | `three.module` não é baixado (só ao escolher 3D) |
+| FPS 3D com nomes, 5 s | pior quadro 4,4 ms (o painel do app mediu 240 FPS de RAF; não confirmei a taxa do monitor nesta medição) |
+| Console | só 2× 401 do refresh de token ao carregar a página, sem erro do grafo |

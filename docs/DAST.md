@@ -660,32 +660,51 @@ animação: ele exige que o percentual **suba** e que as fases nomeadas do ZAP
 apareçam na tela. Uma barra estimada por tempo passaria na primeira asserção e
 falharia na segunda.
 
-### 11.5 Grafo 3D (modo de apresentação)
+### 11.5 CyberGraph (2D e 3D)
 
-A aba **Grafo 3D** do detalhe do scan desenha o caminho de exposição
-Internet → alvo → endpoint → finding com os findings do próprio scan. Ela só
-aparece quando o navegador tem WebGL e é carregada sob demanda (o `three` não
-entra no bundle inicial). Decisão e garantias em
-[[ADR-048 - Grafo 3D do scan DAST na area autenticada]].
+A aba **CyberGraph** do detalhe do scan desenha o caminho de exposição
+Internet → alvo → endpoint → finding com os findings do próprio scan, em dois
+modos com a mesma seleção: **2D** (padrão, SVG, sem WebGL) e **3D** (Three.js,
+só baixado quando escolhido; sem WebGL o botão fica desabilitado). A escolha
+fica no `localStorage` do navegador. Decisão e garantias em
+[[ADR-048 - Grafo 3D do scan DAST na area autenticada]] (seção "Evolução").
 
-| Objeto | Representa |
+- **Barra:** Recentralizar · Restaurar layout · 2D/3D.
+- **2D:** colunas Internet → alvo → endpoint → "Findings (N)". Clicar no grupo
+  expande os findings dele; arestas em degradê; o caminho selecionado ganha fluxo
+  animado e o resto esmaece.
+- **Painel e modal:** clicar num nó mostra o painel (tipo, severidade, triagem,
+  caminho de exposição clicável); "Expandir detalhes", duplo clique ou
+  Shift+Enter (2D) / Enter (3D) abrem o modal. O modal é só leitura; "Triar em
+  Achados" leva à linha do finding na aba Achados, com os filtros limpos.
+- **Arrastar:** nós podem ser arrastados livremente nos dois modos (no 3D, num
+  plano de frente para a câmera); arestas seguem. **Restaurar layout** volta ao
+  padrão. As posições não são salvas no servidor.
+- **3D:** cada objeto tem o nome fixo logo abaixo; com um nó selecionado só os
+  nomes do caminho ficam.
+
+| Objeto 3D | Representa |
 | --- | --- |
 | Globo com meridianos e órbita | Internet (exposição) |
 | Rack de servidor com LEDs | o host do `targetUrl` |
 | Porta hexagonal | um `normalizedUrl` distinto |
 | Cristal na cor da severidade | um `DastFinding`; HIGH ganha halo pulsante |
 
-- **Interação:** arrastar gira; com a cena em foco, a roda aproxima; hover mostra
-  o nome; clique destaca o caminho até a Internet e o que está abaixo do nó;
-  **Recentralizar** volta ao enquadramento inicial.
-- **Teclado:** Tab foca a cena, setas percorrem os nós, Esc limpa a seleção.
+- **Interação:** arrastar o fundo move a vista (2D) ou gira (3D); com o grafo em
+  foco, a roda aproxima; **Recentralizar** volta ao enquadramento inicial.
+- **Teclado:** 2D — Tab percorre os nós, Enter seleciona, Shift+Enter abre o
+  modal, Esc limpa. 3D — Tab foca a cena, setas percorrem os nós, Enter abre,
+  Esc limpa.
 - **Limites:** até 300 nós (corta INFO antes de HIGH e avisa). A aba
-  **Achados** continua sendo a visão de trabalho e a alternativa acessível.
+  **Achados** continua sendo a visão de trabalho.
 - **Escopo honesto:** usa só o que o ZAP já grava. Sensores, `ObservedAsset`,
-  ligação com a Aplicação e a visão 2D da spec do Security Graph ainda não existem.
+  subdomínio/IP/tecnologia/CVE e a ligação com a Aplicação da spec do Security
+  Graph ainda não existem; por isso não há faixa de sensores nem alerta de
+  divergência de exposição.
 
 Código: `app/web/src/features/security-graph/` (`graph-model.ts` monta o grafo,
-`scene/` desenha). Evidências: `docs/evidencias/security-graph/`.
+`graph-2d-layout.ts` e `cyber-graph-2d.tsx` o 2D, `scene/` o 3D,
+`cyber-graph.tsx` a aba). Evidências: `docs/evidencias/security-graph/`.
 
 ---
 

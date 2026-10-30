@@ -115,5 +115,15 @@ flowchart LR
    como o ZAP, ou SonarCloud), **como entra** (Web API `api/issues/search` → `SastFinding`) e **como cruza**
    com o DAST (CWE em comum, arquivo/rota). Essas três decisões pedem ADR antes de codar.
 
+## 6. Atualização da manhã — CyberGraph
+
+Pedido do Rafael na manhã de 2026-10-30, na mesma branch: a aba virou **CyberGraph**, com modo 2D
+(SVG, padrão) inspirado em visualizações de caminho de ataque, alternância 2D/3D ao lado de
+"Recentralizar", painel do nó, modal de detalhes, arraste livre de nós com "Restaurar layout" e nomes
+fixos abaixo dos objetos no 3D. Decisões tomadas com ele antes de codar: só dados reais (sem faixa de
+sensores nem alerta de divergência, que dependem da Fase 1), painel + modal, modal só leitura com
+atalho para a aba Achados, findings agrupados por endpoint. Detalhes no ADR-048 (Evolução), em
+`docs/DAST.md` §11.5 e nos prints 07–17 de `docs/evidencias/security-graph/`.
+
 ---
 PR: `feat/security-graph` → `dev` (link na mensagem final da sessão).

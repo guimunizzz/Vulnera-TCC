@@ -53,6 +53,24 @@ O grafo é montado no cliente a partir dos findings que a tela do scan já carre
 - Um tipo de nó novo (CVE, tecnologia, subdomínio, IP) entra como um `case` em
   `KitDeMalhas.criar` e uma camada em `CAMADA_X`.
 
+## Evolução — CyberGraph 2D/3D (2026-10-30, mesmo dia)
+
+A aba virou **CyberGraph**, com o 2D como padrão e o 3D como alternativa. O que mudou nas decisões acima:
+
+- **A aba aparece sempre.** O 2D é SVG e não precisa de WebGL; sem WebGL só o botão 3D fica
+  desabilitado. O 3D continua num chunk lazy próprio: escolher o 2D não baixa o `three`.
+- **2D em SVG próprio, não React Flow.** Layout em colunas calculado em `graph-2d-layout.ts` (puro,
+  testado), sem dependência nova. Findings de cada endpoint ficam agrupados num nó "Findings (N)" que
+  expande; com 300 nós, um card por finding viraria uma coluna ilegível. React Flow continua sendo
+  opção se a visão 2D precisar de edição de layout persistente ou minimapa.
+- **Uma seleção para os dois modos**, com painel lateral (caminho de exposição) e modal de detalhes
+  **só leitura**: triagem e promoção continuam na aba Achados, com as permissões que já existem lá.
+- **Nós arrastáveis** nos dois modos e botão **Restaurar layout**. As posições ficam em memória na
+  tela (sobrevivem à troca 2D/3D e de tema), não são salvas no servidor.
+- **Nomes fixos no 3D** via `CSS2DRenderer` (addon do `three`, sem dependência nova). O tooltip de
+  hover saiu. Com um nó selecionado, só os nomes do caminho ficam visíveis, para não virar ruído.
+- A região `aria-live` da seleção passou para o painel lateral, que vale para os dois modos.
+
 ## Relacionado
 
 [[ADR-041 - Atmosfera unica no layout autenticado]]
