@@ -58,7 +58,8 @@
         "src/three/**",
         "src/components/dashboard/hero/use-dashboard-scene.ts",
         "src/components/landing/scene/use-landing-scene.ts",
-        "src/components/landing/scene/shaders.ts"
+        "src/components/landing/scene/shaders.ts",
+        "src/features/security-graph/scene/**"
       ],
       "rules": { "no-restricted-imports": "off" }
     },

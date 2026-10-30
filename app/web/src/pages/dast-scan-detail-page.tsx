@@ -16,7 +16,7 @@
  * (docs/DAST-DOCKER-GAP.md §5).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dastApi } from "../lib/api/dast.api";
@@ -45,6 +45,9 @@ import {
   type DastRisk,
   type DastTriageStatus,
 } from "../types/dast.types";
+
+// O CyberGraph só é baixado quando a aba abre; o `three` do modo 3D, só quando a pessoa escolhe o 3D.
+const CyberGraph = lazy(() => import("../features/security-graph/cyber-graph"));
 
 function formatElapsed(totalSeconds: number): string {
   const min = Math.floor(totalSeconds / 60);
@@ -237,7 +240,7 @@ export function DastScanDetailPage() {
   // Aba ativa da área de resultado: a lista de achados ou o diff com uma
   // execução anterior. Comparação é uma pergunta diferente ("a correção
   // funcionou?") e merece o próprio espaço em vez de disputar a mesma tabela.
-  const [aba, setAba] = useState<"findings" | "comparacao">("findings");
+  const [aba, setAba] = useState<"findings" | "comparacao" | "grafo">("findings");
   const [findingParaPromover, setFindingParaPromover] = useState<DastFinding | null>(null);
 
   const scanQuery = useQuery({
@@ -313,6 +316,19 @@ export function DastScanDetailPage() {
     () => findingsQuery.data?.find((f) => f.id === findingParaPromover?.id) ?? findingParaPromover,
     [findingsQuery.data, findingParaPromover],
   );
+
+  // Do CyberGraph para a lista: limpa os filtros (que poderiam esconder o
+  // finding), abre a linha dele e a traz para a tela, onde ficam triagem e promoção.
+  function verNaLista(findingId: string): void {
+    setRiskFilter("");
+    setTriageFilter("");
+    setSearch("");
+    setExpandedId(findingId);
+    setAba("findings");
+    window.setTimeout(() => {
+      document.getElementById(`finding-detalhe-${findingId}`)?.scrollIntoView({ block: "center" });
+    }, 0);
+  }
 
   async function handleDownloadPdf(): Promise<void> {
     if (!id) return;
@@ -469,6 +485,7 @@ export function DastScanDetailPage() {
               [
                 ["findings", `Achados (${findingsQuery.data?.length ?? 0})`],
                 ["comparacao", "Comparar com execução anterior"],
+                ["grafo", "CyberGraph"],
               ] as const
             ).map(([chave, rotulo]) => (
               <button
@@ -490,6 +507,12 @@ export function DastScanDetailPage() {
           </div>
 
           {aba === "comparacao" && <DastComparePanel scanId={scan.id} />}
+
+          {aba === "grafo" && findingsQuery.data && (
+            <Suspense fallback={<Skeleton className="mt-4 h-[28rem] w-full bg-inset" />}>
+              <CyberGraph targetUrl={scan.targetUrl} findings={findingsQuery.data} aoVerNaLista={verNaLista} />
+            </Suspense>
+          )}
 
           {aba === "findings" && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
