@@ -680,8 +680,12 @@ fica no `localStorage` do navegador. Decisão e garantias em
 - **Arrastar:** nós podem ser arrastados livremente nos dois modos (no 3D, num
   plano de frente para a câmera); arestas seguem. **Restaurar layout** volta ao
   padrão. As posições não são salvas no servidor.
-- **3D:** cada objeto tem o nome fixo logo abaixo; com um nó selecionado só os
-  nomes do caminho ficam.
+- **3D:** endpoints empilhados na vertical (leve curva em profundidade) e
+  findings em grade de frente para a câmera. Cada objeto tem o nome fixo logo
+  abaixo; quando dois nomes colidiriam na tela, some o de menor prioridade
+  (selecionado/hover, estrutura, findings do mais grave ao mais leve) até a
+  câmera girar ou o nó ganhar hover. Com um nó selecionado só os nomes do
+  caminho concorrem.
 
 | Objeto 3D | Representa |
 | --- | --- |

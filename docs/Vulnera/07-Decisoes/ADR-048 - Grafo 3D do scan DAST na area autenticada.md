@@ -70,6 +70,9 @@ A aba virou **CyberGraph**, com o 2D como padrão e o 3D como alternativa. O que
 - **Nomes fixos no 3D** via `CSS2DRenderer` (addon do `three`, sem dependência nova). O tooltip de
   hover saiu. Com um nó selecionado, só os nomes do caminho ficam visíveis, para não virar ruído.
 - A região `aria-live` da seleção passou para o painel lateral, que vale para os dois modos.
+- **Layout 3D sem sobreposição**: o anel de endpoints e a esfera de findings deram lugar a uma pilha
+  vertical com grade de findings de frente para a câmera; nomes que colidiriam na tela são escondidos
+  por prioridade a cada 4 quadros (projeção + teste de retângulos, sem leitura de layout por quadro).
 
 ## Relacionado
 

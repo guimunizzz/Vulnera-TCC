@@ -60,3 +60,26 @@ quando indicado.
 | Modo 2D | `three.module` não é baixado (só ao escolher 3D) |
 | FPS 3D com nomes, 5 s | pior quadro 4,4 ms (o painel do app mediu 240 FPS de RAF; não confirmei a taxa do monitor nesta medição) |
 | Console | só 2× 401 do refresh de token ao carregar a página, sem erro do grafo |
+
+## Espaçamento do 3D e redesenho de painel/modal — 2026-10-30
+
+Pedido do Rafael: 3D "muito poluído" e detalhes "muito secos". O 3D trocou o anel de endpoints e as
+esferas de findings por uma pilha de endpoints com grade de findings de frente para a câmera, e os nomes
+passaram a disputar espaço na tela (o de menor prioridade some até a câmera girar ou o nó ganhar hover).
+Painel e modal ganharam borda e faixa na cor do nó, cabeçalho com o ícone do grafo, fichas de metadado,
+seções em cartões e entrada escalonada.
+
+| Arquivo | O que mostra |
+| --- | --- |
+| `18-cybergraph-3d-espacado-sem-colisao.jpg` | 3D com endpoints empilhados e findings em grade; 19 de 24 nomes visíveis, nenhum encavalado (compare com o 10) |
+| `19-cybergraph-painel-redesenhado.jpg` | Painel: borda e faixa na cor da severidade, ícone do nó, fichas CWE/confiança/data/parâmetro, caminho em linha do tempo com os ícones do grafo |
+| `20-cybergraph-modal-redesenhado.jpg` | Modal do finding: borda e brilho na cor da severidade, seis fichas, seções com ícone, solução com borda verde |
+| `21-cybergraph-modal-grupo-claro-redesenhado.jpg` | Modal do grupo no tema claro: blocos por risco com borda na cor da severidade e lista com borda por risco |
+| `22-cybergraph-modal-mobile.jpg` | Modal em 375 px: fichas em duas colunas, rodapé empilhado |
+
+| Verificação (navegador) | Resultado |
+| --- | --- |
+| Abrir o modal (amostrado por quadro) | escala 0,96 → 1 e opacidade 0 → 1 em ~200 ms; seções entram escalonadas até ~450 ms |
+| Fechar o modal | some em ~160 ms (fade + escala) |
+| Trocar de grupo para finding dentro do modal | conteúdo reanima pela troca de nó |
+| `prefers-reduced-motion` | não emulado; as variantes vêm de `useMotion()`, que já remove deslocamento e escala |
