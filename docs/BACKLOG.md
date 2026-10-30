@@ -6,6 +6,11 @@
 
 ## Status
 
+**✅ 2026-10-30 — Grafo 3D do scan DAST (modo de apresentação; Fase 6 da spec do Security Graph, parcial).** Branch `feat/security-graph`: aba "Grafo 3D" no detalhe do scan com Internet → alvo → endpoint → finding a partir dos findings do ZAP. Cena PBR (ambiente procedural, luz de três pontos, sombra suave), bloom HDR, contorno de hover/seleção, partículas de fluxo, destaque de caminho, OrbitControls, teclado e `aria-live`. Lazy, sem dependência nova; um canvas por cena com `forceContextLoss` (vazamento de contexto reproduzido e corrigido). 60 FPS medidos com 24 e 300 nós na máquina de desenvolvimento. Web versionado 405/405 (2 falhas só no `findings-table.test.tsx` não rastreado), contraste 66/66, lint 0 erros (9 avisos anteriores), build aprovado. Ver ADR-048, `docs/DAST.md` §11.5, `docs/evidencias/security-graph/` e `docs/NIGHT_SHIFT_REPORT.md`. Sem alteração de API, schema, RBAC, dependências ou lockfile.
+
+- [ ] SG-FUT-01 — Fases 1–5 da spec do Security Graph (schema, sensores, API de grafo, visão 2D, aba na Aplicação/widget); o 3D passa a consumir `GET /dast/scans/:id/graph`.
+- [ ] SG-FUT-02 — Medir o grafo 3D em GPU integrada e celular real; validar `prefers-reduced-motion` emulado no navegador.
+
 **✅ 2026-10-16 — Frontend Docker atualizado para exibir a barra lateral (100%).** Corrigida a divergência entre a validação via Vite e a versão servida em `http://localhost:8086`: reconstruído e recriado somente `web` com `docker compose up -d --build --no-deps web`. HTML/JS/CSS retornam HTTP 200 e contêm a nova marca, grupos e estilos. API/MySQL seguem saudáveis sem reinicialização. Evidência: `output/sidebar-applied/served-check.md`; procedimento registrado em `docs/FRONTEND_WEB.md`.
 
 - [x] Disponibilizar a alteração da barra lateral no frontend Docker acessado pelo Rafael.

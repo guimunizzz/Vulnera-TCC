@@ -660,6 +660,33 @@ animação: ele exige que o percentual **suba** e que as fases nomeadas do ZAP
 apareçam na tela. Uma barra estimada por tempo passaria na primeira asserção e
 falharia na segunda.
 
+### 11.5 Grafo 3D (modo de apresentação)
+
+A aba **Grafo 3D** do detalhe do scan desenha o caminho de exposição
+Internet → alvo → endpoint → finding com os findings do próprio scan. Ela só
+aparece quando o navegador tem WebGL e é carregada sob demanda (o `three` não
+entra no bundle inicial). Decisão e garantias em
+[[ADR-048 - Grafo 3D do scan DAST na area autenticada]].
+
+| Objeto | Representa |
+| --- | --- |
+| Globo com meridianos e órbita | Internet (exposição) |
+| Rack de servidor com LEDs | o host do `targetUrl` |
+| Porta hexagonal | um `normalizedUrl` distinto |
+| Cristal na cor da severidade | um `DastFinding`; HIGH ganha halo pulsante |
+
+- **Interação:** arrastar gira; com a cena em foco, a roda aproxima; hover mostra
+  o nome; clique destaca o caminho até a Internet e o que está abaixo do nó;
+  **Recentralizar** volta ao enquadramento inicial.
+- **Teclado:** Tab foca a cena, setas percorrem os nós, Esc limpa a seleção.
+- **Limites:** até 300 nós (corta INFO antes de HIGH e avisa). A aba
+  **Achados** continua sendo a visão de trabalho e a alternativa acessível.
+- **Escopo honesto:** usa só o que o ZAP já grava. Sensores, `ObservedAsset`,
+  ligação com a Aplicação e a visão 2D da spec do Security Graph ainda não existem.
+
+Código: `app/web/src/features/security-graph/` (`graph-model.ts` monta o grafo,
+`scene/` desenha). Evidências: `docs/evidencias/security-graph/`.
+
 ---
 
 ## Docs relacionados
@@ -669,6 +696,7 @@ falharia na segunda.
 - [[ADR-030 - Execucao assincrona sem fila]]
 - [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]]
 - [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]
+- [[ADR-048 - Grafo 3D do scan DAST na area autenticada]]
 - Vault: `docs/Vulnera/03-Produto/Modulos/DAST.md`, `Fluxo - Scan DAST`,
   `02-Dominio/Entidades/DastScan.md` e `DastFinding.md`, `06-Dados/Enum - DAST.md`
 - `PRD_VIVO.md`, `docs/BACKLOG.md`, `docs/ROADMAP_PROMPTS.md`, `docs/DECISIONS.md`
