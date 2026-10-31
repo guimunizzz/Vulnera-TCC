@@ -54,7 +54,8 @@ export interface GraphSceneOptions {
 }
 
 // Camadas e aglomerados espaçados para os nomes fixos não se sobreporem (findings são o grosso dos nós).
-const CAMADA_X: Record<GraphNodeKind, number> = { INTERNET: -6.6, ASSET: -3.2, ENDPOINT: 0.6, FINDING: 5.2 };
+// Só INTERNET e ASSET usam o x do tipo; os demais vêm da pilha/grade (ver posicoesDoGrafo).
+const CAMADA_X: Record<GraphNodeKind, number> = { INTERNET: -6.6, ASSET: -3.2, ENDPOINT: 0.6, FINDING: 5.2, IP: 0.6, SUBDOMAIN: 0.6, TECH: 0.6, PORT: 5.2 };
 const MAX_DPR = 1.5;
 const SEGMENTOS_ARESTA = 24;
 const ESCALA_HOVER = 1.18;
@@ -91,22 +92,26 @@ const CURVA_Z = 0.035;
  * os findings de cada endpoint formam uma grade à frente dele. Pilha e não anel:
  * no anel, dois endpoints na mesma altura (um na frente, outro atrás) caem no
  * mesmo lugar da tela e os nomes se sobrepõem.
+ * Ativos de descoberta seguem a mesma regra: os ramos do alvo (IP, tecnologia,
+ * subdomínios) vão na pilha dos endpoints, e os filhos deles (portas, CVEs,
+ * subdomínios) na grade.
  */
 export function posicoesDoGrafo(grafo: SecurityGraph): Map<string, THREE.Vector3> {
   const saida = new Map<string, THREE.Vector3>();
   const pai = new Map(grafo.edges.map((edge) => [edge.target, edge.source]));
+  const raiz = (node: GraphNode) => node.kind === "INTERNET" || node.kind === "ASSET";
   const filhos = new Map<string, GraphNode[]>();
   for (const node of grafo.nodes) {
-    if (node.kind !== "FINDING") continue;
     const origem = pai.get(node.id) ?? "asset";
+    if (raiz(node) || origem === "asset") continue;
     filhos.set(origem, [...(filhos.get(origem) ?? []), node]);
   }
 
   for (const node of grafo.nodes) {
-    if (node.kind === "INTERNET" || node.kind === "ASSET") saida.set(node.id, new THREE.Vector3(CAMADA_X[node.kind], 0, 0));
+    if (raiz(node)) saida.set(node.id, new THREE.Vector3(CAMADA_X[node.kind], 0, 0));
   }
 
-  const endpoints = grafo.nodes.filter((node) => node.kind === "ENDPOINT");
+  const endpoints = grafo.nodes.filter((node) => !raiz(node) && pai.get(node.id) === "asset");
   const alturas = endpoints.map((node) => Math.max(linhasDe(filhos.get(node.id)?.length ?? 0), 1) * GRADE_DY + FOLGA_ENDPOINT);
   let topo = alturas.reduce((soma, h) => soma + h, 0) / 2;
   endpoints.forEach((node, i) => {
@@ -137,7 +142,16 @@ interface Rotulo3D {
   visivel: boolean;
 }
 
-const PRIORIDADE_TIPO: Record<GraphNodeKind, number> = { INTERNET: 0, ASSET: 1, ENDPOINT: 2, FINDING: 3 };
+const PRIORIDADE_TIPO: Record<GraphNodeKind, number> = {
+  INTERNET: 0,
+  ASSET: 1,
+  IP: 2,
+  ENDPOINT: 2,
+  SUBDOMAIN: 2.5,
+  TECH: 2.5,
+  FINDING: 3,
+  PORT: 3,
+};
 const PRIORIDADE_RISCO: Record<DastRisk, number> = { HIGH: 0, MEDIUM: 0.1, LOW: 0.2, INFO: 0.3 };
 
 interface Aresta {

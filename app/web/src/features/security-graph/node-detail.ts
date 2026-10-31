@@ -13,7 +13,7 @@
  * `cyber-graph.tsx` e `cyber-graph-detalhes.tsx`.
  */
 
-import type { DastFinding, DastRisk } from "../../types/dast.types";
+import type { DastFinding, DastObservedAsset, DastRisk } from "../../types/dast.types";
 import { idDoGrupo, type Kind2D } from "./graph-2d-layout";
 import { caminhoAte, type SecurityGraph } from "./graph-model";
 
@@ -38,6 +38,12 @@ export interface DetalheDoNo {
   /** URL completa do endpoint (ENDPOINT e GROUP). */
   url?: string;
   caminho: PassoDoCaminho[];
+  /** Tipo do nó de onde o grupo pende (ENDPOINT ou IP); no resto, o próprio tipo. */
+  ramo: Kind2D;
+  /** Ativo de descoberta por trás do nó (IP, porta, tecnologia, subdomínio). */
+  asset?: DastObservedAsset;
+  /** Filhos estruturais diretos: portas, tecnologias, subdomínios. */
+  estrutura: { kind: Kind2D; label: string }[];
 }
 
 /** URL absoluta para exibir: o scan simulado grava `normalizedUrl` relativo ("/login"). */
@@ -77,18 +83,26 @@ export function descreverNo(
   const proprio = findingsPorNo.get(baseId);
   const findings = (proprio ? [proprio] : abaixo).sort((a, b) => RISK_ORDER[a.risk] - RISK_ORDER[b.risk]);
   const caminho: PassoDoCaminho[] = caminhoAte(grafo, baseId).map((n) => ({ id: n.id, kind: n.kind, label: n.label }));
-  if (grupo) caminho.push({ id, kind: "GROUP", label: `Findings (${findings.length})` });
+  if (grupo) caminho.push({ id, kind: "GROUP", label: `${base.kind === "IP" ? "CVEs" : "Findings"} (${findings.length})` });
 
   return {
     id,
     kind: grupo ? "GROUP" : base.kind,
-    label: grupo ? `Findings de ${base.label}` : base.label,
+    label: grupo ? `${base.kind === "IP" ? "CVEs" : "Findings"} de ${base.label}` : base.label,
     risk: base.kind === "INTERNET" ? undefined : findings[0]?.risk,
     finding: proprio,
     findings,
     endpoints: grafo.nodes.filter((n) => n.kind === "ENDPOINT").length,
     url: base.kind === "ENDPOINT" ? urlCompleta(baseId.slice("endpoint:".length), targetUrl) : undefined,
     caminho,
+    ramo: base.kind,
+    asset: grupo ? undefined : base.asset,
+    estrutura: grupo
+      ? []
+      : grafo.edges
+          .filter((e) => e.source === baseId)
+          .flatMap((e) => grafo.nodes.find((n) => n.id === e.target && n.kind !== "FINDING") ?? [])
+          .map((n) => ({ kind: n.kind, label: n.label })),
   };
 }
 

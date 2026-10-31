@@ -9,14 +9,18 @@
  * POR QUE EXISTE
  * Com 300 nós, um card por finding vira uma coluna enorme. O agrupamento
  * mantém a leitura do caminho de exposição e só abre o que a pessoa pediu.
+ * Os ativos de descoberta entram como ramos do alvo (IP, tecnologia,
+ * subdomínios): os filhos estruturais deles (portas, tecnologias do IP,
+ * subdomínios) ficam na coluna do meio, e as CVEs do IP viram um grupo como os
+ * findings de um endpoint. Ramo com muitos filhos (subdomínios) recolhe.
  * A posição é calculada aqui (pura, testável) para o SVG só desenhar.
  *
  * QUEM USA
  * `cyber-graph.tsx` e `cyber-graph-2d.tsx`.
  */
 
-import type { DastRisk } from "../../types/dast.types";
-import type { GraphEdge, GraphNodeKind, SecurityGraph } from "./graph-model";
+import type { DastObservedAsset, DastRisk } from "../../types/dast.types";
+import type { GraphEdge, GraphNode, GraphNodeKind, SecurityGraph } from "./graph-model";
 
 export type Kind2D = GraphNodeKind | "GROUP";
 
@@ -29,7 +33,10 @@ export interface No2D {
   /** Findings abaixo do nó: endpoint e grupo. */
   total?: number;
   expandido?: boolean;
+  /** Ramo que recolhe os filhos estruturais (subdomínios); clicar alterna. */
+  expandivel?: boolean;
   sensorKey?: string;
+  asset?: DastObservedAsset;
   x: number;
   y: number;
 }
@@ -41,7 +48,19 @@ export interface Visao2D {
   altura: number;
 }
 
-export const COLUNA_X: Record<Kind2D, number> = { INTERNET: 80, ASSET: 290, ENDPOINT: 500, GROUP: 710, FINDING: 920 };
+export const COLUNA_X: Record<Kind2D, number> = {
+  INTERNET: 80,
+  ASSET: 290,
+  ENDPOINT: 500,
+  IP: 500,
+  SUBDOMAIN: 500,
+  TECH: 500,
+  PORT: 710,
+  GROUP: 710,
+  FINDING: 920,
+};
+/** Acima disso, os filhos estruturais de um ramo começam recolhidos. */
+const MAX_ESTRUTURA_ABERTA = 6;
 const LINHA = 84;
 const MARGEM = 64;
 const RISK_ORDER: Record<DastRisk, number> = { HIGH: 0, MEDIUM: 1, LOW: 2, INFO: 3 };
@@ -106,32 +125,58 @@ export function montarVisao2D(grafo: SecurityGraph, expandidos: ReadonlySet<stri
   const asset = grafo.nodes.find((n) => n.kind === "ASSET");
   if (!internet || !asset) return { nodes: [], edges: [], largura: 0, altura: 0 };
 
-  // Endpoints mais perigosos (e depois mais cheios) no topo, como numa lista de prioridade.
-  const endpoints = (filhos.get(asset.id) ?? [])
-    .map((id) => {
-      const findings = (filhos.get(id) ?? []).flatMap((f) => porId.get(f) ?? []);
-      return { id, findings, risk: piorRisco(findings.map((f) => f.risk)) };
+  // Ramos mais perigosos (e depois mais cheios) no topo, como numa lista de prioridade.
+  const ramos = (filhos.get(asset.id) ?? [])
+    .flatMap((id) => porId.get(id) ?? [])
+    .map((no) => {
+      const diretos = (filhos.get(no.id) ?? []).flatMap((f) => porId.get(f) ?? []);
+      const findings = diretos.filter((n) => n.kind === "FINDING");
+      return { no, findings, estrutura: diretos.filter((n) => n.kind !== "FINDING"), risk: piorRisco(findings.map((f) => f.risk)) };
     })
     .sort((a, b) => RISK_ORDER[a.risk ?? "INFO"] - RISK_ORDER[b.risk ?? "INFO"] || b.findings.length - a.findings.length);
 
   const nodes: No2D[] = [];
   const edges: GraphEdge[] = [{ source: internet.id, target: asset.id }];
+  const no2d = (n: GraphNode, x: number, y: number): No2D => ({
+    id: n.id,
+    kind: n.kind,
+    label: n.label,
+    risk: n.risk,
+    sensorKey: n.sensorKey,
+    asset: n.asset,
+    total: n.total,
+    x,
+    y,
+  });
   let linha = 0;
-  for (const endpoint of endpoints) {
-    const grupoId = idDoGrupo(endpoint.id);
-    const expandido = expandidos.has(grupoId) && endpoint.findings.length > 0;
-    const linhas = expandido ? endpoint.findings.length : 1;
-    const y = MARGEM + (linha + (linhas - 1) / 2) * LINHA;
-    const total = endpoint.findings.length;
-    nodes.push({ id: endpoint.id, kind: "ENDPOINT", label: porId.get(endpoint.id)?.label ?? endpoint.id, risk: endpoint.risk, total, x: COLUNA_X.ENDPOINT, y });
-    edges.push({ source: asset.id, target: endpoint.id });
+  for (const ramo of ramos) {
+    const grupoId = idDoGrupo(ramo.no.id);
+    const recolhivel = ramo.estrutura.length > MAX_ESTRUTURA_ABERTA;
+    const estrutura = !recolhivel || expandidos.has(ramo.no.id) ? ramo.estrutura : [];
+    const expandido = expandidos.has(grupoId) && ramo.findings.length > 0;
+    const linhasFindings = ramo.findings.length === 0 ? 0 : expandido ? ramo.findings.length : 1;
+    const linhas = Math.max(1, estrutura.length + linhasFindings);
+    const total = ramo.findings.length;
+    nodes.push({
+      ...no2d(ramo.no, COLUNA_X.ENDPOINT, MARGEM + (linha + (linhas - 1) / 2) * LINHA),
+      risk: ramo.risk,
+      total: total || ramo.no.total,
+      ...(recolhivel ? { expandivel: true, expandido: estrutura.length > 0 } : {}),
+    });
+    edges.push({ source: asset.id, target: ramo.no.id });
+    estrutura.forEach((e, i) => {
+      nodes.push(no2d(e, COLUNA_X.GROUP, MARGEM + (linha + i) * LINHA));
+      edges.push({ source: ramo.no.id, target: e.id });
+    });
+    const inicioFindings = linha + estrutura.length;
     if (total > 0) {
-      nodes.push({ id: grupoId, kind: "GROUP", label: "Findings", risk: endpoint.risk, total, expandido, x: COLUNA_X.GROUP, y });
-      edges.push({ source: endpoint.id, target: grupoId });
+      const y = MARGEM + (inicioFindings + (linhasFindings - 1) / 2) * LINHA;
+      nodes.push({ id: grupoId, kind: "GROUP", label: ramo.no.kind === "IP" ? "CVEs" : "Findings", risk: ramo.risk, total, expandido, x: COLUNA_X.GROUP, y });
+      edges.push({ source: ramo.no.id, target: grupoId });
     }
     if (expandido) {
-      endpoint.findings.forEach((f, i) => {
-        nodes.push({ id: f.id, kind: "FINDING", label: f.label, risk: f.risk, sensorKey: f.sensorKey, x: COLUNA_X.FINDING, y: MARGEM + (linha + i) * LINHA });
+      ramo.findings.forEach((f, i) => {
+        nodes.push(no2d(f, COLUNA_X.FINDING, MARGEM + (inicioFindings + i) * LINHA));
         edges.push({ source: grupoId, target: f.id });
       });
     }
@@ -142,7 +187,7 @@ export function montarVisao2D(grafo: SecurityGraph, expandidos: ReadonlySet<stri
   const meio = altura / 2;
   nodes.unshift(
     { id: internet.id, kind: "INTERNET", label: internet.label, x: COLUNA_X.INTERNET, y: meio },
-    { id: asset.id, kind: "ASSET", label: asset.label, risk: piorRisco(endpoints.map((e) => e.risk)), x: COLUNA_X.ASSET, y: meio },
+    { id: asset.id, kind: "ASSET", label: asset.label, risk: piorRisco(ramos.map((e) => e.risk)), x: COLUNA_X.ASSET, y: meio },
   );
   const temFindings = nodes.some((n) => n.kind === "FINDING");
   const largura = (temFindings ? COLUNA_X.FINDING : COLUNA_X.GROUP) + 120;

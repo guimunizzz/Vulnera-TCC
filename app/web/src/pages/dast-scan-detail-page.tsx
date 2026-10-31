@@ -40,6 +40,7 @@ import {
   ACTIVE_DAST_STATUSES,
   DAST_RISK_LABELS,
   DAST_SENSOR_LABELS,
+  severidadeCvss,
   DAST_TRIAGE_LABELS,
   DAST_TRIAGE_TONES,
   labelDaFase,
@@ -119,6 +120,15 @@ function FindingRow({
           {finding.sensorKey !== "zap" && (
             <Badge tom="acento" className="ml-2 align-middle normal-case" title={DAST_SENSOR_LABELS[finding.sensorKey] ?? finding.sensorKey}>
               sensor {finding.sensorKey}
+            </Badge>
+          )}
+          {finding.cveId && (
+            <Badge
+              tom="atencao"
+              className="ml-2 align-middle normal-case"
+              title={finding.cvssVector ?? "CVSS ainda não consultado no NVD"}
+            >
+              {finding.cvssScore != null ? `CVSS ${finding.cvssScore.toFixed(1)} · ${severidadeCvss(finding.cvssScore)}` : "CVSS pendente"}
             </Badge>
           )}
         </td>
@@ -280,6 +290,11 @@ export function DastScanDetailPage() {
   const sensorsQuery = useQuery({
     queryKey: ["dast", "scans", id, "sensors"],
     queryFn: () => dastApi.listSensors(id!),
+    enabled: !!id && scan?.status === "COMPLETED",
+  });
+  const assetsQuery = useQuery({
+    queryKey: ["dast", "scans", id, "assets"],
+    queryFn: () => dastApi.listAssets(id!),
     enabled: !!id && scan?.status === "COMPLETED",
   });
 
@@ -542,6 +557,7 @@ export function DastScanDetailPage() {
                 targetUrl={scan.targetUrl}
                 findings={findingsQuery.data}
                 sensores={sensorsQuery.data ?? []}
+                ativos={assetsQuery.data ?? []}
                 aoVerNaLista={verNaLista}
               />
             </Suspense>

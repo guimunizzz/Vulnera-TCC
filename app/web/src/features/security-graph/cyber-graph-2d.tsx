@@ -54,10 +54,21 @@ interface Props {
   minimapa: boolean;
 }
 
-const RAIO: Record<Kind2D, number> = { INTERNET: 40, ASSET: 28, ENDPOINT: 25, GROUP: 25, FINDING: 21 };
+const RAIO: Record<Kind2D, number> = { INTERNET: 40, ASSET: 28, ENDPOINT: 25, GROUP: 25, FINDING: 21, IP: 27, PORT: 19, TECH: 19, SUBDOMAIN: 21 };
 const encurtar = (texto: string, max: number) => (texto.length > max ? `${texto.slice(0, max - 1)}…` : texto);
 const SETAS: readonly string[] = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
-const LEGENDA_TIPOS: Kind2D[] = ["INTERNET", "ASSET", "ENDPOINT", "GROUP"];
+const LEGENDA_TIPOS: Kind2D[] = ["INTERNET", "ASSET", "ENDPOINT", "GROUP", "IP", "PORT", "TECH", "SUBDOMAIN"];
+const LEGENDA_NOME: Record<Kind2D, string> = {
+  INTERNET: "Internet",
+  ASSET: "Alvo",
+  ENDPOINT: "Endpoint",
+  GROUP: "Grupo",
+  FINDING: "Finding",
+  IP: "IP",
+  PORT: "Porta",
+  TECH: "Tecnologia",
+  SUBDOMAIN: "Subdomínio",
+};
 const LEGENDA_RISCOS: DastRisk[] = ["HIGH", "MEDIUM", "LOW", "INFO"];
 const MINIMAPA = { w: 168, h: 108 };
 
@@ -73,6 +84,15 @@ function subtitulo(no: No2D): string {
       return no.expandido ? "Clique para recolher" : "Clique para expandir";
     case "FINDING":
       return `Risco ${DAST_RISK_LABELS[no.risk ?? "INFO"].toLowerCase()} · ${DAST_SENSOR_SHORT_LABELS[no.sensorKey ?? "zap"] ?? no.sensorKey}`;
+    case "IP":
+      return no.asset?.metadata?.publico === false ? "IP privado · sem consulta" : `IP público · ${no.total ?? 0} CVE${no.total === 1 ? "" : "s"}`;
+    case "PORT":
+      return "Porta aberta · InternetDB";
+    case "TECH":
+      return `Tecnologia · ${String(no.asset?.metadata?.fonte ?? "observada")}`;
+    case "SUBDOMAIN":
+      if (no.expandivel) return `${no.total ?? 0} em certificados · ${no.expandido ? "recolher" : "expandir"}`;
+      return no.asset ? "Subdomínio · crt.sh" : `${no.total ?? 0} em certificados`;
   }
 }
 
@@ -339,8 +359,8 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                 role="button"
                 tabIndex={no.id === tabulavel ? 0 : -1}
                 aria-pressed={selecionado}
-                aria-expanded={no.kind === "GROUP" ? no.expandido : undefined}
-                aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${DAST_RISK_LABELS[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} findings` : ""}`}
+                aria-expanded={no.kind === "GROUP" || no.expandivel ? no.expandido : undefined}
+                aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${DAST_RISK_LABELS[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} ${no.kind === "SUBDOMAIN" ? "subdomínios" : no.kind === "IP" ? "CVEs" : "findings"}` : ""}`}
                 className="cg-no cg-entrar cursor-grab outline-none active:cursor-grabbing"
                 opacity={apagado ? 0.28 : 1}
                 onFocus={() => setFocoId(no.id)}
@@ -364,7 +384,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                 <title>{no.label}</title>
                 {selecionado && <circle r={raio + 9} fill={cor(token, 0.16)} stroke={cor(token, 0.7)} strokeWidth={1.5} />}
                 <circle className="cg-foco" r={raio + 5} fill="none" stroke={cor("--color-focus-ring")} strokeWidth={2} opacity={0} />
-                {no.kind === "GROUP" && <circle r={raio + 4} fill="none" stroke={cor(token, 0.55)} strokeWidth={1.5} />}
+                {(no.kind === "GROUP" || no.expandivel) && <circle r={raio + 4} fill="none" stroke={cor(token, 0.55)} strokeWidth={1.5} />}
                 <circle r={raio} fill={cor("--color-bg-surface")} stroke={cor(token)} strokeWidth={2} filter="url(#cg-sombra)" />
                 <circle r={raio - 5} fill={cor(token, internet ? 0.22 : 0.14)} />
                 <Icone
@@ -376,10 +396,11 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                   strokeWidth={internet ? 1.4 : 1.8}
                   aria-hidden="true"
                 />
-                {no.kind === "GROUP" && (
+                {(no.kind === "GROUP" || no.expandivel) && (
                   <g transform={`translate(${raio * 0.75} ${-raio * 0.75})`}>
-                    <circle r={10} fill={cor(`${token}-surface`)} stroke={cor(token)} strokeWidth={1.5} />
-                    <text textAnchor="middle" dy="0.35em" fontSize={10} fontWeight={700} fill={cor(`${token}-ink`)}>
+                    {/* Só os tokens de severidade têm -surface/-ink; o resto usa a superfície neutra. */}
+                    <circle r={10} fill={no.kind === "GROUP" ? cor(`${token}-surface`) : cor("--color-bg-surface")} stroke={cor(token)} strokeWidth={1.5} />
+                    <text textAnchor="middle" dy="0.35em" fontSize={10} fontWeight={700} fill={no.kind === "GROUP" ? cor(`${token}-ink`) : cor("--color-text-primary")}>
                       {no.total}
                     </text>
                   </g>
@@ -404,12 +425,12 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
 
       {/* Legenda: mesma linguagem do nó (ícone na cor do tipo; findings pela severidade). */}
       <div className="pointer-events-none absolute bottom-3 left-3 mr-16 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-surface/85 px-3 py-2 text-xs text-fg-muted backdrop-blur">
-        {LEGENDA_TIPOS.map((kind) => {
+        {LEGENDA_TIPOS.filter((kind) => kind === "INTERNET" || kind === "ASSET" || visao.nodes.some((n) => n.kind === kind)).map((kind) => {
           const Icone = ICONE_DO_TIPO[kind];
           return (
             <span key={kind} className="flex items-center gap-1">
               <Icone className="h-3.5 w-3.5" style={{ color: cor(tokenDoNo({ kind })) }} aria-hidden="true" />
-              {kind === "GROUP" ? "Grupo" : kind === "INTERNET" ? "Internet" : kind === "ASSET" ? "Alvo" : "Endpoint"}
+              {LEGENDA_NOME[kind]}
             </span>
           );
         })}

@@ -155,7 +155,7 @@ export function DastPage() {
         <div>
           <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Análise de segurança</p>
           <h1 className="text-2xl font-bold text-fg">Scans DAST</h1>
-          <p className="mt-1 text-fg-muted">Análise dinâmica automatizada: OWASP ZAP, headers de segurança e certificado SSL/TLS.</p>
+          <p className="mt-1 text-fg-muted">Análise dinâmica automatizada: OWASP ZAP, headers, certificado SSL/TLS, tecnologias, IP com portas e CVEs, e subdomínios.</p>
         </div>
         <Button onClick={() => setIsCreateOpen(true)}>Nova análise</Button>
       </div>
@@ -184,7 +184,7 @@ export function DastPage() {
         <EmptyState
           className="mt-6"
           titulo="Nenhum scan ainda"
-          descricao="Informe um alvo autorizado: o Vulnera roda o OWASP ZAP, os headers de segurança e o certificado SSL/TLS e entrega tudo no fim."
+          descricao="Informe um alvo autorizado: o Vulnera roda o OWASP ZAP e os sensores passivos (headers, SSL/TLS, tecnologias, IP/portas/CVEs e subdomínios) e entrega tudo no fim."
           acao={<Button onClick={() => setIsCreateOpen(true)}>Nova análise</Button>}
         />
       )}
@@ -250,7 +250,7 @@ export function DastPage() {
           <DialogTitle>Nova análise</DialogTitle>
           <DialogDescription>
             Informe o alvo. O Vulnera roda tudo em sequência e entrega o resultado no fim: OWASP ZAP (spider + análise
-            passiva), headers de segurança e certificado SSL/TLS.
+            passiva), headers de segurança, certificado SSL/TLS, tecnologias, IP com portas e CVEs, e subdomínios.
           </DialogDescription>
 
           <form
@@ -287,6 +287,9 @@ export function DastPage() {
               <li><strong className="text-fg">OWASP ZAP</strong> — descobre URLs com o spider e analisa as respostas, sem testes ativos nem formulários.</li>
               <li><strong className="text-fg">Headers de segurança</strong> — uma requisição à página informada: CSP, HSTS, anti-clickjacking, cookies.</li>
               <li><strong className="text-fg">Certificado SSL/TLS</strong> — um handshake: validade, cadeia, nome do host e versão do protocolo.</li>
+              <li><strong className="text-fg">Tecnologias</strong> — o que a página anuncia em headers, cookies e HTML (servidor, linguagem, CMS).</li>
+              <li><strong className="text-fg">IP, portas e CVEs</strong> — consulta a InternetDB (Shodan) pelo IP do alvo e busca o CVSS de cada CVE no NVD (NIST). Nada é enviado ao alvo; as CVEs são potenciais.</li>
+              <li><strong className="text-fg">Subdomínios</strong> — logs públicos de certificados (crt.sh). Só listados, nunca acessados.</li>
             </ul>
 
             <label className="flex items-start gap-3 text-sm text-fg">

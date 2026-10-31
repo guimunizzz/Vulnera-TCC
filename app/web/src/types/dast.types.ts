@@ -120,10 +120,42 @@ export const DAST_SENSOR_LABELS: Record<string, string> = {
   zap: "OWASP ZAP · Spider + passivo",
   headers: "Headers de segurança",
   ssl: "Certificado SSL/TLS",
+  fingerprint: "Tecnologias (fingerprint)",
+  internetdb: "IP, portas e CVEs (InternetDB + NVD)",
+  crtsh: "Subdomínios (crt.sh)",
 };
 
 /** Nome curto da origem, para subtítulo de nó e selos. */
-export const DAST_SENSOR_SHORT_LABELS: Record<string, string> = { zap: "ZAP", headers: "Headers", ssl: "SSL/TLS" };
+export const DAST_SENSOR_SHORT_LABELS: Record<string, string> = {
+  zap: "ZAP",
+  headers: "Headers",
+  ssl: "SSL/TLS",
+  fingerprint: "Tecnologias",
+  internetdb: "InternetDB",
+  crtsh: "crt.sh",
+};
+
+export type DastAssetKind = "IP" | "PORT" | "TECHNOLOGY" | "SUBDOMAIN";
+
+/** O que os sensores de descoberta observaram (topologia, não achado). */
+export interface DastObservedAsset {
+  kind: DastAssetKind;
+  value: string;
+  /** A quem se liga no grafo; null = ao host do alvo. */
+  parentValue: string | null;
+  sensorKey: string;
+  metadata: Record<string, unknown> | null;
+}
+
+/** Faixas oficiais do CVSS (v3/v4); "Crítica" não existe no DastRisk, só no rótulo. */
+export function severidadeCvss(nota: number | null | undefined): string {
+  if (nota === null || nota === undefined) return "pendente";
+  if (nota >= 9) return "Crítica";
+  if (nota >= 7) return "Alta";
+  if (nota >= 4) return "Média";
+  if (nota > 0) return "Baixa";
+  return "Nenhuma";
+}
 
 export const DAST_SENSOR_STATUS_LABELS: Record<DastSensorStatus, string> = {
   OK: "OK",
@@ -146,6 +178,11 @@ export interface DastFinding {
   normalizedUrl: string;
   /** Sensor de origem: "zap" ou um sensor passivo ("headers"). */
   sensorKey: string;
+  /** Só em CVE potencial (sensor internetdb): CVSS oficial do NVD. */
+  cveId?: string | null;
+  cvssScore?: number | null;
+  cvssVersion?: string | null;
+  cvssVector?: string | null;
   param: string | null;
   evidence: string | null;
   description: string | null;

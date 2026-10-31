@@ -48,6 +48,7 @@ import {
   DAST_SENSOR_LABELS,
   DAST_TRIAGE_LABELS,
   DAST_TRIAGE_TONES,
+  severidadeCvss,
   type DastFinding,
   type DastRisk,
 } from "../../types/dast.types";
@@ -88,20 +89,105 @@ function ContagemPorRisco({ findings, compacta }: { findings: DastFinding[]; com
   );
 }
 
+const plural = (n: number, singular: string, pluralForma = `${singular}s`) => `${n} ${n === 1 ? singular : pluralForma}`;
+
 function resumo(detalhe: DetalheDoNo, targetUrl: string): string {
+  const meta = detalhe.asset?.metadata ?? {};
   switch (detalhe.kind) {
     case "INTERNET":
-      return "Ponto de partida do scan: tudo à direita foi alcançado pelo ZAP a partir da rede, sem acesso interno.";
+      return "Ponto de partida do scan: tudo à direita foi alcançado a partir da rede, sem acesso interno.";
     case "ASSET":
-      return `Alvo do scan (${targetUrl}). ${detalhe.endpoints} endpoint${detalhe.endpoints === 1 ? "" : "s"} com findings.`;
+      return `Alvo do scan (${targetUrl}). ${plural(detalhe.endpoints, "endpoint")} com findings.`;
     case "ENDPOINT":
+      return `${plural(detalhe.findings.length, "finding")} observado${detalhe.findings.length === 1 ? "" : "s"} neste endpoint.`;
     case "GROUP":
-      return `${detalhe.findings.length} finding${detalhe.findings.length === 1 ? "" : "s"} observado${detalhe.findings.length === 1 ? "" : "s"} neste endpoint.`;
+      return detalhe.ramo === "IP"
+        ? `${plural(detalhe.findings.length, "CVE potencial", "CVEs potenciais")} associada${detalhe.findings.length === 1 ? "" : "s"} a este IP pela InternetDB (Shodan), com CVSS do NVD (NIST). Nenhuma foi testada no alvo.`
+        : `${plural(detalhe.findings.length, "finding")} observado${detalhe.findings.length === 1 ? "" : "s"} neste endpoint.`;
+    case "IP": {
+      if (meta.publico === false)
+        return "IP privado ou local: a InternetDB só conhece IPs públicos, então portas e CVEs não foram consultadas. O restante do scan rodou normalmente.";
+      const portas = detalhe.estrutura.filter((e) => e.kind === "PORT").length;
+      return `IP público do alvo. A InternetDB (Shodan) registra ${plural(portas, "porta aberta", "portas abertas")} e ${plural(detalhe.findings.length, "CVE potencial", "CVEs potenciais")} para ele. O Vulnera não se conectou a essas portas.`;
+    }
+    case "PORT":
+      return `Porta ${detalhe.label.replace("porta ", "")} aberta em ${detalhe.asset?.parentValue ?? "?"}, vista publicamente pela Shodan. O Vulnera não se conectou a ela.`;
+    case "TECH":
+      return `${detalhe.label}, identificada por ${String(meta.fonte ?? "observação passiva")}.${meta.cpe ? ` CPE ${String(meta.cpe)}.` : ""} Versão anunciada não confirma a versão instalada.`;
+    case "SUBDOMAIN":
+      return detalhe.asset
+        ? `${detalhe.label} aparece em certificado público (Certificate Transparency). Não foi acessado: o escopo autorizado é só ${targetUrl}.`
+        : `${plural(detalhe.estrutura.length, "subdomínio")} em certificados públicos (crt.sh). Nenhum foi acessado: o escopo autorizado é só ${targetUrl}.`;
     case "FINDING": {
       const texto = detalhe.finding?.description ?? "O ZAP não trouxe descrição para este alerta.";
       return texto.length > 220 ? `${texto.slice(0, 219)}…` : texto;
     }
   }
+}
+
+/** Nota CVSS em destaque: número grande na cor do risco, faixa oficial, versão, vetor e link para o NVD. */
+function CvssCartao({ finding }: { finding: DastFinding }) {
+  const nota = finding.cvssScore ?? null;
+  const token = tokenDoNo({ kind: "FINDING", risk: finding.risk });
+  return (
+    <div
+      className="flex items-center gap-3 rounded-control border border-subtle bg-inset/60 p-3"
+      style={{ borderLeftColor: cor(token), borderLeftWidth: 3 }}
+    >
+      <div className="grid h-14 w-14 shrink-0 place-items-center rounded-control" style={{ background: cor(token, 0.14) }}>
+        <span className="font-mono text-xl font-bold" style={{ color: cor(token) }} data-numeric>
+          {nota !== null ? nota.toFixed(1) : "—"}
+        </span>
+      </div>
+      <div className="min-w-0 text-sm">
+        <p className="font-semibold text-fg">
+          CVSS {finding.cvssVersion ?? ""} · {severidadeCvss(nota)}
+        </p>
+        <p className="break-all font-mono text-[11px] text-fg-muted">{finding.cvssVector ?? "Sem CVSS do NVD para esta CVE neste scan."}</p>
+        <a
+          className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+          href={`https://nvd.nist.gov/vuln/detail/${finding.cveId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {finding.cveId} no NVD (NIST)
+          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/** O que o sensor de descoberta sabe do ativo (IP, porta, tecnologia, subdomínio). */
+function FichasDoAtivo({ detalhe }: { detalhe: DetalheDoNo }) {
+  const a = detalhe.asset;
+  if (!a && detalhe.estrutura.length === 0) return null;
+  const meta = a?.metadata ?? {};
+  const hostnames = Array.isArray(meta.hostnames) ? (meta.hostnames as string[]) : [];
+  const tags = Array.isArray(meta.tags) ? (meta.tags as string[]) : [];
+  return (
+    <dl className="grid grid-cols-2 gap-2">
+      {a && <Ficha icone={Radar} rotulo="Sensor de origem">{DAST_SENSOR_LABELS[a.sensorKey] ?? a.sensorKey}</Ficha>}
+      {a?.parentValue && (
+        <Ficha icone={Link2} rotulo="Ligado a">
+          <span className="break-all font-mono text-xs">{a.parentValue}</span>
+        </Ficha>
+      )}
+      {hostnames.length > 0 && (
+        <Ficha icone={Hash} rotulo="Nomes reversos">
+          <span className="break-all font-mono text-xs">{hostnames.slice(0, 5).join(", ")}</span>
+        </Ficha>
+      )}
+      {tags.length > 0 && <Ficha icone={Tag} rotulo="Marcas da Shodan">{tags.join(", ")}</Ficha>}
+      {detalhe.estrutura.length > 0 && (
+        <div className="col-span-2">
+          <Ficha icone={ListChecks} rotulo={detalhe.kind === "SUBDOMAIN" ? "Subdomínios" : "Portas e tecnologias"}>
+            <span className="font-mono text-xs">{detalhe.estrutura.map((e) => e.label).join(" · ")}</span>
+          </Ficha>
+        </div>
+      )}
+    </dl>
+  );
 }
 
 function Selos({ detalhe }: { detalhe: DetalheDoNo }) {
@@ -111,6 +197,7 @@ function Selos({ detalhe }: { detalhe: DetalheDoNo }) {
     <div className="flex flex-wrap items-center gap-1">
       {detalhe.risk && <SeverityBadge severidade={SEVERIDADE_DO_RISCO[detalhe.risk]} />}
       {f && <Badge tom={DAST_TRIAGE_TONES[f.triageStatus]}>{DAST_TRIAGE_LABELS[f.triageStatus]}</Badge>}
+      {f?.cveId && <Badge tom="atencao">potencial · não validado</Badge>}
       {f?.promotedVulnerability && <Badge tom="acento">promovido</Badge>}
     </div>
   );
@@ -192,8 +279,8 @@ export function PainelDoNo({
             </div>
             <ContagemPorRisco findings={totalFindings} compacta />
             <p className="border-t border-subtle pt-3 text-xs text-fg-muted">
-              Fontes: alertas do OWASP ZAP e o sensor passivo de headers deste scan. Tecnologias, subdomínios, IPs e portas
-              (fingerprint, crt.sh e InternetDB) entram numa próxima fase do Security Graph.
+              Fontes: OWASP ZAP e os sensores passivos deste scan. IP, portas e CVEs vêm da InternetDB (Shodan) com CVSS do
+              NVD (NIST); CVE é potencial até alguém confirmar a versão. Subdomínios (crt.sh) só são listados, nunca acessados.
             </p>
           </>
         ) : (
@@ -215,6 +302,8 @@ export function PainelDoNo({
             </div>
 
             <p className="text-sm leading-relaxed text-fg-secondary">{resumo(detalhe, targetUrl)}</p>
+            {f?.cveId && <CvssCartao finding={f} />}
+            <FichasDoAtivo detalhe={detalhe} />
 
             {f && (
               <dl className="grid grid-cols-2 gap-2">
@@ -409,10 +498,15 @@ export function ModalDoNo({
             <div className="max-h-[60vh] overflow-y-auto border-t border-subtle px-6 py-5">
               {f ? (
                 <div className="flex flex-col gap-5">
+                  {f.cveId && (
+                    <motion.div variants={item}>
+                      <CvssCartao finding={f} />
+                    </motion.div>
+                  )}
                   <motion.dl variants={item} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     <Ficha icone={ShieldAlert} rotulo="CWE">{f.cweId ? `CWE-${f.cweId}` : "—"}</Ficha>
                     <Ficha icone={Tag} rotulo="WASC">{f.wascId ?? "—"}</Ficha>
-                    <Ficha icone={Gauge} rotulo="Confiança do ZAP">{f.confidence}</Ficha>
+                    <Ficha icone={Gauge} rotulo={f.sensorKey === "zap" ? "Confiança do ZAP" : "Confiança"}>{f.confidence}</Ficha>
                     <Ficha icone={Radar} rotulo="Sensor de origem">{DAST_SENSOR_LABELS[f.sensorKey] ?? f.sensorKey}</Ficha>
                     <Ficha icone={Hash} rotulo={f.sensorKey === "zap" ? "Regra do ZAP" : "Regra do sensor"}>
                       <span className="font-mono text-xs">{f.pluginId}</span>
@@ -464,6 +558,9 @@ export function ModalDoNo({
                   <motion.p variants={item} className="text-sm leading-relaxed text-fg-secondary">
                     {resumo(detalhe, targetUrl)}
                   </motion.p>
+                  <motion.div variants={item}>
+                    <FichasDoAtivo detalhe={detalhe} />
+                  </motion.div>
                   {detalhe.url && (
                     <Secao icone={Link2} titulo="URL">
                       <span className="break-all font-mono text-xs">{detalhe.url}</span>

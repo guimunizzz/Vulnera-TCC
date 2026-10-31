@@ -13,6 +13,7 @@ import type {
   CreateDastScanInput,
   DastFinding,
   DastSensorRun,
+  DastObservedAsset,
   DastModuleStatus,
   DastReportData,
   DastScan,
@@ -37,6 +38,8 @@ export const dastApi = {
 
   listFindings: (id: string) => apiClient.get<DastFinding[]>(`/dast/scans/${id}/findings`).then((res) => res.data),
   listSensors: (id: string) => apiClient.get<DastSensorRun[]>(`/dast/scans/${id}/sensors`).then((res) => res.data),
+
+  listAssets: (id: string) => apiClient.get<DastObservedAsset[]>(`/dast/scans/${id}/assets`).then((res) => res.data),
 
   getReportData: (id: string) => apiClient.get<DastReportData>(`/dast/scans/${id}/report/data`).then((res) => res.data),
 

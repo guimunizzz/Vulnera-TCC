@@ -208,18 +208,26 @@ export class KitDeMalhas {
         };
         break;
       }
+      // Ativos de descoberta reaproveitam a porta hexagonal: o núcleo muda de cor
+      // (IP no acento, folhas em neutro) e as folhas ficam menores.
+      case "IP":
+      case "SUBDOMAIN":
+      case "TECH":
+      case "PORT":
       case "ENDPOINT": {
         const porta = solido(
           this.geos.porta,
           this.mat("porta", () => new THREE.MeshStandardMaterial({ color: p.metal, metalness: 0.95, roughness: 0.22 })),
         );
         porta.rotation.x = Math.PI / 2;
+        const corNucleo = node.kind === "IP" ? p.accent : node.kind === "ENDPOINT" || node.kind === "SUBDOMAIN" ? p.accentSoft : p.neutral;
         const nucleo = new THREE.Mesh(
           this.geos.nucleoPorta,
-          this.mat("nucleo-porta", () =>
-            new THREE.MeshStandardMaterial({ color: p.accentSoft, emissive: p.accentSoft, emissiveIntensity: 1.4, roughness: 0.4 }),
+          this.mat(`nucleo-${corNucleo}`, () =>
+            new THREE.MeshStandardMaterial({ color: corNucleo, emissive: corNucleo, emissiveIntensity: 1.4, roughness: 0.4 }),
           ),
         );
+        if (node.kind === "PORT" || node.kind === "TECH" || (node.kind === "SUBDOMAIN" && node.asset)) corpo.scale.setScalar(0.7);
         nucleo.rotation.x = Math.PI / 2;
         const anel = new THREE.Mesh(this.geos.anelPorta, this.brilho("anel-porta", hdr(p.neutral, 1.8), 0.8));
         corpo.add(porta, nucleo, anel);

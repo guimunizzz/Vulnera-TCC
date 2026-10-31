@@ -27,6 +27,7 @@ import {
   DAST_RISK_LABELS,
   DAST_SENSOR_SHORT_LABELS,
   type DastFinding,
+  type DastObservedAsset,
   type DastRisk,
   type DastSensorRun,
 } from "../../types/dast.types";
@@ -76,16 +77,19 @@ export default function CyberGraph({
   targetUrl,
   findings,
   sensores,
+  ativos = [],
   aoVerNaLista,
 }: {
   targetUrl: string;
   findings: DastFinding[];
   sensores: DastSensorRun[];
+  /** IP, portas, tecnologias e subdomínios vistos pelos sensores de descoberta. */
+  ativos?: DastObservedAsset[];
   aoVerNaLista(findingId: string): void;
 }) {
   const [riscos, setRiscos] = useState<ReadonlySet<DastRisk>>(() => new Set(RISCOS));
   const visiveis = useMemo(() => findings.filter((f) => riscos.has(f.risk)), [findings, riscos]);
-  const grafo = useMemo(() => buildSecurityGraph(targetUrl, visiveis), [targetUrl, visiveis]);
+  const grafo = useMemo(() => buildSecurityGraph(targetUrl, visiveis, ativos), [targetUrl, visiveis, ativos]);
   const findingsPorNo = useMemo(() => new Map(findings.map((f) => [`finding:${f.id}`, f])), [findings]);
   const contagem = useMemo(() => {
     const c: Record<DastRisk, number> = { HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 };
@@ -131,7 +135,12 @@ export default function CyberGraph({
     });
 
   const aoClicar2D = (no: No2D) => {
-    if (no.kind === "GROUP") alternarGrupo(no.id);
+    if (no.kind === "GROUP" || no.expandivel) {
+      alternarGrupo(no.id);
+      // Com vários ramos o grafo fica mais alto que o palco: o grupo aberto vai para o centro
+      // para os filhos dele não nascerem fora da tela.
+      window.setTimeout(() => ref2d.current?.centralizarEm(no.id), 0);
+    }
     selecionar(no.id);
   };
 
@@ -231,10 +240,10 @@ export default function CyberGraph({
               <span className="font-mono" data-numeric>
                 · {grafo.nodes.length} nós
               </span>
-              {/* Escopo honesto: só as fontes que rodaram; os outros sensores da spec ainda não existem. */}
+              {/* Escopo honesto: só as fontes que rodaram neste scan. */}
               <span
                 className="rounded-full border border-subtle bg-inset px-2 py-0.5"
-                title="Fingerprint de tecnologia, crt.sh (subdomínios) e Shodan InternetDB (portas e CVEs) entram numa próxima fase do Security Graph."
+                title="Fontes que rodaram neste scan. Status e mensagem de cada uma estão na faixa de sensores acima."
               >
                 {sensores.length > 1
                   ? `Fontes: ${sensores.map((s) => DAST_SENSOR_SHORT_LABELS[s.sensorKey] ?? s.sensorKey).join(" · ")}`

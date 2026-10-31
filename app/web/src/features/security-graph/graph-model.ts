@@ -8,7 +8,10 @@
  *
  * POR QUE EXISTE
  * Separa a topologia (testável em jsdom) da cena Three.js (só no chunk lazy).
- * Ainda não há API de grafo nem sensores: os nós vêm só do ZAP, sem dado novo.
+ * Além dos findings, recebe os ativos dos sensores de descoberta: IP (com
+ * portas e tecnologias da InternetDB), tecnologias da página (fingerprint) e
+ * subdomínios (crt.sh, num nó agregado). As CVEs potenciais se ligam ao IP —
+ * é por ele que a exposição acontece, não por um endpoint.
  * Quando `GET /dast/scans/:id/graph` existir, ele substitui `buildSecurityGraph`
  * mantendo o mesmo formato `SecurityGraph`.
  *
@@ -16,9 +19,9 @@
  * `security-graph-3d.tsx` e `scene/graph-scene.ts`.
  */
 
-import type { DastFinding, DastRisk } from "../../types/dast.types";
+import type { DastFinding, DastObservedAsset, DastRisk } from "../../types/dast.types";
 
-export type GraphNodeKind = "INTERNET" | "ASSET" | "ENDPOINT" | "FINDING";
+export type GraphNodeKind = "INTERNET" | "ASSET" | "ENDPOINT" | "FINDING" | "IP" | "PORT" | "TECH" | "SUBDOMAIN";
 
 export interface GraphNode {
   id: string;
@@ -27,6 +30,10 @@ export interface GraphNode {
   risk?: DastRisk;
   /** Só em FINDING: o sensor que gerou ("zap", "headers"). */
   sensorKey?: string;
+  /** Ativo de descoberta de onde o nó veio (IP, porta, tecnologia, subdomínio). */
+  asset?: DastObservedAsset;
+  /** Nó agregado (subdomínios): quantos itens ele junta. */
+  total?: number;
 }
 
 export interface GraphEdge {
@@ -61,7 +68,17 @@ function caminhoDe(url: string): string {
   }
 }
 
-export function buildSecurityGraph(targetUrl: string, findings: DastFinding[]): SecurityGraph {
+export const ID_SUBDOMINIOS = "subdominios";
+
+const KIND_DO_ATIVO: Record<DastObservedAsset["kind"], GraphNodeKind> = { IP: "IP", PORT: "PORT", TECHNOLOGY: "TECH", SUBDOMAIN: "SUBDOMAIN" };
+const idDoAtivo = (a: { kind: DastObservedAsset["kind"]; value: string }): string => `${a.kind.toLowerCase()}:${a.value}`;
+
+function rotuloDoAtivo(a: DastObservedAsset): string {
+  if (a.kind === "PORT") return `porta ${a.value.split(":").pop()}`;
+  return a.value;
+}
+
+export function buildSecurityGraph(targetUrl: string, findings: DastFinding[], assets: DastObservedAsset[] = []): SecurityGraph {
   const nodes: GraphNode[] = [
     { id: "internet", kind: "INTERNET", label: "Internet" },
     { id: "asset", kind: "ASSET", label: hostDe(targetUrl) },
@@ -70,9 +87,41 @@ export function buildSecurityGraph(targetUrl: string, findings: DastFinding[]): 
   const endpoints = new Set<string>();
   let truncated = false;
 
+  // Ativos primeiro: são poucos (subdomínios têm teto no sensor) e dão a forma do grafo.
+  const ids = new Set(nodes.map((n) => n.id));
+  const porValor = new Map(assets.map((a) => [a.value, a]));
+  const subdominios = assets.filter((a) => a.kind === "SUBDOMAIN");
+  if (subdominios.length) {
+    nodes.push({ id: ID_SUBDOMINIOS, kind: "SUBDOMAIN", label: "Subdomínios", total: subdominios.length });
+    edges.push({ source: "asset", target: ID_SUBDOMINIOS });
+    ids.add(ID_SUBDOMINIOS);
+  }
+  // IP antes das portas/tecnologias que penduram nele.
+  const ordemAtivo: Record<DastObservedAsset["kind"], number> = { IP: 0, SUBDOMAIN: 1, TECHNOLOGY: 2, PORT: 3 };
+  for (const ativo of [...assets].sort((a, b) => ordemAtivo[a.kind] - ordemAtivo[b.kind])) {
+    const id = idDoAtivo(ativo);
+    if (ids.has(id)) continue;
+    const pai = ativo.kind === "SUBDOMAIN" ? ID_SUBDOMINIOS : ativo.parentValue && porValor.has(ativo.parentValue) ? idDoAtivo(porValor.get(ativo.parentValue)!) : "asset";
+    if (!ids.has(pai)) continue;
+    nodes.push({ id, kind: KIND_DO_ATIVO[ativo.kind], label: rotuloDoAtivo(ativo), asset: ativo });
+    edges.push({ source: pai, target: id });
+    ids.add(id);
+  }
+  const noDoIp = nodes.find((n) => n.kind === "IP")?.id;
+
   // Ordena por risco para que o corte por tamanho descarte INFO antes de HIGH.
   const ordenados = [...findings].sort((a, b) => RISK_ORDER[a.risk] - RISK_ORDER[b.risk]);
   for (const finding of ordenados) {
+    // CVE potencial expõe o IP, não um caminho da aplicação.
+    if (finding.cveId && noDoIp) {
+      if (nodes.length + 1 > MAX_GRAPH_NODES) {
+        truncated = true;
+        break;
+      }
+      nodes.push({ id: `finding:${finding.id}`, kind: "FINDING", label: finding.title, risk: finding.risk, sensorKey: finding.sensorKey });
+      edges.push({ source: noDoIp, target: `finding:${finding.id}` });
+      continue;
+    }
     const endpointId = `endpoint:${finding.normalizedUrl}`;
     const novos = endpoints.has(endpointId) ? 1 : 2;
     if (nodes.length + novos > MAX_GRAPH_NODES) {
