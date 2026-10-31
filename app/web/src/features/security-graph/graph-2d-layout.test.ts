@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { DastFinding, DastRisk } from "../../types/dast.types";
-import { COLUNA_X, idDoGrupo, montarVisao2D } from "./graph-2d-layout";
+import { caixaDoConteudo, COLUNA_X, idDoGrupo, montarVisao2D, vizinhoNaDirecao } from "./graph-2d-layout";
 import { buildSecurityGraph, caminhoAte } from "./graph-model";
-import { descreverNo, grupoDoFinding } from "./node-detail";
+import { descreverNo, grupoDoFinding, urlCompleta } from "./node-detail";
 
 function finding(id: string, risk: DastRisk, normalizedUrl: string): DastFinding {
   return { id, risk, normalizedUrl, title: `F ${id}` } as DastFinding;
@@ -81,5 +81,42 @@ describe("caminho e detalhe do nó", () => {
 
   it("grupoDoFinding acha o grupo que precisa abrir para mostrar o finding", () => {
     expect(grupoDoFinding(grafo, "finding:a")).toBe(idDoGrupo(LOGIN));
+  });
+
+  it("URL do endpoint sai completa mesmo quando o scan gravou o caminho relativo", () => {
+    expect(urlCompleta("/login", "https://exemplo.com/")).toBe("https://exemplo.com/login");
+    expect(urlCompleta("https://outro.com/a", "https://exemplo.com/")).toBe("https://outro.com/a");
+    expect(urlCompleta("/login")).toBe("/login");
+    const relativo = buildSecurityGraph("https://exemplo.com/", [finding("r", "LOW", "/login")]);
+    const detalhe = descreverNo(relativo, new Map(), "endpoint:/login", "https://exemplo.com/");
+    expect(detalhe?.url).toBe("https://exemplo.com/login");
+  });
+});
+
+describe("navegação por setas e caixa do conteúdo", () => {
+  const nos = [
+    { id: "internet", x: 80, y: 200 },
+    { id: "asset", x: 290, y: 200 },
+    { id: "e1", x: 500, y: 100 },
+    { id: "e2", x: 500, y: 300 },
+  ];
+
+  it("→ vai para a coluna seguinte e ↑/↓ andam na mesma coluna", () => {
+    expect(vizinhoNaDirecao(nos, nos[0], "ArrowRight")?.id).toBe("asset");
+    expect(vizinhoNaDirecao(nos, nos[1], "ArrowRight")?.id).toMatch(/^e/);
+    expect(vizinhoNaDirecao(nos, nos[2], "ArrowDown")?.id).toBe("e2");
+    expect(vizinhoNaDirecao(nos, nos[3], "ArrowUp")?.id).toBe("e1");
+    expect(vizinhoNaDirecao(nos, nos[3], "ArrowLeft")?.id).toBe("asset");
+  });
+
+  it("nas bordas não há vizinho", () => {
+    expect(vizinhoNaDirecao(nos, nos[0], "ArrowLeft")).toBeNull();
+    expect(vizinhoNaDirecao(nos, nos[2], "ArrowUp")).toBeNull();
+  });
+
+  it("a caixa inclui folga para os rótulos abaixo dos nós", () => {
+    const caixa = caixaDoConteudo(nos);
+    expect(caixa.x).toBeLessThan(80);
+    expect(caixa.y + caixa.altura).toBeGreaterThan(300 + 50);
   });
 });

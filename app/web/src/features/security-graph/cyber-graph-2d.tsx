@@ -5,8 +5,8 @@
  * Desenha a visão 2D do CyberGraph em SVG: nós circulares com ícone, rótulo e
  * subtítulo, arestas curvas em degradê da origem ao destino, grupo de findings
  * com contagem, destaque do caminho selecionado, nós arrastáveis, arrastar o
- * fundo para mover e zoom
- * pela roda (só com o grafo em foco, para não prender a rolagem da página).
+ * fundo para mover, zoom (roda com o grafo em foco, +/− e botões), legenda,
+ * minimapa quando o grafo não cabe e navegação por setas com um só ponto de Tab.
  *
  * POR QUE EXISTE
  * É a visão de trabalho do grafo: lê bem em qualquer tamanho, não depende de
@@ -16,14 +16,30 @@
  * `cyber-graph.tsx`.
  */
 
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { DAST_RISK_LABELS } from "../../types/dast.types";
-import type { Kind2D, No2D, Visao2D } from "./graph-2d-layout";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { DAST_RISK_LABELS, DAST_SENSOR_SHORT_LABELS, type DastRisk } from "../../types/dast.types";
+import { svgParaPng } from "./exportar";
+import { caixaDoConteudo, vizinhoNaDirecao, type Direcao, type Kind2D, type No2D, type Visao2D } from "./graph-2d-layout";
 import { contextoDoNo, chaveDaAresta } from "./graph-model";
 import { cor, ICONE_DO_TIPO, ROTULO_TIPO, tokenDoNo } from "./node-visual";
 
 export interface CyberGraph2DHandle {
   recentralizar(): void;
+  /** < 1 afasta, > 1 aproxima, em torno do centro da tela. */
+  aproximar(fator: number): void;
+  /** Centraliza a vista num nó (busca, navegação por teclado). */
+  centralizarEm(id: string): void;
+  exportarPng(): Promise<Blob | null>;
 }
 
 interface Props {
@@ -34,11 +50,16 @@ interface Props {
   aoLimpar(): void;
   /** Nó arrastado para (x, y), nas coordenadas do grafo. */
   aoMover(id: string, x: number, y: number): void;
+  /** Minimapa ligado pela pessoa: fixo sobre o grafo, ele sempre pode cobrir algum nó. */
+  minimapa: boolean;
 }
 
-const ICONE = ICONE_DO_TIPO;
 const RAIO: Record<Kind2D, number> = { INTERNET: 40, ASSET: 28, ENDPOINT: 25, GROUP: 25, FINDING: 21 };
 const encurtar = (texto: string, max: number) => (texto.length > max ? `${texto.slice(0, max - 1)}…` : texto);
+const SETAS: readonly string[] = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+const LEGENDA_TIPOS: Kind2D[] = ["INTERNET", "ASSET", "ENDPOINT", "GROUP"];
+const LEGENDA_RISCOS: DastRisk[] = ["HIGH", "MEDIUM", "LOW", "INFO"];
+const MINIMAPA = { w: 168, h: 108 };
 
 function subtitulo(no: No2D): string {
   switch (no.kind) {
@@ -51,24 +72,29 @@ function subtitulo(no: No2D): string {
     case "GROUP":
       return no.expandido ? "Clique para recolher" : "Clique para expandir";
     case "FINDING":
-      return `Risco ${DAST_RISK_LABELS[no.risk ?? "INFO"].toLowerCase()}`;
+      return `Risco ${DAST_RISK_LABELS[no.risk ?? "INFO"].toLowerCase()} · ${DAST_SENSOR_SHORT_LABELS[no.sensorKey ?? "zap"] ?? no.sensorKey}`;
   }
 }
 
 const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 2.5;
+const limitarZoom = (k: number) => Math.min(Math.max(k, ZOOM_MIN), ZOOM_MAX);
 
 export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function CyberGraph2D(
-  { visao, selecionadoId, aoClicar, aoAbrir, aoLimpar, aoMover },
+  { visao, selecionadoId, aoClicar, aoAbrir, aoLimpar, aoMover, minimapa },
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tamanho, setTamanho] = useState({ w: 0, h: 0 });
   const [vista, setVista] = useState({ x: 0, y: 0, k: 1 });
+  const [focoId, setFocoId] = useState<string | null>(null);
   const mexeu = useRef(false);
   // Arrasto do fundo (move a vista) ou de um nó (`no` preenchido: move só o nó).
   const arrasto = useRef<{ x: number; y: number; vx: number; vy: number; moveu: boolean; no?: string } | null>(null);
   const foiArrasto = useRef(false);
+  // Espelhos para os métodos do handle lerem o estado mais recente (ex.: centralizar logo após expandir um grupo).
+  const atual = useRef({ visao, vista, tamanho });
+  atual.current = { visao, vista, tamanho };
 
   const enquadrar = useCallback(() => {
     const { w, h } = tamanho;
@@ -85,12 +111,58 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
     if (!mexeu.current) enquadrar();
   }, [enquadrar]);
 
-  useImperativeHandle(ref, () => ({
-    recentralizar() {
-      mexeu.current = false;
-      enquadrar();
-    },
-  }), [enquadrar]);
+  const centralizarEm = useCallback((id: string) => {
+    const { visao: v, vista: vi, tamanho: t } = atual.current;
+    const no = v.nodes.find((n) => n.id === id);
+    if (!no || !t.w) return;
+    mexeu.current = true;
+    setVista({ k: vi.k, x: t.w / 2 - no.x * vi.k, y: t.h / 2 - no.y * vi.k });
+  }, []);
+
+  const aproximar = useCallback((fator: number) => {
+    const { tamanho: t } = atual.current;
+    mexeu.current = true;
+    setVista((v) => {
+      const k = limitarZoom(v.k * fator);
+      const cx = t.w / 2;
+      const cy = t.h / 2;
+      return { k, x: cx - ((cx - v.x) / v.k) * k, y: cy - ((cy - v.y) / v.k) * k };
+    });
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      recentralizar() {
+        mexeu.current = false;
+        enquadrar();
+      },
+      aproximar,
+      centralizarEm,
+      // Grafo inteiro, não só o que está na tela; zoom e deslocamento da vista não entram.
+      async exportarPng() {
+        const svg = svgRef.current;
+        if (!svg) return null;
+        const caixa = caixaDoConteudo(atual.current.visao.nodes);
+        const copia = svg.cloneNode(true) as SVGSVGElement;
+        copia.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+        copia.setAttribute("viewBox", `${caixa.x} ${caixa.y} ${caixa.largura} ${caixa.altura}`);
+        copia.setAttribute("width", String(caixa.largura));
+        copia.setAttribute("height", String(caixa.altura));
+        copia.setAttribute("font-family", getComputedStyle(svg).fontFamily);
+        copia.querySelector("[data-vista]")?.setAttribute("transform", "");
+        const fundo = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        fundo.setAttribute("x", String(caixa.x));
+        fundo.setAttribute("y", String(caixa.y));
+        fundo.setAttribute("width", String(caixa.largura));
+        fundo.setAttribute("height", String(caixa.altura));
+        fundo.setAttribute("fill", cor("--color-bg-canvas"));
+        copia.insertBefore(fundo, copia.querySelector("[data-vista]"));
+        return svgParaPng(copia, caixa.largura, caixa.altura);
+      },
+    }),
+    [enquadrar, aproximar, centralizarEm],
+  );
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -108,7 +180,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
       const my = e.clientY - rect.top;
       mexeu.current = true;
       setVista((v) => {
-        const k = Math.min(Math.max(v.k * Math.exp(-e.deltaY * 0.0015), ZOOM_MIN), ZOOM_MAX);
+        const k = limitarZoom(v.k * Math.exp(-e.deltaY * 0.0015));
         return { k, x: mx - ((mx - v.x) / v.k) * k, y: my - ((my - v.y) / v.k) * k };
       });
     };
@@ -125,6 +197,19 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
   );
   const porId = useMemo(() => new Map(visao.nodes.map((n) => [n.id, n])), [visao]);
 
+  // Um só ponto de Tab no grafo (roving tabindex): 300 nós em sequência de Tab seriam uma maratona.
+  const tabulavel = (focoId && porId.has(focoId) ? focoId : null) ?? (selecionadoId && porId.has(selecionadoId) ? selecionadoId : null) ?? visao.nodes[0]?.id;
+
+  const focarNo = (no: No2D) => {
+    setFocoId(no.id);
+    svgRef.current?.querySelector<SVGGElement>(`[data-no-id="${CSS.escape(no.id)}"]`)?.focus();
+    // Fora da tela (ou quase), traz para o centro: o foco do teclado não pode sumir de vista.
+    const { vista: v, tamanho: t } = atual.current;
+    const sx = v.x + no.x * v.k;
+    const sy = v.y + no.y * v.k;
+    if (sx < 60 || sx > t.w - 60 || sy < 60 || sy > t.h - 60) centralizarEm(no.id);
+  };
+
   const aoTeclar = (no: No2D) => (e: KeyboardEvent<SVGGElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -132,168 +217,262 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
       else aoClicar(no);
     } else if (e.key === "Escape") {
       aoLimpar();
+    } else if (SETAS.includes(e.key)) {
+      e.preventDefault();
+      const proximo = vizinhoNaDirecao(visao.nodes, no, e.key as Direcao);
+      if (proximo) focarNo(proximo);
     }
   };
 
+  const caixa = useMemo(() => caixaDoConteudo(visao.nodes), [visao.nodes]);
+  const escalaMini = Math.min(MINIMAPA.w / caixa.largura, MINIMAPA.h / caixa.altura);
+  const moverPeloMinimapa = (e: ReactPointerEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const gx = caixa.x + (e.clientX - rect.left) / escalaMini;
+    const gy = caixa.y + (e.clientY - rect.top) / escalaMini;
+    mexeu.current = true;
+    setVista((v) => ({ ...v, x: tamanho.w / 2 - gx * v.k, y: tamanho.h / 2 - gy * v.k }));
+  };
+
   return (
-    <svg
-      ref={svgRef}
-      tabIndex={0}
-      role="group"
-      aria-roledescription="grafo"
-      aria-label={`CyberGraph 2D: ${visao.nodes.length} nós, da Internet até os findings. Tab percorre os nós, Enter seleciona, Shift+Enter abre os detalhes, Esc limpa.`}
-      className="block h-[34rem] w-full cursor-grab touch-none select-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus active:cursor-grabbing"
-      onPointerDown={(e) => {
-        if (e.button !== 0) return;
-        foiArrasto.current = false;
-        arrasto.current = { x: e.clientX, y: e.clientY, vx: vista.x, vy: vista.y, moveu: false };
-      }}
-      onPointerMove={(e) => {
-        const a = arrasto.current;
-        if (!a) return;
-        const dx = e.clientX - a.x;
-        const dy = e.clientY - a.y;
-        // Só captura o ponteiro depois de mover: capturar no pointerdown mudaria o alvo do clique.
-        if (!a.moveu && Math.hypot(dx, dy) > 4) {
-          a.moveu = true;
-          e.currentTarget.setPointerCapture(e.pointerId);
-        }
-        if (!a.moveu) return;
-        if (a.no) {
-          aoMover(a.no, a.vx + dx / vista.k, a.vy + dy / vista.k);
-          return;
-        }
-        mexeu.current = true;
-        setVista((v) => ({ ...v, x: a.vx + dx, y: a.vy + dy }));
-      }}
-      onPointerUp={() => {
-        foiArrasto.current = arrasto.current?.moveu ?? false;
-        arrasto.current = null;
-      }}
-      onPointerCancel={() => {
-        arrasto.current = null;
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !foiArrasto.current) aoLimpar();
-      }}
-    >
-      <defs>
-        <filter id="cg-sombra" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="black" floodOpacity="0.25" />
-        </filter>
-        {visao.edges.map((edge, i) => {
-          const de = porId.get(edge.source);
-          const para = porId.get(edge.target);
-          if (!de || !para) return null;
-          return (
-            <linearGradient key={chaveDaAresta(edge)} id={`cg-g-${i}`} gradientUnits="userSpaceOnUse" x1={de.x} y1={de.y} x2={para.x} y2={para.y}>
-              <stop offset="0%" stopColor={cor(tokenDoNo(de))} />
-              <stop offset="100%" stopColor={cor(tokenDoNo(para))} />
-            </linearGradient>
-          );
-        })}
-      </defs>
+    <div className="relative">
+      <svg
+        ref={svgRef}
+        tabIndex={-1}
+        role="group"
+        aria-roledescription="grafo"
+        aria-label={`CyberGraph 2D: ${visao.nodes.length} nós, da Internet até os findings. Setas andam entre os nós, Enter seleciona, Shift+Enter abre os detalhes, Esc limpa, + e − aproximam.`}
+        className="block h-[34rem] w-full cursor-grab touch-none select-none outline-none active:cursor-grabbing"
+        onKeyDown={(e) => {
+          if (e.key === "+" || e.key === "=") aproximar(1.2);
+          else if (e.key === "-") aproximar(1 / 1.2);
+        }}
+        onPointerDown={(e) => {
+          if (e.button !== 0) return;
+          foiArrasto.current = false;
+          arrasto.current = { x: e.clientX, y: e.clientY, vx: vista.x, vy: vista.y, moveu: false };
+        }}
+        onPointerMove={(e) => {
+          const a = arrasto.current;
+          if (!a) return;
+          const dx = e.clientX - a.x;
+          const dy = e.clientY - a.y;
+          // Só captura o ponteiro depois de mover: capturar no pointerdown mudaria o alvo do clique.
+          if (!a.moveu && Math.hypot(dx, dy) > 4) {
+            a.moveu = true;
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }
+          if (!a.moveu) return;
+          if (a.no) {
+            aoMover(a.no, a.vx + dx / vista.k, a.vy + dy / vista.k);
+            return;
+          }
+          mexeu.current = true;
+          setVista((v) => ({ ...v, x: a.vx + dx, y: a.vy + dy }));
+        }}
+        onPointerUp={() => {
+          foiArrasto.current = arrasto.current?.moveu ?? false;
+          arrasto.current = null;
+        }}
+        onPointerCancel={() => {
+          arrasto.current = null;
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget && !foiArrasto.current) aoLimpar();
+        }}
+      >
+        <defs>
+          <filter id="cg-sombra" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="black" floodOpacity="0.25" />
+          </filter>
+          {visao.edges.map((edge, i) => {
+            const de = porId.get(edge.source);
+            const para = porId.get(edge.target);
+            if (!de || !para) return null;
+            return (
+              <linearGradient key={chaveDaAresta(edge)} id={`cg-g-${i}`} gradientUnits="userSpaceOnUse" x1={de.x} y1={de.y} x2={para.x} y2={para.y}>
+                <stop offset="0%" stopColor={cor(tokenDoNo(de))} />
+                <stop offset="100%" stopColor={cor(tokenDoNo(para))} />
+              </linearGradient>
+            );
+          })}
+        </defs>
 
-      <g transform={`translate(${vista.x} ${vista.y}) scale(${vista.k})`}>
-        {visao.edges.map((edge, i) => {
-          const de = porId.get(edge.source);
-          const para = porId.get(edge.target);
-          if (!de || !para) return null;
-          const x1 = de.x + RAIO[de.kind];
-          const x2 = para.x - RAIO[para.kind];
-          const meio = (x1 + x2) / 2;
-          const d = `M ${x1} ${de.y} C ${meio} ${de.y}, ${meio} ${para.y}, ${x2} ${para.y}`;
-          const noCaminho = contexto?.arestas.has(chaveDaAresta(edge)) ?? false;
-          return (
-            <g key={chaveDaAresta(edge)} className="cg-entrar">
-              <path
-                d={d}
-                fill="none"
-                stroke={`url(#cg-g-${i})`}
-                strokeWidth={noCaminho ? 3 : 2}
-                strokeOpacity={contexto ? (noCaminho ? 1 : 0.14) : 0.75}
-                strokeLinecap="round"
-              />
-              {noCaminho && <path d={d} fill="none" stroke={cor("--color-text-primary", 0.55)} strokeWidth={1.4} className="cg-fluxo" />}
-            </g>
-          );
-        })}
+        <g data-vista transform={`translate(${vista.x} ${vista.y}) scale(${vista.k})`}>
+          {visao.edges.map((edge, i) => {
+            const de = porId.get(edge.source);
+            const para = porId.get(edge.target);
+            if (!de || !para) return null;
+            const x1 = de.x + RAIO[de.kind];
+            const x2 = para.x - RAIO[para.kind];
+            const meio = (x1 + x2) / 2;
+            const d = `M ${x1} ${de.y} C ${meio} ${de.y}, ${meio} ${para.y}, ${x2} ${para.y}`;
+            const noCaminho = contexto?.arestas.has(chaveDaAresta(edge)) ?? false;
+            return (
+              <g key={chaveDaAresta(edge)} className="cg-entrar">
+                <path
+                  d={d}
+                  fill="none"
+                  stroke={`url(#cg-g-${i})`}
+                  strokeWidth={noCaminho ? 3 : 2}
+                  strokeOpacity={contexto ? (noCaminho ? 1 : 0.14) : 0.75}
+                  strokeLinecap="round"
+                />
+                {noCaminho && <path d={d} fill="none" stroke={cor("--color-text-primary", 0.55)} strokeWidth={1.4} className="cg-fluxo" />}
+              </g>
+            );
+          })}
 
-        {visao.nodes.map((no) => {
-          const raio = RAIO[no.kind];
-          const token = tokenDoNo(no);
-          const Icone = ICONE[no.kind];
-          const tamIcone = no.kind === "INTERNET" ? 34 : 20;
-          const selecionado = no.id === selecionadoId;
-          const apagado = contexto ? !contexto.nos.has(no.id) : false;
-          const internet = no.kind === "INTERNET";
-          return (
-            <g
-              key={no.id}
-              transform={`translate(${no.x} ${no.y})`}
-              role="button"
-              tabIndex={0}
-              aria-pressed={selecionado}
-              aria-expanded={no.kind === "GROUP" ? no.expandido : undefined}
-              aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${DAST_RISK_LABELS[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} findings` : ""}`}
-              className="cg-no cg-entrar cursor-grab outline-none active:cursor-grabbing"
-              opacity={apagado ? 0.28 : 1}
-              onPointerDown={(e) => {
-                if (e.button !== 0) return;
-                // Sem propagar: o fundo não começa a mover a vista junto com o nó.
-                e.stopPropagation();
-                foiArrasto.current = false;
-                arrasto.current = { x: e.clientX, y: e.clientY, vx: no.x, vy: no.y, moveu: false, no: no.id };
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!foiArrasto.current) aoClicar(no);
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                aoAbrir(no);
-              }}
-              onKeyDown={aoTeclar(no)}
-            >
-              <title>{no.label}</title>
-              {selecionado && <circle r={raio + 9} fill={cor(token, 0.16)} stroke={cor(token, 0.7)} strokeWidth={1.5} />}
-              <circle className="cg-foco" r={raio + 5} fill="none" stroke={cor("--color-focus-ring")} strokeWidth={2} opacity={0} />
-              {no.kind === "GROUP" && <circle r={raio + 4} fill="none" stroke={cor(token, 0.55)} strokeWidth={1.5} />}
-              <circle r={raio} fill={cor("--color-bg-surface")} stroke={cor(token)} strokeWidth={2} filter="url(#cg-sombra)" />
-              <circle r={raio - 5} fill={cor(token, internet ? 0.22 : 0.14)} />
-              <Icone
-                x={-tamIcone / 2}
-                y={-tamIcone / 2}
-                width={tamIcone}
-                height={tamIcone}
-                color={cor(token)}
-                strokeWidth={internet ? 1.4 : 1.8}
-                aria-hidden="true"
-              />
-              {no.kind === "GROUP" && (
-                <g transform={`translate(${raio * 0.75} ${-raio * 0.75})`}>
-                  <circle r={10} fill={cor(`${token}-surface`)} stroke={cor(token)} strokeWidth={1.5} />
-                  <text textAnchor="middle" dy="0.35em" fontSize={10} fontWeight={700} fill={cor(`${token}-ink`)}>
-                    {no.total}
-                  </text>
-                </g>
-              )}
-              <text
-                y={raio + (internet ? 22 : 17)}
-                textAnchor="middle"
-                fontSize={internet ? 17 : 13}
-                fontWeight={internet ? 700 : 600}
-                fill={cor("--color-text-primary")}
+          {visao.nodes.map((no) => {
+            const raio = RAIO[no.kind];
+            const token = tokenDoNo(no);
+            const Icone = ICONE_DO_TIPO[no.kind];
+            const tamIcone = no.kind === "INTERNET" ? 34 : 20;
+            const selecionado = no.id === selecionadoId;
+            const apagado = contexto ? !contexto.nos.has(no.id) : false;
+            const internet = no.kind === "INTERNET";
+            return (
+              <g
+                key={no.id}
+                data-no-id={no.id}
+                transform={`translate(${no.x} ${no.y})`}
+                role="button"
+                tabIndex={no.id === tabulavel ? 0 : -1}
+                aria-pressed={selecionado}
+                aria-expanded={no.kind === "GROUP" ? no.expandido : undefined}
+                aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${DAST_RISK_LABELS[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} findings` : ""}`}
+                className="cg-no cg-entrar cursor-grab outline-none active:cursor-grabbing"
+                opacity={apagado ? 0.28 : 1}
+                onFocus={() => setFocoId(no.id)}
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return;
+                  // Sem propagar: o fundo não começa a mover a vista junto com o nó.
+                  e.stopPropagation();
+                  foiArrasto.current = false;
+                  arrasto.current = { x: e.clientX, y: e.clientY, vx: no.x, vy: no.y, moveu: false, no: no.id };
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!foiArrasto.current) aoClicar(no);
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  aoAbrir(no);
+                }}
+                onKeyDown={aoTeclar(no)}
               >
-                {encurtar(no.label, internet ? 20 : 26)}
-              </text>
-              <text y={raio + (internet ? 38 : 32)} textAnchor="middle" fontSize={11} fill={cor("--color-text-muted")}>
-                {subtitulo(no)}
-              </text>
-            </g>
+                <title>{no.label}</title>
+                {selecionado && <circle r={raio + 9} fill={cor(token, 0.16)} stroke={cor(token, 0.7)} strokeWidth={1.5} />}
+                <circle className="cg-foco" r={raio + 5} fill="none" stroke={cor("--color-focus-ring")} strokeWidth={2} opacity={0} />
+                {no.kind === "GROUP" && <circle r={raio + 4} fill="none" stroke={cor(token, 0.55)} strokeWidth={1.5} />}
+                <circle r={raio} fill={cor("--color-bg-surface")} stroke={cor(token)} strokeWidth={2} filter="url(#cg-sombra)" />
+                <circle r={raio - 5} fill={cor(token, internet ? 0.22 : 0.14)} />
+                <Icone
+                  x={-tamIcone / 2}
+                  y={-tamIcone / 2}
+                  width={tamIcone}
+                  height={tamIcone}
+                  color={cor(token)}
+                  strokeWidth={internet ? 1.4 : 1.8}
+                  aria-hidden="true"
+                />
+                {no.kind === "GROUP" && (
+                  <g transform={`translate(${raio * 0.75} ${-raio * 0.75})`}>
+                    <circle r={10} fill={cor(`${token}-surface`)} stroke={cor(token)} strokeWidth={1.5} />
+                    <text textAnchor="middle" dy="0.35em" fontSize={10} fontWeight={700} fill={cor(`${token}-ink`)}>
+                      {no.total}
+                    </text>
+                  </g>
+                )}
+                <text
+                  y={raio + (internet ? 22 : 17)}
+                  textAnchor="middle"
+                  fontSize={internet ? 17 : 13}
+                  fontWeight={internet ? 700 : 600}
+                  fill={cor("--color-text-primary")}
+                >
+                  {encurtar(no.label, internet ? 20 : 26)}
+                </text>
+                <text y={raio + (internet ? 38 : 32)} textAnchor="middle" fontSize={11} fill={cor("--color-text-muted")}>
+                  {subtitulo(no)}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+
+      {/* Legenda: mesma linguagem do nó (ícone na cor do tipo; findings pela severidade). */}
+      <div className="pointer-events-none absolute bottom-3 left-3 mr-16 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-surface/85 px-3 py-2 text-xs text-fg-muted backdrop-blur">
+        {LEGENDA_TIPOS.map((kind) => {
+          const Icone = ICONE_DO_TIPO[kind];
+          return (
+            <span key={kind} className="flex items-center gap-1">
+              <Icone className="h-3.5 w-3.5" style={{ color: cor(tokenDoNo({ kind })) }} aria-hidden="true" />
+              {kind === "GROUP" ? "Grupo" : kind === "INTERNET" ? "Internet" : kind === "ASSET" ? "Alvo" : "Endpoint"}
+            </span>
           );
         })}
-      </g>
-    </svg>
+        <span className="flex items-center gap-2">
+          Finding:
+          {LEGENDA_RISCOS.map((risk) => (
+            <span key={risk} className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: cor(tokenDoNo({ kind: "FINDING", risk })) }} />
+              {DAST_RISK_LABELS[risk]}
+            </span>
+          ))}
+        </span>
+      </div>
+
+      {minimapa && (
+        <div className="absolute bottom-3 right-14 overflow-hidden rounded-control border border-subtle bg-surface/90 shadow-raised backdrop-blur">
+          <svg
+            width={MINIMAPA.w}
+            height={MINIMAPA.h}
+            role="img"
+            aria-label="Minimapa do grafo: clique ou arraste para mover a vista"
+            className="block cursor-pointer touch-none"
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              moverPeloMinimapa(e);
+            }}
+            onPointerMove={(e) => {
+              if (e.buttons === 1) moverPeloMinimapa(e);
+            }}
+          >
+            <g transform={`scale(${escalaMini}) translate(${-caixa.x} ${-caixa.y})`}>
+              {visao.edges.map((edge) => {
+                const de = porId.get(edge.source);
+                const para = porId.get(edge.target);
+                if (!de || !para) return null;
+                return (
+                  <line
+                    key={chaveDaAresta(edge)}
+                    x1={de.x}
+                    y1={de.y}
+                    x2={para.x}
+                    y2={para.y}
+                    stroke={cor("--color-text-muted", 0.35)}
+                    strokeWidth={1 / escalaMini}
+                  />
+                );
+              })}
+              {visao.nodes.map((no) => (
+                <circle key={no.id} cx={no.x} cy={no.y} r={RAIO[no.kind] * 0.9} fill={cor(tokenDoNo(no))} />
+              ))}
+              <rect
+                x={-vista.x / vista.k}
+                y={-vista.y / vista.k}
+                width={tamanho.w / vista.k}
+                height={tamanho.h / vista.k}
+                fill={cor("--color-accent", 0.1)}
+                stroke={cor("--color-accent")}
+                strokeWidth={2 / escalaMini}
+              />
+            </g>
+          </svg>
+        </div>
+      )}
+    </div>
   );
 });

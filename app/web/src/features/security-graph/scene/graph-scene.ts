@@ -33,6 +33,7 @@ import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRe
 import type { DastRisk } from "../../../types/dast.types";
 import { chaveDaAresta, contextoDoNo, type GraphNode, type GraphNodeKind, type SecurityGraph } from "../graph-model";
 import { KitDeMalhas, type NoVisual } from "./node-meshes";
+import { INTERVALO_IGNORADO_MS, JANELA_QUADROS, proximoNivel, type NivelQualidade } from "./qualidade";
 import type { GraphPalette } from "./palette";
 
 export type Posicao3D = { x: number; y: number; z: number };
@@ -46,6 +47,10 @@ export interface GraphSceneOptions {
   /** Fim de um arrasto: posição nova do nó. */
   aoMoverNo(id: string, posicao: Posicao3D): void;
   aoPerderContexto(): void;
+  /** Quantos nomes estão escondidos por colisão agora. */
+  aoContarOcultos?(quantidade: number): void;
+  /** A cena baixou a qualidade para manter a fluidez. */
+  aoMudarQualidade?(nivel: NivelQualidade): void;
 }
 
 // Camadas e aglomerados espaçados para os nomes fixos não se sobreporem (findings são o grosso dos nós).
@@ -198,6 +203,11 @@ export class GraphScene {
   private visivel = true;
   private quadro = 0;
   private readonly inicio = performance.now();
+  private ocultos = 0;
+  private nivelQualidade: NivelQualidade = 0;
+  private ultimoQuadro = 0;
+  private somaQuadros = 0;
+  private qtdQuadros = 0;
   private readonly observadorTamanho: ResizeObserver;
   private readonly observadorVisivel: IntersectionObserver;
 
@@ -392,12 +402,104 @@ export class GraphScene {
     }
     candidatos.sort((a, b) => a.chave - b.chave || a.z - b.z);
     const aceitos: { x0: number; y0: number; x1: number; y1: number }[] = [];
+    let ocultos = 0;
     for (const c of candidatos) {
       const caixa = { x0: c.x - c.r.largura / 2 - 2, y0: c.y - 1, x1: c.x + c.r.largura / 2 + 2, y1: c.y + c.r.altura + 1 };
       const colide = aceitos.some((a) => caixa.x0 < a.x1 && caixa.x1 > a.x0 && caixa.y0 < a.y1 && caixa.y1 > a.y0);
-      if (!colide) aceitos.push(caixa);
+      if (colide) ocultos += 1;
+      else aceitos.push(caixa);
       this.mostrarRotulo(c.r, !colide);
     }
+    // Só avisa quando muda: o componente re-renderiza com a contagem.
+    if (ocultos !== this.ocultos) {
+      this.ocultos = ocultos;
+      this.opcoes.aoContarOcultos?.(ocultos);
+    }
+  }
+
+  /* ---------------------------------------------------- zoom, captura, qualidade */
+
+  /** Aproxima (fator < 1) ou afasta (> 1) a câmera do alvo, dentro dos limites do OrbitControls. */
+  aproximar(fator: number): void {
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    const distancia = THREE.MathUtils.clamp(offset.length() * fator, this.controls.minDistance, this.controls.maxDistance);
+    this.camera.position.copy(this.controls.target).add(offset.setLength(distancia));
+    this.usuarioMexeu = true;
+  }
+
+  /** Volta ao enquadramento do grafo inteiro, sem perder a seleção. */
+  ajustarVista(): void {
+    this.usuarioMexeu = false;
+    this.enquadrar();
+    const visual = this.selecionado ? this.nos.get(this.selecionado) : null;
+    if (visual) this.focoAlvo.copy(visual.raiz.position);
+  }
+
+  /**
+   * PNG do que está na tela, com os nomes visíveis desenhados por cima (eles são
+   * DOM, não entram no canvas WebGL). O render e a cópia acontecem na mesma
+   * tarefa: sem `preserveDrawingBuffer`, o buffer ainda está íntegro aqui.
+   */
+  capturar(): Promise<Blob | null> {
+    this.composer.render();
+    const origem = this.renderer.domElement;
+    const tela = document.createElement("canvas");
+    tela.width = origem.width;
+    tela.height = origem.height;
+    const ctx = tela.getContext("2d");
+    if (!ctx) return Promise.resolve(null);
+    ctx.drawImage(origem, 0, 0);
+    const escala = origem.width / Math.max(1, this.canvas.clientWidth);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    for (const r of this.rotulos3d) {
+      if (!r.visivel || !r.largura) continue;
+      r.obj.getWorldPosition(this.auxRotulo).project(this.camera);
+      const x = ((this.auxRotulo.x + 1) / 2) * tela.width;
+      const y = ((1 - this.auxRotulo.y) / 2) * tela.height;
+      const estilo = getComputedStyle(r.el);
+      ctx.font = `${estilo.fontWeight} ${parseFloat(estilo.fontSize) * escala}px ${estilo.fontFamily}`;
+      // Só encurta o que também está truncado na tela; a métrica do canvas difere um pouco da do DOM.
+      const folga = parseFloat(estilo.paddingLeft) + parseFloat(estilo.paddingRight);
+      let texto = r.el.textContent ?? "";
+      if (r.el.scrollWidth > r.el.clientWidth) {
+        const maxLargura = (r.largura - folga) * escala;
+        while (texto.length > 1 && ctx.measureText(texto).width > maxLargura) texto = texto.slice(0, -2) + "…";
+      }
+      const largura = ctx.measureText(texto).width + folga * escala;
+      const altura = r.altura * escala;
+      ctx.fillStyle = estilo.backgroundColor;
+      ctx.beginPath();
+      ctx.roundRect(x - largura / 2, y, largura, altura, 4 * escala);
+      ctx.fill();
+      ctx.fillStyle = estilo.color;
+      ctx.fillText(texto, x, y + 2 * escala);
+    }
+    return new Promise((resolver) => tela.toBlob(resolver, "image/png"));
+  }
+
+  /** Mede o tempo de quadro e, se a GPU não der conta, baixa a qualidade (ver qualidade.ts). */
+  private medirQualidade(agora: number): void {
+    const intervalo = agora - this.ultimoQuadro;
+    this.ultimoQuadro = agora;
+    if (intervalo <= 0 || intervalo > INTERVALO_IGNORADO_MS || this.nivelQualidade === 2) return;
+    this.somaQuadros += intervalo;
+    this.qtdQuadros += 1;
+    if (this.qtdQuadros < JANELA_QUADROS) return;
+    const nivel = proximoNivel(this.somaQuadros / this.qtdQuadros, this.nivelQualidade);
+    this.somaQuadros = 0;
+    this.qtdQuadros = 0;
+    if (nivel === this.nivelQualidade) return;
+    this.nivelQualidade = nivel;
+    if (nivel === 1) {
+      this.renderer.setPixelRatio(1);
+      this.composer.setPixelRatio(1);
+      this.redimensionar();
+    } else {
+      this.bloom.enabled = false;
+      this.outline.edgeGlow = 0;
+    }
+    this.opcoes.aoMudarQualidade?.(nivel);
   }
 
   private mostrarRotulo(r: Rotulo3D, visivel: boolean): void {
@@ -708,8 +810,10 @@ export class GraphScene {
     this.controls.target.lerp(this.focoAlvo, reduzido ? 1 : 0.06);
     this.controls.update();
 
+    this.medirQualidade(agora);
     this.quadro += 1;
-    if (this.quadro % 2 === 0 || reduzido) this.renderer.shadowMap.needsUpdate = true;
+    // No nível 2 a sombra só se refaz a cada 8 quadros: acompanha o arraste sem pesar em GPU fraca.
+    if (this.quadro % (this.nivelQualidade === 2 ? 8 : 2) === 0 || reduzido) this.renderer.shadowMap.needsUpdate = true;
     this.composer.render();
     this.rotulos.render(this.scene, this.camera);
     // `=== 1`: já no primeiro quadro, para os nomes não nascerem encavalados.

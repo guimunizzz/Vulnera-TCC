@@ -25,6 +25,8 @@ export interface GraphNode {
   kind: GraphNodeKind;
   label: string;
   risk?: DastRisk;
+  /** Só em FINDING: o sensor que gerou ("zap", "headers"). */
+  sensorKey?: string;
 }
 
 export interface GraphEdge {
@@ -83,7 +85,7 @@ export function buildSecurityGraph(targetUrl: string, findings: DastFinding[]): 
       edges.push({ source: "asset", target: endpointId });
     }
     const findingId = `finding:${finding.id}`;
-    nodes.push({ id: findingId, kind: "FINDING", label: finding.title, risk: finding.risk });
+    nodes.push({ id: findingId, kind: "FINDING", label: finding.title, risk: finding.risk, sensorKey: finding.sensorKey });
     edges.push({ source: endpointId, target: findingId });
   }
 

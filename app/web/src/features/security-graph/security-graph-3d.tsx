@@ -25,6 +25,10 @@ import { GRAPH_PALETTE } from "./scene/palette";
 export interface SecurityGraph3DHandle {
   recentralizar(): void;
   restaurarLayout(): void;
+  /** < 1 aproxima, > 1 afasta. */
+  aproximar(fator: number): void;
+  ajustarVista(): void;
+  capturar(): Promise<Blob | null>;
 }
 
 interface Props {
@@ -53,6 +57,8 @@ const SecurityGraph3D = forwardRef<SecurityGraph3DHandle, Props>(function Securi
   const { resolvido } = useTheme();
   const { reduzido } = useMotion();
   const [falhou, setFalhou] = useState(false);
+  const [ocultos, setOcultos] = useState(0);
+  const [qualidadeReduzida, setQualidadeReduzida] = useState(false);
   // Espelhos para a cena não ser recriada a cada render do pai.
   const props = useRef({ selecionadoId, posicoes, aoSelecionar, aoAbrir, aoMoverNo });
   props.current = { selecionadoId, posicoes, aoSelecionar, aoAbrir, aoMoverNo };
@@ -63,6 +69,9 @@ const SecurityGraph3D = forwardRef<SecurityGraph3DHandle, Props>(function Securi
     () => ({
       recentralizar: () => cenaRef.current?.recentralizar(),
       restaurarLayout: () => cenaRef.current?.restaurarLayout(),
+      aproximar: (fator) => cenaRef.current?.aproximar(fator),
+      ajustarVista: () => cenaRef.current?.ajustarVista(),
+      capturar: () => cenaRef.current?.capturar() ?? Promise.resolve(null),
     }),
     [],
   );
@@ -92,6 +101,8 @@ const SecurityGraph3D = forwardRef<SecurityGraph3DHandle, Props>(function Securi
         reduzido,
         posicoesSalvas: props.current.posicoes,
         aoMoverNo: (id, posicao) => props.current.aoMoverNo(id, posicao),
+        aoContarOcultos: setOcultos,
+        aoMudarQualidade: () => setQualidadeReduzida(true),
         aoSelecionar: (node) => {
           daCena.current = node?.id ?? null;
           props.current.aoSelecionar(daCena.current);
@@ -154,8 +165,22 @@ const SecurityGraph3D = forwardRef<SecurityGraph3DHandle, Props>(function Securi
     <div ref={palcoRef} className="relative min-h-[34rem] overflow-hidden">
       {/* Nomes abaixo dos objetos (CSS2DRenderer); o canvas já descreve o grafo para leitor de tela. */}
       <div ref={rotulosRef} aria-hidden="true" className="pointer-events-none absolute left-0 top-0" />
-      {/* Legenda na base: no topo ela disputaria espaço com o painel em telas estreitas. */}
-      <div className="pointer-events-none absolute bottom-3 left-3 mr-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-surface/80 px-3 py-2 text-xs text-fg-muted backdrop-blur">
+      {(ocultos > 0 || qualidadeReduzida) && (
+        <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1 text-xs" aria-live="polite">
+          {ocultos > 0 && (
+            <span className="rounded-control bg-surface/85 px-2 py-1 text-fg-muted backdrop-blur">
+              {ocultos} {ocultos === 1 ? "nome oculto" : "nomes ocultos"} para não encavalar · passe o mouse ou gire a cena
+            </span>
+          )}
+          {qualidadeReduzida && (
+            <span className="rounded-control bg-surface/85 px-2 py-1 text-fg-muted backdrop-blur">
+              Efeitos reduzidos para manter a fluidez neste dispositivo
+            </span>
+          )}
+        </div>
+      )}
+      {/* Legenda na base; a margem direita deixa espaço para os botões de zoom. */}
+      <div className="pointer-events-none absolute bottom-3 left-3 mr-16 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-surface/80 px-3 py-2 text-xs text-fg-muted backdrop-blur">
         <span>Globo: Internet</span>
         <span>Rack: alvo</span>
         <span>Hexágono: endpoint</span>

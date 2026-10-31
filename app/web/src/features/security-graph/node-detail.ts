@@ -40,11 +40,25 @@ export interface DetalheDoNo {
   caminho: PassoDoCaminho[];
 }
 
+/** URL absoluta para exibir: o scan simulado grava `normalizedUrl` relativo ("/login"). */
+export function urlCompleta(url: string, base?: string): string {
+  try {
+    return new URL(url, base).href;
+  } catch {
+    return url;
+  }
+}
+
 /**
  * Junta o que o grafo e a lista de findings sabem sobre um nó.
  * Grupo é só visual (2D): herda o caminho do endpoint dele.
  */
-export function descreverNo(grafo: SecurityGraph, findingsPorNo: ReadonlyMap<string, DastFinding>, id: string): DetalheDoNo | null {
+export function descreverNo(
+  grafo: SecurityGraph,
+  findingsPorNo: ReadonlyMap<string, DastFinding>,
+  id: string,
+  targetUrl?: string,
+): DetalheDoNo | null {
   const grupo = id.startsWith("grupo:");
   const baseId = grupo ? id.slice("grupo:".length) : id;
   const base = grafo.nodes.find((n) => n.id === baseId);
@@ -73,7 +87,7 @@ export function descreverNo(grafo: SecurityGraph, findingsPorNo: ReadonlyMap<str
     finding: proprio,
     findings,
     endpoints: grafo.nodes.filter((n) => n.kind === "ENDPOINT").length,
-    url: base.kind === "ENDPOINT" ? baseId.slice("endpoint:".length) : undefined,
+    url: base.kind === "ENDPOINT" ? urlCompleta(baseId.slice("endpoint:".length), targetUrl) : undefined,
     caminho,
   };
 }

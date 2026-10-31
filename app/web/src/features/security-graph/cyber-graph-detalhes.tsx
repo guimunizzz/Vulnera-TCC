@@ -32,6 +32,8 @@ import {
   Link2,
   ListChecks,
   Maximize2,
+  Radar,
+  ShieldCheck,
   ShieldAlert,
   Tag,
   Wrench,
@@ -43,6 +45,7 @@ import { Dialog, DialogClose, DialogFooter, DialogTitle } from "../../components
 import { useMotion } from "../../motion/use-motion";
 import {
   DAST_RISK_LABELS,
+  DAST_SENSOR_LABELS,
   DAST_TRIAGE_LABELS,
   DAST_TRIAGE_TONES,
   type DastFinding,
@@ -153,6 +156,7 @@ export function PainelDoNo({
   aoSelecionar,
   aoExpandir,
   aoVerNaLista,
+  certificado,
 }: {
   detalhe: DetalheDoNo | null;
   targetUrl: string;
@@ -160,6 +164,8 @@ export function PainelDoNo({
   aoSelecionar(id: string): void;
   aoExpandir(): void;
   aoVerNaLista(findingId: string): void;
+  /** Resumo do sensor SSL/TLS (mostrado no nó do alvo). */
+  certificado?: string | null;
 }) {
   const { troca } = useMotion();
   const token = detalhe ? tokenDoNo(detalhe) : "--color-accent";
@@ -185,6 +191,10 @@ export function PainelDoNo({
               </p>
             </div>
             <ContagemPorRisco findings={totalFindings} compacta />
+            <p className="border-t border-subtle pt-3 text-xs text-fg-muted">
+              Fontes: alertas do OWASP ZAP e o sensor passivo de headers deste scan. Tecnologias, subdomínios, IPs e portas
+              (fingerprint, crt.sh e InternetDB) entram numa próxima fase do Security Graph.
+            </p>
           </>
         ) : (
           <>
@@ -210,6 +220,7 @@ export function PainelDoNo({
               <dl className="grid grid-cols-2 gap-2">
                 <Ficha icone={ShieldAlert} rotulo="CWE">{f.cweId ? `CWE-${f.cweId}` : "—"}</Ficha>
                 <Ficha icone={Gauge} rotulo="Confiança">{f.confidence}</Ficha>
+                <Ficha icone={Radar} rotulo="Sensor de origem">{DAST_SENSOR_LABELS[f.sensorKey] ?? f.sensorKey}</Ficha>
                 <Ficha icone={CalendarClock} rotulo="Observado">{new Date(f.createdAt).toLocaleDateString("pt-BR")}</Ficha>
                 <Ficha icone={Braces} rotulo="Parâmetro">
                   <span className="font-mono text-xs">{f.param ?? "—"}</span>
@@ -220,6 +231,13 @@ export function PainelDoNo({
               <dl>
                 <Ficha icone={Link2} rotulo="URL">
                   <span className="break-all font-mono text-xs">{detalhe.url}</span>
+                </Ficha>
+              </dl>
+            )}
+            {detalhe.kind === "ASSET" && certificado && (
+              <dl>
+                <Ficha icone={ShieldCheck} rotulo="Certificado SSL/TLS">
+                  <span className="text-xs">{certificado}</span>
                 </Ficha>
               </dl>
             )}
@@ -343,6 +361,7 @@ export function ModalDoNo({
   aoFechar,
   aoSelecionar,
   aoVerNaLista,
+  certificado,
 }: {
   detalhe: DetalheDoNo | null;
   aberto: boolean;
@@ -350,6 +369,8 @@ export function ModalDoNo({
   aoFechar(): void;
   aoSelecionar(id: string): void;
   aoVerNaLista(findingId: string): void;
+  /** Resumo do sensor SSL/TLS (mostrado no nó do alvo). */
+  certificado?: string | null;
 }) {
   const { lista, item } = useMotion();
   const f = detalhe?.finding;
@@ -392,7 +413,8 @@ export function ModalDoNo({
                     <Ficha icone={ShieldAlert} rotulo="CWE">{f.cweId ? `CWE-${f.cweId}` : "—"}</Ficha>
                     <Ficha icone={Tag} rotulo="WASC">{f.wascId ?? "—"}</Ficha>
                     <Ficha icone={Gauge} rotulo="Confiança do ZAP">{f.confidence}</Ficha>
-                    <Ficha icone={Hash} rotulo="Regra do ZAP">
+                    <Ficha icone={Radar} rotulo="Sensor de origem">{DAST_SENSOR_LABELS[f.sensorKey] ?? f.sensorKey}</Ficha>
+                    <Ficha icone={Hash} rotulo={f.sensorKey === "zap" ? "Regra do ZAP" : "Regra do sensor"}>
                       <span className="font-mono text-xs">{f.pluginId}</span>
                     </Ficha>
                     <Ficha icone={Braces} rotulo="Parâmetro">
@@ -445,6 +467,11 @@ export function ModalDoNo({
                   {detalhe.url && (
                     <Secao icone={Link2} titulo="URL">
                       <span className="break-all font-mono text-xs">{detalhe.url}</span>
+                    </Secao>
+                  )}
+                  {detalhe.kind === "ASSET" && certificado && (
+                    <Secao icone={ShieldCheck} titulo="Certificado SSL/TLS">
+                      {certificado}
                     </Secao>
                   )}
                   {detalhe.findings.length > 0 && (

@@ -2,31 +2,41 @@
  * cyber-graph.tsx
  *
  * O QUE FAZ
- * Aba CyberGraph do scan DAST: barra com "Recentralizar" e a alternância 2D/3D,
- * o palco do modo escolhido, o painel do nó selecionado e o modal de detalhes.
- * A seleção é uma só para os dois modos.
+ * Aba CyberGraph do scan DAST: barra com Recentralizar, Restaurar layout,
+ * Exportar PNG e a alternância 2D/3D; busca de nó e filtro por severidade; o
+ * palco do modo escolhido com botões de zoom; o painel do nó selecionado e o
+ * modal de detalhes. A seleção é uma só para os dois modos.
  *
  * POR QUE EXISTE
  * O 2D é a visão de trabalho (leve, sem WebGL, cada nó é um botão); o 3D é a
  * de apresentação. Os dois mostram o mesmo caminho Internet → alvo → endpoint
- * → finding, montado só com os findings reais do scan.
+ * → finding, montado só com os findings reais do scan (OWASP ZAP). Sensores
+ * passivos ainda não existem: a barra diz isso em vez de simular.
  *
  * QUEM USA
  * `dast-scan-detail-page.tsx`, via React.lazy(). O 3D é outro chunk lazy:
  * `three` só baixa quando a pessoa escolhe o 3D.
  */
 
-import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react";
-import { LocateFixed, RotateCcw } from "lucide-react";
+import { lazy, Suspense, useCallback, useMemo, useRef, useState, type FormEvent } from "react";
+import { Download, LocateFixed, Map as MapIcon, Minus, Plus, RotateCcw, Scan, Search } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Skeleton } from "../../components/ui/card";
 import { cn } from "../../lib/cn";
-import type { DastFinding } from "../../types/dast.types";
+import {
+  DAST_RISK_LABELS,
+  DAST_SENSOR_SHORT_LABELS,
+  type DastFinding,
+  type DastRisk,
+  type DastSensorRun,
+} from "../../types/dast.types";
 import { CyberGraph2D, type CyberGraph2DHandle } from "./cyber-graph-2d";
 import { ModalDoNo, PainelDoNo } from "./cyber-graph-detalhes";
+import { baixarArquivo } from "./exportar";
 import { montarVisao2D, type No2D, type Posicoes2D } from "./graph-2d-layout";
-import { buildSecurityGraph } from "./graph-model";
+import { buildSecurityGraph, type GraphNode } from "./graph-model";
 import { descreverNo, grupoDoFinding } from "./node-detail";
+import { cor, tokenDoNo } from "./node-visual";
 import type { Posicao3D } from "./scene/graph-scene";
 import type { SecurityGraph3DHandle } from "./security-graph-3d";
 import "./cyber-graph.css";
@@ -34,6 +44,7 @@ import "./cyber-graph.css";
 const SecurityGraph3D = lazy(() => import("./security-graph-3d"));
 const TEM_WEBGL = typeof window !== "undefined" && "WebGL2RenderingContext" in window;
 const CHAVE_MODO = "vulnera:cybergraph-modo";
+const RISCOS: DastRisk[] = ["HIGH", "MEDIUM", "LOW", "INFO"];
 
 type Modo = "2d" | "3d";
 
@@ -46,34 +57,63 @@ function lerModo(): Modo {
   }
 }
 
+/** Nó pelo texto digitado: nome exato primeiro, depois o primeiro que contém o termo. */
+function acharNo(nos: GraphNode[], termo: string): GraphNode | undefined {
+  const t = termo.trim().toLowerCase();
+  if (!t) return undefined;
+  return nos.find((n) => n.label.toLowerCase() === t) ?? nos.find((n) => n.label.toLowerCase().includes(t));
+}
+
+function hostDe(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/[^\w.-]/g, "_");
+  } catch {
+    return "scan";
+  }
+}
+
 export default function CyberGraph({
   targetUrl,
   findings,
+  sensores,
   aoVerNaLista,
 }: {
   targetUrl: string;
   findings: DastFinding[];
+  sensores: DastSensorRun[];
   aoVerNaLista(findingId: string): void;
 }) {
-  const grafo = useMemo(() => buildSecurityGraph(targetUrl, findings), [targetUrl, findings]);
+  const [riscos, setRiscos] = useState<ReadonlySet<DastRisk>>(() => new Set(RISCOS));
+  const visiveis = useMemo(() => findings.filter((f) => riscos.has(f.risk)), [findings, riscos]);
+  const grafo = useMemo(() => buildSecurityGraph(targetUrl, visiveis), [targetUrl, visiveis]);
   const findingsPorNo = useMemo(() => new Map(findings.map((f) => [`finding:${f.id}`, f])), [findings]);
+  const contagem = useMemo(() => {
+    const c: Record<DastRisk, number> = { HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 };
+    for (const f of findings) c[f.risk] += 1;
+    return c;
+  }, [findings]);
   const [modo, setModo] = useState<Modo>(lerModo);
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [expandidos, setExpandidos] = useState<ReadonlySet<string>>(() => new Set());
   const [modalAberto, setModalAberto] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [avisoBusca, setAvisoBusca] = useState("");
+  const [exportando, setExportando] = useState(false);
+  const [minimapa, setMinimapa] = useState(false);
   // Posições arrastadas, por modo. Ficam aqui para sobreviver à troca 2D/3D e de tema.
   const [posicoes2d, setPosicoes2d] = useState<Posicoes2D>(() => new Map());
   const [posicoes3d, setPosicoes3d] = useState<ReadonlyMap<string, Posicao3D>>(() => new Map());
   const visao = useMemo(() => montarVisao2D(grafo, expandidos, posicoes2d), [grafo, expandidos, posicoes2d]);
   const layoutMexido = (modo === "2d" ? posicoes2d : posicoes3d).size > 0;
   const detalhe = useMemo(
-    () => (selecionadoId ? descreverNo(grafo, findingsPorNo, selecionadoId) : null),
-    [grafo, findingsPorNo, selecionadoId],
+    () => (selecionadoId ? descreverNo(grafo, findingsPorNo, selecionadoId, targetUrl) : null),
+    [grafo, findingsPorNo, selecionadoId, targetUrl],
   );
+  const nomesParaBusca = useMemo(() => [...new Set(grafo.nodes.map((n) => n.label))].sort(), [grafo]);
   const ref2d = useRef<CyberGraph2DHandle>(null);
   const ref3d = useRef<SecurityGraph3DHandle>(null);
 
-  // Selecionar um finding (no 3D, no painel ou no modal) abre o grupo dele no 2D.
+  // Selecionar um finding (no 3D, no painel, no modal ou na busca) abre o grupo dele no 2D.
   const selecionar = useCallback(
     (id: string | null) => {
       setSelecionadoId(id);
@@ -133,6 +173,46 @@ export default function CyberGraph({
     }
   };
 
+  // Zoom: no 2D o fator multiplica a escala; no 3D divide a distância da câmera.
+  const aproximar = (fator: number) => {
+    if (modo === "2d") ref2d.current?.aproximar(fator);
+    else ref3d.current?.aproximar(1 / fator);
+  };
+  const ajustar = () => {
+    if (modo === "2d") ref2d.current?.recentralizar();
+    else ref3d.current?.ajustarVista();
+  };
+
+  const buscar = (e: FormEvent) => {
+    e.preventDefault();
+    const no = acharNo(grafo.nodes, busca);
+    if (!no) {
+      setAvisoBusca(`Nenhum nó com “${busca.trim()}” ${riscos.size < RISCOS.length ? "entre as severidades visíveis" : "neste scan"}.`);
+      return;
+    }
+    setAvisoBusca("");
+    selecionar(no.id);
+    // Depois do render: o grupo do finding acabou de abrir e mudou as posições.
+    if (modo === "2d") window.setTimeout(() => ref2d.current?.centralizarEm(no.id), 0);
+  };
+
+  const alternarRisco = (risco: DastRisk) =>
+    setRiscos((atual) => {
+      const proximo = new Set(atual);
+      if (!proximo.delete(risco)) proximo.add(risco);
+      return proximo;
+    });
+
+  const exportarPng = async () => {
+    setExportando(true);
+    try {
+      const blob = modo === "2d" ? await ref2d.current?.exportarPng() : await ref3d.current?.capturar();
+      if (blob) baixarArquivo(blob, `cybergraph-${hostDe(targetUrl)}-${modo}.png`);
+    } finally {
+      setExportando(false);
+    }
+  };
+
   const verNaLista = (findingId: string) => {
     setModalAberto(false);
     aoVerNaLista(findingId);
@@ -143,11 +223,22 @@ export default function CyberGraph({
       <div className="min-w-0">
         <div className="overflow-hidden rounded-container border border-subtle">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-subtle bg-surface px-3 py-2">
-            <p className="text-xs text-fg-muted">
-              Internet <span aria-hidden="true">→</span> Alvo <span aria-hidden="true">→</span> Endpoint{" "}
-              <span aria-hidden="true">→</span> Findings
-              <span className="ml-2 font-mono" data-numeric>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted">
+              <span>
+                Internet <span aria-hidden="true">→</span> Alvo <span aria-hidden="true">→</span> Endpoint{" "}
+                <span aria-hidden="true">→</span> Findings
+              </span>
+              <span className="font-mono" data-numeric>
                 · {grafo.nodes.length} nós
+              </span>
+              {/* Escopo honesto: só as fontes que rodaram; os outros sensores da spec ainda não existem. */}
+              <span
+                className="rounded-full border border-subtle bg-inset px-2 py-0.5"
+                title="Fingerprint de tecnologia, crt.sh (subdomínios) e Shodan InternetDB (portas e CVEs) entram numa próxima fase do Security Graph."
+              >
+                {sensores.length > 1
+                  ? `Fontes: ${sensores.map((s) => DAST_SENSOR_SHORT_LABELS[s.sensorKey] ?? s.sensorKey).join(" · ")}`
+                  : "Fonte: OWASP ZAP"}
               </span>
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -170,6 +261,17 @@ export default function CyberGraph({
                 iconeInicio={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
               >
                 Restaurar layout
+              </Button>
+              <Button
+                variant="secundario"
+                size="sm"
+                onClick={exportarPng}
+                carregando={exportando}
+                className="whitespace-nowrap"
+                title={modo === "2d" ? "Baixa o grafo inteiro como imagem" : "Baixa a cena como está na tela"}
+                iconeInicio={<Download className="h-4 w-4" aria-hidden="true" />}
+              >
+                Exportar PNG
               </Button>
               <div role="group" aria-label="Modo de visualização" className="inline-flex rounded-control border border-subtle bg-inset p-0.5">
                 {(["2d", "3d"] as const).map((m) => {
@@ -195,7 +297,65 @@ export default function CyberGraph({
             </div>
           </div>
 
-          <div className="cg-palco">
+          <div className="flex flex-wrap items-center gap-2 border-b border-subtle bg-surface px-3 py-2">
+            <form role="search" onSubmit={buscar} className="flex min-w-[14rem] flex-1 items-center gap-2">
+              <label className="relative flex-1">
+                <span className="sr-only">Buscar nó no grafo</span>
+                <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-muted" aria-hidden="true" />
+                <input
+                  type="search"
+                  list="cg-nomes"
+                  value={busca}
+                  onChange={(e) => {
+                    setBusca(e.target.value);
+                    setAvisoBusca("");
+                  }}
+                  placeholder="Buscar nó (endpoint, finding, alvo)…"
+                  className="h-9 w-full rounded-control border border-default bg-inset pl-8 pr-2 text-sm text-fg placeholder:text-fg-muted"
+                />
+              </label>
+              <datalist id="cg-nomes">
+                {nomesParaBusca.map((nome) => (
+                  <option key={nome} value={nome} />
+                ))}
+              </datalist>
+              <Button type="submit" variant="secundario" size="sm" disabled={!busca.trim()}>
+                Ir
+              </Button>
+            </form>
+            <div role="group" aria-label="Filtrar findings por severidade" className="flex flex-wrap gap-1">
+              {RISCOS.map((risco) => {
+                const ativo = riscos.has(risco);
+                const token = tokenDoNo({ kind: "FINDING", risk: risco });
+                return (
+                  <button
+                    key={risco}
+                    type="button"
+                    aria-pressed={ativo}
+                    onClick={() => alternarRisco(risco)}
+                    className={cn(
+                      "alvo-estendido flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                      ativo ? "text-fg" : "text-fg-muted line-through opacity-60",
+                    )}
+                    style={{ borderColor: ativo ? cor(token, 0.6) : undefined, background: ativo ? cor(token, 0.12) : undefined }}
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ background: cor(token) }} aria-hidden="true" />
+                    {DAST_RISK_LABELS[risco]}
+                    <span className="font-mono text-fg-muted" data-numeric>
+                      {contagem[risco]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {avisoBusca && (
+              <p className="w-full text-xs text-fg-muted" role="status">
+                {avisoBusca}
+              </p>
+            )}
+          </div>
+
+          <div className="cg-palco relative">
             {modo === "2d" ? (
               <CyberGraph2D
                 ref={ref2d}
@@ -205,6 +365,7 @@ export default function CyberGraph({
                 aoAbrir={(no) => abrir(no.id)}
                 aoLimpar={() => setSelecionadoId(null)}
                 aoMover={mover2d}
+                minimapa={minimapa}
               />
             ) : (
               <Suspense fallback={<Skeleton className="h-[34rem] w-full bg-inset" />}>
@@ -219,14 +380,38 @@ export default function CyberGraph({
                 />
               </Suspense>
             )}
+            {/* Zoom por botões: a roda só funciona com o grafo em foco, e no celular não há roda. */}
+            <div role="group" aria-label="Zoom" className="absolute bottom-3 right-3 flex flex-col gap-1">
+              <Button variant="secundario" size="sm" rotulo="Aproximar" onClick={() => aproximar(1.25)}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button variant="secundario" size="sm" rotulo="Afastar" onClick={() => aproximar(1 / 1.25)}>
+                <Minus className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button variant="secundario" size="sm" rotulo="Ajustar à tela" onClick={ajustar}>
+                <Scan className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              {modo === "2d" && (
+                <Button
+                  variant={minimapa ? "primario" : "secundario"}
+                  size="sm"
+                  rotulo={minimapa ? "Esconder minimapa" : "Mostrar minimapa"}
+                  aria-pressed={minimapa}
+                  onClick={() => setMinimapa((v) => !v)}
+                >
+                  <MapIcon className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
         <p className="mt-2 text-sm text-fg-muted">
           {modo === "2d"
-            ? "Arraste um nó para reposicioná-lo e o fundo para mover a vista; com o grafo em foco, role para aproximar. Clique em “Findings” para expandir o grupo."
-            : "Arraste um objeto para reposicioná-lo e o fundo para girar; com a cena em foco, role para aproximar."}{" "}
+            ? "Arraste um nó para reposicioná-lo e o fundo para mover a vista. Com um nó em foco, as setas andam pelo grafo. Clique em “Findings” para expandir o grupo."
+            : "Arraste um objeto para reposicioná-lo e o fundo para girar; com a cena em foco, role para aproximar e use as setas para percorrer os nós."}{" "}
           Duplo clique num nó abre os detalhes.
           {grafo.truncated && " Grafo truncado nos findings de maior risco."}
+          {visiveis.length < findings.length && ` Mostrando ${visiveis.length} de ${findings.length} findings pelo filtro de severidade.`}
         </p>
       </div>
 
@@ -236,6 +421,7 @@ export default function CyberGraph({
         totalFindings={findings}
         aoSelecionar={selecionar}
         aoExpandir={() => setModalAberto(true)}
+        certificado={sensores.find((s) => s.sensorKey === "ssl")?.message ?? null}
         aoVerNaLista={verNaLista}
       />
 
@@ -245,6 +431,7 @@ export default function CyberGraph({
         targetUrl={targetUrl}
         aoFechar={() => setModalAberto(false)}
         aoSelecionar={selecionar}
+        certificado={sensores.find((s) => s.sensorKey === "ssl")?.message ?? null}
         aoVerNaLista={verNaLista}
       />
     </div>
