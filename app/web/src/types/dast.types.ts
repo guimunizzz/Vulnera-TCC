@@ -104,6 +104,35 @@ export interface PromotedVulnerability {
   status: string;
 }
 
+export type DastSensorStatus = "OK" | "NO_DATA" | "NOT_APPLICABLE" | "UNAVAILABLE" | "ERROR";
+
+/** Execução de um sensor no scan. "Sem dados" nunca é "seguro": o status diz qual dos dois. */
+export interface DastSensorRun {
+  sensorKey: string;
+  status: DastSensorStatus;
+  message: string | null;
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+}
+
+export const DAST_SENSOR_LABELS: Record<string, string> = {
+  zap: "OWASP ZAP · Spider + passivo",
+  headers: "Headers de segurança",
+  ssl: "Certificado SSL/TLS",
+};
+
+/** Nome curto da origem, para subtítulo de nó e selos. */
+export const DAST_SENSOR_SHORT_LABELS: Record<string, string> = { zap: "ZAP", headers: "Headers", ssl: "SSL/TLS" };
+
+export const DAST_SENSOR_STATUS_LABELS: Record<DastSensorStatus, string> = {
+  OK: "OK",
+  NO_DATA: "Sem dados",
+  NOT_APPLICABLE: "Não se aplica",
+  UNAVAILABLE: "Indisponível",
+  ERROR: "Erro",
+};
+
 export interface DastFinding {
   id: string;
   scanId: string;
@@ -115,6 +144,8 @@ export interface DastFinding {
   wascId: string | null;
   url: string;
   normalizedUrl: string;
+  /** Sensor de origem: "zap" ou um sensor passivo ("headers"). */
+  sensorKey: string;
   param: string | null;
   evidence: string | null;
   description: string | null;

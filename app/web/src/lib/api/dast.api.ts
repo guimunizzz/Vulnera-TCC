@@ -12,6 +12,7 @@ import type {
   ComparableScan,
   CreateDastScanInput,
   DastFinding,
+  DastSensorRun,
   DastModuleStatus,
   DastReportData,
   DastScan,
@@ -35,6 +36,7 @@ export const dastApi = {
   cancel: (id: string) => apiClient.post<DastScan>(`/dast/scans/${id}/cancel`).then((res) => res.data),
 
   listFindings: (id: string) => apiClient.get<DastFinding[]>(`/dast/scans/${id}/findings`).then((res) => res.data),
+  listSensors: (id: string) => apiClient.get<DastSensorRun[]>(`/dast/scans/${id}/sensors`).then((res) => res.data),
 
   getReportData: (id: string) => apiClient.get<DastReportData>(`/dast/scans/${id}/report/data`).then((res) => res.data),
 

@@ -35,9 +35,11 @@ import { generateDastReportPdf } from "../lib/pdf/dast-report";
 import { DastTriageControls } from "../components/dast/dast-triage-controls";
 import { DastPromoteDialog } from "../components/dast/dast-promote-dialog";
 import { DastComparePanel } from "../components/dast/dast-compare-panel";
+import { DastSensorStrip } from "../components/dast/dast-sensor-strip";
 import {
   ACTIVE_DAST_STATUSES,
   DAST_RISK_LABELS,
+  DAST_SENSOR_LABELS,
   DAST_TRIAGE_LABELS,
   DAST_TRIAGE_TONES,
   labelDaFase,
@@ -111,7 +113,15 @@ function FindingRow({
         <td className="px-4 py-3">
           <SeverityBadge severidade={finding.risk} />
         </td>
-        <td className="px-4 py-3 text-fg">{finding.title}</td>
+        <td className="px-4 py-3 text-fg">
+          {finding.title}
+          {/* Origem fora do ZAP fica explícita: o mesmo tema (ex.: CSP) pode vir das duas fontes. */}
+          {finding.sensorKey !== "zap" && (
+            <Badge tom="acento" className="ml-2 align-middle normal-case" title={DAST_SENSOR_LABELS[finding.sensorKey] ?? finding.sensorKey}>
+              sensor {finding.sensorKey}
+            </Badge>
+          )}
+        </td>
         {/* Coluna de triagem: é o que o pentester varre com os olhos pra saber
             o que ainda falta olhar, por isso vem antes da URL. */}
         <td className="px-4 py-3">
@@ -263,6 +273,13 @@ export function DastScanDetailPage() {
   const findingsQuery = useQuery({
     queryKey: ["dast", "scans", id, "findings"],
     queryFn: () => dastApi.listFindings(id!),
+    enabled: !!id && scan?.status === "COMPLETED",
+  });
+
+  // Status de cada sensor (ZAP + passivos). Scans anteriores aos sensores devolvem lista vazia.
+  const sensorsQuery = useQuery({
+    queryKey: ["dast", "scans", id, "sensors"],
+    queryFn: () => dastApi.listSensors(id!),
     enabled: !!id && scan?.status === "COMPLETED",
   });
 
@@ -456,9 +473,18 @@ export function DastScanDetailPage() {
         </Alert>
       )}
 
+      {/* Real concluído com ressalva (ex.: um sensor não conseguiu medir): o resultado vale, mas incompleto. */}
+      {scan.status === "COMPLETED" && !scan.simulated && scan.warningMessage && (
+        <Alert tom="atencao" className="mt-4" titulo="Análise concluída com avisos">
+          {scan.warningMessage}
+        </Alert>
+      )}
+
       {scan.status === "FAILED" && (
-        <Alert tom="perigo" className="mt-4">
-          Scan falhou: {scan.errorMessage ?? "erro desconhecido"}
+        <Alert tom="perigo" className="mt-4" titulo="A análise não pôde ser concluída">
+          {/* O código técnico (ex.: TARGET_ACCESS_FAILED) fica no banco e no log; a pessoa lê só o motivo. */}
+          {scan.errorMessage?.replace(/^[A-Z][A-Z0-9_]+:\s*/, "") ||
+            "Erro desconhecido. Confira se o endereço está acessível a partir do servidor do Vulnera e tente de novo."}
         </Alert>
       )}
 
@@ -476,6 +502,8 @@ export function DastScanDetailPage() {
             <RiskCountCard risk="LOW" value={scan.alertsLow} />
             <RiskCountCard risk="INFO" value={scan.alertsInfo} />
           </div>
+
+          <DastSensorStrip sensores={sensorsQuery.data ?? []} findings={findingsQuery.data ?? []} />
 
           {/* Abas: "achados" é a lista de sempre; "comparação" responde se a
               correção funcionou. São perguntas diferentes — juntar as duas na
@@ -510,7 +538,12 @@ export function DastScanDetailPage() {
 
           {aba === "grafo" && findingsQuery.data && (
             <Suspense fallback={<Skeleton className="mt-4 h-[28rem] w-full bg-inset" />}>
-              <CyberGraph targetUrl={scan.targetUrl} findings={findingsQuery.data} aoVerNaLista={verNaLista} />
+              <CyberGraph
+                targetUrl={scan.targetUrl}
+                findings={findingsQuery.data}
+                sensores={sensorsQuery.data ?? []}
+                aoVerNaLista={verNaLista}
+              />
             </Suspense>
           )}
 
