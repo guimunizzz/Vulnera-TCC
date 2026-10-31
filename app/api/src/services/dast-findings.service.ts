@@ -216,6 +216,8 @@ export interface CandidateFinding {
   description: string | null;
   solution: string | null;
   reference: string | null;
+  /** Sensor de origem; ausente = "zap" (o default da coluna). */
+  sensorKey?: string;
 }
 
 /**

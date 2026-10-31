@@ -12,6 +12,7 @@
 
 import type { Request, Response } from "express";
 import type { DastScanService } from "../services/dast-scan.service";
+import { toSensorRunResponse } from "../models/dast-sensor-run.model";
 
 export class DastScanController {
   constructor(private readonly service: DastScanService) {}
@@ -106,6 +107,20 @@ export class DastScanController {
       if (error.message === "SCAN_NOT_FOUND") return res.status(404).json({ error: "SCAN_NOT_FOUND" });
       if (error.message === "FORBIDDEN") return res.status(403).json({ error: "FORBIDDEN" });
       console.error("DastScanController.listFindings", error);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
+    }
+  }
+
+  async listSensors(req: Request, res: Response): Promise<Response> {
+    try {
+      const actor = req.user!;
+      const id = req.params.id as string;
+      const runs = await this.service.listSensorRuns(actor, id);
+      return res.status(200).json(runs.map(toSensorRunResponse));
+    } catch (error: any) {
+      if (error.message === "SCAN_NOT_FOUND") return res.status(404).json({ error: "SCAN_NOT_FOUND" });
+      if (error.message === "FORBIDDEN") return res.status(403).json({ error: "FORBIDDEN" });
+      console.error("DastScanController.listSensors", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
   }

@@ -74,7 +74,7 @@ beforeEach(async () => {
 });
 
 describe("DAST — RBAC", () => {
-  it("DAST-RBAC-01..08 — CLIENT recebe 403 em todas as 8 rotas", async () => {
+  it("DAST-RBAC-01..09 — CLIENT recebe 403 em todas as 9 rotas", async () => {
     const { clientToken } = await seedActors();
     const auth = { Authorization: `Bearer ${clientToken}` };
     const fakeId = "id-que-nao-existe";
@@ -85,6 +85,7 @@ describe("DAST — RBAC", () => {
       request(app).get(`/api/dast/scans/${fakeId}`).set(auth),
       request(app).post(`/api/dast/scans/${fakeId}/cancel`).set(auth),
       request(app).get(`/api/dast/scans/${fakeId}/findings`).set(auth),
+      request(app).get(`/api/dast/scans/${fakeId}/sensors`).set(auth),
       request(app).get(`/api/dast/scans/${fakeId}/report/html`).set(auth),
       request(app).get(`/api/dast/scans/${fakeId}/report/data`).set(auth),
       request(app).get("/api/dast/scans/status").set(auth),
@@ -313,6 +314,45 @@ describe("DAST — fluxo feliz completo", () => {
     expect(reportHtmlRes.headers["content-type"]).toContain("text/html");
     expect(reportHtmlRes.headers["content-security-policy"]).toBe("sandbox");
     expect(reportHtmlRes.headers["x-content-type-options"]).toBe("nosniff");
+  });
+});
+
+describe("DAST — sensores passivos", () => {
+  it("DAST-SENS-01 — scan simulado registra ZAP e headers, e os findings do sensor vêm com sensorKey", async () => {
+    const { pentesterAToken } = await seedActors();
+    const auth = { Authorization: `Bearer ${pentesterAToken}` };
+    const createRes = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://alvo-sensores.test" });
+    const final = await waitForTerminalStatus(pentesterAToken, createRes.body.id);
+    expect(final.status).toBe("COMPLETED");
+
+    const sensores = await request(app).get(`/api/dast/scans/${createRes.body.id}/sensors`).set(auth);
+    expect(sensores.status).toBe(200);
+    expect(sensores.body.map((s: { sensorKey: string }) => s.sensorKey)).toEqual(["zap", "headers", "ssl"]);
+    expect(sensores.body.every((s: { status: string }) => s.status === "OK")).toBe(true);
+    const headers = sensores.body.find((s: { sensorKey: string }) => s.sensorKey === "headers");
+    expect(headers.status).toBe("OK");
+    // Simulado é rotulado como simulado: nunca passa por medição real.
+    expect(headers.message).toMatch(/simulado/i);
+
+    const findings = await request(app).get(`/api/dast/scans/${createRes.body.id}/findings`).set(auth);
+    const doSensor = findings.body.filter((f: { sensorKey: string }) => f.sensorKey === "headers");
+    expect(doSensor.length).toBeGreaterThan(0);
+    expect(doSensor.every((f: { pluginId: string; triageStatus: string }) => f.pluginId.startsWith("sensor:headers:") && f.triageStatus === "NEW")).toBe(true);
+    expect(findings.body.some((f: { sensorKey: string }) => f.sensorKey === "zap")).toBe(true);
+    // Contadores incluem os findings do sensor.
+    const total = final.alertsHigh + final.alertsMedium + final.alertsLow + final.alertsInfo;
+    expect(total).toBe(findings.body.length);
+  });
+
+  it("DAST-SENS-02 — PENTESTER não lê os sensores de scan de outro PENTESTER", async () => {
+    const { pentesterAToken, pentesterBToken } = await seedActors();
+    const createRes = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-sensores-dono.test" });
+    await waitForTerminalStatus(pentesterAToken, createRes.body.id);
+    const res = await request(app).get(`/api/dast/scans/${createRes.body.id}/sensors`).set("Authorization", `Bearer ${pentesterBToken}`);
+    expect(res.status).toBe(403);
   });
 });
 

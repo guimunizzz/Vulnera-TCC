@@ -16,6 +16,8 @@ import { UserRepository } from "../repositories/user.repository";
 import { DastScanService } from "../services/dast-scan.service";
 import { DastScanController } from "../controllers/dast-scan.controller";
 import { dastWatchdog } from "../services/dast-watchdog.service";
+import { HeadersSensor } from "../services/sensors/headers.sensor";
+import { SslSensor } from "../services/sensors/ssl.sensor";
 
 export function makeDastScanService(): DastScanService {
   const repository = new DastScanRepository(prisma);
@@ -26,7 +28,9 @@ export function makeDastScanService(): DastScanService {
   // fila e o limite de concorrência só valem se todas as chamadas passarem
   // pela mesma instância — uma por factory daria um limite de 2 por
   // instância, que é o mesmo que não ter limite.
-  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog);
+  // Sensores passivos rodam depois do ZAP, na ordem desta lista.
+  const sensors = [new HeadersSensor(), new SslSensor()];
+  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog, sensors);
 }
 
 export function makeDastScanController(): DastScanController {

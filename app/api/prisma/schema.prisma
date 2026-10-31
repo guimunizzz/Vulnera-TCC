@@ -858,6 +858,19 @@ enum DastRisk {
   INFO
 }
 
+// Resultado de um sensor passivo num scan (spec "Sensores e Security Graph").
+// "Sem dados" nunca pode parecer "seguro": por isso o status é explícito e
+// NO_DATA/UNAVAILABLE/ERROR aparecem na tela em vez de virar lista vazia.
+//   NOT_APPLICABLE — o sensor não se aplica ao alvo (ex.: fonte pública p/ IP privado)
+//   UNAVAILABLE    — o alvo ou o serviço externo não respondeu
+enum DastSensorStatus {
+  OK
+  NO_DATA
+  NOT_APPLICABLE
+  UNAVAILABLE
+  ERROR
+}
+
 // Triagem de um DastFinding pelo pentester, DENTRO do silo DAST (ADR-032).
 // Um scan devolve dezenas de alertas e o ZAP não sabe quais importam: sem
 // isso, quem revisa 40 achados não tem onde registrar o que já analisou e
@@ -915,8 +928,9 @@ model DastScan {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  requestedBy User          @relation(fields: [requestedById], references: [id])
+  requestedBy User            @relation(fields: [requestedById], references: [id])
   findings    DastFinding[]
+  sensorRuns  DastSensorRun[]
 
   @@index([requestedById])
   @@index([status])
@@ -925,6 +939,24 @@ model DastScan {
   // VarChar(2048), índice completo estouraria o teto de bytes por índice do
   // MySQL (o projeto já foi mordido nisso duas vezes, ver §2 do CLAUDE.md).
   @@index([status, targetUrl(length: 191)])
+}
+
+// Uma execução de sensor dentro de um scan: o ZAP e, depois dele no mesmo job,
+// os sensores passivos (hoje só `headers`). Falha de sensor não derruba o scan:
+// fica registrada aqui e o scan conclui com aviso.
+model DastSensorRun {
+  id         String           @id @default(cuid())
+  scanId     String
+  sensorKey  String           @db.VarChar(32)
+  status     DastSensorStatus
+  message    String?          @db.Text
+  startedAt  DateTime
+  finishedAt DateTime
+  durationMs Int
+
+  scan DastScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([scanId, sensorKey])
 }
 
 // DastFinding — um alerta do ZAP já normalizado (1 instance = 1 finding).
@@ -948,6 +980,10 @@ model DastFinding {
   solution      String?  @db.Text
   reference     String?  @db.Text
   createdAt     DateTime @default(now())
+  // Sensor que originou o finding. Os sensores passivos usam pluginId com
+  // namespace (`sensor:headers:csp-ausente`), então o fingerprint e a
+  // deduplicação continuam com a mesma fórmula.
+  sensorKey     String   @default("zap") @db.VarChar(32)
 
   // ---------------------------------------------------------------------
   // Triagem dentro do silo (ADR-032). Não substitui a promoção pra
