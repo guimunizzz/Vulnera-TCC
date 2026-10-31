@@ -10,6 +10,12 @@
  *   TEMA-04  componentes renderizam nos dois temas
  *   MOV-01   `prefers-reduced-motion` remove deslocamento e escala
  *   MOV-02   com movimento reduzido, o contador não conta
+ *   MOV-03   a opção do menu de acessibilidade reduz sem o sistema pedir
+ *   A11Y-PREF-01  o script inline do index.html aplica o mesmo que o módulo
+ *   A11Y-PREF-02  preferência guardada inválida cai no padrão, campo a campo
+ *   A11Y-PREF-03  o painel muda texto e opções na hora, guarda e restaura
+ *   A11Y-PREF-04  movimento reduzido pelo sistema aparece ligado e explicado
+ *   A11Y-PREF-05  painel aberto sem violações WCAG A/AA no axe
  *   FILT-01  filtro vai para a URL e volta dela
  *   FILT-02  a URL vence o localStorage
  *   FILT-03  filtragem cruzada aplica o recorte inteiro
@@ -19,14 +25,24 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, beforeEach } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import axe from "axe-core";
 import { CHAVE_STORAGE, TEMAS, aplicarTema, lerTemaGuardado, resolverTema } from "../design/theme";
 import { ThemeProvider } from "../design/theme-provider";
 import { ThemeToggle } from "../design/theme-toggle";
+import {
+  ATRIBUTO_A11Y,
+  CHAVE_STORAGE_A11Y,
+  ESCALAS_FONTE,
+  PREFERENCIAS_PADRAO,
+  definirPreferencias,
+  lerPreferencias,
+  restaurarPreferencias,
+} from "../design/accessibility";
+import { AccessibilityMenu } from "../design/accessibility-menu";
 import { useMotion } from "../motion/use-motion";
 import { NumeroAnimado } from "../motion/components";
 import { useFiltrosMetricas } from "../hooks/use-filtros-metricas";
@@ -130,28 +146,25 @@ function SondaDeMovimento() {
 }
 
 /**
- * O `useReducedMotion` do `motion` resolve a media query UMA VEZ e memoriza —
- * reinstalar o `matchMedia` depois disso não muda o valor. Por isso a
- * preferência é mockada na fonte: o que este projeto POSSUI (e portanto o que
- * precisa de teste) é o MAPEAMENTO de "reduzido" para as variantes; se a
- * biblioteca lê a media query corretamente é responsabilidade dela.
+ * `useMotion` lê "reduzido" de design/accessibility.ts, que consulta o
+ * `matchMedia` a cada leitura (e não memoriza, como o `useReducedMotion` do
+ * `motion`). Por isso basta reinstalar o mock de `matchMedia` entre as
+ * montagens — sem mockar a biblioteca.
  */
-vi.mock("motion/react", async (original) => {
-  const real = await original<typeof import("motion/react")>();
-  return { ...real, useReducedMotion: () => reduzidoMockado };
-});
-let reduzidoMockado = false;
-
 describe("Movimento reduzido", () => {
+  beforeEach(() => {
+    restaurarPreferencias();
+    instalarMatchMedia([]);
+  });
+
   it("MOV-01 — remove deslocamento e escala, e zera o desenho de gráfico", () => {
-    reduzidoMockado = false;
     const { unmount } = render(<SondaDeMovimento />);
     expect(screen.getByTestId("reduzido")).toHaveTextContent("false");
     expect(screen.getByTestId("item-y")).toHaveTextContent("10");
     expect(screen.getByTestId("overlay-escala")).toHaveTextContent("0.96");
     unmount();
 
-    reduzidoMockado = true;
+    instalarMatchMedia(["prefers-reduced-motion: reduce"]);
     render(<SondaDeMovimento />);
     expect(screen.getByTestId("reduzido")).toHaveTextContent("true");
     // Deslocamento vira ZERO e a escala vira 1 — sobra a opacidade. Movimento
@@ -162,14 +175,113 @@ describe("Movimento reduzido", () => {
   });
 
   it("MOV-02 — o contador de KPI não conta, apenas mostra o valor", () => {
-    reduzidoMockado = true;
+    instalarMatchMedia(["prefers-reduced-motion: reduce"]);
     render(<NumeroAnimado valor={1234} />);
 
     // Sem movimento reduzido haveria DOIS nós (o animado `aria-hidden` e o
     // `.sr-only`); com ele, um só — contar É movimento.
     expect(screen.getByText("1.234")).toBeInTheDocument();
     expect(document.querySelectorAll("[aria-hidden='true']")).toHaveLength(0);
-    reduzidoMockado = false;
+  });
+
+  it("MOV-03 — a opção do menu de acessibilidade reduz sem o sistema pedir", () => {
+    definirPreferencias({ reduzirMovimento: true });
+    render(<SondaDeMovimento />);
+
+    expect(screen.getByTestId("reduzido")).toHaveTextContent("true");
+    expect(screen.getByTestId("item-y")).toHaveTextContent("0");
+    // O atributo é o que liga o piso de CSS (base.css) para animação de terceiros.
+    expect(document.documentElement).toHaveAttribute(ATRIBUTO_A11Y.reduzirMovimento);
+  });
+});
+
+/* ==========================================================================
+   Menu de acessibilidade
+   ========================================================================== */
+
+describe("Menu de acessibilidade", () => {
+  beforeEach(() => {
+    restaurarPreferencias();
+    localStorage.clear();
+    instalarMatchMedia([]);
+  });
+
+  it("A11Y-PREF-01 — o script inline do index.html aplica o mesmo que o módulo, antes do React", () => {
+    // Mesma trava do TEMA-01: a cópia mínima no index.html não pode divergir de
+    // design/accessibility.ts. Aqui o script é EXECUTADO, não só lido.
+    const html = readFileSync(resolve(__dirname, "../../index.html"), "utf8");
+    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? "";
+    localStorage.setItem(CHAVE_STORAGE_A11Y, JSON.stringify({ escalaFonte: 1.5, altoContraste: true, sublinharLinks: true }));
+
+    new Function(script)();
+
+    const raiz = document.documentElement;
+    expect(raiz.style.getPropertyValue("--a11y-escala-fonte")).toBe("1.5");
+    expect(raiz).toHaveAttribute(ATRIBUTO_A11Y.altoContraste);
+    expect(raiz).toHaveAttribute(ATRIBUTO_A11Y.sublinharLinks);
+    expect(raiz).not.toHaveAttribute(ATRIBUTO_A11Y.reduzirMovimento);
+    for (const atributo of Object.values(ATRIBUTO_A11Y)) expect(script).toContain(`"${atributo}"`);
+    for (const escala of ESCALAS_FONTE.slice(1)) expect(script).toContain(String(escala));
+  });
+
+  it("A11Y-PREF-02 — preferência guardada inválida cai no padrão, campo a campo", () => {
+    localStorage.setItem(CHAVE_STORAGE_A11Y, JSON.stringify({ escalaFonte: 3, altoContraste: "sim", focoReforcado: true }));
+    expect(lerPreferencias()).toEqual({ ...PREFERENCIAS_PADRAO, focoReforcado: true });
+
+    localStorage.setItem(CHAVE_STORAGE_A11Y, "{quebrado");
+    expect(lerPreferencias()).toEqual(PREFERENCIAS_PADRAO);
+  });
+
+  it("A11Y-PREF-03 — o painel muda texto e opções na hora, guarda e restaura", async () => {
+    const user = userEvent.setup();
+    render(<AccessibilityMenu />);
+    await user.click(screen.getByRole("button", { name: "Acessibilidade" }));
+    const painel = screen.getByRole("dialog", { name: "Acessibilidade" });
+
+    // No limite o botão fica aria-disabled (e não disabled), para não perder o foco.
+    expect(within(painel).getByRole("button", { name: "Diminuir texto" })).toHaveAttribute("aria-disabled", "true");
+    await user.click(within(painel).getByRole("button", { name: "Aumentar texto" }));
+    await user.click(within(painel).getByRole("button", { name: "Aumentar texto" }));
+    expect(within(painel).getByText("125%")).toBeInTheDocument();
+    expect(document.documentElement.style.getPropertyValue("--a11y-escala-fonte")).toBe("1.25");
+
+    const contraste = within(painel).getByRole("switch", { name: "Alto contraste" });
+    await user.click(contraste);
+    expect(contraste).toHaveAttribute("aria-checked", "true");
+    expect(contraste).toHaveAccessibleDescription(/nível AAA/);
+    expect(document.documentElement).toHaveAttribute(ATRIBUTO_A11Y.altoContraste);
+    expect(JSON.parse(localStorage.getItem(CHAVE_STORAGE_A11Y) ?? "{}")).toMatchObject({ escalaFonte: 1.25, altoContraste: true });
+    // O gatilho avisa que há ajuste ativo — também para o leitor de tela.
+    expect(screen.getByRole("button", { name: "Acessibilidade (ajustes ativos)" })).toBeInTheDocument();
+
+    await user.click(within(painel).getByRole("button", { name: "Restaurar padrão" }));
+    expect(document.documentElement).not.toHaveAttribute(ATRIBUTO_A11Y.altoContraste);
+    expect(document.documentElement.style.getPropertyValue("--a11y-escala-fonte")).toBe("");
+  });
+
+  it("A11Y-PREF-04 — movimento reduzido pelo sistema aparece ligado e explicado", async () => {
+    instalarMatchMedia(["prefers-reduced-motion: reduce"]);
+    const user = userEvent.setup();
+    render(<AccessibilityMenu />);
+    await user.click(screen.getByRole("button", { name: "Acessibilidade" }));
+
+    const movimento = screen.getByRole("switch", { name: "Reduzir animações" });
+    expect(movimento).toHaveAttribute("aria-checked", "true");
+    expect(movimento).toBeDisabled();
+    expect(movimento).toHaveAccessibleDescription("Já ativo pelas configurações do seu sistema.");
+  });
+
+  it("A11Y-PREF-05 — painel aberto sem violações WCAG A/AA no axe", async () => {
+    const user = userEvent.setup();
+    render(<AccessibilityMenu />);
+    await user.click(screen.getByRole("button", { name: "Acessibilidade" }));
+
+    const resultado = await axe.run(document.body, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] },
+      // Ver AXE-01: o jsdom não resolve cor de custom property.
+      rules: { "color-contrast": { enabled: false } },
+    });
+    expect(resultado.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
 });
 

@@ -11,6 +11,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { CreditCard, Globe, Activity, FileText, type LucideIcon } from "lucide-react";
 import { Reveal, GlitchHeading } from "../ui";
+import { movimentoReduzido } from "../../../design/accessibility";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -53,7 +54,7 @@ export default function HowItWorks() {
 
   useGSAP(
     () => {
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reduced = movimentoReduzido();
       if (reduced) return;
 
       // Passos aparecem em sequência (stagger 200ms)

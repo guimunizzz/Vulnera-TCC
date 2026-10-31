@@ -13,6 +13,8 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, User, Sun, Moon } from "lucide-react";
 import { useTheme } from "../../design/theme-provider";
+import { AccessibilityMenu } from "../../design/accessibility-menu";
+import { movimentoReduzido, usePreferenciasAcessibilidade } from "../../design/accessibility";
 import { InteractiveLabel } from "../ui/interactive-label";
 
 const PRODUCT_LINKS = [
@@ -31,6 +33,9 @@ export default function Nav() {
   const [open, setOpen] = useState(false);
   const [atTop, setAtTop] = useState(() => window.scrollY < 24);
   const { resolvido, definirTema } = useTheme();
+  // Texto ampliado pelo menu de acessibilidade: os links centrais (atalhos de
+  // rolagem, que já somem abaixo de md) passariam por cima dos botões da direita.
+  const textoAmpliado = usePreferenciasAcessibilidade().escalaFonte > 1.1;
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,7 +77,7 @@ export default function Nav() {
     setOpen(false);
     if (window.location.hash !== href) window.history.pushState(null, "", href);
     target.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      behavior: movimentoReduzido() ? "instant" : "smooth",
       block: "start",
     });
   }
@@ -82,7 +87,8 @@ export default function Nav() {
       className="fixed left-0 right-0 top-0 z-[30] border-b border-[rgba(var(--vx-accent-rgb),0.15)] bg-[rgba(var(--vx-bg-2-rgb),0.75)] backdrop-blur-sm"
     >
       <motion.div
-        animate={{ height: atTop ? 76 : 48 }}
+        // rem, e não px: com o texto ampliado os botões crescem e a barra acompanha.
+        animate={{ height: atTop ? "4.75rem" : "3rem" }}
         transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
         className="mx-auto flex max-w-6xl items-center justify-between px-6"
       >
@@ -102,7 +108,7 @@ export default function Nav() {
 
         <nav
           aria-label="Navegação principal"
-          className="vx-main-nav hidden md:absolute md:left-1/2 md:flex md:-translate-x-1/2 md:items-center md:whitespace-nowrap"
+          className={`vx-main-nav hidden md:absolute md:left-1/2 md:-translate-x-1/2 md:items-center md:whitespace-nowrap ${textoAmpliado ? "" : "md:flex"}`}
         >
           <div ref={dropdownRef} className="relative shrink-0">
             <button
@@ -162,6 +168,7 @@ export default function Nav() {
           >
             <User size={17} aria-hidden="true" />
           </Link>
+          <AccessibilityMenu className="h-10 w-10 rounded-[6px] border border-[rgba(var(--vx-accent-rgb),0.2)] text-[color:var(--vx-text-2)] hover:border-[var(--vx-accent)] hover:bg-transparent hover:text-[color:var(--vx-accent)]" />
           <button
             type="button"
             onClick={() => definirTema(isDark ? "light" : "dark")}

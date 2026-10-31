@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { useMovimentoReduzido } from "../../../design/accessibility";
 import { ArrowLeft, ArrowUpRight, Check, ChevronRight, RotateCcw } from "lucide-react";
 import { Reveal, GlitchHeading } from "../ui";
 import "./demo.css";
@@ -29,14 +30,14 @@ const DOMAINS = [
 ];
 
 function Progress({ value, label }: { value: number; label: string }) {
-  const reduced = useReducedMotion();
+  const reduced = useMovimentoReduzido();
   return <div className="vx-demo-progress" role="progressbar" aria-label={label} aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
     <motion.span initial={{ scaleX: reduced ? value / 100 : 0 }} animate={{ scaleX: value / 100 }} transition={{ duration: reduced ? 0 : 0.55, ease: "easeOut" }} />
   </div>;
 }
 
 export default function Demo() {
-  const reduced = useReducedMotion();
+  const reduced = useMovimentoReduzido();
   const [page, setPage] = useState<(typeof NAV_ITEMS)[number]>("Dashboard");
   const [tab, setTab] = useState<(typeof TABS)[number]>("Postura atual");
   const [finding, setFinding] = useState<number | null>(null);

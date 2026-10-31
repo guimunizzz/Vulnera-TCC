@@ -10,6 +10,7 @@
  *   QueryProvider  — estado de servidor
  *   BrowserRouter  — as rotas
  *   ToastProvider  — dentro do Router porque um toast pode conter <Link>
+ *   ConfiguracaoDeMovimento — movimento reduzido para todo `motion` do app
  */
 
 import { StrictMode } from "react";
@@ -19,6 +20,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/query-client";
 import { ThemeProvider } from "./design/theme-provider";
 import { ToastProvider } from "./components/ui/toast";
+import { ConfiguracaoDeMovimento } from "./motion/components";
 import { App } from "./App";
 import "./index.css";
 import "./styles/base.css";
@@ -29,7 +31,9 @@ createRoot(document.getElementById("root")!).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ToastProvider>
-            <App />
+            <ConfiguracaoDeMovimento>
+              <App />
+            </ConfiguracaoDeMovimento>
           </ToastProvider>
         </BrowserRouter>
       </QueryClientProvider>
