@@ -11,6 +11,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { Reveal, GlitchHeading } from "../ui";
+import { movimentoReduzido } from "../../../design/accessibility";
 
 const DOMAINS = [
   { label: "Gestão de Acesso", score: 4 },
@@ -61,7 +62,7 @@ export default function Maturity() {
 
   useGSAP(
     () => {
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reduced = movimentoReduzido();
 
       ScrollTrigger.create({
         trigger: scope.current ?? undefined,

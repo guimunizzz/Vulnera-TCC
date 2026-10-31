@@ -66,6 +66,21 @@
   --vx-elevated-shadow: 0 12px 32px rgba(28, 22, 38, 0.12);
 }
 
+/* Alto contraste do menu de acessibilidade. A landing tem paleta própria, que
+   os tokens de tokens.css §11 não alcançam: aqui só o texto sobe a 7:1 ou mais.
+   O `:not` impede o bloco escuro de vencer o claro (mesma especificidade). */
+:root[data-alto-contraste]:not([data-theme='light']) .vx-landing {
+  --vx-text: #ffffff;
+  --vx-text-2: #e5e7eb;
+  --vx-text-3: #c4bdd3;
+}
+
+:root[data-alto-contraste][data-theme='light'] .vx-landing {
+  --vx-text: #000000;
+  --vx-text-2: #2e2838;
+  --vx-text-3: #463f52;
+}
+
 /* Offset de âncora para a navbar fixa (76px + folga). `scroll-padding` só
    funciona no container de rolagem — o <html> — então precisa ser global,
    mas só entra quando a landing está montada. */
