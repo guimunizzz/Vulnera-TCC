@@ -670,7 +670,13 @@ fica no `localStorage` do navegador. Decisão e garantias em
 [[ADR-048 - Grafo 3D do scan DAST na area autenticada]] (seção "Evolução").
 
 - **Barra:** Recentralizar · Restaurar layout · Exportar PNG · 2D/3D, e o selo
-  "Fonte: OWASP ZAP" (sensores passivos são a próxima fase).
+  "Fontes: …" com os sensores que rodaram no scan.
+- **Ativos de descoberta (2026-10-31):** além dos endpoints, o alvo ganha ramos
+  de **IP** (com as portas abertas, as tecnologias dos CPEs e o grupo "CVEs"),
+  **tecnologia** (fingerprint) e **Subdomínios** (recolhido quando há mais de 6).
+  A CVE se liga ao IP, não a um endpoint. O painel/modal da CVE mostra o cartão
+  CVSS (nota, faixa oficial, versão, vetor e link para o NVD) e o selo
+  "potencial · não validado"; a lista de Achados mostra "CVSS x,x · faixa".
 - **Busca e filtro:** a busca (com sugestões) seleciona o nó, abre o grupo dele
   e centraliza a vista; os chips de severidade tiram do grafo os findings
   desmarcados e a legenda diz quantos estão aparecendo.
@@ -701,6 +707,8 @@ fica no `localStorage` do navegador. Decisão e garantias em
 | Rack de servidor com LEDs | o host do `targetUrl` |
 | Porta hexagonal | um `normalizedUrl` distinto |
 | Cristal na cor da severidade | um `DastFinding`; HIGH ganha halo pulsante |
+| Porta hexagonal com núcleo do acento | o IP público do alvo |
+| Porta hexagonal menor, núcleo neutro | porta aberta, tecnologia ou subdomínio |
 
 - **Interação:** arrastar o fundo move a vista (2D) ou gira (3D); com o grafo em
   foco, a roda aproxima; **Recentralizar** volta ao enquadramento inicial.
@@ -712,13 +720,14 @@ fica no `localStorage` do navegador. Decisão e garantias em
   de zoom (clicar/arrastar move a vista). Fica desligado por padrão: fixo sobre o
   grafo, ele sempre pode cobrir algum nó.
 - **Sensores:** a faixa "Sensores deste scan" (acima das abas) mostra o status
-  do ZAP, do sensor de headers e do sensor de certificado SSL/TLS (OK, Sem dados,
+  do ZAP, dos headers, do certificado SSL/TLS, das tecnologias, do IP/portas/CVEs
+  (InternetDB + NVD) e dos subdomínios (crt.sh) (OK, Sem dados,
   Não se aplica, Indisponível, Erro), quantos achados cada um gerou, a duração e a
   mensagem — o resumo do certificado ou o motivo legível de uma falha. O finding
   mostra "Sensor de origem" no painel e no modal, a lista de Achados marca os que
   não vieram do ZAP e o nó do alvo mostra o certificado. Detalhes em `DISCOVERY.md`.
-- **Nova análise:** a pessoa só informa o alvo e marca a autorização; ZAP,
-  headers e certificado rodam em sequência e o resultado chega no fim. Trocar o
+- **Nova análise:** a pessoa só informa o alvo e marca a autorização; ZAP e os
+  cinco sensores passivos rodam em sequência e o resultado chega no fim. Trocar o
   alvo desmarca a autorização. A demonstração (sem tocar a rede) é um link
   secundário. Um scan real que conclui com sensor indisponível mostra
   "Análise concluída com avisos" com o motivo.

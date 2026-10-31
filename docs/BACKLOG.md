@@ -8,8 +8,11 @@
 
 **✅ 2026-10-31 — Sensores passivos de headers e certificado SSL/TLS + "só escolher o alvo".** Branch `feat/security-graph`: `DastSensorRun` (status OK/NO_DATA/NOT_APPLICABLE/UNAVAILABLE/ERROR por sensor) e `DastFinding.sensorKey` (migration `20261031000000_add_dast_sensor_runs`); sensores `headers` (1 GET, redirect só na mesma origem) e `ssl` (1 handshake) rodam depois do ZAP no mesmo job; falha vira aviso, nunca dado simulado. `GET /dast/scans/:id/sensors` com regra de dono. Tela: Nova análise com só o alvo + autorização; faixa de sensores na página do scan; certificado no nó do alvo; mensagens de erro legíveis (DNS, porta recusada, timeout, 429 com espera). Também: busca, filtro por severidade, zoom por botões, minimapa opcional, setas no 2D, exportar PNG, qualidade adaptativa e nomes ocultos no 3D, E2E `cybergraph.spec.ts`. Validado com scan **real** pela tela e sensor SSL contra badssl.com. API 748/748, web 425/427 (2 falhas no arquivo não versionado). Ver `DISCOVERY.md`, `DESIGN.md`, `SECURITY.md`.
 
-- [ ] SG-FUT-04 — Sensores fingerprint, crt.sh e InternetDB (`ObservedAsset`), e `applicationId/companyId` no scan para o alerta de divergência de exposição.
-- [ ] SG-FUT-05 — Decidir se headers e SSL devem rodar mesmo quando o ZAP falha (hoje um ZAP em `FAILED` encerra o scan antes dos sensores).
+- [x] SG-FUT-04a — Sensores fingerprint, crt.sh e InternetDB + NVD (IP, portas, CVEs com CVSS) em `DastObservedAsset`, no CyberGraph (2026-10-31, ver `DISCOVERY.md`).
+- [ ] SG-FUT-04b — `applicationId/companyId` no scan para o alerta de divergência de exposição.
+- [ ] SG-FUT-05 — Decidir se os sensores passivos (headers, SSL, fingerprint, InternetDB, crt.sh) devem rodar mesmo quando o ZAP falha (hoje um ZAP em `FAILED` encerra o scan antes deles).
+- [ ] SG-FUT-06 — crt.sh: cache por domínio e Public Suffix List; cruzar versão do fingerprint com o NVD.
+- [ ] SG-FUT-07 — Scan completo contra IP público com CVEs (o ambiente só tem o próprio Vulnera, em rede privada, como alvo autorizado).
 
 **✅ 2026-10-30 — CyberGraph 2D/3D.** Mesma branch: a aba "Grafo 3D" virou **CyberGraph**, com modo 2D em SVG (padrão, sem WebGL; findings agrupados por endpoint em "Findings (N)" que expande), alternância 2D/3D, painel do nó com caminho de exposição, modal de detalhes só leitura com atalho "Triar em Achados", arraste livre de nós nos dois modos com "Restaurar layout" e nomes fixos abaixo dos objetos no 3D (`CSS2DRenderer`). Validado no navegador (mouse real, temas claro/escuro, 375 px). Web 414/416 (as 2 falhas seguem no `findings-table.test.tsx` não rastreado), contraste OK, lint 0 erros, build com `index-*.js` +0,3 kB. Ver ADR-048 (Evolução), `docs/DAST.md` §11.5 e `docs/evidencias/security-graph/` (07–17).
 

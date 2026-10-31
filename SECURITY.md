@@ -93,6 +93,16 @@ O Vulnera dispara tráfego contra alvos. Por isso o scanner tem regras próprias
   `rejectUnauthorized: false` **de propósito** — o sensor precisa enxergar o certificado ruim para
   relatá-lo — e lê a validade da cadeia de `socket.authorized`. Não há tráfego de aplicação nessa
   conexão, então aceitar o certificado não expõe dado nenhum.
+- **Sensores de descoberta com fonte externa** (`internetdb.sensor.ts`, `nvd-cve.service.ts`,
+  `crtsh.sensor.ts`): falam só com hosts **fixos no código** (`internetdb.shodan.io`,
+  `services.nvd.nist.gov`, `crt.sh`), nunca com uma URL vinda do usuário ou de resposta de terceiro —
+  não há SSRF por ali. O que sai do Vulnera: o **IP público** do alvo (para a Shodan), **IDs de CVE e
+  CPEs** (para o NVD) e o **domínio** do alvo (para o crt.sh). Alvo que só resolve para IP privado ou
+  nome interno vira `NOT_APPLICABLE` **sem** requisição externa (só a resolução de DNS). O ID de CVE é
+  validado (`CVE-AAAA-NNNN…`) antes de entrar na URL do NVD. Respostas grandes têm teto de leitura
+  (crt.sh 8 MB, HTML do fingerprint 64 KB). Subdomínios e portas descobertos **nunca** são acessados.
+- **Chave do NVD** (`NVD_API_KEY`, opcional): lida por `EnvVar`, enviada só no header `apiKey` ao NVD,
+  nunca logada nem devolvida pela API.
 - **Falha não vira dado falso**: sensor que não consegue medir fica `UNAVAILABLE`/`ERROR` na tela, o
   scan conclui com aviso, e o modo real nunca cai em resultado simulado.
 - **Achado automatizado não vira vulnerabilidade sozinho**: todo `DastFinding` nasce `NEW` e só vira
@@ -110,9 +120,10 @@ O Vulnera dispara tráfego contra alvos. Por isso o scanner tem regras próprias
 - Sem MFA nem bloqueio progressivo de conta além do rate limiting.
 - `prefers-reduced-motion`/acessibilidade e desempenho não são controles de segurança, mas a
   visualização 3D ainda não foi medida em GPU fraca (SG-FUT-02).
-- Sensores crt.sh e Shodan InternetDB (fontes públicas externas) ainda não existem; quando
-  existirem, devem ser `NOT_APPLICABLE` para alvo privado **sem** fazer requisição externa — ver
-  [`DISCOVERY.md`](DISCOVERY.md).
+- CVE da InternetDB é **potencial**: deduzida pela versão anunciada, sem validação no alvo. Entra
+  com confiança baixa e rótulo "potencial · não validado"; confirmar é trabalho humano na triagem —
+  ver [`DISCOVERY.md`](DISCOVERY.md).
+- A InternetDB é gratuita só para uso não comercial; uso comercial do Vulnera exige licença.
 - Sem pentest externo independente do próprio Vulnera.
 
 ## Referências

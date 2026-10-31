@@ -64,8 +64,19 @@ Princípios:
 | Endpoint | `Globe` | `--color-chart-3` (verde) |
 | Grupo "Findings (N)" | `ScanSearch` | severidade do pior finding |
 | Finding | `Bug` | `--color-severity-*` |
+| IP | `Network` | `--color-chart-1` |
+| Porta aberta | `Plug` | `--color-chart-2` |
+| Tecnologia | `Layers` | `--color-chart-axis` (neutro) |
+| Subdomínio / "Subdomínios (N)" | `Waypoints` | `--color-chart-3` |
 
-- Estrutura (Internet, alvo, endpoint) nunca usa cor de severidade: vermelho/laranja só significam risco.
+- Estrutura (Internet, alvo, endpoint, IP, porta, tecnologia, subdomínio) nunca usa cor de
+  severidade: vermelho/laranja só significam risco.
+- Ativos de descoberta são **ramos do alvo** na coluna dos endpoints. Os filhos estruturais (portas,
+  tecnologias do IP, subdomínios) ocupam a coluna do meio, e as CVEs do IP viram um grupo "CVEs (N)"
+  como os findings de um endpoint. Ramo com mais de 6 filhos começa recolhido (o nó ganha o anel e a
+  contagem do grupo e alterna no clique). A legenda só lista os tipos presentes no grafo.
+- CVE tem o **cartão CVSS** no painel e no topo do modal: a nota grande na cor do risco, a faixa
+  oficial ("Crítica" inclusive, que o `DastRisk` não tem), versão, vetor e link para o NVD.
 - Arestas em degradê da cor da origem para a do destino; o caminho selecionado ganha fluxo animado e
   o resto cai para ~15–30% de opacidade.
 - Fundo do palco com grade de pontos (token de borda), como nas referências de "attack path".
@@ -140,8 +151,11 @@ link secundário. Erros chegam como frase acionável (DNS, porta recusada, timeo
 
 ## Limites conhecidos 🚧
 
-- O grafo ainda é montado no cliente a partir dos findings; sem subdomínio/IP/tecnologia/CVE nem
-  divergência de exposição até os próximos sensores ([`DISCOVERY.md`](DISCOVERY.md)).
+- O grafo ainda é montado no cliente a partir dos findings e dos ativos (`/assets`); sem alerta de
+  divergência de exposição até o scan ter `applicationId` ([`DISCOVERY.md`](DISCOVERY.md)).
+- Com muitos ramos (endpoints + IP + tecnologias + subdomínios) o enquadramento inicial pode não
+  mostrar o topo; abrir um grupo centraliza a vista nele, e a busca e "Ajustar à tela" resolvem o
+  resto (o E2E `CG-01` encontrou o caso: o grupo de CVEs do IP abria fora do palco).
 - Posições arrastadas vivem só na tela (não são salvas por scan).
 - 3D não medido em GPU integrada fraca nem em celular real; a qualidade adaptativa é a rede de
   proteção até essa medição.

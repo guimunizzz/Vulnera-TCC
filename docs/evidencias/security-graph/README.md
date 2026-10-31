@@ -100,3 +100,20 @@ seções em cartões e entrada escalonada.
 | Sensor SSL contra servidores reais | example.com OK · expired → expirado · self-signed → não confiável · wrong.host → nome divergente · TLS 1.0 → obsoleto · DNS inexistente → `UNAVAILABLE` legível |
 | Sensor de headers real | `:8086` → OK sem achados · porta fechada → `UNAVAILABLE` ("a porta do alvo recusou a conexão") |
 | Suítes | API 748/748 (`--runInBand`) · web 425/427 (2 falhas só no `findings-table.test.tsx` não versionado) |
+
+## Descoberta: IP, portas, CVEs com CVSS do NVD, tecnologias e subdomínios — 2026-10-31
+
+| Arquivo | O que mostra |
+| --- | --- |
+| `26-scan-real-seis-sensores-ip-indisponivel.jpg` | Scan **real** em `http://host.docker.internal:8086/`: seis sensores na faixa; "IP, portas e CVEs" em "Não se aplica" com "IP público indisponível… o restante do scan seguiu normalmente" |
+| `27-cybergraph-ip-cve-cvss-painel.jpg` | Demonstração: caminho Internet → alvo → IP → CVEs → CVE-2021-42013 aceso; painel com o cartão "CVSS 3.1 · Crítica 9.8", vetor, link do NVD e selo "potencial · não validado" |
+| `28-cybergraph-painel-do-ip.jpg` | Painel do IP: 3 portas, 4 CVEs, tecnologias dos CPEs, marcas da Shodan |
+| `29-cybergraph-modal-cve-cvss.jpg` | Modal da CVE com o cartão CVSS no topo, CWE do NVD, confiança `Low` e regra `sensor:internetdb:CVE-…` |
+| `30-cybergraph-3d-ip-e-cve.jpg` | 3D com o caminho até a CVE selecionada |
+| `31-demonstracao-seis-sensores.jpg` | Faixa da demonstração: cada sensor diz que nada foi consultado |
+
+| Verificação | Resultado |
+| --- | --- |
+| Sensores contra a internet real (script, sem ZAP) | `scanme.nmap.org`: IP 45.33.32.156, 4 portas, 3 CPEs, 131 CVEs, **todas com CVSS do NVD** em 88 s sem chave; crt.sh `UNAVAILABLE` (conexão encerrada pelo crt.sh) |
+| Scan real pela tela contra IP público | **não rodado**: o ambiente bloqueou marcar autorização para alvo de terceiro; o único alvo autorizado é o próprio Vulnera |
+| Console | só os 401 conhecidos do refresh de token ao carregar |
