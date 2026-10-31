@@ -9,7 +9,8 @@
  */
 
 import { useState } from "react";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { movimentoReduzido } from "../../design/accessibility";
 import Intro3D from "./intro-3d";
 import CustomCursor from "./custom-cursor";
 import Nav from "./nav";
@@ -58,7 +59,9 @@ function LandingSections() {
 }
 
 export default function LandingRoot() {
-  const [introActive, setIntroActive] = useState(() => !hasSeenIntro());
+  // A intro é uma animação 3D que roda sozinha: quem pediu menos movimento
+  // vai direto ao conteúdo (WCAG 2.2.2 e 2.3.3).
+  const [introActive, setIntroActive] = useState(() => !hasSeenIntro() && !movimentoReduzido());
 
   const finishIntro = () => {
     try {
@@ -70,21 +73,20 @@ export default function LandingRoot() {
   };
 
   return (
-    <MotionConfig reducedMotion="user">
-      <AnimatePresence mode="wait">
-        {introActive ? (
-          <Intro3D key="intro" onComplete={finishIntro} />
-        ) : (
-          <motion.div
-            key="landing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <LandingSections />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </MotionConfig>
+    // O `MotionConfig` que respeita o movimento reduzido fica na raiz (main.tsx).
+    <AnimatePresence mode="wait">
+      {introActive ? (
+        <Intro3D key="intro" onComplete={finishIntro} />
+      ) : (
+        <motion.div
+          key="landing"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          <LandingSections />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

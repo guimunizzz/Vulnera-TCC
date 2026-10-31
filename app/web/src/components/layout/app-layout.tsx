@@ -30,6 +30,7 @@ import { useLocation, useNavigate, useOutlet } from "react-router-dom";
 import { Sidebar } from "./sidebar";
 import { Button, Drawer, DrawerBody, DrawerHeader, DropdownMenu, Avatar } from "../ui";
 import { ThemeToggle } from "../../design/theme-toggle";
+import { AccessibilityMenu } from "../../design/accessibility-menu";
 import { TransicaoDeRota } from "../../motion/components";
 import { useAuthStore } from "../../store/auth.store";
 import { authApi } from "../../lib/api/auth.api";
@@ -115,6 +116,7 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            <AccessibilityMenu />
             <ThemeToggle compacto />
             <DropdownMenu
               rotulo="Conta"

@@ -574,3 +574,97 @@
     --duration-chart: 1ms;
   }
 }
+
+/* O mesmo pedido feito pelo menu de acessibilidade (design/accessibility.ts). */
+:root[data-reduzir-movimento] {
+  --duration-instant: 1ms;
+  --duration-fast: 1ms;
+  --duration-base: 1ms;
+  --duration-slow: 1ms;
+  --duration-chart: 1ms;
+}
+
+/* ==========================================================================
+   11. ALTO CONTRASTE — opção do menu de acessibilidade
+   --------------------------------------------------------------------------
+   NÃO é um terceiro tema: é um reforço por cima do escuro e do claro. Texto
+   vai a 7:1 (WCAG 1.4.6, nível AAA), bordas de controle e anel de foco ficam
+   bem mais fortes, e as severidades continuam reconhecíveis pelo matiz.
+   `npm run check:contrast` mede os dois blocos abaixo com a régua AAA.
+
+   No escuro o botão primário INVERTE (preenchimento claro, texto escuro):
+   iris-600 com texto branco para em 5,78:1, abaixo de 7. Funciona porque todo
+   `bg-accent`/`bg-danger` do produto escreve com `-fg` por cima — o par anda
+   junto, nunca um sem o outro.
+
+   ⚠️ O `:not([data-theme="light"])` impede que o bloco escuro vaze para o
+   claro: os dois têm a mesma especificidade de atributo.
+   ========================================================================== */
+
+:root[data-alto-contraste]:not([data-theme="light"]) {
+  --color-text-secondary: var(--neutral-100);
+  --color-text-muted: var(--neutral-200);
+
+  --color-border-subtle: var(--neutral-700);
+  --color-border-default: var(--neutral-500);
+  --color-border-strong: var(--neutral-300);
+
+  --color-accent: var(--iris-300);
+  --color-accent-hover: var(--iris-200);
+  --color-accent-active: var(--iris-400);
+  --color-accent-fg: var(--neutral-950);
+  --color-accent-ink: var(--iris-200);
+  --color-focus-ring: var(--iris-200);
+
+  --color-success-ink: var(--green-200);
+  --color-warning-ink: var(--amber-200);
+  --color-danger: var(--red-300);
+  --color-danger-hover: var(--red-200);
+  --color-danger-fg: var(--neutral-950);
+  --color-danger-ink: var(--red-200);
+
+  --color-severity-critical-ink: var(--red-200);
+  --color-severity-critical-surface: var(--red-950);
+  --color-severity-high-ink: var(--orange-200);
+  --color-severity-high-surface: var(--orange-950);
+  --color-severity-medium-ink: var(--amber-200);
+  --color-severity-medium-surface: var(--amber-950);
+  --color-severity-low-ink: var(--blue-200);
+  --color-severity-low-surface: var(--blue-950);
+  --color-severity-info-ink: var(--neutral-200);
+  --color-severity-info-surface: var(--neutral-950);
+
+  --color-chart-grid: var(--neutral-700);
+  --color-chart-axis: var(--neutral-300);
+}
+
+:root[data-alto-contraste][data-theme="light"] {
+  --color-text-primary: var(--neutral-950);
+  --color-text-secondary: var(--neutral-900);
+  --color-text-muted: var(--neutral-800);
+
+  --color-border-subtle: var(--neutral-400);
+  --color-border-default: var(--neutral-600);
+  --color-border-strong: var(--neutral-800);
+
+  --color-accent: var(--iris-800);
+  --color-accent-hover: var(--iris-900);
+  --color-accent-active: var(--iris-950);
+  --color-accent-ink: var(--iris-800);
+  --color-focus-ring: var(--iris-800);
+
+  --color-success-ink: var(--green-800);
+  --color-warning-ink: var(--amber-900);
+  --color-danger: var(--red-700);
+  --color-danger-hover: var(--red-800);
+  --color-danger-ink: var(--red-800);
+
+  --color-severity-critical-ink: var(--red-800);
+  --color-severity-high-ink: var(--orange-800);
+  --color-severity-medium-ink: var(--amber-900);
+  --color-severity-low-ink: var(--blue-800);
+  --color-severity-info-ink: var(--neutral-800);
+
+  --color-chart-grid: var(--neutral-300);
+  --color-chart-axis: var(--neutral-700);
+}

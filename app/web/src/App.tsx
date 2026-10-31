@@ -26,6 +26,7 @@ import { PlaybookDetailPage } from "./pages/playbook-detail-page";
 import { RemediationPage } from "./pages/remediation-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
+import { ComMenuAcessibilidade } from "./design/accessibility-menu";
 
 export function App() {
   return (
@@ -35,20 +36,26 @@ export function App() {
           logado (é material de apresentação da banca). */}
       <Route path="/" element={<LandingPage />} />
 
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Route>
-      <Route path="/plans" element={<PlansPage />} />
+      {/* Rotas sem cabeçalho próprio ganham o menu de acessibilidade fixo no
+          canto superior direito. A landing e o AppLayout o têm no cabeçalho. */}
+      <Route element={<ComMenuAcessibilidade />}>
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
+        <Route path="/plans" element={<PlansPage />} />
 
-      {/* O styleguide é ferramenta de desenvolvimento e evidência para a banca,
-          não parte do produto. `import.meta.env.DEV` é avaliado em build time:
-          no bundle de produção o Vite elimina o ramo inteiro, e a página nem
-          sequer é empacotada. */}
-      {import.meta.env.DEV && <Route path="/styleguide" element={<StyleguidePage />} />}
+        {/* O styleguide é ferramenta de desenvolvimento e evidência para a banca,
+            não parte do produto. `import.meta.env.DEV` é avaliado em build time:
+            no bundle de produção o Vite elimina o ramo inteiro, e a página nem
+            sequer é empacotada. */}
+        {import.meta.env.DEV && <Route path="/styleguide" element={<StyleguidePage />} />}
+      </Route>
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route element={<ComMenuAcessibilidade />}>
+          <Route path="/onboarding" element={<OnboardingPage />} />
+        </Route>
 
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -107,7 +114,9 @@ export function App() {
         </Route>
 
         {/* Relatório do ZAP fora do AppLayout — tela cheia, sem sidebar, é
-            aberta em nova aba a partir do detalhe do scan. */}
+            aberta em nova aba a partir do detalhe do scan. Sem menu de
+            acessibilidade: o relatório é um iframe isolado de terceiros, onde
+            nossas preferências não chegam (o zoom do navegador chega). */}
         <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
           <Route path="/dast/scans/:id/report" element={<DastScanReportPage />} />
         </Route>

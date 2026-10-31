@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef } from "react";
+import { movimentoReduzido, observarAcessibilidade } from "../../design/accessibility";
 import "./interactive-label.css";
 
 /** Public-page button labels: decode for CTAs, sliced glitch for text links.
@@ -17,7 +18,6 @@ export const InteractiveLabel = memo(function InteractiveLabel({ children, effec
     const output = animated.current;
     const control = label?.closest("a, button");
     if (!label || !output || !control) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const letters = Array.from(children);
     // A classificação não muda entre frames do mesmo texto.
     const animatable = letters.map((letter) => /\p{L}/u.test(letter));
@@ -35,7 +35,7 @@ export const InteractiveLabel = memo(function InteractiveLabel({ children, effec
     };
     const blocked = () => control.matches(':disabled, [aria-disabled="true"], [aria-busy="true"]');
     const start = () => {
-      if (reduced.matches || blocked() || frame !== undefined) return;
+      if (movimentoReduzido() || blocked() || frame !== undefined) return;
       const startTime = performance.now();
       const duration = Math.min(900, Math.max(320, letters.length * 40));
       const settled = letters.map(() => false);
@@ -72,7 +72,7 @@ export const InteractiveLabel = memo(function InteractiveLabel({ children, effec
     control.addEventListener("focus", focus);
     control.addEventListener("blur", stop);
     control.addEventListener("click", stop);
-    reduced.addEventListener("change", stop);
+    const pararDeObservar = observarAcessibilidade(stop);
     document.addEventListener("visibilitychange", stop);
     return () => {
       stop();
@@ -81,7 +81,7 @@ export const InteractiveLabel = memo(function InteractiveLabel({ children, effec
       control.removeEventListener("focus", focus);
       control.removeEventListener("blur", stop);
       control.removeEventListener("click", stop);
-      reduced.removeEventListener("change", stop);
+      pararDeObservar();
       document.removeEventListener("visibilitychange", stop);
     };
   }, [children, effect]);

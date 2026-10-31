@@ -31,7 +31,7 @@ export function DashboardHero({ userName }: { userName: string }) {
     >
       <DashboardHeroFallback />
 
-      <div className="relative z-base grid min-h-[11rem] items-center gap-6 px-5 py-6 sm:px-6 md:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.65fr)] md:px-8">
+      <div className="dashboard-hero-colunas relative z-base grid min-h-[11rem] items-center gap-6 px-5 py-6 sm:px-6 md:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.65fr)] md:px-8">
         <div className="max-w-prose">
           <div className="mb-3 flex items-center gap-3 font-mono text-xs font-medium uppercase tracking-wide text-accent-ink">
             <span aria-hidden="true" className="h-px w-8 bg-accent" />
@@ -47,7 +47,7 @@ export function DashboardHero({ userName }: { userName: string }) {
 
         <p
           aria-hidden="true"
-          className="hidden justify-self-end border-l border-accent/35 pl-5 text-right text-lg font-semibold text-fg-secondary sm:block md:text-xl"
+          className="dashboard-hero-lema hidden justify-self-end border-l border-accent/35 pl-5 text-right text-lg font-semibold text-fg-secondary sm:block md:text-xl"
         >
           Menos riscos.
           <br />

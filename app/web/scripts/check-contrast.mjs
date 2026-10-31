@@ -22,6 +22,10 @@
  *   - texto normal ................ 4.5:1
  *   - texto grande (≥24px ou ≥19px bold) . 3.0:1
  *   - elemento gráfico / borda de controle . 3.0:1
+ *
+ * ALTO CONTRASTE (opção do menu de acessibilidade, tokens.css §11) usa a régua
+ * AAA (WCAG 1.4.6): texto 7:1, texto grande 4.5:1. Elemento gráfico segue em
+ * 3:1 — o WCAG não define nível AAA para ele.
  */
 
 import { readFileSync } from "node:fs";
@@ -200,7 +204,8 @@ const PARES = [
   ["--color-success", "--color-bg-surface", "grafico", "Série 'resolvidos' em gráfico"],
 ];
 
-const MINIMO = { texto: 4.5, "texto-grande": 3.0, grafico: 3.0 };
+const MINIMO_AA = { texto: 4.5, "texto-grande": 3.0, grafico: 3.0 };
+const MINIMO_AAA = { texto: 7.0, "texto-grande": 4.5, grafico: 3.0 };
 
 // ---------------------------------------------------------------------------
 // Execução
@@ -214,25 +219,36 @@ const blocos = lerBlocos(css);
 const base = {};
 for (const b of blocos) if (b.seletor === ":root") Object.assign(base, b.vars);
 
+// O bloco escuro de alto contraste cita `[data-theme="light"]` dentro do
+// `:not(...)`; sem separar os blocos de contraste, ele vazaria para o claro.
+const ehAltoContraste = (b) => b.seletor.includes("data-alto-contraste");
+
 const escopoDark = { ...base };
 for (const b of blocos) {
-  if (b.seletor.includes('[data-theme="dark"]')) Object.assign(escopoDark, b.vars);
+  if (!ehAltoContraste(b) && b.seletor.includes('[data-theme="dark"]')) Object.assign(escopoDark, b.vars);
 }
 const escopoLight = { ...base };
 for (const b of blocos) {
-  if (b.seletor.includes('[data-theme="light"]')) Object.assign(escopoLight, b.vars);
+  if (!ehAltoContraste(b) && b.seletor.includes('[data-theme="light"]')) Object.assign(escopoLight, b.vars);
+}
+const escopoDarkAlto = { ...escopoDark };
+const escopoLightAlto = { ...escopoLight };
+for (const b of blocos.filter(ehAltoContraste)) {
+  Object.assign(b.seletor.includes(":not(") ? escopoDarkAlto : escopoLightAlto, b.vars);
 }
 
 const temas = [
-  ["dark", escopoDark],
-  ["light", escopoLight],
+  ["dark", escopoDark, MINIMO_AA],
+  ["light", escopoLight, MINIMO_AA],
+  ["dark + alto contraste (AAA)", escopoDarkAlto, MINIMO_AAA],
+  ["light + alto contraste (AAA)", escopoLightAlto, MINIMO_AAA],
 ];
 
 let falhas = 0;
 let foraDeGamut = 0;
 const linhas = [];
 
-for (const [nomeTema, escopo] of temas) {
+for (const [nomeTema, escopo, minimos] of temas) {
   for (const [fgNome, bgNome, tipo, rotulo] of PARES) {
     const fg = resolver(fgNome, escopo);
     const bg = resolver(bgNome, escopo);
@@ -244,7 +260,7 @@ for (const [nomeTema, escopo] of temas) {
     const cFg = oklchParaSrgb(...fg);
     const cBg = oklchParaSrgb(...bg);
     const razao = contraste(cFg.luminancia, cBg.luminancia);
-    const min = MINIMO[tipo];
+    const min = minimos[tipo];
     const passa = razao >= min;
     if (!passa) falhas++;
     if (cFg.foraDeGamut || cBg.foraDeGamut) foraDeGamut++;
@@ -306,7 +322,7 @@ if (foraDeGamut > 0) {
   console.error("⚠ Algum par medido usa cor clampada — a razão acima é a da cor EXIBIDA, não a do token.");
 }
 if (falhas > 0) {
-  console.error(`\n✗ ${falhas} par(es) abaixo do mínimo WCAG AA.`);
+  console.error(`\n✗ ${falhas} par(es) abaixo do mínimo.`);
   process.exit(1);
 }
-console.log("\n✓ Todos os pares atendem WCAG 2.1 AA nos dois temas.");
+console.log("\n✓ Todos os pares atendem WCAG 2.1 AA nos dois temas e AAA no alto contraste.");

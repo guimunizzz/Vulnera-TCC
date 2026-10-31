@@ -22,8 +22,10 @@
 html {
   /* A escala tipográfica é toda em rem: mexer aqui reescala a interface inteira
      de forma proporcional. É também o que faz o zoom do navegador funcionar
-     direito para quem precisa dele. */
-  font-size: 16px;
+     direito para quem precisa dele. 100% (e não 16px) respeita o tamanho de
+     letra que a pessoa configurou no navegador; a escala vem do menu de
+     acessibilidade (design/accessibility.ts). */
+  font-size: calc(100% * var(--a11y-escala-fonte, 1));
   -webkit-text-size-adjust: 100%;
   scrollbar-gutter: stable;
 }
@@ -256,6 +258,64 @@ pre {
   [data-motion-essencial] {
     animation: spin 1.6s linear infinite !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Menu de acessibilidade — cada opção é um atributo no <html>
+   ---------------------------------------------------------------------------
+   Estampados por design/accessibility.ts (e pelo script inline do index.html
+   antes do primeiro paint). O alto contraste mora em tokens.css §11, porque
+   troca cores, e cor só nasce lá.
+   --------------------------------------------------------------------------- */
+
+/* Reduzir animações: o mesmo piso do bloco acima, para quem pediu pelo menu e
+   não pelo sistema. Media query não aceita seletor, por isso a cópia. */
+:root[data-reduzir-movimento] {
+  scroll-behavior: auto !important;
+}
+
+:root[data-reduzir-movimento] *,
+:root[data-reduzir-movimento] *::before,
+:root[data-reduzir-movimento] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+:root[data-reduzir-movimento] [data-motion-essencial] {
+  animation: spin 1.6s linear infinite !important;
+}
+
+:root[data-reduzir-movimento] .press:active {
+  transform: none;
+}
+
+/* Sublinhar links: link reconhecível sem depender da cor (WCAG 1.4.1). */
+:root[data-sublinhar-links] a[href] {
+  text-decoration-line: underline !important;
+  text-decoration-thickness: max(1px, 0.08em);
+  text-underline-offset: 0.2em;
+}
+
+/* Espaçamento de texto: exatamente os valores do WCAG 1.4.12. A interface tem
+   que aguentá-los sem cortar conteúdo — esta opção também serve de teste. */
+:root[data-espacamento-texto] body * {
+  line-height: 1.5 !important;
+  letter-spacing: 0.12em !important;
+  word-spacing: 0.16em !important;
+}
+
+:root[data-espacamento-texto] p:not(:last-child) {
+  margin-bottom: 2em !important;
+}
+
+/* Foco reforçado: anel mais grosso e um halo, para quem navega pelo teclado e
+   perde o anel padrão de 2px de vista. */
+:root[data-foco-reforcado] :focus-visible {
+  outline-width: 4px !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 8px oklch(var(--color-focus-ring) / 0.35) !important;
 }
 
 /* ---------------------------------------------------------------------------
