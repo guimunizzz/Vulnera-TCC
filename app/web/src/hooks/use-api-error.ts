@@ -128,13 +128,16 @@ const MESSAGES: Record<string, string> = {
 
   // DAST (scans via OWASP ZAP)
   SIMULATED_SCAN_OPERATION_NOT_ALLOWED: "Demonstrações não podem ser promovidas nem comparadas como resultados reais.",
-  INVALID_SCAN_MODE: "Escolha Simulado ou Real antes de continuar.",
-  REAL_SCAN_CONFIRMATION_REQUIRED: "Confirme a autorização para executar o scan real.",
+  INVALID_SCAN_MODE: "Não foi possível iniciar a análise. Recarregue a página e tente de novo.",
+  REAL_SCAN_CONFIRMATION_REQUIRED: "Marque que você tem autorização para testar este alvo.",
   MISSING_TARGET_URL: "Informe a URL do alvo.",
-  INVALID_TARGET_URL: "URL inválida. Use o formato http(s)://exemplo.com.",
-  SCAN_ALREADY_RUNNING_FOR_TARGET: "Já existe um scan em andamento para esse alvo.",
-  SCAN_NOT_FOUND: "Scan não encontrado.",
+  INVALID_TARGET_URL: "URL inválida. Use http:// ou https://, sem usuário e senha (ex.: https://exemplo.com).",
+  SCAN_ALREADY_RUNNING_FOR_TARGET: "Já existe uma análise em andamento para esse alvo. Acompanhe a que está rodando ou espere ela terminar.",
+  SCAN_NOT_FOUND: "Análise não encontrada. Ela pode ter sido removida ou pertencer a outra pessoa.",
   REPORT_NOT_FOUND: "Relatório ainda não disponível para este scan.",
+
+  // rate limiting (a mensagem com o tempo de espera é montada em useApiError)
+  RATE_LIMITED: "Muitas requisições em sequência. Aguarde alguns segundos e tente novamente.",
 
   // genérico
   INTERNAL_ERROR: "Algo deu errado no servidor. Tente novamente.",
@@ -160,9 +163,16 @@ export function getApiErrorCode(error: unknown): string | undefined {
 export function useApiError(): (error: unknown) => string {
   return useCallback((error: unknown): string => {
     const code = getApiErrorCode(error);
+    if (code === "RATE_LIMITED" && axios.isAxiosError(error)) {
+      const segundos = Number(error.response?.data?.retryAfterSeconds);
+      if (Number.isFinite(segundos) && segundos > 0) return `Muitas requisições em sequência. Tente novamente em ${Math.ceil(segundos)} s.`;
+    }
     if (code) return messageForCode(code);
-    if (axios.isAxiosError(error) && error.code === "ERR_NETWORK") {
-      return "Não foi possível conectar ao servidor.";
+    if (axios.isAxiosError(error)) {
+      if (error.code === "ERR_NETWORK") return "Não foi possível conectar ao servidor. Verifique sua conexão ou se a API está no ar.";
+      if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") return "O servidor demorou demais para responder. Tente novamente.";
+      const status = error.response?.status ?? 0;
+      if (status >= 500) return "O servidor encontrou um erro. Tente novamente em instantes.";
     }
     return "Não foi possível concluir a ação. Tente novamente.";
   }, []);

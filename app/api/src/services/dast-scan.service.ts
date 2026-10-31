@@ -52,6 +52,8 @@ import {
 } from "./zap-runner.service";
 import type { DastWatchdog, WatchdogRunContext, WatchdogSnapshot } from "./dast-watchdog.service";
 import { extractFindingsFromReport, type RiskCounters } from "./dast-findings.service";
+import type { Sensor, SensorResult } from "./sensors/sensor.types";
+import type { DastObservedAsset, DastSensorRun } from "@prisma/client";
 import type { UserRole } from "../models/user.model";
 
 interface Actor {
@@ -101,6 +103,8 @@ export class DastScanService {
     private readonly auditLogRepository: AuditLogRepository,
     private readonly userRepository: UserRepository,
     private readonly watchdog: DastWatchdog,
+    /** Sensores passivos que rodam depois do ZAP, no mesmo job (spec "Sensores e Security Graph"). */
+    private readonly sensors: Sensor[],
   ) {}
 
   async create(actor: Actor, dto: CreateDastScanDTO): Promise<DastScanEntity> {
@@ -310,6 +314,74 @@ export class DastScanService {
   // Privados
   // ==========================================================================
 
+  /** Status de cada sensor do scan (chips da tela). Mesma regra de dono que os findings. */
+  async listSensorRuns(actor: Actor, id: string): Promise<DastSensorRun[]> {
+    await this.getOwnedScan(actor, id);
+    return this.repository.findSensorRuns(id);
+  }
+
+  async listAssets(actor: Actor, id: string): Promise<DastObservedAsset[]> {
+    await this.getOwnedScan(actor, id);
+    return this.repository.findAssets(id);
+  }
+
+  /**
+   * Registra o ZAP como sensor e roda os passivos em sequência. Nada aqui
+   * derruba o scan: um sensor que falha vira UNAVAILABLE/ERROR gravado e um
+   * aviso devolvido para o `warningMessage` — nunca dado simulado no modo real.
+   */
+  private async runSensors(
+    scan: DastScan,
+    simulated: boolean,
+    zapDurationMs: number | undefined,
+    signal: AbortSignal,
+    pulso: () => void,
+  ): Promise<string[]> {
+    const avisos: string[] = [];
+    const agora = new Date();
+    const duracaoZap = zapDurationMs ?? 0;
+    await this.gravarExecucao(scan.id, "zap", agora, duracaoZap, {
+      status: "OK",
+      message: simulated ? "Resultado simulado (scan de demonstração)." : "Spider + varredura passiva concluídos.",
+      findings: [],
+    });
+
+    for (const sensor of this.sensors) {
+      const inicio = new Date();
+      let resultado: SensorResult;
+      try {
+        pulso();
+        resultado = await sensor.run({ targetUrl: scan.targetUrl, simulated, signal, pulso });
+        if (resultado.findings.length > 0) await this.repository.persistFindingsAndUpdateCounters(scan.id, resultado.findings);
+        if (resultado.assets?.length) await this.repository.saveAssets(scan.id, sensor.key, resultado.assets);
+      } catch (err) {
+        resultado = { status: "ERROR", message: `Falha no sensor ${sensor.key}: ${(err as Error).message}`, findings: [] };
+      }
+      await this.gravarExecucao(scan.id, sensor.key, inicio, Date.now() - inicio.getTime(), resultado);
+      if (resultado.status === "UNAVAILABLE" || resultado.status === "ERROR") {
+        avisos.push(`Sensor ${sensor.key}: ${resultado.message ?? resultado.status}`);
+        this.watchdog.raise("warn", scan.id, `Sensor ${sensor.key} ${resultado.status}: ${resultado.message ?? ""}`);
+      }
+    }
+    return avisos;
+  }
+
+  private async gravarExecucao(scanId: string, sensorKey: string, inicio: Date, durationMs: number, resultado: SensorResult): Promise<void> {
+    try {
+      await this.repository.saveSensorRun(scanId, {
+        sensorKey,
+        status: resultado.status,
+        message: resultado.message ?? null,
+        startedAt: inicio,
+        finishedAt: new Date(inicio.getTime() + durationMs),
+        durationMs: Math.round(durationMs),
+      });
+    } catch (err) {
+      // O status do sensor é informativo; perder o registro não pode reprovar um scan já concluído.
+      console.warn(`[DAST] falha ao gravar execução do sensor ${sensorKey} do scan ${scanId}`, err);
+    }
+  }
+
   private async getOwnedScan(actor: Actor, id: string): Promise<DastScan> {
     const scan = await this.repository.findById(id);
     if (!scan) throw new Error("SCAN_NOT_FOUND");
@@ -377,12 +449,17 @@ export class DastScanService {
       }
 
       void counters; // já refletido no banco via persistFindingsAndUpdateCounters; aqui só pra deixar o fluxo explícito
+      const avisosDosSensores = await this.runSensors(scan, outcome.simulated, outcome.durationMs, ctx.signal, () =>
+        // Sensores lentos (fila do NVD) pulsam o watchdog para não serem tomados por travados.
+        ctx.heartbeat("REPORT", 99),
+      );
       if (outcome.simulated) {
         this.watchdog.raise("warn", scanId, outcome.warningMessage ?? "Scan concluído com resultado simulado.");
       }
+      const avisos = [outcome.warningMessage, ...avisosDosSensores].filter((a): a is string => !!a);
       await this.markFinished(scan, "COMPLETED", outcome.durationMs, null, outcome.htmlReportPath, outcome.jsonReportPath, {
         simulated: outcome.simulated,
-        warningMessage: outcome.warningMessage ?? null,
+        warningMessage: avisos.length ? avisos.join(" ") : null,
       });
     } catch (err) {
       // Erro inesperado fora do contrato normal do runner (ex: falha de I/O
