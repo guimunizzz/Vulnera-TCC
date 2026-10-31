@@ -13,10 +13,12 @@
  * subdomínios): os filhos estruturais deles (portas, tecnologias do IP,
  * subdomínios) ficam na coluna do meio, e as CVEs do IP viram um grupo como os
  * findings de um endpoint. Ramo com muitos filhos (subdomínios) recolhe.
- * A posição é calculada aqui (pura, testável) para o SVG só desenhar.
+ * A posição é calculada aqui (pura, testável) para o SVG só desenhar. A regra
+ * de quais grupos escondem quais nós (`ocultosPorGrupo`) é a mesma no 3D, e a
+ * transição de abrir/fechar (`interpolarVisao`) também é pura.
  *
  * QUEM USA
- * `cyber-graph.tsx` e `cyber-graph-2d.tsx`.
+ * `cyber-graph.tsx`, `cyber-graph-2d.tsx` e `scene/graph-scene.ts`.
  */
 
 import type { DastObservedAsset, DastRisk } from "../../types/dast.types";
@@ -112,21 +114,21 @@ export function caixaDoConteudo(nos: { x: number; y: number }[]): { x: number; y
   return { x, y, largura: Math.max(...xs) + 150 - x, altura: Math.max(...ys) + 80 - y };
 }
 
-/**
- * `posicoes` são os nós que a pessoa arrastou: substituem o layout padrão só
- * para eles. A largura/altura continuam as do padrão, para arrastar não reenquadrar.
- */
-export function montarVisao2D(grafo: SecurityGraph, expandidos: ReadonlySet<string>, posicoes: Posicoes2D = new Map()): Visao2D {
+interface Ramo {
+  no: GraphNode;
+  findings: GraphNode[];
+  estrutura: GraphNode[];
+  risk?: DastRisk;
+}
+
+/** Filhos diretos do alvo, cada um com os findings e os filhos estruturais separados. */
+function ramosDoAlvo(grafo: SecurityGraph): { filhos: Map<string, string[]>; ramos: Ramo[] } {
   const porId = new Map(grafo.nodes.map((n) => [n.id, n]));
   const filhos = new Map<string, string[]>();
   for (const edge of grafo.edges) filhos.set(edge.source, [...(filhos.get(edge.source) ?? []), edge.target]);
-
-  const internet = grafo.nodes.find((n) => n.kind === "INTERNET");
   const asset = grafo.nodes.find((n) => n.kind === "ASSET");
-  if (!internet || !asset) return { nodes: [], edges: [], largura: 0, altura: 0 };
-
   // Ramos mais perigosos (e depois mais cheios) no topo, como numa lista de prioridade.
-  const ramos = (filhos.get(asset.id) ?? [])
+  const ramos = (asset ? filhos.get(asset.id) ?? [] : [])
     .flatMap((id) => porId.get(id) ?? [])
     .map((no) => {
       const diretos = (filhos.get(no.id) ?? []).flatMap((f) => porId.get(f) ?? []);
@@ -134,6 +136,97 @@ export function montarVisao2D(grafo: SecurityGraph, expandidos: ReadonlySet<stri
       return { no, findings, estrutura: diretos.filter((n) => n.kind !== "FINDING"), risk: piorRisco(findings.map((f) => f.risk)) };
     })
     .sort((a, b) => RISK_ORDER[a.risk ?? "INFO"] - RISK_ORDER[b.risk ?? "INFO"] || b.findings.length - a.findings.length);
+  return { filhos, ramos };
+}
+
+const recolhivel = (ramo: Ramo): boolean => ramo.estrutura.length > MAX_ESTRUTURA_ABERTA;
+
+/** Grupos que um ramo abre e fecha: o dos findings (CVEs no IP) e, se tiver muitos filhos, o deles. */
+const gruposDe = (ramo: Ramo): string[] => [...(ramo.findings.length ? [idDoGrupo(ramo.no.id)] : []), ...(recolhivel(ramo) ? [ramo.no.id] : [])];
+
+/** Grupos que interagir com o nó alterna (no 3D, onde não existe nó de grupo). Vazio: o nó não agrupa nada. */
+export function gruposDoNo(grafo: SecurityGraph, id: string): string[] {
+  const ramo = ramosDoAlvo(grafo).ramos.find((r) => r.no.id === id);
+  return ramo ? gruposDe(ramo) : [];
+}
+
+/** Grupos que precisam estar abertos para o nó aparecer (busca, painel, seleção vinda de fora). */
+export function gruposParaMostrar(grafo: SecurityGraph, id: string): string[] {
+  for (const ramo of ramosDoAlvo(grafo).ramos) {
+    if (ramo.findings.some((f) => f.id === id)) return [idDoGrupo(ramo.no.id)];
+    if (recolhivel(ramo) && ramo.estrutura.some((e) => e.id === id)) return [ramo.no.id];
+  }
+  return [];
+}
+
+/** Nós escondidos por grupo fechado, com tudo o que pende deles. Mesma regra do 2D. */
+export function ocultosPorGrupo(grafo: SecurityGraph, expandidos: ReadonlySet<string>): Set<string> {
+  const { filhos, ramos } = ramosDoAlvo(grafo);
+  const ocultos = new Set<string>();
+  const esconder = (id: string) => {
+    ocultos.add(id);
+    for (const filho of filhos.get(id) ?? []) esconder(filho);
+  };
+  for (const ramo of ramos) {
+    if (ramo.findings.length && !expandidos.has(idDoGrupo(ramo.no.id))) ramo.findings.forEach((f) => esconder(f.id));
+    if (recolhivel(ramo) && !expandidos.has(ramo.no.id)) ramo.estrutura.forEach((e) => esconder(e.id));
+  }
+  return ocultos;
+}
+
+export interface No2DExibido extends No2D {
+  /** Saiu da visão (grupo fechou) e está encolhendo para dentro do pai. */
+  saindo?: boolean;
+  opacidade?: number;
+}
+
+export type Visao2DExibida = Omit<Visao2D, "nodes"> & { nodes: No2DExibido[] };
+
+const paiEm = (edges: GraphEdge[], id: string): string | undefined => edges.find((e) => e.target === id)?.source;
+
+/** Ancestral mais próximo do nó (pelas arestas dadas) que existe em `nos`. */
+function ancoraEm<N>(edges: GraphEdge[], nos: ReadonlyMap<string, N>, id: string): N | undefined {
+  let pai = paiEm(edges, id);
+  const vistos = new Set<string>();
+  while (pai && !nos.has(pai) && !vistos.has(pai)) {
+    vistos.add(pai);
+    pai = paiEm(edges, pai);
+  }
+  return pai ? nos.get(pai) : undefined;
+}
+
+/**
+ * Quadro `t` (0 a 1, com desaceleração) da transição entre duas visões: quem fica
+ * desliza para a posição nova, quem entra sai de onde o pai estava e quem sai
+ * encolhe para dentro do pai, sumindo. As arestas de quem sai vão junto.
+ */
+export function interpolarVisao(de: Visao2D, para: Visao2D, t: number): Visao2DExibida {
+  const e = 1 - (1 - Math.min(Math.max(t, 0), 1)) ** 3;
+  const mistura = (a: number, b: number) => a + (b - a) * e;
+  const antes = new Map(de.nodes.map((n) => [n.id, n]));
+  const depois = new Map(para.nodes.map((n) => [n.id, n]));
+  const ficam = para.nodes.map((n) => {
+    const origem = antes.get(n.id) ?? ancoraEm(para.edges, antes, n.id) ?? n;
+    return { ...n, x: mistura(origem.x, n.x), y: mistura(origem.y, n.y) };
+  });
+  const saem = de.nodes
+    .filter((n) => !depois.has(n.id))
+    .map((n) => {
+      const destino = ancoraEm(de.edges, depois, n.id) ?? n;
+      return { ...n, x: mistura(n.x, destino.x), y: mistura(n.y, destino.y), saindo: true, opacidade: 1 - e };
+    });
+  return { ...para, nodes: [...ficam, ...saem], edges: [...para.edges, ...de.edges.filter((a) => !depois.has(a.target))] };
+}
+
+/**
+ * `posicoes` são os nós que a pessoa arrastou: substituem o layout padrão só
+ * para eles. A largura/altura continuam as do padrão, para arrastar não reenquadrar.
+ */
+export function montarVisao2D(grafo: SecurityGraph, expandidos: ReadonlySet<string>, posicoes: Posicoes2D = new Map()): Visao2D {
+  const internet = grafo.nodes.find((n) => n.kind === "INTERNET");
+  const asset = grafo.nodes.find((n) => n.kind === "ASSET");
+  if (!internet || !asset) return { nodes: [], edges: [], largura: 0, altura: 0 };
+  const { ramos } = ramosDoAlvo(grafo);
 
   const nodes: No2D[] = [];
   const edges: GraphEdge[] = [{ source: internet.id, target: asset.id }];
@@ -151,8 +244,8 @@ export function montarVisao2D(grafo: SecurityGraph, expandidos: ReadonlySet<stri
   let linha = 0;
   for (const ramo of ramos) {
     const grupoId = idDoGrupo(ramo.no.id);
-    const recolhivel = ramo.estrutura.length > MAX_ESTRUTURA_ABERTA;
-    const estrutura = !recolhivel || expandidos.has(ramo.no.id) ? ramo.estrutura : [];
+    const fecha = recolhivel(ramo);
+    const estrutura = !fecha || expandidos.has(ramo.no.id) ? ramo.estrutura : [];
     const expandido = expandidos.has(grupoId) && ramo.findings.length > 0;
     const linhasFindings = ramo.findings.length === 0 ? 0 : expandido ? ramo.findings.length : 1;
     const linhas = Math.max(1, estrutura.length + linhasFindings);
@@ -161,7 +254,7 @@ export function montarVisao2D(grafo: SecurityGraph, expandidos: ReadonlySet<stri
       ...no2d(ramo.no, COLUNA_X.ENDPOINT, MARGEM + (linha + (linhas - 1) / 2) * LINHA),
       risk: ramo.risk,
       total: total || ramo.no.total,
-      ...(recolhivel ? { expandivel: true, expandido: estrutura.length > 0 } : {}),
+      ...(fecha ? { expandivel: true, expandido: estrutura.length > 0 } : {}),
     });
     edges.push({ source: asset.id, target: ramo.no.id });
     estrutura.forEach((e, i) => {

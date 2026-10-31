@@ -685,8 +685,12 @@ fica no `localStorage` do navegador. Decisão e garantias em
 - **Exportar PNG:** no 2D, o grafo inteiro em 2×, com as cores do tema atual;
   no 3D, a cena como está na tela, com os nomes visíveis desenhados por cima.
 - **2D:** colunas Internet → alvo → endpoint → "Findings (N)". Clicar no grupo
-  expande os findings dele; arestas em degradê; o caminho selecionado ganha fluxo
-  animado e o resto esmaece.
+  expande os findings dele (eles saem do grupo deslizando e voltam para ele ao
+  fechar); arestas em degradê; o caminho selecionado ganha fluxo animado e o resto
+  esmaece.
+- **Grupos no 3D:** o 3D começa com os mesmos grupos fechados do 2D. Endpoint, IP
+  e "Subdomínios" mostram `▸ N` antes do nome; clique ou Espaço abre e fecha, com
+  os objetos crescendo a partir do pai. O estado é o mesmo nos dois modos.
 - **Painel e modal:** clicar num nó mostra o painel (tipo, severidade, triagem,
   caminho de exposição clicável); "Expandir detalhes", duplo clique ou
   Shift+Enter (2D) / Enter (3D) abrem o modal. O modal é só leitura; "Triar em

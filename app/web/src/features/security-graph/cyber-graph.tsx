@@ -34,9 +34,9 @@ import {
 import { CyberGraph2D, type CyberGraph2DHandle } from "./cyber-graph-2d";
 import { ModalDoNo, PainelDoNo } from "./cyber-graph-detalhes";
 import { baixarArquivo } from "./exportar";
-import { montarVisao2D, type No2D, type Posicoes2D } from "./graph-2d-layout";
+import { gruposDoNo, gruposParaMostrar, montarVisao2D, type No2D, type Posicoes2D } from "./graph-2d-layout";
 import { buildSecurityGraph, type GraphNode } from "./graph-model";
-import { descreverNo, grupoDoFinding } from "./node-detail";
+import { descreverNo } from "./node-detail";
 import { cor, tokenDoNo } from "./node-visual";
 import type { Posicao3D } from "./scene/graph-scene";
 import type { SecurityGraph3DHandle } from "./security-graph-3d";
@@ -117,12 +117,30 @@ export default function CyberGraph({
   const ref2d = useRef<CyberGraph2DHandle>(null);
   const ref3d = useRef<SecurityGraph3DHandle>(null);
 
-  // Selecionar um finding (no 3D, no painel, no modal ou na busca) abre o grupo dele no 2D.
+  // Selecionar um nó escondido (pelo painel, pelo modal ou pela busca) abre o grupo dele, no 2D e no 3D.
   const selecionar = useCallback(
     (id: string | null) => {
       setSelecionadoId(id);
-      const grupo = id?.startsWith("finding:") ? grupoDoFinding(grafo, id) : null;
-      if (grupo) setExpandidos((atual) => (atual.has(grupo) ? atual : new Set(atual).add(grupo)));
+      const grupos = id ? gruposParaMostrar(grafo, id) : [];
+      if (grupos.some((g) => !expandidos.has(g))) setExpandidos((atual) => new Set([...atual, ...grupos]));
+    },
+    [grafo, expandidos],
+  );
+
+  // No 3D não há nó de grupo: interagir com o endpoint, o IP ou "Subdomínios" abre ou fecha o que pende dele.
+  const alternarRamo = useCallback(
+    (id: string) => {
+      const grupos = gruposDoNo(grafo, id);
+      if (!grupos.length) return;
+      setExpandidos((atual) => {
+        const aberto = grupos.every((g) => atual.has(g));
+        const proximo = new Set(atual);
+        for (const g of grupos) {
+          if (aberto) proximo.delete(g);
+          else proximo.add(g);
+        }
+        return proximo;
+      });
     },
     [grafo],
   );
@@ -383,7 +401,9 @@ export default function CyberGraph({
                   grafo={grafo}
                   selecionadoId={selecionadoId}
                   posicoes={posicoes3d}
+                  expandidos={expandidos}
                   aoSelecionar={selecionar}
+                  aoAlternar={alternarRamo}
                   aoAbrir={abrir}
                   aoMoverNo={mover3d}
                 />
@@ -417,7 +437,7 @@ export default function CyberGraph({
         <p className="mt-2 text-sm text-fg-muted">
           {modo === "2d"
             ? "Arraste um nó para reposicioná-lo e o fundo para mover a vista. Com um nó em foco, as setas andam pelo grafo. Clique em “Findings” para expandir o grupo."
-            : "Arraste um objeto para reposicioná-lo e o fundo para girar; com a cena em foco, role para aproximar e use as setas para percorrer os nós."}{" "}
+            : "Clique num endpoint, no IP ou em Subdomínios para abrir ou fechar o que pende dele (Espaço faz o mesmo pelo teclado). Arraste um objeto para reposicioná-lo e o fundo para girar; com a cena em foco, role para aproximar e use as setas para percorrer os nós."}{" "}
           Duplo clique num nó abre os detalhes.
           {grafo.truncated && " Grafo truncado nos findings de maior risco."}
           {visiveis.length < findings.length && ` Mostrando ${visiveis.length} de ${findings.length} findings pelo filtro de severidade.`}

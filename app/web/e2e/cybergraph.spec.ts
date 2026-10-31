@@ -4,8 +4,8 @@
  * O QUE FAZ
  * Dirige a aba CyberGraph do detalhe de um scan DAST de ponta a ponta: grupo de
  * findings, painel, modal, "Triar em Achados", busca, filtro por severidade,
- * arrastar e restaurar o layout, teclado, exportar PNG, modo 3D e movimento
- * reduzido.
+ * arrastar e restaurar o layout, teclado, exportar PNG, modo 3D (com grupos que
+ * abrem e fecham) e movimento reduzido.
  *
  * POR QUE EXISTE
  * Os testes de unidade cobrem layout e montagem do detalhe; a fiação entre SVG,
@@ -38,7 +38,10 @@ async function criarScanSimulado(request: APIRequestContext): Promise<string> {
 }
 
 async function abrirCyberGraph(page: Page, scanId: string, modo: "2D" | "3D" = "2D"): Promise<void> {
+  // Os ativos (IP, portas, CVEs) chegam depois dos findings e mudam o layout: interagir antes disso clica no nó errado.
+  const ativos = page.waitForResponse((r) => r.url().endsWith(`/dast/scans/${scanId}/assets`));
   await page.goto(`/dast/scans/${scanId}`);
+  await ativos;
   await page.getByRole("tab", { name: "CyberGraph" }).click();
   await page.getByRole("button", { name: modo, exact: true }).click();
 }
@@ -167,6 +170,35 @@ test.describe("CyberGraph", () => {
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Exportar PNG" }).click();
     expect((await download).suggestedFilename()).toMatch(/^cybergraph-.+-3d\.png$/);
+  });
+
+  test("CG-09 — no 3D os grupos começam fechados e Espaço abre e fecha o do endpoint", async ({ page }) => {
+    await abrirCyberGraph(page, scanId);
+    // Nome de um endpoint pelo 2D, onde cada nó é um botão com título.
+    const endpoint = (await grafo2d(page).locator('g[role="button"][aria-label^="Endpoint"] title').first().textContent()) ?? "";
+    expect(endpoint).not.toBe("");
+
+    const botao3d = page.getByRole("button", { name: "3D", exact: true });
+    test.skip(await botao3d.isDisabled(), "navegador do teste sem WebGL 2");
+    await botao3d.click();
+    const canvas = page.locator('canvas[aria-roledescription="grafo 3D"]');
+    test.skip(!(await canvas.isVisible({ timeout: 20_000 }).catch(() => false)), "WebGL não iniciou neste ambiente");
+    const visiveis = async () => Number((await canvas.getAttribute("aria-label"))?.match(/(\d+) de \d+ nós visíveis/)?.[1]);
+    await expect(canvas).toHaveAttribute("aria-label", /\d+ de \d+ nós visíveis/);
+    const fechado = await visiveis();
+    // Grupo fechado: selo "▸ N" antes do nome, na camada de rótulos.
+    const rotulos = page.locator('canvas[aria-roledescription="grafo 3D"] ~ div[aria-hidden="true"]');
+    await expect(rotulos.getByText(/^▸ \d+$/).first()).toBeAttached();
+
+    await page.getByLabel("Buscar nó no grafo").fill(endpoint);
+    await page.getByLabel("Buscar nó no grafo").press("Enter");
+    await expect(painel(page).getByRole("heading", { name: endpoint })).toBeVisible();
+    await canvas.focus();
+    await page.keyboard.press(" ");
+    await expect.poll(visiveis).toBeGreaterThan(fechado);
+    await expect(rotulos.getByText(/^▾ \d+$/).first()).toBeAttached();
+    await page.keyboard.press(" ");
+    await expect.poll(visiveis).toBe(fechado);
   });
 
   test.describe("com movimento reduzido", () => {

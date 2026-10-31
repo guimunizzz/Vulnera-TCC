@@ -14,7 +14,7 @@
  */
 
 import type { DastFinding, DastObservedAsset, DastRisk } from "../../types/dast.types";
-import { idDoGrupo, type Kind2D } from "./graph-2d-layout";
+import type { Kind2D } from "./graph-2d-layout";
 import { caminhoAte, type SecurityGraph } from "./graph-model";
 
 const RISK_ORDER: Record<DastRisk, number> = { HIGH: 0, MEDIUM: 1, LOW: 2, INFO: 3 };
@@ -106,7 +106,3 @@ export function descreverNo(
   };
 }
 
-export const grupoDoFinding = (grafo: SecurityGraph, findingNodeId: string): string | null => {
-  const pai = grafo.edges.find((e) => e.target === findingNodeId);
-  return pai ? idDoGrupo(pai.source) : null;
-};

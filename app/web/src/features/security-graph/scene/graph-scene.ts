@@ -10,7 +10,9 @@
  *   - OrbitControls com amortecimento, giro automático e foco no selecionado;
  *   - destaque de caminho: o que está fora do contexto do nó fica translúcido;
  *   - nomes fixos abaixo de cada objeto (CSS2DRenderer, texto nítido em DOM);
- *   - nós arrastáveis num plano de frente para a câmera, com as arestas seguindo.
+ *   - nós arrastáveis num plano de frente para a câmera, com as arestas seguindo;
+ *   - grupos que abrem e fecham: os filhos saem de dentro do pai (e voltam para
+ *     ele) enquanto os vizinhos deslizam para o layout novo.
  *
  * POR QUE EXISTE
  * Manter o three fora do React deixa o componente só com estado de UI e garante
@@ -31,6 +33,7 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import type { DastRisk } from "../../../types/dast.types";
+import { gruposDoNo, ocultosPorGrupo } from "../graph-2d-layout";
 import { chaveDaAresta, contextoDoNo, type GraphNode, type GraphNodeKind, type SecurityGraph } from "../graph-model";
 import { KitDeMalhas, type NoVisual } from "./node-meshes";
 import { INTERVALO_IGNORADO_MS, JANELA_QUADROS, proximoNivel, type NivelQualidade } from "./qualidade";
@@ -43,7 +46,11 @@ export interface GraphSceneOptions {
   reduzido: boolean;
   /** Nós que a pessoa já arrastou (sobrevivem à troca de tema e de modo). */
   posicoesSalvas: ReadonlyMap<string, Posicao3D>;
+  /** Grupos abertos (mesmos ids do 2D); o que pende de grupo fechado fica dentro do pai. */
+  expandidos: ReadonlySet<string>;
   aoSelecionar(node: GraphNode | null): void;
+  /** Clique parado num nó (depois de selecioná-lo): abre ou fecha o grupo dele. */
+  aoClicar?(id: string): void;
   /** Fim de um arrasto: posição nova do nó. */
   aoMoverNo(id: string, posicao: Posicao3D): void;
   aoPerderContexto(): void;
@@ -60,6 +67,8 @@ const MAX_DPR = 1.5;
 const SEGMENTOS_ARESTA = 24;
 const ESCALA_HOVER = 1.18;
 const ESCALA_SELECIONADO = 1.28;
+/** Fração do caminho que o nó anda por quadro ao abrir/fechar um grupo (~0,4 s a 60 fps). */
+const PASSO_TRANSICAO = 0.14;
 
 /** Espaço entre findings do mesmo endpoint: largura de um nome de ~20 caracteres e altura de objeto + nome. */
 const GRADE_DX = 2.2;
@@ -182,7 +191,19 @@ export class GraphScene {
   private readonly arestas: Aresta[] = [];
   private readonly coresArestas: THREE.BufferAttribute;
   private readonly pontosArestas: THREE.BufferAttribute;
-  private readonly posicoesPadrao: Map<string, THREE.Vector3>;
+  /** Layout calculado só com os nós visíveis: muda quando um grupo abre ou fecha. */
+  private posicoesPadrao: Map<string, THREE.Vector3>;
+  private readonly pai: Map<string, string>;
+  private expandidos: ReadonlySet<string>;
+  private ocultos: Set<string>;
+  /** Nós que a pessoa arrastou: ficam onde ela pôs, mesmo quando o layout muda em volta. */
+  private readonly movidos = new Map<string, THREE.Vector3>();
+  /** Para onde cada nó está indo enquanto uma transição de grupo acontece. */
+  private destinos = new Map<string, THREE.Vector3>();
+  private emTransicao = false;
+  private distanciaDestino: number | null = null;
+  private readonly selos = new Map<string, { el: HTMLElement; grupos: string[]; filhos: number }>();
+  private readonly piso: THREE.Object3D[] = [];
   private readonly rotulos: CSS2DRenderer;
   private readonly rotulos3d: Rotulo3D[] = [];
   private readonly auxRotulo = new THREE.Vector3();
@@ -217,7 +238,7 @@ export class GraphScene {
   private visivel = true;
   private quadro = 0;
   private readonly inicio = performance.now();
-  private ocultos = 0;
+  private nomesOcultos = 0;
   private nivelQualidade: NivelQualidade = 0;
   private ultimoQuadro = 0;
   private somaQuadros = 0;
@@ -257,13 +278,22 @@ export class GraphScene {
 
     this.montarLuzes();
     this.kit = new KitDeMalhas(paleta);
-    this.posicoesPadrao = posicoesDoGrafo(grafo);
-    const posicoes = new Map(this.posicoesPadrao);
-    opcoes.posicoesSalvas.forEach((p, id) => {
-      if (posicoes.has(id)) posicoes.set(id, new THREE.Vector3(p.x, p.y, p.z));
-    });
+    this.pai = new Map(grafo.edges.map((edge) => [edge.target, edge.source]));
+    this.expandidos = opcoes.expandidos;
+    this.ocultos = ocultosPorGrupo(grafo, opcoes.expandidos);
+    this.posicoesPadrao = posicoesDoGrafo(this.grafoVisivel());
+    opcoes.posicoesSalvas.forEach((p, id) => this.movidos.set(id, new THREE.Vector3(p.x, p.y, p.z)));
+    const posicoes = this.calcularDestinos();
     this.rotulos = new CSS2DRenderer({ element: camadaRotulos });
     this.montarNos(posicoes);
+    // Escondido nasce dentro do pai, com escala zero (depois de medir o rótulo, que usa a caixa do objeto).
+    for (const id of this.ocultos) {
+      const visual = this.nos.get(id);
+      if (!visual) continue;
+      visual.raiz.scale.setScalar(0);
+      visual.raiz.visible = false;
+    }
+    this.atualizarSelos();
     [this.coresArestas, this.pontosArestas] = this.montarArestas(posicoes);
     this.particulas = this.montarParticulas();
     // Margem do tamanho de um nó em volta das posições (os centros não bastam).
@@ -321,6 +351,76 @@ export class GraphScene {
     this.raf = requestAnimationFrame(this.desenhar);
   }
 
+  /* ---------------------------------------------------------------- grupos */
+
+  private grafoVisivel(): SecurityGraph {
+    return {
+      ...this.grafo,
+      nodes: this.grafo.nodes.filter((n) => !this.ocultos.has(n.id)),
+      edges: this.grafo.edges.filter((e) => !this.ocultos.has(e.target)),
+    };
+  }
+
+  /** Nós fora de grupo fechado, na ordem do grafo (navegação por setas). */
+  nosVisiveis(): GraphNode[] {
+    return this.grafo.nodes.filter((n) => !this.ocultos.has(n.id));
+  }
+
+  /** Visível vai para o layout (ou para onde a pessoa o arrastou); escondido vai para dentro do ancestral visível. */
+  private calcularDestinos(): Map<string, THREE.Vector3> {
+    const saida = new Map<string, THREE.Vector3>();
+    for (const node of this.grafo.nodes) {
+      if (!this.ocultos.has(node.id)) saida.set(node.id, (this.movidos.get(node.id) ?? this.posicoesPadrao.get(node.id) ?? new THREE.Vector3()).clone());
+    }
+    for (const id of this.ocultos) saida.set(id, (saida.get(this.ancoraVisivel(id) ?? "") ?? new THREE.Vector3()).clone());
+    return saida;
+  }
+
+  private ancoraVisivel(id: string): string | undefined {
+    let pai = this.pai.get(id);
+    while (pai && this.ocultos.has(pai)) pai = this.pai.get(pai);
+    return pai;
+  }
+
+  /** "▸ 12" (fechado) ou "▾ 12" (aberto) antes do nome dos nós que agrupam. */
+  private atualizarSelos(): void {
+    this.selos.forEach(({ el, grupos, filhos }) => {
+      el.textContent = `${grupos.every((g) => this.expandidos.has(g)) ? "▾" : "▸"} ${filhos}`;
+    });
+  }
+
+  /**
+   * Abre/fecha grupos: o que fecha encolhe para dentro do pai, o que abre sai de
+   * dentro dele, e o resto desliza para o layout novo (o quadro anima; ver `desenhar`).
+   */
+  definirExpandidos(expandidos: ReadonlySet<string>): void {
+    const antes = this.ocultos;
+    this.expandidos = expandidos;
+    this.ocultos = ocultosPorGrupo(this.grafo, expandidos);
+    this.posicoesPadrao = posicoesDoGrafo(this.grafoVisivel());
+    this.destinos = this.calcularDestinos();
+    this.nos.forEach((visual, id) => {
+      if (!antes.has(id) || this.ocultos.has(id)) return;
+      const ancora = this.nos.get(this.ancoraVisivel(id) ?? "");
+      if (ancora) visual.raiz.position.copy(ancora.raiz.position);
+      visual.raiz.visible = true;
+    });
+    this.emTransicao = true;
+    this.atualizarSelos();
+    if (this.selecionado && this.ocultos.has(this.selecionado)) this.selecionar(null);
+
+    this.caixa.setFromPoints([...this.posicoesPadrao.values()]).expandByScalar(0.8);
+    this.posicionarPiso();
+    // Grupo grande abrindo: a câmera recua até caber, sem salto (só se a pessoa não mexeu nela).
+    if (!this.usuarioMexeu) {
+      const distancia = this.distanciaDaCaixa();
+      this.controls.target0.copy(this.caixa.getCenter(new THREE.Vector3()));
+      if (!this.selecionado) this.focoAlvo.copy(this.controls.target0);
+      this.ajustarLimites(distancia, this.camera.position.distanceTo(this.controls.target));
+      this.distanciaDestino = distancia;
+    }
+  }
+
   /* ---------------------------------------------------------------- montagem */
 
   private montarLuzes(): void {
@@ -346,11 +446,17 @@ export class GraphScene {
   }
 
   private montarNos(posicoes: Map<string, THREE.Vector3>): void {
+    // Com tudo fechado, quantos filhos diretos cada nó esconde: é o número do selo.
+    const recolhiveis = ocultosPorGrupo(this.grafo, new Set());
+    const filhosRecolhiveis = new Map<string, number>();
+    for (const edge of this.grafo.edges) {
+      if (recolhiveis.has(edge.target)) filhosRecolhiveis.set(edge.source, (filhosRecolhiveis.get(edge.source) ?? 0) + 1);
+    }
     for (const node of this.grafo.nodes) {
       const visual = this.kit.criar(node);
       visual.raiz.position.copy(posicoes.get(node.id) ?? new THREE.Vector3());
       this.scene.add(visual.raiz);
-      this.montarRotulo(visual);
+      this.montarRotulo(visual, filhosRecolhiveis.get(node.id) ?? 0);
       this.nos.set(node.id, visual);
       for (const alvo of visual.alvos) {
         this.alvos.push(alvo);
@@ -365,14 +471,23 @@ export class GraphScene {
   }
 
   /** Nome sempre visível abaixo do objeto; DOM para o texto ficar nítido em qualquer zoom. */
-  private montarRotulo(visual: NoVisual): void {
+  private montarRotulo(visual: NoVisual, filhosRecolhiveis: number): void {
     const el = document.createElement("div");
     // Findings são muitos e próximos: rótulo menor e mais discreto que o da estrutura.
     el.className =
       visual.node.kind === "FINDING"
         ? "pointer-events-none max-w-[8.5rem] truncate whitespace-nowrap rounded bg-canvas/70 px-1 py-px text-[10px] leading-tight text-fg-secondary transition-opacity"
         : "pointer-events-none max-w-[11rem] truncate whitespace-nowrap rounded bg-canvas/70 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-fg transition-opacity";
-    el.textContent = visual.node.label;
+    const grupos = filhosRecolhiveis ? gruposDoNo(this.grafo, visual.node.id) : [];
+    if (grupos.length) {
+      // Selo antes do nome: o nome trunca, a contagem não.
+      const selo = document.createElement("span");
+      selo.className = "rounded bg-accent px-1 font-mono text-accent-fg";
+      el.append(selo, ` ${visual.node.label}`);
+      this.selos.set(visual.node.id, { el: selo, grupos, filhos: filhosRecolhiveis });
+    } else {
+      el.textContent = visual.node.label;
+    }
     const rotulo = new CSS2DObject(el);
     // Logo abaixo da base do objeto, medida antes de qualquer animação de escala.
     const caixa = new THREE.Box3().setFromObject(visual.raiz);
@@ -394,7 +509,7 @@ export class GraphScene {
     const h = this.canvas.clientHeight;
     const candidatos: { r: Rotulo3D; x: number; y: number; z: number; chave: number }[] = [];
     for (const r of this.rotulos3d) {
-      const ativo = !this.contexto || this.contexto.nos.has(r.id);
+      const ativo = !this.ocultos.has(r.id) && (!this.contexto || this.contexto.nos.has(r.id));
       r.obj.getWorldPosition(this.auxRotulo).project(this.camera);
       if (!ativo || this.auxRotulo.z > 1) {
         this.mostrarRotulo(r, false);
@@ -425,8 +540,8 @@ export class GraphScene {
       this.mostrarRotulo(c.r, !colide);
     }
     // Só avisa quando muda: o componente re-renderiza com a contagem.
-    if (ocultos !== this.ocultos) {
-      this.ocultos = ocultos;
+    if (ocultos !== this.nomesOcultos) {
+      this.nomesOcultos = ocultos;
       this.opcoes.aoContarOcultos?.(ocultos);
     }
   }
@@ -559,8 +674,10 @@ export class GraphScene {
     for (const aresta of this.arestas) {
       if (ids && !ids.has(aresta.de) && !ids.has(aresta.para)) continue;
       const a = this.nos.get(aresta.de)?.raiz.position;
-      const b = this.nos.get(aresta.para)?.raiz.position;
-      if (!a || !b) continue;
+      const destino = this.nos.get(aresta.para)?.raiz;
+      if (!a || !destino) continue;
+      // Filho já recolhido: a aresta some no pai em vez de esticar quando o pai é arrastado.
+      const b = destino.visible ? destino.position : a;
       GraphScene.arco(aresta.curva, a, b);
       for (let i = 0; i < SEGMENTOS_ARESTA; i += 1) {
         aresta.curva.getPoint(i / SEGMENTOS_ARESTA, amostra);
@@ -572,12 +689,11 @@ export class GraphScene {
     this.pontosArestas.needsUpdate = true;
   }
 
-  /** Volta todos os nós para o layout calculado. */
+  /** Volta todos os nós para o layout calculado, deslizando. */
   restaurarLayout(): void {
-    this.nos.forEach((visual, id) => visual.raiz.position.copy(this.posicoesPadrao.get(id) ?? visual.raiz.position));
-    this.atualizarArestas();
-    const visual = this.selecionado ? this.nos.get(this.selecionado) : null;
-    if (visual) this.focoAlvo.copy(visual.raiz.position);
+    this.movidos.clear();
+    this.destinos = this.calcularDestinos();
+    this.emTransicao = true;
   }
 
   private montarParticulas(): THREE.InstancedMesh {
@@ -612,7 +728,14 @@ export class GraphScene {
     gradeMat.transparent = true;
     gradeMat.opacity = 0.35;
     this.scene.add(sombra, grade);
+    this.piso.push(sombra, grade);
     this.descartaveis.push(sombraGeo, sombraMat, grade.geometry, gradeMat);
+  }
+
+  /** Piso logo abaixo do layout atual: um grupo aberto pode crescer para baixo. */
+  private posicionarPiso(): void {
+    const y = this.caixa.min.y - 0.6;
+    this.piso.forEach((obj, i) => (obj.position.y = y + i * 0.01));
   }
 
   /* -------------------------------------------------------------- destaque */
@@ -728,13 +851,19 @@ export class GraphScene {
     this.canvas.style.cursor = this.hover ? "grab" : "";
     if (arrasto?.moveu) {
       const p = this.nos.get(arrasto.id)?.raiz.position;
-      if (p) this.opcoes.aoMoverNo(arrasto.id, { x: p.x, y: p.y, z: p.z });
+      if (p) {
+        this.movidos.set(arrasto.id, p.clone());
+        this.destinos.set(arrasto.id, p.clone());
+        this.opcoes.aoMoverNo(arrasto.id, { x: p.x, y: p.y, z: p.z });
+      }
       return;
     }
     // Arrastar o fundo orbita; só um clique parado seleciona.
     if (!inicio || Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 5) return;
     this.aoMover(e);
-    this.selecionar(this.pegar());
+    const id = this.pegar();
+    this.selecionar(id);
+    if (id) this.opcoes.aoClicar?.(id);
   };
   private readonly aoPerderContexto = (e: Event): void => {
     e.preventDefault();
@@ -749,8 +878,12 @@ export class GraphScene {
 
   private pegar(): string | null {
     this.raycaster.setFromCamera(this.ponteiro, this.camera);
-    const hit = this.raycaster.intersectObjects(this.alvos, false)[0];
-    return hit ? this.donoDoAlvo.get(hit.object) ?? null : null;
+    // O raycaster não olha `visible`: nó recolhido (ou encolhendo) não pode ser clicado.
+    for (const hit of this.raycaster.intersectObjects(this.alvos, false)) {
+      const id = this.donoDoAlvo.get(hit.object);
+      if (id && !this.ocultos.has(id)) return id;
+    }
+    return null;
   }
 
   private redimensionar(): void {
@@ -765,26 +898,37 @@ export class GraphScene {
   }
 
   /** Distância que cabe a caixa do grafo na largura E na altura do canvas atual. */
-  private enquadrar(): void {
-    const centro = this.caixa.getCenter(new THREE.Vector3());
+  private distanciaDaCaixa(): number {
     const metade = this.caixa.getSize(new THREE.Vector3()).multiplyScalar(0.5);
     const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
-    const distancia = Math.max(metade.y / tan, metade.x / (tan * this.camera.aspect)) * 1.08 + metade.z;
-    const direcao = new THREE.Vector3(0.1, 0.24, 1).normalize();
-    this.camera.position.copy(centro).addScaledVector(direcao, distancia);
-    this.controls.target.copy(centro);
-    this.focoAlvo.copy(centro);
-    this.controls.minDistance = distancia * 0.3;
-    this.controls.maxDistance = distancia * 2;
-    this.controls.update();
-    this.controls.saveState();
+    return Math.max(metade.y / tan, metade.x / (tan * this.camera.aspect)) * 1.08 + metade.z;
+  }
+
+  /** Limites de zoom e névoa para a distância de enquadramento; `atual` entra para o limite não dar salto. */
+  private ajustarLimites(distancia: number, atual = distancia): void {
+    this.controls.minDistance = Math.min(distancia * 0.3, atual);
+    this.controls.maxDistance = Math.max(distancia * 2, atual);
     const fog = this.scene.fog as THREE.Fog;
     fog.near = distancia * 1.2;
     fog.far = distancia * 3;
   }
 
+  private enquadrar(): void {
+    const centro = this.caixa.getCenter(new THREE.Vector3());
+    const distancia = this.distanciaDaCaixa();
+    const direcao = new THREE.Vector3(0.1, 0.24, 1).normalize();
+    this.distanciaDestino = null;
+    this.camera.position.copy(centro).addScaledVector(direcao, distancia);
+    this.controls.target.copy(centro);
+    this.focoAlvo.copy(centro);
+    this.ajustarLimites(distancia);
+    this.controls.update();
+    this.controls.saveState();
+  }
+
   private readonly aoMexerNaCamera = (): void => {
     this.usuarioMexeu = true;
+    this.distanciaDestino = null;
   };
 
   /* ---------------------------------------------------------------- quadro */
@@ -800,18 +944,53 @@ export class GraphScene {
       this.definirHover(this.pegar());
     }
 
+    let emMovimento = false;
     this.nos.forEach((visual, id) => {
+      const oculto = this.ocultos.has(id);
+      if (!visual.raiz.visible) return;
       if (!reduzido) visual.animar(t);
-      const alvo = id === this.selecionado ? ESCALA_SELECIONADO : id === this.hover ? ESCALA_HOVER : 1;
+      const alvo = oculto ? 0 : id === this.selecionado ? ESCALA_SELECIONADO : id === this.hover ? ESCALA_HOVER : 1;
       this.auxEscala.setScalar(alvo);
       if (reduzido) visual.raiz.scale.copy(this.auxEscala);
       else visual.raiz.scale.lerp(this.auxEscala, 0.16);
+      if (this.emTransicao && id !== this.arrastando?.id) {
+        const destino = this.destinos.get(id);
+        if (destino) {
+          if (reduzido || visual.raiz.position.distanceToSquared(destino) < 1e-6) visual.raiz.position.copy(destino);
+          else {
+            visual.raiz.position.lerp(destino, PASSO_TRANSICAO);
+            emMovimento = true;
+          }
+        }
+      }
+      // Encolheu dentro do pai: sai do render, da sombra e do contorno.
+      if (oculto && visual.raiz.scale.x < 0.02) {
+        visual.raiz.scale.setScalar(0);
+        visual.raiz.visible = false;
+        if (this.destinos.has(id)) visual.raiz.position.copy(this.destinos.get(id)!);
+      }
     });
+    if (this.emTransicao) {
+      this.atualizarArestas();
+      this.emTransicao = emMovimento;
+      const selecionado = this.selecionado ? this.nos.get(this.selecionado) : null;
+      if (selecionado) this.focoAlvo.copy(selecionado.raiz.position);
+    }
+    if (this.distanciaDestino !== null) {
+      const offset = this.auxVetor.copy(this.camera.position).sub(this.controls.target);
+      const atual = offset.length();
+      const proxima = reduzido ? this.distanciaDestino : atual + (this.distanciaDestino - atual) * 0.08;
+      this.camera.position.copy(this.controls.target).add(offset.setLength(proxima));
+      if (Math.abs(proxima - this.distanciaDestino) < this.distanciaDestino * 0.005) {
+        this.ajustarLimites(this.distanciaDestino);
+        this.distanciaDestino = null;
+      }
+    }
 
     if (!reduzido) {
       for (let i = 0; i < this.arestas.length; i += 1) {
-        const { chave, curva } = this.arestas[i];
-        const fora = this.contexto && !this.contexto.arestas.has(chave);
+        const { chave, curva, para } = this.arestas[i];
+        const fora = this.ocultos.has(para) || (this.contexto && !this.contexto.arestas.has(chave));
         curva.getPoint((t * 0.22 + i * 0.137) % 1, this.auxVetor);
         this.auxEscala.setScalar(fora ? 0 : this.contexto ? 1.6 : 1);
         this.particulas.setMatrixAt(i, this.auxMatriz.compose(this.auxVetor, this.quaternionNeutro, this.auxEscala));

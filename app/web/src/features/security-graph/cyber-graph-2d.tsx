@@ -7,6 +7,8 @@
  * com contagem, destaque do caminho selecionado, nós arrastáveis, arrastar o
  * fundo para mover, zoom (roda com o grafo em foco, +/− e botões), legenda,
  * minimapa quando o grafo não cabe e navegação por setas com um só ponto de Tab.
+ * Abrir ou fechar um grupo anima: os filhos saem do pai (ou voltam para ele) e
+ * os outros nós deslizam para o lugar novo.
  *
  * POR QUE EXISTE
  * É a visão de trabalho do grafo: lê bem em qualquer tamanho, não depende de
@@ -21,15 +23,26 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { useMotion } from "../../motion/use-motion";
 import { DAST_RISK_LABELS, DAST_SENSOR_SHORT_LABELS, type DastRisk } from "../../types/dast.types";
 import { svgParaPng } from "./exportar";
-import { caixaDoConteudo, vizinhoNaDirecao, type Direcao, type Kind2D, type No2D, type Visao2D } from "./graph-2d-layout";
+import {
+  caixaDoConteudo,
+  interpolarVisao,
+  vizinhoNaDirecao,
+  type Direcao,
+  type Kind2D,
+  type No2D,
+  type Visao2D,
+  type Visao2DExibida,
+} from "./graph-2d-layout";
 import { contextoDoNo, chaveDaAresta } from "./graph-model";
 import { cor, ICONE_DO_TIPO, ROTULO_TIPO, tokenDoNo } from "./node-visual";
 
@@ -96,6 +109,47 @@ function subtitulo(no: No2D): string {
   }
 }
 
+const DURACAO_GRUPO_MS = 360;
+
+/**
+ * O que o SVG desenha: a própria visão, ou um quadro da transição quando o
+ * conjunto de nós muda (grupo abriu/fechou, filtro). Arrastar e selecionar não
+ * mudam o conjunto, então seguem o ponteiro sem atraso.
+ */
+function useVisaoAnimada(visao: Visao2D, reduzido: boolean): Visao2DExibida {
+  const [quadro, setQuadro] = useState<Visao2DExibida | null>(null);
+  const anterior = useRef(visao);
+  const exibida: Visao2DExibida = quadro ?? visao;
+  const ultimo = useRef(exibida);
+  ultimo.current = exibida;
+
+  // Layout effect: o primeiro quadro entra antes da pintura, sem piscar a visão final.
+  useLayoutEffect(() => {
+    const de = anterior.current;
+    anterior.current = visao;
+    const ids = new Set(de.nodes.map((n) => n.id));
+    if (reduzido || (de.nodes.length === visao.nodes.length && visao.nodes.every((n) => ids.has(n.id)))) {
+      setQuadro(null);
+      return;
+    }
+    // Parte de onde os nós estão na tela agora (uma transição pode ter sido interrompida).
+    const naTela = new Map(ultimo.current.nodes.filter((n) => !n.saindo).map((n) => [n.id, n]));
+    const origem = { ...de, nodes: de.nodes.map((n) => ({ ...n, x: naTela.get(n.id)?.x ?? n.x, y: naTela.get(n.id)?.y ?? n.y })) };
+    const inicio = performance.now();
+    let raf = 0;
+    const passo = (agora: number) => {
+      const t = (agora - inicio) / DURACAO_GRUPO_MS;
+      setQuadro(t < 1 ? interpolarVisao(origem, visao, t) : null);
+      if (t < 1) raf = requestAnimationFrame(passo);
+    };
+    setQuadro(interpolarVisao(origem, visao, 0));
+    raf = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(raf);
+  }, [visao, reduzido]);
+
+  return exibida;
+}
+
 const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 2.5;
 const limitarZoom = (k: number) => Math.min(Math.max(k, ZOOM_MIN), ZOOM_MAX);
@@ -105,6 +159,9 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const { reduzido } = useMotion();
+  const desenho = useVisaoAnimada(visao, reduzido);
+  const porIdDesenho = useMemo(() => new Map(desenho.nodes.map((n) => [n.id, n])), [desenho]);
   const [tamanho, setTamanho] = useState({ w: 0, h: 0 });
   const [vista, setVista] = useState({ x: 0, y: 0, k: 1 });
   const [focoId, setFocoId] = useState<string | null>(null);
@@ -305,9 +362,9 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
           <filter id="cg-sombra" x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="black" floodOpacity="0.25" />
           </filter>
-          {visao.edges.map((edge, i) => {
-            const de = porId.get(edge.source);
-            const para = porId.get(edge.target);
+          {desenho.edges.map((edge, i) => {
+            const de = porIdDesenho.get(edge.source);
+            const para = porIdDesenho.get(edge.target);
             if (!de || !para) return null;
             return (
               <linearGradient key={chaveDaAresta(edge)} id={`cg-g-${i}`} gradientUnits="userSpaceOnUse" x1={de.x} y1={de.y} x2={para.x} y2={para.y}>
@@ -319,9 +376,9 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
         </defs>
 
         <g data-vista transform={`translate(${vista.x} ${vista.y}) scale(${vista.k})`}>
-          {visao.edges.map((edge, i) => {
-            const de = porId.get(edge.source);
-            const para = porId.get(edge.target);
+          {desenho.edges.map((edge, i) => {
+            const de = porIdDesenho.get(edge.source);
+            const para = porIdDesenho.get(edge.target);
             if (!de || !para) return null;
             const x1 = de.x + RAIO[de.kind];
             const x2 = para.x - RAIO[para.kind];
@@ -329,7 +386,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
             const d = `M ${x1} ${de.y} C ${meio} ${de.y}, ${meio} ${para.y}, ${x2} ${para.y}`;
             const noCaminho = contexto?.arestas.has(chaveDaAresta(edge)) ?? false;
             return (
-              <g key={chaveDaAresta(edge)} className="cg-entrar">
+              <g key={chaveDaAresta(edge)} className="cg-entrar" opacity={para.opacidade}>
                 <path
                   d={d}
                   fill="none"
@@ -343,7 +400,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
             );
           })}
 
-          {visao.nodes.map((no) => {
+          {desenho.nodes.map((no) => {
             const raio = RAIO[no.kind];
             const token = tokenDoNo(no);
             const Icone = ICONE_DO_TIPO[no.kind];
@@ -351,6 +408,15 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
             const selecionado = no.id === selecionadoId;
             const apagado = contexto ? !contexto.nos.has(no.id) : false;
             const internet = no.kind === "INTERNET";
+            if (no.saindo) {
+              // Encolhendo para dentro do pai: só desenho, fora da árvore de acessibilidade e do clique.
+              return (
+                <g key={no.id} transform={`translate(${no.x} ${no.y}) scale(${no.opacidade})`} opacity={no.opacidade} aria-hidden="true" pointerEvents="none">
+                  <circle r={raio} fill={cor("--color-bg-surface")} stroke={cor(token)} strokeWidth={2} />
+                  <circle r={raio - 5} fill={cor(token, 0.14)} />
+                </g>
+              );
+            }
             return (
               <g
                 key={no.id}

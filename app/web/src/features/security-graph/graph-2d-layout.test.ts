@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { DastFinding, DastRisk } from "../../types/dast.types";
-import { caixaDoConteudo, COLUNA_X, idDoGrupo, montarVisao2D, vizinhoNaDirecao } from "./graph-2d-layout";
+import { caixaDoConteudo, COLUNA_X, gruposParaMostrar, idDoGrupo, interpolarVisao, montarVisao2D, vizinhoNaDirecao } from "./graph-2d-layout";
 import { buildSecurityGraph, caminhoAte } from "./graph-model";
-import { descreverNo, grupoDoFinding, urlCompleta } from "./node-detail";
+import { descreverNo, urlCompleta } from "./node-detail";
 
 function finding(id: string, risk: DastRisk, normalizedUrl: string): DastFinding {
   return { id, risk, normalizedUrl, title: `F ${id}` } as DastFinding;
@@ -79,8 +79,9 @@ describe("caminho e detalhe do nó", () => {
     expect(descreverNo(grafo, porNo, "finding:nao-existe")).toBeNull();
   });
 
-  it("grupoDoFinding acha o grupo que precisa abrir para mostrar o finding", () => {
-    expect(grupoDoFinding(grafo, "finding:a")).toBe(idDoGrupo(LOGIN));
+  it("gruposParaMostrar acha o grupo que precisa abrir para mostrar o finding", () => {
+    expect(gruposParaMostrar(grafo, "finding:a")).toEqual([idDoGrupo(LOGIN)]);
+    expect(gruposParaMostrar(grafo, LOGIN)).toEqual([]);
   });
 
   it("URL do endpoint sai completa mesmo quando o scan gravou o caminho relativo", () => {
@@ -90,6 +91,32 @@ describe("caminho e detalhe do nó", () => {
     const relativo = buildSecurityGraph("https://exemplo.com/", [finding("r", "LOW", "/login")]);
     const detalhe = descreverNo(relativo, new Map(), "endpoint:/login", "https://exemplo.com/");
     expect(detalhe?.url).toBe("https://exemplo.com/login");
+  });
+});
+
+describe("transição de abrir/fechar grupo", () => {
+  const fechado = montarVisao2D(grafo, new Set());
+  const aberto = montarVisao2D(grafo, new Set([idDoGrupo(LOGIN)]));
+  const grupo = (v: { nodes: { id: string; x: number; y: number }[] }) => v.nodes.find((n) => n.id === idDoGrupo(LOGIN))!;
+
+  it("ao abrir, os findings nascem no grupo e terminam no lugar deles", () => {
+    const inicio = interpolarVisao(fechado, aberto, 0);
+    const b = inicio.nodes.find((n) => n.id === "finding:b")!;
+    expect([b.x, b.y]).toEqual([grupo(fechado).x, grupo(fechado).y]);
+    const fim = interpolarVisao(fechado, aberto, 1);
+    expect(fim.nodes.find((n) => n.id === "finding:b")).toMatchObject(aberto.nodes.find((n) => n.id === "finding:b")!);
+    expect(fim.nodes.some((n) => n.saindo)).toBe(false);
+  });
+
+  it("ao fechar, os findings encolhem para o grupo, somem e levam as arestas junto", () => {
+    const meio = interpolarVisao(aberto, fechado, 0.5);
+    const saindo = meio.nodes.filter((n) => n.saindo);
+    expect(saindo.map((n) => n.id).sort()).toEqual(["finding:a", "finding:b"]);
+    expect(saindo.every((n) => (n.opacidade ?? 1) < 1 && (n.opacidade ?? 0) > 0)).toBe(true);
+    expect(meio.edges).toContainEqual({ source: idDoGrupo(LOGIN), target: "finding:a" });
+    const fim = interpolarVisao(aberto, fechado, 1);
+    const a = fim.nodes.find((n) => n.id === "finding:a")!;
+    expect([a.x, a.y, a.opacidade]).toEqual([grupo(fechado).x, grupo(fechado).y, 0]);
   });
 });
 

@@ -75,6 +75,14 @@ Princípios:
   tecnologias do IP, subdomínios) ocupam a coluna do meio, e as CVEs do IP viram um grupo "CVEs (N)"
   como os findings de um endpoint. Ramo com mais de 6 filhos começa recolhido (o nó ganha o anel e a
   contagem do grupo e alterna no clique). A legenda só lista os tipos presentes no grafo.
+- **Grupos nos dois modos, com o mesmo estado:** o que pende de grupo fechado (findings, CVEs,
+  subdomínios acima de 6) começa escondido também no 3D, onde não há nó de grupo: o endpoint, o IP
+  ou "Subdomínios" leva o selo `▸ N` antes do nome e clicar (ou Espaço) abre e fecha. Abrir no 2D
+  abre no 3D e vice-versa (`ocultosPorGrupo` em `graph-2d-layout.ts` é a regra única).
+- **Animação de abrir/fechar:** os filhos saem de dentro do pai e voltam para ele (no 2D com
+  `interpolarVisao`, ~360 ms com desaceleração; no 3D os objetos crescem a partir do pai enquanto os
+  vizinhos deslizam para o layout novo e a câmera recua até caber). Com movimento reduzido, o
+  layout troca sem transição. Buscar ou selecionar no painel um nó escondido abre o grupo dele.
 - CVE tem o **cartão CVSS** no painel e no topo do modal: a nota grande na cor do risco, a faixa
   oficial ("Crítica" inclusive, que o `DastRisk` não tem), versão, vetor e link para o NVD.
 - Arestas em degradê da cor da origem para a do destino; o caminho selecionado ganha fluxo animado e
@@ -99,12 +107,13 @@ Princípios:
 | Ação | 2D | 3D |
 | --- | --- | --- |
 | Selecionar | clique | clique |
+| Abrir/fechar grupo | clique no grupo (ou no nó com anel), Enter/Espaço | clique no nó com selo `▸ N`, Espaço |
 | Detalhes | duplo clique, Shift+Enter, "Expandir detalhes" | duplo clique, Enter |
 | Mover | arrastar o fundo | arrastar o fundo gira |
 | Reposicionar nó | arrastar o nó | arrastar o objeto (plano de frente para a câmera) |
 | Zoom | roda com foco, `+`/`-`, botões | roda com foco, botões |
 | Voltar | Recentralizar · Restaurar layout · Ajustar | idem |
-| Buscar | busca com sugestões: seleciona, abre o grupo e centraliza | seleciona e foca a câmera |
+| Buscar | busca com sugestões: seleciona, abre o grupo e centraliza | seleciona, abre o grupo e foca a câmera |
 | Filtrar | chips de severidade | idem |
 | Exportar | PNG do grafo inteiro em 2× | PNG da cena com os nomes |
 
@@ -145,8 +154,8 @@ link secundário. Erros chegam como frase acionável (DNS, porta recusada, timeo
 
 | Camada | Onde |
 | --- | --- |
-| Vitest (puro) | `graph-model.test.ts`, `graph-2d-layout.test.ts`, `exportar.test.ts`, `scene/node-meshes.test.ts`, `scene/qualidade.test.ts` |
-| Playwright | `app/web/e2e/cybergraph.spec.ts` (CG-01…CG-08: grupo, painel, modal, triagem, busca, filtro, arraste, teclado, PNG 2D/3D, movimento reduzido, sensores) |
+| Vitest (puro) | `graph-model.test.ts`, `graph-2d-layout.test.ts` (inclui a transição), `graph-descoberta.test.ts` (inclui os grupos do 3D), `exportar.test.ts`, `scene/node-meshes.test.ts`, `scene/qualidade.test.ts` |
+| Playwright | `app/web/e2e/cybergraph.spec.ts` (CG-01…CG-09: grupo, painel, modal, triagem, busca, filtro, arraste, teclado, PNG 2D/3D, movimento reduzido, sensores, grupos no 3D) |
 | Vitest (tela) | `pages/dast-page.test.tsx` (autorização obrigatória, trocar alvo desmarca, demonstração nunca vira real, URL com credencial, mensagens de 409 e 429) |
 
 ## Limites conhecidos 🚧
