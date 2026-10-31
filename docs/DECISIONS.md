@@ -861,3 +861,14 @@ controller mais usado do produto não era trabalho deste CP. A duplicação é
 vigiada pelo teste **`SQ-U-08`**, que lê o controller e falha se ele ganhar um
 parâmetro que o utilitário não conhece — e o canário já cobrou a dívida uma vez,
 quando `assignedTo` entrou na listagem.
+
+## Menu de acessibilidade — 2026-10-31
+
+### Nova — preferências de acessibilidade no navegador, não na conta
+
+Menu no canto superior direito de todas as telas (exceto o relatório do ZAP,
+iframe de terceiros): tamanho do texto até 200%, alto contraste, reduzir
+animações, sublinhar links, espaçamento de texto e foco reforçado. Guardado em
+`localStorage` como o tema, aplicado antes do primeiro paint. O alto contraste é
+um **reforço** sobre o escuro e o claro (texto ≥ 7:1, medido), não um terceiro
+tema. Ver **[[ADR-049 - Menu de acessibilidade com preferencias no navegador]]**.
