@@ -73,6 +73,13 @@ A aba virou **CyberGraph**, com o 2D como padrão e o 3D como alternativa. O que
 - **Layout 3D sem sobreposição**: o anel de endpoints e a esfera de findings deram lugar a uma pilha
   vertical com grade de findings de frente para a câmera; nomes que colidiriam na tela são escondidos
   por prioridade a cada 4 quadros (projeção + teste de retângulos, sem leitura de layout por quadro).
+- **Qualidade adaptativa no 3D** (`scene/qualidade.ts`): média de quadro acima de 25 ms por ~2 s baixa
+  a resolução para 1×; se continuar lento, desliga bloom e brilho do contorno e espaça a sombra. Só
+  desce, nunca sobe, para não piscar. Responde à falta de medição em GPU fraca sem esconder que ela
+  ainda não foi feita.
+- **Exportar PNG** sem dependência nova: no 2D o SVG é clonado com as variáveis CSS resolvidas e
+  rasterizado em canvas; no 3D o render e a cópia do canvas WebGL acontecem na mesma tarefa (sem
+  `preserveDrawingBuffer`) e os nomes visíveis são desenhados por cima.
 
 ## Relacionado
 

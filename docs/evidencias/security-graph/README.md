@@ -83,3 +83,20 @@ seções em cartões e entrada escalonada.
 | Fechar o modal | some em ~160 ms (fade + escala) |
 | Trocar de grupo para finding dentro do modal | conteúdo reanima pela troca de nó |
 | `prefers-reduced-motion` | não emulado; as variantes vêm de `useMotion()`, que já remove deslocamento e escala |
+
+## Sensores passivos (headers e SSL/TLS) e "só escolher o alvo" — 2026-10-31
+
+| Arquivo | O que mostra |
+| --- | --- |
+| `23-nova-analise-so-o-alvo.jpg` | Nova análise: só o alvo e a autorização no mesmo passo; as três verificações descritas antes de iniciar; demonstração como link secundário |
+| `24-scan-real-faixa-de-sensores.jpg` | Scan **real** em `http://host.docker.internal:8086/` (o próprio Vulnera): faixa com ZAP (9 achados, 33 s), headers (0 achados — a app já envia todos) e SSL/TLS ("Alvo sem HTTPS"); selo "sensor ssl" na lista |
+| `25-cybergraph-finding-do-sensor-headers.jpg` | Scan simulado: "CSP ausente" no CyberGraph com subtítulo "· Headers" e "Sensor de origem: Headers de segurança" no painel |
+
+| Verificação | Resultado |
+| --- | --- |
+| Scan real pela tela (alvo + autorização → Iniciar análise) | STARTING → SPIDER → PASSIVE → COMPLETED em 33 s; `simulated=false`; sensores `zap`, `headers`, `ssl` todos `OK` |
+| Alvo inalcançável (`:59999`) | `FAILED` em 20 s, `simulated=false`, 0 achados; mensagem legível sem o código técnico |
+| URL inválida / 3º pedido seguido | 400 `INVALID_TARGET_URL` / 429 `RATE_LIMITED` com `retryAfterSeconds` → "Tente novamente em N s" |
+| Sensor SSL contra servidores reais | example.com OK · expired → expirado · self-signed → não confiável · wrong.host → nome divergente · TLS 1.0 → obsoleto · DNS inexistente → `UNAVAILABLE` legível |
+| Sensor de headers real | `:8086` → OK sem achados · porta fechada → `UNAVAILABLE` ("a porta do alvo recusou a conexão") |
+| Suítes | API 748/748 (`--runInBand`) · web 425/427 (2 falhas só no `findings-table.test.tsx` não versionado) |

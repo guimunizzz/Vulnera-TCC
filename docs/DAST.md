@@ -669,7 +669,15 @@ só baixado quando escolhido; sem WebGL o botão fica desabilitado). A escolha
 fica no `localStorage` do navegador. Decisão e garantias em
 [[ADR-048 - Grafo 3D do scan DAST na area autenticada]] (seção "Evolução").
 
-- **Barra:** Recentralizar · Restaurar layout · 2D/3D.
+- **Barra:** Recentralizar · Restaurar layout · Exportar PNG · 2D/3D, e o selo
+  "Fonte: OWASP ZAP" (sensores passivos são a próxima fase).
+- **Busca e filtro:** a busca (com sugestões) seleciona o nó, abre o grupo dele
+  e centraliza a vista; os chips de severidade tiram do grafo os findings
+  desmarcados e a legenda diz quantos estão aparecendo.
+- **Zoom:** botões + / − / ajustar no canto do palco (a roda continua valendo
+  com o grafo em foco); no 2D, `+` e `-` no teclado.
+- **Exportar PNG:** no 2D, o grafo inteiro em 2×, com as cores do tema atual;
+  no 3D, a cena como está na tela, com os nomes visíveis desenhados por cima.
 - **2D:** colunas Internet → alvo → endpoint → "Findings (N)". Clicar no grupo
   expande os findings dele; arestas em degradê; o caminho selecionado ganha fluxo
   animado e o resto esmaece.
@@ -696,9 +704,28 @@ fica no `localStorage` do navegador. Decisão e garantias em
 
 - **Interação:** arrastar o fundo move a vista (2D) ou gira (3D); com o grafo em
   foco, a roda aproxima; **Recentralizar** volta ao enquadramento inicial.
-- **Teclado:** 2D — Tab percorre os nós, Enter seleciona, Shift+Enter abre o
+- **Teclado:** 2D — um único ponto de Tab no grafo; as setas andam entre os
+  nós (← → entre colunas, ↑ ↓ na coluna), Enter seleciona, Shift+Enter abre o
   modal, Esc limpa. 3D — Tab foca a cena, setas percorrem os nós, Enter abre,
   Esc limpa.
+- **2D:** legenda de tipos e severidades; minimapa opcional pelo botão no grupo
+  de zoom (clicar/arrastar move a vista). Fica desligado por padrão: fixo sobre o
+  grafo, ele sempre pode cobrir algum nó.
+- **Sensores:** a faixa "Sensores deste scan" (acima das abas) mostra o status
+  do ZAP, do sensor de headers e do sensor de certificado SSL/TLS (OK, Sem dados,
+  Não se aplica, Indisponível, Erro), quantos achados cada um gerou, a duração e a
+  mensagem — o resumo do certificado ou o motivo legível de uma falha. O finding
+  mostra "Sensor de origem" no painel e no modal, a lista de Achados marca os que
+  não vieram do ZAP e o nó do alvo mostra o certificado. Detalhes em `DISCOVERY.md`.
+- **Nova análise:** a pessoa só informa o alvo e marca a autorização; ZAP,
+  headers e certificado rodam em sequência e o resultado chega no fim. Trocar o
+  alvo desmarca a autorização. A demonstração (sem tocar a rede) é um link
+  secundário. Um scan real que conclui com sensor indisponível mostra
+  "Análise concluída com avisos" com o motivo.
+- **3D em máquina fraca:** se a média de quadro passar de 25 ms (~40 FPS), a
+  cena baixa a resolução e, se ainda faltar, desliga bloom e sombra dinâmica,
+  avisando na tela. Um aviso também conta quantos nomes estão ocultos por
+  colisão.
 - **Limites:** até 300 nós (corta INFO antes de HIGH e avisa). A aba
   **Achados** continua sendo a visão de trabalho.
 - **Escopo honesto:** usa só o que o ZAP já grava. Sensores, `ObservedAsset`,
