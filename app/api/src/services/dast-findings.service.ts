@@ -218,6 +218,11 @@ export interface CandidateFinding {
   reference: string | null;
   /** Sensor de origem; ausente = "zap" (o default da coluna). */
   sensorKey?: string;
+  /** Só em findings de CVE (sensor internetdb); CVSS vindo do NVD. */
+  cveId?: string | null;
+  cvssScore?: number | null;
+  cvssVersion?: string | null;
+  cvssVector?: string | null;
 }
 
 /**

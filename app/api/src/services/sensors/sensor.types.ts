@@ -10,10 +10,10 @@
  * fórmula do fingerprint, a deduplicação, a triagem e a promoção não mudam.
  */
 
-import type { DastSensorStatus } from "@prisma/client";
+import type { DastAssetKind, DastSensorStatus } from "@prisma/client";
 import type { CandidateFinding } from "../dast-findings.service";
 
-export type SensorKey = "zap" | "headers" | "ssl";
+export type SensorKey = "zap" | "headers" | "ssl" | "fingerprint" | "internetdb" | "crtsh";
 
 export interface SensorContext {
   targetUrl: string;
@@ -21,12 +21,24 @@ export interface SensorContext {
   simulated: boolean;
   /** Abort do watchdog/cancelamento: o sensor desiste junto com o scan. */
   signal?: AbortSignal;
+  /** Sinal de vida para o watchdog em sensores lentos (fila do NVD). */
+  pulso?: () => void;
+}
+
+/** Ativo observado (topologia, não achado): IP, porta, tecnologia, subdomínio. */
+export interface ObservedAsset {
+  kind: DastAssetKind;
+  value: string;
+  /** A quem o ativo se liga no grafo; null = ao host do alvo. */
+  parentValue: string | null;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SensorResult {
   status: DastSensorStatus;
   message?: string;
   findings: CandidateFinding[];
+  assets?: ObservedAsset[];
 }
 
 export interface Sensor {

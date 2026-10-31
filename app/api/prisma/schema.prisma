@@ -931,6 +931,7 @@ model DastScan {
   requestedBy User            @relation(fields: [requestedById], references: [id])
   findings    DastFinding[]
   sensorRuns  DastSensorRun[]
+  assets      DastObservedAsset[]
 
   @@index([requestedById])
   @@index([status])
@@ -959,6 +960,47 @@ model DastSensorRun {
   @@unique([scanId, sensorKey])
 }
 
+// O que os sensores de descoberta OBSERVARAM sobre o alvo — não é achado, é
+// topologia: IP, portas abertas, tecnologias e subdomínios. Alimenta o
+// CyberGraph. `parentValue` diz a quem o ativo se liga no grafo (porta → IP,
+// IP → host do alvo).
+model DastObservedAsset {
+  id          String         @id @default(cuid())
+  scanId      String
+  kind        DastAssetKind
+  value       String         @db.VarChar(255)
+  parentValue String?        @db.VarChar(255)
+  sensorKey   String         @db.VarChar(32)
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+
+  scan DastScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([scanId, kind, value])
+}
+
+enum DastAssetKind {
+  IP
+  PORT
+  TECHNOLOGY
+  SUBDOMAIN
+}
+
+// Cache GLOBAL das CVEs consultadas no NVD (NIST). Dado público: não tem
+// tenant nem dono. Existe porque o NVD sem chave aceita 5 consultas a cada
+// 30 s — sem cache, cada scan repetiria as mesmas consultas lentas.
+model CveRecord {
+  id          String    @id @db.VarChar(32) // "CVE-2021-44228"
+  description String?   @db.Text
+  cvssScore   Float?
+  cvssVersion String?   @db.VarChar(8)
+  cvssVector  String?   @db.VarChar(255)
+  cweId       String?   @db.VarChar(32)
+  publishedAt DateTime?
+  references  Json?
+  fetchedAt   DateTime  @default(now())
+}
+
 // DastFinding — um alerta do ZAP já normalizado (1 instance = 1 finding).
 // fingerprint = sha256(pluginId + "|" + normalizedUrl + "|" + (param ?? ""))
 // — NUNCA inclui evidence (ela muda entre scans da mesma vulnerabilidade).
@@ -984,6 +1026,13 @@ model DastFinding {
   // namespace (`sensor:headers:csp-ausente`), então o fingerprint e a
   // deduplicação continuam com a mesma fórmula.
   sensorKey     String   @default("zap") @db.VarChar(32)
+  // Só para findings de CVE (sensor internetdb): a CVE é POTENCIAL — deduzida
+  // pela versão do software, nunca testada no alvo. O CVSS vem do NVD (NIST)
+  // e fica copiado aqui para o finding não mudar se o NVD reavaliar depois.
+  cveId         String?  @db.VarChar(32)
+  cvssScore     Float?
+  cvssVersion   String?  @db.VarChar(8)
+  cvssVector    String?  @db.VarChar(255)
 
   // ---------------------------------------------------------------------
   // Triagem dentro do silo (ADR-032). Não substitui a promoção pra

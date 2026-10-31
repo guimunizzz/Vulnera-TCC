@@ -53,7 +53,7 @@ import {
 import type { DastWatchdog, WatchdogRunContext, WatchdogSnapshot } from "./dast-watchdog.service";
 import { extractFindingsFromReport, type RiskCounters } from "./dast-findings.service";
 import type { Sensor, SensorResult } from "./sensors/sensor.types";
-import type { DastSensorRun } from "@prisma/client";
+import type { DastObservedAsset, DastSensorRun } from "@prisma/client";
 import type { UserRole } from "../models/user.model";
 
 interface Actor {
@@ -320,12 +320,23 @@ export class DastScanService {
     return this.repository.findSensorRuns(id);
   }
 
+  async listAssets(actor: Actor, id: string): Promise<DastObservedAsset[]> {
+    await this.getOwnedScan(actor, id);
+    return this.repository.findAssets(id);
+  }
+
   /**
    * Registra o ZAP como sensor e roda os passivos em sequência. Nada aqui
    * derruba o scan: um sensor que falha vira UNAVAILABLE/ERROR gravado e um
    * aviso devolvido para o `warningMessage` — nunca dado simulado no modo real.
    */
-  private async runSensors(scan: DastScan, simulated: boolean, zapDurationMs: number | undefined, signal: AbortSignal): Promise<string[]> {
+  private async runSensors(
+    scan: DastScan,
+    simulated: boolean,
+    zapDurationMs: number | undefined,
+    signal: AbortSignal,
+    pulso: () => void,
+  ): Promise<string[]> {
     const avisos: string[] = [];
     const agora = new Date();
     const duracaoZap = zapDurationMs ?? 0;
@@ -339,8 +350,10 @@ export class DastScanService {
       const inicio = new Date();
       let resultado: SensorResult;
       try {
-        resultado = await sensor.run({ targetUrl: scan.targetUrl, simulated, signal });
+        pulso();
+        resultado = await sensor.run({ targetUrl: scan.targetUrl, simulated, signal, pulso });
         if (resultado.findings.length > 0) await this.repository.persistFindingsAndUpdateCounters(scan.id, resultado.findings);
+        if (resultado.assets?.length) await this.repository.saveAssets(scan.id, sensor.key, resultado.assets);
       } catch (err) {
         resultado = { status: "ERROR", message: `Falha no sensor ${sensor.key}: ${(err as Error).message}`, findings: [] };
       }
@@ -436,7 +449,10 @@ export class DastScanService {
       }
 
       void counters; // já refletido no banco via persistFindingsAndUpdateCounters; aqui só pra deixar o fluxo explícito
-      const avisosDosSensores = await this.runSensors(scan, outcome.simulated, outcome.durationMs, ctx.signal);
+      const avisosDosSensores = await this.runSensors(scan, outcome.simulated, outcome.durationMs, ctx.signal, () =>
+        // Sensores lentos (fila do NVD) pulsam o watchdog para não serem tomados por travados.
+        ctx.heartbeat("REPORT", 99),
+      );
       if (outcome.simulated) {
         this.watchdog.raise("warn", scanId, outcome.warningMessage ?? "Scan concluído com resultado simulado.");
       }
