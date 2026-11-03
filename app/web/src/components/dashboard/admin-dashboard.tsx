@@ -19,11 +19,13 @@ import { useQuery } from "@tanstack/react-query";
 import { companiesApi } from "../../lib/api/companies.api";
 import { subscriptionsApi } from "../../lib/api/subscriptions.api";
 import { useFindingsResumo } from "../../hooks/use-findings";
+import { Check } from "lucide-react";
 import { Card } from "../ui/card";
+import { Badge } from "../ui/badge";
 import { LinkButton } from "../ui/button";
-import { Alert } from "../ui/alert";
+import { cn } from "../../lib/cn";
 import { KpiCard } from "./kpi-card";
-import { RegiaoCarregando, Skeleton } from "../ui/card";
+import { DashboardCarregando } from "./dashboard-carregando";
 import { StaggerItem, StaggerList } from "../../motion/components";
 import { useMotion } from "../../motion/use-motion";
 import { DURACAO, EASE } from "../../motion/tokens";
@@ -63,8 +65,10 @@ export function AdminDashboard() {
   const maiorVolume = topCompanies[0]?.count ?? 0;
 
   if (loadingCompanies || loadingActive || loadingPending || resumo.carregando) {
-    return <AdminDashboardSkeleton />;
+    return <DashboardCarregando rotulo="Carregando dashboard administrativo" />;
   }
+
+  const pendentes = pendingSubs?.length ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,6 +77,7 @@ export function AdminDashboard() {
           <KpiCard
             label="Empresas ativas"
             value={activeSubs?.length ?? 0}
+            legenda="Com assinatura ativa"
             icon={<CompaniesIcon />}
             tone="accent"
           />
@@ -80,16 +85,18 @@ export function AdminDashboard() {
         <StaggerItem indice={1}>
           <KpiCard
             label="Assinaturas pendentes"
-            value={pendingSubs?.length ?? 0}
+            value={pendentes}
+            legenda={pendentes > 0 ? "Aguardando a sua aprovação" : "Nenhuma aprovação aguardando"}
             icon={<PendingIcon />}
-            tone={(pendingSubs?.length ?? 0) > 0 ? "warning" : "neutral"}
-            accentClassName={(pendingSubs?.length ?? 0) > 0 ? "text-warning-ink" : undefined}
+            tone={pendentes > 0 ? "warning" : "neutral"}
+            accentClassName={pendentes > 0 ? "text-warning-ink" : undefined}
           />
         </StaggerItem>
         <StaggerItem indice={2} className="sm:col-span-2 xl:col-span-1">
           <KpiCard
             label="Críticos em aberto (global)"
             value={resumo.criticosAbertos}
+            legenda={resumo.criticosAbertos > 0 ? "Prioridade de tratamento" : "Nada crítico em aberto"}
             icon={<CriticalIcon />}
             tone={resumo.criticosAbertos > 0 ? "critical" : "neutral"}
             accentClassName={resumo.criticosAbertos > 0 ? "text-severity-critical-ink" : undefined}
@@ -97,105 +104,104 @@ export function AdminDashboard() {
         </StaggerItem>
       </StaggerList>
 
-      {(pendingSubs?.length ?? 0) > 0 && (
-        <Alert tom="atencao" titulo="Aprovações aguardando ação" className="border border-warning/25">
-          {pendingSubs!.length} assinatura{pendingSubs!.length > 1 ? "s" : ""} aguardando aprovação.{" "}
-          <Link to="/admin/subscriptions" className="font-medium underline underline-offset-2">
-            Revisar agora
-          </Link>
-          .
-        </Alert>
-      )}
+      {/* Ranking e fila de aprovações lado a lado (proposta da Fase 5): a
+          aprovação deixa de ser um alerta solto mais uma faixa no rodapé. */}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(16rem,1fr)]">
+        <Card
+          titulo="Empresas por volume de findings"
+          descricao="Ranking calculado a partir dos findings visíveis no escopo administrativo."
+          acoes={topCompanies.length > 0 ? (
+            <Badge tom="neutro" className="whitespace-nowrap">
+              {topCompanies.length} {topCompanies.length === 1 ? "empresa" : "empresas"}
+            </Badge>
+          ) : undefined}
+          semPadding
+          className="overflow-hidden"
+        >
+          {topCompanies.length === 0 && (
+            <p className="p-5 text-sm text-fg-muted">Nenhum finding registrado ainda.</p>
+          )}
+          {topCompanies.length > 0 && (
+            <StaggerList as="ol" className="mt-4 divide-y divide-subtle border-t border-subtle">
+              {topCompanies.map((company, index) => {
+                const volumeRelativo = maiorVolume > 0 ? Math.round((company.count / maiorVolume) * 100) : 0;
 
-      <Card
-        titulo="Top empresas por volume de findings"
-        descricao="Ranking calculado a partir dos findings visíveis no escopo administrativo."
-        semPadding
-        className="overflow-hidden"
-      >
-        {topCompanies.length === 0 && (
-          <p className="p-5 text-sm text-fg-muted">Nenhum finding registrado ainda.</p>
-        )}
-        {topCompanies.length > 0 && (
-          <StaggerList as="ol" className="divide-y divide-subtle" >
-            {topCompanies.map((company, index) => {
-              const volumeRelativo = maiorVolume > 0 ? Math.round((company.count / maiorVolume) * 100) : 0;
-
-              return (
-                <StaggerItem
-                  as="li"
-                  indice={index}
-                  key={company.companyId}
-                  className="grid gap-3 px-4 py-4 transition-colors duration-fast hover:bg-hovered sm:grid-cols-[2rem_minmax(9rem,1fr)_minmax(10rem,1.4fr)_auto] sm:items-center"
-                >
-                  <span className="font-mono text-sm font-semibold text-accent-ink" aria-label={`Posição ${index + 1}`}>
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span className="min-w-0 truncate text-sm font-medium text-fg">{company.name}</span>
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      aria-hidden="true"
-                      className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-inset"
-                      data-volume-relativo={volumeRelativo}
-                    >
-                      <motion.div
-                        className="h-full rounded-full bg-accent"
-                        initial={reduzido ? false : { width: 0 }}
-                        animate={{ width: `${volumeRelativo}%` }}
-                        transition={{ duration: reduzido ? DURACAO.instant : DURACAO.chart, ease: EASE.out }}
-                      />
-                    </div>
-                    <span className="w-20 text-right font-mono text-xs text-fg-muted" data-numeric>
-                      {company.count} finding{company.count === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <Link
-                    to={`/companies/${company.companyId}/maturity`}
-                    className="justify-self-start text-xs font-medium text-accent-ink underline-offset-2 hover:underline sm:justify-self-end"
+                return (
+                  <StaggerItem
+                    as="li"
+                    indice={index}
+                    key={company.companyId}
+                    className="grid gap-3 px-4 py-4 transition-colors duration-fast hover:bg-hovered sm:grid-cols-[2rem_minmax(9rem,1fr)_minmax(10rem,1.4fr)_auto] sm:items-center"
                   >
-                    Maturidade
-                  </Link>
-                </StaggerItem>
-              );
-            })}
-          </StaggerList>
-        )}
-      </Card>
+                    <span className="font-mono text-sm font-semibold text-accent-ink" aria-label={`Posição ${index + 1}`}>
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="min-w-0 truncate text-sm font-medium text-fg">{company.name}</span>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div
+                        aria-hidden="true"
+                        className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-inset"
+                        data-volume-relativo={volumeRelativo}
+                      >
+                        <motion.div
+                          className="h-full rounded-full bg-accent"
+                          initial={reduzido ? false : { width: 0 }}
+                          animate={{ width: `${volumeRelativo}%` }}
+                          transition={{ duration: reduzido ? DURACAO.instant : DURACAO.chart, ease: EASE.out }}
+                        />
+                      </div>
+                      <span className="w-20 text-right font-mono text-xs text-fg-muted" data-numeric>
+                        {company.count} finding{company.count === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <Link
+                      to={`/companies/${company.companyId}/maturity`}
+                      className="justify-self-start text-xs font-medium text-accent-ink underline-offset-2 hover:underline sm:justify-self-end"
+                    >
+                      Maturidade
+                    </Link>
+                  </StaggerItem>
+                );
+              })}
+            </StaggerList>
+          )}
+        </Card>
 
-      <div className="flex flex-col items-start justify-between gap-3 rounded-container border border-subtle bg-surface p-4 sm:flex-row sm:items-center">
-        <div>
-          <p className="text-sm font-medium text-fg">Fila de aprovações</p>
-          <p className="mt-1 text-xs text-fg-muted">Revise solicitações e mantenha o acesso das empresas em dia.</p>
-        </div>
-        <LinkButton to="/admin/subscriptions" variant="secundario" className="shrink-0">
-          Ver assinaturas pendentes
-        </LinkButton>
+        <Card titulo="Aprovações" descricao="Solicitações de assinatura das empresas.">
+          <div className="mt-4 flex items-start gap-3">
+            <span
+              aria-hidden="true"
+              className={cn(
+                "grid h-8 w-8 shrink-0 place-items-center rounded-full",
+                pendentes > 0 ? "bg-warning-surface text-warning-ink" : "bg-success-surface text-success-ink",
+              )}
+            >
+              {pendentes > 0 ? <PendingIcon /> : <Check className="h-4 w-4" />}
+            </span>
+            <div>
+              <p className="text-sm font-medium text-fg">
+                {pendentes > 0
+                  ? `${pendentes} ${pendentes === 1 ? "assinatura aguardando" : "assinaturas aguardando"} aprovação`
+                  : "Tudo em dia"}
+              </p>
+              <p className="mt-1 text-xs text-fg-muted">
+                {pendentes > 0
+                  ? "Empresas sem aprovação ainda não conseguem cadastrar aplicações."
+                  : "Nenhuma aprovação pendente."}
+              </p>
+            </div>
+          </div>
+          <LinkButton
+            to="/admin/subscriptions"
+            variant={pendentes > 0 ? "primario" : "secundario"}
+            larguraTotal
+            className="mt-5"
+          >
+            {pendentes > 0 ? "Revisar assinaturas" : "Ver assinaturas"}
+          </LinkButton>
+        </Card>
       </div>
     </div>
-  );
-}
-
-function AdminDashboardSkeleton() {
-  return (
-    <RegiaoCarregando rotulo="Carregando dashboard administrativo" className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {[0, 1, 2].map((item) => (
-          <Card key={item} semPadding className="min-h-[8rem] p-5">
-            <div className="flex items-center justify-between gap-4">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-9 w-9" />
-            </div>
-            <Skeleton className="mt-6 h-8 w-20" />
-          </Card>
-        ))}
-      </div>
-      <Card semPadding className="p-5">
-        <Skeleton className="h-4 w-56" />
-        <div className="mt-5 flex flex-col gap-4">
-          {[0, 1, 2].map((item) => <Skeleton key={item} className="h-10 w-full" />)}
-        </div>
-      </Card>
-    </RegiaoCarregando>
   );
 }
 

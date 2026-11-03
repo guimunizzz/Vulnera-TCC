@@ -179,6 +179,12 @@ afterEach(() => {
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
 });
 
+/** Desde a Fase 5 do refactor web-motion-3d, Contexto e Remover moram no menu "⋯" da linha. */
+async function escolherNoMenu(user: ReturnType<typeof userEvent.setup>, aplicacao: string, item: string): Promise<void> {
+  await user.click(screen.getByRole("button", { name: `Mais ações para ${aplicacao}` }));
+  await user.click(await screen.findByRole("menuitem", { name: item }));
+}
+
 describe("ApplicationsPage", () => {
   it("APP-CTX-01 — CLIENT OWNER edita os seis campos, salva e reabre o contexto atualizado", async () => {
     entrarComo("CLIENT");
@@ -192,7 +198,7 @@ describe("ApplicationsPage", () => {
     });
     renderizarPagina();
     await screen.findByText("Painel interno");
-    const abrirContexto = () => user.click(within(screen.getByRole("row", { name: /Painel interno/ })).getByRole("button", { name: "Contexto" }));
+    const abrirContexto = () => escolherNoMenu(user, "Painel interno", "Editar contexto de risco");
     await abrirContexto();
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Criticidade" }), "HIGH");
@@ -221,7 +227,7 @@ describe("ApplicationsPage", () => {
     const user = userEvent.setup();
     renderizarPagina();
     await screen.findByText("Portal do Cliente");
-    await user.click(within(screen.getByRole("row", { name: /Portal do Cliente/ })).getByRole("button", { name: "Contexto" }));
+    await escolherNoMenu(user, "Portal do Cliente", "Editar contexto de risco");
     await user.selectOptions(screen.getByRole("combobox", { name: "Criticidade" }), "LOW");
     expect(screen.getByRole("button", { name: "Salvar contexto" })).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent("Só um administrador");
@@ -234,7 +240,7 @@ describe("ApplicationsPage", () => {
     api.updateApplication.mockRejectedValue(erroDaApi("FORBIDDEN"));
     renderizarPagina();
     await screen.findByText("Painel interno");
-    await user.click(within(screen.getByRole("row", { name: /Painel interno/ })).getByRole("button", { name: "Contexto" }));
+    await escolherNoMenu(user, "Painel interno", "Editar contexto de risco");
     await user.type(screen.getByRole("textbox", { name: "Dono técnico" }), "Squad QA");
     await user.click(screen.getByRole("button", { name: "Salvar contexto" }));
     expect(await screen.findByText("Você não tem permissão para fazer isso.")).toBeInTheDocument();
@@ -249,8 +255,8 @@ describe("ApplicationsPage", () => {
 
     expect(await screen.findByText("Portal do Cliente")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Aplicações" })).toBeInTheDocument();
-    expect(screen.getByText("2", { selector: "[data-numeric]" })).toBeInTheDocument();
-    expect(screen.getByText("de 5 vagas no plano PRO")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Aplicações" }).parentElement).toHaveTextContent("Aplicações2 aplicações");
+    expect(screen.getByText("Plano PRO: 2 de 5 vagas")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Capacidade de aplicações do plano" })).toHaveAttribute("aria-valuenow", "2");
     expect(screen.getByText("Painel interno")).toBeInTheDocument();
 
@@ -261,14 +267,18 @@ describe("ApplicationsPage", () => {
 
   it("APP-VIS-02 — PENTESTER mantém ações de leitura e análise, sem ações de gestão", async () => {
     entrarComo("PENTESTER");
+    const user = userEvent.setup();
     renderizarPagina();
 
     const table = await screen.findByRole("table");
-    expect(within(table).getAllByRole("link", { name: "Painel" })).toHaveLength(2);
+    // O nome da aplicação é o link do painel.
+    expect(within(table).getByRole("link", { name: "Portal do Cliente" })).toHaveAttribute("href", "/applications/app-1/dashboard");
+    expect(within(table).getByRole("link", { name: "Painel interno" })).toHaveAttribute("href", "/applications/app-2/dashboard");
     expect(within(table).getAllByRole("link", { name: "Nova análise" })).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Nova aplicação" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Contexto" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Remover" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Mais ações para Portal do Cliente" }));
+    const itens = (await screen.findAllByRole("menuitem")).map((item) => item.textContent);
+    expect(itens).toEqual(["Abrir painel"]);
     expect(api.companies).not.toHaveBeenCalled();
     expect(api.subscription).not.toHaveBeenCalled();
     expect(api.plans).not.toHaveBeenCalled();
@@ -308,8 +318,7 @@ describe("ApplicationsPage", () => {
     });
 
     expect(await screen.findByText("Portal do Cliente")).toBeInTheDocument();
-    expect(screen.getByText("2", { selector: "[data-numeric]" })).toBeInTheDocument();
-    expect(screen.getByText("alvos registrados")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Aplicações" }).parentElement).toHaveTextContent("Aplicações2 aplicações");
     expect(screen.queryByRole("progressbar", { name: "Capacidade de aplicações do plano" })).not.toBeInTheDocument();
     expect(api.subscription).not.toHaveBeenCalled();
     expect(api.plans).not.toHaveBeenCalled();
@@ -503,7 +512,7 @@ describe("ApplicationsPage", () => {
       .mockRejectedValueOnce(erroDaApi("PLAN_LIMIT_REACHED"));
     renderizarPagina();
 
-    expect(await screen.findByText("de 5 vagas no plano PRO")).toBeInTheDocument();
+    expect(await screen.findByText("Plano PRO: 2 de 5 vagas")).toBeInTheDocument();
     abrirModal();
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Alvo da própria empresa" } });
     fireEvent.click(screen.getByRole("button", { name: "Criar" }));
@@ -622,5 +631,39 @@ describe("ApplicationsPage", () => {
     expect(screen.getByLabelText("Nome")).toHaveValue("Sessão nova");
     expect(screen.queryByText("A empresa selecionada não está mais disponível. Atualizamos a lista; escolha outra empresa.")).not.toBeInTheDocument();
     expect(api.applications).toHaveBeenCalledTimes(2);
+  });
+
+  it("APP-VIS-05 — busca e ambiente filtram só no navegador, com contagem e limpeza", async () => {
+    entrarComo("CLIENT");
+    const user = userEvent.setup();
+    renderizarPagina();
+    await screen.findByText("Portal do Cliente");
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filtrar por ambiente" }), "HOMOL");
+    const table = screen.getByRole("table");
+    expect(within(table).queryByText("Portal do Cliente")).not.toBeInTheDocument();
+    expect(within(table).getByText("Painel interno")).toBeInTheDocument();
+    expect(screen.getByText(/Mostrando/)).toHaveTextContent("Mostrando 1 de 2 aplicações");
+
+    await user.type(screen.getByRole("searchbox", { name: "Filtrar aplicações" }), "portal");
+    expect(screen.getByText("Nenhuma aplicação com esses filtros")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Limpar filtros" }));
+    expect(within(screen.getByRole("table")).getByText("Portal do Cliente")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Filtrar por ambiente" })).toHaveValue("");
+    // Filtro é local: nenhuma nova consulta à API.
+    expect(api.applications).toHaveBeenCalledTimes(1);
+  });
+
+  it("APP-VIS-06 — Remover sai do menu e continua pedindo confirmação", async () => {
+    entrarComo("CLIENT");
+    const user = userEvent.setup();
+    renderizarPagina();
+    await screen.findByText("Portal do Cliente");
+
+    await escolherNoMenu(user, "Portal do Cliente", "Remover aplicação");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Remover aplicação?");
+    expect(api.deleteApplication).not.toHaveBeenCalled();
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Remover" }));
+    await waitFor(() => expect(api.deleteApplication).toHaveBeenCalledWith("app-1"));
   });
 });

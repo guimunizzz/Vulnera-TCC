@@ -33,7 +33,6 @@ import { Button } from "../components/ui/button";
 import { DashboardAtmosphere } from "../components/dashboard/hero/dashboard-atmosphere";
 import { NumeroAnimado } from "../motion/components";
 import { useMotion } from "../motion/use-motion";
-import "../components/dashboard/hero/dashboard-hero.css";
 import "./findings-page.css";
 
 export function FindingsPage() {

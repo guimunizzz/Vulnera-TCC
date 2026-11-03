@@ -24,6 +24,8 @@ import { DURACAO, EASE } from "../../motion/tokens";
 export interface KpiCardProps {
   label: string;
   value: string | number;
+  /** Uma linha curta que diz o que o número significa (ou que está tudo bem). */
+  legenda?: string;
   accentClassName?: string;
   icon?: ReactNode;
   tone?: "accent" | "warning" | "critical" | "neutral";
@@ -44,20 +46,20 @@ function DefaultKpiIcon() {
   );
 }
 
-export function KpiCard({ label, value, accentClassName, icon, tone = "accent" }: KpiCardProps) {
+export function KpiCard({ label, value, legenda, accentClassName, icon, tone = "accent" }: KpiCardProps) {
   const { reduzido } = useMotion();
   const estilo = TOM[tone];
 
   return (
     <article aria-label={label} className="h-full">
-      <Card semPadding className="dashboard-kpi group relative h-full overflow-hidden bg-transparent transition-colors duration-base hover:border-strong">
+      <Card semPadding className="group relative h-full overflow-hidden transition-colors duration-base hover:border-strong">
         <span aria-hidden="true" className={cn("absolute inset-y-0 left-0 w-px", estilo.line)} />
         <div className="relative flex min-h-[8rem] flex-col justify-between gap-5 p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-fg-secondary">{label}</p>
             <motion.div
               aria-hidden="true"
-              className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-control", estilo.icon)}
+              className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-control", estilo.icon)}
               initial={reduzido ? false : { opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: reduzido ? DURACAO.instant : DURACAO.base, ease: EASE.out }}
@@ -66,14 +68,12 @@ export function KpiCard({ label, value, accentClassName, icon, tone = "accent" }
             </motion.div>
           </div>
 
-          <p className={cn("font-mono text-3xl font-bold text-fg", accentClassName)} data-numeric>
-            {typeof value === "number" ? <NumeroAnimado valor={value} /> : value}
-          </p>
-
-          <span
-            aria-hidden="true"
-            className="dashboard-kpi-orbit-fallback pointer-events-none absolute bottom-0 right-4 h-20 w-20 rounded-full border border-accent/20"
-          />
+          <div>
+            <p className={cn("font-mono text-3xl font-bold text-fg", accentClassName)} data-numeric>
+              {typeof value === "number" ? <NumeroAnimado valor={value} /> : value}
+            </p>
+            {legenda && <p className="mt-2 text-xs text-fg-muted">{legenda}</p>}
+          </div>
         </div>
       </Card>
     </article>

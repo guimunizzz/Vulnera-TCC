@@ -2,42 +2,23 @@
  * applications-page.css
  *
  * O QUE FAZ
- * Compõe a abertura discreta do inventário de aplicações e a leitura da
- * tabela, usando exclusivamente tokens do design system.
+ * Barra de capacidade do plano e leitura da tabela do inventário — no
+ * desktop uma tabela, abaixo de 640 px um card por aplicação.
  *
  * POR QUE EXISTE
- * A página é uma área operacional densa. A trilha visual ajuda a separar
- * inventário e ações sem usar uma cena animada que concorra com a tabela.
+ * A página é uma área operacional densa. Desde a Fase 5 do refactor
+ * web-motion-3d o cabeçalho é compacto, sem a trilha decorativa, e a tabela
+ * ganhou busca e filtro de ambiente no topo.
  *
  * QUEM CONSOME
  * Apenas `pages/applications-page.tsx`.
  */
 
-.applications-hero {
-  background:
-    linear-gradient(112deg, oklch(var(--color-bg-surface)) 0%, oklch(var(--color-bg-surface) / 0.96) 55%, oklch(var(--color-accent-surface) / 0.46) 100%);
-  box-shadow:
-    var(--elevation-raised),
-    inset 0 1px 0 oklch(var(--color-text-primary) / 0.035);
-}
-
-.applications-hero-signal {
-  background:
-    linear-gradient(115deg, transparent 16%, oklch(var(--color-accent) / 0.14) 16.1%, transparent 16.5%),
-    linear-gradient(115deg, transparent 45%, oklch(var(--color-border-subtle) / 0.66) 45.1%, transparent 45.5%),
-    repeating-linear-gradient(90deg, transparent 0 32px, oklch(var(--color-accent) / 0.055) 33px 34px);
-  mask-image: linear-gradient(90deg, transparent, black 50%, black 86%, transparent);
-}
-
-.applications-hero-stat {
-  border-left: 1px solid oklch(var(--color-accent-ink) / 0.28);
-}
-
 .applications-capacity-track {
   width: 100%;
   height: 3px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: oklch(var(--color-border-subtle));
 }
 
@@ -58,11 +39,6 @@
 }
 
 @media (max-width: 639px) {
-  .applications-hero-stat {
-    border-top: 1px solid oklch(var(--color-accent-ink) / 0.2);
-    border-left: 0;
-  }
-
   .applications-inventory-table table,
   .applications-inventory-table tbody {
     display: block;
@@ -80,11 +56,12 @@
   }
 
   .applications-inventory-table tbody {
-    padding: 0.75rem;
+    padding: var(--space-3);
   }
 
   .applications-inventory-table tbody tr {
-    display: block;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     overflow: hidden;
     border: 1px solid oklch(var(--color-border-subtle));
     border-radius: var(--radius-container);
@@ -92,40 +69,39 @@
   }
 
   .applications-inventory-table tbody tr + tr {
-    margin-top: 0.75rem;
+    margin-top: var(--space-3);
   }
 
   .applications-inventory-table td {
     display: block;
-    max-width: none;
     padding: 0;
   }
 
-  .applications-inventory-table td:first-child {
-    padding: 1rem 1rem 0.25rem;
-    font-size: 1rem;
+  /* Aplicação e ambiente na primeira linha do card. */
+  .applications-inventory-table td:nth-child(1) {
+    padding: var(--space-4) var(--space-4) var(--space-3);
   }
 
   .applications-inventory-table td:nth-child(2) {
-    overflow: visible;
-    padding: 0 1rem 0.75rem;
-    text-overflow: clip;
-    overflow-wrap: anywhere;
-    white-space: normal;
+    align-self: start;
+    padding: var(--space-4) var(--space-4) 0 0;
+  }
+
+  .applications-inventory-table td:nth-child(3),
+  .applications-inventory-table td:nth-child(4) {
+    grid-column: 1 / -1;
   }
 
   .applications-inventory-table td:nth-child(3) {
     border-top: 1px solid oklch(var(--color-border-subtle));
-    padding: 0.75rem 1rem;
+    padding: var(--space-3) var(--space-4);
   }
 
   .applications-inventory-table td:nth-child(4) {
-    padding: 0 1rem 1rem;
+    padding: 0 var(--space-4) var(--space-4);
   }
 
   .applications-inventory-table td:nth-child(4) > div {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    min-width: 0;
+    justify-content: flex-start;
   }
 }

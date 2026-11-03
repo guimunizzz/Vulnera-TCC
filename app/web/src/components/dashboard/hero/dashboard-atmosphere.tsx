@@ -6,6 +6,7 @@
 import { lazy, Suspense, useContext } from "react";
 import { useCenaPermitida } from "../../../three/gate";
 import { AmbientHostContext } from "./ambient-host-context";
+import "./dashboard-atmosphere.css";
 
 // Falha de download de decoração não deve derrubar a área de trabalho.
 const Canvas = lazy(() => import("./dashboard-ambient-canvas").catch(() => ({ default: () => <></> })));
