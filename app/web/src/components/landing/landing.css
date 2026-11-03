@@ -94,8 +94,8 @@
 }
 
 /* Superfície atrás dos blocos de texto. A cena narrativa aparece inteira nas
-   margens e entre as seções e fica a 8% atrás das letras: é o que mantém o
-   texto AA sobre ela. Os 92% são conferidos por scene-contrast.test.ts
+   margens e entre as seções e fica a 6% atrás das letras: é o que mantém o
+   texto AA sobre ela. Os 94% são conferidos por scene-contrast.test.ts
    (OPACIDADE_SUPERFICIE em scene/config.ts). */
 .vx-superficie {
   position: relative;
@@ -107,8 +107,8 @@
   inset: calc(-1 * var(--space-6));
   z-index: -1;
   border-radius: var(--radius-overlay);
-  background-color: color-mix(in srgb, var(--vx-bg) 92%, transparent);
-  box-shadow: 0 0 var(--space-8) var(--space-4) color-mix(in srgb, var(--vx-bg) 92%, transparent);
+  background-color: color-mix(in srgb, var(--vx-bg) 94%, transparent);
+  box-shadow: 0 0 var(--space-8) var(--space-4) color-mix(in srgb, var(--vx-bg) 94%, transparent);
 }
 
 /* Cena e pôster trocam por crossfade — só opacidade. Com movimento reduzido

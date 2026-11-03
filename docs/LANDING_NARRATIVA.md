@@ -122,10 +122,25 @@ flowchart LR
 - Detalhes visuais: scanlines a cada 3 linhas de pixel e, raramente, uma faixa
   de "glitch" que desloca duas células — os dois só no WebGL.
 
+## 5.1 Gota d'água (clique no fundo)
+
+Um clique no fundo — e **só** clique: nada segue o ponteiro — deixa cair uma
+gota, e ondulações circulares se espalham pelo campo de caracteres, na landing
+e na área autenticada (`src/three/gotas.ts`).
+
+| Parte | Como funciona |
+|---|---|
+| Quem conta como "fundo" | O canvas segue `pointer-events: none`; o clique é ouvido na janela e ignorado quando o alvo é interativo (link, botão, campo, item de menu, aba, diálogo), quando é o botão direito ou quando vem do teclado (`detail = 0`). |
+| Física | Até 6 gotas simultâneas; frente a 320 px/s, pacote gaussiano de 70 px, cristas a cada 34 px, some em 2,4 s, perde força com tempo e distância. |
+| Visual | A onda **refrata** a grade (a leitura das células é deslocada, como texto visto pela água) e a crista desenha um anel de glifos da rampa — puxado para o ciano na landing, na cor de tinta na plataforma. |
+| Contraste | O anel nunca passa do alfa de destaque (landing) nem do teto do campo (plataforma): a garantia de AA não muda com a gota. |
+| Custo | Com onda viva, o loop desenha a cada quadro (~23 redesenhos/s medidos); quando ela some, volta aos tiques (4/s na plataforma, 8/s na landing). |
+| Movimento reduzido | A cena nem monta; não há gota. |
+
 ## 6. Cores e legibilidade
 
 - Texto sobre a cena mantém **AA**. Os blocos de conteúdo ganham uma
-  superfície (`.vx-superficie`, 92% da cor de fundo): a cena aparece inteira
+  superfície (`.vx-superficie`, 94% da cor de fundo): a cena aparece inteira
   nas margens e entre as seções e fica atenuada atrás das letras.
 - `scene-contrast.test.ts` calcula o pior caso — dois glifos em destaque e a
   varredura empilhados atrás da superfície — para cada cor de texto × cada cor
@@ -151,12 +166,15 @@ flowchart LR
 A mesma técnica, em versão **discreta**, substituiu as ondas e órbitas do
 dashboard (um canvas global no layout, decoração, nada sobre dado):
 
-- campo esparso (~12% das células) com a rampa `. · : - +` e poucas colunas
+- campo esparso (~20% das células) com a rampa `. · : - +` e poucas colunas
   de "chuva" em `:` e `|`, mais presentes no topo;
 - **sem dígitos**: no produto número é dado, e um `0`/`1` ao lado de um KPI,
   breadcrumb ou aba seria lido como tal (teste CENA-06);
-- 14 px por célula, **4 tiques por segundo**, opacidade máxima 0,24 (escuro) e
-  0,16 (claro), cores `--color-ambient-ink` e `--color-ambient-muted`;
+- 14 px por célula, **4 tiques por segundo**, opacidade máxima 0,30 (escuro) e
+  0,24 (claro), cores `--color-ambient-ink` e `--color-ambient-muted`. É o teto
+  em que o texto secundário do produto segue AA mesmo com um glifo cruzando a
+  letra (7,7:1 e 6,2:1); cabeçalhos de página soltos sobre o fundo ganham um
+  véu desfocado (`.atmosfera-veu`) que protege também o texto muted;
 - as superfícies do produto (hero, KPIs, cards de severidade) ficam quase
   opacas até a borda: a atmosfera aparece nos vãos e margens, nunca atrás de
   texto ou número;
@@ -170,6 +188,7 @@ dashboard (um canvas global no layout, decoração, nada sobre dado):
 | 2026-10-23 | Roteiro dos seis atos (Fase 4.1) e primeira implementação com campo de **pontos** WebGL e pôster SVG. |
 | 2026-10-27 | Pontos substituídos por **caracteres ASCII** (estética de terminal, neon) na landing e na área autenticada, a pedido do Rafael. Pôster passa a ser `<pre>`. |
 | 2026-10-30 | Hash do pôster corrigido; atmosfera do produto sem dígitos; medições finais (§7). |
+| 2026-11-03 | Fundo mais visível a pedido do Rafael (landing: glifos 0,48/0,60/0,45 e vinheta mais cheia, superfície do texto 92% → 94%; plataforma: ~3× mais tinta, véu atrás dos cabeçalhos) e **gota d'água** no clique (§5.1). |
 
 ### Boas práticas consultadas (2026-10-27)
 

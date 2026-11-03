@@ -6,7 +6,8 @@
  * nada sobre dado. Um quad em tela cheia e uma draw call; o glifo é decidido
  * por célula no shader, com o atlas de `src/three/ascii.ts`.
  * Render sob demanda: só redesenha em poucos "tiques" por segundo, na troca
- * de tema ou de tamanho. Consumido somente pelo canvas lazy; não atualiza
+ * de tema ou de tamanho — e, por alguns segundos, quando um clique no fundo
+ * deixa cair uma gota (`src/three/gotas.ts`). Consumido somente pelo canvas lazy; não atualiza
  * estado React por frame. Renderer, loop, pausas, contexto perdido, descarte
  * e cores vêm do kit `src/three/`.
  */
@@ -16,6 +17,7 @@ import { montarCena, type CenaMontada } from "../../../three/scene-host";
 import { descartarCena } from "../../../three/dispose";
 import { lerCorDoToken, observarTema, temaAtual } from "../../../three/palette";
 import { criarAtlasAscii, GLSL_ASCII, type AtlasAscii } from "../../../three/ascii";
+import { criarGotas, GLSL_GOTAS, GOTA } from "../../../three/gotas";
 
 interface Options {
   onReady?: () => void;
@@ -34,8 +36,13 @@ const TIQUES_POR_SEGUNDO = 4;
  * Nada de alerta ou severidade no fundo do produto.
  */
 export const GLIFOS_ATMOSFERA = " .·:-+|";
-/** Opacidade máxima dos glifos por tema (o claro precisa de menos). */
-const OPACIDADE = { dark: 0.24, light: 0.16 } as const;
+/**
+ * Opacidade máxima dos glifos por tema. Subiu a pedido do Rafael (o fundo
+ * estava difícil de ver) até o limite em que o texto secundário do produto
+ * segue AA mesmo com um glifo cruzando a letra (7,7:1 no escuro, 6,2:1 no
+ * claro); cabeçalhos soltos sobre o fundo têm véu (`.atmosfera-veu`).
+ */
+const OPACIDADE = { dark: 0.3, light: 0.24 } as const;
 
 const VERTEX = /* glsl */ `
 void main() {
@@ -45,6 +52,7 @@ void main() {
 
 const FRAGMENT = /* glsl */ `
 ${GLSL_ASCII}
+${GLSL_GOTAS}
 
 uniform float uTique;
 uniform float uAlfa;
@@ -52,13 +60,16 @@ uniform vec3 uCorTinta;
 uniform vec3 uCorApagada;
 
 void main() {
-  vec2 celula = celulaDaTela();
+  // Água: a onda das gotas desloca a leitura da grade (refração).
+  vec4 onda = ondaDasGotas(gl_FragCoord.xy);
+  vec2 pos = gl_FragCoord.xy - onda.xy * uCelula.x * ${GOTA.deslocamentoCelulas.toFixed(2)};
+  vec2 celula = celulaEm(pos);
   vec2 grade = gradeDaTela();
   float r = hashCelula(celula);
 
-  // Campo estático esparso (≈ 12% das células), com cintilar raro por tique.
+  // Campo estático esparso (≈ 20% das células), com cintilar raro por tique.
   // Rampa puxada para os glifos leves (. · :).
-  float presente = step(0.88, r);
+  float presente = step(0.8, r);
   float cintila = step(0.92, hashCelula(celula + vec2(uTique, 0.0)));
   float sorteio = mix(hashCelula(celula + 29.0), hashCelula(celula + vec2(uTique, 5.0)), cintila);
   float indice = 1.0 + floor(sorteio * sorteio * 5.0);
@@ -73,13 +84,24 @@ void main() {
   // O rastro alterna ":" e "|": chuva de terminal, sem caractere legível.
   if (rastro > 0.01) indice = mix(3.0, 6.0, step(0.5, hashCelula(celula + vec2(uTique, 9.0))));
 
-  float alfa = max(presente * 0.55, rastro) * uAlfa;
-  // Mais presente no topo (atrás do cabeçalho da página), some para baixo.
+  float alfa = max(presente * 0.75, rastro) * uAlfa;
+  // Mais presente no topo, sem sumir embaixo.
   float altura = (celula.y + 0.5) / grade.y;
-  alfa *= mix(0.35, 1.0, altura);
-  vec3 cor = mix(uCorApagada, uCorTinta, max(rastro, step(0.97, r)));
+  alfa *= mix(0.6, 1.0, altura);
+  vec3 cor = mix(uCorApagada, uCorTinta, max(rastro, step(0.94, r)));
 
-  gl_FragColor = vec4(cor, coberturaDoGlifo(indice) * alfa);
+  // Crista da onda: anel de glifos da rampa na cor de tinta. Limitado a uAlfa,
+  // o mesmo teto do campo (o contraste do texto não muda com a gota).
+  // A altura raramente passa de 0,5 longe do centro: normaliza para o anel aparecer.
+  float crista = smoothstep(0.04, 0.45, onda.z);
+  if (uAlfa * crista > alfa) {
+    indice = 1.0 + floor(crista * 4.99);
+    cor = uCorTinta;
+    alfa = uAlfa * crista;
+  }
+  alfa = max(alfa, min(alfa * (1.0 + 0.6 * onda.w), uAlfa));
+
+  gl_FragColor = vec4(cor, coberturaDoGlifoEm(indice, pos) * alfa);
   #include <colorspace_fragment>
 }
 `;
@@ -104,7 +126,16 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
     let tamanho: ResizeObserver | undefined;
     let pararDeObservarTema: (() => void) | undefined;
 
+    // Clique no fundo = gota d'água.
+    const gotas = criarGotas({
+      canvas,
+      tempoAtual: () => tempo,
+      dpr: () => cena?.renderer.getPixelRatio() ?? 1,
+      aoCair: () => { sujo = true; },
+    });
+
     const uniformes = {
+      ...gotas.uniformes,
       uAtlas: { value: null as THREE.Texture | null },
       uTotalGlifos: { value: Array.from(GLIFOS_ATMOSFERA).length },
       uCelula: { value: new THREE.Vector2(CELULA_PX, CELULA_PX * 2) },
@@ -140,8 +171,10 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
       }
       tempo += delta;
       const tique = Math.floor(tempo * TIQUES_POR_SEGUNDO);
-      if (pronto && !sujo && tique === ultimoTique) return;
+      // Com onda viva, todo quadro do loop desenha; sem ela, só os tiques.
+      if (pronto && !sujo && tique === ultimoTique && !gotas.ativa(tempo)) return;
       uniformes.uTique.value = tique;
+      uniformes.uTempo.value = tempo;
       ultimoTique = tique;
       sujo = false;
       renderer.render(cenaThree, camera);
@@ -154,6 +187,7 @@ export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>
     function cleanup(): void {
       if (parado) return;
       parado = true;
+      gotas.parar();
       tamanho?.disconnect();
       pararDeObservarTema?.();
       if (cenaThree) descartarCena(cenaThree);

@@ -11,7 +11,8 @@
  * Uma draw call: nenhum vértice por caractere, nenhuma geometria por ato. O
  * glifo é escolhido uma vez por célula e carimbado do atlas (`src/three/ascii.ts`).
  * O tempo só entra como "tique" inteiro (poucos por segundo): o cintilar dos
- * caracteres não exige render contínuo.
+ * caracteres não exige render contínuo. A exceção é a onda de uma gota
+ * (clique no fundo, `src/three/gotas.ts`), que dura alguns segundos.
  *
  * Os atos seguem `docs/LANDING_NARRATIVA.md` §3; o espelho sem animação está
  * em `estadoDaCelula` (layout.ts), usado pelo pôster.
@@ -22,6 +23,7 @@
  */
 
 import { GLSL_ASCII } from "../../../three/ascii";
+import { GLSL_GOTAS, GOTA } from "../../../three/gotas";
 import { CENTRO_DOS_GRUPOS } from "./layout";
 import { GLIFO, VINHETA } from "./config";
 
@@ -35,6 +37,7 @@ void main() {
 
 export const FRAGMENT_ASCII = /* glsl */ `
 ${GLSL_ASCII}
+${GLSL_GOTAS}
 
 uniform float uProgresso;
 uniform float uTique;
@@ -76,7 +79,10 @@ float distanciaPx(vec2 clip, vec2 centro) {
 }
 
 void main() {
-  vec2 celula = celulaDaTela();
+  // Água: a onda das gotas desloca a leitura da grade (refração).
+  vec4 onda = ondaDasGotas(gl_FragCoord.xy);
+  vec2 pos = gl_FragCoord.xy - onda.xy * uCelula.x * ${GOTA.deslocamentoCelulas.toFixed(2)};
+  vec2 celula = celulaEm(pos);
   vec2 grade = gradeDaTela();
   float p = uProgresso;
 
@@ -180,12 +186,24 @@ void main() {
     alfa = uAlfaFeixe * presenca * (1.0 - bloco / 4.0);
   }
 
+  // Crista da onda: um anel de glifos da rampa, puxado para o neon. Nunca passa
+  // do alfa de destaque — o limite que o teste de contraste garante.
+  // A altura raramente passa de 0,5 longe do centro: normaliza para o anel aparecer.
+  float crista = smoothstep(0.04, 0.45, onda.z);
+  float alfaOnda = uAlfaDestaque * crista;
+  if (alfaOnda > alfa) {
+    indice = ${GLIFO.rampaInicio}.0 + floor(crista * ${(GLIFO.rampaTotal - 0.01).toFixed(2)});
+    cor = mix(uCorBase, uCorNeon, crista);
+    alfa = alfaOnda;
+  }
+  alfa = max(alfa, min(alfa * (1.0 + 0.6 * onda.w), uAlfaDestaque));
+
   // Faixa de glitch tingida de neon.
   cor = mix(cor, uCorGlitch, naFaixa * 0.6);
   // Scanlines: uma linha de pixel a cada três, mais escura.
   float scanline = 1.0 - 0.18 * step(2.0, mod(floor(gl_FragCoord.y), 3.0));
 
-  float cobertura = coberturaDoGlifo(indice);
+  float cobertura = coberturaDoGlifoEm(indice, pos);
   gl_FragColor = vec4(cor, cobertura * alfa * scanline);
   #include <colorspace_fragment>
 }

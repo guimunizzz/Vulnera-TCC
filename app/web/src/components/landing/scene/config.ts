@@ -59,15 +59,15 @@ export const GLIFO = {
  */
 export const OPACIDADE_CENA = {
   /** Caractere calmo do campo de terminal. */
-  saudavel: 0.34,
+  saudavel: 0.48,
   /** Alerta, severidade revelada, grupo ou "✓". */
-  destaque: 0.45,
+  destaque: 0.6,
   /** Blocos da varredura. */
-  feixe: 0.35,
+  feixe: 0.45,
 } as const;
 
 /** Opacidade do fundo na superfície atrás do texto. Espelha `landing.css`. */
-export const OPACIDADE_SUPERFICIE = 0.92;
+export const OPACIDADE_SUPERFICIE = 0.94;
 
 export const FPS_CENA = 30;
 export const MAX_DPR_CENA = 1.5;
@@ -82,7 +82,7 @@ export const TIQUES_POR_SEGUNDO = 8;
  * Densidade do campo calmo: fração das células com caractere, do centro
  * (atrás do texto) para as laterais, entre |x| = inicio e |x| = fim.
  */
-export const VINHETA = { inicio: 0.35, fim: 0.95, densidadeCentro: 0.18, densidadeLateral: 0.48 } as const;
+export const VINHETA = { inicio: 0.35, fim: 0.95, densidadeCentro: 0.22, densidadeLateral: 0.56 } as const;
 
 /** Raio dos grupos de severidade nas laterais, em px CSS. */
 export const RAIO_DO_GRUPO_PX = 88;

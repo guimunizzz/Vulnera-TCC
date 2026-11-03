@@ -74,17 +74,20 @@ uniform float uTotalGlifos;
 uniform vec2 uCelula;
 uniform vec2 uResolucao;
 
-vec2 celulaDaTela() { return floor(gl_FragCoord.xy / uCelula); }
+vec2 celulaEm(vec2 pos) { return floor(pos / uCelula); }
+vec2 celulaDaTela() { return celulaEm(gl_FragCoord.xy); }
 vec2 gradeDaTela() { return floor(uResolucao / uCelula); }
 
 float hashCelula(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
-// Cobertura (0 a 1) do glifo "indice" no pixel atual da célula.
-float coberturaDoGlifo(float indice) {
-  vec2 local = fract(gl_FragCoord.xy / uCelula);
+// Cobertura (0 a 1) do glifo "indice" no ponto "pos" (px) da sua célula. A
+// versão com posição existe para a onda das gotas, que lê a grade deslocada.
+float coberturaDoGlifoEm(float indice, vec2 pos) {
+  vec2 local = fract(pos / uCelula);
   vec2 uv = vec2((floor(indice) + local.x) / uTotalGlifos, local.y);
   return texture2D(uAtlas, uv).a;
 }
+float coberturaDoGlifo(float indice) { return coberturaDoGlifoEm(indice, gl_FragCoord.xy); }
 `;

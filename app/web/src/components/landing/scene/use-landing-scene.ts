@@ -29,6 +29,7 @@ import * as THREE from "three";
 import { montarCena, type CenaMontada } from "../../../three/scene-host";
 import { descartarCena } from "../../../three/dispose";
 import { lerCorDoToken, observarTema } from "../../../three/palette";
+import { criarGotas } from "../../../three/gotas";
 import { criarAtlasAscii, type AtlasAscii } from "../../../three/ascii";
 import { gsap, ScrollTrigger } from "../motion/gsap";
 import { EASE_LANDING, SCRUB_LANDING } from "../motion/tokens";
@@ -89,6 +90,13 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
     let pararDeObservarTema: (() => void) | undefined;
     let tamanho: ResizeObserver | undefined;
     let gatilho: ScrollTrigger | undefined;
+    // Clique no fundo = gota d'água (src/three/gotas.ts).
+    const gotas = criarGotas({
+      canvas,
+      tempoAtual: () => tempo,
+      dpr: () => cena?.renderer.getPixelRatio() ?? 1,
+      aoCair: () => { sujo = true; },
+    });
     // O loop lê daqui; o ScrollTrigger escreve (suavizado).
     const progresso = { valor: 0 };
     let marcos: number[] = [];
@@ -99,6 +107,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       uCelula: { value: new THREE.Vector2(CELULA_LANDING_PX, CELULA_LANDING_PX * 2) },
       uResolucao: { value: new THREE.Vector2(1, 1) },
       uProgresso: { value: 0 },
+      ...gotas.uniformes,
       uTique: { value: 0 },
       uRaioDoGrupo: { value: RAIO_DO_GRUPO_PX },
       uAlfaSaudavel: { value: OPACIDADE_CENA.saudavel },
@@ -146,9 +155,11 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       tempo += delta;
       const tique = Math.floor(tempo * TIQUES_POR_SEGUNDO);
       const p = progresso.valor;
-      const mudou = sujo || Math.abs(p - ultimoProgresso) > 1e-4 || tique !== ultimoTique;
+      // Com onda viva, todo quadro do loop desenha; sem ela, só tiques e scroll.
+      const mudou = sujo || gotas.ativa(tempo) || Math.abs(p - ultimoProgresso) > 1e-4 || tique !== ultimoTique;
       if (pronto && !mudou) return;
       uniformes.uProgresso.value = p;
+      uniformes.uTempo.value = tempo;
       uniformes.uTique.value = tique;
       ultimoProgresso = p;
       ultimoTique = tique;
@@ -165,6 +176,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       if (parado) return;
       parado = true;
       gatilho?.kill();
+      gotas.parar();
       gsap.killTweensOf(progresso);
       tamanho?.disconnect();
       pararDeObservarTema?.();
