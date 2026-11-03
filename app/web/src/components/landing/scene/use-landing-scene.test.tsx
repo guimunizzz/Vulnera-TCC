@@ -80,7 +80,7 @@ describe("useLandingScene", () => {
     expect(canvas).toHaveAttribute("aria-hidden", "true");
     expect(canvas).toHaveClass("pointer-events-none");
     await waitFor(() => expect(falso.iniciar).toHaveBeenCalledTimes(1));
-    expect(falso.montar).toHaveBeenCalledWith(expect.objectContaining({ canvas, fps: 30, maxDpr: 1.5 }));
+    expect(falso.montar).toHaveBeenCalledWith(expect.objectContaining({ canvas, fps: 60, maxDpr: 1.5 }));
     expect(new Set(falso.tokens)).toEqual(new Set([
       "--vx-accent", "--vx-cyan", "--vx-magenta",
       "--color-severity-low", "--color-severity-medium", "--color-severity-high", "--color-severity-critical",

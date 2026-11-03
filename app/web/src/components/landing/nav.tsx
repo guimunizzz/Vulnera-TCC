@@ -80,8 +80,11 @@ export default function Nav() {
   }
 
   return (
+    // Fundo quase opaco, sem backdrop-blur: atrás da barra a cena anima a
+    // 60 fps, e o desfoque era refeito a cada quadro — custava ~10 fps na
+    // rolagem e picos de 150 ms na GPU integrada (medido em 2026-11-03).
     <motion.header
-      className="fixed left-0 right-0 top-0 z-[30] border-b border-[rgba(var(--vx-accent-rgb),0.15)] bg-[rgba(var(--vx-bg-2-rgb),0.75)] backdrop-blur-sm"
+      className="fixed left-0 right-0 top-0 z-[30] border-b border-[rgba(var(--vx-accent-rgb),0.15)] bg-[rgba(var(--vx-bg-2-rgb),0.92)]"
     >
       <motion.div
         animate={{ height: atTop ? 76 : 48 }}

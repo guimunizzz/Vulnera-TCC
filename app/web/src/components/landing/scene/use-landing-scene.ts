@@ -11,9 +11,9 @@
  *   vêm do kit `src/three/`; o atlas de glifos, de `src/three/ascii.ts`.
  * - Um ScrollTrigger único lê o scroll; `gsap.quickTo` suaviza o valor e o
  *   escreve num objeto simples que o loop lê. Nenhum `setState` por quadro.
- * - Render sob demanda: o loop do kit roda no orçamento de 30 fps, mas só
- *   desenha quando o progresso, o tema ou o tamanho mudam, ou num "tique" do
- *   cintilar (poucos por segundo). Parada, a cena quase não usa GPU.
+ * - Movimento contínuo: desenha todo quadro do loop do kit, a 60 fps (antes
+ *   era render sob demanda a 30 fps em "tiques", que passava sensação de
+ *   lag). O loop pausa com a aba oculta e com o canvas fora da tela.
  * - O atlas espera a fonte carregar (assíncrono). Se a cena for desmontada
  *   antes, nada é montado e a textura é descartada.
  * - O `<canvas>` é criado aqui a cada montagem e removido no descarte: o
@@ -30,6 +30,7 @@ import { montarCena, type CenaMontada } from "../../../three/scene-host";
 import { descartarCena } from "../../../three/dispose";
 import { lerCorDoToken, observarTema } from "../../../three/palette";
 import { criarGotas } from "../../../three/gotas";
+import { criarGradeDeCelulas } from "../../../three/grade-celulas";
 import { criarAtlasAscii, type AtlasAscii } from "../../../three/ascii";
 import { gsap, ScrollTrigger } from "../motion/gsap";
 import { EASE_LANDING, SCRUB_LANDING } from "../motion/tokens";
@@ -44,7 +45,7 @@ import {
   calcularMarcos,
   mapearProgresso,
 } from "./config";
-import { FRAGMENT_ASCII, VERTEX_ASCII } from "./shaders";
+import { FRAGMENT_CELULAS, FRAGMENT_TELA, VERTEX_ASCII } from "./shaders";
 
 interface Opcoes {
   onReady?: () => void;
@@ -84,9 +85,6 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
     let pronto = false;
     let tempo = 0;
     let redimensionar = true;
-    let sujo = true;
-    let ultimoProgresso = Number.NaN;
-    let ultimoTique = -1;
     let pararDeObservarTema: (() => void) | undefined;
     let tamanho: ResizeObserver | undefined;
     let gatilho: ScrollTrigger | undefined;
@@ -95,7 +93,6 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       canvas,
       tempoAtual: () => tempo,
       dpr: () => cena?.renderer.getPixelRatio() ?? 1,
-      aoCair: () => { sujo = true; },
     });
     // O loop lê daqui; o ScrollTrigger escreve (suavizado).
     const progresso = { valor: 0 };
@@ -108,6 +105,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       uResolucao: { value: new THREE.Vector2(1, 1) },
       uProgresso: { value: 0 },
       ...gotas.uniformes,
+      uGotasAtivas: { value: 0 },
       uTique: { value: 0 },
       uRaioDoGrupo: { value: RAIO_DO_GRUPO_PX },
       uAlfaSaudavel: { value: OPACIDADE_CENA.saudavel },
@@ -122,6 +120,9 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       uCorCritica: { value: new THREE.Color() },
       uCorResolvido: { value: new THREE.Color() },
     };
+    // Passada 1 (uma vez por célula) → textura; a passada 2 lê dela. As duas
+    // compartilham os mesmos objetos de uniform.
+    const grade = criarGradeDeCelulas(FRAGMENT_CELULAS, uniformes);
     // O shader ignora a câmera; o renderer só exige uma.
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -129,7 +130,6 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       for (const [uniforme, token] of Object.entries(TOKENS)) {
         lerCorDoToken(canvas, token, uniformes[uniforme as keyof typeof TOKENS].value);
       }
-      sujo = true;
     }
 
     function medirMarcos(): void {
@@ -149,21 +149,18 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
         // Célula em px CSS × DPR: a grade não adensa em tela de alta densidade.
         uniformes.uCelula.value.set(CELULA_LANDING_PX * dpr, (CELULA_LANDING_PX * dpr) / atlas.proporcao);
         uniformes.uRaioDoGrupo.value = RAIO_DO_GRUPO_PX * dpr;
+        grade.redimensionar(uniformes.uResolucao.value, uniformes.uCelula.value);
         redimensionar = false;
-        sujo = true;
       }
       tempo += delta;
       const tique = Math.floor(tempo * TIQUES_POR_SEGUNDO);
       const p = progresso.valor;
-      // Com onda viva, todo quadro do loop desenha; sem ela, só tiques e scroll.
-      const mudou = sujo || gotas.ativa(tempo) || Math.abs(p - ultimoProgresso) > 1e-4 || tique !== ultimoTique;
-      if (pronto && !mudou) return;
+      // Movimento contínuo: desenha todo quadro do loop (até 60 fps).
       uniformes.uProgresso.value = p;
       uniformes.uTempo.value = tempo;
       uniformes.uTique.value = tique;
-      ultimoProgresso = p;
-      ultimoTique = tique;
-      sujo = false;
+      uniformes.uGotasAtivas.value = gotas.ativa(tempo) ? 1 : 0;
+      grade.desenhar(renderer);
       renderer.render(cenaThree, camera);
       if (!pronto) {
         pronto = true;
@@ -175,6 +172,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
     function limpar(): void {
       if (parado) return;
       parado = true;
+      grade.descartar();
       gatilho?.kill();
       gotas.parar();
       gsap.killTweensOf(progresso);
@@ -209,9 +207,9 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       const quadro = new THREE.Mesh(
         new THREE.PlaneGeometry(2, 2),
         new THREE.ShaderMaterial({
-          uniforms: uniformes,
+          uniforms: { ...uniformes, ...grade.uniformes },
           vertexShader: VERTEX_ASCII,
-          fragmentShader: FRAGMENT_ASCII,
+          fragmentShader: FRAGMENT_TELA,
           transparent: true,
           depthTest: false,
           depthWrite: false,

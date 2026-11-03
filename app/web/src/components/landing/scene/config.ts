@@ -69,13 +69,14 @@ export const OPACIDADE_CENA = {
 /** Opacidade do fundo na superfície atrás do texto. Espelha `landing.css`. */
 export const OPACIDADE_SUPERFICIE = 0.94;
 
-export const FPS_CENA = 30;
+/** 60 fps: o movimento é contínuo (pedido do Rafael, 2026-11-03). */
+export const FPS_CENA = 60;
 export const MAX_DPR_CENA = 1.5;
 /** Largura da célula de caractere em px CSS (a altura sai da proporção da fonte). */
 export const CELULA_LANDING_PX = 12;
 /**
- * Tiques por segundo do cintilar dos caracteres. Parada, a cena só redesenha
- * nesses tiques — não a 30 fps.
+ * Tiques por segundo da troca de glifo e do glitch — as únicas mudanças
+ * discretas; o resto da cena anima em tempo contínuo.
  */
 export const TIQUES_POR_SEGUNDO = 8;
 /**

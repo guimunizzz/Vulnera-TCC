@@ -16,6 +16,8 @@
  *   LAND-08  sem WebGL2: pôster estático, nenhum canvas, nenhuma intro
  *   LAND-09  com WebGL2: um canvas da cena (lazy); movimento reduzido: pôster
  *   LAND-10  sair da landing para /login não deixa canvas para trás
+ *   LAND-11  com a cena pronta, o pôster (~5 mil spans) sai do DOM depois
+ *            do esmaecimento — não re-renderiza durante a rolagem
  */
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -185,6 +187,8 @@ describe("LandingPage", () => {
     const { unmount } = renderLanding();
     await waitFor(() => expect(canvasDaCena()).toHaveLength(1), ESPERA);
     expect(document.querySelector("[data-landing-cena]")).toHaveAttribute("data-landing-cena", "webgl");
+    // LAND-11: a cena (mock) avisa pronta; o pôster esmaece e sai do DOM.
+    await waitFor(() => expect(document.querySelector("[data-landing-poster]")).toBeNull(), ESPERA);
     unmount();
 
     instalarMatchMedia(["prefers-reduced-motion: reduce"]);

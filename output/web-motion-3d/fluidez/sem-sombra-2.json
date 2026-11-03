@@ -1,0 +1,44 @@
+{
+  "rotulo": "sem-sombra-2",
+  "quando": "2026-11-03T11:32:45.272Z",
+  "landingParada": {
+    "desenhosPorSegundo": 120.7,
+    "fpsNavegador": 60,
+    "p95ms": 16.8,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "landingRolando": {
+    "desenhosPorSegundo": 151.3,
+    "fpsNavegador": 48.1,
+    "p95ms": 33.5,
+    "engasgos": 0.181,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "landingGota": {
+    "desenhosPorSegundo": 121,
+    "fpsNavegador": 60,
+    "p95ms": 16.9,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaParada": {
+    "desenhosPorSegundo": 120,
+    "fpsNavegador": 60,
+    "p95ms": 17,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaGota": {
+    "desenhosPorSegundo": 121,
+    "fpsNavegador": 60,
+    "p95ms": 17,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  }
+}

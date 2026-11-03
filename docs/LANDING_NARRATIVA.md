@@ -96,21 +96,26 @@ pôster usa um hash inteiro próprio, reprodutível em qualquer navegador.
 ```mermaid
 flowchart LR
   Scroll[Scroll da página] --> ST["ScrollTrigger único<br/>(lazy, com a cena)"]
-  ST -->|"quickTo → progresso 0–5"| Loop["Loop do kit<br/>render sob demanda"]
-  Loop -->|"uniforms: progresso, tique"| GPU["1 quad em tela cheia<br/>1 fragment shader"]
+  ST -->|"quickTo → progresso 0–5"| Loop["Loop do kit<br/>60 fps contínuo"]
+  Loop -->|"uniforms: progresso, tempo, tique"| Celulas["Passada 1: 1× por célula<br/>textura do tamanho da grade"]
+  Celulas --> GPU["Passada 2: por pixel<br/>gota + glifo do atlas"]
   Atlas["Atlas de glifos<br/>(canvas 2D, JetBrains Mono)"] --> GPU
   Atos["Gatilhos por seção<br/>(ato atual)"] --> Poster["Pôster ASCII por ato<br/>(&lt;pre&gt;)"]
   Gate{"useCenaPermitida"} -->|sim| ST
   Gate -->|não| Poster
 ```
 
-- **Um quad, uma draw call.** A tela é dividida em células (12 px CSS de
-  largura × DPR; a altura sai da proporção da fonte). Para cada pixel o
-  fragment shader descobre a célula, decide o glifo e a cor pelo ato e lê a
-  cobertura no atlas (`src/three/ascii.ts`). Não há geometria por caractere.
-- **Render sob demanda.** O loop do kit roda a 30 fps no máximo, mas só
-  desenha quando o progresso muda, quando muda o tique (8/s, o "cintilar"), o
-  tema ou o tamanho. Parada, a cena custa 8 quadros por segundo.
+- **Duas passadas, nenhuma geometria por caractere.** A tela é dividida em
+  células (12 px CSS de largura × DPR; a altura sai da proporção da fonte).
+  A passada 1 roda **uma vez por célula** numa textura do tamanho da grade
+  (`src/three/grade-celulas.ts`) e decide glifo, cor e alfa pelo ato. A
+  passada 2 roda por pixel e só lê a célula, aplica a gota e carimba a
+  cobertura do atlas (`src/three/ascii.ts`). Antes era uma passada só, com a
+  lógica inteira repetida em cada pixel (~250× por célula).
+- **Movimento contínuo a 60 fps.** O campo respira, o "!" pulsa em curva
+  suave e a chuva da plataforma desce sem degraus; só a troca de glifo e o
+  glitch seguem em tiques (trocar caractere é discreto). Substitui o render
+  sob demanda a 30 fps em tiques, que passava sensação de lag.
 - **Sem estado React por quadro.** O progresso vai de um ScrollTrigger para um
   `gsap.quickTo` e dele para um uniform.
 - **Kit compartilhado.** Hospedeiro (DPR ≤ 1,5, low-power, perda de contexto),
@@ -134,7 +139,7 @@ e na área autenticada (`src/three/gotas.ts`).
 | Física | Até 6 gotas simultâneas; frente a 320 px/s, pacote gaussiano de 70 px, cristas a cada 34 px, some em 2,4 s, perde força com tempo e distância. |
 | Visual | A onda **refrata** a grade (a leitura das células é deslocada, como texto visto pela água) e a crista desenha um anel de glifos da rampa — puxado para o ciano na landing, na cor de tinta na plataforma. |
 | Contraste | O anel nunca passa do alfa de destaque (landing) nem do teto do campo (plataforma): a garantia de AA não muda com a gota. |
-| Custo | Com onda viva, o loop desenha a cada quadro (~23 redesenhos/s medidos); quando ela some, volta aos tiques (4/s na plataforma, 8/s na landing). |
+| Custo | A cena já desenha todo quadro; sem gota viva o laço das ondas nem roda (desvio por uniform). Medido: 60 fps com a gota, na landing e na plataforma. |
 | Movimento reduzido | A cena nem monta; não há gota. |
 
 ## 6. Cores e legibilidade
@@ -156,7 +161,11 @@ e na área autenticada (`src/three/gotas.ts`).
 | Decisão | Medida | Evidência |
 |---|---|---|
 | Pôster abaixo de 768 px | Fração da tela livre das superfícies, atos 0→5: **375 px** 54% e depois 15% em todos; **768 px** 55/38/48% e 16/14/18%; **1440 px** 79/59/59/40/35/40%. Em 375 px a cena ficaria escondida em 5 dos 6 atos, gastando GPU de celular para nada. 768 px fica no limite (atos 3–5 parecidos com 375); manteve-se o corte padrão do kit (ADR-041) — registrado para reavaliar com aparelho real. | `output/web-motion-3d/landing-ascii/fase4-landing-matrix.json` (`areaLivrePorAto`) |
-| Render sob demanda com tiques | Parado no rodapé: **23 quadros em 3 s** (antes: 181 desenhos em 3 s com o hero fora da tela). | `landing-ascii/landing-perf-fase4.json` × `baseline/landing-perf-baseline.json` |
+| ~~Render sob demanda com tiques~~ (substituída em 2026-11-03) | Parado no rodapé: 23 quadros em 3 s (antes: 181 desenhos em 3 s com o hero fora da tela). Economizava GPU, mas o movimento em degraus parecia lag. | `landing-ascii/landing-perf-fase4.json` × `baseline/landing-perf-baseline.json` |
+| Duas passadas + 60 fps contínuo | Rolando a landing com o fundo a 60 fps numa passada só: **31 fps, 51% dos quadros > 25 ms**. Com as duas passadas: o fundo custa ~3 fps na rolagem (controle sem canvas: ~45 fps × ~42 com). Parada, com gota e na plataforma (inclusive rolando Findings): **60 fps, 0% de engasgo**. | `fluidez/*.json`, `diag-desenhos.cjs` |
+| Loop do kit com tolerância ao jitter | Comparar com o intervalo exato pulava quadros de 33,2 ms e alternava 33/50 ms (engasgo). Aceitar 85% do intervalo mantém a cadência — teste KIT-09. | `src/three/loop.ts` |
+| Pôster desmontado com a cena pronta | Escondido mas montado, o pôster (~5 mil `<span>`) re-renderizava a cada troca de ato durante a rolagem. | teste LAND-11 |
+| Barra da landing sem `backdrop-blur` | Com a cena animando atrás, o desfoque era refeito todo quadro: rolagem de 38–47 → 50–51 fps e picos de 150 → 90 ms. | `diag-desenhos.cjs` (`CSS_EXTRA`) |
 | Fim da intro 3D | A intro levava 7,4 s com long tasks de até 451 ms e ignorava movimento reduzido. Agora: 0 long tasks na rolagem. | `baseline/landing-perf-intro.json` |
 | Rolagem | **57,2 / 57,7 fps** de média (mínimo 49) contra 43,2 / 38,6 (mínimo 22) no baseline — mesma máquina, mesmo protocolo, GPU Iris Xe. | idem |
 | Hash do pôster com avalanche completa | O hash inicial dava 98% de `0` no binário (sais correlacionados, r = −0,5); com o fmix32 do MurmurHash3, \|r\| < 0,03. | teste NAR-11 |
@@ -189,6 +198,7 @@ dashboard (um canvas global no layout, decoração, nada sobre dado):
 | 2026-10-27 | Pontos substituídos por **caracteres ASCII** (estética de terminal, neon) na landing e na área autenticada, a pedido do Rafael. Pôster passa a ser `<pre>`. |
 | 2026-10-30 | Hash do pôster corrigido; atmosfera do produto sem dígitos; medições finais (§7). |
 | 2026-11-03 | Fundo mais visível a pedido do Rafael (landing: glifos 0,48/0,60/0,45 e vinheta mais cheia, superfície do texto 92% → 94%; plataforma: ~3× mais tinta, véu atrás dos cabeçalhos) e **gota d'água** no clique (§5.1). |
+| 2026-11-03 | **Fluidez** (pedido do Rafael: o fundo passava sensação de lag): 60 fps contínuo, duas passadas, loop sem engasgo de cadência, pôster desmontado com a cena pronta, barra da landing sem `backdrop-blur` (§7). |
 
 ### Boas práticas consultadas (2026-10-27)
 
@@ -197,7 +207,7 @@ dashboard (um canvas global no layout, decoração, nada sobre dado):
 | WebGL sempre atrás do texto; título e CTA legíveis de imediato | Superfície AA atrás dos blocos; vinheta deixa o centro do hero esparso |
 | Comunicar o comportamento do sistema, não brilho aleatório | A cena conta a narrativa da página, ato a ato |
 | Uma linguagem visual dominante, sem empilhar efeitos | Só glifos; sem bloom nem pós-processamento |
-| "Se nada anima, não renderize todo quadro" | Render sob demanda com tiques |
+| "Se nada anima, não renderize todo quadro" | Agora a cena anima sempre (pedido de fluidez); o custo caiu com as duas passadas e o loop pausa com a aba oculta e o canvas fora da tela |
 | DPR limitado, pôster primeiro, reduced-motion, perda de contexto | DPR ≤ 1,5; pôster ASCII; gate do kit; canvas novo por montagem |
 | `mediump` em GPU móvel | `precision: "mediump"` no material |
 

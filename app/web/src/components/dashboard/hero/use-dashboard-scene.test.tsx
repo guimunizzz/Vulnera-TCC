@@ -74,7 +74,7 @@ describe("useDashboardScene (atmosfera ASCII) sobre o kit", () => {
   it("CENA-01 — monta com orçamento do dashboard, lê os tokens de atmosfera e inicia", async () => {
     render(<Cena />);
     await waitFor(() => expect(falso.iniciar).toHaveBeenCalledTimes(1));
-    expect(falso.montar).toHaveBeenCalledWith(expect.objectContaining({ fps: 30, maxDpr: 1.5 }));
+    expect(falso.montar).toHaveBeenCalledWith(expect.objectContaining({ fps: 60, maxDpr: 1.5 }));
     expect(new Set(falso.tokens)).toEqual(new Set(["--color-ambient-ink", "--color-ambient-muted"]));
   });
 

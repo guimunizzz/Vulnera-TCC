@@ -17,6 +17,15 @@
  */
 
 const DELTA_MAXIMO_S = 0.06;
+/**
+ * O relógio do RAF oscila alguns décimos de ms. Comparar com o intervalo exato
+ * fazia um quadro de 33,2 ms (orçamento de 33,3) ser pulado e a cena alternar
+ * 33/50 ms — o "engasgo" que se percebe como lag; a 60 fps num monitor de
+ * 60 Hz, metade dos quadros caía. Aceitar 85% do intervalo absorve o jitter
+ * e mantém a cadência estável (60 Hz → todo quadro a 60 fps, um sim outro
+ * não a 30 fps).
+ */
+const TOLERANCIA_DO_INTERVALO = 0.85;
 
 export interface Loop {
   /** Começa (ou retoma) respeitando aba e viewport. */
@@ -30,7 +39,7 @@ export function criarLoop({ fps, alvo, aoQuadro }: {
   alvo: Element;
   aoQuadro: (delta: number, agora: number) => void;
 }): Loop {
-  const intervalo = 1000 / fps;
+  const intervalo = (1000 / fps) * TOLERANCIA_DO_INTERVALO;
   let raf = 0;
   let anterior = 0;
   let visivel = true;

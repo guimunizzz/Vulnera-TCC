@@ -12,6 +12,8 @@
  *   KIT-06  alvo fora da viewport pausa
  *   KIT-07  descartar libera RAF, observers, listeners, renderer e contexto
  *   KIT-08  webglcontextlost descarta e avisa
+ *   KIT-09  jitter do relógio não derruba quadros (60 Hz real: 60 fps desenha
+ *           todos, 30 fps desenha um sim, outro não)
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -117,12 +119,33 @@ describe("montarCena", () => {
   it("KIT-04 — respeita o orçamento de fps", () => {
     const aoQuadro = vi.fn();
     montar({ aoQuadro, fps: 30 }).iniciar();
-    // Quadros a cada 10 ms: o orçamento de 33,3 ms deixa passar 1000, 1040 e 1080.
+    // Quadros a cada 10 ms: o orçamento de 33,3 ms (com 15% de tolerância ao
+    // jitter, 28,3 ms) deixa passar 1000, 1030, 1060 e 1090.
     for (let agora = 1000; agora <= 1100; agora += 10) rodarQuadro(agora);
     // Argumentos de aoQuadro: (renderer, delta, agora).
-    expect(aoQuadro.mock.calls.map((chamada) => chamada[2])).toEqual([1000, 1040, 1080]);
+    expect(aoQuadro.mock.calls.map((chamada) => chamada[2])).toEqual([1000, 1030, 1060, 1090]);
     expect(aoQuadro.mock.calls[0][1]).toBe(0); // primeiro quadro sem salto de tempo
-    expect(aoQuadro.mock.calls[1][1]).toBeCloseTo(0.04);
+    expect(aoQuadro.mock.calls[1][1]).toBeCloseTo(0.03);
+  });
+
+  it("KIT-09 — jitter do relógio não derruba quadros", () => {
+    // Monitor de 60 Hz real: intervalos de 16,5 a 16,8 ms.
+    const tempos = [1000];
+    for (let i = 0; i < 12; i += 1) tempos.push(tempos[tempos.length - 1] + (i % 2 ? 16.8 : 16.5));
+
+    const a60 = vi.fn();
+    montar({ aoQuadro: a60, fps: 60 }).iniciar();
+    tempos.forEach(rodarQuadro);
+    expect(a60).toHaveBeenCalledTimes(tempos.length);
+
+    montadas.forEach((cena) => cena.descartar());
+    const a30 = vi.fn();
+    montar({ aoQuadro: a30, fps: 30 }).iniciar();
+    tempos.forEach((t) => rodarQuadro(t + 1000));
+    // Um sim, outro não: 13 quadros → 7 desenhos, cadência fixa de ~33 ms.
+    expect(a30).toHaveBeenCalledTimes(7);
+    const intervalos = a30.mock.calls.slice(1).map((c, i) => c[2] - a30.mock.calls[i][2]);
+    intervalos.forEach((ms) => expect(ms).toBeCloseTo(33.3, 0));
   });
 
   it("KIT-05 — aba oculta pausa o loop e a volta retoma", () => {

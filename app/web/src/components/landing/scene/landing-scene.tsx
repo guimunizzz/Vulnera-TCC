@@ -4,8 +4,13 @@
  * O QUE FAZ
  * A camada de fundo da landing: o pôster estático sempre pintado e, quando o
  * gate do kit permite, a cena WebGL por cima, carregada só por `lazy()`.
- * Quando o primeiro quadro da cena sai, o pôster esmaece; se a cena se perde,
- * ele volta.
+ * Quando o primeiro quadro da cena sai, o pôster esmaece e é DESMONTADO; se a
+ * cena se perde, ele volta.
+ *
+ * Por que desmontar: o pôster tem um <span> por glifo (~5 mil em 1440 px, o
+ * dobro no crossfade). Escondido mas montado, ele re-renderizava a cada troca
+ * de ato — justamente durante a rolagem — e derrubava os quadros (medido em
+ * 2026-11-03).
  *
  * POR QUE EXISTE
  * Um único canvas por rota (decisão do refactor web-motion-3d). O gate
@@ -17,6 +22,7 @@
  */
 
 import { lazy, Suspense, useEffect, useState } from "react";
+import { DURACAO } from "../../../motion/tokens";
 import { useCenaPermitida } from "../../../three/gate";
 import { LARGURA_MINIMA_CENA } from "./config";
 import { LandingPoster } from "./landing-poster";
@@ -35,9 +41,24 @@ export function LandingScene() {
     if (!permitida) setPronta(false);
   }, [permitida]);
 
+  const oculto = permitida && pronta;
+  // Com a cena pronta, o pôster congela no ato atual, termina o esmaecimento
+  // (--duration-slow) e sai do DOM.
+  const [posterMontado, setPosterMontado] = useState(true);
+  const [atoDoPoster, setAtoDoPoster] = useState(ato);
+  useEffect(() => {
+    if (!oculto) {
+      setPosterMontado(true);
+      setAtoDoPoster(ato);
+      return;
+    }
+    const id = window.setTimeout(() => setPosterMontado(false), DURACAO.slow * 1000);
+    return () => window.clearTimeout(id);
+  }, [oculto, ato]);
+
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0" data-landing-cena={permitida ? "webgl" : "poster"}>
-      <LandingPoster ato={ato} oculto={permitida && pronta} />
+      {posterMontado && <LandingPoster ato={oculto ? atoDoPoster : ato} oculto={oculto} />}
       {permitida && (
         <Suspense fallback={null}>
           <Canvas aoFicarPronta={() => setPronta(true)} aoPerder={() => setPronta(false)} />

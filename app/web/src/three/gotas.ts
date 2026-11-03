@@ -18,8 +18,8 @@
  *     botão, campo, item de menu…) — clicar num botão nunca faz onda.
  *   - Clique por teclado (`detail === 0`) não gera gota.
  *   - Movimento reduzido: a cena nem monta (gate do kit), então não há gota.
- *   - Enquanto houver onda viva, a cena redesenha a cada quadro do loop
- *     (orçamento de fps do kit); quando a última some, volta aos tiques.
+ *   - As cenas desenham todo quadro do loop (60 fps, pausado com a aba
+ *     oculta); `ativa()` diz se ainda há onda — útil para medir e testar.
  *
  * QUEM USA
  * `components/landing/scene/use-landing-scene.ts` e
