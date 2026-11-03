@@ -450,9 +450,14 @@
      Traço das cenas three.js — ondas, órbitas, pontos. É DECORAÇÃO: não é ação
      (violeta de botão), nem série de gráfico, nem severidade, e não carrega
      dado. Sem par de contraste: nunca é texto nem a única forma de informar
-     algo. Lidos em runtime por `src/three/palette.ts`. */
+     algo. Lidos em runtime por `src/three/palette.ts`.
+     Ciano e magenta: acentos da aurora da atmosfera (mesmas cores da landing,
+     `--vx-cyan`/`--vx-magenta`, em OKLCH). Sem primitivo próprio: só a
+     decoração usa estes matizes. */
   --color-ambient-ink: var(--iris-400);
   --color-ambient-muted: var(--neutral-400);
+  --color-ambient-cyan: 0.831 0.135 197; /* #2de2e6 */
+  --color-ambient-magenta: 0.684 0.270 343; /* #ff2ec4 */
 
   /* --- Tokens com alpha embutido ----------------------------------------
      ⚠️ Guardam a cor INTEIRA (não só L C H). Não aceitam `/opacidade` do
@@ -553,6 +558,8 @@
 
   --color-ambient-ink: var(--iris-700);
   --color-ambient-muted: var(--neutral-600);
+  --color-ambient-cyan: 0.520 0.094 223; /* #0e7490 */
+  --color-ambient-magenta: 0.591 0.257 323; /* #c026d3 */
 
   --color-scrim: oklch(0.218 0.015 255 / 0.44);
   --color-bg-hover: oklch(0.218 0.015 255 / 0.05);

@@ -54,7 +54,9 @@
 .findings-severity-grid { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
 
 .findings-severity-card {
-  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 38%, oklch(var(--color-bg-surface) / 0.94) 63%, oklch(var(--color-bg-surface) / 0.88));
+  /* Opaco onde há texto (selo e número à esquerda); a borda direita deixa a
+     atmosfera aparecer, como nos KPIs do Dashboard. */
+  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 55%, oklch(var(--color-bg-surface) / 0.95) 70%, oklch(var(--color-bg-surface) / 0.55));
   box-shadow: var(--elevation-raised);
   transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
 }

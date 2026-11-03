@@ -172,21 +172,36 @@ e na área autenticada (`src/three/gotas.ts`).
 
 ## 8. Atmosfera ASCII da área autenticada
 
-A mesma técnica, em versão **discreta**, substituiu as ondas e órbitas do
-dashboard (um canvas global no layout, decoração, nada sobre dado):
+A mesma técnica, num canvas global no layout (decoração, nada sobre dado),
+substituiu as ondas e órbitas do dashboard. Em 2026-11-03 o Rafael achou a
+primeira versão "sem vida"; a atual devolve forma, cor e movimento sem voltar
+ao fundo antigo (números em `components/dashboard/hero/atmosfera-config.ts`):
 
-- campo esparso (~20% das células) com a rampa `. · : - +` e poucas colunas
-  de "chuva" em `:` e `|`, mais presentes no topo;
+| Camada | O que faz |
+|---|---|
+| **Ondas em ASCII** | As 6 curvas do fundo antigo (`sen(x·2,3 + t·0,22) + cos(x·4,1 − t·0,13)`), desenhadas com glifos escolhidos pela inclinação (`-` `~` `/` `\`), esmaecendo entre células; um brilho percorre cada curva e há poeira fina entre elas. |
+| **Aurora** | Matiz lento violeta → ciano → magenta que tinge os glifos, mais uma lavagem de cor de 5% do teto por trás deles. |
+| **Brilho** | A cabeça de cada fluxo de "chuva" (`:` `|`) acende com halo ciano. |
+| **Hover discreto** | Perto do ponteiro (150 px, só mouse/caneta) aparecem mais glifos e eles acendem; o ponto segue suavizado. Sem clique: a gota ficou só na landing. |
+| **Varredura** | Uma faixa `=`/`-` desce pela tela na troca de página e, sozinha, a cada 36 s (nunca "spammando"). |
+| **Campo** | ~20% das células com a rampa `. · : - +`, respirando devagar. |
+
+Regras que continuam valendo:
+
 - **sem dígitos**: no produto número é dado, e um `0`/`1` ao lado de um KPI,
-  breadcrumb ou aba seria lido como tal (teste CENA-06);
-- 14 px por célula, **4 tiques por segundo**, opacidade máxima 0,30 (escuro) e
-  0,24 (claro), cores `--color-ambient-ink` e `--color-ambient-muted`. É o teto
-  em que o texto secundário do produto segue AA mesmo com um glifo cruzando a
-  letra (7,7:1 e 6,2:1); cabeçalhos de página soltos sobre o fundo ganham um
-  véu desfocado (`.atmosfera-veu`) que protege também o texto muted;
-- as superfícies do produto (hero, KPIs, cards de severidade) ficam quase
-  opacas até a borda: a atmosfera aparece nos vãos e margens, nunca atrás de
-  texto ou número;
+  breadcrumb ou aba seria lido como tal (ATM-02 e CENA-06);
+- teto de opacidade 0,30 (escuro) e 0,24 (claro), em qualquer cor da aurora:
+  o texto primário e o secundário seguem AA mesmo com um glifo cruzando a
+  letra — conta feita por `atmosfera-contrast.test.ts` (ATM-01) com as cores
+  reais de `tokens.css`; o ciano e o magenta são tokens
+  (`--color-ambient-cyan`, `--color-ambient-magenta`), as mesmas cores da
+  landing em OKLCH;
+- cabeçalhos de página soltos sobre o fundo têm o véu desfocado
+  (`.atmosfera-veu`), que protege também o texto muted;
+- KPIs do Dashboard e cards de severidade de Findings são opacos onde há
+  texto e translúcidos só na borda direita, onde a atmosfera aparece;
+- duas passadas (lógica por célula, glifo por pixel) a 60 fps; medido
+  56–60 fps parado e rolando, 0% de quadros > 25 ms;
 - movimento reduzido, tela < 768 px ou sem WebGL2: o chunk de three nem é
   baixado e fica o fundo CSS.
 
@@ -199,6 +214,7 @@ dashboard (um canvas global no layout, decoração, nada sobre dado):
 | 2026-10-30 | Hash do pôster corrigido; atmosfera do produto sem dígitos; medições finais (§7). |
 | 2026-11-03 | Fundo mais visível a pedido do Rafael (landing: glifos 0,48/0,60/0,45 e vinheta mais cheia, superfície do texto 92% → 94%; plataforma: ~3× mais tinta, véu atrás dos cabeçalhos) e **gota d'água** no clique (§5.1). |
 | 2026-11-03 | **Fluidez** (pedido do Rafael: o fundo passava sensação de lag): 60 fps contínuo, duas passadas, loop sem engasgo de cadência, pôster desmontado com a cena pronta, barra da landing sem `backdrop-blur` (§7). |
+| 2026-11-03 | Atmosfera da plataforma "com vida" (pedido do Rafael): ondas ASCII, aurora violeta/ciano/magenta, brilho na chuva, hover discreto, varredura na troca de página e a cada 36 s; gota removida da plataforma (§8). |
 
 ### Boas práticas consultadas (2026-10-27)
 

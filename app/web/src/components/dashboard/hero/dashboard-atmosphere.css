@@ -32,6 +32,13 @@
     radial-gradient(ellipse at 8% 72%, oklch(var(--color-accent) / 0.09), transparent 45%);
 }
 
+/* Cards de KPI: opacos onde há texto (rótulo, número e legenda ficam à
+   esquerda) e translúcidos na borda direita, onde a atmosfera aparece.
+   O ícone do canto tem fundo próprio. */
+.dashboard-kpi {
+  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 55%, oklch(var(--color-bg-surface) / 0.95) 70%, oklch(var(--color-bg-surface) / 0.55));
+}
+
 /* Véu atrás de texto solto sobre a atmosfera (cabeçalhos de página sem card).
    Desfocado para não virar uma caixa: os glifos somem atrás das letras e
    continuam visíveis em volta. Com ele, o texto muted segue AA sobre o fundo. */

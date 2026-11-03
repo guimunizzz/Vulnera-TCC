@@ -9,8 +9,8 @@
  *
  * POR QUE EXISTE
  * Pedido do Rafael (2026-10-30): interação com o fundo SOMENTE por clique —
- * nada de seguir o ponteiro. A landing e a atmosfera da área autenticada
- * usam a mesma física, então ela mora no kit.
+ * nada de seguir o ponteiro. Desde 2026-11-03 só a landing usa a gota: na
+ * área autenticada o clique é trabalho, e a atmosfera reage a hover discreto.
  *
  * REGRAS
  *   - O canvas continua `pointer-events: none` e fora do foco: o clique é
@@ -22,8 +22,7 @@
  *     oculta); `ativa()` diz se ainda há onda — útil para medir e testar.
  *
  * QUEM USA
- * `components/landing/scene/use-landing-scene.ts` e
- * `components/dashboard/hero/use-dashboard-scene.ts`.
+ * `components/landing/scene/use-landing-scene.ts`.
  */
 
 /** Quantas gotas convivem; a mais antiga é substituída. */

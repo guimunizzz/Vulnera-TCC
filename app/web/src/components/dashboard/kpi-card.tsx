@@ -52,7 +52,7 @@ export function KpiCard({ label, value, legenda, accentClassName, icon, tone = "
 
   return (
     <article aria-label={label} className="h-full">
-      <Card semPadding className="group relative h-full overflow-hidden transition-colors duration-base hover:border-strong">
+      <Card semPadding className="dashboard-kpi group relative h-full overflow-hidden bg-transparent transition-colors duration-base hover:border-strong">
         <span aria-hidden="true" className={cn("absolute inset-y-0 left-0 w-px", estilo.line)} />
         <div className="relative flex min-h-[8rem] flex-col justify-between gap-5 p-5">
           <div className="flex items-center justify-between gap-3">

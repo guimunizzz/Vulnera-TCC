@@ -14,15 +14,19 @@
  */
 
 import { useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useDashboardScene } from "./use-dashboard-scene";
 
 function DashboardAmbientCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pronto, setPronto] = useState(false);
-  // A troca de tema é observada pelo kit (`observarTema`), não por prop.
+  // O canvas vive no layout e sobrevive à troca de página; a rota só dispara
+  // a varredura de transição. A troca de tema é observada pelo kit.
+  const { pathname } = useLocation();
   useDashboardScene(canvasRef, {
     onReady: () => setPronto(true),
     onLost: () => setPronto(false),
+    chaveDeRota: pathname,
   });
 
   return (

@@ -11,6 +11,8 @@
  *   CENA-04  contexto perdido avisa onLost e limpa o resto do hook
  *   CENA-05  desmontado antes do atlas: nada é montado e a textura é descartada
  *   CENA-06  nenhum dígito nos glifos: no produto, número é dado
+ *   CENA-07  hover: ouve o ponteiro na janela e para de ouvir no unmount (sem
+ *            listener de clique — a gota ficou só na landing)
  */
 
 import { useRef } from "react";
@@ -75,7 +77,9 @@ describe("useDashboardScene (atmosfera ASCII) sobre o kit", () => {
     render(<Cena />);
     await waitFor(() => expect(falso.iniciar).toHaveBeenCalledTimes(1));
     expect(falso.montar).toHaveBeenCalledWith(expect.objectContaining({ fps: 60, maxDpr: 1.5 }));
-    expect(new Set(falso.tokens)).toEqual(new Set(["--color-ambient-ink", "--color-ambient-muted"]));
+    expect(new Set(falso.tokens)).toEqual(new Set([
+      "--color-ambient-ink", "--color-ambient-muted", "--color-ambient-cyan", "--color-ambient-magenta",
+    ]));
   });
 
   it("CENA-02 — unmount descarta cena, hospedeiro, tema e observer", async () => {
@@ -117,6 +121,19 @@ describe("useDashboardScene (atmosfera ASCII) sobre o kit", () => {
     liberar({ textura, total: 8, proporcao: 0.5 });
     await waitFor(() => expect(textura.dispose).toHaveBeenCalled());
     expect(falso.montar).not.toHaveBeenCalled();
+  });
+
+  it("CENA-07 — hover ouve pointermove e solta no unmount; nada de clique", async () => {
+    const adicionar = vi.spyOn(window, "addEventListener");
+    const remover = vi.spyOn(window, "removeEventListener");
+    const { unmount } = render(<Cena />);
+    await waitFor(() => expect(falso.iniciar).toHaveBeenCalled());
+    expect(adicionar.mock.calls.map((c) => c[0])).toContain("pointermove");
+    expect(adicionar.mock.calls.map((c) => c[0])).not.toContain("click");
+    unmount();
+    expect(remover.mock.calls.map((c) => c[0])).toContain("pointermove");
+    adicionar.mockRestore();
+    remover.mockRestore();
   });
 
   it("CENA-06 — nenhum dígito nos glifos da atmosfera", () => {
