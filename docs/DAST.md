@@ -660,6 +660,96 @@ animação: ele exige que o percentual **suba** e que as fases nomeadas do ZAP
 apareçam na tela. Uma barra estimada por tempo passaria na primeira asserção e
 falharia na segunda.
 
+### 11.5 CyberGraph (2D e 3D)
+
+A aba **CyberGraph** do detalhe do scan desenha o caminho de exposição
+Internet → alvo → endpoint → finding com os findings do próprio scan, em dois
+modos com a mesma seleção: **2D** (padrão, SVG, sem WebGL) e **3D** (Three.js,
+só baixado quando escolhido; sem WebGL o botão fica desabilitado). A escolha
+fica no `localStorage` do navegador. Decisão e garantias em
+[[ADR-048 - Grafo 3D do scan DAST na area autenticada]] (seção "Evolução").
+
+- **Barra:** Recentralizar · Restaurar layout · Exportar PNG · 2D/3D, e o selo
+  "Fontes: …" com os sensores que rodaram no scan.
+- **Ativos de descoberta (2026-10-31):** além dos endpoints, o alvo ganha ramos
+  de **IP** (com as portas abertas, as tecnologias dos CPEs e o grupo "CVEs"),
+  **tecnologia** (fingerprint) e **Subdomínios** (recolhido quando há mais de 6).
+  A CVE se liga ao IP, não a um endpoint. O painel/modal da CVE mostra o cartão
+  CVSS (nota, faixa oficial, versão, vetor e link para o NVD) e o selo
+  "potencial · não validado"; a lista de Achados mostra "CVSS x,x · faixa".
+- **Busca e filtro:** a busca (com sugestões) seleciona o nó, abre o grupo dele
+  e centraliza a vista; os chips de severidade tiram do grafo os findings
+  desmarcados e a legenda diz quantos estão aparecendo.
+- **Zoom:** botões + / − / ajustar no canto do palco (a roda continua valendo
+  com o grafo em foco); no 2D, `+` e `-` no teclado.
+- **Exportar PNG:** no 2D, o grafo inteiro em 2×, com as cores do tema atual;
+  no 3D, a cena como está na tela, com os nomes visíveis desenhados por cima.
+- **2D:** colunas Internet → alvo → endpoint → "Findings (N)". Clicar no grupo
+  expande os findings dele (eles saem do grupo deslizando e voltam para ele ao
+  fechar); arestas em degradê; o caminho selecionado ganha fluxo animado e o resto
+  esmaece.
+- **Grupos no 3D:** o 3D começa com os mesmos grupos fechados do 2D. Endpoint, IP
+  e "Subdomínios" mostram `▸ N` antes do nome; clique ou Espaço abre e fecha, com
+  os objetos crescendo a partir do pai. O estado é o mesmo nos dois modos.
+- **Painel e modal:** clicar num nó mostra o painel (tipo, severidade, triagem,
+  caminho de exposição clicável); "Expandir detalhes", duplo clique ou
+  Shift+Enter (2D) / Enter (3D) abrem o modal. O modal é só leitura; "Triar em
+  Achados" leva à linha do finding na aba Achados, com os filtros limpos.
+- **Arrastar:** nós podem ser arrastados livremente nos dois modos (no 3D, num
+  plano de frente para a câmera); arestas seguem. **Restaurar layout** volta ao
+  padrão. As posições não são salvas no servidor.
+- **3D:** endpoints empilhados na vertical (leve curva em profundidade) e
+  findings em grade de frente para a câmera. Cada objeto tem o nome fixo logo
+  abaixo; quando dois nomes colidiriam na tela, some o de menor prioridade
+  (selecionado/hover, estrutura, findings do mais grave ao mais leve) até a
+  câmera girar ou o nó ganhar hover. Com um nó selecionado só os nomes do
+  caminho concorrem.
+
+| Objeto 3D | Representa |
+| --- | --- |
+| Globo com meridianos e órbita | Internet (exposição) |
+| Rack de servidor com LEDs | o host do `targetUrl` |
+| Porta hexagonal | um `normalizedUrl` distinto |
+| Cristal na cor da severidade | um `DastFinding`; HIGH ganha halo pulsante |
+| Porta hexagonal com núcleo do acento | o IP público do alvo |
+| Porta hexagonal menor, núcleo neutro | porta aberta, tecnologia ou subdomínio |
+
+- **Interação:** arrastar o fundo move a vista (2D) ou gira (3D); com o grafo em
+  foco, a roda aproxima; **Recentralizar** volta ao enquadramento inicial.
+- **Teclado:** 2D — um único ponto de Tab no grafo; as setas andam entre os
+  nós (← → entre colunas, ↑ ↓ na coluna), Enter seleciona, Shift+Enter abre o
+  modal, Esc limpa. 3D — Tab foca a cena, setas percorrem os nós, Enter abre,
+  Esc limpa.
+- **2D:** legenda de tipos e severidades; minimapa opcional pelo botão no grupo
+  de zoom (clicar/arrastar move a vista). Fica desligado por padrão: fixo sobre o
+  grafo, ele sempre pode cobrir algum nó.
+- **Sensores:** a faixa "Sensores deste scan" (acima das abas) mostra o status
+  do ZAP, dos headers, do certificado SSL/TLS, das tecnologias, do IP/portas/CVEs
+  (InternetDB + NVD) e dos subdomínios (crt.sh) (OK, Sem dados,
+  Não se aplica, Indisponível, Erro), quantos achados cada um gerou, a duração e a
+  mensagem — o resumo do certificado ou o motivo legível de uma falha. O finding
+  mostra "Sensor de origem" no painel e no modal, a lista de Achados marca os que
+  não vieram do ZAP e o nó do alvo mostra o certificado. Detalhes em `DISCOVERY.md`.
+- **Nova análise:** a pessoa só informa o alvo e marca a autorização; ZAP e os
+  cinco sensores passivos rodam em sequência e o resultado chega no fim. Trocar o
+  alvo desmarca a autorização. A demonstração (sem tocar a rede) é um link
+  secundário. Um scan real que conclui com sensor indisponível mostra
+  "Análise concluída com avisos" com o motivo.
+- **3D em máquina fraca:** se a média de quadro passar de 25 ms (~40 FPS), a
+  cena baixa a resolução e, se ainda faltar, desliga bloom e sombra dinâmica,
+  avisando na tela. Um aviso também conta quantos nomes estão ocultos por
+  colisão.
+- **Limites:** até 300 nós (corta INFO antes de HIGH e avisa). A aba
+  **Achados** continua sendo a visão de trabalho.
+- **Escopo honesto:** usa só o que o ZAP já grava. Sensores, `ObservedAsset`,
+  subdomínio/IP/tecnologia/CVE e a ligação com a Aplicação da spec do Security
+  Graph ainda não existem; por isso não há faixa de sensores nem alerta de
+  divergência de exposição.
+
+Código: `app/web/src/features/security-graph/` (`graph-model.ts` monta o grafo,
+`graph-2d-layout.ts` e `cyber-graph-2d.tsx` o 2D, `scene/` o 3D,
+`cyber-graph.tsx` a aba). Evidências: `docs/evidencias/security-graph/`.
+
 ---
 
 ## Docs relacionados
@@ -669,6 +759,7 @@ falharia na segunda.
 - [[ADR-030 - Execucao assincrona sem fila]]
 - [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]]
 - [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]
+- [[ADR-048 - Grafo 3D do scan DAST na area autenticada]]
 - Vault: `docs/Vulnera/03-Produto/Modulos/DAST.md`, `Fluxo - Scan DAST`,
   `02-Dominio/Entidades/DastScan.md` e `DastFinding.md`, `06-Dados/Enum - DAST.md`
 - `PRD_VIVO.md`, `docs/BACKLOG.md`, `docs/ROADMAP_PROMPTS.md`, `docs/DECISIONS.md`

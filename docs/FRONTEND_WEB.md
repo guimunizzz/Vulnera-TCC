@@ -10,8 +10,10 @@
 **Estado em 2026-10-16.** O frontend está em `app/web/` e é uma SPA React +
 TypeScript construída com Vite. Tailwind usa os tokens próprios em
 `src/styles/tokens.css`; os componentes de interface ficam em
-`src/components/ui/`. Motion anima transições de interface. Three.js só desenha
-a atmosfera decorativa compartilhada e é carregado sob demanda. Os gráficos
+`src/components/ui/`. Motion anima transições de interface. Three.js desenha
+a atmosfera decorativa compartilhada e, desde 2026-10-30, o modo 3D do
+CyberGraph do scan DAST (`src/features/security-graph/`, exceção registrada no
+ADR-048; o modo 2D é SVG); os dois são carregados sob demanda. Os gráficos
 analíticos usam os componentes de `src/components/metrics/`.
 
 Este documento descreve o código implementado. As especificações de tokens e

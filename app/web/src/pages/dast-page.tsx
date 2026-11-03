@@ -80,7 +80,8 @@ function StatusCell({ scan, posicaoNaFila }: { scan: DastScan; posicaoNaFila: nu
 function isValidHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
+    // Mesma regra do backend (validateTargetUrl): credencial embutida na URL é recusada.
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") && !parsed.username && !parsed.password;
   } catch {
     return false;
   }
@@ -89,10 +90,8 @@ function isValidHttpUrl(value: string): boolean {
 export function DastPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [targetUrl, setTargetUrl] = useState("");
-  const [mode, setMode] = useState<"REAL" | "SIMULATED">("SIMULATED");
-  const [confirmingReal, setConfirmingReal] = useState(false);
   const [authorized, setAuthorized] = useState(false);
-  const closeCreate = () => { setIsCreateOpen(false); setConfirmingReal(false); setAuthorized(false); setFormError(null); };
+  const closeCreate = () => { setIsCreateOpen(false); setAuthorized(false); setFormError(null); };
   const [formError, setFormError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
@@ -126,7 +125,10 @@ export function DastPage() {
   }, [usersQuery.data]);
 
   const createMutation = useMutation({
-    mutationFn: () => dastApi.create({ targetUrl: targetUrl.trim(), mode, confirmedRealScan: mode === "REAL" && confirmingReal && authorized }),
+    // A pessoa só escolhe o alvo: o modo real roda ZAP + headers + certificado em sequência.
+    // A demonstração é o atalho secundário, que não toca a rede.
+    mutationFn: (mode: "REAL" | "SIMULATED") =>
+      dastApi.create({ targetUrl: targetUrl.trim(), mode, confirmedRealScan: mode === "REAL" && authorized }),
     onSuccess: (scan) => {
       queryClient.invalidateQueries({ queryKey: ["dast", "scans"] });
       queryClient.invalidateQueries({ queryKey: ["dast", "status"] });
@@ -153,9 +155,9 @@ export function DastPage() {
         <div>
           <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Análise de segurança</p>
           <h1 className="text-2xl font-bold text-fg">Scans DAST</h1>
-          <p className="mt-1 text-fg-muted">Análise dinâmica automatizada via OWASP ZAP.</p>
+          <p className="mt-1 text-fg-muted">Análise dinâmica automatizada: OWASP ZAP, headers, certificado SSL/TLS, tecnologias, IP com portas e CVEs, e subdomínios.</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>Novo scan</Button>
+        <Button onClick={() => setIsCreateOpen(true)}>Nova análise</Button>
       </div>
 
       <DastStatusBanner status={statusQuery.data} />
@@ -182,8 +184,8 @@ export function DastPage() {
         <EmptyState
           className="mt-6"
           titulo="Nenhum scan ainda"
-          descricao="Escolha uma demonstração sem acessar o alvo ou um rastreamento pelo spider do OWASP ZAP com análise passiva real."
-          acao={<Button onClick={() => setIsCreateOpen(true)}>Novo scan</Button>}
+          descricao="Informe um alvo autorizado: o Vulnera roda o OWASP ZAP e os sensores passivos (headers, SSL/TLS, tecnologias, IP/portas/CVEs e subdomínios) e entrega tudo no fim."
+          acao={<Button onClick={() => setIsCreateOpen(true)}>Nova análise</Button>}
         />
       )}
 
@@ -245,11 +247,10 @@ export function DastPage() {
         aoFechar={() => { if (!createMutation.isPending) closeCreate(); }}
       >
         <>
-          <DialogTitle>{confirmingReal ? "Confirmar scan real" : "Novo scan DAST"}</DialogTitle>
+          <DialogTitle>Nova análise</DialogTitle>
           <DialogDescription>
-            {confirmingReal
-              ? "Este scan acessará o alvo de verdade. Confirme somente se você tem autorização para testar este endereço."
-              : "Escolha como deseja executar. A demonstração gera um relatório fictício; o modo real descobre URLs com o spider do OWASP ZAP e analisa as respostas."}
+            Informe o alvo. O Vulnera roda tudo em sequência e entrega o resultado no fim: OWASP ZAP (spider + análise
+            passiva), headers de segurança, certificado SSL/TLS, tecnologias, IP com portas e CVEs, e subdomínios.
           </DialogDescription>
 
           <form
@@ -257,65 +258,67 @@ export function DastPage() {
             onSubmit={(e) => {
               e.preventDefault();
               setFormError(null);
-              if (!canSubmit || createMutation.isPending) return;
-              if (mode === "REAL" && !confirmingReal) { setAuthorized(false); setConfirmingReal(true); return; }
-              if (mode === "REAL" && !authorized) return;
-              createMutation.mutate();
+              if (!canSubmit || !authorized || createMutation.isPending) return;
+              createMutation.mutate("REAL");
             }}
           >
             {formError && <Alert tom="perigo">{formError}</Alert>}
 
-            {confirmingReal ? (
-              <>
-                <Alert tom="atencao" titulo="O alvo receberá requisições reais">
-                  <p className="break-all font-mono text-xs">{trimmedUrl}</p>
-                  <p className="mt-2">O spider tradicional do ZAP descobrirá URLs e recursos no endereço e caminho informado, com limites de tempo e profundidade. As respostas serão analisadas passivamente. Formulários e testes ativos estão desativados. O rastreamento não executa JavaScript nem cobre todas as rotas de uma SPA. A navegação pode causar efeitos em algumas aplicações.</p>
-                </Alert>
-                <label className="flex items-start gap-3 text-sm text-fg">
-                  <input type="checkbox" checked={authorized} disabled={createMutation.isPending} onChange={(e) => setAuthorized(e.target.checked)} className="mt-1" />
-                  Tenho autorização para testar este alvo e confirmo a execução real.
-                </label>
-              </>
-            ) : (
-              <>
-                <fieldset className="flex flex-col gap-3" disabled={createMutation.isPending}>
-                  <legend className="mb-2 text-sm font-medium text-fg">Tipo de execução</legend>
-                  <label className="flex items-start gap-3 rounded-control border border-subtle bg-surface p-3 text-sm text-fg">
-                    <input type="radio" name="scan-mode" value="SIMULATED" checked={mode === "SIMULATED"} onChange={() => setMode("SIMULATED")} className="mt-1" />
-                    <span><strong>Simulado</strong><span className="block text-fg-muted">Relatório de demonstração. Não executa o ZAP nem acessa o alvo.</span></span>
-                  </label>
-                  <label className="flex items-start gap-3 rounded-control border border-subtle bg-surface p-3 text-sm text-fg">
-                    <input type="radio" name="scan-mode" value="REAL" checked={mode === "REAL"} onChange={() => setMode("REAL")} className="mt-1" />
-                    <span><strong>Real — análise passiva</strong><span className="block text-fg-muted">O spider do ZAP descobre URLs e recursos; a análise passiva gera achados reais. Exige confirmação.</span></span>
-                  </label>
-                </fieldset>
             <Field
               rotulo="URL do alvo"
-              dica="Ex: https://exemplo.com"
+              dica="Ex: https://exemplo.com — o endereço e o caminho que podem ser analisados"
               obrigatorio
-              erro={trimmedUrl.length > 0 && !canSubmit ? "Informe uma URL http:// ou https:// válida." : null}
+              erro={trimmedUrl.length > 0 && !canSubmit ? "Informe uma URL http:// ou https:// válida, sem usuário e senha." : null}
             >
               {(attrs) => (
                 <Input
                   {...attrs}
                   placeholder="https://exemplo.com"
                   value={targetUrl}
-                  onChange={(e) => setTargetUrl(e.target.value)}
+                  disabled={createMutation.isPending}
+                  // Trocar o alvo invalida a autorização dada para o anterior.
+                  onChange={(e) => { setTargetUrl(e.target.value); setAuthorized(false); setFormError(null); }}
                   autoFocus
                 />
               )}
             </Field>
 
-              </>
-            )}
+            <ul className="flex flex-col gap-1.5 rounded-control border border-subtle bg-inset p-3 text-sm text-fg-muted">
+              <li><strong className="text-fg">OWASP ZAP</strong> — descobre URLs com o spider e analisa as respostas, sem testes ativos nem formulários.</li>
+              <li><strong className="text-fg">Headers de segurança</strong> — uma requisição à página informada: CSP, HSTS, anti-clickjacking, cookies.</li>
+              <li><strong className="text-fg">Certificado SSL/TLS</strong> — um handshake: validade, cadeia, nome do host e versão do protocolo.</li>
+              <li><strong className="text-fg">Tecnologias</strong> — o que a página anuncia em headers, cookies e HTML (servidor, linguagem, CMS).</li>
+              <li><strong className="text-fg">IP, portas e CVEs</strong> — consulta a InternetDB (Shodan) pelo IP do alvo e busca o CVSS de cada CVE no NVD (NIST). Nada é enviado ao alvo; as CVEs são potenciais.</li>
+              <li><strong className="text-fg">Subdomínios</strong> — logs públicos de certificados (crt.sh). Só listados, nunca acessados.</li>
+            </ul>
 
-            <div className="mt-2 flex justify-end gap-2">
-              <Button type="button" variant="secundario" disabled={createMutation.isPending} onClick={() => confirmingReal ? setConfirmingReal(false) : closeCreate()}>
-                {confirmingReal ? "Voltar" : "Cancelar"}
+            <label className="flex items-start gap-3 text-sm text-fg">
+              <input type="checkbox" checked={authorized} disabled={createMutation.isPending || !canSubmit} onChange={(e) => setAuthorized(e.target.checked)} className="mt-1" />
+              <span>
+                Tenho autorização para testar este alvo.
+                <span className="block text-fg-muted">O alvo receberá requisições reais; algumas aplicações registram ou reagem à navegação do spider.</span>
+              </span>
+            </label>
+
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="fantasma"
+                size="sm"
+                disabled={!canSubmit || createMutation.isPending}
+                title="Gera dados fictícios para apresentar a ferramenta; nenhuma requisição é feita ao alvo."
+                onClick={() => { setFormError(null); createMutation.mutate("SIMULATED"); }}
+              >
+                Ver demonstração sem acessar o alvo
               </Button>
-              <Button type="submit" disabled={!canSubmit || createMutation.isPending || (confirmingReal && !authorized)}>
-                {createMutation.isPending ? "Iniciando..." : confirmingReal ? "Confirmar e iniciar scan real" : mode === "REAL" ? "Continuar para confirmação" : "Gerar demonstração"}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="secundario" disabled={createMutation.isPending} onClick={closeCreate}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={!canSubmit || !authorized || createMutation.isPending}>
+                  {createMutation.isPending ? "Iniciando..." : "Iniciar análise"}
+                </Button>
+              </div>
             </div>
           </form>
         </>
