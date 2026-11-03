@@ -90,6 +90,24 @@
   }
 }
 
+/* O lema decorativo só fica ao lado do título quando há espaço. A container
+   query é em rem de propósito: com o texto ampliado pelo menu de
+   acessibilidade o limiar cresce junto, e o lema sai antes de encostar no
+   título (WCAG 1.4.4). Em 100% nada muda — o lema aparece a partir de md. */
+.dashboard-hero-surface {
+  container-type: inline-size;
+}
+
+@container (max-width: 44rem) {
+  .dashboard-hero-surface .dashboard-hero-colunas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-hero-surface .dashboard-hero-lema {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dashboard-ambient-canvas {
     transition: none;

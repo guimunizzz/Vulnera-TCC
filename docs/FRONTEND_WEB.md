@@ -133,13 +133,30 @@ funcional durante a saída e entrada do conteúdo. Os demais módulos reutilizam
 os componentes Motion existentes para listas, filtros, cards e feedback das
 mutations. Não há durações arbitrárias por página.
 
-Quando `prefers-reduced-motion` está ativo, a cena WebGL não monta, os loops
-CSS param e as variantes de Motion removem deslocamento e escala. Valores e
+Quando `prefers-reduced-motion` está ativo **ou** a pessoa liga "Reduzir
+animações" no menu de acessibilidade, a cena WebGL não monta, os loops CSS
+param, a intro 3D da landing é pulada e as variantes de Motion removem
+deslocamento e escala. A pergunta "o movimento está reduzido?" tem uma resposta
+só: `movimentoReduzido()` / `useMovimentoReduzido()` em
+`src/design/accessibility.ts` — não consulte a media query direto. Valores e
 conteúdo permanecem legíveis. A decoração usa `aria-hidden` e
 `pointer-events: none`; a navegação mantém link de pulo, landmarks, foco e
 controles semânticos. Em tabelas estreitas, o conteúdo rola horizontalmente
 quando necessário em vez de cortar colunas; listas que já possuíam cards
 mobile continuam usando o mesmo DOM.
+
+## Menu de acessibilidade
+
+Botão no canto superior direito de todas as telas (cabeçalho do `AppLayout`,
+barra da landing, e fixo via `ComMenuAcessibilidade` nas rotas sem cabeçalho).
+O painel (`src/design/accessibility-menu.tsx`) ajusta tamanho do texto (100 a
+200%), alto contraste, reduzir animações, sublinhar links, espaçamento de texto
+(WCAG 1.4.12) e foco reforçado. As escolhas ficam no `localStorage`
+(`vulnera:a11y`) e viram atributos no `<html>`; o script inline do `index.html`
+as aplica antes do primeiro paint. Tabela de opções e contraste em
+`docs/DESIGN_SYSTEM.md` §4; decisão no ADR-049. Ao criar uma tela, verifique-a
+também com texto a 200% e alto contraste — `e2e/acessibilidade.spec.ts` varre as
+principais com `axe-core`.
 
 ## Tema e política de scripts
 

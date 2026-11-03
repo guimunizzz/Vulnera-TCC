@@ -318,9 +318,13 @@ atravessar a barra com a seta.
 **exibida** e falha abaixo do mínimo.
 
 ```
-66 pares medidos · 0 falha(s) · 77 primitivos auditados · 0 fora do gamut sRGB
-✓ Todos os pares atendem WCAG 2.1 AA nos dois temas.
+132 pares medidos · 0 falha(s) · 77 primitivos auditados · 0 fora do gamut sRGB
+✓ Todos os pares atendem WCAG 2.1 AA nos dois temas e AAA no alto contraste.
 ```
+
+São os mesmos 33 pares em quatro cenários: escuro e claro (régua AA) e escuro e
+claro com **alto contraste** (régua AAA: texto 7:1, ver "Menu de
+acessibilidade" abaixo). Até 2026-10-31 eram 66 pares, só os dois temas.
 
 | Par | dark | light | mínimo |
 |---|---|---|---|
@@ -344,6 +348,53 @@ sem virar rosa.
 
 ⚠️ **Limitação:** a paridade foi provada em jsdom + `axe-core`, **não em leitor
 de tela real**. NVDA e VoiceOver não foram testados.
+
+### Menu de acessibilidade (2026-10-31)
+
+Botão com ícone próprio no canto superior direito de **todas as telas**: no
+cabeçalho do `AppLayout`, na barra da landing e fixo nas rotas sem cabeçalho
+(login, cadastro, planos, onboarding). Exceção: o relatório do ZAP, que é um
+iframe isolado de terceiros onde as preferências não chegam. Decisão em
+**[[ADR-049 - Menu de acessibilidade com preferencias no navegador]]**.
+
+| Opção | Ícone (lucide) | O que faz | Critério WCAG |
+|---|---|---|---|
+| Tamanho do texto | `AArrowDown` / `AArrowUp` | 100 · 110 · 125 · 150 · 175 · 200% pela raiz (`--a11y-escala-fonte`) | 1.4.4 (AA) |
+| Alto contraste | `Contrast` | reforço sobre o tema atual, texto ≥ 7:1 (tokens.css §11) | 1.4.6 (AAA) |
+| Reduzir animações | `CirclePause` | mesmo efeito de `prefers-reduced-motion`, sem depender do sistema | 2.2.2 (A), 2.3.3 |
+| Sublinhar links | `Underline` | todo `a[href]` sublinhado | 1.4.1 (A) |
+| Espaçamento de texto | `Space` | os valores exatos do critério: entrelinha 1.5, letras 0.12em, palavras 0.16em, parágrafo 2em | 1.4.12 (AA) |
+| Foco reforçado | `Focus` | anel de 4px com halo | 2.4.7 (AA), 2.4.13 |
+| Restaurar padrão | `RotateCcw` | volta tudo ao padrão | — |
+
+Como funciona: `design/accessibility.ts` guarda as escolhas em `localStorage`
+(`vulnera:a11y`) e estampa atributos no `<html>` (`data-alto-contraste`,
+`data-reduzir-movimento`, `data-sublinhar-links`, `data-espacamento-texto`,
+`data-foco-reforcado`). O script inline do `index.html` faz o mesmo antes do
+primeiro paint, como o tema. `useMotion()` e todo código fora do React (GSAP,
+rAF, intro 3D da landing) consultam `movimentoReduzido()`, que vale para o menu
+**ou** para o sistema.
+
+| Par (alto contraste) | dark | light | mínimo |
+|---|---|---|---|
+| Texto atenuado / superfície | 14,07:1 | 14,33:1 | 7,0 |
+| Texto do botão primário | 9,80:1 | 11,30:1 | 7,0 |
+| Link / superfície | 11,84:1 | 11,30:1 | 7,0 |
+| Chip CRITICAL | 11,90:1 | 9,34:1 | 7,0 |
+| Borda de controle / superfície | 11,70:1 | 14,33:1 | 3,0 |
+
+No escuro o botão primário **inverte** (preenchimento claro, texto escuro):
+iris-600 com texto branco para em 5,78:1. Funciona porque todo `bg-accent` e
+`bg-danger` do produto escreve com o `-fg` correspondente.
+
+Provas: `sistema.test.tsx` (MOV-03, A11Y-PREF-01..05) e
+`e2e/acessibilidade.spec.ts` (AC-01..04, com varredura `axe-core` WCAG 2.x A/AA
+em 9 telas, também com alto contraste e texto a 200%).
+
+⚠️ **Limites:** a landing (`--vx-*`) e o login (`--login-*`) têm paletas
+próprias e ganham só reforço de texto e borda, não a régua AAA medida; gráficos
+SVG com `fontSize` numérico (Recharts, radar de maturidade, CyberGraph 2D) não
+crescem com o texto — o zoom do navegador continua cobrindo esses casos.
 
 ---
 
