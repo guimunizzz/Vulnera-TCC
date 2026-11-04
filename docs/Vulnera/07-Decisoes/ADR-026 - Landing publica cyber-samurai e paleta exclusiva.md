@@ -1,12 +1,22 @@
 ---
 type: decisao
 tags: [decision, frontend, design-system, landing, three.js]
-status: vigente
+status: parcialmente substituída
+substituida_por: ADR-050
 codigo: ADR-026
 data: 2026-08-19
 ---
 
 # ADR-026 - Landing pública "cyber-samurai" e paleta exclusiva da superfície de marketing
+
+> [!warning] Parcialmente substituída pelo ADR-050 (2026-11-04)
+> O refactor `web-motion-3d` substituiu o §1 (a landing segue o tema do app),
+> o §2 (não há `landing-palette.ts`; as cores ficam em `--vx-*` e nos tokens,
+> lidas em runtime) e o §4 (o gate do kit `src/three/` e um pôster ASCII no
+> lugar de `useHeroScene`/`CyberCanvas`). O §3 foi confirmado em parte: three
+> vanilla, sem R3F, mas sem `EffectComposer` (o ASCII é um shader próprio de
+> duas passadas). O texto abaixo é o registro original, mantido como histórico.
+> Ver [[ADR-050 - Camadas de movimento e kit three.js imperativo no web]].
 
 > [!info] Executa a task 8.12 do `docs/BACKLOG.md`
 > `fix/landing-publica` (2026-08-18) deixou a landing como placeholder mínimo

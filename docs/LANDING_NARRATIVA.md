@@ -11,9 +11,9 @@
 # Landing narrativa — roteiro da cena
 
 > [!NOTE]
-> **Estado (2026-10-30):** implementado e validado no container `:8086`
-> (Fase 4 do refactor `web-motion-3d`). A primeira versão, um campo de
-> **pontos** WebGL, foi substituída por uma cena de **caracteres ASCII**
+> **Estado (2026-11-04):** implementado e validado no container `:8086`
+> (refactor `web-motion-3d`, encerrado na Fase 6; decisão no ADR-050). A
+> primeira versão, um campo de **pontos** WebGL, foi substituída por uma cena de **caracteres ASCII**
 > depois do retorno do Rafael (os pontos pareciam genéricos e pesados). O
 > roteiro dos seis atos não mudou; mudou o material. Ver §8.
 
@@ -81,10 +81,11 @@ meio da tela; entre duas seções, ele cresce em linha reta.
 | Situação | O que a pessoa vê |
 |---|---|
 | WebGL2, sem movimento reduzido, tela ≥ 768 px | A cena WebGL completa. |
-| Movimento reduzido | O pôster ASCII do ato atual. A troca de ato é um **crossfade** (só opacidade, `--duration-slow`); nenhum glifo anda, não há pulso nem varredura. |
+| Movimento reduzido (do sistema ou do menu de acessibilidade) | O pôster ASCII do ato atual. A troca de ato é um **crossfade** (só opacidade, `--duration-slow`); nenhum glifo anda, não há pulso nem varredura. |
 | Sem WebGL2, sem canvas 2D para o atlas, ou falha ao baixar a cena | O pôster, com a mesma troca por ato. |
 | Contexto WebGL perdido no meio da sessão | A cena some e o pôster, que sempre esteve embaixo, assume. |
 | Tela < 768 px | O pôster (decidido por medição — §6). |
+| Alto contraste do menu de acessibilidade | Fundo liso: sem cena e sem pôster. O teto de opacidade dos glifos foi calculado para AA, e o alto contraste promete 7:1 (ADR-049). |
 
 O pôster é um `<pre>` com um `<span>` por glifo, gerado por
 `scene/layout.ts`, que espelha a regra do shader célula por célula (mesmas
@@ -202,8 +203,8 @@ Regras que continuam valendo:
   texto e translúcidos só na borda direita, onde a atmosfera aparece;
 - duas passadas (lógica por célula, glifo por pixel) a 60 fps; medido
   56–60 fps parado e rolando, 0% de quadros > 25 ms;
-- movimento reduzido, tela < 768 px ou sem WebGL2: o chunk de three nem é
-  baixado e fica o fundo CSS.
+- movimento reduzido (sistema ou menu), alto contraste do menu, tela < 768 px
+  ou sem WebGL2: o chunk de three nem é baixado e fica o fundo CSS.
 
 ## 9. Histórico
 
@@ -215,6 +216,7 @@ Regras que continuam valendo:
 | 2026-11-03 | Fundo mais visível a pedido do Rafael (landing: glifos 0,48/0,60/0,45 e vinheta mais cheia, superfície do texto 92% → 94%; plataforma: ~3× mais tinta, véu atrás dos cabeçalhos) e **gota d'água** no clique (§5.1). |
 | 2026-11-03 | **Fluidez** (pedido do Rafael: o fundo passava sensação de lag): 60 fps contínuo, duas passadas, loop sem engasgo de cadência, pôster desmontado com a cena pronta, barra da landing sem `backdrop-blur` (§7). |
 | 2026-11-03 | Atmosfera da plataforma "com vida" (pedido do Rafael): ondas ASCII, aurora violeta/ciano/magenta, brilho na chuva, hover discreto, varredura na troca de página e a cada 36 s; gota removida da plataforma (§8). |
+| 2026-11-04 | Merge de `dev` com o menu de acessibilidade (ADR-049): "Reduzir animações" do menu também troca a cena pelo pôster e refaz o GSAP; o alto contraste deixa o fundo liso (§4). Fechamento do refactor no ADR-050. |
 
 ### Boas práticas consultadas (2026-10-27)
 

@@ -16,6 +16,10 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-04 — Refactor de movimento, 3D e interface do web (100% das fases 0–6).** Branch `refactor/web-motion-3d`. Arquitetura de animação em camadas (Motion no produto, GSAP só na landing, CSS nos loops, three.js imperativo pelo kit `src/three/`), cena ASCII narrativa na landing, atmosfera ASCII na plataforma, código dividido por rota e redesenho de Dashboard, Aplicações e Projetos. Integrado ao menu de acessibilidade de `dev`: movimento reduzido e alto contraste também desligam as cenas. Validação: `npm run check` (lint 0 erros, contraste 132/132 AA + AAA, **526/526 testes**), build, container `:8086` reconstruído, e2e de acessibilidade 4/4 e CyberGraph 9/9, roteiros Playwright em `output/web-motion-3d/`. Não validado em celular real nem com leitor de tela real. Decisão no ADR-050; pendências WEB-FUT-01..07 no BACKLOG.
+
+- [x] Fases 0–6 do refactor `web-motion-3d`, com checkpoint e commit local por fase.
+
 **✅ 2026-10-16 — Disponibilidade da barra lateral no Docker local (100%).** O frontend de `http://localhost:8086` ainda servia a imagem anterior: os arquivos HTTP não continham a nova marca, grupos ou estilos. A validação da implementação havia usado um servidor Vite separado. Executado `docker compose up -d --build --no-deps web`; build aprovado e somente o container web recriado. Confirmados HTTP 200 para HTML/JS/CSS e a presença dos três elementos no bundle servido (`index-W8-sgNk_.js`, `index-Bd20NLid.css`). API e MySQL continuam saudáveis, sem reinicialização. Evidência: `output/sidebar-applied/served-check.md`. Fluxo de atualização documentado em `docs/FRONTEND_WEB.md`.
 
 - [x] Atualizar o frontend Docker para disponibilizar a barra lateral no endereço usado pelo Rafael.

@@ -7,28 +7,46 @@
 
 # Frontend web do Vulnera
 
-**Estado em 2026-10-16.** O frontend está em `app/web/` e é uma SPA React +
-TypeScript construída com Vite. Tailwind usa os tokens próprios em
-`src/styles/tokens.css`; os componentes de interface ficam em
-`src/components/ui/`. Motion anima transições de interface. Three.js desenha
-a atmosfera decorativa compartilhada e, desde 2026-10-30, o modo 3D do
-CyberGraph do scan DAST (`src/features/security-graph/`, exceção registrada no
-ADR-048; o modo 2D é SVG); os dois são carregados sob demanda. Os gráficos
-analíticos usam os componentes de `src/components/metrics/`.
+**Estado em 2026-11-04** (fim do refactor `web-motion-3d`, ADR-050). O
+frontend está em `app/web/` e é uma SPA React + TypeScript construída com Vite.
+Tailwind usa os tokens próprios em `src/styles/tokens.css`; os componentes de
+interface ficam em `src/components/ui/`. Motion anima a interface; GSAP com
+ScrollTrigger anima só a narrativa da landing; three.js desenha o fundo
+decorativo (a cena ASCII da landing e a atmosfera da plataforma, pelo kit
+`src/three/`) e o modo 3D do CyberGraph do scan DAST
+(`src/features/security-graph/`, ADR-048; o modo 2D é SVG). Tudo que usa three
+é carregado sob demanda. Os gráficos analíticos usam os componentes de
+`src/components/metrics/`.
 
 Este documento descreve o código implementado. As especificações de tokens e
 das telas anteriores continuam em [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) e
-[DASHBOARD_VISUAL.md](DASHBOARD_VISUAL.md). A decisão do fundo único está em
-[ADR-041](Vulnera/07-Decisoes/ADR-041%20-%20Atmosfera%20unica%20no%20layout%20autenticado.md).
+[DASHBOARD_VISUAL.md](DASHBOARD_VISUAL.md) (este último é histórico). A decisão
+do fundo único está em
+[ADR-041](Vulnera/07-Decisoes/ADR-041%20-%20Atmosfera%20unica%20no%20layout%20autenticado.md),
+e as camadas de animação e o kit three.js em
+[ADR-050](Vulnera/07-Decisoes/ADR-050%20-%20Camadas%20de%20movimento%20e%20kit%20three.js%20imperativo%20no%20web.md).
+O roteiro da cena e da atmosfera ASCII está em
+[LANDING_NARRATIVA.md](LANDING_NARRATIVA.md).
 
 ## Entrada, rotas e dados
 
 `src/main.tsx` monta, nessa ordem, `ThemeProvider`, TanStack Query,
-`BrowserRouter` e `ToastProvider`. `src/App.tsx` registra as rotas. As telas
-autenticadas passam por `ProtectedRoute`; quase todas usam `AppLayout`, que
-fornece navegação, cabeçalho, alternância de tema, área principal e transição
-entre rotas. `/onboarding` usa um fluxo protegido de tela inteira.
-`/dast/scans/:id/report` também é uma tela cheia separada do layout.
+`BrowserRouter`, `ToastProvider` e `ConfiguracaoDeMovimento` (o `MotionConfig`
+que leva o movimento reduzido a todo componente `motion`). `src/App.tsx`
+registra as rotas. As telas autenticadas passam por `ProtectedRoute`; quase
+todas usam `AppLayout`, que fornece navegação, cabeçalho, alternância de tema,
+área principal e transição entre rotas. `/onboarding` usa um fluxo protegido de
+tela inteira. `/dast/scans/:id/report` também é uma tela cheia separada do
+layout.
+
+Cada página é um chunk próprio, carregado por `paginaLazy`
+(`src/lib/lazy-page.ts`) sob o `LimiteDeRota`
+(`src/components/layout/route-boundary.tsx`): skeleton enquanto baixa e uma
+tela de recuperação só para a falha de download (rede caída, deploy novo).
+Erro de render continua subindo. Ficam no chunk principal apenas `AppLayout`,
+`ProtectedRoute` e a landing, que faz o próprio `lazy()`. Login e cadastro vêm
+num só lote para que a troca animada entre eles nunca espere download. O
+styleguide só existe no servidor de desenvolvimento.
 
 A barra lateral segue a prévia aprovada em 2026-10-16: marca VULNERA SECURITY,
 ícones de traço fino e grupos Visão geral, Operação e Administração. Os grupos
@@ -79,25 +97,83 @@ ao trocar somente a aba. Gravações invalidam listas/detalhes/quadro/métricas
 afetados, e sair ou trocar de usuário limpa o cache da sessão. O botão “Tentar
 novamente” do detalhe de finding refaz a consulta. Decisão e limites em ADR-044.
 
+## Camadas de animação
+
+Cada biblioteca tem um papel, e a pergunta "o movimento está reduzido?" tem uma
+fonte só (`src/design/accessibility.ts`: sistema **ou** menu de acessibilidade).
+
+```mermaid
+flowchart TB
+  pref["design/accessibility.ts<br/>movimentoReduzido · altoContraste"]
+
+  subgraph produto["Interface do produto"]
+    motion["Motion<br/>src/motion · useMotion · tokens"]
+    css["CSS<br/>loops decorativos · press"]
+  end
+
+  subgraph landing["Landing pública"]
+    gsap["GSAP + ScrollTrigger<br/>components/landing/motion"]
+    cena["Cena ASCII narrativa<br/>components/landing/scene"]
+    poster["Pôster ASCII estático"]
+  end
+
+  subgraph plataforma["Área autenticada"]
+    atmos["Atmosfera ASCII<br/>components/dashboard/hero"]
+    fundo["Fundo CSS"]
+  end
+
+  subgraph kit["Kit src/three"]
+    gate["gate.ts<br/>decide antes do download"]
+    host["scene-host · loop · dispose"]
+    pal["palette.ts<br/>cor lida dos tokens"]
+    ascii["ascii · grade-celulas · gotas"]
+  end
+
+  pref --> motion
+  pref --> css
+  pref --> gsap
+  pref --> gate
+  gate -->|permitida| cena
+  gate -->|permitida| atmos
+  gate -->|bloqueada| poster
+  gate -->|bloqueada| fundo
+  cena --> host
+  atmos --> host
+  host --> pal
+  host --> ascii
+```
+
+| Situação | Landing | Plataforma |
+|---|---|---|
+| WebGL2, tela ≥ 768 px, sem preferência | cena ASCII a 60 fps | atmosfera ASCII a 60 fps |
+| Movimento reduzido (sistema ou menu) | pôster do ato atual, troca por fade | fundo CSS parado |
+| Alto contraste do menu | fundo liso, sem pôster | fundo CSS |
+| Tela < 768 px, sem WebGL2 ou falha do chunk | pôster | fundo CSS |
+
 ## Fundo único da área autenticada
 
 `AppLayout` monta `operations-backdrop.css` e `DashboardAtmosphere` uma vez,
 como camadas sem interação sob `operations-content`. A base CSS desenha uma
-grade técnica sutil, luzes radiais e um sinal circular lento. O mesmo fundo
-funciona nos temas dark e light porque usa os tokens OKLCH existentes. Em
-mobile, o sinal circular sai e a grade perde opacidade. A folha também para o
-loop quando o sistema pede movimento reduzido.
+grade técnica sutil e luzes radiais nos tokens OKLCH dos dois temas. O
+`AmbientHostContext` garante no máximo um canvas por navegação autenticada.
 
-`DashboardAtmosphere` conserva a cena Three.js que já era usada no Dashboard e
-em Findings. O novo `AmbientHostContext` informa a essas páginas que o layout
-já montou a cena: assim, a navegação autenticada possui no máximo um canvas.
-O canvas tem `aria-hidden`, não recebe ponteiro e só carrega em viewport com
-pelo menos 768 px, sem `prefers-reduced-motion`. A cena limita o DPR a 1,5,
-desenha em até 30 fps, pausa com a aba oculta e descarta renderer, geometria,
-material, RAF e observers no cleanup. O buffer acompanha o tamanho visível do
-canvas, limitado a `min(100dvh, 60rem)`; páginas longas continuam com o fundo
-CSS abaixo dessa área. A cena não bloqueia conteúdo quando WebGL ou o download
-falha.
+Por cima, quando o gate do kit permite, a atmosfera ASCII
+(`components/dashboard/hero/use-dashboard-scene.ts`, números em
+`atmosfera-config.ts`): as curvas das ondas antigas desenhadas em glifos,
+aurora violeta → ciano → magenta, brilho na cabeça da chuva, hover discreto
+(só mouse e caneta) e uma varredura na troca de página e a cada 36 s. Não há
+dígitos, porque no produto número é dado. O teto de opacidade (0,30 no tema
+escuro, 0,24 no claro) mantém o texto primário e o secundário em AA com um
+glifo cruzando a letra (teste ATM-01). Cabeçalhos soltos sobre o fundo usam o
+véu `.atmosfera-veu`. Os KPIs do Dashboard e os cards de severidade de Findings
+são opacos onde há texto e translúcidos só na borda direita.
+
+O canvas tem `aria-hidden` e `pointer-events: none` e escuta o ponteiro na
+`window`. A renderização usa duas passadas (lógica por célula, glifo por
+pixel), roda a 60 fps com DPR ≤ 1,5, pausa com a aba oculta e descarta
+renderer, texturas, render targets, RAF, listeners e observers no cleanup.
+O buffer acompanha o tamanho visível do canvas, limitado a `min(100dvh, 60rem)`.
+Falha de WebGL ou do download mantém o fundo CSS e o conteúdo.
 
 O botão **Pausar animações** de Findings envia o evento local
 `vulnera:ambient-pause` ao `AppLayout`. Ao sair da página, o efeito limpa a
@@ -134,9 +210,11 @@ os componentes Motion existentes para listas, filtros, cards e feedback das
 mutations. Não há durações arbitrárias por página.
 
 Quando `prefers-reduced-motion` está ativo **ou** a pessoa liga "Reduzir
-animações" no menu de acessibilidade, a cena WebGL não monta, os loops CSS
-param, a intro 3D da landing é pulada e as variantes de Motion removem
-deslocamento e escala. A pergunta "o movimento está reduzido?" tem uma resposta
+animações" no menu de acessibilidade, nenhuma cena WebGL monta (a landing mostra
+o pôster), os loops CSS param, o GSAP da landing refaz as animações em versão
+de fade curto e as variantes de Motion removem deslocamento e escala. O alto
+contraste do menu também impede a montagem das cenas, porque o teto de
+opacidade dos glifos foi calculado para AA e o alto contraste promete 7:1. A pergunta "o movimento está reduzido?" tem uma resposta
 só: `movimentoReduzido()` / `useMovimentoReduzido()` em
 `src/design/accessibility.ts` — não consulte a media query direto. Valores e
 conteúdo permanecem legíveis. A decoração usa `aria-hidden` e
@@ -171,7 +249,10 @@ paint correto em checkout Windows. `src/test/csp.test.ts` cobre a regra.
 
 Ao criar uma tela autenticada, registre a rota sob `AppLayout` em `App.tsx`,
 use componentes de `src/components/ui/`, tokens semânticos, dados da API e as
-variantes de `useMotion()`. A página não deve montar outra atmosfera. Escolha
+variantes de `useMotion()`. A página não deve montar outra atmosfera. Uma cena
+three.js nova entra pelo kit: `useCenaPermitida` antes do `lazy()`, cor lida
+por `three/palette.ts`, `aria-hidden` e `pointer-events: none`, e teste de
+contraste do texto sobre ela. Escolha
 `data-ops-hero` apenas quando um cabeçalho destacado ajudar o fluxo, sem
 repetir um conjunto fixo de KPIs. Teste também estados de loading, vazio, erro,
 tema claro/escuro, 375/768/1440 px e movimento reduzido.
