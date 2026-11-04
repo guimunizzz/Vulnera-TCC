@@ -165,6 +165,16 @@ export const DECODIFICACAO_LANDING = {
   glifos: "#%&*+=/\\<>_-:",
 } as const;
 
+/**
+ * Boot do hero: linhas de terminal antes do título, uma vez por sessão.
+ * 4 linhas × 170 ms + 320 ms de respiro ≈ 1 s. Sai com fade `fast`.
+ */
+export const BOOT_LANDING = {
+  passoMs: 170,
+  respiroMs: 320,
+  chaveSessao: "vulnera:boot-visto",
+} as const;
+
 /** Entrada por recorte (mockups e tabelas): a máscara abre de cima para baixo. */
 export const MASCARA_LANDING = {
   fechada: "inset(0% 0% 100% 0%)",

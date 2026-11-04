@@ -44,6 +44,7 @@ import {
   TIQUES_POR_SEGUNDO,
   calcularMarcos,
   mapearProgresso,
+  TRANSICAO_CENA,
 } from "./config";
 import { FRAGMENT_CELULAS, FRAGMENT_TELA, VERTEX_ASCII } from "./shaders";
 
@@ -97,6 +98,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
     // O loop lê daqui; o ScrollTrigger escreve (suavizado).
     const progresso = { valor: 0 };
     let marcos: number[] = [];
+    let atoAnterior: number | null = null;
 
     const uniformes = {
       uAtlas: { value: null as THREE.Texture | null },
@@ -111,6 +113,8 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       uAlfaSaudavel: { value: OPACIDADE_CENA.saudavel },
       uAlfaDestaque: { value: OPACIDADE_CENA.destaque },
       uAlfaFeixe: { value: OPACIDADE_CENA.feixe },
+      uTransicaoInicio: { value: -1e4 },
+      uTransicaoSentido: { value: 1 },
       uCorBase: { value: new THREE.Color() },
       uCorNeon: { value: new THREE.Color() },
       uCorGlitch: { value: new THREE.Color() },
@@ -155,6 +159,17 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       tempo += delta;
       const tique = Math.floor(tempo * TIQUES_POR_SEGUNDO);
       const p = progresso.valor;
+      // Troca de seção (ato arredondado) dispara a varredura de transição, no
+      // sentido da rolagem; nunca na primeira medida nem em rajada.
+      const atoAtual = Math.round(p);
+      if (atoAnterior === null) atoAnterior = atoAtual;
+      else if (atoAtual !== atoAnterior) {
+        if (tempo - uniformes.uTransicaoInicio.value > TRANSICAO_CENA.intervaloMinimoS) {
+          uniformes.uTransicaoInicio.value = tempo;
+          uniformes.uTransicaoSentido.value = atoAtual > atoAnterior ? 1 : -1;
+        }
+        atoAnterior = atoAtual;
+      }
       // Movimento contínuo: desenha todo quadro do loop (até 60 fps).
       uniformes.uProgresso.value = p;
       uniformes.uTempo.value = tempo;

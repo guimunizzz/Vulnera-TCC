@@ -32,7 +32,7 @@ import { GLSL_ASCII } from "../../../three/ascii";
 import { GLSL_GOTAS, GOTA } from "../../../three/gotas";
 import { GLSL_LER_CELULAS } from "../../../three/grade-celulas";
 import { CENTRO_DOS_GRUPOS } from "./layout";
-import { GLIFO, VINHETA } from "./config";
+import { GLIFO, TRANSICAO_CENA, VINHETA } from "./config";
 
 const vec2 = ([x, y]: readonly [number, number]) => `vec2(${x.toFixed(3)}, ${y.toFixed(3)})`;
 
@@ -52,6 +52,8 @@ uniform float uRaioDoGrupo;
 uniform float uAlfaSaudavel;
 uniform float uAlfaDestaque;
 uniform float uAlfaFeixe;
+uniform float uTransicaoInicio;
+uniform float uTransicaoSentido;
 
 const vec2 GRUPO_BAIXA = ${vec2(CENTRO_DOS_GRUPOS[1])};
 const vec2 GRUPO_MEDIA = ${vec2(CENTRO_DOS_GRUPOS[2])};
@@ -183,6 +185,26 @@ void main() {
 
   // Faixa de glitch tingida de magenta.
   if (naFaixa > 0.5) cor = ${COR.glitch}.0;
+
+  // --- Transição entre seções: faixa de "=" / "-" no sentido da rolagem.
+  // Easing suave (smoothstep), frente nítida e rastro longo atrás dela.
+  float tt = uTempo - uTransicaoInicio;
+  if (tt > 0.0 && tt < ${TRANSICAO_CENA.duracaoS.toFixed(2)}) {
+    float k = tt / ${TRANSICAO_CENA.duracaoS.toFixed(2)};
+    float suave = k * k * (3.0 - 2.0 * k);
+    float frente = uTransicaoSentido * (1.15 - 2.3 * suave);
+    // Distância em linhas, positiva ATRÁS da frente (de onde a faixa veio).
+    float dv = (clip.y - frente) * uTransicaoSentido * grade.y * 0.5;
+    float banda = dv < 0.0 ? exp(-dv * dv * 0.8) : exp(-dv / ${TRANSICAO_CENA.rastroLinhas.toFixed(1)});
+    // Entra e sai sem corte: sobe nos primeiros 10% e esmaece no fim.
+    banda *= min(1.0, k * 10.0) * (1.0 - k * k);
+    float alfaFaixa = banda * uAlfaFeixe;
+    if (banda > 0.05 && alfaFaixa >= alfa * 0.6) {
+      indice = banda > 0.6 ? ${GLIFO.igual}.0 : ${GLIFO.traco}.0;
+      cor = banda > 0.35 ? ${COR.neon}.0 : ${COR.base}.0;
+      alfa = max(alfa, alfaFaixa);
+    }
+  }
 
   gl_FragColor = vec4(indice / 255.0, cor / 255.0, clamp(alfa, 0.0, 1.0), 1.0);
 }

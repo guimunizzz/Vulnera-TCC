@@ -187,6 +187,32 @@ Movimento reduzido (sistema ou menu): o título não decodifica, as três
 variantes de entrada viram fade e o botão não escala. Provas: ENT-01..07
 (`landing-entradas.test.tsx`).
 
+**Boot do hero (2026-11-04).** Na primeira visita da sessão, quatro linhas de
+terminal (`> vulnera init`, `[ ok ] carregando sensores`, …) aparecem em
+~1 s antes da entrada do título (`sections/hero-boot.tsx`, tempos em
+`BOOT_LANDING`). Pula com o botão "PULAR", qualquer tecla, clique ou rolagem.
+Não toca com movimento reduzido (sistema ou menu), quando a página abre numa
+âncora (`#demo`) nem de novo na mesma sessão. As linhas são `aria-hidden` e
+não trazem número: o título fica no DOM o tempo todo, só a entrada visual
+espera. É o substituto curto da intro 3D de 7 s removida no ADR-050
+(BOOT-01..04).
+
+**Plano recomendado com moldura ASCII (2026-11-04).** O card "MAIS POPULAR"
+do Pricing tem uma moldura `=-·-` com cantos `+`, 12 px para fora, cujos
+glifos circulam pelo perímetro no sentido horário (`BordaAscii` em
+`pricing.tsx`, `.vx-borda-ascii` em `landing.css`). É só `transform` em CSS;
+para com movimento reduzido e com a seção fora da tela. Os outros planos
+continuam sem moldura (ENT-08).
+
+**Transição entre seções (2026-11-04).** Quando o ato da cena muda, uma
+faixa de `=` / `-` cruza a tela no sentido da rolagem, a mesma linguagem da
+varredura da plataforma (§8): frente nítida em ciano, rastro de 7 linhas,
+easing smoothstep, entrada e saída sem corte (`TRANSICAO_CENA` em
+`scene/config.ts`, 1,1 s, no máximo uma a cada 0,8 s). Fica no shader da
+primeira passada, com alfa máximo igual ao do feixe, já coberto pelo teste de
+contraste (ENT-09). Sem cena (movimento reduzido, tela estreita, alto
+contraste), não há varredura.
+
 ⚠️ A máscara fica num filho do elemento observado. Na primeira versão o
 recorte estava no próprio alvo do `whileInView`: o Chrome desconta o
 `clip-path` do alvo na interseção, o recorte fechado nunca "entrava na tela", e
@@ -239,6 +265,8 @@ Regras que continuam valendo:
 | 2026-11-03 | Atmosfera da plataforma "com vida" (pedido do Rafael): ondas ASCII, aurora violeta/ciano/magenta, brilho na chuva, hover discreto, varredura na troca de página e a cada 36 s; gota removida da plataforma (§8). |
 | 2026-11-04 | Merge de `dev` com o menu de acessibilidade (ADR-049): "Reduzir animações" do menu também troca a cena pelo pôster e refaz o GSAP; o alto contraste deixa o fundo liso (§4). Fechamento do refactor no ADR-050. |
 | 2026-11-04 | Seções menos monótonas (§7.1): glitch só no hero e na chamada final, títulos que se decodificam, entrada por tipo de conteúdo, loops pausados fora da tela e chamada final só com GSAP + CSS. |
+| 2026-11-04 | Boot de terminal de ~1 s no hero, uma vez por sessão, pulável e ausente com movimento reduzido (§7.1). |
+| 2026-11-04 | Moldura ASCII animada no plano recomendado e varredura de glifos na troca de seção, no sentido da rolagem (§7.1). |
 
 ### Boas práticas consultadas (2026-10-27)
 

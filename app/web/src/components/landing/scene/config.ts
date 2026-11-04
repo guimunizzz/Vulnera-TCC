@@ -38,6 +38,9 @@ export const GLIFO = {
   vazio: 0,
   rampaInicio: 1,
   rampaTotal: 6,
+  /** `-` e `=` (dentro da rampa): a varredura de transição. */
+  traco: 4,
+  igual: 6,
   zero: 7,
   um: 8,
   alerta: 9,
@@ -57,6 +60,20 @@ export const GLIFO = {
  * dos CSS. Um glifo por célula: não há sobreposição, mas o teste ainda soma
  * dois destaques e a varredura, por margem.
  */
+/**
+ * Varredura de transição: ao trocar de ato (seção), uma faixa de `=`/`-`
+ * cruza a tela no sentido da rolagem — a mesma linguagem da atmosfera da
+ * plataforma. O alfa máximo é o do feixe (`OPACIDADE_CENA.feixe`), já coberto
+ * pelo teste de contraste. `intervaloMinimoS` evita uma varredura por seção
+ * numa rolagem rápida.
+ */
+export const TRANSICAO_CENA = {
+  duracaoS: 1.1,
+  intervaloMinimoS: 0.8,
+  /** Comprimento do rastro, em linhas de célula. */
+  rastroLinhas: 7,
+} as const;
+
 export const OPACIDADE_CENA = {
   /** Caractere calmo do campo de terminal. */
   saudavel: 0.48,

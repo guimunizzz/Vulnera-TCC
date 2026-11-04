@@ -60,6 +60,29 @@ const PLANS: Plan[] = [
   },
 ];
 
+/**
+ * Moldura ASCII do plano recomendado: os glifos circulam pelo perímetro
+ * (topo → direita, direita ↓, base ←, esquerda ↑). É só `transform` em CSS
+ * (`.vx-borda-ascii` em landing.css): barato, fluido e parado com movimento
+ * reduzido ou com a seção fora da tela. Os outros planos não têm moldura.
+ */
+const PADRAO_BORDA = "=-·-".repeat(60);
+
+function BordaAscii() {
+  return (
+    <div className="vx-borda-ascii" aria-hidden="true">
+      {(["topo", "direita", "base", "esquerda"] as const).map((lado) => (
+        <span key={lado} className={`vx-borda-ascii-lado vx-borda-ascii-${lado}`}>
+          <span className="vx-borda-ascii-faixa">{PADRAO_BORDA}</span>
+        </span>
+      ))}
+      {(["se", "sd", "ie", "id"] as const).map((canto) => (
+        <span key={canto} className={`vx-borda-ascii-canto vx-borda-ascii-${canto}`}>+</span>
+      ))}
+    </div>
+  );
+}
+
 export default function Pricing() {
   return (
     <section id="planos" data-ato="5" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
@@ -85,8 +108,9 @@ export default function Pricing() {
                       : "border border-[rgba(var(--vx-neutral-rgb),0.25)] hover:border-[rgba(var(--vx-accent-rgb),0.4)]"
                 }`}
               >
+                {plan.highlight && <BordaAscii />}
                 {plan.highlight && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-[6px] bg-[var(--vx-accent)] px-3 py-1 font-mono text-[10px] font-bold tracking-widest text-[var(--vx-on-accent)]">
+                  <span className="absolute -top-3 left-1/2 z-[1] -translate-x-1/2 rounded-[6px] bg-[var(--vx-accent)] px-3 py-1 font-mono text-[10px] font-bold tracking-widest text-[var(--vx-on-accent)]">
                     MAIS POPULAR
                   </span>
                 )}

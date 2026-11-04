@@ -5,12 +5,18 @@
  * "INICIAR ANÁLISE" agora navega pra /register (react-router); "VER DEMO"
  * continua âncora interna. O fundo 3D é a cena narrativa única da landing
  * (`../scene/`), fixa atrás de todas as seções; este é o ato 0, "Funciona".
+ *
+ * Na primeira visita da sessão, um boot de terminal de ~1 s (`hero-boot.tsx`)
+ * antecede a entrada do título.
  */
 
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, type Variants } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import { GlitchHeading } from "../ui";
+import { HeroBoot } from "./hero-boot";
+import { deveTocarBoot } from "./hero-boot-estado";
 import { InteractiveLabel } from "../../ui/interactive-label";
 import {
   DESLOCAMENTO_LANDING,
@@ -33,6 +39,9 @@ const item: Variants = {
 };
 
 export default function Hero() {
+  // Decidido na montagem: com movimento reduzido, âncora na URL ou boot já
+  // visto nesta sessão, o hero entra direto.
+  const [boot, setBoot] = useState(deveTocarBoot);
   return (
     <section
       data-ato="0"
@@ -47,7 +56,7 @@ export default function Hero() {
         className="vx-superficie relative z-[10] text-center"
         variants={container}
         initial="hidden"
-        animate="show"
+        animate={boot ? "hidden" : "show"}
       >
         <motion.div variants={item}>
           <GlitchHeading
@@ -94,6 +103,8 @@ export default function Hero() {
           </motion.a>
         </motion.div>
       </motion.div>
+
+      {boot && <HeroBoot aoTerminar={() => setBoot(false)} />}
 
       <div
         className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[var(--vx-accent)]"

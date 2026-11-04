@@ -9,6 +9,8 @@
  *   ENT-05  escala da chamada final em CSS espelha ESCALA_LANDING
  *   ENT-06  glitch só no hero e na chamada final; seções usam o decodificado
  *   ENT-07  máscara: o recorte fica num filho, nunca no elemento observado
+ *   ENT-08  moldura ASCII só no plano recomendado, decorativa
+ *   ENT-09  varredura de transição no shader, com alfa do feixe e sentido
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -17,6 +19,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import { useRef } from "react";
 import { Reveal, TituloDecodificado } from "./ui";
+import { MemoryRouter } from "react-router-dom";
+import Pricing from "./sections/pricing";
+import { FRAGMENT_CELULAS } from "./scene/shaders";
 import { usePausarLoopsForaDaTela } from "./motion/use-landing-motion";
 import { ESCALA_LANDING } from "./motion/tokens";
 import { definirPreferencias, restaurarPreferencias } from "../../design/accessibility";
@@ -143,5 +148,21 @@ describe("Reveal com máscara", () => {
     const observado = recortado.parentElement as HTMLElement;
     expect(recortado.style.clipPath).toContain("inset");
     expect(observado.style.clipPath).toBe("");
+  });
+});
+
+describe("Pricing e transição", () => {
+  it("ENT-08 — moldura ASCII só no plano recomendado, aria-hidden", () => {
+    const { container } = render(<MemoryRouter><Pricing /></MemoryRouter>);
+    const molduras = container.querySelectorAll(".vx-borda-ascii");
+    expect(molduras).toHaveLength(1);
+    expect(molduras[0]).toHaveAttribute("aria-hidden", "true");
+    expect(molduras[0].closest("div.relative")?.textContent).toContain("MAIS POPULAR");
+  });
+
+  it("ENT-09 — varredura de transição usa o alfa do feixe e o sentido da rolagem", () => {
+    expect(FRAGMENT_CELULAS).toContain("uniform float uTransicaoInicio;");
+    expect(FRAGMENT_CELULAS).toContain("uniform float uTransicaoSentido;");
+    expect(FRAGMENT_CELULAS).toContain("banda * uAlfaFeixe");
   });
 });

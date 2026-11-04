@@ -296,9 +296,86 @@
   opacity: 1;
 }
 
+/* Boot do hero (hero-boot.tsx): sai com fade curto. */
+.vx-boot {
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.vx-boot[data-saindo] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Moldura ASCII do plano recomendado (pricing.tsx). Cada lado é uma faixa
+   de glifos que desliza um período do padrão "=-·-" (4ch) em loop: só
+   transform, sem layout nem pintura por quadro. A moldura fica 12px fora do
+   card, no vão da grade. */
+.vx-landing {
+  --vx-borda-ascii-ciclo: 1.4s;
+  --vx-borda-ascii-afastamento: 12px;
+}
+.vx-borda-ascii {
+  position: absolute;
+  inset: calc(var(--vx-borda-ascii-afastamento) * -1);
+  pointer-events: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--vx-accent);
+  text-shadow: 0 0 6px rgba(var(--vx-accent-rgb), 0.55);
+}
+.vx-borda-ascii-lado {
+  position: absolute;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.vx-borda-ascii-topo,
+.vx-borda-ascii-base {
+  left: 1ch;
+  right: 1ch;
+  height: 1em;
+}
+.vx-borda-ascii-topo { top: 0; }
+.vx-borda-ascii-base { bottom: 0; }
+.vx-borda-ascii-direita,
+.vx-borda-ascii-esquerda {
+  top: 1em;
+  bottom: 1em;
+  width: 1em;
+  writing-mode: vertical-rl;
+}
+.vx-borda-ascii-direita { right: 0; }
+.vx-borda-ascii-esquerda { left: 0; }
+.vx-borda-ascii-faixa {
+  display: inline-block;
+  will-change: transform;
+  animation: var(--vx-borda-ascii-ciclo) linear infinite;
+}
+/* Sentido horário: topo →, direita ↓, base ←, esquerda ↑. */
+.vx-borda-ascii-topo .vx-borda-ascii-faixa { animation-name: vx-borda-direita; }
+.vx-borda-ascii-base .vx-borda-ascii-faixa { animation-name: vx-borda-esquerda; }
+.vx-borda-ascii-direita .vx-borda-ascii-faixa { animation-name: vx-borda-desce; }
+.vx-borda-ascii-esquerda .vx-borda-ascii-faixa { animation-name: vx-borda-sobe; }
+@keyframes vx-borda-direita { from { transform: translateX(-4ch); } to { transform: translateX(0); } }
+@keyframes vx-borda-esquerda { from { transform: translateX(0); } to { transform: translateX(-4ch); } }
+@keyframes vx-borda-desce { from { transform: translateY(-4ch); } to { transform: translateY(0); } }
+@keyframes vx-borda-sobe { from { transform: translateY(0); } to { transform: translateY(-4ch); } }
+.vx-borda-ascii-canto {
+  position: absolute;
+  width: 1ch;
+  text-align: center;
+}
+.vx-borda-ascii-se { top: 0; left: 0; }
+.vx-borda-ascii-sd { top: 0; right: 0; }
+.vx-borda-ascii-ie { bottom: 0; left: 0; }
+.vx-borda-ascii-id { bottom: 0; right: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .vx-borda-ascii-faixa { animation: none; }
+}
+:root[data-reduzir-movimento] .vx-borda-ascii-faixa { animation: none; }
+
 /* Loops decorativos param quando a seção sai da tela
    (usePausarLoopsForaDaTela em motion/use-landing-motion.ts). */
-[data-fora-da-tela] :is(.vx-breathe, .vx-blink, .vx-cell-alert, .vx-bounce) {
+[data-fora-da-tela] :is(.vx-breathe, .vx-blink, .vx-cell-alert, .vx-bounce, .vx-borda-ascii-faixa) {
   animation-play-state: paused;
 }
 
