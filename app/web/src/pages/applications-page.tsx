@@ -24,6 +24,7 @@ import { ApplicationRiskForm } from "../components/applications/application-risk
 import { StaggerItem, StaggerList } from "../motion/components";
 import { ENVIRONMENTS, ENVIRONMENT_LABELS, type Application, type CreateApplicationInput, type Environment } from "../types/application.types";
 import "./applications-page.css";
+import { TABELA } from "../components/ui/table-estilos";
 
 export function ApplicationsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -275,7 +276,7 @@ export function ApplicationsPage() {
           ) : (
             <ScrollArea rotulo="Tabela de aplicações" className="applications-inventory-table">
               <table className="min-w-[56rem] w-full text-left text-sm">
-                <thead className="border-b border-subtle bg-inset text-xs uppercase tracking-[0.1em] text-fg-muted">
+                <thead className={TABELA.cabecalho}>
                   <tr>
                     <th className="px-4 py-3 font-medium">Aplicação</th>
                     <th className="px-4 py-3 font-medium">Ambiente</th>
@@ -285,8 +286,8 @@ export function ApplicationsPage() {
                 </thead>
                 <StaggerList as="tbody">
                   {filtered.map((application, index) => (
-                    <StaggerItem as="tr" indice={index} key={application.id} className="border-t border-subtle align-middle">
-                      <td className="px-4 py-4">
+                    <StaggerItem as="tr" indice={index} key={application.id} className={`${TABELA.linha} align-middle`}>
+                      <td className="px-4 py-3">
                         <div className="flex min-w-0 items-center gap-3">
                           <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-control border border-subtle bg-inset text-fg-muted">
                             <Monitor className="h-4 w-4" />
@@ -304,13 +305,13 @@ export function ApplicationsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3">
                         <Badge tom={application.environment === "PROD" ? "acento" : "neutro"} className="whitespace-nowrap">
                           {ENVIRONMENT_LABELS[application.environment as Environment] ?? application.environment}
                         </Badge>
                       </td>
-                      <td className="px-4 py-4"><RiskContextChips contexto={application} mostrarAmbiente={false} /></td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3"><RiskContextChips contexto={application} mostrarAmbiente={false} /></td>
+                      <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
                           <LinkButton
                             variant="secundario"

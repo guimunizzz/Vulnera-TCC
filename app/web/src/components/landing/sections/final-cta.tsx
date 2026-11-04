@@ -76,7 +76,7 @@ export default function FinalCTA() {
         </div>
       </section>
 
-      <footer className="border-t border-[rgba(var(--vx-accent-rgb),0.15)] bg-[var(--vx-bg-3)] px-6 py-14">
+      <footer className="border-t border-[rgba(var(--vx-accent-rgb),0.15)] bg-[var(--vx-bg-3)] px-6 pb-10 pt-16">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 md:grid-cols-3">
           <div>
             <p className="font-mono text-lg font-bold tracking-widest text-[var(--vx-text)]">

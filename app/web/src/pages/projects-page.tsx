@@ -31,6 +31,7 @@ import { useCompanyName } from "../hooks/use-company-name";
 import { cn } from "../lib/cn";
 import type { ProjectStatus } from "../types/project.types";
 import "./projects-page.css";
+import { TABELA } from "../components/ui/table-estilos";
 
 const STATUS_STEPS: { status: ProjectStatus; label: string }[] = [
   { status: "PENDING", label: "Pendentes" },
@@ -201,7 +202,7 @@ export function ProjectsPage() {
           ) : (
             <ScrollArea rotulo="Tabela de projetos" className="projects-table">
               <table className="min-w-[48rem] w-full text-left text-sm">
-                <thead className="border-b border-subtle bg-inset text-xs uppercase tracking-[0.1em] text-fg-muted">
+                <thead className={TABELA.cabecalho}>
                   <tr>
                     <th className="px-4 py-3 font-medium">Projeto</th>
                     <th className="px-4 py-3 font-medium">Aplicação</th>
@@ -212,15 +213,15 @@ export function ProjectsPage() {
                 </thead>
                 <StaggerList as="tbody">
                   {filtrados.map((project, index) => (
-                    <StaggerItem as="tr" indice={index} key={project.id} className="projects-row relative border-t border-subtle align-middle">
-                      <td className="px-4 py-4 font-medium text-fg">
+                    <StaggerItem as="tr" indice={index} key={project.id} className={`projects-row relative align-middle ${TABELA.linha}`}>
+                      <td className="px-4 py-3 font-medium text-fg">
                         {/* O link cobre a linha inteira (::after) — a seta é só a pista visual. */}
                         <Link className="projects-row-link rounded-control text-fg hover:text-accent-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" to={`/projects/${project.id}`}>
                           {project.name}
                         </Link>
                       </td>
-                      <td className="px-4 py-4 text-fg-muted">{applicationNames.get(project.applicationId) ?? "—"}</td>
-                      <td className="px-4 py-4">
+                      <td className="px-4 py-3 text-fg-muted">{applicationNames.get(project.applicationId) ?? "—"}</td>
+                      <td className="px-4 py-3">
                         <div className="flex flex-col items-start gap-2">
                           <StatusBadge status={project.status} />
                           <span
@@ -234,10 +235,10 @@ export function ProjectsPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-fg-muted">
+                      <td className="px-4 py-3 text-fg-muted">
                         <time dateTime={project.requestedAt}>{DATA.format(new Date(project.requestedAt))}</time>
                       </td>
-                      <td className="px-4 py-4 text-right text-fg-muted">
+                      <td className="px-4 py-3 text-right text-fg-muted">
                         <ArrowRight className="projects-row-arrow ml-auto h-4 w-4" aria-hidden="true" />
                       </td>
                     </StaggerItem>

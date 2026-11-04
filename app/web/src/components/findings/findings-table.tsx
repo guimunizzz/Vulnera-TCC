@@ -172,6 +172,9 @@ export function FindingsTable({
         id: "title",
         cabecalho: "Finding",
         ordenavel: true,
+        // Mínimos: com os chips numa linha só, o título era espremido até
+        // quebrar palavra a palavra. A tabela rola na horizontal antes disso.
+        larguraClassName: "min-w-[16rem]",
         celula: (f) => <span className="font-medium text-fg">{f.title}</span>,
       },
       {
@@ -228,6 +231,7 @@ export function FindingsTable({
         id: "project",
         cabecalho: "Projeto",
         ocultarEmTelaEstreita: true,
+        larguraClassName: "min-w-[10rem]",
         celula: (f) => <span className="text-fg-muted">{f.projectName}</span>,
       },
       {
@@ -235,6 +239,7 @@ export function FindingsTable({
         id: "application",
         cabecalho: "Aplicação",
         ocultarEmTelaEstreita: true,
+        larguraClassName: "min-w-[10rem]",
         celula: (f) => <span className="text-fg-muted">{f.applicationName}</span>,
       },
       {
@@ -242,6 +247,7 @@ export function FindingsTable({
         id: "company",
         cabecalho: "Empresa",
         ocultarEmTelaEstreita: true,
+        larguraClassName: "min-w-[10rem]",
         celula: (f) => <span className="text-fg-muted">{f.companyName}</span>,
       },
       {

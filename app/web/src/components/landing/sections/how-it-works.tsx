@@ -97,7 +97,7 @@ export default function HowItWorks() {
           </TituloDecodificado>
         </Reveal>
 
-        <div className="relative mt-20 grid grid-cols-1 gap-14 md:grid-cols-4 md:gap-8">
+        <div className="relative mt-20 grid grid-cols-1 gap-12 md:grid-cols-4 md:gap-8">
           {/* Linha pontilhada conectando os passos (desenhada via GSAP ScrollTrigger) */}
           <div
             className="vx-flow-line absolute left-[12%] right-[12%] top-[88px] hidden border-t border-dashed border-[rgba(var(--vx-accent-rgb),0.35)] md:block"

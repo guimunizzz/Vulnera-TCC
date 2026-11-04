@@ -65,7 +65,7 @@ export function RiskContextChips({ contexto, compacto = true, mostrarAmbiente = 
     <div
       role="group"
       aria-label="Contexto de risco da aplicação"
-      className={["flex flex-wrap items-center gap-1.5", className].filter(Boolean).join(" ")}
+      className={["flex flex-wrap items-center gap-2", className].filter(Boolean).join(" ")}
     >
       <Badge tom={TOM_CRITICIDADE[contexto.criticality] ?? "neutro"} className="whitespace-nowrap">
         <span title={`Criticidade: ${criticidade}`}>

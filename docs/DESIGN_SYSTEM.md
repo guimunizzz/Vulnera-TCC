@@ -290,6 +290,20 @@ Todos em `app/web/src/components/ui/`, exportados por `index.ts`.
 | `Alert` | `tom` · `titulo` · `aoFechar`. **Fica** na página (toast some) |
 | `Separator` | `orientacao` · `decorativo` |
 
+**Tabelas — um padrão só (2026-11-04).** Toda tabela da plataforma, a do
+componente `Table` e as escritas à mão nas páginas, usa as classes de
+`components/ui/table-estilos.ts` (`TABELA.cabecalho`, `.th`, `.linha`,
+`.celula`): cabeçalho `bg-inset` em caixa alta, células `px-4 py-3`, linha com
+divisória sutil e realce no hover. O padrão é o de Aplicações e Projetos,
+aprovado no redesenho. Coluna de texto livre ganha largura mínima
+(`larguraClassName`): a tabela rola na horizontal antes de espremer o título.
+`Badge` é sempre uma linha só (`whitespace-nowrap`): chip quebrado em duas
+linhas deixa o texto colado na borda arredondada.
+
+⚠️ Classe de espaçamento fora da escala (§2.6: 0–6, 8, 10, 12, 16, 20, 24)
+não gera CSS e não avisa. O rodapé da landing (`py-14`) e os chips de contexto
+de risco (`gap-1.5`) ficavam sem espaço nenhum por isso.
+
 ---
 
 ## 4. Contrato de acessibilidade
