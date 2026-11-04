@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Calculator, FileBarChart, Smartphone, Sparkles, X, type LucideIcon } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
 import { DURACAO } from "../../../motion/tokens";
 import { DESLOCAMENTO_MOTION_LANDING, EASE_MOTION_LANDING, ESCALA_LANDING } from "../motion/tokens";
@@ -128,10 +128,10 @@ export default function Features() {
   return (
     <section id="recursos" data-ato="3" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
       <div className="vx-superficie mx-auto w-full max-w-5xl">
-        <Reveal className="text-center">
-          <GlitchHeading className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+        <Reveal className="text-center" variante="fade">
+          <TituloDecodificado className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Killer features
-          </GlitchHeading>
+          </TituloDecodificado>
         </Reveal>
 
         <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">

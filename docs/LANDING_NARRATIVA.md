@@ -171,6 +171,27 @@ e na área autenticada (`src/three/gotas.ts`).
 | Rolagem | **57,2 / 57,7 fps** de média (mínimo 49) contra 43,2 / 38,6 (mínimo 22) no baseline — mesma máquina, mesmo protocolo, GPU Iris Xe. | idem |
 | Hash do pôster com avalanche completa | O hash inicial dava 98% de `0` no binário (sais correlacionados, r = −0,5); com o fmix32 do MurmurHash3, \|r\| < 0,03. | teste NAR-11 |
 
+## 7.1 Animações das seções (2026-11-04)
+
+O fundo conta a história; as seções na frente dele não podem competir com
+ele nem animar todas do mesmo jeito.
+
+| Regra | Onde |
+|---|---|
+| **Glitch só no hero e na chamada final.** Os outros títulos de seção se **decodificam** uma vez ao entrar na tela: cada letra passa por glifos de terminal (`#%&*+=/\<>_-:`) até assentar. A letra original segura a largura, então o título não treme. | `TituloDecodificado` em `ui.tsx`; tempos em `DECODIFICACAO_LANDING` |
+| **Entrada conforme o conteúdo.** `subir` para cards e listas em sequência; `fade` para o cabeçalho da seção (o título já se move por dentro); `mascara` (recorte de cima para baixo) para mockup e tabela: Demo, Comparação e a planilha do Problema. | `Reveal variante=…` |
+| **Loops param fora da tela.** Seção ou rodapé fora da viewport ganha `data-fora-da-tela`, e o CSS pausa pulso, piscar e seta. | `usePausarLoopsForaDaTela` |
+| **Uma biblioteca por seção.** A chamada final ficou só com GSAP (título preso à rolagem); o hover e o toque do botão são CSS (`.vx-cta-escala`), com valores que espelham `ESCALA_LANDING`. | `final-cta.tsx`, `landing.css` |
+
+Movimento reduzido (sistema ou menu): o título não decodifica, as três
+variantes de entrada viram fade e o botão não escala. Provas: ENT-01..07
+(`landing-entradas.test.tsx`).
+
+⚠️ A máscara fica num filho do elemento observado. Na primeira versão o
+recorte estava no próprio alvo do `whileInView`: o Chrome desconta o
+`clip-path` do alvo na interseção, o recorte fechado nunca "entrava na tela", e
+a planilha do Problema, a tabela dos Diferenciais e a Demo sumiam (ENT-07).
+
 ## 8. Atmosfera ASCII da área autenticada
 
 A mesma técnica, num canvas global no layout (decoração, nada sobre dado),
@@ -217,6 +238,7 @@ Regras que continuam valendo:
 | 2026-11-03 | **Fluidez** (pedido do Rafael: o fundo passava sensação de lag): 60 fps contínuo, duas passadas, loop sem engasgo de cadência, pôster desmontado com a cena pronta, barra da landing sem `backdrop-blur` (§7). |
 | 2026-11-03 | Atmosfera da plataforma "com vida" (pedido do Rafael): ondas ASCII, aurora violeta/ciano/magenta, brilho na chuva, hover discreto, varredura na troca de página e a cada 36 s; gota removida da plataforma (§8). |
 | 2026-11-04 | Merge de `dev` com o menu de acessibilidade (ADR-049): "Reduzir animações" do menu também troca a cena pelo pôster e refaz o GSAP; o alto contraste deixa o fundo liso (§4). Fechamento do refactor no ADR-050. |
+| 2026-11-04 | Seções menos monótonas (§7.1): glitch só no hero e na chamada final, títulos que se decodificam, entrada por tipo de conteúdo, loops pausados fora da tela e chamada final só com GSAP + CSS. |
 
 ### Boas práticas consultadas (2026-10-27)
 

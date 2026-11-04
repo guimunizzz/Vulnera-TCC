@@ -452,7 +452,10 @@ movimento reduzido pede menos movimento, não menos informação.
 | Loops decorativos e `press` | CSS | folha do módulo, com `@media (prefers-reduced-motion)` e `:root[data-reduzir-movimento]` |
 | Fundo decorativo | three.js imperativo | kit `src/three/` |
 
-GSAP não entra no produto, e Motion não faz scroll-scrub. Decisão e números
+GSAP não entra no produto, e Motion não faz scroll-scrub. Numa mesma seção da
+landing, uma biblioteca só: o hover de botão que acompanha uma seção GSAP é
+CSS. Glitch fica reservado ao hero e à chamada final; os títulos das outras
+seções se decodificam uma vez (`LANDING_NARRATIVA.md` §7.1). Decisão e números
 em **[[ADR-050 - Camadas de movimento e kit three.js imperativo no web]]**.
 
 ### Física

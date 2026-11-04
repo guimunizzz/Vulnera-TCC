@@ -8,7 +8,7 @@
  */
 
 import { useRef } from "react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import { gsap } from "../motion/gsap";
 import { useMovimentoLanding } from "../motion/use-landing-motion";
 import { ATRASO_LANDING, DURACAO_LANDING, EASE_LANDING, ESCALONAMENTO_LANDING } from "../motion/tokens";
@@ -131,13 +131,13 @@ export default function Maturity() {
       className="vx-grid-bg flex min-h-screen items-center px-6 py-24"
     >
       <div className="vx-superficie mx-auto w-full max-w-5xl">
-        <Reveal className="text-center">
+        <Reveal className="text-center" variante="fade">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">
             {"// MATURIDADE DE SEGURANÇA"}
           </p>
-          <GlitchHeading className="mt-4 text-3xl font-bold leading-tight text-[var(--vx-text)] md:text-4xl">
+          <TituloDecodificado className="mt-4 text-3xl font-bold leading-tight text-[var(--vx-text)] md:text-4xl">
             Não é só uma lista de findings. É um raio-x da sua postura de segurança.
-          </GlitchHeading>
+          </TituloDecodificado>
           <p className="mx-auto mt-4 max-w-2xl text-[var(--vx-text-2)]">
             7 domínios avaliados, score consolidado e um nível claro pra mostrar ao cliente onde ele
             está — e pra onde precisa ir.

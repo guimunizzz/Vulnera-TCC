@@ -4,7 +4,7 @@ import { useMovimentoReduzido } from "../../../design/accessibility";
 import { DURACAO } from "../../../motion/tokens";
 import { atrasoDoItem } from "../../../motion/use-motion";
 import { ArrowLeft, ArrowUpRight, Check, ChevronRight, RotateCcw } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import "./demo.css";
 
 const NAV_ITEMS = ["Dashboard", "Aplicações", "Projetos", "Maturidade", "Configurações"] as const;
@@ -91,11 +91,11 @@ export default function Demo() {
   return (
     <section id="demo" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
       <div className="vx-superficie mx-auto w-full max-w-4xl text-center">
-        <Reveal>
+        <Reveal variante="fade">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">{"// VEJA EM AÇÃO"}</p>
-          <GlitchHeading className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+          <TituloDecodificado className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             A plataforma da TechNova Solutions, de perto.
-          </GlitchHeading>
+          </TituloDecodificado>
         </Reveal>
         <Reveal ordem={1}>
           <div className="vx-demo-tabs" role="group" aria-label="Visualizações do dashboard">
@@ -105,7 +105,7 @@ export default function Demo() {
             </button>)}
           </div>
         </Reveal>
-        <Reveal ordem={2}>
+        <Reveal ordem={2} variante="mascara">
           <div className={`vx-demo ${compact ? "vx-demo--compact" : ""}`} role="region" aria-label="Preview interativo da plataforma">
             <header className="vx-demo-header">
               <span className="vx-demo-brand">VULNERA</span>

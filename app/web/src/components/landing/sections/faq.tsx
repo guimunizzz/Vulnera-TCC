@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Plus } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
 import { DURACAO } from "../../../motion/tokens";
 import { DURACAO_MOTION_LANDING, EASE_MOTION_LANDING } from "../motion/tokens";
@@ -84,13 +84,13 @@ export default function FAQ() {
   return (
     <section className="vx-grid-bg px-6 py-24">
       <div className="vx-superficie mx-auto w-full max-w-2xl">
-        <Reveal className="text-center">
+        <Reveal className="text-center" variante="fade">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">
             {"// PERGUNTAS FREQUENTES"}
           </p>
-          <GlitchHeading className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+          <TituloDecodificado className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Antes de assinar.
-          </GlitchHeading>
+          </TituloDecodificado>
         </Reveal>
 
         <Reveal ordem={1} className="mt-12">

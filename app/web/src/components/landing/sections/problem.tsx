@@ -6,8 +6,8 @@
  */
 
 import { useMemo } from "react";
-import { X } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
+import { FileSpreadsheet, X } from "lucide-react";
+import { Reveal, TituloDecodificado } from "../ui";
 
 const PAINS = [
   "Findings espalhados em planilhas que ninguém atualiza",
@@ -27,13 +27,13 @@ export default function Problem() {
       <div className="vx-superficie mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-16 md:grid-cols-5">
         {/* Coluna esquerda (60%) */}
         <div className="md:col-span-3">
-          <Reveal>
+          <Reveal variante="fade">
             <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">
               {"// O PROBLEMA"}
             </p>
-            <GlitchHeading className="mt-4 text-3xl font-bold leading-tight text-[var(--vx-text)] md:text-[3rem]">
+            <TituloDecodificado className="mt-4 text-3xl font-bold leading-tight text-[var(--vx-text)] md:text-[3rem]">
               Consultorias de segurança ainda operam em 2003.
-            </GlitchHeading>
+            </TituloDecodificado>
           </Reveal>
 
           <ul className="mt-10 space-y-5">
@@ -57,13 +57,16 @@ export default function Problem() {
         </div>
 
         {/* Coluna direita (40%) — planilha caótica */}
-        <Reveal className="md:col-span-2" ordem={2}>
+        <Reveal className="md:col-span-2" ordem={2} variante="mascara">
           <div
             className="rounded-[6px] border border-[rgba(var(--vx-danger-rgb),0.25)] bg-[var(--vx-bg-2)] p-4"
             aria-hidden="true"
           >
             <div className="mb-3 flex items-center justify-between font-mono text-[10px] text-[var(--vx-text-2)]">
-              <span>findings_FINAL_v7 (2).xlsx</span>
+              <span className="flex items-center gap-2">
+                <FileSpreadsheet size={14} strokeWidth={1.75} className="text-[var(--vx-danger)]" />
+                findings_FINAL_v7 (2).xlsx
+              </span>
               <span className="text-[var(--vx-danger)]">não salvo*</span>
             </div>
             <div className="grid grid-cols-4 gap-1">

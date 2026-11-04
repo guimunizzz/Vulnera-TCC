@@ -6,7 +6,7 @@
  */
 
 import { Linkedin } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import rafaelPhoto from "../../../assets/landing/team/rafael.jpg";
 import guilhermePhoto from "../../../assets/landing/team/guilherme.jpg";
 import iannPhoto from "../../../assets/landing/team/iann.jpg";
@@ -42,11 +42,11 @@ export default function Team() {
   return (
     <section id="equipe" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
       <div className="vx-superficie mx-auto w-full max-w-5xl">
-        <Reveal className="text-center">
+        <Reveal className="text-center" variante="fade">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">{"// QUEM CONSTRÓI"}</p>
-          <GlitchHeading className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+          <TituloDecodificado className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             O time por trás do Vulnera.
-          </GlitchHeading>
+          </TituloDecodificado>
         </Reveal>
 
         <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">

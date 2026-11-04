@@ -132,3 +132,26 @@ export function useRecalculoDoScroll(raiz: RefObject<HTMLElement | null>): void 
     };
   }, [raiz]);
 }
+
+/**
+ * Marca com `data-fora-da-tela` as seções (e o rodapé) fora da viewport; o CSS
+ * da landing pausa os loops decorativos dentro delas (pulso, piscar, seta).
+ * Um observador para a página inteira, não um por seção.
+ */
+export function usePausarLoopsForaDaTela(raiz: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const elemento = raiz.current;
+    if (!elemento || typeof IntersectionObserver === "undefined") return;
+    const alvos = Array.from(elemento.querySelectorAll<HTMLElement>("section, footer"));
+    const observador = new IntersectionObserver((entradas) => {
+      for (const entrada of entradas) {
+        entrada.target.toggleAttribute("data-fora-da-tela", !entrada.isIntersecting);
+      }
+    });
+    alvos.forEach((alvo) => observador.observe(alvo));
+    return () => {
+      observador.disconnect();
+      alvos.forEach((alvo) => alvo.removeAttribute("data-fora-da-tela"));
+    };
+  }, [raiz]);
+}

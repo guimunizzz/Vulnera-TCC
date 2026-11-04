@@ -17,7 +17,7 @@
 import { useRef } from "react";
 import Nav from "./nav";
 import { ScrollProgress } from "./ui";
-import { useRecalculoDoScroll } from "./motion/use-landing-motion";
+import { usePausarLoopsForaDaTela, useRecalculoDoScroll } from "./motion/use-landing-motion";
 import { LandingScene } from "./scene/landing-scene";
 import Hero from "./sections/hero";
 import Problem from "./sections/problem";
@@ -35,6 +35,8 @@ export default function LandingRoot() {
   const raiz = useRef<HTMLDivElement>(null);
   // Fontes e mudanças de altura (FAQ, demo) desalinhariam os ScrollTriggers.
   useRecalculoDoScroll(raiz);
+  // Loops CSS (pulso da planilha, seta do hero) param fora da tela.
+  usePausarLoopsForaDaTela(raiz);
 
   return (
     // O `MotionConfig` que respeita o movimento reduzido (sistema OU menu de

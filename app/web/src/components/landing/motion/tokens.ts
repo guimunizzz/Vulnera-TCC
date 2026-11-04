@@ -147,5 +147,29 @@ export const MOLA_LANDING = {
   cartao: { type: "spring", stiffness: 300, damping: 22 },
 } as const;
 
+/**
+ * Decodificação dos títulos de seção (estética de terminal): cada letra passa
+ * por glifos aleatórios até assentar, uma vez, quando o título entra na tela.
+ * O tempo cresce com o tamanho do título, dentro de um piso e de um teto.
+ */
+export const DECODIFICACAO_LANDING = {
+  /** Tempo por letra, em ms. */
+  porLetraMs: 22,
+  minimoMs: 450,
+  maximoMs: 1100,
+  /** Intervalo entre trocas de glifo, em ms (~25 trocas por segundo). */
+  passoMs: 40,
+  /** Fração do título visível para disparar. */
+  limiarVisivel: 0.6,
+  /** Glifos do embaralhamento: sem letras nem dígitos, para não formar palavras. */
+  glifos: "#%&*+=/\\<>_-:",
+} as const;
+
+/** Entrada por recorte (mockups e tabelas): a máscara abre de cima para baixo. */
+export const MASCARA_LANDING = {
+  fechada: "inset(0% 0% 100% 0%)",
+  aberta: "inset(0% 0% 0% 0%)",
+} as const;
+
 /** Breakpoint `md` do Tailwind — abaixo dele, efeitos decorativos de layout largo somem. */
 export const LARGURA_DESKTOP_LANDING = 768;

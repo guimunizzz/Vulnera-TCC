@@ -3,18 +3,18 @@
  *
  * Portado de `vulnera-landing/src/components/sections/FinalCTA.jsx`.
  * O CTA agora navega pra /register (react-router).
+ *
+ * Uma biblioteca só: o título entra com GSAP preso à rolagem; o hover e o
+ * toque do botão são CSS (`.vx-cta-escala` em landing.css).
  */
 
 import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "motion/react";
 import { GlitchHeading } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
 import { gsap } from "../motion/gsap";
 import { useMovimentoLanding } from "../motion/use-landing-motion";
-import { DESLOCAMENTO_LANDING, EASE_LANDING, ESCALA_LANDING } from "../motion/tokens";
-
-const MotionLink = motion.create(Link);
+import { DESLOCAMENTO_LANDING, EASE_LANDING } from "../motion/tokens";
 
 // Frações do trecho de scroll (seção entrando → centro da seção no centro da
 // tela): a opacidade completa em 60% dele; a escala usa o trecho inteiro.
@@ -66,15 +66,13 @@ export default function FinalCTA() {
           <p className="mt-6 text-lg text-[var(--vx-text-2)]">
             Comece sua primeira análise em menos de 3 minutos.
           </p>
-          <MotionLink
+          <Link
             to="/register"
-            whileHover={{ scale: ESCALA_LANDING.hover }}
-            whileTap={{ scale: ESCALA_LANDING.toque }}
-            className="mt-12 inline-block rounded-[6px] bg-[var(--vx-accent)] px-12 py-4 font-mono text-base font-bold tracking-wider text-[var(--vx-on-accent)] transition-shadow duration-[300ms] hover:shadow-[0_0_44px_rgba(var(--vx-accent-rgb),0.8)]"
+            className="vx-cta-escala mt-12 inline-block rounded-[6px] bg-[var(--vx-accent)] px-12 py-4 font-mono text-base font-bold tracking-wider text-[var(--vx-on-accent)] hover:shadow-[0_0_44px_rgba(var(--vx-accent-rgb),0.8)]"
             style={{ boxShadow: "0 0 20px rgba(var(--vx-accent-rgb),0.45)" }}
           >
             <InteractiveLabel>ORGANIZAR MINHA PRIMEIRA ANÁLISE →</InteractiveLabel>
-          </MotionLink>
+          </Link>
         </div>
       </section>
 

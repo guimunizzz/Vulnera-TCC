@@ -8,7 +8,7 @@
 
 import { useRef } from "react";
 import { CreditCard, Globe, Activity, FileText, type LucideIcon } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import { gsap } from "../motion/gsap";
 import { useMovimentoLanding } from "../motion/use-landing-motion";
 import { DESLOCAMENTO_LANDING, DURACAO_LANDING, EASE_LANDING, ESCALONAMENTO_LANDING, SCRUB_LANDING } from "../motion/tokens";
@@ -91,10 +91,10 @@ export default function HowItWorks() {
       className="vx-grid-bg flex min-h-screen items-center px-6 py-24"
     >
       <div className="vx-superficie mx-auto w-full max-w-6xl">
-        <Reveal className="text-center">
-          <GlitchHeading className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+        <Reveal className="text-center" variante="fade">
+          <TituloDecodificado className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Como funciona
-          </GlitchHeading>
+          </TituloDecodificado>
         </Reveal>
 
         <div className="relative mt-20 grid grid-cols-1 gap-14 md:grid-cols-4 md:gap-8">

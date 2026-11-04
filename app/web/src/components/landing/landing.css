@@ -268,6 +268,67 @@
   animation: vx-bounce 1.6s ease-in-out infinite;
 }
 
+/* Título de seção decodificado (TituloDecodificado em ui.tsx). A letra
+   original segura a largura; o glifo fica por cima só durante o efeito. */
+.vx-decode-palavra {
+  display: inline-block;
+  white-space: nowrap;
+}
+.vx-decode-slot {
+  position: relative;
+  display: inline-block;
+}
+.vx-decode-glifo {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+}
+.vx-decode-ruido {
+  color: var(--vx-accent);
+}
+.vx-decode[data-decodificando] .vx-decode-letra {
+  opacity: 0;
+}
+.vx-decode[data-decodificando] .vx-decode-glifo {
+  opacity: 1;
+}
+
+/* Loops decorativos param quando a seção sai da tela
+   (usePausarLoopsForaDaTela em motion/use-landing-motion.ts). */
+[data-fora-da-tela] :is(.vx-breathe, .vx-blink, .vx-cell-alert, .vx-bounce) {
+  animation-play-state: paused;
+}
+
+/* Botão da chamada final: hover e toque em CSS, como o `press` do design
+   system — a seção já é animada pelo GSAP, e o Motion saiu dela. Os valores
+   espelham ESCALA_LANDING (motion/tokens.ts; conferido por teste). */
+.vx-landing {
+  --vx-escala-hover: 1.04;
+  --vx-escala-toque: 0.97;
+}
+.vx-cta-escala {
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-slow) var(--ease-out);
+}
+.vx-cta-escala:hover {
+  transform: scale(var(--vx-escala-hover));
+}
+.vx-cta-escala:active {
+  transform: scale(var(--vx-escala-toque));
+}
+@media (prefers-reduced-motion: reduce) {
+  .vx-cta-escala:is(:hover, :active) {
+    transform: none;
+  }
+}
+:root[data-reduzir-movimento] .vx-cta-escala:is(:hover, :active) {
+  transform: none;
+}
+
 /* Movimento reduzido: a rede global em styles/base.css já zera durações e
    iterações de animação para *, *::before, *::after — não é preciso repetir
    aqui. `scroll-behavior` volta a auto pela mesma regra global. */

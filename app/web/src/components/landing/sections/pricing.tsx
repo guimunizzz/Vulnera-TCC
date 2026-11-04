@@ -11,7 +11,7 @@
 
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
 import { DESLOCAMENTO_MOTION_LANDING, ESCALA_LANDING, MOLA_LANDING } from "../motion/tokens";
 
@@ -64,10 +64,10 @@ export default function Pricing() {
   return (
     <section id="planos" data-ato="5" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
       <div className="vx-superficie mx-auto w-full max-w-6xl">
-        <Reveal className="text-center">
-          <GlitchHeading className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+        <Reveal className="text-center" variante="fade">
+          <TituloDecodificado className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Planos que cabem na sua empresa.
-          </GlitchHeading>
+          </TituloDecodificado>
           <p className="mt-4 text-[var(--vx-text-2)]">Comece pelo Basic, escale quando precisar.</p>
         </Reveal>
 

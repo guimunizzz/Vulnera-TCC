@@ -5,7 +5,7 @@
  */
 
 import { Check, X } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
 
 const ROWS = [
@@ -33,18 +33,18 @@ export default function Comparison() {
   return (
     <section className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
       <div className="vx-superficie mx-auto w-full max-w-4xl">
-        <Reveal className="text-center">
+        <Reveal className="text-center" variante="fade">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">{"// DIFERENCIAIS"}</p>
-          <GlitchHeading className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+          <TituloDecodificado className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Chega de operar como em 2003.
-          </GlitchHeading>
+          </TituloDecodificado>
           <p className="mx-auto mt-4 max-w-xl text-[var(--vx-text-2)]">
             O mesmo processo que sua consultoria já faz — só que rastreável, auditável e sem planilha
             perdida.
           </p>
         </Reveal>
 
-        <Reveal ordem={1} className="mt-16">
+        <Reveal ordem={1} className="mt-16" variante="mascara">
           <div className="hidden grid-cols-[1.2fr_1fr_1fr] gap-4 border-b border-[rgba(var(--vx-accent-rgb),0.15)] pb-3 font-mono text-xs tracking-widest text-[var(--vx-text-3)] md:grid">
             <span>ASPECTO</span>
             <span className="text-[var(--vx-accent)]">VULNERA</span>
