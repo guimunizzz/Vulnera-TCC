@@ -25,6 +25,8 @@ import { ThemeProvider } from "./design/theme-provider";
 vi.mock("./pages/landing-page", () => ({
   LandingPage: () => <div data-testid="landing-stub">landing</div>,
 }));
+vi.mock("./pages/onboarding-page", () => ({ OnboardingPage: () => <div>Onboarding de teste</div> }));
+vi.mock("./pages/dast-scan-report-page", () => ({ DastScanReportPage: () => <div>Relatório de teste</div> }));
 
 function limparAuth(): void {
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
@@ -71,6 +73,7 @@ describe("Roteamento de App", () => {
     fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
     expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("assistant-root")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Nome" })).toBeRequired();
     expect(screen.getByRole("link", { name: "Vulnera — página inicial" })).toBe(logo);
 
@@ -100,6 +103,7 @@ describe("Roteamento de App", () => {
     renderApp("/dashboard");
 
     expect(screen.getByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
+    expect(screen.getAllByTestId("assistant-root")).toHaveLength(1);
   });
 
   it("ROTA-04 — '/' com sessão continua mostrando a landing, não expulsa quem já está logado", () => {
@@ -110,5 +114,13 @@ describe("Roteamento de App", () => {
     // pro dashboard.
     expect(screen.getByTestId("landing-stub")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Olá, Rafael" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("assistant-root")).not.toBeInTheDocument();
+  });
+
+  it.each(["/onboarding", "/dast/scans/ficticio/report"])("monta uma instância do assistente também fora de AppLayout em %s", (route) => {
+    logar("ADMIN");
+    renderApp(route);
+    expect(screen.getAllByTestId("assistant-root")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Abrir Assistente Vulnera" })).toBeInTheDocument();
   });
 });

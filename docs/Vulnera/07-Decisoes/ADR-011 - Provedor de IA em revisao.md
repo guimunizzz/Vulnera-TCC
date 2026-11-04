@@ -1,13 +1,15 @@
 ---
 type: decisao
-tags: [decision, pendente]
-status: pendente
+tags: [decision, historico]
+status: encerrada
 codigo: ADR-011
 data: 2026-07-26
 flag: F-02
 ---
 
 # ADR-011 - Provedor de IA em revisao
+
+> **Histórico encerrado:** a flag F-02 foi encerrada pelo corte de IA em 03/08/2026 (ADR-017). A escolha do Gemini no assistente contextual de 23/10/2026 é uma decisão nova e restrita, registrada no [[ADR-048 - Assistente contextual com Gemini e ajuda local]]. O exemplo de modelo e o recurso de findings abaixo não são configuração atual.
 
 > [!note] Decisão em aberto — impacto baixo
 > Gemini 1.5 Flash permanece como padrão até decisão contrária.

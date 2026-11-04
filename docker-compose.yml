@@ -59,6 +59,16 @@ services:
       # compara aqui.
       CORS_ORIGIN: http://localhost:8086
       UPLOADS_DIR: uploads
+      # Orientação opcional; chave apenas na API. Sem configuração, ajuda local.
+      ASSISTANT_MODE: "${ASSISTANT_MODE:-local}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_MODEL: "${GEMINI_MODEL:-}"
+      ASSISTANT_TIMEOUT_MS: "${ASSISTANT_TIMEOUT_MS:-15000}"
+      ASSISTANT_MAX_OUTPUT_TOKENS: "${ASSISTANT_MAX_OUTPUT_TOKENS:-500}"
+      RATE_LIMIT_ASSISTANT_USER_PER_HOUR: "${RATE_LIMIT_ASSISTANT_USER_PER_HOUR:-10}"
+      RATE_LIMIT_ASSISTANT_USER_BURST: "${RATE_LIMIT_ASSISTANT_USER_BURST:-5}"
+      RATE_LIMIT_ASSISTANT_GLOBAL_PER_HOUR: "${RATE_LIMIT_ASSISTANT_GLOBAL_PER_HOUR:-30}"
+      RATE_LIMIT_ASSISTANT_GLOBAL_BURST: "${RATE_LIMIT_ASSISTANT_GLOBAL_BURST:-10}"
       # ---------------------------------------------------------------------
       # Módulo DAST (OWASP ZAP) — scan REAL dentro da stack, desde 2026-09-09.
       # Ver docs/DAST-DOCKER-GAP.md (diagnóstico) e ADR-031 (decisão).

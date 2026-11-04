@@ -216,6 +216,11 @@ src/
 7. Mobile + IA Gemini
 8. Maturidade + Polimento + Apresentação
 
+> **Histórico de escopo:** a IA acima era sugestão de findings, retirada em
+> 03/08/2026 (ADR-017). Em 23/10/2026, ADR-048 introduziu exclusivamente o
+> Assistente Vulnera de orientação na web, com Gemini opcional e ajuda local;
+> não reativou o recurso antigo nem IA no mobile. Ver `ASSISTENTE_VULNERA.md`.
+
 ---
 
 ## D13 — Divisão por integrante

@@ -298,12 +298,19 @@ mantêm suas próprias datas e limites. Relatório desta atualização:
 <details>
 <summary>Fora do MVP / trabalho futuro</summary>
 
-IA, chat em tempo real, tickets de suporte, e-mail transacional, pagamento
+Geração de findings ou cálculo de severidade por IA, chat em tempo real, tickets de suporte, e-mail transacional, pagamento
 real, reset de senha, i18n, filas distribuídas e deploy de produção ficam
 fora do MVP. Exposure Graph e pesos de VRS por empresa permanecem planejados.
 Consulte o [backlog](docs/BACKLOG.md) antes de iniciar novas features.
 
 </details>
+
+O **Assistente Vulnera**, introduzido em 23/10/2026, oferece orientação nas
+telas protegidas da web, com mascote, atalhos permitidos, Gemini opcional e
+ajuda local identificada. Não consulta registros nem executa alterações.
+Configuração segura, condições do Free Tier e roteiro de três minutos em
+[ASSISTENTE_VULNERA.md](docs/ASSISTENTE_VULNERA.md). A integração ao vivo com
+Gemini ainda depende de chave/modelo e validação no projeto da demonstração.
 
 ## Documentação
 
@@ -311,6 +318,7 @@ Consulte o [backlog](docs/BACKLOG.md) antes de iniciar novas features.
   <tr><th>Documento</th><th>Conteúdo</th></tr>
   <tr><td><a href="AGENTS.md">AGENTS.md</a> / <a href="PRD_VIVO.md">PRD_VIVO.md</a></td><td>Convenções e estado de implementação</td></tr>
   <tr><td><a href="docs/DEMO.md">Demo</a></td><td>Credenciais e roteiro de apresentação</td></tr>
+  <tr><td><a href="docs/ASSISTENTE_VULNERA.md">Assistente Vulnera</a></td><td>Orientação contextual, Gemini/local, limites e roteiro de três minutos</td></tr>
   <tr><td><a href="docs/DAST.md">DAST</a></td><td>Modos, execução, configuração e diagnóstico</td></tr>
   <tr><td><a href="docs/EXPOSURE_REMEDIATION.md">Exposure &amp; Remediation</a></td><td>SLA, VRS, aceite de risco, playbooks e quadro</td></tr>
   <tr><td><a href="docs/FINDINGS_QUERY.md">Findings query</a> / <a href="docs/DESIGN_SYSTEM.md">Design system</a></td><td>Busca, componentes e acessibilidade</td></tr>

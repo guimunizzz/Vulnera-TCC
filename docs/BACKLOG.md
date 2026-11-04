@@ -6,6 +6,31 @@
 
 ## Status
 
+**✅ 2026-10-23 — Assistente Vulnera concluído localmente (7/7 fases, 100% do plano de implementação/validação local).** Disponível em `http://localhost:8086`, modo local. API focal 47/47, web 400/400, contraste 66/66, builds host/Docker e navegador produção 12/12 aprovados; 100% de linhas nos serviços novos, HTTP sintético 13/13, três perfis reais na API e fluxo CLIENT pela UI. Resultado API geral combinado 772/773 (rodada Linux + CVSS corrigido no ambiente): somente assertion anterior do header Excel; `check` API mantém dois imports antigos de lint. Gemini ao vivo pendente de chave/modelo privados, sem chamada Google. Guia [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md), [evidências](../output/assistant/VALIDACAO.md), ADR-048; histórico e trabalho anterior preservados, sem commit/push/PR.
+
+- [ ] Assistente — responsável preparar projeto Free Tier e chave/modelo privados e executar poucas perguntas manuais para comprovar Gemini ao vivo; não confundir ajuda local com prova do provedor.
+- [ ] Fora do assistente — revisar assertion `findings-export.test.ts:176` que exige aspas no filename, incompatível com Express 5.3.0 resolvido pelas faixas atuais; reprodução independente em `output/assistant/VALIDACAO.md`.
+- [ ] Fora do assistente — cabeçalho Conta em 320px continua gerando largura 335px; painel do assistente cabe e não amplia o overflow, conforme QA antes/depois.
+
+**✅ 2026-10-23 — Assistente Vulnera: Fase 0 concluída (1/7 fases, 14% do plano).** Investigação do checkout e plano registrados em [ASSISTENTE_VULNERA_PLANO.md](ASSISTENTE_VULNERA_PLANO.md), com mapa de rotas/perfis, ações, arquivos/dependências, critérios de aceite, configuração proposta e divergências. ADR-048 registra o retorno da IA apenas como orientação; as funcionalidades antigas de geração de findings e IA mobile continuam excluídas. Implementação ainda não iniciada. Branch `feature/agent-ai`; alterações anteriores preservadas, sem commit/push/PR.
+
+- [x] Assistente — Fase 0: investigar e delimitar a integração, incluindo onboarding, relatório DAST, overlays, sessão e Free Tier atual.
+- [x] Assistente — Fase 1: 14 tópicos versionados, recuperação PT-BR com continuação limitada, DTOs e nove ações rastreadas até as rotas.
+- [x] Assistente — Fase 2: endpoint autenticado, gateway Gemini injetável, ajuda local, limites compartilhados por usuário/globais e configuração backend/Docker; 47/47 focais.
+- [x] Assistente — Fase 3: layout autenticado compartilhado, mascote SVG/CSS com movimento/pausas e painel acessível; QA desktop/320px e modais.
+- [x] Assistente — Fase 4: contexto normalizado, envio explícito, navegação por ação permitida e isolamento de sessão/resposta tardia; 45/45 focais web.
+- [x] Assistente — Fase 5: checks/builds, navegador nos três perfis/temas/larguras, HTTP e UI reais locais; ressalvas da API e ausência de Gemini ao vivo explicitadas.
+- [x] Assistente — Fase 6: guia `ASSISTENTE_VULNERA.md`, configuração segura/Free Tier, limites, roteiro de três minutos e documentos vivos sincronizados.
+- [x] Preparação do assistente: dependências instaladas por `npm install --package-lock=false`, pois não há lockfile raiz; nenhum manifesto/lockfile alterado. Prisma Client gerado, builds executados.
+- [x] Preparação da validação API: criado MySQL de teste isolado em porta 3308 e database `vulnera_test`, com configuração explícita do processo. Endurecimento geral do setup/reconciliação das regras protegidas permanece fora desta feature; banco demo não foi usado na limpeza.
+
+**? 2026-10-21 ? Refer?ncia da dura??o de transi??o das abas corrigida (100% desta corre??o).** Branch `fix/mobile-erro-layout`: adicionado o import de `TAB_TRANSITION_DURATION` em `app/mobile/app/(tabs)/_layout.tsx`, reutilizando a constante de 320 ms j? exportada pela barra. Anima??es e prefer?ncia de movimento reduzido preservadas. Compara??o TypeScript com o layout original em mem?ria confirmou a remo??o exclusiva deste erro (200 ? 199 diagn?sticos, nenhum novo; zero no layout). `npm run typecheck` e `npm run lint` continuam reprovados por pend?ncias preexistentes: 14 diagn?sticos em projeto/conta, 185 em c?pias de arquivos web dentro de `output/`, e vari?veis `width`/`stage` sem uso. `git diff --check` aprovado. Mobile n?o possui script `check` nem su?te de testes; valida??o em aparelho n?o executada nesta tarefa.
+
+- [x] Corrigir o import ausente que causava `ReferenceError: TAB_TRANSITION_DURATION` nas abas mobile.
+
+- [ ] Mobile ? corrigir refer?ncias preexistentes a `STAGES`, `DetailField`, `displayDate`, `SectionHeading` e `Ionicons`, al?m de propriedades inconsistentes em Configura??es (`notificationIcon`, `footer`, `wordmark`, `icon`/`title` do estado de push). Podem causar novas falhas ao abrir essas telas.
+- [ ] Mobile ? revisar a inclus?o de c?pias web em `output/` no typecheck e as vari?veis sem uso `width` no layout e `stage` no detalhe do projeto; fora do escopo desta corre??o.
+
 **✅ 2026-10-16 — Frontend Docker atualizado para exibir a barra lateral (100%).** Corrigida a divergência entre a validação via Vite e a versão servida em `http://localhost:8086`: reconstruído e recriado somente `web` com `docker compose up -d --build --no-deps web`. HTML/JS/CSS retornam HTTP 200 e contêm a nova marca, grupos e estilos. API/MySQL seguem saudáveis sem reinicialização. Evidência: `output/sidebar-applied/served-check.md`; procedimento registrado em `docs/FRONTEND_WEB.md`.
 
 - [x] Disponibilizar a alteração da barra lateral no frontend Docker acessado pelo Rafael.
@@ -460,6 +485,10 @@ prompts.
 ---
 
 ## Removido do escopo
+
+> O corte histórico abaixo permanece aplicável ao editor/sugestão de findings.
+> ADR-048 reintroduziu em 23/10/2026 somente o assistente de orientação web,
+> com Gemini opcional e ajuda local, sem IA no mobile ou operações sobre dados.
 
 | Removido                                                       | Quando     | Motivo                                      |
 | -------------------------------------------------------------- | ---------- | ------------------------------------------- |

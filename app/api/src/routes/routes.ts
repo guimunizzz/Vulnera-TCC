@@ -15,6 +15,7 @@ import { dastScanRoutes } from "./dast-scan.routes";
 import { riskAcceptanceRoutes } from "./risk-acceptance.routes";
 import { remediationPlaybookRoutes } from "./remediation-playbook.routes";
 import { savedQueryRoutes } from "./saved-query.routes";
+import { assistantRoutes } from "./assistant.routes";
 
 const router = Router();
 
@@ -40,5 +41,6 @@ router.use("/playbooks", remediationPlaybookRoutes);
 
 // CP-6 — buscas salvas e watchlists (a pergunta, nunca a resposta).
 router.use("/saved-queries", savedQueryRoutes);
+router.use("/assistant", assistantRoutes);
 
 export { router as apiRoutes };

@@ -1,0 +1,37 @@
+{
+  "origin": "http://localhost:8086",
+  "timestamp": "2026-10-23T22:19:33.804Z",
+  "fixtures": false,
+  "configuredMode": "local",
+  "geminiLiveValidated": false,
+  "loginAttempts": 1,
+  "questions": [
+    {
+      "question": "Como solicito uma análise?",
+      "screen": "dashboard",
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "new-analysis",
+        "applications",
+        "projects"
+      ]
+    },
+    {
+      "question": "O que posso fazer nesta tela?",
+      "screen": "new-analysis",
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "new-analysis",
+        "applications",
+        "projects"
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "businessFormsSubmitted": 0,
+  "loginStatus": 200,
+  "outcome": "Login CLIENT, duas respostas Ajuda local e atalho real aprovados, sem fixtures.",
+  "loggedOut": true
+}

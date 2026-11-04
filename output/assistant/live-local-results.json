@@ -1,0 +1,109 @@
+{
+  "base": "http://127.0.0.1:3002/api",
+  "googleCalls": 0,
+  "checks": [
+    {
+      "case": "authentication",
+      "pass": true
+    },
+    {
+      "case": "forged-role",
+      "pass": true
+    },
+    {
+      "case": "no-generation-on-get",
+      "pass": true
+    },
+    {
+      "case": "ADMIN:dashboard",
+      "pass": true,
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "new-analysis",
+        "applications",
+        "projects"
+      ]
+    },
+    {
+      "case": "ADMIN:projects",
+      "pass": true,
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "projects"
+      ]
+    },
+    {
+      "case": "ADMIN:finding-detail",
+      "pass": true,
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "projects",
+        "findings"
+      ]
+    },
+    {
+      "case": "CLIENT:dashboard",
+      "pass": true,
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "new-analysis",
+        "applications",
+        "projects"
+      ]
+    },
+    {
+      "case": "CLIENT:projects",
+      "pass": true,
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "projects"
+      ]
+    },
+    {
+      "case": "CLIENT:finding-detail",
+      "pass": true,
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "projects"
+      ]
+    },
+    {
+      "case": "PENTESTER:dashboard",
+      "pass": true,
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "projects"
+      ]
+    },
+    {
+      "case": "PENTESTER:projects",
+      "pass": true,
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "projects"
+      ]
+    },
+    {
+      "case": "PENTESTER:finding-detail",
+      "pass": true,
+      "status": 200,
+      "source": "local",
+      "actions": [
+        "projects",
+        "findings"
+      ]
+    },
+    {
+      "case": "out-of-help",
+      "pass": true
+    }
+  ]
+}

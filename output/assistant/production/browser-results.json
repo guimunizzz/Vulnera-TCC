@@ -1,0 +1,78 @@
+{
+  "origin": "http://localhost:8086",
+  "timestamp": "2026-10-23T22:19:01.553Z",
+  "mode": "Fixtures sinteticas interceptadas somente no navegador; sem Gemini real ou escrita no banco.",
+  "passed": 12,
+  "total": 12,
+  "pageErrors": [],
+  "securityViolations": [],
+  "servedAssets": [
+    "/assets/index-BM7VkbDc.js"
+  ],
+  "existingLimitations": [
+    {
+      "theme": "dark",
+      "viewport": 320,
+      "before": 335,
+      "after": 335,
+      "finding": "Cabecalho Conta preexistente excede largura320; assistente nao aumenta esse overflow."
+    },
+    {
+      "theme": "light",
+      "viewport": 320,
+      "before": 335,
+      "after": 335,
+      "finding": "Cabecalho Conta preexistente excede largura320; assistente nao aumenta esse overflow."
+    }
+  ],
+  "results": [
+    {
+      "name": "ADMIN: envio explicito, acoes filtradas, navegacao e origem",
+      "ok": true
+    },
+    {
+      "name": "CLIENT: envio explicito, acoes filtradas, navegacao e origem",
+      "ok": true
+    },
+    {
+      "name": "PENTESTER: envio explicito, acoes filtradas, navegacao e origem",
+      "ok": true
+    },
+    {
+      "name": "Sugestoes/refoco sem chamadas; trava duplicada e contexto capturado no envio",
+      "ok": true
+    },
+    {
+      "name": "Movimento autonomo, pausa por hover/foco/manual e resize",
+      "ok": true
+    },
+    {
+      "name": "Modal existente bloqueia assistente e preserva foco",
+      "ok": true
+    },
+    {
+      "name": "Painel 320px, rolagem, alvos, reduced motion e print: dark",
+      "ok": true
+    },
+    {
+      "name": "Painel 320px, rolagem, alvos, reduced motion e print: light",
+      "ok": true
+    },
+    {
+      "name": "Onboarding e relatorio DAST cobertos, HTML original preservado",
+      "ok": true
+    },
+    {
+      "name": "Ausente em paginas publicas e privado sem sessao",
+      "ok": true
+    },
+    {
+      "name": "Logout cancela e descarta resposta tardia",
+      "ok": true
+    },
+    {
+      "name": "Resposta exibida como texto seguro e fonte Gemini distinta",
+      "ok": true
+    }
+  ]
+}

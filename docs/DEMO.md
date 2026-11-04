@@ -19,6 +19,11 @@
 
 ## Antes de começar (fora da contagem dos 10 min)
 
+Para a demonstração opcional do **Assistente Vulnera** em aproximadamente
+três minutos, use o roteiro de [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
+O modo local funciona sem Google; Gemini exige a preparação privada de chave,
+modelo e projeto Free Tier. A origem da resposta fica visível no painel.
+
 - Navegador aberto em **http://localhost:8086**
 - Celular com o Expo Go instalado e o app mobile rodando (`npx expo start`
   em `app/mobile`, `.env` apontando pro IP da rede local) — só necessário

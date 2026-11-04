@@ -150,7 +150,10 @@ paint correto em checkout Windows. `src/test/csp.test.ts` cobre a regra.
 
 ## Como manter e verificar
 
-Ao criar uma tela autenticada, registre a rota sob `AppLayout` em `App.tsx`,
+Ao criar uma tela autenticada, registre a rota sob `AuthenticatedLayout` em
+`App.tsx`. Use `AppLayout` para as telas com navegação lateral; onboarding e
+relatório DAST permanecem fora dele e dentro do contêiner autenticado. Assim,
+o assistente mantém uma única instância fora das transições de página. Depois,
 use componentes de `src/components/ui/`, tokens semânticos, dados da API e as
 variantes de `useMotion()`. A página não deve montar outra atmosfera. Escolha
 `data-ops-hero` apenas quando um cabeçalho destacado ajudar o fluxo, sem
@@ -164,3 +167,21 @@ demonstração estão em [DEMO.md](DEMO.md). Em `app/web/`, rode
 `npm run build`. O resultado específico desta entrega, inclusive limites
 observados no navegador, está em
 [`output/frontend-visual-overhaul-report.md`](../output/frontend-visual-overhaul-report.md).
+
+## Assistente de orientação — 2026-10-23
+
+`components/layout/authenticated-layout.tsx` mantém `Outlet` e uma instância
+de `components/assistant/assistant.tsx`. Portal persistente respeita inert e
+modais; Motion percorre bordas sem renderizar React a cada quadro, com pausas
+e posição estática em tela pequena/movimento reduzido. O painel tem posição
+própria, texto seguro, origem real e atalhos fechados. Somente envio explícito
+faz POST; sugestões, rota, digitação e movimento não geram texto.
+
+`lib/assistant-context.ts` normaliza telas e filtra destinos; conversa fica
+em memória e usa `sessionVersion` não persistido para cancelar respostas de
+sessão encerrada, inclusive novo login da mesma pessoa. Rotação de token e
+atualização de perfil preservam a conversa. Nenhum código é inserido no HTML
+ZAP, PDF ou Excel; impressão oculta o portal.
+
+Guia: [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md). Evidências de testes,
+navegador, integração local e limites: [VALIDACAO.md](../output/assistant/VALIDACAO.md).

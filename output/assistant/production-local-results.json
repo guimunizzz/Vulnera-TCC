@@ -1,0 +1,86 @@
+{
+  "base": "http://localhost:3001/api",
+  "googleCalls": 0,
+  "realLogin": true,
+  "fixtureAccountsAlreadyExisting": true,
+  "results": [
+    {
+      "role": "ADMIN",
+      "pass": true,
+      "loginStatus": 200,
+      "logoutStatus": 204,
+      "checks": [
+        {
+          "screen": "dashboard",
+          "status": 200,
+          "source": "local",
+          "actions": [
+            "new-analysis",
+            "applications",
+            "projects"
+          ]
+        },
+        {
+          "screen": "finding-detail",
+          "status": 200,
+          "source": "local",
+          "actions": [
+            "projects",
+            "findings"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "CLIENT",
+      "pass": true,
+      "loginStatus": 200,
+      "logoutStatus": 204,
+      "checks": [
+        {
+          "screen": "dashboard",
+          "status": 200,
+          "source": "local",
+          "actions": [
+            "new-analysis",
+            "applications",
+            "projects"
+          ]
+        },
+        {
+          "screen": "finding-detail",
+          "status": 200,
+          "source": "local",
+          "actions": [
+            "projects"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "PENTESTER",
+      "pass": true,
+      "loginStatus": 200,
+      "logoutStatus": 204,
+      "checks": [
+        {
+          "screen": "dashboard",
+          "status": 200,
+          "source": "local",
+          "actions": [
+            "projects"
+          ]
+        },
+        {
+          "screen": "finding-detail",
+          "status": 200,
+          "source": "local",
+          "actions": [
+            "projects",
+            "findings"
+          ]
+        }
+      ]
+    }
+  ]
+}

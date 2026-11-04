@@ -1,12 +1,14 @@
 ---
 type: decisao
 tags: [decision, escopo]
-status: vigente
+status: parcialmente-substituida
 codigo: ADR-017
 data: 2026-08-03
 ---
 
 # ADR-017 - IA cortada do escopo do MVP
+
+> **Evolução em 2026-10-23:** o [[ADR-048 - Assistente contextual com Gemini e ajuda local]] reintroduz exclusivamente orientação contextual na web autenticada, com Gemini opcional e ajuda local. O corte abaixo permanece como histórico e continua aplicável a sugestão de findings, cálculo de severidade por IA e IA mobile. `Vulnerability.aiAssisted` não foi reativado. A integração nova não recupera o endpoint/editor antigos.
 
 ## Contexto
 

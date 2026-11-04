@@ -21,6 +21,11 @@
 | 8     | Maturidade (checklist) + fechamento TCC        | 12      | 16/10 → 25/10 | 📋             |
 
 **Cortado do escopo:** IA / Gemini · chat · tickets · e-mail transacional · Prometheus/Grafana.
+
+> **Evolução de escopo — 2026-10-23 (registro da Fase 0):** o pedido do Assistente Vulnera reintroduz exclusivamente orientação contextual na web protegida, com Gemini opcional e ajuda local. A Fase 0 desse novo plano está concluída; implementação pendente. A lista de corte acima permanece como registro do planejamento original, incluindo sugestão de findings/IA mobile, que continuam fora do escopo. Ver ADR-048 e a seção Assistente Vulnera ao fim deste documento.
+
+> **Fechamento da continuação — 2026-10-23:** Fases 1–6 também entregues e aplicadas localmente. O guia atual é `docs/ASSISTENTE_VULNERA.md`; Gemini ao vivo depende de configuração privada e permanece não validado. Ressalvas das verificações estão registradas no relatório final.
+
 **Enxugado:** mobile (só o essencial pra demo) · maturidade (checklist de perguntas, não SAMM completo).
 
 > ⚠️ Sem buffer. Se acumular mais de uma semana de atraso até o fim da Fase 6, **a Fase 7 encolhe primeiro** — mobile vira demonstração de telas com dados de seed, sem push funcional.
@@ -1126,3 +1131,31 @@ partindo de `dev`, com espera visual fluida quando necessária.
 - Detalhes da API, autorização e fluxo read-only seguem a documentação funcional vigente.
 - As menções antigas a testar push no Expo Go Android são históricas: o código atual trata esse ambiente como indisponível. O teste de push exige um build compatível e aparelho.
 - Evidências e limites: `app/mobile/output/mobile-refactor-report.md`.
+
+---
+
+# Assistente Vulnera — orientação contextual (pedido de 2026-10-23)
+
+Este plano tem numeração própria de 0 a 6; não renumera as fases originais do MVP. A Fase 0 seguiu a pausa de AGENTS §0.2 S1; na continuação de 23/10/2026 o usuário autorizou executar todas as fases sem pausas, mantendo relatórios de checkpoint em atualizações. Os guias protegidos não foram editados. Preservar o escopo detalhado e as fronteiras registradas no [plano](ASSISTENTE_VULNERA_PLANO.md) e no ADR-048.
+
+| Fase | Prompt de execução / resultado exigido | Status |
+| --- | --- | --- |
+| 0 — Investigar | Ler documentos/schema, preservar Git, conferir scripts, mapear rotas/perfis/overlays/tokens e propor integração sem persistência nova | ✅ Concluída em 2026-10-23 |
+| 1 — Ajuda e contratos | 14 tópicos versionados, recuperação por termos/tela/continuação limitada, DTOs e nove ações fechadas por perfil | ✅ Concluída em 2026-10-23 |
+| 2 — Backend e Gemini | Endpoint por factory, gateway `fetch`, configuração opcional, fallback local e limites de usuário/instância com 429 vigente; 47 focais | ✅ Concluída em 2026-10-23 |
+| 3 — Mascote e painel | Instância autenticada única, SVG/CSS/Motion, pausas, reduced motion, painel estável, teclado, foco, inert e impressão | ✅ Concluída em 2026-10-23 |
+| 4 — Contexto e sessão | POST explícito sem retry de geração, screen capturado, atalhos por clique, memória e descarte de sessão encerrada; 45 focais web | ✅ Concluída em 2026-10-23 |
+| 5 — Validação e demo | Web 400/400, builds host/Docker, navegador produção 12/12, HTTP/UI locais e ressalvas API registradas; Gemini ao vivo pendente de configuração | ✅ Concluída em 2026-10-23 |
+| 6 — Documentação e entrega | Guia Free Tier/Docker/local, limites/dados fictícios/roteiro, docs vivos, ADR e diff local revisável | ✅ Concluída em 2026-10-23 |
+
+## Histórico
+
+- **Branch/base:** `feature/agent-ai`, `44f9c58`.
+- **PR:** não aberta; sem commit/push neste checkpoint.
+- **Continuação/fechamento:** 2026-10-23, fases 1–6 entregues; 7/7 fases, 100% da implementação e validação local previstas. Autorização do usuário substituiu as pausas nesta execução; checkpoints relatados durante o trabalho.
+- **Validação final:** API focal 47/47 e 100% de linhas nos serviços novos; web 400/400, contraste 66/66, builds host/Docker; navegador produção 12/12 sem erros/CSP; 13/13 HTTP sintético, três perfis autenticados reais e CLIENT UI sem fixtures. API combinado Node 22/CVSS 772/773, assertion anterior Excel falha; check API mantém dois imports anteriores de lint. Detalhes, ajustes de ambiente e limites em `output/assistant/VALIDACAO.md`.
+- **Aplicação/guia:** `http://localhost:8086`, modo local, dados/volumes anteriores preservados. `docs/ASSISTENTE_VULNERA.md`, ADR-048 vigente e ADR-006/011/017 com evolução histórica. Sem chave/modelo no runtime consultado, sem chamada Google; prova Gemini ao vivo explicitamente pendente.
+- **Data/checkpoint:** 2026-10-23, Fase 0 concluída; 1/7 fases, 14% do plano. Fases 1–6 pendentes, sem código de produto novo.
+- **Entrega:** `docs/ASSISTENTE_VULNERA_PLANO.md`, ADR-048, PRD/BACKLOG/ROADMAP/Changelog e nota de evolução no Contexto Mestre. Nove ações confirmadas; onboarding e relatório DAST ficam fora de AppLayout, exigindo contêiner autenticado compartilhado.
+- **Validação:** web e health API HTTP 200. Lint API, builds API/web e check web bloqueados por dependências npm ausentes no host (`eslint`/`tsc`); testes não executados. Conta Free Tier e integração ao vivo com Gemini não validadas.
+- **Decisões/desvios:** retorno da IA restrito à orientação por pedido explícito, modelo recomendado conforme documentação oficial atual, ajuda local padrão e nenhuma migration/dependência nova planejada. Riscos de TTL/evicção do limiter e banco de teste registrados. Histórico do corte de IA e alterações anteriores preservados; nenhum arquivo protegido, `.env`, schema, container ou dado alterado.

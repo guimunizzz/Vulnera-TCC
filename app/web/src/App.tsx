@@ -26,6 +26,7 @@ import { PlaybookDetailPage } from "./pages/playbook-detail-page";
 import { RemediationPage } from "./pages/remediation-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
+import { AuthenticatedLayout } from "./components/layout/authenticated-layout";
 
 export function App() {
   return (
@@ -48,6 +49,7 @@ export function App() {
       {import.meta.env.DEV && <Route path="/styleguide" element={<StyleguidePage />} />}
 
       <Route element={<ProtectedRoute />}>
+        <Route element={<AuthenticatedLayout />}>
         <Route path="/onboarding" element={<OnboardingPage />} />
 
         <Route element={<AppLayout />}>
@@ -110,6 +112,7 @@ export function App() {
             aberta em nova aba a partir do detalhe do scan. */}
         <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
           <Route path="/dast/scans/:id/report" element={<DastScanReportPage />} />
+        </Route>
         </Route>
       </Route>
 

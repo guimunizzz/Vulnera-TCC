@@ -15,6 +15,8 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   user: User | null;
+  /** Identifica um novo login, inclusive da mesma pessoa; nunca é persistido. */
+  sessionVersion: number;
   setAuth: (auth: AuthResponse) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   updateUser: (user: User, sessionUser: User) => boolean;
@@ -27,11 +29,12 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       user: null,
+      sessionVersion: 0,
       setAuth: (auth) => {
         // Leituras recentes pertencem à sessão: outro usuário precisa buscar
         // seu próprio escopo, mesmo que visite a mesma rota dentro de 30 s.
         if (get().user?.id !== auth.user.id) queryClient.clear();
-        set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user });
+        set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user, sessionVersion: get().sessionVersion + 1 });
       },
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
       updateUser: (user, sessionUser) => {
@@ -47,9 +50,13 @@ export const useAuthStore = create<AuthState>()(
       },
       clearAuth: () => {
         queryClient.clear();
-        set({ accessToken: null, refreshToken: null, user: null });
+        set({ accessToken: null, refreshToken: null, user: null, sessionVersion: get().sessionVersion + 1 });
       },
     }),
-    { name: "vulnera-auth" },
+    {
+      name: "vulnera-auth",
+      // A identidade temporária separa conversas; não é uma credencial nem estado recuperável.
+      partialize: ({ accessToken, refreshToken, user }) => ({ accessToken, refreshToken, user }),
+    },
   ),
 );

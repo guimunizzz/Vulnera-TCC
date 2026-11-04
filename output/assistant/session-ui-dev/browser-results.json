@@ -1,0 +1,20 @@
+{
+  "origin": "http://127.0.0.1:5175",
+  "timestamp": "2026-10-23T22:14:41.013Z",
+  "mode": "Fixtures sinteticas interceptadas somente no navegador; sem Gemini real ou escrita no banco.",
+  "passed": 1,
+  "total": 1,
+  "pageErrors": [],
+  "securityViolations": [],
+  "servedAssets": [
+    "/@vite/client",
+    "/src/main.tsx?t=1792793472191"
+  ],
+  "existingLimitations": [],
+  "results": [
+    {
+      "name": "Logout cancela e descarta resposta tardia",
+      "ok": true
+    }
+  ]
+}

@@ -9,6 +9,71 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-10-23 — Assistente Vulnera, Fases 1–6 entregues
+
+**✅ 7/7 fases, 100% da implementação e validação local previstas.**
+Branch `feature/agent-ai`, base `44f9c58`; sem commit, push ou PR. O usuário
+autorizou continuar sem pausa nos checkpoints, relatados durante a execução.
+
+- Base de 14 tópicos, contratos tipados e nove ações conferidas com rotas;
+  recuperação PT-BR, contexto limitado e restrições dos três perfis.
+- `POST /api/assistant/chat` autenticado por factory, Gemini por `fetch`
+  injetável, host fixo, timeout/saída limitados, chamada única, configuração
+  opcional e ajuda local identificada. Limites por usuário/instância
+  compartilhados, com retenção/evicção adequadas e 429 preservado.
+- Layout autenticado único inclui onboarding e relatório DAST; sentinela
+  SVG/Motion percorre bordas com pausas, painel estável e acessível, foco,
+  inert/modais, texto seguro e impressão oculta. Conversa em memória com
+  contexto capturado e isolamento em logout/troca/novo login.
+- API focal 47/47, serviços novos 100% linhas/85,5% branches; web focal
+  45/45 e check 400/400, contraste 66/66, lint 0 erros/9 avisos anteriores.
+  Builds host/Docker e navegador servido em 8086: 12/12, zero erros/CSP.
+- HTTP sintético 13/13; logins reais dos três perfis com seis perguntas
+  locais; CLIENT real na UI com duas respostas, atalho e logout sem fixtures
+  nem envio de formulário de negócio. Nenhuma chamada Google: runtime sem
+  chave/modelo. Gemini ao vivo permanece pendente de configuração privada.
+- API geral combinada Node 22 + repetição CVSS com dependência montada:
+  772/773 testes, 47/48 suítes. Assertion anterior de aspas no header Excel
+  continua falhando; check API mantém dois imports não usados anteriores.
+  Ajustes ambientais de uploads/CVSS e encerramento nativo Windows estão
+  separados dos defeitos da feature em `output/assistant/VALIDACAO.md`.
+- QA corrigiu Escape durante espera, largura do painel 320px, recuperação
+  indevida de histórico e distinção entre relatórios DAST e de projeto.
+  Overflow anterior do cabeçalho Conta em 320px foi registrado, sem correção
+  fora do escopo.
+- Aplicado localmente em `http://localhost:8086`, modo local. Confirmado zero
+  scans ativos antes da recriação da aplicação; dados/volumes preservados.
+  Banco de testes separado, sem schema/migration nova, pacote declarado,
+  lockfile, `.env` real ou guia protegido alterado.
+- Guia `docs/ASSISTENTE_VULNERA.md` contém Free Tier, chave privada, Docker,
+  limites e roteiro de três minutos. PRD/BACKLOG/ROADMAP, README, operação,
+  frontend e demo sincronizados; ADR-048 vigente e ADR-006/011/017 com
+  evolução histórica, sem reativar geração de findings ou IA no mobile.
+
+## 2026-10-23 — Assistente Vulnera, Fase 0
+
+**✅ Investigação concluída — 100% desta fase; 1/7 fases, 14% do plano.**
+Branch `feature/agent-ai`, base `44f9c58`; sem commit, push ou PR.
+Implementação das Fases 1–6 ainda pendente.
+
+- Confirmados API/web, schema, sessão, guards, rate limiter, tokens, Motion,
+  portais/inert e nove destinos permitidos. Onboarding e relatório DAST
+  exigem layout autenticado acima de AppLayout para uma instância única.
+- Plano de arquivos, telas/perfis, contratos propostos, aceite e divergências
+  em `docs/ASSISTENTE_VULNERA_PLANO.md`. ADR-048 aceita IA somente como
+  orientação contextual, com Gemini opcional e ajuda local identificada;
+  sugestão de findings e IA mobile continuam excluídas.
+- Documentação oficial consultada em 23/10: recomendação inicial
+  `gemini-3.5-flash-lite`, modelo configurável. Elegibilidade da conta e
+  chamada real não verificadas; gratuidade depende da configuração da conta.
+- Web e health API responderam HTTP 200. Lint API, builds API/web e check web
+  não chegaram a executar por ausência de `node_modules`/`eslint`/`tsc` no
+  host; testes não executados. Riscos de TTL/evicção dos limites lentos e
+  isolamento do banco de teste registrados para a implementação/validação.
+- PRD/BACKLOG/ROADMAP e Contexto Mestre atualizados. Trabalho anterior
+  preservado; nenhum código, schema, lockfile, `.env`, dado ou container
+  alterado; nenhuma integração Gemini anunciada como pronta.
+
 ## 2026-10-09 — Spider tradicional, perfil por execução e README
 
 **✅ Concluída — 100% (4/4).** Mesma branch
