@@ -4,14 +4,14 @@
  *
  * Portado de `vulnera-landing/src/components/sections/Maturity.jsx`.
  * Os números aqui são uma amostra ilustrativa, não dado de cliente.
+ * Movimento: setup e escala em `../motion/` (Fase 3 do refactor web-motion-3d).
  */
 
 import { useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
-import { Reveal, GlitchHeading } from "../ui";
-import { movimentoReduzido } from "../../../design/accessibility";
+import { Reveal, TituloDecodificado } from "../ui";
+import { gsap } from "../motion/gsap";
+import { useMovimentoLanding } from "../motion/use-landing-motion";
+import { ATRASO_LANDING, DURACAO_LANDING, EASE_LANDING, ESCALONAMENTO_LANDING } from "../motion/tokens";
 
 const DOMAINS = [
   { label: "Gestão de Acesso", score: 4 },
@@ -37,6 +37,10 @@ const LEVEL_COLOR: string = {
   ADVANCED: "var(--vx-success)",
 }[LEVEL];
 
+// Valores finais do radar (não são tokens de movimento: são o desenho).
+const OPACIDADE_AREA = 0.16;
+const RAIO_PONTO = 4;
+
 const CENTER = 130;
 const MAX_R = 95;
 const ANGLE_STEP = (2 * Math.PI) / DOMAINS.length;
@@ -60,88 +64,80 @@ export default function Maturity() {
   const scope = useRef<HTMLElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
 
-  useGSAP(
-    () => {
-      const reduced = movimentoReduzido();
+  useMovimentoLanding(scope, ({ reduzido }) => {
+    const path = pathRef.current;
+    const scoreEl = scope.current?.querySelector<HTMLElement>(".vx-mat-score");
+    const largura = (_i: number, el: HTMLElement) => el.dataset.w ?? "0%";
 
-      ScrollTrigger.create({
-        trigger: scope.current ?? undefined,
-        start: "top 60%",
-        once: true,
-        onEnter: () => {
-          const path = pathRef.current;
-          if (path) {
-            const length = path.getTotalLength();
-            gsap.set(path, { strokeDasharray: length, strokeDashoffset: reduced ? 0 : length });
-            gsap.to(path, {
-              strokeDashoffset: 0,
-              duration: reduced ? 0 : 1.4,
-              ease: "power2.out",
-            });
-            gsap.fromTo(
-              path,
-              { fillOpacity: 0 },
-              {
-                fillOpacity: 0.16,
-                duration: reduced ? 0 : 1,
-                delay: reduced ? 0 : 0.4,
-                ease: "power2.out",
-              },
-            );
-          }
+    // Movimento reduzido: o estado final de uma vez — o traço não se desenha,
+    // as barras não crescem e o score não conta (contar É movimento). O fade
+    // de entrada continua vindo do `Reveal`.
+    if (reduzido) {
+      if (path) gsap.set(path, { fillOpacity: OPACIDADE_AREA });
+      gsap.set(".vx-mat-dot", { attr: { r: RAIO_PONTO } });
+      gsap.set(".vx-mat-bar", { width: largura });
+      if (scoreEl) gsap.set(scoreEl, { innerText: OVERALL_SCORE });
+      return;
+    }
 
-          gsap.fromTo(
-            ".vx-mat-dot",
-            { attr: { r: 0 } },
-            {
-              attr: { r: 4 },
-              duration: reduced ? 0 : 0.4,
-              delay: reduced ? 0 : 0.3,
-              ease: "back.out(2)",
-              stagger: reduced ? 0 : 0.08,
-            },
-          );
-
-          gsap.to(".vx-mat-bar", {
-            width: (_i: number, el: HTMLElement) => el.dataset.w ?? "0%",
-            duration: reduced ? 0 : 0.8,
-            ease: "power2.out",
-            stagger: reduced ? 0 : 0.08,
-          });
-
-          const scoreEl = scope.current?.querySelector<HTMLElement>(".vx-mat-score");
-          if (scoreEl) {
-            gsap.fromTo(
-              scoreEl,
-              { innerText: 0 },
-              {
-                innerText: OVERALL_SCORE,
-                duration: reduced ? 0 : 1.6,
-                ease: "power3.out",
-                snap: { innerText: 1 },
-              },
-            );
-          }
-        },
-      });
-    },
-    { scope },
-  );
+    // Uma timeline criada já no contexto (e não dentro de um onEnter), para
+    // que o revert do matchMedia também alcance os tweens.
+    const linha = gsap.timeline({
+      defaults: { ease: EASE_LANDING.saida },
+      scrollTrigger: { trigger: scope.current, start: "top 60%", once: true },
+    });
+    if (path) {
+      const length = path.getTotalLength();
+      gsap.set(path, { strokeDasharray: length, strokeDashoffset: length });
+      linha.to(path, { strokeDashoffset: 0, duration: DURACAO_LANDING.traco }, 0);
+      linha.fromTo(
+        path,
+        { fillOpacity: 0 },
+        { fillOpacity: OPACIDADE_AREA, duration: DURACAO_LANDING.preenchimento },
+        ATRASO_LANDING.preenchimento,
+      );
+    }
+    linha.fromTo(
+      ".vx-mat-dot",
+      { attr: { r: 0 } },
+      {
+        attr: { r: RAIO_PONTO },
+        duration: DURACAO_LANDING.pontual,
+        ease: EASE_LANDING.ressalto,
+        stagger: ESCALONAMENTO_LANDING.itens,
+      },
+      ATRASO_LANDING.pontos,
+    );
+    linha.to(
+      ".vx-mat-bar",
+      { width: largura, duration: DURACAO_LANDING.crescimento, stagger: ESCALONAMENTO_LANDING.itens },
+      0,
+    );
+    if (scoreEl) {
+      linha.fromTo(
+        scoreEl,
+        { innerText: 0 },
+        { innerText: OVERALL_SCORE, duration: DURACAO_LANDING.contagem, ease: EASE_LANDING.enfase, snap: { innerText: 1 } },
+        0,
+      );
+    }
+  });
 
   return (
     <section
       id="maturidade"
+      data-ato="4"
       ref={scope}
-      className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24"
+      className="vx-grid-bg flex min-h-screen items-center px-6 py-24"
     >
-      <div className="mx-auto w-full max-w-5xl">
-        <Reveal className="text-center">
+      <div className="vx-superficie mx-auto w-full max-w-5xl">
+        <Reveal className="text-center" variante="fade">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">
             {"// MATURIDADE DE SEGURANÇA"}
           </p>
-          <GlitchHeading className="mt-4 text-3xl font-bold leading-tight text-[var(--vx-text)] md:text-4xl">
+          <TituloDecodificado className="mt-4 text-3xl font-bold leading-tight text-[var(--vx-text)] md:text-4xl">
             Não é só uma lista de findings. É um raio-x da sua postura de segurança.
-          </GlitchHeading>
+          </TituloDecodificado>
           <p className="mx-auto mt-4 max-w-2xl text-[var(--vx-text-2)]">
             7 domínios avaliados, score consolidado e um nível claro pra mostrar ao cliente onde ele
             está — e pra onde precisa ir.
@@ -149,7 +145,7 @@ export default function Maturity() {
         </Reveal>
 
         <div className="mt-16 grid grid-cols-1 items-center gap-12 md:grid-cols-2">
-          <Reveal delay={150} className="flex flex-col items-center">
+          <Reveal ordem={1} className="flex flex-col items-center">
             <svg
               viewBox="0 0 260 260"
               className="w-full max-w-[320px]"
@@ -221,10 +217,14 @@ export default function Maturity() {
               >
                 {LEVEL}
               </span>
+              {/* R2: números de amostra precisam dizer que são amostra. */}
+              <p className="mt-3 font-mono text-sm text-[var(--vx-text-2)]">
+                Exemplo ilustrativo — não é a avaliação de uma empresa real.
+              </p>
             </div>
           </Reveal>
 
-          <Reveal delay={250}>
+          <Reveal ordem={2}>
             <ul className="space-y-4">
               {DOMAINS.map((d) => (
                 <li key={d.label}>

@@ -22,6 +22,7 @@ import { generateExecutivePdf } from "../lib/pdf/executive";
 import { generateTechnicalPdf } from "../lib/pdf/technical";
 import type { ProjectStatus } from "../types/project.types";
 import type { ReportType } from "../types/report.types";
+import { TABELA } from "../components/ui/table-estilos";
 
 const REPORT_TYPE_LABELS: Record<ReportType, string> = { EXECUTIVE: "Executivo", TECHNICAL: "Técnico" };
 const REPORT_READY_STATUSES: ProjectStatus[] = ["IN_REVIEW", "COMPLETED"];
@@ -377,7 +378,7 @@ export function ProjectDetailPage() {
               {reportHistory && reportHistory.length > 0 && (
                 <div className="overflow-hidden rounded-container border border-subtle">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-surface text-fg-muted">
+                    <thead className={TABELA.cabecalho}>
                       <tr>
                         <th className="px-4 py-3 font-medium">Título</th>
                         <th className="px-4 py-3 font-medium">Tipo</th>
@@ -387,7 +388,7 @@ export function ProjectDetailPage() {
                     </thead>
                     <tbody>
                       {reportHistory.map((report) => (
-                        <tr key={report.id} className="border-t border-subtle">
+                        <tr key={report.id} className={TABELA.linha}>
                           <td className="px-4 py-3 text-fg">{report.title}</td>
                           <td className="px-4 py-3 text-fg-muted">{REPORT_TYPE_LABELS[report.type]}</td>
                           <td className="px-4 py-3 text-fg-muted">{userName(report.generatedBy)}</td>

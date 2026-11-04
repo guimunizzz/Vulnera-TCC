@@ -5,11 +5,16 @@
  * `oklch(var(--token))`, então os valores abaixo espelham os tokens de
  * `styles/tokens.css` (comentário ao lado de cada um). O DOM continua usando
  * os tokens CSS diretamente.
+ *
+ * `accent`, `accentSoft` e `neutral` vinham de `dashboard-scene-palette.ts`,
+ * removido no refactor web-motion-3d (a atmosfera passou a ler os tokens em
+ * runtime via `src/three/palette.ts`). Os valores foram trazidos para cá sem
+ * mudança, para o grafo ficar idêntico; migrar esta paleta para a leitura de
+ * tokens é pendência registrada no BACKLOG.
  */
 
 import type { ThemeResolvido } from "../../../design/theme";
 import type { DastRisk } from "../../../types/dast.types";
-import { DASHBOARD_SCENE_PALETTE } from "../../../components/dashboard/hero/dashboard-scene-palette";
 
 export interface GraphPalette {
   fundo: string;
@@ -28,7 +33,9 @@ export interface GraphPalette {
 
 export const GRAPH_PALETTE: Record<ThemeResolvido, GraphPalette> = {
   dark: {
-    ...DASHBOARD_SCENE_PALETTE.dark,
+    accent: "#a38bf9", // --color-accent-ink / iris-300 aproximado
+    accentSoft: "#6f4fd3", // --color-accent / iris-600 aproximado
+    neutral: "#8290a8", // --color-text-muted aproximado
     fundo: "#0d1018", // --color-bg-surface escuro aproximado
     grade: "#2a3142",
     metal: "#3a4152",
@@ -44,7 +51,9 @@ export const GRAPH_PALETTE: Record<ThemeResolvido, GraphPalette> = {
     bloom: { strength: 0.7, radius: 0.5, threshold: 1.0 },
   },
   light: {
-    ...DASHBOARD_SCENE_PALETTE.light,
+    accent: "#5d35b8", // --color-accent-ink / iris-700 aproximado
+    accentSoft: "#855fea", // --color-accent / iris-600 aproximado
+    neutral: "#526078", // --color-text-muted aproximado
     fundo: "#f4f5f9", // --color-bg-surface claro aproximado
     grade: "#c9cedb",
     metal: "#8a93a8",

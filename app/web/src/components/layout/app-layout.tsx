@@ -37,6 +37,7 @@ import { authApi } from "../../lib/api/auth.api";
 import { DashboardAtmosphere } from "../dashboard/hero/dashboard-atmosphere";
 import { AmbientHostContext } from "../dashboard/hero/ambient-host-context";
 import { QueryLoadingIndicator } from "./query-loading-indicator";
+import { LimiteDeRota } from "./route-boundary";
 import "./operations-backdrop.css";
 import "./module-surfaces.css";
 
@@ -142,7 +143,10 @@ export function AppLayout() {
           <div className="operations-content relative">
             <AmbientHostContext.Provider value={true}>
               <TransicaoDeRota chave={location.pathname}>
-                {outlet}
+                {/* Dentro da transição: cada rota tem o próprio limite, a saída
+                    continua mostrando a página anterior já carregada e só a área
+                    de conteúdo espera o chunk — sidebar e cabeçalho ficam. */}
+                <LimiteDeRota variante="conteudo">{outlet}</LimiteDeRota>
               </TransicaoDeRota>
             </AmbientHostContext.Provider>
           </div>

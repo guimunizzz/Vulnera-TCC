@@ -1,0 +1,52 @@
+{
+  "rotulo": "borda-varredura-2",
+  "quando": "2026-11-04T13:36:36.676Z",
+  "landingParada": {
+    "quadrosDaCenaPorSegundo": 59.9,
+    "fpsNavegador": 60,
+    "p95ms": 16.9,
+    "engasgos": 0.006,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "landingRolando": {
+    "quadrosDaCenaPorSegundo": 19.2,
+    "fpsNavegador": 19.4,
+    "p95ms": 116.9,
+    "engasgos": 0.5,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "landingGota": {
+    "quadrosDaCenaPorSegundo": 59.7,
+    "fpsNavegador": 59.5,
+    "p95ms": 17,
+    "engasgos": 0.008,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaParada": {
+    "quadrosDaCenaPorSegundo": 60,
+    "fpsNavegador": 60,
+    "p95ms": 16.9,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaGota": {
+    "quadrosDaCenaPorSegundo": 60.1,
+    "fpsNavegador": 60,
+    "p95ms": 17,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaRolando": {
+    "quadrosDaCenaPorSegundo": 59.6,
+    "fpsNavegador": 59.7,
+    "p95ms": 16.9,
+    "engasgos": 0.005,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  }
+}

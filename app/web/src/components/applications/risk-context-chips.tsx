@@ -49,10 +49,12 @@ export interface RiskContextChipsProps {
   contexto: ApplicationRiskContext;
   /** Compacto: só os chips; sem ele, cada chip vem precedido do nome da dimensão. */
   compacto?: boolean;
+  /** Sem ele, o ambiente sai dos chips — para quando ele já tem coluna própria (tabela de aplicações). */
+  mostrarAmbiente?: boolean;
   className?: string;
 }
 
-export function RiskContextChips({ contexto, compacto = true, className }: RiskContextChipsProps) {
+export function RiskContextChips({ contexto, compacto = true, mostrarAmbiente = true, className }: RiskContextChipsProps) {
   const criticidade = CRITICALITY_LABELS[contexto.criticality as Criticality] ?? contexto.criticality;
   const ambiente = ENVIRONMENT_LABELS[contexto.environment as Environment] ?? contexto.environment;
   const sensibilidade = DATA_SENSITIVITY_LABELS[contexto.dataSensitivity as DataSensitivity] ?? contexto.dataSensitivity;
@@ -63,7 +65,7 @@ export function RiskContextChips({ contexto, compacto = true, className }: RiskC
     <div
       role="group"
       aria-label="Contexto de risco da aplicação"
-      className={["flex flex-wrap items-center gap-1.5", className].filter(Boolean).join(" ")}
+      className={["flex flex-wrap items-center gap-2", className].filter(Boolean).join(" ")}
     >
       <Badge tom={TOM_CRITICIDADE[contexto.criticality] ?? "neutro"} className="whitespace-nowrap">
         <span title={`Criticidade: ${criticidade}`}>
@@ -71,12 +73,14 @@ export function RiskContextChips({ contexto, compacto = true, className }: RiskC
           {criticidade}
         </span>
       </Badge>
-      <Badge tom={contexto.environment === "PROD" ? "acento" : "neutro"} className="whitespace-nowrap">
-        <span title={`Ambiente: ${ambiente}`}>
-          {prefixo("Ambiente")}
-          {ambiente}
-        </span>
-      </Badge>
+      {mostrarAmbiente && (
+        <Badge tom={contexto.environment === "PROD" ? "acento" : "neutro"} className="whitespace-nowrap">
+          <span title={`Ambiente: ${ambiente}`}>
+            {prefixo("Ambiente")}
+            {ambiente}
+          </span>
+        </Badge>
+      )}
       <Badge tom={contexto.internetFacing ? "atencao" : "neutro"} className="whitespace-nowrap">
         <span title={contexto.internetFacing ? "Exposta à internet" : "Não exposta à internet"}>
           {contexto.internetFacing ? "Exposta à internet" : "Interna"}

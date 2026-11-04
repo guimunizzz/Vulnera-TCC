@@ -129,7 +129,13 @@ Estados       --color-success/warning/danger  (+ -ink, -surface, -fg)
 Severidade    --color-severity-{critical,high,medium,low,info}
                                 (+ -ink, -surface)
 Gráficos      --color-chart-1..6 · -grid · -axis
+Fundo         --color-ambient-ink · -muted · -cyan · -magenta
 ```
+
+O grupo **Fundo** é só para a decoração three.js (atmosfera da plataforma),
+lido em runtime por `src/three/palette.ts`. Nenhum componente o usa como cor de
+texto, borda ou estado. Ciano e magenta são os acentos neon da landing em
+OKLCH; no tema claro, eles escurecem para não brilhar sobre o branco.
 
 **A convenção `-ink` / `-surface` — leia isto antes de usar severidade:**
 
@@ -227,6 +233,13 @@ sombra.
 🎯 **Nenhum componente inventa duração.** O espelho em TypeScript
 (`src/motion/tokens.ts`) é conferido contra o CSS por teste.
 
+A landing pública tem uma escala própria e maior, também nomeada por intenção,
+em `components/landing/motion/tokens.ts` (entrada, crescimento, traço,
+contagem, escalonamento, scrub). Quando o movimento está reduzido, ela usa o
+mesmo `fast` do app. As cenas three.js têm os números em módulos de
+configuração (`landing/scene/config.ts`, `dashboard/hero/atmosfera-config.ts`),
+nunca no shader nem no hook.
+
 ---
 
 ## 3. Catálogo de componentes
@@ -276,6 +289,20 @@ Todos em `app/web/src/components/ui/`, exportados por `index.ts`.
 | `EmptyState` / `ErrorState` | `titulo`+`descricao`+`acao` / `aoTentarNovamente` |
 | `Alert` | `tom` · `titulo` · `aoFechar`. **Fica** na página (toast some) |
 | `Separator` | `orientacao` · `decorativo` |
+
+**Tabelas — um padrão só (2026-11-04).** Toda tabela da plataforma, a do
+componente `Table` e as escritas à mão nas páginas, usa as classes de
+`components/ui/table-estilos.ts` (`TABELA.cabecalho`, `.th`, `.linha`,
+`.celula`): cabeçalho `bg-inset` em caixa alta, células `px-4 py-3`, linha com
+divisória sutil e realce no hover. O padrão é o de Aplicações e Projetos,
+aprovado no redesenho. Coluna de texto livre ganha largura mínima
+(`larguraClassName`): a tabela rola na horizontal antes de espremer o título.
+`Badge` é sempre uma linha só (`whitespace-nowrap`): chip quebrado em duas
+linhas deixa o texto colado na borda arredondada.
+
+⚠️ Classe de espaçamento fora da escala (§2.6: 0–6, 8, 10, 12, 16, 20, 24)
+não gera CSS e não avisa. O rodapé da landing (`py-14`) e os chips de contexto
+de risco (`gap-1.5`) ficavam sem espaço nenhum por isso.
 
 ---
 
@@ -430,6 +457,21 @@ movimento reduzido pede menos movimento, não menos informação.
 | **Press** | `scale: 0.97`, em CSS puro | É a animação mais frequente da app; não vale JS por clique |
 | **Toast** | spring + `layout` para empilhar | Sem `layout`, os toasts existentes pulam ao abrir espaço |
 
+### Camadas — quem anima o quê
+
+| Camada | Biblioteca | Onde |
+|---|---|---|
+| Interface do produto | Motion | `src/motion/` (`useMotion`, `components.tsx`) |
+| Narrativa por rolagem da landing | GSAP + ScrollTrigger | `components/landing/motion/` |
+| Loops decorativos e `press` | CSS | folha do módulo, com `@media (prefers-reduced-motion)` e `:root[data-reduzir-movimento]` |
+| Fundo decorativo | three.js imperativo | kit `src/three/` |
+
+GSAP não entra no produto, e Motion não faz scroll-scrub. Numa mesma seção da
+landing, uma biblioteca só: o hover de botão que acompanha uma seção GSAP é
+CSS. Glitch fica reservado ao hero e à chamada final; os títulos das outras
+seções se decodificam uma vez (`LANDING_NARRATIVA.md` §7.1). Decisão e números
+em **[[ADR-050 - Camadas de movimento e kit three.js imperativo no web]]**.
+
 ### Física
 
 Spring para movimento **espacial** (posição, escala, layout): `stiffness`
@@ -494,7 +536,38 @@ npm run dev             # /styleguide fica em http://localhost:3000/styleguide
 **A regra que mais importa levar:** componente usa só token semântico. É o que
 faz o mobile herdar o tema em vez de reinventá-lo.
 
-## Atmosfera do dashboard (2026-09-22)
+## Fundo decorativo ASCII (2026-11)
+
+Landing e plataforma usam a mesma técnica: glifos ASCII desenhados por shader
+num canvas atrás do conteúdo, pelo kit `src/three/`. Roteiro e números em
+`docs/LANDING_NARRATIVA.md`, e decisão no ADR-050.
+
+- **Decoração, nunca dado.** Canvas `aria-hidden`, sem foco e com
+  `pointer-events: none`. Nenhuma forma representa métrica. Na plataforma, sem
+  dígitos: um `0` ao lado de um KPI seria lido como número.
+- **Teto medido.** A opacidade máxima dos glifos (plataforma: 0,30 no tema
+  escuro e 0,24 no claro) é o ponto em que o texto primário e o secundário
+  seguem AA com um glifo cruzando a letra, em qualquer cor da aurora (testes
+  ATM-01 e CTR). Para mudar o teto, refaça a conta.
+- **Superfície onde há texto.** Cabeçalho solto sobre o fundo usa
+  `.atmosfera-veu`. KPIs do Dashboard e cards de severidade de Findings são
+  opacos onde há texto e translúcidos só na borda direita, que fica vazia.
+- **Gate antes do download.** `useCenaPermitida` bloqueia com movimento
+  reduzido (sistema ou menu), alto contraste do menu, tela < 768 px ou sem
+  WebGL2. A landing mostra o pôster (ou fundo liso no alto contraste), e a
+  plataforma, o fundo CSS.
+- **Cor só de token**, lida em runtime (§2.4, grupo Fundo). Mudar o tema
+  atualiza os uniforms sem recriar o contexto.
+- **Interação mínima.** Na plataforma, hover discreto (só mouse e caneta),
+  ouvido na `window`. Na landing, a "gota" no clique, que ignora alvos
+  interativos. Nenhum dos dois cria estado React por quadro.
+
+## Atmosfera do dashboard (2026-09-22) — histórico
+
+> Substituída pelo fundo ASCII acima (refactor `web-motion-3d`, ADR-050): as
+> curvas e órbitas saíram, e o `dashboard-scene-palette.ts`, com suas cores
+> aproximadas, foi removido em favor dos tokens lidos em runtime. O registro
+> abaixo fica como histórico.
 
 `DashboardAtmosphere` monta um único canvas lazy para os três perfis. O Three.js
 desenha 18 curvas lentas no fundo e três órbitas com núcleo geométrico no canto

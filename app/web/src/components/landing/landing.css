@@ -12,6 +12,12 @@
  * O `ThemeProvider` do app estampa `data-theme="dark" | "light"` (sempre um
  * valor concreto, ver design/theme.ts) em `<html>`. Por isso o modo claro é só
  * `:root[data-theme='light'] .vx-landing` — dois casos, nunca `@media`.
+ * A landing segue o tema do app (decisão de 2026-10-23, que substitui o
+ * "sempre escuro" da ADR-026).
+ *
+ * CENA NARRATIVA
+ * A cena WebGL lê estas cores em runtime (`src/three/palette.ts` aceita hex):
+ * esta é a única fonte da paleta da landing — não há hex da landing em TS.
  *
  * Portado de `vulnera-landing/src/index.css` (projeto Vite standalone).
  */
@@ -27,6 +33,8 @@
   --vx-accent-soft: #c4b5fd;
   --vx-accent-soft-rgb: 196, 181, 253;
   --vx-magenta: #ff2ec4;
+  /* Neon ciano: acento de terminal da cena ASCII (varredura, binário). */
+  --vx-cyan: #2de2e6;
   --vx-danger: #ff2e63;
   --vx-danger-rgb: 255, 46, 99;
   --vx-orange: #ff8c42;
@@ -34,7 +42,9 @@
   --vx-success: #00e08a;
   --vx-text: #e5e7eb;
   --vx-text-2: #9ca3af;
-  --vx-text-3: #756c88;
+  /* Ajustado em 2026-10-23 (era #756c88, 4,19:1 — reprovava AA sobre o
+     próprio fundo); mesma matiz, só a luminosidade OKLCH subiu. */
+  --vx-text-3: #837996;
   --vx-neutral-rgb: 156, 163, 175;
   --vx-elevated-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 
@@ -54,6 +64,7 @@
   --vx-accent-soft: #7c3aed;
   --vx-accent-soft-rgb: 124, 58, 237;
   --vx-magenta: #c026d3;
+  --vx-cyan: #0e7490;
   --vx-danger: #dc2626;
   --vx-danger-rgb: 220, 38, 38;
   --vx-orange: #c2650c;
@@ -61,7 +72,7 @@
   --vx-success: #15803d;
   --vx-text: #1c1626;
   --vx-text-2: #5b5468;
-  --vx-text-3: #857c94;
+  --vx-text-3: #6c647b; /* era #857c94, 3,65:1 */
   --vx-neutral-rgb: 113, 113, 122;
   --vx-elevated-shadow: 0 12px 32px rgba(28, 22, 38, 0.12);
 }
@@ -81,6 +92,13 @@
   --vx-text-3: #463f52;
 }
 
+/* Alto contraste: sem cena e sem pôster. O teto de opacidade dos glifos foi
+   calculado para AA (scene-contrast.test.ts); com texto a 7:1 o fundo fica liso.
+   A cena WebGL nem monta (three/gate.ts); aqui sai o pôster estático. */
+:root[data-alto-contraste] .vx-poster {
+  display: none;
+}
+
 /* Offset de âncora para a navbar fixa (76px + folga). `scroll-padding` só
    funciona no container de rolagem — o <html> — então precisa ser global,
    mas só entra quando a landing está montada. */
@@ -95,6 +113,47 @@
 .vx-main-nav {
   flex-wrap: nowrap;
   gap: 2rem;
+}
+
+/* Superfície atrás dos blocos de texto. A cena narrativa aparece inteira nas
+   margens e entre as seções e fica a 6% atrás das letras: é o que mantém o
+   texto AA sobre ela. Os 94% são conferidos por scene-contrast.test.ts
+   (OPACIDADE_SUPERFICIE em scene/config.ts). */
+.vx-superficie {
+  position: relative;
+  isolation: isolate;
+}
+.vx-superficie::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--space-6));
+  z-index: -1;
+  border-radius: var(--radius-overlay);
+  background-color: color-mix(in srgb, var(--vx-bg) 94%, transparent);
+  box-shadow: 0 0 var(--space-8) var(--space-4) color-mix(in srgb, var(--vx-bg) 94%, transparent);
+}
+
+/* Cena e pôster trocam por crossfade — só opacidade. Com movimento reduzido
+   as durações dos tokens viram 1 ms e a troca é imediata. */
+.vx-poster,
+.vx-poster-ato,
+.vx-cena-canvas {
+  transition: opacity var(--duration-slow) var(--ease-out);
+}
+.vx-poster-entrando {
+  animation: vx-poster-entrar var(--duration-slow) var(--ease-out);
+}
+.vx-poster-saindo {
+  opacity: 0;
+}
+@keyframes vx-poster-entrar {
+  from { opacity: 0; }
+}
+.vx-cena-canvas {
+  opacity: 0;
+}
+.vx-cena-canvas[data-ready="true"] {
+  opacity: 1;
 }
 
 /* Grid sutil de fundo, presente em todas as seções */
@@ -207,6 +266,144 @@
 }
 .vx-bounce {
   animation: vx-bounce 1.6s ease-in-out infinite;
+}
+
+/* Título de seção decodificado (TituloDecodificado em ui.tsx). A letra
+   original segura a largura; o glifo fica por cima só durante o efeito. */
+.vx-decode-palavra {
+  display: inline-block;
+  white-space: nowrap;
+}
+.vx-decode-slot {
+  position: relative;
+  display: inline-block;
+}
+.vx-decode-glifo {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+}
+.vx-decode-ruido {
+  color: var(--vx-accent);
+}
+.vx-decode[data-decodificando] .vx-decode-letra {
+  opacity: 0;
+}
+.vx-decode[data-decodificando] .vx-decode-glifo {
+  opacity: 1;
+}
+
+/* Boot do hero (hero-boot.tsx): sai com fade curto. */
+.vx-boot {
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.vx-boot[data-saindo] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Moldura ASCII do plano recomendado (pricing.tsx). Cada lado é uma faixa
+   de glifos que desliza um período do padrão "=-·-" (4ch) em loop: só
+   transform, sem layout nem pintura por quadro. A moldura fica 12px fora do
+   card, no vão da grade. */
+.vx-landing {
+  --vx-borda-ascii-ciclo: 1.4s;
+  --vx-borda-ascii-afastamento: 12px;
+}
+.vx-borda-ascii {
+  position: absolute;
+  inset: calc(var(--vx-borda-ascii-afastamento) * -1);
+  pointer-events: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--vx-accent);
+  text-shadow: 0 0 6px rgba(var(--vx-accent-rgb), 0.55);
+}
+.vx-borda-ascii-lado {
+  position: absolute;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.vx-borda-ascii-topo,
+.vx-borda-ascii-base {
+  left: 1ch;
+  right: 1ch;
+  height: 1em;
+}
+.vx-borda-ascii-topo { top: 0; }
+.vx-borda-ascii-base { bottom: 0; }
+.vx-borda-ascii-direita,
+.vx-borda-ascii-esquerda {
+  top: 1em;
+  bottom: 1em;
+  width: 1em;
+  writing-mode: vertical-rl;
+}
+.vx-borda-ascii-direita { right: 0; }
+.vx-borda-ascii-esquerda { left: 0; }
+.vx-borda-ascii-faixa {
+  display: inline-block;
+  will-change: transform;
+  animation: var(--vx-borda-ascii-ciclo) linear infinite;
+}
+/* Sentido horário: topo →, direita ↓, base ←, esquerda ↑. */
+.vx-borda-ascii-topo .vx-borda-ascii-faixa { animation-name: vx-borda-direita; }
+.vx-borda-ascii-base .vx-borda-ascii-faixa { animation-name: vx-borda-esquerda; }
+.vx-borda-ascii-direita .vx-borda-ascii-faixa { animation-name: vx-borda-desce; }
+.vx-borda-ascii-esquerda .vx-borda-ascii-faixa { animation-name: vx-borda-sobe; }
+@keyframes vx-borda-direita { from { transform: translateX(-4ch); } to { transform: translateX(0); } }
+@keyframes vx-borda-esquerda { from { transform: translateX(0); } to { transform: translateX(-4ch); } }
+@keyframes vx-borda-desce { from { transform: translateY(-4ch); } to { transform: translateY(0); } }
+@keyframes vx-borda-sobe { from { transform: translateY(0); } to { transform: translateY(-4ch); } }
+.vx-borda-ascii-canto {
+  position: absolute;
+  width: 1ch;
+  text-align: center;
+}
+.vx-borda-ascii-se { top: 0; left: 0; }
+.vx-borda-ascii-sd { top: 0; right: 0; }
+.vx-borda-ascii-ie { bottom: 0; left: 0; }
+.vx-borda-ascii-id { bottom: 0; right: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .vx-borda-ascii-faixa { animation: none; }
+}
+:root[data-reduzir-movimento] .vx-borda-ascii-faixa { animation: none; }
+
+/* Loops decorativos param quando a seção sai da tela
+   (usePausarLoopsForaDaTela em motion/use-landing-motion.ts). */
+[data-fora-da-tela] :is(.vx-breathe, .vx-blink, .vx-cell-alert, .vx-bounce, .vx-borda-ascii-faixa) {
+  animation-play-state: paused;
+}
+
+/* Botão da chamada final: hover e toque em CSS, como o `press` do design
+   system — a seção já é animada pelo GSAP, e o Motion saiu dela. Os valores
+   espelham ESCALA_LANDING (motion/tokens.ts; conferido por teste). */
+.vx-landing {
+  --vx-escala-hover: 1.04;
+  --vx-escala-toque: 0.97;
+}
+.vx-cta-escala {
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-slow) var(--ease-out);
+}
+.vx-cta-escala:hover {
+  transform: scale(var(--vx-escala-hover));
+}
+.vx-cta-escala:active {
+  transform: scale(var(--vx-escala-toque));
+}
+@media (prefers-reduced-motion: reduce) {
+  .vx-cta-escala:is(:hover, :active) {
+    transform: none;
+  }
+}
+:root[data-reduzir-movimento] .vx-cta-escala:is(:hover, :active) {
+  transform: none;
 }
 
 /* Movimento reduzido: a rede global em styles/base.css já zera durações e

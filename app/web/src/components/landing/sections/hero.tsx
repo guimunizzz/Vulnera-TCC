@@ -3,48 +3,60 @@
  *
  * Portado de `vulnera-landing/src/components/sections/Hero.jsx`.
  * "INICIAR ANÁLISE" agora navega pra /register (react-router); "VER DEMO"
- * continua âncora interna. A cena 3D (`AmbientParticles`) já está isolada num
- * chunk à parte porque toda a landing é `lazy()` na rota (ver landing-page.tsx).
+ * continua âncora interna. O fundo 3D é a cena narrativa única da landing
+ * (`../scene/`), fixa atrás de todas as seções; este é o ato 0, "Funciona".
+ *
+ * Na primeira visita da sessão, um boot de terminal de ~1 s (`hero-boot.tsx`)
+ * antecede a entrada do título.
  */
 
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, type Variants } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import { GlitchHeading } from "../ui";
-import AmbientParticles from "../ambient-particles";
+import { HeroBoot } from "./hero-boot";
+import { deveTocarBoot } from "./hero-boot-estado";
 import { InteractiveLabel } from "../../ui/interactive-label";
+import {
+  DESLOCAMENTO_LANDING,
+  DURACAO_MOTION_LANDING,
+  EASE_MOTION_LANDING,
+  ESCALA_LANDING,
+  ESCALONAMENTO_MOTION_LANDING,
+} from "../motion/tokens";
 
 const MotionLink = motion.create(Link);
 
 const container: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.15, delayChildren: 0.2 } },
+  show: { transition: { staggerChildren: ESCALONAMENTO_MOTION_LANDING.hero, delayChildren: ESCALONAMENTO_MOTION_LANDING.inicioHero } },
 };
 
 const item: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+  hidden: { opacity: 0, y: DESLOCAMENTO_LANDING.entrada },
+  show: { opacity: 1, y: 0, transition: { duration: DURACAO_MOTION_LANDING.entrada, ease: EASE_MOTION_LANDING.saida } },
 };
 
 export default function Hero() {
+  // Decidido na montagem: com movimento reduzido, âncora na URL ou boot já
+  // visto nesta sessão, o hero entra direto.
+  const [boot, setBoot] = useState(deveTocarBoot);
   return (
     <section
+      data-ato="0"
       className="vx-grid-bg-strong relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6"
       style={{
-        backgroundColor: "var(--vx-bg)",
+        // Transparente nas bordas: a cena fixa atrás aparece em volta do título.
         backgroundImage:
-          "radial-gradient(ellipse at center, rgba(var(--vx-bg-2-rgb),0.9) 0%, var(--vx-bg) 70%)",
+          "radial-gradient(ellipse at center, rgba(var(--vx-bg-2-rgb),0.9) 0%, rgba(var(--vx-bg-2-rgb),0) 70%)",
       }}
     >
-      <AmbientParticles
-        count={typeof window !== "undefined" && window.innerWidth < 768 ? 180 : 400}
-      />
-
       <motion.div
-        className="relative z-[10] text-center"
+        className="vx-superficie relative z-[10] text-center"
         variants={container}
         initial="hidden"
-        animate="show"
+        animate={boot ? "hidden" : "show"}
       >
         <motion.div variants={item}>
           <GlitchHeading
@@ -74,8 +86,8 @@ export default function Hero() {
         >
           <MotionLink
             to="/register"
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: ESCALA_LANDING.hover }}
+            whileTap={{ scale: ESCALA_LANDING.toque }}
             className="rounded-[6px] bg-[var(--vx-accent)] px-8 py-3 font-mono text-sm font-bold tracking-wider text-[var(--vx-on-accent)] transition-shadow duration-[300ms] hover:shadow-[0_0_30px_rgba(var(--vx-accent-rgb),0.7)]"
             style={{ boxShadow: "0 0 16px rgba(var(--vx-accent-rgb),0.4)" }}
           >
@@ -83,14 +95,16 @@ export default function Hero() {
           </MotionLink>
           <motion.a
             href="#demo"
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: ESCALA_LANDING.hover }}
+            whileTap={{ scale: ESCALA_LANDING.toque }}
             className="rounded-[6px] border border-[var(--vx-accent-soft)] px-8 py-3 font-mono text-sm font-bold tracking-wider text-[var(--vx-accent-soft)] transition-all duration-[300ms] hover:bg-[rgba(var(--vx-accent-soft-rgb),0.08)] hover:shadow-[0_0_20px_rgba(var(--vx-accent-soft-rgb),0.4)]"
           >
             <InteractiveLabel>VER DEMO</InteractiveLabel>
           </motion.a>
         </motion.div>
       </motion.div>
+
+      {boot && <HeroBoot aoTerminar={() => setBoot(false)} />}
 
       <div
         className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[var(--vx-accent)]"

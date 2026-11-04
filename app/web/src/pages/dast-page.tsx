@@ -34,6 +34,7 @@ import { Skeleton } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { DastStatusBanner, useDastStatus } from "../components/dast/dast-status-banner";
 import { ACTIVE_DAST_STATUSES, labelDaFase, type DastScan } from "../types/dast.types";
+import { TABELA } from "../components/ui/table-estilos";
 
 function formatDuration(ms: number | null): string {
   if (ms == null) return "—";
@@ -192,7 +193,7 @@ export function DastPage() {
       {!scansQuery.isLoading && !scansQuery.isError && scans.length > 0 && (
         <div data-ops-surface className="mt-4 overflow-x-auto rounded-container border border-subtle">
           <table className="w-full text-left text-sm">
-            <thead className="bg-surface text-fg-muted">
+            <thead className={TABELA.cabecalho}>
               <tr>
                 <th className="px-4 py-3 font-medium">Alvo</th>
                 <th className="px-4 py-3 font-medium">Status</th>
@@ -209,7 +210,7 @@ export function DastPage() {
             </thead>
             <tbody>
               {scans.map((scan) => (
-                <tr key={scan.id} className="border-t border-subtle transition-colors duration-fast hover:bg-hovered">
+                <tr key={scan.id} className={TABELA.linha}>
                   <td className="max-w-xs truncate px-4 py-3 font-mono text-xs text-fg" title={scan.targetUrl}>
                     {scan.targetUrl}
                   </td>

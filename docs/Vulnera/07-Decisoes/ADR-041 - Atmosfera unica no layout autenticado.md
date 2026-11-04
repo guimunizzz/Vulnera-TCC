@@ -8,6 +8,13 @@ data: 2026-09-23
 
 # ADR-041 - Atmosfera única no layout autenticado
 
+> [!info] Atualizada pelo ADR-050 (2026-11-04)
+> Continua valendo: um canvas, montado pelo `AppLayout`, com o mesmo contrato
+> de decoração. Mudou o conteúdo e o ritmo: ondas e órbitas deram lugar a uma
+> atmosfera ASCII a 60 fps em duas passadas, e o alto contraste do menu de
+> acessibilidade também impede a montagem. Ver
+> [[ADR-050 - Camadas de movimento e kit three.js imperativo no web]].
+
 ## Contexto
 
 Dashboard e Findings já usavam a mesma cena Three.js em montagens locais.

@@ -1,0 +1,27 @@
+{
+  "phase": "after",
+  "fixture": true,
+  "metrics": [
+    {
+      "title": "Metadados",
+      "background": "oklch(0.218 0.015 255)",
+      "alpha": 255,
+      "border": "oklch(0.272 0.017 255)",
+      "primaryColor": "oklch(0.985 0.002 255)",
+      "mutedColor": "oklch(0.715 0.013 255)",
+      "primaryContrast": 16.59909340919262,
+      "mutedContrast": 6.898991964890973
+    },
+    {
+      "title": "Pentesters atribuídos",
+      "background": "oklch(0.218 0.015 255)",
+      "alpha": 255,
+      "border": "oklch(0.272 0.017 255)",
+      "primaryColor": "oklch(0.985 0.002 255)",
+      "mutedColor": null,
+      "primaryContrast": 16.59909340919262,
+      "mutedContrast": null
+    }
+  ],
+  "pageErrors": []
+}

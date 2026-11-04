@@ -27,7 +27,7 @@ import type { Transition, Variants } from "motion/react";
 import { DESLOCAMENTO, DURACAO, EASE, SPRING, STAGGER, STAGGER_MAX_ITENS } from "./tokens";
 
 export interface Movimento {
-  /** `true` quando o sistema pede movimento reduzido. */
+  /** `true` quando o sistema OU o menu de acessibilidade pedem movimento reduzido. */
   reduzido: boolean;
   /** Overlay centralizado: dialog. */
   overlay: Variants;

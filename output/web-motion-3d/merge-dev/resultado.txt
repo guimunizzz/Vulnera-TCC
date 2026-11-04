@@ -1,0 +1,16 @@
+OK   landing: cena WebGL monta
+OK   landing: botão de acessibilidade na barra
+OK   landing + reduzir: sem canvas
+OK   landing + reduzir: pôster visível
+OK   landing: desligar reduzir devolve a cena
+OK   landing + alto contraste: sem canvas
+OK   landing + alto contraste: pôster oculto
+OK   plataforma: atmosfera monta
+OK   plataforma + reduzir: sem canvas
+OK   plataforma: desligar reduzir devolve o canvas
+OK   plataforma + alto contraste: sem canvas
+OK   200%: /dashboard sem rolagem horizontal (1430/1440)
+OK   200%: /applications sem rolagem horizontal (1430/1440)
+OK   200%: /projects sem rolagem horizontal (1430/1440)
+OK   200%: raiz em 32px (32px)
+erros 0

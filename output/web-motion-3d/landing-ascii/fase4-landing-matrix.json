@@ -1,0 +1,285 @@
+{
+  "casos": [
+    {
+      "rotulo": "1440-dark-normal",
+      "largura": 1440,
+      "tema": "dark",
+      "reduzido": false,
+      "modo": "webgl",
+      "canvas": 1,
+      "pronta": "true",
+      "posterVisivel": "0",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.791,
+        0.594,
+        0.587,
+        0.4,
+        0.354,
+        0.403
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "1440-dark-reduce",
+      "largura": 1440,
+      "tema": "dark",
+      "reduzido": true,
+      "modo": "poster",
+      "canvas": 0,
+      "pronta": null,
+      "posterVisivel": "1",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.791,
+        0.594,
+        0.587,
+        0.4,
+        0.354,
+        0.403
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "1440-light-normal",
+      "largura": 1440,
+      "tema": "light",
+      "reduzido": false,
+      "modo": "webgl",
+      "canvas": 1,
+      "pronta": "true",
+      "posterVisivel": "0",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.791,
+        0.594,
+        0.587,
+        0.4,
+        0.354,
+        0.403
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "1440-light-reduce",
+      "largura": 1440,
+      "tema": "light",
+      "reduzido": true,
+      "modo": "poster",
+      "canvas": 0,
+      "pronta": null,
+      "posterVisivel": "1",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.791,
+        0.594,
+        0.587,
+        0.4,
+        0.354,
+        0.403
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "768-dark-normal",
+      "largura": 768,
+      "tema": "dark",
+      "reduzido": false,
+      "modo": "webgl",
+      "canvas": 1,
+      "pronta": "true",
+      "posterVisivel": "0",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.553,
+        0.378,
+        0.483,
+        0.159,
+        0.142,
+        0.177
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "768-dark-reduce",
+      "largura": 768,
+      "tema": "dark",
+      "reduzido": true,
+      "modo": "poster",
+      "canvas": 0,
+      "pronta": null,
+      "posterVisivel": "1",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.553,
+        0.378,
+        0.483,
+        0.159,
+        0.142,
+        0.177
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "768-light-normal",
+      "largura": 768,
+      "tema": "light",
+      "reduzido": false,
+      "modo": "webgl",
+      "canvas": 1,
+      "pronta": "true",
+      "posterVisivel": "0",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.553,
+        0.378,
+        0.483,
+        0.159,
+        0.142,
+        0.177
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "768-light-reduce",
+      "largura": 768,
+      "tema": "light",
+      "reduzido": true,
+      "modo": "poster",
+      "canvas": 0,
+      "pronta": null,
+      "posterVisivel": "1",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.553,
+        0.378,
+        0.483,
+        0.159,
+        0.142,
+        0.177
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "375-dark-normal",
+      "largura": 375,
+      "tema": "dark",
+      "reduzido": false,
+      "modo": "poster",
+      "canvas": 0,
+      "pronta": null,
+      "posterVisivel": "1",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.541,
+        0.151,
+        0.151,
+        0.151,
+        0.151,
+        0.151
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "375-dark-reduce",
+      "largura": 375,
+      "tema": "dark",
+      "reduzido": true,
+      "modo": "poster",
+      "canvas": 0,
+      "pronta": null,
+      "posterVisivel": "1",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.541,
+        0.151,
+        0.151,
+        0.151,
+        0.151,
+        0.151
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "375-light-normal",
+      "largura": 375,
+      "tema": "light",
+      "reduzido": false,
+      "modo": "poster",
+      "canvas": 0,
+      "pronta": null,
+      "posterVisivel": "1",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.541,
+        0.151,
+        0.151,
+        0.151,
+        0.151,
+        0.151
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "375-light-reduce",
+      "largura": 375,
+      "tema": "light",
+      "reduzido": true,
+      "modo": "poster",
+      "canvas": 0,
+      "pronta": null,
+      "posterVisivel": "1",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.541,
+        0.151,
+        0.151,
+        0.151,
+        0.151,
+        0.151
+      ],
+      "erros": []
+    },
+    {
+      "rotulo": "1440-dark-sem-webgl",
+      "largura": 1440,
+      "tema": "dark",
+      "reduzido": false,
+      "modo": "webgl",
+      "canvas": 0,
+      "pronta": null,
+      "posterVisivel": "1",
+      "introPresente": false,
+      "atoDoPosterNoFim": "5",
+      "areaLivrePorAto": [
+        0.791,
+        0.594,
+        0.587,
+        0.4,
+        0.354,
+        0.403
+      ],
+      "erros": [
+        "THREE.WebGLRenderer: A WebGL context could not be created. Reason:  disabled by enterprise policy or commandline switch",
+        "THREE.WebGLRenderer: A WebGL context could not be created. Reason:  disabled by enterprise policy or commandline switch",
+        "THREE.WebGLRenderer: Error creating WebGL context."
+      ]
+    }
+  ],
+  "saidaParaLogin": {
+    "canvasNaLanding": 1,
+    "canvasNoLogin": 0
+  }
+}

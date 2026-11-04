@@ -1,0 +1,52 @@
+{
+  "rotulo": "final-2",
+  "quando": "2026-11-03T11:44:26.568Z",
+  "landingParada": {
+    "quadrosDaCenaPorSegundo": 60,
+    "fpsNavegador": 60,
+    "p95ms": 16.8,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "landingRolando": {
+    "quadrosDaCenaPorSegundo": 48,
+    "fpsNavegador": 48,
+    "p95ms": 33.5,
+    "engasgos": 0.172,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "landingGota": {
+    "quadrosDaCenaPorSegundo": 60.1,
+    "fpsNavegador": 60,
+    "p95ms": 16.9,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaParada": {
+    "quadrosDaCenaPorSegundo": 54.4,
+    "fpsNavegador": 54.3,
+    "p95ms": 16.9,
+    "engasgos": 0.012,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaGota": {
+    "quadrosDaCenaPorSegundo": 60.2,
+    "fpsNavegador": 60,
+    "p95ms": 16.9,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaRolando": {
+    "quadrosDaCenaPorSegundo": 59.9,
+    "fpsNavegador": 60,
+    "p95ms": 16.9,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  }
+}

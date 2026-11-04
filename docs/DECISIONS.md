@@ -872,3 +872,37 @@ animações, sublinhar links, espaçamento de texto e foco reforçado. Guardado 
 `localStorage` como o tema, aplicado antes do primeiro paint. O alto contraste é
 um **reforço** sobre o escuro e o claro (texto ≥ 7:1, medido), não um terceiro
 tema. Ver **[[ADR-049 - Menu de acessibilidade com preferencias no navegador]]**.
+
+## Refactor web-motion-3d — 2026-11-04
+
+### Nova — uma biblioteca de animação por papel
+
+Motion anima a interface do produto (`useMotion`, só tokens). GSAP com
+ScrollTrigger fica só na narrativa por rolagem da landing
+(`components/landing/motion/`). CSS cuida de loops decorativos e do `press`.
+three.js é usado só para decoração, de forma imperativa, pelo kit `src/three/`.
+R3F e drei saíram, junto com a intro 3D, as partículas e o cursor customizado.
+Ver **[[ADR-050 - Camadas de movimento e kit three.js imperativo no web]]**.
+
+### Nova — cena e atmosfera em ASCII, cor só de token
+
+A landing tem uma cena ASCII narrativa em seis atos (`LANDING_NARRATIVA.md`),
+com pôster estático quando não pode rodar. A plataforma tem uma atmosfera ASCII
+discreta, sem dígitos e com teto de opacidade calculado para AA. As cores são
+lidas do CSS em runtime. Os novos tokens `--color-ambient-*` (ink, muted,
+cyan, magenta) substituem o hex aproximado das cenas.
+
+### Substituída — partes do ADR-026 e detalhes do ADR-041
+
+A landing passou a seguir o tema do app, em vez de ser sempre escura. O
+`landing-palette.ts` e o `useHeroScene` nunca existiram e saíram do registro
+vigente. A atmosfera única do ADR-041 segue, agora a 60 fps em duas passadas.
+Os textos originais foram mantidos, cada um com uma nota no topo.
+
+### Integração com o menu de acessibilidade (ADR-049)
+
+O merge de `dev` (2026-11-04) trouxe a fonte única de movimento reduzido
+(`design/accessibility.ts`), e as cenas, o GSAP da landing e o `useMotion`
+passaram a obedecer a ela. O hook próprio do refactor saiu. O alto contraste
+(texto ≥ 7:1) também impede a montagem das cenas e esconde o pôster da landing,
+porque o teto de opacidade dos glifos foi calculado para AA.

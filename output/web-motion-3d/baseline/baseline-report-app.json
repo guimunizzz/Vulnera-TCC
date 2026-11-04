@@ -1,0 +1,293 @@
+{
+  "startedAt": "2026-10-23T11:44:45.382Z",
+  "landing": [],
+  "app": [
+    {
+      "file": "app-admin-dashboard-1440-dark.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-applications-1440-dark.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-projects-1440-dark.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-dashboard-768-dark.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-applications-768-dark.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-projects-768-dark.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-dashboard-375-dark.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 0,
+      "url": "http://localhost:8086/dashboard",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-applications-375-dark.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 0,
+      "url": "http://localhost:8086/applications",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-projects-375-dark.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 0,
+      "url": "http://localhost:8086/projects",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-client-dashboard-1440-dark.png",
+      "role": "client",
+      "route": "dashboard",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-client-applications-1440-dark.png",
+      "role": "client",
+      "route": "applications",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-client-projects-1440-dark.png",
+      "role": "client",
+      "route": "projects",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-dashboard-1440-light.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-applications-1440-light.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-projects-1440-light.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-dashboard-768-light.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-applications-768-light.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-projects-768-light.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-dashboard-375-light.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 375,
+      "theme": "light",
+      "canvases": 0,
+      "url": "http://localhost:8086/dashboard",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-applications-375-light.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 375,
+      "theme": "light",
+      "canvases": 0,
+      "url": "http://localhost:8086/applications",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-admin-projects-375-light.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 375,
+      "theme": "light",
+      "canvases": 0,
+      "url": "http://localhost:8086/projects",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-client-dashboard-1440-light.png",
+      "role": "client",
+      "route": "dashboard",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-client-applications-1440-light.png",
+      "role": "client",
+      "route": "applications",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications",
+      "ocupado": false,
+      "erro": false
+    },
+    {
+      "file": "app-client-projects-1440-light.png",
+      "role": "client",
+      "route": "projects",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects",
+      "ocupado": false,
+      "erro": false
+    }
+  ],
+  "errors": [
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-client-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-light",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-client-light",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    }
+  ],
+  "finishedAt": "2026-10-23T11:47:37.480Z"
+}

@@ -16,7 +16,11 @@
 
 .findings-hero {
   padding: 1.5rem;
-  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 30%, oklch(var(--color-bg-surface) / 0.88) 65%, oklch(var(--color-bg-surface) / 0.28));
+  /* Quase opaco até a borda (a atmosfera ASCII nunca fica atrás do total);
+     o brilho do canto, antes emprestado de .findings-page-glow, vem daqui. */
+  background:
+    radial-gradient(ellipse at 98% 25%, oklch(var(--color-accent) / 0.13), transparent 48%),
+    linear-gradient(110deg, oklch(var(--color-bg-surface)) 30%, oklch(var(--color-bg-surface) / 0.94) 65%, oklch(var(--color-bg-surface) / 0.88));
   box-shadow: var(--elevation-raised), inset 0 1px 0 oklch(var(--color-text-primary) / 0.04);
 }
 
@@ -50,7 +54,9 @@
 .findings-severity-grid { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
 
 .findings-severity-card {
-  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 38%, oklch(var(--color-bg-surface) / 0.94) 63%, oklch(var(--color-bg-surface) / 0.25));
+  /* Opaco onde há texto (selo e número à esquerda); a borda direita deixa a
+     atmosfera aparecer, como nos KPIs do Dashboard. */
+  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 55%, oklch(var(--color-bg-surface) / 0.95) 70%, oklch(var(--color-bg-surface) / 0.55));
   box-shadow: var(--elevation-raised);
   transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
 }
@@ -72,8 +78,6 @@
   transform: rotate(-30deg) scaleY(0.5);
   box-shadow: 0 0 0 12px oklch(var(--color-accent-ink) / 0.025);
 }
-
-.findings-overview[data-scene-ready="true"] .findings-card-orbit { opacity: 0; }
 
 .findings-saved-panel {
   background: oklch(var(--color-bg-surface) / 0.96);

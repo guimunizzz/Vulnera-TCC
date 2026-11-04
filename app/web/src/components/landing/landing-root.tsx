@@ -1,20 +1,24 @@
 /**
- * landing-root.tsx — a landing pública inteira: a intro 3D (uma vez por sessão)
- * e, depois dela, a sequência de seções.
+ * landing-root.tsx — a landing pública inteira: a cena narrativa no fundo e a
+ * sequência de seções por cima.
  *
  * Portado de `vulnera-landing/src/App.jsx` + `src/pages/Landing.jsx` (juntados
  * num arquivo só). Este módulo é carregado via `lazy()` em
- * `pages/landing-page.tsx` — é o que mantém `three`, `gsap`, `@react-three/*` e
- * todas as seções FORA do bundle principal do app.
+ * `pages/landing-page.tsx` — é o que mantém `gsap` e todas as seções FORA do
+ * bundle principal do app; `three` fica num chunk ainda mais adiante, o da
+ * cena (`scene/landing-scene-canvas.tsx`).
+ *
+ * Refactor web-motion-3d (Fase 4): saíram a intro 3D de 6 s (não respeitava
+ * movimento reduzido), as partículas genéricas do hero e o cursor customizado.
+ * No lugar, uma cena ASCII única conta a história da página — roteiro em
+ * `docs/LANDING_NARRATIVA.md`.
  */
 
-import { useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { movimentoReduzido } from "../../design/accessibility";
-import Intro3D from "./intro-3d";
-import CustomCursor from "./custom-cursor";
+import { useRef } from "react";
 import Nav from "./nav";
 import { ScrollProgress } from "./ui";
+import { usePausarLoopsForaDaTela, useRecalculoDoScroll } from "./motion/use-landing-motion";
+import { LandingScene } from "./scene/landing-scene";
 import Hero from "./sections/hero";
 import Problem from "./sections/problem";
 import HowItWorks from "./sections/how-it-works";
@@ -27,66 +31,34 @@ import FAQ from "./sections/faq";
 import Team from "./sections/team";
 import FinalCTA from "./sections/final-cta";
 
-const INTRO_SEEN_KEY = "vx-intro-seen";
-
-function hasSeenIntro(): boolean {
-  try {
-    return sessionStorage.getItem(INTRO_SEEN_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function LandingSections() {
-  return (
-    <div className="font-sans text-[var(--vx-text)]">
-      <ScrollProgress />
-      <CustomCursor />
-      <Nav />
-      <Hero />
-      <Problem />
-      <HowItWorks />
-      <Features />
-      <Comparison />
-      <Demo />
-      <Maturity />
-      <Pricing />
-      <FAQ />
-      <Team />
-      <FinalCTA />
-    </div>
-  );
-}
-
 export default function LandingRoot() {
-  // A intro é uma animação 3D que roda sozinha: quem pediu menos movimento
-  // vai direto ao conteúdo (WCAG 2.2.2 e 2.3.3).
-  const [introActive, setIntroActive] = useState(() => !hasSeenIntro() && !movimentoReduzido());
-
-  const finishIntro = () => {
-    try {
-      sessionStorage.setItem(INTRO_SEEN_KEY, "1");
-    } catch {
-      // sessionStorage indisponível (modo privado etc.) — só não persiste
-    }
-    setIntroActive(false);
-  };
+  const raiz = useRef<HTMLDivElement>(null);
+  // Fontes e mudanças de altura (FAQ, demo) desalinhariam os ScrollTriggers.
+  useRecalculoDoScroll(raiz);
+  // Loops CSS (pulso da planilha, seta do hero) param fora da tela.
+  usePausarLoopsForaDaTela(raiz);
 
   return (
-    // O `MotionConfig` que respeita o movimento reduzido fica na raiz (main.tsx).
-    <AnimatePresence mode="wait">
-      {introActive ? (
-        <Intro3D key="intro" onComplete={finishIntro} />
-      ) : (
-        <motion.div
-          key="landing"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
-          <LandingSections />
-        </motion.div>
-      )}
-    </AnimatePresence>
+    // O `MotionConfig` que respeita o movimento reduzido (sistema OU menu de
+    // acessibilidade) fica na raiz do app (main.tsx).
+    <>
+      <LandingScene />
+      {/* Conteúdo acima da cena fixa (z-0). */}
+      <div ref={raiz} className="relative z-[1] font-sans text-[var(--vx-text)]">
+        <ScrollProgress />
+        <Nav />
+        <Hero />
+        <Problem />
+        <HowItWorks />
+        <Features />
+        <Comparison />
+        <Demo />
+        <Maturity />
+        <Pricing />
+        <FAQ />
+        <Team />
+        <FinalCTA />
+      </div>
+    </>
   );
 }

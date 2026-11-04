@@ -1,0 +1,34 @@
+{
+  "rotulo": "duas-passadas",
+  "quando": "2026-11-03T11:22:24.519Z",
+  "landingParada": {
+    "desenhosPorSegundo": 120.7,
+    "fpsNavegador": 60,
+    "p95ms": 16.8,
+    "engasgos": 0
+  },
+  "landingRolando": {
+    "desenhosPorSegundo": 165.3,
+    "fpsNavegador": 54.9,
+    "p95ms": 17.2,
+    "engasgos": 0.044
+  },
+  "landingGota": {
+    "desenhosPorSegundo": 115,
+    "fpsNavegador": 57.5,
+    "p95ms": 16.8,
+    "engasgos": 0.009
+  },
+  "plataformaParada": {
+    "desenhosPorSegundo": 120,
+    "fpsNavegador": 60,
+    "p95ms": 16.8,
+    "engasgos": 0
+  },
+  "plataformaGota": {
+    "desenhosPorSegundo": 121,
+    "fpsNavegador": 59.5,
+    "p95ms": 16.8,
+    "engasgos": 0.008
+  }
+}

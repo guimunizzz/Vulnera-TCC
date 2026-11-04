@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Alert } from "../../components/ui/alert";
 import { Dialog, DialogDescription, DialogTitle } from "../../components/ui/dialog";
 import type { Subscription } from "../../types/subscription.types";
+import { TABELA } from "../../components/ui/table-estilos";
 
 type PendingAction = { subscription: Subscription; type: "approve" | "reject" } | null;
 
@@ -72,7 +73,7 @@ export function PendingSubscriptionsPage() {
       {!isLoading && subscriptions && subscriptions.length > 0 && (
         <div className="mt-6 overflow-x-auto rounded-container border border-subtle">
           <table className="min-w-[40rem] w-full text-left text-sm">
-            <thead className="bg-surface text-fg-muted">
+            <thead className={TABELA.cabecalho}>
               <tr>
                 <th className="px-4 py-3 font-medium">Empresa</th>
                 <th className="px-4 py-3 font-medium">Plano</th>
@@ -82,7 +83,7 @@ export function PendingSubscriptionsPage() {
             </thead>
             <tbody>
               {subscriptions.map((sub) => (
-                <tr key={sub.id} className="border-t border-subtle">
+                <tr key={sub.id} className={TABELA.linha}>
                   <td className="px-4 py-3 text-fg">{companyName(sub.companyId)}</td>
                   <td className="px-4 py-3 text-fg">{planName(sub.planId)}</td>
                   <td className="px-4 py-3 text-fg-muted">{new Date(sub.createdAt).toLocaleString("pt-BR")}</td>

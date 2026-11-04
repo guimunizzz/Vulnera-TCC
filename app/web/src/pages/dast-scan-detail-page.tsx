@@ -48,6 +48,7 @@ import {
   type DastRisk,
   type DastTriageStatus,
 } from "../types/dast.types";
+import { TABELA } from "../components/ui/table-estilos";
 
 // O CyberGraph só é baixado quando a aba abre; o `three` do modo 3D, só quando a pessoa escolhe o 3D.
 const CyberGraph = lazy(() => import("../features/security-graph/cyber-graph"));
@@ -110,7 +111,7 @@ function FindingRow({
   const promovido = finding.promotedVulnerability;
   return (
     <>
-      <tr className="border-t border-subtle">
+      <tr className={TABELA.linha}>
         <td className="px-4 py-3">
           <SeverityBadge severidade={finding.risk} />
         </td>
@@ -636,7 +637,7 @@ export function DastScanDetailPage() {
           {aba === "findings" && filteredFindings.length > 0 && (
             <div className="mt-4 overflow-x-auto rounded-container border border-subtle">
               <table className="w-full text-left text-sm">
-                <thead className="bg-surface text-fg-muted">
+                <thead className={TABELA.cabecalho}>
                   <tr>
                     <th className="px-4 py-3 font-medium">Risco</th>
                     <th className="px-4 py-3 font-medium">Título</th>

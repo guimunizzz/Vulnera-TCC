@@ -3,17 +3,15 @@
  * ScrollTrigger.
  *
  * Portado de `vulnera-landing/src/components/sections/HowItWorks.jsx`.
+ * Movimento: setup e escala em `../motion/` (Fase 3 do refactor web-motion-3d).
  */
 
 import { useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
 import { CreditCard, Globe, Activity, FileText, type LucideIcon } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
-import { movimentoReduzido } from "../../../design/accessibility";
-
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+import { Reveal, TituloDecodificado } from "../ui";
+import { gsap } from "../motion/gsap";
+import { useMovimentoLanding } from "../motion/use-landing-motion";
+import { DESLOCAMENTO_LANDING, DURACAO_LANDING, EASE_LANDING, ESCALONAMENTO_LANDING, SCRUB_LANDING } from "../motion/tokens";
 
 interface Step {
   num: string;
@@ -52,55 +50,54 @@ const STEPS: Step[] = [
 export default function HowItWorks() {
   const scope = useRef<HTMLElement>(null);
 
-  useGSAP(
-    () => {
-      const reduced = movimentoReduzido();
-      if (reduced) return;
+  useMovimentoLanding(scope, ({ reduzido, desktop }) => {
+    // Passos aparecem em sequência. Movimento reduzido: só o fade, curto e
+    // sem escalonamento.
+    gsap.from(".vx-step", {
+      opacity: 0,
+      y: reduzido ? 0 : DESLOCAMENTO_LANDING.entrada,
+      duration: reduzido ? DURACAO_LANDING.reduzida : DURACAO_LANDING.entrada,
+      ease: EASE_LANDING.saida,
+      stagger: reduzido ? 0 : ESCALONAMENTO_LANDING.passos,
+      scrollTrigger: { trigger: scope.current, start: "top 70%", once: true },
+    });
 
-      // Passos aparecem em sequência (stagger 200ms)
-      gsap.from(".vx-step", {
-        opacity: 0,
-        y: 24,
-        duration: 0.6,
-        ease: "power2.out",
-        stagger: 0.2,
-        scrollTrigger: { trigger: scope.current, start: "top 70%", once: true },
-      });
-
-      // Linha pontilhada "desenha" conforme o scroll (scrub)
-      gsap.fromTo(
-        ".vx-flow-line",
-        { scaleX: 0 },
-        {
-          scaleX: 1,
-          transformOrigin: "left center",
-          ease: "none",
-          scrollTrigger: {
-            trigger: scope.current,
-            start: "top 75%",
-            end: "top 25%",
-            scrub: 0.5,
-          },
+    // Linha pontilhada "desenha" conforme o scroll (scrub). É escala: some
+    // sob movimento reduzido (a linha fica inteira) e abaixo de md, onde ela
+    // nem é exibida.
+    if (reduzido || !desktop) return;
+    gsap.fromTo(
+      ".vx-flow-line",
+      { scaleX: 0 },
+      {
+        scaleX: 1,
+        transformOrigin: "left center",
+        ease: EASE_LANDING.linear,
+        scrollTrigger: {
+          trigger: scope.current,
+          start: "top 75%",
+          end: "top 25%",
+          scrub: SCRUB_LANDING.linha,
         },
-      );
-    },
-    { scope },
-  );
+      },
+    );
+  });
 
   return (
     <section
       id="como-funciona"
+      data-ato="2"
       ref={scope}
-      className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24"
+      className="vx-grid-bg flex min-h-screen items-center px-6 py-24"
     >
-      <div className="mx-auto w-full max-w-6xl">
-        <Reveal className="text-center">
-          <GlitchHeading className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+      <div className="vx-superficie mx-auto w-full max-w-6xl">
+        <Reveal className="text-center" variante="fade">
+          <TituloDecodificado className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Como funciona
-          </GlitchHeading>
+          </TituloDecodificado>
         </Reveal>
 
-        <div className="relative mt-20 grid grid-cols-1 gap-14 md:grid-cols-4 md:gap-8">
+        <div className="relative mt-20 grid grid-cols-1 gap-12 md:grid-cols-4 md:gap-8">
           {/* Linha pontilhada conectando os passos (desenhada via GSAP ScrollTrigger) */}
           <div
             className="vx-flow-line absolute left-[12%] right-[12%] top-[88px] hidden border-t border-dashed border-[rgba(var(--vx-accent-rgb),0.35)] md:block"

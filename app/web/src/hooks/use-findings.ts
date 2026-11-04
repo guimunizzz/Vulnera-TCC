@@ -105,7 +105,7 @@ export function useFindings(params: URLSearchParams, habilitado = true): UseFind
    ========================================================================== */
 
 /** Status que contam como "ainda não fechado". */
-const ABERTOS = ["OPEN", "IN_PROGRESS", "FIXED"];
+export const STATUS_ABERTOS = ["OPEN", "IN_PROGRESS", "FIXED"];
 const QUANTOS_RECENTES = 5;
 
 export interface ResumoDeFindings {
@@ -143,7 +143,7 @@ export function useFindingsResumo(): ResumoDeFindings {
   });
   const paramsCriticos = new URLSearchParams({
     severity: "CRITICAL",
-    status: ABERTOS.join(","),
+    status: STATUS_ABERTOS.join(","),
     pageSize: "1",
   });
 

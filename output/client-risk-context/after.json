@@ -1,0 +1,15 @@
+{
+  "updates": [
+    {
+      "criticality": "HIGH",
+      "environment": "PROD",
+      "internetFacing": true,
+      "dataSensitivity": "CONFIDENTIAL",
+      "businessOwner": "Diretoria Comercial",
+      "technicalOwner": "Squad Checkout"
+    }
+  ],
+  "reopened": true,
+  "reductionBlocked": true,
+  "pageErrors": []
+}

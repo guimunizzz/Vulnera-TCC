@@ -25,8 +25,8 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it, beforeEach, vi } from "vitest";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import axe from "axe-core";
@@ -192,6 +192,29 @@ describe("Movimento reduzido", () => {
     expect(screen.getByTestId("item-y")).toHaveTextContent("0");
     // O atributo é o que liga o piso de CSS (base.css) para animação de terceiros.
     expect(document.documentElement).toHaveAttribute(ATRIBUTO_A11Y.reduzirMovimento);
+  });
+
+  it("MOV-04 — a troca da preferência do sistema com a página aberta chega aos componentes", () => {
+    // Uma media query controlável: o teste muda `matches` e dispara "change",
+    // como o navegador faz quando a pessoa liga "reduzir movimento".
+    let reduzido = false;
+    const ouvintes = new Set<() => void>();
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      get matches() { return query.includes("prefers-reduced-motion: reduce") && reduzido; },
+      media: query,
+      addEventListener: (_: string, ouvinte: () => void) => ouvintes.add(ouvinte),
+      removeEventListener: (_: string, ouvinte: () => void) => ouvintes.delete(ouvinte),
+    }));
+    render(<SondaDeMovimento />);
+    expect(screen.getByTestId("reduzido")).toHaveTextContent("false");
+
+    act(() => { reduzido = true; ouvintes.forEach((ouvinte) => ouvinte()); });
+    expect(screen.getByTestId("reduzido")).toHaveTextContent("true");
+    expect(screen.getByTestId("item-y")).toHaveTextContent("0");
+
+    act(() => { reduzido = false; ouvintes.forEach((ouvinte) => ouvinte()); });
+    expect(screen.getByTestId("reduzido")).toHaveTextContent("false");
+    instalarMatchMedia([]);
   });
 });
 

@@ -1,0 +1,7 @@
+{
+  "number": 58,
+  "url": "https://github.com/guimunizzz/Vulnera-TCC/pull/58",
+  "draft": true,
+  "base": "dev",
+  "head": "codex/fix-dast-network-targets"
+}

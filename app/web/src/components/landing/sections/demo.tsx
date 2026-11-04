@@ -1,8 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMovimentoReduzido } from "../../../design/accessibility";
+import { DURACAO } from "../../../motion/tokens";
+import { atrasoDoItem } from "../../../motion/use-motion";
 import { ArrowLeft, ArrowUpRight, Check, ChevronRight, RotateCcw } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import "./demo.css";
 
 const NAV_ITEMS = ["Dashboard", "Aplicações", "Projetos", "Maturidade", "Configurações"] as const;
@@ -32,7 +34,7 @@ const DOMAINS = [
 function Progress({ value, label }: { value: number; label: string }) {
   const reduced = useMovimentoReduzido();
   return <div className="vx-demo-progress" role="progressbar" aria-label={label} aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
-    <motion.span initial={{ scaleX: reduced ? value / 100 : 0 }} animate={{ scaleX: value / 100 }} transition={{ duration: reduced ? 0 : 0.55, ease: "easeOut" }} />
+    <motion.span initial={{ scaleX: reduced ? value / 100 : 0 }} animate={{ scaleX: value / 100 }} transition={{ duration: reduced ? 0 : DURACAO.chart, ease: "easeOut" }} />
   </div>;
 }
 
@@ -87,15 +89,15 @@ export default function Demo() {
   }
 
   return (
-    <section id="demo" className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24">
-      <div className="mx-auto w-full max-w-4xl text-center">
-        <Reveal>
+    <section id="demo" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
+      <div className="vx-superficie mx-auto w-full max-w-4xl text-center">
+        <Reveal variante="fade">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">{"// VEJA EM AÇÃO"}</p>
-          <GlitchHeading className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+          <TituloDecodificado className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             A plataforma da TechNova Solutions, de perto.
-          </GlitchHeading>
+          </TituloDecodificado>
         </Reveal>
-        <Reveal delay={150}>
+        <Reveal ordem={1}>
           <div className="vx-demo-tabs" role="group" aria-label="Visualizações do dashboard">
             {TABS.map((item) => <button type="button" key={item} aria-pressed={page === "Dashboard" && tab === item && finding === null}
               onClick={() => { navigate("Dashboard"); setTab(item); }}>
@@ -103,7 +105,7 @@ export default function Demo() {
             </button>)}
           </div>
         </Reveal>
-        <Reveal delay={200}>
+        <Reveal ordem={2} variante="mascara">
           <div className={`vx-demo ${compact ? "vx-demo--compact" : ""}`} role="region" aria-label="Preview interativo da plataforma">
             <header className="vx-demo-header">
               <span className="vx-demo-brand">VULNERA</span>
@@ -113,14 +115,14 @@ export default function Demo() {
             <div className="vx-demo-body">
               <nav className="vx-demo-nav" aria-label="Navegação do preview">
                 {NAV_ITEMS.map((item) => <button type="button" key={item} aria-current={page === item ? "page" : undefined} onClick={() => navigate(item)}>
-                  {page === item && <motion.span className="vx-demo-nav-active" layoutId="demo-nav-active" transition={{ duration: reduced ? 0 : 0.25 }} />}
+                  {page === item && <motion.span className="vx-demo-nav-active" layoutId="demo-nav-active" transition={{ duration: reduced ? 0 : DURACAO.base }} />}
                   <span>{item}</span><ChevronRight size={12} aria-hidden="true" />
                 </button>)}
                 <span className="vx-demo-nav-hint">Explore a plataforma.<br />Tudo aqui é interativo.</span>
               </nav>
               <div className="vx-demo-content">
                 <AnimatePresence mode="wait" initial={false}>
-                  <motion.div ref={attachView} tabIndex={-1} className="vx-demo-view" role="group" aria-label={`${page} do preview`} key={`${page}-${tab}-${finding ?? "overview"}`} initial={{ opacity: 0, y: reduced ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduced ? 0 : -4 }} transition={{ duration: reduced ? 0 : 0.16 }}>
+                  <motion.div ref={attachView} tabIndex={-1} className="vx-demo-view" role="group" aria-label={`${page} do preview`} key={`${page}-${tab}-${finding ?? "overview"}`} initial={{ opacity: 0, y: reduced ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduced ? 0 : -4 }} transition={{ duration: reduced ? 0 : DURACAO.fast }}>
                     {page === "Dashboard" && selectedFinding && finding !== null ? <>
                       <button type="button" className="vx-demo-back" onClick={() => openFinding(null)}><ArrowLeft size={13} /> Voltar ao dashboard</button>
                       <div className="vx-demo-detail">
@@ -145,7 +147,7 @@ export default function Demo() {
                       {tab === "Postura atual" && <>
                         <div className="vx-demo-chart" role="group" aria-label="Filtrar findings por severidade">
                           {FINDINGS.map((item, index) => <button type="button" key={item.severity} aria-label={`Filtrar severidade ${item.severity}`} aria-pressed={severity === index} onClick={() => setSeverity(severity === index ? null : index)} style={{ opacity: severity === null || severity === index ? 1 : 0.35 }}>
-                            <span className="vx-demo-bars" aria-hidden="true">{Array.from({ length: item.count - Number(resolved.includes(index)) }, (_, i) => <motion.span key={i} style={{ background: item.color, height: `${35 + ((i * 17 + index * 13) % 65)}%` }} initial={{ scaleY: reduced ? 1 : 0 }} animate={{ scaleY: 1 }} transition={{ duration: reduced ? 0 : 0.5, delay: reduced ? 0 : i * 0.018 }} />)}</span>
+                            <span className="vx-demo-bars" aria-hidden="true">{Array.from({ length: item.count - Number(resolved.includes(index)) }, (_, i) => <motion.span key={i} style={{ background: item.color, height: `${35 + ((i * 17 + index * 13) % 65)}%` }} initial={{ scaleY: reduced ? 1 : 0 }} animate={{ scaleY: 1 }} transition={{ duration: reduced ? 0 : DURACAO.chart, delay: atrasoDoItem(i, reduced) }} />)}</span>
                             <span>{item.count - Number(resolved.includes(index))} {item.severity.toLowerCase()}</span>
                           </button>)}
                         </div>
@@ -156,7 +158,7 @@ export default function Demo() {
                         </button>)}</div>
                       </>}
                       {tab === "Evolução" && <div className="vx-demo-detail"><h3>Menos exposição, a cada ciclo.</h3><p>Findings abertos nas últimas seis avaliações.</p>
-                        <div className="vx-demo-trend">{[52, 46, 41, 35, 31, open].map((value, index) => <div key={index}><span>{value}</span><motion.div initial={{ scaleY: reduced ? 1 : 0 }} animate={{ scaleY: 1 }} style={{ height: `${value * 1.6}px` }} transition={{ duration: reduced ? 0 : 0.5, delay: reduced ? 0 : index * 0.05 }} /><span>Ciclo {index + 1}</span></div>)}</div>
+                        <div className="vx-demo-trend">{[52, 46, 41, 35, 31, open].map((value, index) => <div key={index}><span>{value}</span><motion.div initial={{ scaleY: reduced ? 1 : 0 }} animate={{ scaleY: 1 }} style={{ height: `${value * 1.6}px` }} transition={{ duration: reduced ? 0 : DURACAO.chart, delay: atrasoDoItem(index, reduced) }} /><span>Ciclo {index + 1}</span></div>)}</div>
                         <span className="vx-demo-caption">{Math.round((1 - open / 52) * 100)}% menos findings em relação ao primeiro ciclo.</span>
                       </div>}
                       {tab === "Insights" && <div className="vx-demo-detail"><h3>Onde agir primeiro</h3><p>Prioridades sugeridas para este cenário de demonstração.</p>

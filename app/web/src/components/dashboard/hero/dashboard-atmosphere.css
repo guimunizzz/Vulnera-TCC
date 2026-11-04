@@ -1,0 +1,65 @@
+/**
+ * dashboard-atmosphere.css
+ *
+ * O QUE FAZ
+ * Estilos da atmosfera ASCII da área autenticada: fundo CSS imediato, a
+ * entrada do canvas quando a cena fica pronta e o véu atrás de texto solto.
+ *
+ * POR QUE EXISTE
+ * O canvas vive no layout global (`app-layout.tsx`), então estes estilos
+ * precisam carregar com a atmosfera — antes vinham do CSS do hero do
+ * Dashboard, e uma rota aberta direto (Projetos, DAST) montava o canvas sem
+ * eles. Era `dashboard-hero.css` até a Fase 5 do refactor web-motion-3d, que
+ * trocou o hero por um cabeçalho compacto.
+ *
+ * QUEM USA
+ * `dashboard-atmosphere.tsx` e `dashboard-ambient-canvas.tsx`.
+ */
+
+.dashboard-ambient-canvas {
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease-out);
+  z-index: -1;
+}
+
+.dashboard-ambient-canvas[data-ready="true"] {
+  opacity: 1;
+}
+
+.dashboard-atmosphere-fallback {
+  z-index: -2;
+  background: radial-gradient(ellipse at 90% 12%, oklch(var(--color-accent) / 0.16), transparent 58%),
+    radial-gradient(ellipse at 8% 72%, oklch(var(--color-accent) / 0.09), transparent 45%);
+}
+
+/* Cards de KPI: opacos onde há texto (rótulo, número e legenda ficam à
+   esquerda) e translúcidos na borda direita, onde a atmosfera aparece.
+   O ícone do canto tem fundo próprio. */
+.dashboard-kpi {
+  background: linear-gradient(110deg, oklch(var(--color-bg-surface)) 55%, oklch(var(--color-bg-surface) / 0.95) 70%, oklch(var(--color-bg-surface) / 0.55));
+}
+
+/* Véu atrás de texto solto sobre a atmosfera (cabeçalhos de página sem card).
+   Desfocado para não virar uma caixa: os glifos somem atrás das letras e
+   continuam visíveis em volta. Com ele, o texto muted segue AA sobre o fundo. */
+.atmosfera-veu {
+  position: relative;
+  isolation: isolate;
+}
+
+.atmosfera-veu::before {
+  content: "";
+  position: absolute;
+  inset: calc(var(--space-3) * -1) calc(var(--space-4) * -1);
+  z-index: -1;
+  border-radius: var(--radius-container);
+  background: oklch(var(--color-bg-canvas) / 0.88);
+  filter: blur(var(--space-3));
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-ambient-canvas {
+    transition: none;
+  }
+}

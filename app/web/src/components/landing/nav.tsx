@@ -16,6 +16,8 @@ import { useTheme } from "../../design/theme-provider";
 import { AccessibilityMenu } from "../../design/accessibility-menu";
 import { movimentoReduzido, usePreferenciasAcessibilidade } from "../../design/accessibility";
 import { InteractiveLabel } from "../ui/interactive-label";
+import { DURACAO, EASE } from "../../motion/tokens";
+import { DESLOCAMENTO_MOTION_LANDING } from "./motion/tokens";
 
 const PRODUCT_LINKS = [
   { label: "Como funciona", href: "#como-funciona" },
@@ -83,13 +85,16 @@ export default function Nav() {
   }
 
   return (
+    // Fundo quase opaco, sem backdrop-blur: atrás da barra a cena anima a
+    // 60 fps, e o desfoque era refeito a cada quadro — custava ~10 fps na
+    // rolagem e picos de 150 ms na GPU integrada (medido em 2026-11-03).
     <motion.header
-      className="fixed left-0 right-0 top-0 z-[30] border-b border-[rgba(var(--vx-accent-rgb),0.15)] bg-[rgba(var(--vx-bg-2-rgb),0.75)] backdrop-blur-sm"
+      className="fixed left-0 right-0 top-0 z-[30] border-b border-[rgba(var(--vx-accent-rgb),0.15)] bg-[rgba(var(--vx-bg-2-rgb),0.92)]"
     >
       <motion.div
         // rem, e não px: com o texto ampliado os botões crescem e a barra acompanha.
         animate={{ height: atTop ? "4.75rem" : "3rem" }}
-        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: DURACAO.slow, ease: EASE.out }}
         className="mx-auto flex max-w-6xl items-center justify-between px-6"
       >
         <a href="#" className="group flex flex-col leading-none">
@@ -99,7 +104,7 @@ export default function Nav() {
           </span>
           <motion.span
             animate={{ opacity: atTop ? 1 : 0, height: atTop ? "auto" : 0, marginTop: atTop ? 4 : 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: DURACAO.base }}
             className="overflow-hidden font-mono text-[10px] tracking-[0.4em] text-[var(--vx-text-2)]"
           >
             SECURITY
@@ -118,7 +123,7 @@ export default function Nav() {
               className="flex items-center gap-[6px] font-mono text-sm tracking-wide text-[var(--vx-text-2)] transition-colors hover:text-[var(--vx-accent)]"
             >
               <InteractiveLabel effect="glitch">Produto</InteractiveLabel>
-              <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.15 }}>
+              <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: DURACAO.fast }}>
                 <ChevronDown size={15} aria-hidden="true" />
               </motion.span>
             </button>
@@ -126,10 +131,10 @@ export default function Nav() {
             <AnimatePresence>
               {open && (
                 <motion.ul
-                  initial={{ opacity: 0, y: -6 }}
+                  initial={{ opacity: 0, y: -DESLOCAMENTO_MOTION_LANDING.menu }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.15 }}
+                  exit={{ opacity: 0, y: -DESLOCAMENTO_MOTION_LANDING.menu }}
+                  transition={{ duration: DURACAO.fast }}
                   className="absolute left-1/2 top-full mt-3 w-[224px] -translate-x-1/2 rounded-[6px] border border-[rgba(var(--vx-accent-rgb),0.2)] bg-[var(--vx-bg-2)] p-2 shadow-[var(--vx-elevated-shadow)]"
                 >
                   {PRODUCT_LINKS.map((link) => (
@@ -179,7 +184,7 @@ export default function Nav() {
           </button>
           <motion.div
             animate={{ opacity: atTop ? 1 : 0, width: atTop ? "auto" : 0, marginLeft: atTop ? 0 : -12 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: DURACAO.base }}
             className="hidden overflow-hidden md:block"
           >
             <Link

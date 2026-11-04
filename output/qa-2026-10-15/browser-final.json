@@ -1,0 +1,227 @@
+{
+  "startedAt": "2026-10-15T12:02:21.704Z",
+  "checks": [
+    {
+      "name": "dashboard ADMIN estabiliza sem reload",
+      "ok": true
+    },
+    {
+      "name": "criação aplicação UI isolada",
+      "ok": true,
+      "detail": {
+        "status": 201,
+        "body": {
+          "id": "cmv9homrr004oph01q24yyjy5",
+          "name": "QA-20261015-UI-mv9hhdmd Aplicação final",
+          "url": "http://localhost:8086/",
+          "environment": "PROD",
+          "techStack": null,
+          "description": null,
+          "companyId": "cmv9hhigg001xph01p3d3rv8q",
+          "isActive": true,
+          "criticality": "MEDIUM",
+          "internetFacing": false,
+          "dataSensitivity": "INTERNAL",
+          "businessOwner": null,
+          "technicalOwner": null,
+          "createdAt": "2026-10-15T12:02:40.839Z",
+          "updatedAt": "2026-10-15T12:02:40.839Z"
+        }
+      }
+    },
+    {
+      "name": "wizard projeto UI isolado",
+      "ok": true,
+      "detail": {
+        "status": 201
+      }
+    },
+    {
+      "name": "limpeza impacto/recomendação com HTTP200 persiste",
+      "ok": false,
+      "detail": {
+        "status": 200,
+        "impact": "Impacto QA preenchido",
+        "recommendation": "Recomendação QA preenchida",
+        "payload": {
+          "title": "QA-20261015-UI-mv9hhdmd SQL Injection no parâmetro de pesquisa com impacto no acesso aos dados confidenciais dos clientes",
+          "description": "Registro de QA para validação da apresentação, sem vulnerabilidade real.",
+          "owaspCategory": "A03",
+          "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+        }
+      }
+    },
+    {
+      "name": "download de evidência UI isolado",
+      "ok": true
+    },
+    {
+      "name": "arquivo inválido recebe recusa tratada",
+      "ok": false,
+      "detail": {
+        "status": 201
+      }
+    },
+    {
+      "name": "comentário UI isolado",
+      "ok": true
+    },
+    {
+      "name": "download executivo.pdf",
+      "ok": true
+    },
+    {
+      "name": "histórico relatório acessível em mobile",
+      "ok": false,
+      "detail": {
+        "right": 398.046875,
+        "width": 381.046875,
+        "parentWidth": 331,
+        "parentOverflow": "hidden",
+        "last": "15/10/2026, 09:00:11"
+      }
+    },
+    {
+      "name": "breadcrumb aplicação PENTESTER abre destino permitido",
+      "ok": false,
+      "detail": {
+        "actual": "/applications/cmv9hda2r000nph012g2hu7q9/dashboard"
+      }
+    },
+    {
+      "name": "histórico mostra nome do autor para PENTESTER",
+      "ok": false,
+      "detail": {
+        "text": "Título\tTipo\tGerado por\tData\nRelatório Executivo — QA-20261015-mv9hcuic Projeto tenantA\tExecutivo\tcmue2b9em0003pxogpar7imm9\t15/10/2026, 09:00:11"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "flow": "tecnico.pdf",
+      "error": "page.waitForEvent: Timeout 18000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================"
+    },
+    {
+      "flow": "busca-salva",
+      "error": "locator.check: Timeout 18000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('Fixar na barra lateral')\u001b[22m\n\u001b[2m    - locator resolved to <input type=\"checkbox\" class=\"peer sr-only\"/>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <label class=\"flex min-h-touch cursor-pointer items-start gap-3 py-2 has-[:disabled]:cursor-not-allowed\">…</label> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <label class=\"flex min-h-touch cursor-pointer items-start gap-3 py-2 has-[:disabled]:cursor-not-allowed\">…</label> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    33 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <label class=\"flex min-h-touch cursor-pointer items-start gap-3 py-2 has-[:disabled]:cursor-not-allowed\">…</label> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "flow": "landing",
+      "error": "locator.click: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /SKIP INTRO/ })\u001b[22m\n"
+    }
+  ],
+  "http": [
+    {
+      "status": 429,
+      "method": "GET",
+      "url": "http://localhost:3001/api/applications/cmv9homrr004oph01q24yyjy5",
+      "body": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "status": 429,
+      "method": "GET",
+      "url": "http://localhost:3001/api/vulnerabilities/cmv9hljab004aph01ppagkm3y/comments?page=1&pageSize=10",
+      "body": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "status": 429,
+      "method": "GET",
+      "url": "http://localhost:3001/api/users",
+      "body": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "status": 429,
+      "method": "GET",
+      "url": "http://localhost:3001/api/projects/cmv9hdb8i000pph01zb0tb5c4",
+      "body": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "status": 429,
+      "method": "GET",
+      "url": "http://localhost:3001/api/vulnerabilities/cmv9hljab004aph01ppagkm3y/comments?page=1&pageSize=10",
+      "body": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "status": 429,
+      "method": "GET",
+      "url": "http://localhost:3001/api/projects/cmv9hdb8i000pph01zb0tb5c4",
+      "body": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "status": 429,
+      "method": "GET",
+      "url": "http://localhost:3001/api/projects/cmv9hdb8i000pph01zb0tb5c4",
+      "body": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "status": 429,
+      "method": "POST",
+      "url": "http://localhost:3001/api/reports",
+      "body": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":15}"
+    },
+    {
+      "status": 429,
+      "method": "GET",
+      "url": "http://localhost:3001/api/projects/cmv9hdb8i000pph01zb0tb5c4/report-data",
+      "body": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":8}"
+    }
+  ],
+  "observations": [
+    {
+      "name": "wizard-mobile",
+      "viewport": 375,
+      "scrollWidth": 365,
+      "violations": []
+    },
+    {
+      "name": "finding-edit",
+      "viewport": 1440,
+      "scrollWidth": 1430,
+      "violations": []
+    },
+    {
+      "name": "relatorios-mobile",
+      "viewport": 375,
+      "scrollWidth": 365,
+      "violations": []
+    }
+  ],
+  "created": {
+    "application": {
+      "id": "cmv9homrr004oph01q24yyjy5",
+      "name": "QA-20261015-UI-mv9hhdmd Aplicação final",
+      "url": "http://localhost:8086/",
+      "environment": "PROD",
+      "techStack": null,
+      "description": null,
+      "companyId": "cmv9hhigg001xph01p3d3rv8q",
+      "isActive": true,
+      "criticality": "MEDIUM",
+      "internetFacing": false,
+      "dataSensitivity": "INTERNAL",
+      "businessOwner": null,
+      "technicalOwner": null,
+      "createdAt": "2026-10-15T12:02:40.839Z",
+      "updatedAt": "2026-10-15T12:02:40.839Z"
+    },
+    "project": {
+      "id": "cmv9hoqn6004qph01rl16nh8i",
+      "name": "QA-20261015-UI-mv9hhdmd Projeto final",
+      "description": null,
+      "applicationId": "cmv9homrr004oph01q24yyjy5",
+      "companyId": "cmv9hhigg001xph01p3d3rv8q",
+      "analysisType": "DAST",
+      "analysisLevel": "BASIC",
+      "hasRemediation": false,
+      "scopeIn": null,
+      "scopeOut": null,
+      "notes": null,
+      "status": "PENDING",
+      "requestedAt": "2026-10-15T12:02:45.858Z",
+      "startedAt": null,
+      "closedAt": null,
+      "updatedAt": "2026-10-15T12:02:45.858Z"
+    }
+  },
+  "finishedAt": "2026-10-15T12:04:57.629Z"
+}
