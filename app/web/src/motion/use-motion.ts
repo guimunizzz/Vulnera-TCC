@@ -22,12 +22,12 @@
  * listas com escalonamento, o contador de KPI e a transição de rota.
  */
 
+import { useMovimentoReduzido } from "../design/accessibility";
 import type { Transition, Variants } from "motion/react";
-import { usePrefereMovimentoReduzido } from "./use-prefere-movimento-reduzido";
 import { DESLOCAMENTO, DURACAO, EASE, SPRING, STAGGER, STAGGER_MAX_ITENS } from "./tokens";
 
 export interface Movimento {
-  /** `true` quando o sistema pede movimento reduzido. */
+  /** `true` quando o sistema OU o menu de acessibilidade pedem movimento reduzido. */
   reduzido: boolean;
   /** Overlay centralizado: dialog. */
   overlay: Variants;
@@ -50,9 +50,9 @@ export interface Movimento {
 }
 
 export function useMotion(): Movimento {
-  // Hook próprio, e não o `useReducedMotion` do motion: o dele lê a media
-  // query uma vez só e ignora a troca da preferência com a página aberta.
-  const reduzido = usePrefereMovimentoReduzido();
+  // Reduzido quando o SISTEMA pede ou quando a pessoa ligou a opção no menu de
+  // acessibilidade — os dois valem igual (design/accessibility.ts).
+  const reduzido = useMovimentoReduzido();
 
   const saida: Transition = { duration: reduzido ? DURACAO.instant : DURACAO.fast, ease: EASE.out };
   const entrada: Transition = reduzido

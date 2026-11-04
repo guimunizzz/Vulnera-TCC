@@ -6,11 +6,13 @@
  *   KIT-14  movimento reduzido não monta
  *   KIT-15  abaixo da largura mínima configurável não monta
  *   KIT-16  sem WebGL2 não monta (o chunk de three nem é pedido)
+ *   KIT-17  alto contraste do menu de acessibilidade não monta (texto AAA)
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { instalarMatchMedia } from "../test/setup";
+import { definirPreferencias, restaurarPreferencias } from "../design/accessibility";
 
 const preferencia = vi.hoisted(() => ({ reduzido: false }));
 vi.mock("../motion/use-motion", () => ({ useMotion: () => ({ reduzido: preferencia.reduzido }) }));
@@ -30,6 +32,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  restaurarPreferencias();
   instalarMatchMedia();
 });
 
@@ -53,6 +56,11 @@ describe("useCenaPermitida", () => {
   it("KIT-16 — sem WebGL2 bloqueia", () => {
     vi.unstubAllGlobals();
     expect("WebGL2RenderingContext" in window).toBe(false);
+    expect(renderHook(() => useCenaPermitida()).result.current).toBe(false);
+  });
+
+  it("KIT-17 — alto contraste do menu de acessibilidade bloqueia", () => {
+    definirPreferencias({ altoContraste: true });
     expect(renderHook(() => useCenaPermitida()).result.current).toBe(false);
   });
 });

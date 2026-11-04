@@ -15,7 +15,6 @@
  */
 
 import { useRef } from "react";
-import { MotionConfig } from "motion/react";
 import Nav from "./nav";
 import { ScrollProgress } from "./ui";
 import { useRecalculoDoScroll } from "./motion/use-landing-motion";
@@ -38,7 +37,9 @@ export default function LandingRoot() {
   useRecalculoDoScroll(raiz);
 
   return (
-    <MotionConfig reducedMotion="user">
+    // O `MotionConfig` que respeita o movimento reduzido (sistema OU menu de
+    // acessibilidade) fica na raiz do app (main.tsx).
+    <>
       <LandingScene />
       {/* Conteúdo acima da cena fixa (z-0). */}
       <div ref={raiz} className="relative z-[1] font-sans text-[var(--vx-text)]">
@@ -56,6 +57,6 @@ export default function LandingRoot() {
         <Team />
         <FinalCTA />
       </div>
-    </MotionConfig>
+    </>
   );
 }

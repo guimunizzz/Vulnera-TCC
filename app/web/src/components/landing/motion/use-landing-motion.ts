@@ -10,8 +10,10 @@
  *
  * POR QUE EXISTE
  * Cada seção consultava `window.matchMedia` à mão e só no momento da montagem.
- * Aqui as condições são media queries reativas: quando a pessoa liga "reduzir
- * movimento" (ou a largura cruza o breakpoint), o contexto do `useGSAP` é
+ * Aqui as condições são reativas — movimento reduzido vem do sistema OU do
+ * menu de acessibilidade (`design/accessibility.ts`) e a largura de uma media
+ * query: quando a pessoa liga "reduzir movimento" (ou a largura cruza o
+ * breakpoint), o contexto do `useGSAP` é
  * revertido e a animação roda de novo na versão certa. O revert também mata
  * os ScrollTriggers da seção no unmount: sair da landing e voltar não deixa
  * triggers órfãos.
@@ -37,14 +39,18 @@
 import { useEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 import { ScrollTrigger, useGSAP } from "./gsap";
 import { LARGURA_DESKTOP_LANDING } from "./tokens";
+import { useMovimentoReduzido } from "../../../design/accessibility";
 
 export const CONDICOES_LANDING = {
-  reduzido: "(prefers-reduced-motion: reduce)",
-  normal: "(prefers-reduced-motion: no-preference)",
   desktop: `(min-width: ${LARGURA_DESKTOP_LANDING}px)`,
 } as const;
 
-export type CondicoesLanding = Record<keyof typeof CONDICOES_LANDING, boolean>;
+/** `reduzido` vem do sistema OU do menu de acessibilidade; `normal` é o oposto. */
+export interface CondicoesLanding {
+  reduzido: boolean;
+  normal: boolean;
+  desktop: boolean;
+}
 
 /** Media query reativa: re-renderiza quando a condição muda. */
 function useConsulta(consulta: string): boolean {
@@ -77,7 +83,9 @@ export function useMovimentoLanding(
   escopo: RefObject<Element | null>,
   animar: (condicoes: CondicoesLanding) => void | (() => void),
 ): void {
-  const reduzido = useConsulta(CONDICOES_LANDING.reduzido);
+  // Sistema OU menu de acessibilidade (design/accessibility.ts) — a media
+  // query sozinha não enxerga a opção do menu.
+  const reduzido = useMovimentoReduzido();
   const desktop = useConsulta(CONDICOES_LANDING.desktop);
   const primeiraVez = useRef(true);
 
