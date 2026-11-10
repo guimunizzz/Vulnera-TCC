@@ -24,6 +24,7 @@ import { SlaSettingsPage } from "./pages/settings/sla-settings-page";
 import { PlaybooksPage } from "./pages/playbooks-page";
 import { PlaybookDetailPage } from "./pages/playbook-detail-page";
 import { RemediationPage } from "./pages/remediation-page";
+import { ExposureGraphPage } from "./pages/exposure-graph-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
 import { ComMenuAcessibilidade } from "./design/accessibility-menu";
@@ -88,6 +89,8 @@ export function App() {
           <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:id/dashboard" element={<ApplicationDashboardPage />} />
+            {/* Exposure Graph (CP-8): a empresa de quem está logado; o backend deriva do token. */}
+            <Route path="/exposure-graph" element={<ExposureGraphPage />} />
             <Route path="/new-analysis" element={<NewAnalysisPage />} />
             {/* SLA (CP-2): governança da empresa — ADMIN e CLIENT (OWNER edita,
                 MEMBER lê; o backend reforça). PENTESTER não chega aqui. */}

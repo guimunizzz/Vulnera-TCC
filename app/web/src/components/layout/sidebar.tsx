@@ -20,7 +20,7 @@
 
 import { NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Clock3, FileText, Folder, LayoutDashboard, Monitor, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Check, Clock3, FileText, Folder, LayoutDashboard, Monitor, Network, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { savedQueriesApi } from "../../lib/api/saved-queries.api";
@@ -49,6 +49,7 @@ const GRUPOS: GrupoNav[] = [
     rotulo: "Operação",
     itens: [
       { para: "/applications", rotulo: "Aplicações", papeis: ["ADMIN", "CLIENT"], icone: Monitor },
+      { para: "/exposure-graph", rotulo: "Exposure Graph", papeis: ["ADMIN", "CLIENT"], icone: Network },
       { para: "/projects", rotulo: "Projetos", icone: Folder },
       // Os papéis são os mesmos das rotas; agrupar não amplia o acesso.
       { para: "/findings", rotulo: "Findings", papeis: ["ADMIN", "PENTESTER"], icone: Search },
