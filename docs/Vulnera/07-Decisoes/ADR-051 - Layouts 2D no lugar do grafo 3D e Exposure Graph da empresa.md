@@ -50,18 +50,27 @@ registrado como "não implementado": nenhuma tela mostrava as aplicações da em
    real; nada decorativo que possa ser lido como dado. Selecionar um prédio é a mesma seleção do
    grafo e do painel. "Apresentar" percorre as aplicações da mais grave para a menos grave.
 
-## Garantias (as do ADR-048 que continuam valendo para o mapa)
+## Garantias: o mapa usa o kit three.js (ADR-050)
 
-- **Fora do bundle inicial**: a página carrega o mapa com `React.lazy`; `three`,
-  `@react-three/fiber` e `@react-three/drei` (já instalados, usados no landing) só baixam na aba
-  "Mapa 3D". Continua sendo a exceção funcional ao [[ADR-041 - Atmosfera unica no layout autenticado]]:
-  um segundo canvas só enquanto a aba está aberta.
+- **Sem R3F**: o [[ADR-050 - Camadas de movimento e kit three.js imperativo no web]] tirou R3F e
+  drei do web. O mapa é imperativo, em `exposure-map-scene.ts`, e usa o kit `src/three/`:
+  `montarCena` (renderer, DPR ≤ 1,5, pausa com a aba oculta ou o canvas fora da tela, perda de
+  contexto com `forceContextLoss`), `descartarCena` e `lerCorDoToken` (cores dos tokens OKLCH,
+  recalculadas ao trocar tema ou alto contraste). Os nomes dos prédios usam `CSS2DRenderer` e a
+  órbita, `OrbitControls`, dos addons do próprio `three`. O arquivo entrou na lista de módulos
+  lazy que podem importar `three` (`.eslintrc.json`).
+- **Fora do bundle inicial**: a página é lazy (`paginaLazy`) e o mapa é outro `lazy()`; `three`
+  só baixa na aba "Mapa 3D". É a primeira cena **funcional** do kit e continua sendo a exceção
+  ao [[ADR-041 - Atmosfera unica no layout autenticado]] do ADR-048: um segundo canvas só
+  enquanto a aba está aberta.
+- **Gate diferente do decorativo, de propósito**: o mapa segue o kit em WebGL2 e no limite de
+  768 px (abaixo disso, só a lista). **Não** desliga com movimento reduzido nem com alto
+  contraste, como fazem as cenas decorativas, porque é conteúdo, não fundo: com movimento
+  reduzido ele fica parado (sem pulso da antena, sem voo da câmera, sem "Apresentar"); com alto
+  contraste, usa os tokens do alto contraste e não desenha glifos sobre texto.
 - **Acessibilidade**: o canvas tem `role="img"` com resumo; a **lista de prédios** abaixo dele
-  (botões) dá o mesmo acesso por teclado e leitor de tela, e o painel mostra o detalhe. Movimento
-  reduzido desliga o pulso da antena, o voo da câmera e o botão "Apresentar". Sem WebGL, a aba
-  explica e o grafo 2D segue disponível.
-- **Cores dos dois temas e do alto contraste**: os materiais leem os tokens OKLCH do DOM
-  (convertidos por um canvas 2D) e recalculam ao trocar tema ou contraste.
+  (botões) dá o mesmo acesso por teclado e leitor de tela, e o painel mostra o detalhe. Sem
+  WebGL, a aba explica e o grafo 2D segue disponível.
 
 ## Consequências
 
