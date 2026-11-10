@@ -59,7 +59,7 @@
         "src/components/dashboard/hero/use-dashboard-scene.ts",
         "src/components/landing/scene/use-landing-scene.ts",
         "src/components/landing/scene/shaders.ts",
-        "src/features/security-graph/scene/**"
+        "src/features/security-graph/exposure-map-scene.ts"
       ],
       "rules": { "no-restricted-imports": "off" }
     },

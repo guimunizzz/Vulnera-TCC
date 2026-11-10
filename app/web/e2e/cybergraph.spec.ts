@@ -6,7 +6,7 @@
  * findings, painel, modal, "Triar em Achados", busca, filtro por severidade,
  * arrastar e restaurar o layout, teclado, exportar PNG, troca de layout
  * (radial, estrela, orgânico, clusters), caminho mais crítico e movimento
- * reduzido. O modo 3D saiu (ADR-050).
+ * reduzido. O modo 3D saiu (ADR-051).
  *
  * POR QUE EXISTE
  * Os testes de unidade cobrem layout e montagem do detalhe; a fiação entre SVG,

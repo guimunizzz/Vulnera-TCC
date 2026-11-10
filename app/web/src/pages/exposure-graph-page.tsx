@@ -30,14 +30,10 @@ import { EmptyState, ErrorState } from "../components/ui/empty-state";
 import { useMotion } from "../motion/use-motion";
 import { idDaAplicacao } from "../features/security-graph/exposure-graph-model";
 import { PainelExposicao } from "../features/security-graph/painel-exposicao";
+import { ExposureGraph2D } from "../features/security-graph/exposure-graph";
 import type { ExposureGraph } from "../types/exposure-graph.types";
 
-// Grafo e mapa fora do bundle inicial, como o CyberGraph do scan: só baixam ao abrir a página (e `three`, só na aba do mapa).
-const ExposureGraph2D = lazy(() =>
-  import("../features/security-graph/exposure-graph").then((m) => ({
-    default: m.ExposureGraph2D,
-  })),
-);
+// A página já é lazy (paginaLazy); o mapa é outro chunk para `three` só baixar na aba do mapa.
 const ExposureMap3D = lazy(
   () => import("../features/security-graph/exposure-map-3d"),
 );
@@ -193,18 +189,12 @@ export function ExposureGraphPage() {
                   id: "grafo",
                   rotulo: "Grafo",
                   conteudo: (
-                    <Suspense
-                      fallback={
-                        <Skeleton className="h-[34rem] w-full bg-inset" />
-                      }
-                    >
-                      <ExposureGraph2D
-                        dados={consulta.data}
-                        nomeEmpresa={empresa.data?.name ?? "Empresa"}
-                        selecionadoId={selecionadoId}
-                        aoSelecionar={setSelecionadoId}
-                      />
-                    </Suspense>
+                    <ExposureGraph2D
+                      dados={consulta.data}
+                      nomeEmpresa={empresa.data?.name ?? "Empresa"}
+                      selecionadoId={selecionadoId}
+                      aoSelecionar={setSelecionadoId}
+                    />
                   ),
                 },
                 {

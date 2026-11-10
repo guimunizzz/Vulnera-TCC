@@ -10,7 +10,7 @@
  * POR QUE EXISTE
  * Mostra o caminho Internet → alvo → endpoint → finding, montado só com os
  * findings reais do scan e os ativos dos sensores de descoberta. O modo 3D
- * saiu (ADR-050): no lugar dele, layouts 2D que respondem perguntas diferentes
+ * saiu (ADR-051): no lugar dele, layouts 2D que respondem perguntas diferentes
  * sobre o mesmo grafo, todos em SVG e com cada nó focável.
  *
  * QUEM USA
