@@ -2,26 +2,24 @@
  * cyber-graph.tsx
  *
  * O QUE FAZ
- * Aba CyberGraph do scan DAST: barra com Recentralizar, Restaurar layout,
- * Exportar PNG e a alternância 2D/3D; busca de nó e filtro por severidade; o
- * palco do modo escolhido com botões de zoom; o painel do nó selecionado e o
- * modal de detalhes. A seleção é uma só para os dois modos.
+ * Aba CyberGraph do scan DAST: barra com Recentralizar, Caminho mais crítico,
+ * Restaurar layout, Exportar PNG e o seletor de layout (hierárquico, radial,
+ * estrela, orgânico, clusters); busca de nó e filtro por severidade; o palco
+ * com botões de zoom; o painel do nó selecionado e o modal de detalhes.
  *
  * POR QUE EXISTE
- * O 2D é a visão de trabalho (leve, sem WebGL, cada nó é um botão); o 3D é a
- * de apresentação. Os dois mostram o mesmo caminho Internet → alvo → endpoint
- * → finding, montado só com os findings reais do scan (OWASP ZAP). Sensores
- * passivos ainda não existem: a barra diz isso em vez de simular.
+ * Mostra o caminho Internet → alvo → endpoint → finding, montado só com os
+ * findings reais do scan e os ativos dos sensores de descoberta. O modo 3D
+ * saiu (ADR-050): no lugar dele, layouts 2D que respondem perguntas diferentes
+ * sobre o mesmo grafo, todos em SVG e com cada nó focável.
  *
  * QUEM USA
- * `dast-scan-detail-page.tsx`, via React.lazy(). O 3D é outro chunk lazy:
- * `three` só baixa quando a pessoa escolhe o 3D.
+ * `dast-scan-detail-page.tsx`, via React.lazy().
  */
 
-import { lazy, Suspense, useCallback, useMemo, useRef, useState, type FormEvent } from "react";
-import { Download, LocateFixed, Map as MapIcon, Minus, Plus, RotateCcw, Scan, Search } from "lucide-react";
+import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
+import { Download, LocateFixed, Map as MapIcon, Minus, Plus, RotateCcw, Route, Scan, Search } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { Skeleton } from "../../components/ui/card";
 import { cn } from "../../lib/cn";
 import {
   DAST_RISK_LABELS,
@@ -34,29 +32,16 @@ import {
 import { CyberGraph2D, type CyberGraph2DHandle } from "./cyber-graph-2d";
 import { ModalDoNo, PainelDoNo } from "./cyber-graph-detalhes";
 import { baixarArquivo } from "./exportar";
-import { gruposDoNo, gruposParaMostrar, montarVisao2D, type No2D, type Posicoes2D } from "./graph-2d-layout";
+import { gruposParaMostrar, montarVisao2D, type No2D, type Posicoes2D } from "./graph-2d-layout";
+import { aplicarLayout, type LayoutId } from "./graph-layouts";
+import { SeletorDeLayout } from "./seletor-de-layout";
+import { useLayoutSalvo } from "./use-layout-salvo";
 import { buildSecurityGraph, type GraphNode } from "./graph-model";
 import { descreverNo } from "./node-detail";
 import { cor, tokenDoNo } from "./node-visual";
-import type { Posicao3D } from "./scene/graph-scene";
-import type { SecurityGraph3DHandle } from "./security-graph-3d";
 import "./cyber-graph.css";
 
-const SecurityGraph3D = lazy(() => import("./security-graph-3d"));
-const TEM_WEBGL = typeof window !== "undefined" && "WebGL2RenderingContext" in window;
-const CHAVE_MODO = "vulnera:cybergraph-modo";
 const RISCOS: DastRisk[] = ["HIGH", "MEDIUM", "LOW", "INFO"];
-
-type Modo = "2d" | "3d";
-
-function lerModo(): Modo {
-  try {
-    return TEM_WEBGL && window.localStorage.getItem(CHAVE_MODO) === "3d" ? "3d" : "2d";
-  } catch {
-    // localStorage lança em modo privado de alguns navegadores; o 2D é o padrão.
-    return "2d";
-  }
-}
 
 /** Nó pelo texto digitado: nome exato primeiro, depois o primeiro que contém o termo. */
 function acharNo(nos: GraphNode[], termo: string): GraphNode | undefined {
@@ -96,7 +81,7 @@ export default function CyberGraph({
     for (const f of findings) c[f.risk] += 1;
     return c;
   }, [findings]);
-  const [modo, setModo] = useState<Modo>(lerModo);
+  const [layout, setLayout] = useLayoutSalvo("vulnera:cybergraph-layout");
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [expandidos, setExpandidos] = useState<ReadonlySet<string>>(() => new Set());
   const [modalAberto, setModalAberto] = useState(false);
@@ -104,20 +89,21 @@ export default function CyberGraph({
   const [avisoBusca, setAvisoBusca] = useState("");
   const [exportando, setExportando] = useState(false);
   const [minimapa, setMinimapa] = useState(false);
-  // Posições arrastadas, por modo. Ficam aqui para sobreviver à troca 2D/3D e de tema.
+  // Posições arrastadas no layout atual. Ficam aqui para sobreviver à troca de tema.
   const [posicoes2d, setPosicoes2d] = useState<Posicoes2D>(() => new Map());
-  const [posicoes3d, setPosicoes3d] = useState<ReadonlyMap<string, Posicao3D>>(() => new Map());
-  const visao = useMemo(() => montarVisao2D(grafo, expandidos, posicoes2d), [grafo, expandidos, posicoes2d]);
-  const layoutMexido = (modo === "2d" ? posicoes2d : posicoes3d).size > 0;
+  const base = useMemo(() => montarVisao2D(grafo, expandidos), [grafo, expandidos]);
+  // Separado das posições: o orgânico custa alguns ms e não precisa rodar a cada quadro de arrasto.
+  const noLayout = useMemo(() => aplicarLayout(base, layout), [base, layout]);
+  const visao = useMemo(() => aplicarLayout(noLayout, "hierarquico", posicoes2d), [noLayout, posicoes2d]);
+  const layoutMexido = posicoes2d.size > 0;
   const detalhe = useMemo(
     () => (selecionadoId ? descreverNo(grafo, findingsPorNo, selecionadoId, targetUrl) : null),
     [grafo, findingsPorNo, selecionadoId, targetUrl],
   );
   const nomesParaBusca = useMemo(() => [...new Set(grafo.nodes.map((n) => n.label))].sort(), [grafo]);
   const ref2d = useRef<CyberGraph2DHandle>(null);
-  const ref3d = useRef<SecurityGraph3DHandle>(null);
 
-  // Selecionar um nó escondido (pelo painel, pelo modal ou pela busca) abre o grupo dele, no 2D e no 3D.
+  // Selecionar um nó escondido (pelo painel, pelo modal ou pela busca) abre o grupo dele.
   const selecionar = useCallback(
     (id: string | null) => {
       setSelecionadoId(id);
@@ -125,24 +111,6 @@ export default function CyberGraph({
       if (grupos.some((g) => !expandidos.has(g))) setExpandidos((atual) => new Set([...atual, ...grupos]));
     },
     [grafo, expandidos],
-  );
-
-  // No 3D não há nó de grupo: interagir com o endpoint, o IP ou "Subdomínios" abre ou fecha o que pende dele.
-  const alternarRamo = useCallback(
-    (id: string) => {
-      const grupos = gruposDoNo(grafo, id);
-      if (!grupos.length) return;
-      setExpandidos((atual) => {
-        const aberto = grupos.every((g) => atual.has(g));
-        const proximo = new Set(atual);
-        for (const g of grupos) {
-          if (aberto) proximo.delete(g);
-          else proximo.add(g);
-        }
-        return proximo;
-      });
-    },
-    [grafo],
   );
 
   const alternarGrupo = (id: string) =>
@@ -170,44 +138,31 @@ export default function CyberGraph({
     [selecionar],
   );
 
-  const trocarModo = (novo: Modo) => {
-    if (novo === modo) return;
-    // Grupo só existe no 2D: no 3D a seleção cai no endpoint dele.
-    if (novo === "3d" && selecionadoId?.startsWith("grupo:")) setSelecionadoId(selecionadoId.slice("grupo:".length));
-    setModo(novo);
-    try {
-      window.localStorage.setItem(CHAVE_MODO, novo);
-    } catch {
-      // Sem storage, a escolha vale só nesta visita.
-    }
+  const trocarLayout = (novo: LayoutId) => {
+    if (novo === layout) return;
+    // Posição arrastada vale para o layout em que foi feita.
+    setPosicoes2d(new Map());
+    setLayout(novo);
+    window.setTimeout(() => ref2d.current?.recentralizar(), 0);
   };
 
   const recentralizar = () => {
     setSelecionadoId(null);
-    if (modo === "2d") ref2d.current?.recentralizar();
-    else ref3d.current?.recentralizar();
+    ref2d.current?.recentralizar();
   };
 
   const mover2d = useCallback((id: string, x: number, y: number) => setPosicoes2d((atual) => new Map(atual).set(id, { x, y })), []);
-  const mover3d = useCallback((id: string, p: Posicao3D) => setPosicoes3d((atual) => new Map(atual).set(id, p)), []);
 
-  const restaurarLayout = () => {
-    if (modo === "2d") {
-      setPosicoes2d(new Map());
-    } else {
-      setPosicoes3d(new Map());
-      ref3d.current?.restaurarLayout();
-    }
-  };
+  const aproximar = (fator: number) => ref2d.current?.aproximar(fator);
+  const ajustar = () => ref2d.current?.recentralizar();
 
-  // Zoom: no 2D o fator multiplica a escala; no 3D divide a distância da câmera.
-  const aproximar = (fator: number) => {
-    if (modo === "2d") ref2d.current?.aproximar(fator);
-    else ref3d.current?.aproximar(1 / fator);
-  };
-  const ajustar = () => {
-    if (modo === "2d") ref2d.current?.recentralizar();
-    else ref3d.current?.ajustarVista();
+  // O grafo já vem ordenado por risco: o primeiro finding é o mais grave.
+  const maisCritico = grafo.nodes.find((n) => n.kind === "FINDING");
+  const mostrarCaminhoCritico = () => {
+    if (!maisCritico) return;
+    selecionar(maisCritico.id);
+    // Depois do render: o grupo do finding acabou de abrir e mudou as posições.
+    window.setTimeout(() => ref2d.current?.centralizarEm(maisCritico.id), 0);
   };
 
   const buscar = (e: FormEvent) => {
@@ -220,7 +175,7 @@ export default function CyberGraph({
     setAvisoBusca("");
     selecionar(no.id);
     // Depois do render: o grupo do finding acabou de abrir e mudou as posições.
-    if (modo === "2d") window.setTimeout(() => ref2d.current?.centralizarEm(no.id), 0);
+    window.setTimeout(() => ref2d.current?.centralizarEm(no.id), 0);
   };
 
   const alternarRisco = (risco: DastRisk) =>
@@ -233,8 +188,8 @@ export default function CyberGraph({
   const exportarPng = async () => {
     setExportando(true);
     try {
-      const blob = modo === "2d" ? await ref2d.current?.exportarPng() : await ref3d.current?.capturar();
-      if (blob) baixarArquivo(blob, `cybergraph-${hostDe(targetUrl)}-${modo}.png`);
+      const blob = await ref2d.current?.exportarPng();
+      if (blob) baixarArquivo(blob, `cybergraph-${hostDe(targetUrl)}-${layout}.png`);
     } finally {
       setExportando(false);
     }
@@ -281,7 +236,22 @@ export default function CyberGraph({
               <Button
                 variant="secundario"
                 size="sm"
-                onClick={restaurarLayout}
+                onClick={mostrarCaminhoCritico}
+                disabled={!maisCritico}
+                className="whitespace-nowrap"
+                title={
+                  maisCritico
+                    ? `Destaca o caminho de exposição da Internet até “${maisCritico.label}”`
+                    : "Nenhum finding entre as severidades visíveis"
+                }
+                iconeInicio={<Route className="h-4 w-4" aria-hidden="true" />}
+              >
+                Caminho mais crítico
+              </Button>
+              <Button
+                variant="secundario"
+                size="sm"
+                onClick={() => setPosicoes2d(new Map())}
                 className="whitespace-nowrap"
                 disabled={!layoutMexido}
                 title={layoutMexido ? "Volta os nós arrastados para a posição padrão" : "Arraste um nó para mudar o layout"}
@@ -295,32 +265,12 @@ export default function CyberGraph({
                 onClick={exportarPng}
                 carregando={exportando}
                 className="whitespace-nowrap"
-                title={modo === "2d" ? "Baixa o grafo inteiro como imagem" : "Baixa a cena como está na tela"}
+                title="Baixa o grafo inteiro como imagem, no layout atual"
                 iconeInicio={<Download className="h-4 w-4" aria-hidden="true" />}
               >
                 Exportar PNG
               </Button>
-              <div role="group" aria-label="Modo de visualização" className="inline-flex rounded-control border border-subtle bg-inset p-0.5">
-                {(["2d", "3d"] as const).map((m) => {
-                  const indisponivel = m === "3d" && !TEM_WEBGL;
-                  return (
-                    <button
-                      key={m}
-                      type="button"
-                      aria-pressed={modo === m}
-                      disabled={indisponivel}
-                      title={indisponivel ? "Este navegador não tem WebGL 2" : `Ver em ${m.toUpperCase()}`}
-                      onClick={() => trocarModo(m)}
-                      className={cn(
-                        "alvo-estendido rounded-control px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                        modo === m ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg",
-                      )}
-                    >
-                      {m.toUpperCase()}
-                    </button>
-                  );
-                })}
-              </div>
+              <SeletorDeLayout valor={layout} aoMudar={trocarLayout} />
             </div>
           </div>
 
@@ -383,32 +333,17 @@ export default function CyberGraph({
           </div>
 
           <div className="cg-palco relative">
-            {modo === "2d" ? (
-              <CyberGraph2D
-                ref={ref2d}
-                visao={visao}
-                selecionadoId={selecionadoId}
-                aoClicar={aoClicar2D}
-                aoAbrir={(no) => abrir(no.id)}
-                aoLimpar={() => setSelecionadoId(null)}
-                aoMover={mover2d}
-                minimapa={minimapa}
-              />
-            ) : (
-              <Suspense fallback={<Skeleton className="h-[34rem] w-full bg-inset" />}>
-                <SecurityGraph3D
-                  ref={ref3d}
-                  grafo={grafo}
-                  selecionadoId={selecionadoId}
-                  posicoes={posicoes3d}
-                  expandidos={expandidos}
-                  aoSelecionar={selecionar}
-                  aoAlternar={alternarRamo}
-                  aoAbrir={abrir}
-                  aoMoverNo={mover3d}
-                />
-              </Suspense>
-            )}
+            <CyberGraph2D
+              ref={ref2d}
+              visao={visao}
+              animarTroca={layout}
+              selecionadoId={selecionadoId}
+              aoClicar={aoClicar2D}
+              aoAbrir={(no) => abrir(no.id)}
+              aoLimpar={() => setSelecionadoId(null)}
+              aoMover={mover2d}
+              minimapa={minimapa}
+            />
             {/* Zoom por botões: a roda só funciona com o grafo em foco, e no celular não há roda. */}
             <div role="group" aria-label="Zoom" className="absolute bottom-3 right-3 flex flex-col gap-1">
               <Button variant="secundario" size="sm" rotulo="Aproximar" onClick={() => aproximar(1.25)}>
@@ -420,24 +355,21 @@ export default function CyberGraph({
               <Button variant="secundario" size="sm" rotulo="Ajustar à tela" onClick={ajustar}>
                 <Scan className="h-4 w-4" aria-hidden="true" />
               </Button>
-              {modo === "2d" && (
-                <Button
-                  variant={minimapa ? "primario" : "secundario"}
-                  size="sm"
-                  rotulo={minimapa ? "Esconder minimapa" : "Mostrar minimapa"}
-                  aria-pressed={minimapa}
-                  onClick={() => setMinimapa((v) => !v)}
-                >
-                  <MapIcon className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              )}
+              <Button
+                variant={minimapa ? "primario" : "secundario"}
+                size="sm"
+                rotulo={minimapa ? "Esconder minimapa" : "Mostrar minimapa"}
+                aria-pressed={minimapa}
+                onClick={() => setMinimapa((v) => !v)}
+              >
+                <MapIcon className="h-4 w-4" aria-hidden="true" />
+              </Button>
             </div>
           </div>
         </div>
         <p className="mt-2 text-sm text-fg-muted">
-          {modo === "2d"
-            ? "Arraste um nó para reposicioná-lo e o fundo para mover a vista. Com um nó em foco, as setas andam pelo grafo. Clique em “Findings” para expandir o grupo."
-            : "Clique num endpoint, no IP ou em Subdomínios para abrir ou fechar o que pende dele (Espaço faz o mesmo pelo teclado). Arraste um objeto para reposicioná-lo e o fundo para girar; com a cena em foco, role para aproximar e use as setas para percorrer os nós."}{" "}
+          Arraste um nó para reposicioná-lo e o fundo para mover a vista. Com um nó em foco, as setas andam pelo grafo. Clique em “Findings”
+          para expandir o grupo.{" "}
           Duplo clique num nó abre os detalhes.
           {grafo.truncated && " Grafo truncado nos findings de maior risco."}
           {visiveis.length < findings.length && ` Mostrando ${visiveis.length} de ${findings.length} findings pelo filtro de severidade.`}

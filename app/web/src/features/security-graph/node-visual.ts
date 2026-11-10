@@ -9,12 +9,12 @@
  * ícone e a mesma cor para o mesmo tipo/severidade.
  *
  * QUEM USA
- * `cyber-graph-2d.tsx` e `cyber-graph-detalhes.tsx`.
+ * `cyber-graph-2d.tsx`, `cyber-graph-detalhes.tsx` e `exposure-graph.tsx`.
  */
 
-import { Bug, Earth, Globe, Layers, Network, Plug, ScanSearch, Server, Waypoints, type LucideIcon } from "lucide-react";
-import type { DastRisk } from "../../types/dast.types";
-import type { Kind2D } from "./graph-2d-layout";
+import { AppWindow, Building2, Bug, Earth, Globe, Layers, Network, Plug, ScanSearch, Server, ShieldAlert, Waypoints, type LucideIcon } from "lucide-react";
+import { DAST_RISK_LABELS } from "../../types/dast.types";
+import type { Kind2D, Risco } from "./graph-2d-layout";
 
 export const ICONE_DO_TIPO: Record<Kind2D, LucideIcon> = {
   INTERNET: Earth,
@@ -26,6 +26,9 @@ export const ICONE_DO_TIPO: Record<Kind2D, LucideIcon> = {
   PORT: Plug,
   TECH: Layers,
   SUBDOMAIN: Waypoints,
+  COMPANY: Building2,
+  APPLICATION: AppWindow,
+  CATEGORY: ShieldAlert,
 };
 
 export const ROTULO_TIPO: Record<Kind2D, string> = {
@@ -38,11 +41,19 @@ export const ROTULO_TIPO: Record<Kind2D, string> = {
   PORT: "Porta aberta",
   TECH: "Tecnologia",
   SUBDOMAIN: "Subdomínio",
+  COMPANY: "Empresa",
+  APPLICATION: "Aplicação",
+  CATEGORY: "Categoria OWASP",
 };
 
+export const ROTULO_RISCO: Record<Risco, string> = { CRITICAL: "Crítico", ...DAST_RISK_LABELS };
+
 /** Variável de cor do token: tipo para a estrutura, severidade para o que é achado. */
-export function tokenDoNo(no: { kind: Kind2D; risk?: DastRisk }): string {
+export function tokenDoNo(no: { kind: Kind2D; risk?: Risco }): string {
   if (no.kind === "INTERNET") return "--color-chart-2";
+  if (no.kind === "COMPANY") return "--color-accent";
+  // Aplicação e categoria sem nada aberto: neutras; com algo aberto, na cor do pior.
+  if ((no.kind === "APPLICATION" || no.kind === "CATEGORY") && !no.risk) return "--color-chart-axis";
   if (no.kind === "ASSET") return "--color-accent";
   if (no.kind === "ENDPOINT") return "--color-chart-3";
   // Ativos de descoberta são estrutura: nunca cor de severidade.
