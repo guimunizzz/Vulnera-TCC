@@ -11,9 +11,12 @@
 TypeScript construída com Vite. Tailwind usa os tokens próprios em
 `src/styles/tokens.css`; os componentes de interface ficam em
 `src/components/ui/`. Motion anima transições de interface. Three.js desenha
-a atmosfera decorativa compartilhada e, desde 2026-10-30, o modo 3D do
-CyberGraph do scan DAST (`src/features/security-graph/`, exceção registrada no
-ADR-048; o modo 2D é SVG); os dois são carregados sob demanda. Os gráficos
+a atmosfera decorativa compartilhada e, desde 2026-11-09, o mapa 3D da
+superfície de ataque no Exposure Graph da empresa (`/exposure-graph`, com
+`@react-three/fiber`; exceção registrada no ADR-048 e mantida no ADR-050); os
+dois são carregados sob demanda. O CyberGraph do scan DAST e o grafo da
+empresa são SVG, com cinco layouts (`src/features/security-graph/`); o modo
+3D do CyberGraph saiu (ADR-050). Os gráficos
 analíticos usam os componentes de `src/components/metrics/`.
 
 Este documento descreve o código implementado. As especificações de tokens e

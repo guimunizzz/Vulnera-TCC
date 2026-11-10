@@ -1,7 +1,7 @@
 ---
 type: decisao
 tags: [decision, frontend, three.js, webgl, dast, security-graph, acessibilidade]
-status: vigente
+status: substituido-em-parte
 codigo: ADR-048
 data: 2026-10-30
 ---
@@ -87,3 +87,11 @@ A aba virou **CyberGraph**, com o 2D como padrão e o 3D como alternativa. O que
 [[ADR-026 - Landing publica cyber-samurai e paleta exclusiva]]
 [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]
 `docs/DAST.md` §11.5 · `docs/evidencias/security-graph/README.md` · `docs/NIGHT_SHIFT_REPORT.md`
+
+## Substituição em parte — 2026-11-09
+
+O modo 3D do CyberGraph do scan **saiu**: repetia o 2D com menos legibilidade. No lugar dele
+entraram layouts 2D (radial, estrela, orgânico, clusters), e o 3D voltou como **mapa da
+superfície de ataque da empresa** no Exposure Graph, com as mesmas garantias de WebGL deste ADR
+(lazy, exceção funcional ao ADR-041, alternativa acessível, movimento reduzido). Ver
+[[ADR-050 - Layouts 2D no lugar do grafo 3D e Exposure Graph da empresa]].
