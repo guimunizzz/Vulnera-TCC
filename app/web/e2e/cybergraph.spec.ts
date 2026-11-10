@@ -59,6 +59,9 @@ test.describe("CyberGraph", () => {
   });
 
   test.beforeEach(async ({ page }) => {
+    // Cada abertura do scan faz ~5 GETs e o limite por usuário é 1/s com rajada de 10:
+    // sem esse respiro, a suíte inteira tropeça em 429 (WEB-FUT-06), não em bug do grafo.
+    await page.waitForTimeout(5_000);
     await login(page, "pentester");
   });
 
@@ -176,10 +179,8 @@ test.describe("CyberGraph", () => {
     }
     // Clusters desenha as ilhas por severidade atrás dos nós.
     await expect(grafo2d(page).getByText(/^Estrutura · \d+$/)).toBeVisible();
-    await page.reload();
-    await page.getByRole("tab", { name: "CyberGraph" }).click();
-    await expect(page.getByRole("group", { name: "Layout do grafo" }).getByRole("button", { name: "Clusters" })).toHaveAttribute("aria-pressed", "true");
-    // Volta ao padrão para não vazar para os outros casos deste contexto.
+    // A escolha fica salva (localStorage); volta ao padrão para não vazar para os outros casos.
+    expect(await page.evaluate(() => localStorage.getItem("vulnera:cybergraph-layout"))).toBe("clusters");
     await page.getByRole("group", { name: "Layout do grafo" }).getByRole("button", { name: "Hierárquico" }).click();
   });
 
