@@ -8,14 +8,16 @@
  * fundo para mover, zoom (roda com o grafo em foco, +/− e botões), legenda,
  * minimapa quando o grafo não cabe e navegação por setas com um só ponto de Tab.
  * Abrir ou fechar um grupo anima: os filhos saem do pai (ou voltam para ele) e
- * os outros nós deslizam para o lugar novo.
+ * os outros nós deslizam para o lugar novo; trocar de layout também desliza.
+ * Em layout "livre" (radial, estrela, orgânico, clusters) as arestas ligam os
+ * centros e as ilhas de clusters aparecem atrás dos nós.
  *
  * POR QUE EXISTE
  * É a visão de trabalho do grafo: lê bem em qualquer tamanho, não depende de
  * WebGL e cada nó é um botão focável.
  *
  * QUEM USA
- * `cyber-graph.tsx`.
+ * `cyber-graph.tsx` (scan) e `exposure-graph.tsx` (empresa).
  */
 
 import {
@@ -31,7 +33,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useMotion } from "../../motion/use-motion";
-import { DAST_RISK_LABELS, DAST_SENSOR_SHORT_LABELS, type DastRisk } from "../../types/dast.types";
+import { DAST_SENSOR_SHORT_LABELS } from "../../types/dast.types";
 import { svgParaPng } from "./exportar";
 import {
   caixaDoConteudo,
@@ -40,11 +42,12 @@ import {
   type Direcao,
   type Kind2D,
   type No2D,
+  type Risco,
   type Visao2D,
   type Visao2DExibida,
 } from "./graph-2d-layout";
 import { contextoDoNo, chaveDaAresta } from "./graph-model";
-import { cor, ICONE_DO_TIPO, ROTULO_TIPO, tokenDoNo } from "./node-visual";
+import { cor, ICONE_DO_TIPO, ROTULO_RISCO, ROTULO_TIPO, tokenDoNo } from "./node-visual";
 
 export interface CyberGraph2DHandle {
   recentralizar(): void;
@@ -65,12 +68,29 @@ interface Props {
   aoMover(id: string, x: number, y: number): void;
   /** Minimapa ligado pela pessoa: fixo sobre o grafo, ele sempre pode cobrir algum nó. */
   minimapa: boolean;
+  /** Mudou (ex.: o layout): os nós deslizam da posição antiga para a nova em vez de saltar. */
+  animarTroca?: string;
+  /** O que o grafo mostra, para leitor de tela. */
+  descricao?: string;
 }
 
-const RAIO: Record<Kind2D, number> = { INTERNET: 40, ASSET: 28, ENDPOINT: 25, GROUP: 25, FINDING: 21, IP: 27, PORT: 19, TECH: 19, SUBDOMAIN: 21 };
+const RAIO: Record<Kind2D, number> = {
+  INTERNET: 40,
+  ASSET: 28,
+  ENDPOINT: 25,
+  GROUP: 25,
+  FINDING: 21,
+  IP: 27,
+  PORT: 19,
+  TECH: 19,
+  SUBDOMAIN: 21,
+  COMPANY: 36,
+  APPLICATION: 27,
+  CATEGORY: 23,
+};
 const encurtar = (texto: string, max: number) => (texto.length > max ? `${texto.slice(0, max - 1)}…` : texto);
 const SETAS: readonly string[] = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
-const LEGENDA_TIPOS: Kind2D[] = ["INTERNET", "ASSET", "ENDPOINT", "GROUP", "IP", "PORT", "TECH", "SUBDOMAIN"];
+const LEGENDA_TIPOS: Kind2D[] = ["INTERNET", "ASSET", "COMPANY", "APPLICATION", "CATEGORY", "ENDPOINT", "GROUP", "IP", "PORT", "TECH", "SUBDOMAIN"];
 const LEGENDA_NOME: Record<Kind2D, string> = {
   INTERNET: "Internet",
   ASSET: "Alvo",
@@ -81,11 +101,23 @@ const LEGENDA_NOME: Record<Kind2D, string> = {
   PORT: "Porta",
   TECH: "Tecnologia",
   SUBDOMAIN: "Subdomínio",
+  COMPANY: "Empresa",
+  APPLICATION: "Aplicação",
+  CATEGORY: "Categoria OWASP",
 };
-const LEGENDA_RISCOS: DastRisk[] = ["HIGH", "MEDIUM", "LOW", "INFO"];
+const LEGENDA_RISCOS: Risco[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"];
+/** O que o número do nó conta, por tipo (rótulo para leitor de tela). */
+const NOME_DO_TOTAL: Partial<Record<Kind2D, string>> = {
+  SUBDOMAIN: "subdomínios",
+  IP: "CVEs",
+  COMPANY: "aplicações",
+  APPLICATION: "vulnerabilidades abertas",
+  CATEGORY: "vulnerabilidades abertas",
+};
 const MINIMAPA = { w: 168, h: 108 };
 
 function subtitulo(no: No2D): string {
+  if (no.subtitulo) return no.subtitulo;
   switch (no.kind) {
     case "INTERNET":
       return "origem do scan externo";
@@ -96,7 +128,7 @@ function subtitulo(no: No2D): string {
     case "GROUP":
       return no.expandido ? "Clique para recolher" : "Clique para expandir";
     case "FINDING":
-      return `Risco ${DAST_RISK_LABELS[no.risk ?? "INFO"].toLowerCase()} · ${DAST_SENSOR_SHORT_LABELS[no.sensorKey ?? "zap"] ?? no.sensorKey}`;
+      return `Risco ${ROTULO_RISCO[no.risk ?? "INFO"].toLowerCase()} · ${DAST_SENSOR_SHORT_LABELS[no.sensorKey ?? "zap"] ?? no.sensorKey}`;
     case "IP":
       return no.asset?.metadata?.publico === false ? "IP privado · sem consulta" : `IP público · ${no.total ?? 0} CVE${no.total === 1 ? "" : "s"}`;
     case "PORT":
@@ -106,7 +138,26 @@ function subtitulo(no: No2D): string {
     case "SUBDOMAIN":
       if (no.expandivel) return `${no.total ?? 0} em certificados · ${no.expandido ? "recolher" : "expandir"}`;
       return no.asset ? "Subdomínio · crt.sh" : `${no.total ?? 0} em certificados`;
+    case "COMPANY":
+      return `Empresa · ${no.total ?? 0} aplicações`;
+    case "APPLICATION":
+    case "CATEGORY":
+      return `${no.total ?? 0} abertas`;
   }
+}
+
+/** Aresta de layout livre: de borda a borda pela reta entre os centros, com uma curva leve (fica orgânica e não esconde nó no meio). */
+function arestaLivre(de: No2D, para: No2D): string {
+  const dx = para.x - de.x;
+  const dy = para.y - de.y;
+  const d = Math.hypot(dx, dy) || 1;
+  const [ux, uy] = [dx / d, dy / d];
+  const x1 = de.x + ux * RAIO[de.kind];
+  const y1 = de.y + uy * RAIO[de.kind];
+  const x2 = para.x - ux * RAIO[para.kind];
+  const y2 = para.y - uy * RAIO[para.kind];
+  const curva = Math.min(d * 0.08, 24);
+  return `M ${x1} ${y1} Q ${(x1 + x2) / 2 - uy * curva} ${(y1 + y2) / 2 + ux * curva}, ${x2} ${y2}`;
 }
 
 const DURACAO_GRUPO_MS = 360;
@@ -116,9 +167,10 @@ const DURACAO_GRUPO_MS = 360;
  * conjunto de nós muda (grupo abriu/fechou, filtro). Arrastar e selecionar não
  * mudam o conjunto, então seguem o ponteiro sem atraso.
  */
-function useVisaoAnimada(visao: Visao2D, reduzido: boolean): Visao2DExibida {
+function useVisaoAnimada(visao: Visao2D, reduzido: boolean, chave?: string): Visao2DExibida {
   const [quadro, setQuadro] = useState<Visao2DExibida | null>(null);
   const anterior = useRef(visao);
+  const chaveAnterior = useRef(chave);
   const exibida: Visao2DExibida = quadro ?? visao;
   const ultimo = useRef(exibida);
   ultimo.current = exibida;
@@ -127,8 +179,10 @@ function useVisaoAnimada(visao: Visao2D, reduzido: boolean): Visao2DExibida {
   useLayoutEffect(() => {
     const de = anterior.current;
     anterior.current = visao;
+    const trocou = chaveAnterior.current !== chave;
+    chaveAnterior.current = chave;
     const ids = new Set(de.nodes.map((n) => n.id));
-    if (reduzido || (de.nodes.length === visao.nodes.length && visao.nodes.every((n) => ids.has(n.id)))) {
+    if (reduzido || (!trocou && de.nodes.length === visao.nodes.length && visao.nodes.every((n) => ids.has(n.id)))) {
       setQuadro(null);
       return;
     }
@@ -145,7 +199,7 @@ function useVisaoAnimada(visao: Visao2D, reduzido: boolean): Visao2DExibida {
     setQuadro(interpolarVisao(origem, visao, 0));
     raf = requestAnimationFrame(passo);
     return () => cancelAnimationFrame(raf);
-  }, [visao, reduzido]);
+  }, [visao, reduzido, chave]);
 
   return exibida;
 }
@@ -155,12 +209,13 @@ const ZOOM_MAX = 2.5;
 const limitarZoom = (k: number) => Math.min(Math.max(k, ZOOM_MIN), ZOOM_MAX);
 
 export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function CyberGraph2D(
-  { visao, selecionadoId, aoClicar, aoAbrir, aoLimpar, aoMover, minimapa },
+  { visao, selecionadoId, aoClicar, aoAbrir, aoLimpar, aoMover, minimapa, animarTroca, descricao = "da Internet até os findings" },
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
   const { reduzido } = useMotion();
-  const desenho = useVisaoAnimada(visao, reduzido);
+  const desenho = useVisaoAnimada(visao, reduzido, animarTroca);
+  const livre = visao.forma === "livre";
   const porIdDesenho = useMemo(() => new Map(desenho.nodes.map((n) => [n.id, n])), [desenho]);
   const [tamanho, setTamanho] = useState({ w: 0, h: 0 });
   const [vista, setVista] = useState({ x: 0, y: 0, k: 1 });
@@ -176,12 +231,14 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
   const enquadrar = useCallback(() => {
     const { w, h } = tamanho;
     if (!w || !h || !visao.largura) return;
-    // Abaixo de ~0,6 o texto deixa de ser legível: melhor transbordar (inclusive no celular) e deixar arrastar.
-    const k = Math.max(Math.min((w - 32) / visao.largura, (h - 32) / visao.altura, 1.1), 0.6);
+    // Hierárquico: abaixo de ~0,6 o texto deixa de ser legível, melhor transbordar e deixar arrastar.
+    // Layouts livres são mapas: a forma inteira vale mais que ler cada nome de primeira (o zoom continua lá).
+    const livreAgora = visao.forma === "livre";
+    const k = Math.max(Math.min((w - 32) / visao.largura, (h - 32) / visao.altura, 1.1), livreAgora ? 0.35 : 0.6);
     const largura = visao.largura * k;
-    // Centraliza mesmo transbordando: Internet e alvo ficam no meio da altura do grafo.
-    setVista({ k, x: largura <= w ? (w - largura) / 2 : 12, y: (h - visao.altura * k) / 2 });
-  }, [tamanho, visao.largura, visao.altura]);
+    // Centraliza mesmo transbordando: Internet e alvo ficam no meio da altura do grafo (e, nos livres, da largura).
+    setVista({ k, x: largura <= w || livreAgora ? (w - largura) / 2 : 12, y: (h - visao.altura * k) / 2 });
+  }, [tamanho, visao.largura, visao.altura, visao.forma]);
 
   // Reenquadra no resize e quando um grupo abre ou fecha, a menos que a pessoa já tenha mexido.
   useEffect(() => {
@@ -220,7 +277,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
       async exportarPng() {
         const svg = svgRef.current;
         if (!svg) return null;
-        const caixa = caixaDoConteudo(atual.current.visao.nodes);
+        const caixa = caixaDoConteudo(atual.current.visao.nodes, atual.current.visao.zonas);
         const copia = svg.cloneNode(true) as SVGSVGElement;
         copia.setAttribute("xmlns", "http://www.w3.org/2000/svg");
         copia.setAttribute("viewBox", `${caixa.x} ${caixa.y} ${caixa.largura} ${caixa.altura}`);
@@ -296,12 +353,12 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
       aoLimpar();
     } else if (SETAS.includes(e.key)) {
       e.preventDefault();
-      const proximo = vizinhoNaDirecao(visao.nodes, no, e.key as Direcao);
+      const proximo = vizinhoNaDirecao(visao.nodes, no, e.key as Direcao, livre);
       if (proximo) focarNo(proximo);
     }
   };
 
-  const caixa = useMemo(() => caixaDoConteudo(visao.nodes), [visao.nodes]);
+  const caixa = useMemo(() => caixaDoConteudo(visao.nodes, visao.zonas), [visao.nodes, visao.zonas]);
   const escalaMini = Math.min(MINIMAPA.w / caixa.largura, MINIMAPA.h / caixa.altura);
   const moverPeloMinimapa = (e: ReactPointerEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -318,7 +375,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
         tabIndex={-1}
         role="group"
         aria-roledescription="grafo"
-        aria-label={`CyberGraph 2D: ${visao.nodes.length} nós, da Internet até os findings. Setas andam entre os nós, Enter seleciona, Shift+Enter abre os detalhes, Esc limpa, + e − aproximam.`}
+        aria-label={`Grafo: ${visao.nodes.length} nós, ${descricao}. Setas andam entre os nós, Enter seleciona, Shift+Enter abre os detalhes, Esc limpa, + e − aproximam.`}
         className="block h-[34rem] w-full cursor-grab touch-none select-none outline-none active:cursor-grabbing"
         onKeyDown={(e) => {
           if (e.key === "+" || e.key === "=") aproximar(1.2);
@@ -376,6 +433,19 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
         </defs>
 
         <g data-vista transform={`translate(${vista.x} ${vista.y}) scale(${vista.k})`}>
+          {/* Ilhas dos clusters: atrás de tudo, só contexto (o nome repete o que os nós já dizem). */}
+          {!desenho.nodes.some((n) => n.saindo) &&
+            visao.zonas?.map((z) => {
+              const token = z.risk ? `--color-severity-${z.risk.toLowerCase()}` : "--color-accent";
+              return (
+                <g key={z.id} aria-hidden="true" className="cg-entrar">
+                  <circle cx={z.x} cy={z.y} r={z.r} fill={cor(token, 0.06)} stroke={cor(token, 0.45)} strokeWidth={1.5} strokeDasharray="6 6" />
+                  <text x={z.x} y={z.y - z.r - 12} textAnchor="middle" fontSize={14} fontWeight={700} fill={cor("--color-text-primary")}>
+                    {z.rotulo}
+                  </text>
+                </g>
+              );
+            })}
           {desenho.edges.map((edge, i) => {
             const de = porIdDesenho.get(edge.source);
             const para = porIdDesenho.get(edge.target);
@@ -383,7 +453,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
             const x1 = de.x + RAIO[de.kind];
             const x2 = para.x - RAIO[para.kind];
             const meio = (x1 + x2) / 2;
-            const d = `M ${x1} ${de.y} C ${meio} ${de.y}, ${meio} ${para.y}, ${x2} ${para.y}`;
+            const d = livre ? arestaLivre(de, para) : `M ${x1} ${de.y} C ${meio} ${de.y}, ${meio} ${para.y}, ${x2} ${para.y}`;
             const noCaminho = contexto?.arestas.has(chaveDaAresta(edge)) ?? false;
             return (
               <g key={chaveDaAresta(edge)} className="cg-entrar" opacity={para.opacidade}>
@@ -426,7 +496,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                 tabIndex={no.id === tabulavel ? 0 : -1}
                 aria-pressed={selecionado}
                 aria-expanded={no.kind === "GROUP" || no.expandivel ? no.expandido : undefined}
-                aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${DAST_RISK_LABELS[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} ${no.kind === "SUBDOMAIN" ? "subdomínios" : no.kind === "IP" ? "CVEs" : "findings"}` : ""}`}
+                aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${ROTULO_RISCO[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} ${NOME_DO_TOTAL[no.kind] ?? "findings"}` : ""}`}
                 className="cg-no cg-entrar cursor-grab outline-none active:cursor-grabbing"
                 opacity={apagado ? 0.28 : 1}
                 onFocus={() => setFocoId(no.id)}
@@ -478,7 +548,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                   fontWeight={internet ? 700 : 600}
                   fill={cor("--color-text-primary")}
                 >
-                  {encurtar(no.label, internet ? 20 : 26)}
+                  {encurtar(no.label, internet ? 20 : livre ? 22 : 26)}
                 </text>
                 <text y={raio + (internet ? 38 : 32)} textAnchor="middle" fontSize={11} fill={cor("--color-text-muted")}>
                   {subtitulo(no)}
@@ -491,7 +561,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
 
       {/* Legenda: mesma linguagem do nó (ícone na cor do tipo; findings pela severidade). */}
       <div className="pointer-events-none absolute bottom-3 left-3 mr-16 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-surface/85 px-3 py-2 text-xs text-fg-muted backdrop-blur">
-        {LEGENDA_TIPOS.filter((kind) => kind === "INTERNET" || kind === "ASSET" || visao.nodes.some((n) => n.kind === kind)).map((kind) => {
+        {LEGENDA_TIPOS.filter((kind) => visao.nodes.some((n) => n.kind === kind)).map((kind) => {
           const Icone = ICONE_DO_TIPO[kind];
           return (
             <span key={kind} className="flex items-center gap-1">
@@ -501,11 +571,12 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
           );
         })}
         <span className="flex items-center gap-2">
-          Finding:
-          {LEGENDA_RISCOS.map((risk) => (
+          Severidade:
+          {/* As extremas só quando existem (Crítico não existe no DAST; Informativo não existe em vulnerabilidade gerenciada). */}
+          {LEGENDA_RISCOS.filter((risk) => (risk !== "CRITICAL" && risk !== "INFO") || visao.nodes.some((n) => n.risk === risk)).map((risk) => (
             <span key={risk} className="flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: cor(tokenDoNo({ kind: "FINDING", risk })) }} />
-              {DAST_RISK_LABELS[risk]}
+              {ROTULO_RISCO[risk]}
             </span>
           ))}
         </span>

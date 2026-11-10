@@ -121,7 +121,9 @@ function resumo(detalhe: DetalheDoNo, targetUrl: string): string {
     case "FINDING": {
       const texto = detalhe.finding?.description ?? "O ZAP não trouxe descrição para este alerta.";
       return texto.length > 220 ? `${texto.slice(0, 219)}…` : texto;
-    }
+    }    // Tipos do Exposure Graph da empresa: não aparecem no grafo de um scan.
+    default:
+      return "";
   }
 }
 

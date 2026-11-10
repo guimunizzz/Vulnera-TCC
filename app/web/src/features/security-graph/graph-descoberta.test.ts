@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DastFinding, DastObservedAsset } from "../../types/dast.types";
-import { COLUNA_X, gruposDoNo, gruposParaMostrar, idDoGrupo, montarVisao2D, ocultosPorGrupo } from "./graph-2d-layout";
+import { COLUNA_X, gruposParaMostrar, idDoGrupo, montarVisao2D } from "./graph-2d-layout";
 import { buildSecurityGraph, ID_SUBDOMINIOS } from "./graph-model";
 import { descreverNo } from "./node-detail";
 
@@ -66,19 +66,10 @@ describe("grafo com ativos de descoberta", () => {
     expect(grupo).toMatchObject({ kind: "GROUP", ramo: "IP", label: "CVEs de 45.33.32.156" });
   });
 
-  it("3D: tudo fechado esconde CVEs, findings e subdomínios, mas não as portas (poucas)", () => {
-    const ocultos = ocultosPorGrupo(grafo, new Set());
-    expect([...ocultos].sort()).toEqual(["finding:c1", "finding:z1", ...Array.from({ length: 8 }, (_, i) => `subdomain:s${i}.x.com`)].sort());
-    expect(ocultosPorGrupo(grafo, new Set([idDoGrupo("ip:45.33.32.156"), ID_SUBDOMINIOS])).has("finding:c1")).toBe(false);
-  });
-
-  it("3D: o IP alterna o grupo de CVEs, Subdomínios alterna os filhos, porta e finding não agrupam", () => {
-    expect(gruposDoNo(grafo, "ip:45.33.32.156")).toEqual([idDoGrupo("ip:45.33.32.156")]);
-    expect(gruposDoNo(grafo, ID_SUBDOMINIOS)).toEqual([ID_SUBDOMINIOS]);
-    expect(gruposDoNo(grafo, "port:45.33.32.156:22")).toEqual([]);
-    expect(gruposDoNo(grafo, "finding:c1")).toEqual([]);
-    // Buscar um subdomínio escondido abre o nó agregado.
+  it("buscar um subdomínio escondido abre o nó agregado; porta e finding do IP abrem só o que precisam", () => {
     expect(gruposParaMostrar(grafo, "subdomain:s3.x.com")).toEqual([ID_SUBDOMINIOS]);
+    expect(gruposParaMostrar(grafo, "finding:c1")).toEqual([idDoGrupo("ip:45.33.32.156")]);
+    expect(gruposParaMostrar(grafo, "port:45.33.32.156:22")).toEqual([]);
   });
 
   it("sem IP (alvo privado sem ativo), CVE cai no endpoint como antes", () => {
