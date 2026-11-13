@@ -56,6 +56,14 @@ reaproveita o motor 2D do CyberGraph com um modelo próprio
 achado por `data-nav="/rota"`. O "visto" fica em `localStorage`
 (`vulnera:tour:<tour>:<usuário>`, `lib/tour.ts`). Para um tour novo, defina os
 passos (seletor, título, texto) e chame `useTourAutomatico(id, telaPronta)`.
+O botão **?** ao lado de "Importar relatório" (`code-import-help.tsx`, na página
+SAST/SCA e na aba do projeto) abre o guia de como gerar e importar, com
+comandos copiáveis.
+
+`.alvo-estendido` (área de toque de 44 px em controles densos) só aplica
+`position: relative` a hosts sem `absolute`/`fixed`. Por ser CSS fora de
+camada, a regra antiga vencia o utilitário e tirava o "×" do `DialogClose` do
+canto em todos os diálogos.
 
 Cada página é um chunk próprio, carregado por `paginaLazy`
 (`src/lib/lazy-page.ts`) sob o `LimiteDeRota`

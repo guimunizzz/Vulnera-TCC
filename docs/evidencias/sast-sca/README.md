@@ -43,6 +43,13 @@ escrito à mão:
 | 23 | `23-security-graph-layout-radial.jpg` | o mesmo grafo no layout radial |
 | 24 | `24-security-graph-sca-sbom-trivy.jpg` | grafo do SBOM do Trivy: pacote `bson@1.0.9` aberto com as 2 CVEs (crítica e média) e "corrige em 1.1.4" |
 | 25 | `25-security-graph-375px.jpg` | 375 px |
+| 26 | `26-tour-passo-ajuda.jpg` | passo novo do tour (3 de 6) apontando para o **?** |
+| 27 | `27-ajuda-botao-interrogacao.jpg` | o **?** ao lado de "Importar relatório", com a dica "Como gerar e importar o relatório" |
+| 28 | `28-ajuda-fluxo-e-semgrep.jpg` | o guia: fluxo em 5 passos, aba Semgrep com os comandos (instalado e Docker) e "Bom saber" |
+| 29 | `29-ajuda-trivy-copiado.jpg` | aba Trivy depois de **Copiar**: o comando foi para a área de transferência (conferido lendo-a no navegador) |
+| 30 | `30-ajuda-github-actions.jpg` | aba GitHub Actions com o workflow pronto |
+| 31 | `31-ajuda-na-aba-do-projeto.jpg` | o mesmo **?** na aba SAST/SCA do projeto |
+| 32 | `32-ajuda-375px.jpg` | o guia a 375 px (331 px de largura, sem rolagem horizontal) |
 | 17 | `17-pos-merge-admin-menu-exposure-graph-e-sast-sca.jpg` | depois do merge da `dev` com o PR #71: o ADMIN vê **Exposure Graph** e **SAST/SCA** no menu e as importações de todos os projetos. O PENTESTER vê SAST/SCA e não vê o Exposure Graph (que é de ADMIN e CLIENT) |
 
 ## Relatórios reais passados pelo parser

@@ -29,7 +29,10 @@ por humano, SLA, VRS, remediação e relatório.
 
 2. No menu, abra **SAST/SCA** (selo *new*), clique em **Importar relatório**,
    escolha o projeto e solte o arquivo. Também dá para importar pela aba
-   **SAST/SCA** do projeto.
+   **SAST/SCA** do projeto. Na dúvida, o botão **?** ao lado de "Importar
+   relatório" abre o guia: o fluxo em 5 passos, os comandos prontos para copiar
+   (Semgrep, Trivy, CodeQL e GitHub Actions; instalado ou por Docker) e o que é
+   bom saber antes de importar.
 3. A tela de detalhe mostra os números, a distribuição por severidade e a lista
    de achados com filtros (severidade, origem, triagem, busca e "só novos").
 4. Em cada achado: **triar** (confirmado / falso-positivo / risco aceito, com
@@ -239,6 +242,8 @@ erros de console.** As capturas estão em [`evidencias/sast-sca/`](evidencias/sa
 | SBOM sem componentes parecia "0 vulnerabilidades" | aviso explicando o lockfile ausente |
 | Recomendação do Semgrep trazia HTML e a propaganda "Enable cross-file analysis... sg.run/pro" | texto puro da ajuda, sem a linha promocional e descartada quando só repete a descrição |
 | PDF: URLs longas passavam da margem; capa com "Empresa" e "Aplicação" trocados | tokens longos quebrados; a API devolve `companyName` e a ferramenta foi para o subtítulo |
+| O "×" de fechar de todos os diálogos ficava abaixo da descrição, e não no canto | `.alvo-estendido { position: relative }` (CSS fora de camada, em `base.css`) vencia o utilitário `absolute`; a regra agora só vale para hosts não posicionados, e o painel do `Dialog` é `relative` |
+| Guia de importação mais largo que a tela no celular | as linhas longas de comando alargavam o painel; `min-w-0` deixa o `<pre>` rolar |
 | Teto de 300 nós do grafo passava em 3 (os ancestrais entravam na conta depois dos filhos) | o nó é contado ao entrar nele (teste com 400 achados) |
 | Achado que aparecia ao ligar "falsos-positivos" nascia dentro de um arquivo recolhido | o que começa aberto é recalculado a cada filtro, mantendo as escolhas da pessoa |
 | "Salvar nota" logo depois de mudar o status **desfazia a triagem** (AuditLog: `ACCEPTED_RISK → NEW` em 73 ms) | o controle de triagem guarda o último status confirmado pela API. **O mesmo componente atende o DAST, que também é corrigido** |
