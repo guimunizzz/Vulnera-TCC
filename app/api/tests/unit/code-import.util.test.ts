@@ -80,7 +80,8 @@ describe("code-import.util — SARIF", () => {
     expect(f.filePath).toBe("app/routes/session.js");
     expect(f.startLine).toBe(42);
     expect(f.snippet).toBe("res.send(req.query.name)");
-    expect(f.recommendation).toBe("Use a template engine that escapes output.");
+    // texto puro antes do markdown (a tela não renderiza markdown/HTML)
+    expect(f.recommendation).toBe("Escape output.");
     expect(f.helpUri).toContain("semgrep.dev");
   });
 
@@ -216,6 +217,41 @@ describe("code-import.util — formas vistas em relatórios reais (2026-11-13)",
     // Fingerprint "de verdade" que se repete em linhas diferentes também não distingue: vale a linha.
     const mesmoHash = { ...run, results: run.results.map((x) => ({ ...x, fingerprints: { "matchBasedId/v1": "abc" } })) };
     expect(new Set(parseCodeReport(sarif([mesmoHash])).findings.map((f) => f.fingerprint)).size).toBe(3);
+  });
+
+  it("CI-SARIF-09 ajuda do Semgrep: sem a linha de propaganda e sem repetir a descrição", () => {
+    const desc = "Data is being eval'd from a `curl` command.";
+    const run = {
+      tool: {
+        driver: {
+          name: "Semgrep OSS",
+          rules: [
+            {
+              id: "curl-eval",
+              name: "curl-eval",
+              fullDescription: { text: desc },
+              help: {
+                text: `${desc}\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro`,
+                markdown: `${desc}\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>`,
+              },
+            },
+            {
+              id: "outra",
+              name: "outra",
+              fullDescription: { text: "Algo inseguro." },
+              help: { text: "Use a função segura X.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro" },
+            },
+          ],
+        },
+      },
+      results: [
+        { ruleId: "curl-eval", message: { text: desc }, locations: [{ physicalLocation: { artifactLocation: { uri: "a.sh" }, region: { startLine: 1 } } }] },
+        { ruleId: "outra", message: { text: "Algo inseguro." }, locations: [{ physicalLocation: { artifactLocation: { uri: "b.js" }, region: { startLine: 2 } } }] },
+      ],
+    };
+    const [a, b] = parseCodeReport(sarif([run])).findings;
+    expect(a.recommendation).toBeNull();
+    expect(b.recommendation).toBe("Use a função segura X.");
   });
 
   it("CI-SARIF-08 Trivy SARIF com id NSWG-ECO-* continua SCA, com pacote", () => {

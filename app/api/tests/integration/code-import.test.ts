@@ -401,7 +401,7 @@ describe("Importação SAST/SCA — lista global e dados do relatório", () => {
     const visaoA = await request(app).get("/api/code-imports").set(auth(tokenA));
     expect(visaoA.status).toBe(200);
     expect(visaoA.body.map((i: { id: string }) => i.id)).toEqual([impA.body.id]);
-    expect(visaoA.body[0]).toMatchObject({ projectName: "Projeto A", applicationName: "App A" });
+    expect(visaoA.body[0]).toMatchObject({ projectName: "Projeto A", applicationName: "App A", companyName: "Empresa A" });
 
     const visaoAdmin = await request(app).get("/api/code-imports").set(auth(adminToken));
     expect(visaoAdmin.body.map((i: { id: string }) => i.id).sort()).toEqual([impA.body.id, impB.body.id].sort());

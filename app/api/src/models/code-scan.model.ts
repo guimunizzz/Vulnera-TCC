@@ -16,6 +16,7 @@ export interface CodeScanImportResponseDTO {
   projectId: string;
   projectName: string;
   applicationName: string;
+  companyName: string;
   format: CodeReportFormat;
   toolName: string;
   toolVersion: string | null;
@@ -83,6 +84,7 @@ export function toImportResponse(
     projectId: i.projectId,
     projectName: i.project.name,
     applicationName: i.project.application.name,
+    companyName: i.project.company.name,
     format: i.format as CodeReportFormat,
     toolName: i.toolName,
     toolVersion: i.toolVersion,

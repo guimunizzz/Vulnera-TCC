@@ -131,6 +131,29 @@ const ADVISORY_RE = /^(CVE-\d{4}-\d{4,}|GHSA(-[0-9a-z]{4}){3}|GO-\d{4}-\d+|PYSEC
  */
 const FINGERPRINT_PLACEHOLDER = /^requires login$/i;
 
+/**
+ * Linhas de propaganda que ferramentas anexam à ajuda da regra. Vistas no
+ * Semgrep OSS real (2026-11-13): "Enable cross-file analysis and Pro rules for
+ * free at sg.run/pro".
+ */
+const LINHA_PROMOCIONAL = /sg\.run\/pro|enable cross-file analysis/i;
+
+/**
+ * Ajuda da regra como recomendação: texto puro (a tela não renderiza
+ * markdown/HTML), sem propaganda, e descartada se só repete a descrição —
+ * o Semgrep grava em `help.text` a própria descrição + a linha promocional.
+ */
+function limparAjuda(texto: string | null, jaExibidos: Array<string | null>): string | null {
+  if (!texto) return null;
+  const limpo = texto
+    .split("\n")
+    .filter((linha) => !LINHA_PROMOCIONAL.test(linha))
+    .join("\n")
+    .trim();
+  if (!limpo) return null;
+  return jaExibidos.some((t) => t && t.trim() === limpo) ? null : limpo;
+}
+
 /** 1ª frase da mensagem, curta o bastante para título (mensagens de Semgrep são parágrafos). */
 function primeiraFrase(message: string | null): string | null {
   if (!message) return null;
@@ -298,7 +321,7 @@ function parseSarif(doc: Json): ParsedCodeReport {
       const nomeUtil = nome && nome !== ruleId ? nome : null;
       const title = str(shortUtil ?? nomeUtil ?? primeiraFrase(message) ?? ruleId, 500)!;
 
-      const helpText = isObj(rule.help) ? (str(rule.help.markdown, 10000) ?? str(rule.help.text, 10000)) : null;
+      const helpText = limparAjuda(isObj(rule.help) ? (str(rule.help.text, 10000) ?? str(rule.help.markdown, 10000)) : null, [message, fullDesc]);
       const description = [message, fullDesc && fullDesc !== message ? fullDesc : null].filter(Boolean).join("\n\n") || null;
 
       pendentes.push({

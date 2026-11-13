@@ -52,6 +52,15 @@ function cortar(texto: string, max = MAX_TEXTO): string {
   return texto.length > max ? `${texto.slice(0, max - 1)}… (texto completo no Vulnera)` : texto;
 }
 
+/**
+ * `wrapText` só quebra em espaço: uma URL ou um hash de 120 caracteres passava
+ * da margem direita (visto no PDF real do Semgrep). Corta tokens longos em
+ * pedaços que cabem na linha.
+ */
+export function quebrarTokensLongos(texto: string, max = 70): string {
+  return texto.replace(new RegExp(`\\S{${max + 1},}`, "g"), (token) => token.match(new RegExp(`.{1,${max}}`, "g"))!.join(" "));
+}
+
 /** Severidade do vocabulário do PDF base: INFO cai no cinza de NONE, como na UI. */
 function corDaSeveridade(sev: string): RGB {
   return severityColor(sev === "INFO" ? "NONE" : sev);
@@ -93,11 +102,11 @@ export async function generateCodeImportReportPdf(data: CodeImportReportData): P
   drawCoverPage(ctx, {
     reportTypeLabel: "Relatório SAST/SCA",
     projectName: imp.projectName,
-    companyName: imp.applicationName,
-    applicationName: `${ferramenta} · ${CODE_FORMAT_LABELS[imp.format]}`,
+    companyName: imp.companyName,
+    applicationName: imp.applicationName,
     generatedAt: new Date(data.generatedAt),
     subtitle:
-      `Importação do arquivo ${imp.fileName} por ${imp.uploadedByName} em ` +
+      `${ferramenta} (${CODE_FORMAT_LABELS[imp.format]}) · importação do arquivo ${imp.fileName} por ${imp.uploadedByName} em ` +
       `${new Date(imp.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.`,
   });
 
@@ -168,7 +177,7 @@ export async function generateCodeImportReportPdf(data: CodeImportReportData): P
       cursor = drawText(
         ctx,
         cursor,
-        `• [${CODE_SEVERITY_LABELS[r.severity]}] ${r.title}${r.location ? ` — ${r.location}` : ""}${r.promotedVulnerability ? " (vulnerabilidade registrada: retestar)" : ""}`,
+        quebrarTokensLongos(`• [${CODE_SEVERITY_LABELS[r.severity]}] ${r.title}${r.location ? ` — ${r.location}` : ""}${r.promotedVulnerability ? " (vulnerabilidade registrada: retestar)" : ""}`),
         { size: 9, gapAfter: 2 },
       );
     }
@@ -218,7 +227,7 @@ function drawKpiRow(ctx: ReportContext, cursor: Cursor, items: KpiItem[]): Curso
 function drawLabeledBlock(ctx: ReportContext, cursor: Cursor, label: string, content: string): Cursor {
   const step = ensureSpace(ctx, cursor, 30);
   step.page.drawText(label.toUpperCase(), { x: MARGIN, y: step.y, size: 8, font: ctx.fonts.bold, color: COLORS.accent });
-  return drawText(ctx, { page: step.page, y: step.y - 13 }, content, { size: 9.5, gapAfter: 10 });
+  return drawText(ctx, { page: step.page, y: step.y - 13 }, quebrarTokensLongos(content), { size: 9.5, gapAfter: 10 });
 }
 
 function drawFindingSection(ctx: ReportContext, cursor: Cursor, f: CodeFinding, index: number): Cursor {
@@ -226,7 +235,7 @@ function drawFindingSection(ctx: ReportContext, cursor: Cursor, f: CodeFinding, 
   // Chip numa linha e título na seguinte: `drawText` sempre começa na margem,
   // e títulos de SARIF são longos (quebram em várias linhas).
   drawChip(step.page, ctx.fonts, CODE_SEVERITY_LABELS[f.severity], MARGIN, step.y - 14, corDaSeveridade(f.severity));
-  step = drawText(ctx, { page: step.page, y: step.y - 34 }, `${index}. ${f.title}`, { font: ctx.fonts.bold, size: 12, gapAfter: 8 });
+  step = drawText(ctx, { page: step.page, y: step.y - 34 }, quebrarTokensLongos(`${index}. ${f.title}`, 50), { font: ctx.fonts.bold, size: 12, gapAfter: 8 });
 
   const meta = [
     f.category === "SAST" ? "Código-fonte (SAST)" : "Dependência (SCA)",
@@ -238,7 +247,7 @@ function drawFindingSection(ctx: ReportContext, cursor: Cursor, f: CodeFinding, 
   ]
     .filter(Boolean)
     .join(" · ");
-  step = drawText(ctx, step, meta, { size: 9, color: COLORS.mutedInk, gapAfter: 10 });
+  step = drawText(ctx, step, quebrarTokensLongos(meta), { size: 9, color: COLORS.mutedInk, gapAfter: 10 });
 
   step = drawLabeledBlock(ctx, step, f.category === "SAST" ? "Local" : "Componente", localDoAchado(f));
   if (f.fixedVersion) step = drawLabeledBlock(ctx, step, "Versão corrigida", f.fixedVersion);

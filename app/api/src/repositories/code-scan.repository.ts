@@ -23,12 +23,12 @@ export type CodeFindingWithRelations = CodeFinding & {
 
 const IMPORT_INCLUDE = {
   uploadedBy: { select: { id: true, name: true } },
-  project: { select: { id: true, name: true, application: { select: { name: true } } } },
+  project: { select: { id: true, name: true, application: { select: { name: true } }, company: { select: { name: true } } } },
 } satisfies Prisma.CodeScanImportInclude;
 
 export type CodeScanImportWithUploader = CodeScanImport & {
   uploadedBy: { id: string; name: string };
-  project: { id: string; name: string; application: { name: string } };
+  project: { id: string; name: string; application: { name: string }; company: { name: string } };
 };
 
 export type CreateCodeImportData = Omit<Prisma.CodeScanImportUncheckedCreateInput, "id" | "findings" | "createdAt">;

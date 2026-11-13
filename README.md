@@ -3,7 +3,7 @@
 <div align="center" style="padding: 24px; border-radius: 16px; border: 1px solid #7c3aed;">
   <h1>Vulnera</h1>
   <p><strong>Da descoberta ao acompanhamento da correção.</strong></p>
-  <p>Plataforma de gestão de vulnerabilidades, análises DAST e remediação com isolamento por empresa.</p>
+  <p>Plataforma de gestão de vulnerabilidades, análises DAST, importação SAST/SCA e remediação com isolamento por empresa.</p>
   <p>
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" />
     <img alt="React" src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB" />
@@ -11,13 +11,14 @@
     <img alt="OWASP ZAP" src="https://img.shields.io/badge/OWASP-ZAP-00549E?style=flat-square" />
     <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" />
   </p>
-  <p><a href="#executar-localmente">Executar</a> · <a href="#fluxo-do-produto">Funcionalidades</a> · <a href="#dast-e-descoberta-de-endpoints">DAST</a> · <a href="#evidências-da-interface">Evidências</a> · <a href="#documentação">Documentação</a></p>
+  <p><a href="#executar-localmente">Executar</a> · <a href="#fluxo-do-produto">Funcionalidades</a> · <a href="#dast-e-descoberta-de-endpoints">DAST</a> · <a href="#sastsca-relatórios-de-código-e-dependências">SAST/SCA</a> · <a href="#evidências-da-interface">Evidências</a> · <a href="#documentação">Documentação</a></p>
 </div>
 
 Projeto de TCC. O Vulnera reúne inventário de aplicações, projetos de análise,
 findings revisados por profissionais e acompanhamento da remediação. O ZAP
-automatiza a descoberta e a análise passiva; a triagem e a classificação CVSS
-continuam exigindo revisão humana.
+automatiza a descoberta e a análise passiva, e relatórios de Semgrep, CodeQL e
+Trivy (SARIF e CycloneDX) trazem o que está no código e nas dependências; a
+triagem e a classificação CVSS continuam exigindo revisão humana.
 
 > O GitHub sanitiza o HTML dos READMEs e pode remover atributos `style`. Os
 > blocos abaixo usam também estrutura semântica, alinhamento e tabelas para
@@ -30,7 +31,9 @@ flowchart LR
     A[Empresa e assinatura] --> B[Aplicação]
     B --> C[Projeto e equipe]
     C --> D[Scan DAST autorizado]
+    C --> S[Importação SAST/SCA]
     D --> E[Triagem dos achados]
+    S --> E
     E --> F[Promoção manual + revisão CVSS]
     F --> G[SLA, prioridade e remediação]
     G --> H[Relatórios e acompanhamento]
@@ -42,6 +45,7 @@ flowchart LR
     <tr><td><strong>Inventário e projetos</strong></td><td>Aplicações por empresa, limites de plano, wizard de criação de projeto e equipe de pentesters.</td></tr>
     <tr><td><strong>Findings</strong></td><td>Busca global, filtros e consultas salvas; exportação em CSV e em <strong>Excel formatado</strong> (dashboard, acompanhamento); CVSS 3.1, severidade calculada e override justificado com auditoria.</td></tr>
     <tr><td><strong>DAST</strong></td><td>Modo Real explícito, Spider tradicional do ZAP, análise passiva, progresso, fila, cancelamento, HTML original e PDF.</td></tr>
+    <tr><td><strong>SAST/SCA</strong> <sub>new</sub></td><td>Importação de SARIF 2.1.0 (Semgrep, CodeQL, Trivy...) e SBOM CycloneDX por projeto; comparação com a importação anterior, triagem herdada, promoção com CVSS revisado e PDF próprio.</td></tr>
     <tr><td><strong>Gestão dos achados</strong></td><td>Triagem com nota, promoção manual para vulnerabilidade de um projeto e comparação entre execuções reais do mesmo alvo.</td></tr>
     <tr><td><strong>Remediação</strong></td><td>Responsável, comentários e evidências; quadro de correção, SLA por severidade e Vulnera Risk Score com contexto da aplicação.</td></tr>
     <tr><td><strong>Aceite e playbooks</strong></td><td>Aceite formal de risco com revisão e validade; catálogo OWASP Top 10 e playbooks personalizados por empresa.</td></tr>
@@ -54,8 +58,8 @@ flowchart LR
   <thead><tr><th>Perfil</th><th>Atuação principal</th></tr></thead>
   <tbody>
     <tr><td>ADMIN</td><td>Gestão administrativa, aprovação de assinaturas e acesso global aos scans.</td></tr>
-    <tr><td>PENTESTER</td><td>Execução e triagem dos próprios scans; promoção para projetos dos quais é membro.</td></tr>
-    <tr><td>CLIENT</td><td>Acompanhamento e operações autorizadas dentro da própria empresa; sem acesso ao módulo DAST.</td></tr>
+    <tr><td>PENTESTER</td><td>Execução e triagem dos próprios scans; importação SAST/SCA, triagem e promoção nos projetos dos quais é membro.</td></tr>
+    <tr><td>CLIENT</td><td>Acompanhamento e operações autorizadas dentro da própria empresa; sem acesso aos módulos DAST e SAST/SCA (achado de ferramenta não triado).</td></tr>
   </tbody>
 </table>
 
@@ -216,6 +220,45 @@ Zero achados ou conclusão do Spider não comprovam ausência de vulnerabilidade
 nem cobertura completa. O PDF identifica o perfil registrado por execução;
 scans históricos sem metadados não recebem a metodologia nova retroativamente.
 
+## SAST/SCA: relatórios de código e dependências
+
+O Vulnera **não executa** os scanners de código: ele importa o relatório que a
+pipeline já gera e aplica a ele o fluxo de gestão do produto
+([ADR-052](docs/Vulnera/07-Decisoes/ADR-052%20-%20Importacao%20SAST%20e%20SCA%20por%20SARIF%20e%20CycloneDX.md),
+[guia completo](docs/SAST_SCA.md)).
+
+1. Gere o relatório, por exemplo `semgrep scan --config p/default --sarif --output semgrep.sarif`
+   ou `trivy fs --scanners vuln --format cyclonedx --output sbom.cdx.json .`.
+2. Abra **SAST/SCA** no menu (ou a aba do projeto), clique em **Importar
+   relatório**, escolha o projeto e solte o arquivo.
+3. Trie os achados (confirmado, falso-positivo, risco aceito) e promova os
+   relevantes, revisando o vetor CVSS.
+4. Importe a próxima versão: a aba **Comparação** mostra o que é novo, o que
+   continua (com a triagem preservada) e o que foi resolvido. Os resolvidos que
+   já eram vulnerabilidades ficam marcados para reteste.
+5. **Baixar PDF** gera o relatório da importação.
+
+<table>
+  <tr><th>Ponto</th><th>Como funciona</th></tr>
+  <tr><td>Formatos</td><td>SARIF 2.1.0 e CycloneDX ≥ 1.4 com <code>vulnerabilities</code>; até 10 MB e 5.000 achados (acima disso é recusado, nunca truncado).</td></tr>
+  <tr><td>Reimportação</td><td>Fingerprint estável por ferramenta, regra, arquivo e fingerprint da ferramenta (ou pacote@versão); compara com a importação anterior do mesmo projeto e ferramenta.</td></tr>
+  <tr><td>Promoção</td><td>Destino é o projeto da importação; score calculado do vetor confirmado (RN10); vetor do NVD sugerido quando o SBOM traz; sem duplicar entre importações.</td></tr>
+  <tr><td>Acesso</td><td>ADMIN e PENTESTER membro do projeto; <code>companyId</code> herdado do projeto; CLIENT recebe 403.</td></tr>
+</table>
+
+<div align="center" style="margin: 16px 0; padding: 12px; border-radius: 12px;">
+  <a href="docs/evidencias/sast-sca/08-comparacao-resolvidos-com-vulnerabilidade-para-retestar.jpg"><img src="docs/evidencias/sast-sca/06-reimportacao-novos-resolvidos-triagem-herdada.jpg" alt="Reimportação do relatório Semgrep do NodeGoat depois da correção: 29 achados, 0 novos e 6 resolvidos, com a triagem preservada" width="100%" /></a>
+  <p><strong>Semgrep real no OWASP NodeGoat, antes e depois de corrigir os <code>eval</code>.</strong> 6 achados resolvidos e a triagem anterior preservada.</p>
+</div>
+
+<table>
+  <thead><tr><th>SBOM do Trivy: promoção com o vetor do NVD</th><th>Página global SAST/SCA</th></tr></thead>
+  <tbody><tr>
+    <td><a href="docs/evidencias/sast-sca/10-promover-sca-vetor-da-ferramenta.jpg"><img src="docs/evidencias/sast-sca/10-promover-sca-vetor-da-ferramenta.jpg" alt="Promoção de uma CVE do SBOM do Trivy com vetor CVSS informado pela ferramenta e categoria A06" width="600" /></a></td>
+    <td><a href="docs/evidencias/sast-sca/12-pagina-global-sast-sca.jpg"><img src="docs/evidencias/sast-sca/12-pagina-global-sast-sca.jpg" alt="Página SAST/SCA com números das últimas importações e a lista por projeto" width="600" /></a></td>
+  </tr></tbody>
+</table>
+
 ## Stack e arquitetura
 
 <table>
@@ -252,6 +295,15 @@ usuário, escrita e endpoints específicos.
 
 ## Validação atual
 
+**13/11/2026 — SAST/SCA (branch `feat/sast-sca-ingestion`).**
+
+<table>
+  <tr><th>Verificação</th><th>Resultado</th></tr>
+  <tr><td>API</td><td>804/805 testes em 53 suítes (31 novos: 16 do parser e 15 de integração, com tenancy negativa); tsc limpo. A falha é o FX-I-01 da exportação Excel, que não foi alterada: numa instalação limpa entra o <code>content-disposition</code> 2.x, que tira as aspas do <code>filename</code> (pendência API-FUT-02).</td></tr>
+  <tr><td>Web</td><td>557/557 testes em 64 arquivos (18 novos); build aprovado; lint 0 erros/9 avisos anteriores; contraste 132 pares, 0 falhas.</td></tr>
+  <tr><td>Ferramentas reais</td><td>Semgrep 1.184.0 e Trivy 0.76.2 contra OWASP NodeGoat e Juice Shop; reimportação depois de uma correção real (6 resolvidos); fluxo completo pela interface com 0 erros de console. Ver <a href="docs/evidencias/sast-sca/README.md">evidências</a>.</td></tr>
+</table>
+
 **09/10/2026 — Spider, relatórios e documentação conferidos na stack Docker.**
 
 <table>
@@ -287,6 +339,7 @@ mantêm suas próprias datas e limites. Relatório desta atualização:
 
 <table>
   <tr><th>Área</th><th>Limite atual</th></tr>
+  <tr><td>SAST/SCA</td><td>Importa relatórios, não executa scanners nem confirma exploração; sem ingestão direta pela CI nem consulta própria a OSV/NVD para SBOM sem CVEs.</td></tr>
   <tr><td>DAST</td><td>Sem autenticação no alvo, execução JavaScript/AJAX ou exploração ativa. Queries e caminhos sensíveis são excluídos; não garante descoberta completa.</td></tr>
   <tr><td>Rede e execução</td><td>Sem bloqueio SSRF por faixa de endereço, conforme ADR-045. Contas de scan alcançam serviços HTTP acessíveis ao ZAP. Socket Docker é adequado à demonstração local.</td></tr>
   <tr><td>Fila e rate limiting</td><td>Estado em memória por instância; não há cotas distribuídas nem retomada de scans após restart.</td></tr>
@@ -312,6 +365,7 @@ Consulte o [backlog](docs/BACKLOG.md) antes de iniciar novas features.
   <tr><td><a href="AGENTS.md">AGENTS.md</a> / <a href="PRD_VIVO.md">PRD_VIVO.md</a></td><td>Convenções e estado de implementação</td></tr>
   <tr><td><a href="docs/DEMO.md">Demo</a></td><td>Credenciais e roteiro de apresentação</td></tr>
   <tr><td><a href="docs/DAST.md">DAST</a></td><td>Modos, execução, configuração e diagnóstico</td></tr>
+  <tr><td><a href="docs/SAST_SCA.md">SAST/SCA</a></td><td>Importação de SARIF e CycloneDX, regras de reimportação, API, segurança e validação com Semgrep/Trivy reais</td></tr>
   <tr><td><a href="docs/EXPOSURE_REMEDIATION.md">Exposure &amp; Remediation</a></td><td>SLA, VRS, aceite de risco, playbooks e quadro</td></tr>
   <tr><td><a href="docs/FINDINGS_QUERY.md">Findings query</a> / <a href="docs/DESIGN_SYSTEM.md">Design system</a></td><td>Busca, componentes e acessibilidade</td></tr>
   <tr><td><a href="docs/FINDINGS_EXCEL_EXPORT.md">Exportação Excel</a></td><td>Como usar, limites, segurança, decisões e validação</td></tr>

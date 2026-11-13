@@ -14,6 +14,7 @@ export interface CodeScanImport {
   projectId: string;
   projectName: string;
   applicationName: string;
+  companyName: string;
   format: CodeReportFormat;
   toolName: string;
   toolVersion: string | null;

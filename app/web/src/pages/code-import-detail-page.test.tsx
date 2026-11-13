@@ -28,7 +28,7 @@ vi.mock("../lib/api/dast.api", () => ({ dastApi: dast }));
 vi.mock("../lib/api/projects.api", () => ({ projectsApi: { list: async () => [] } }));
 
 const IMPORT: CodeScanImport = {
-  id: "imp-2", projectId: "p1", projectName: "Portal", applicationName: "App Portal", format: "SARIF",
+  id: "imp-2", projectId: "p1", projectName: "Portal", applicationName: "App Portal", companyName: "TechNova", format: "SARIF",
   toolName: "Semgrep OSS", toolVersion: "1.95.0", fileName: "semgrep.sarif", uploadedByName: "Pentester A",
   previousImportId: "imp-1", totalFindings: 2, newFindings: 1, persistedFindings: 1, resolvedFindings: 3,
   componentsCount: null, warningMessage: null, createdAt: "2026-11-13T10:00:00Z",

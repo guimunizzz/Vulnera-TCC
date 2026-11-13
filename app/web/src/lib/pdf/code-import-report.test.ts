@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
-import { generateCodeImportReportPdf, resumirParaRelatorio } from "./code-import-report";
+import { generateCodeImportReportPdf, quebrarTokensLongos, resumirParaRelatorio } from "./code-import-report";
 import type { CodeFinding, CodeImportReportData } from "../../types/code-import.types";
 
 function achado(over: Partial<CodeFinding>): CodeFinding {
@@ -26,6 +26,14 @@ const FINDINGS = [
 ];
 
 describe("PDF SAST/SCA", () => {
+  it("quebra tokens longos (URLs, hashes) para não passarem da margem", () => {
+    const url = `https://owasp.org/Top10/${"A".repeat(150)}`;
+    const partes = quebrarTokensLongos(`Ver ${url} agora`).split(" ");
+    expect(partes.every((p) => p.length <= 70)).toBe(true);
+    expect(partes.join("")).toBe(`Ver${url}agora`);
+    expect(quebrarTokensLongos("texto normal")).toBe("texto normal");
+  });
+
   it("falso-positivo fica fora da lista e do gráfico, mas é contado", () => {
     const r = resumirParaRelatorio(FINDINGS);
     expect(r.visiveis.map((f) => f.id)).toEqual(["1", "2", "4"]);
@@ -38,7 +46,7 @@ describe("PDF SAST/SCA", () => {
   it("gera um PDF válido mesmo com emoji e seta no texto da ferramenta", async () => {
     const data: CodeImportReportData = {
       import: {
-        id: "imp", projectId: "p", projectName: "Portal", applicationName: "App", format: "SARIF", toolName: "Semgrep OSS",
+        id: "imp", projectId: "p", projectName: "Portal", applicationName: "App", companyName: "TechNova", format: "SARIF", toolName: "Semgrep OSS",
         toolVersion: "1.95.0", fileName: "semgrep.sarif", uploadedByName: "Pentester", previousImportId: "imp-0", totalFindings: 4,
         newFindings: 1, persistedFindings: 3, resolvedFindings: 1, componentsCount: null, warningMessage: null,
         createdAt: "2026-11-13T10:00:00Z", severityCounts: { CRITICAL: 1, HIGH: 1, MEDIUM: 1, LOW: 1, INFO: 0 },

@@ -39,6 +39,13 @@ todas usam `AppLayout`, que fornece navegação, cabeçalho, alternância de tem
 tela inteira. `/dast/scans/:id/report` também é uma tela cheia separada do
 layout.
 
+`/sast-sca` e `/sast-sca/imports/:id` (ADR-052) têm os papéis do DAST (ADMIN e
+PENTESTER). O item do menu tem o selo **new** (`novo: true` em `sidebar.tsx`),
+que é fixo e só sai quando alguém o remove do código (D17.3). A página do
+projeto ganha a aba **SAST/SCA**, oculta para CLIENT. O PDF da importação e o
+`downloadBlob` são importados sob demanda, para que o `pdf-lib` não entre no
+chunk da página (o mesmo problema do WEB-FUT-01).
+
 Cada página é um chunk próprio, carregado por `paginaLazy`
 (`src/lib/lazy-page.ts`) sob o `LimiteDeRota`
 (`src/components/layout/route-boundary.tsx`): skeleton enquanto baixa e uma
@@ -186,7 +193,8 @@ cabeçalho, `data-ops-surface` para superfícies de dados e `data-ops-lift` para
 cards interativos. Variantes de hero usam **os mesmos tokens**, alterando
 composição, luz e borda conforme o contexto. Aplicação destaca superfície de
 ataque; Projeto mostra pipeline; Finding sinaliza ameaça; DAST acrescenta um
-radar CSS discreto; Playbooks lembra uma base de conhecimento; Maturidade e
+radar CSS discreto; SAST/SCA desenha linhas de código estilizadas (uma delas
+na cor de severidade alta); Playbooks lembra uma base de conhecimento; Maturidade e
 Governança mantêm a hierarquia própria. O scan ativo recebe um pequeno pulso
 CSS ao lado de seu progresso real. Não há paleta nem cena 3D por módulo.
 

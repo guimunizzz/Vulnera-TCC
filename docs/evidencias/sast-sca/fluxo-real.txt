@@ -1,0 +1,29 @@
+login ok
+📸 01-menu-sast-sca-new-e-estado-vazio
+projeto: Pentest API — Integração B2B
+📸 02-dialogo-importar-sarif
+importação 1: http://localhost:3100/sast-sca/imports/cmweuujgr009rbr4gpl8f1cb2 · 35 de 35 achados
+📸 03-detalhe-importacao-semgrep-nodegoat
+triagem risco aceito ok
+📸 04-achado-expandido-triagem-e-detalhe
+📸 05-promover-sast-vetor-revisado
+promoção SAST ok
+importação 2: http://localhost:3100/sast-sca/imports/cmweuumv700b2br4g51ustkhb
+📸 06-reimportacao-novos-resolvidos-triagem-herdada
+📸 07-triagem-herdada-na-reimportacao
+📸 08-comparacao-resolvidos-com-vulnerabilidade-para-retestar
+resolvidos na comparação: 6
+PDF: sast-sca-pentest-api-integracao-b2b-semgrep-oss-2026-11-13.pdf
+projeto: Pentest API — Integração B2B
+📸 09-detalhe-sbom-cyclonedx-trivy
+📸 10-promover-sca-vetor-da-ferramenta
+promoção SCA ok
+projeto: Análise Mobile — App TechNova
+projeto: Análise Mobile — App TechNova
+📸 11-sbom-vazio-aviso-sem-lockfile
+📸 12-pagina-global-sast-sca
+📸 13-aba-sast-sca-no-projeto
+📸 14-detalhe-tema-claro
+375px: scrollWidth do documento = 379
+📸 15-detalhe-375px
+erros de console: 0
