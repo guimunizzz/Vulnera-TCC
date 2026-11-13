@@ -215,7 +215,7 @@ export default function CyberGraph({
               </span>
               {/* Escopo honesto: só as fontes que rodaram neste scan. */}
               <span
-                className="rounded-full border border-subtle bg-inset px-2 py-0.5"
+                className="rounded-full border border-subtle bg-inset px-2 py-1"
                 title="Fontes que rodaram neste scan. Status e mensagem de cada uma estão na faixa de sensores acima."
               >
                 {sensores.length > 1
@@ -288,7 +288,7 @@ export default function CyberGraph({
                     setAvisoBusca("");
                   }}
                   placeholder="Buscar nó (endpoint, finding, alvo)…"
-                  className="h-9 w-full rounded-control border border-default bg-inset pl-8 pr-2 text-sm text-fg placeholder:text-fg-muted"
+                  className="h-10 w-full rounded-control border border-default bg-inset pl-8 pr-2 text-sm text-fg placeholder:text-fg-muted"
                 />
               </label>
               <datalist id="cg-nomes">
@@ -311,7 +311,7 @@ export default function CyberGraph({
                     aria-pressed={ativo}
                     onClick={() => alternarRisco(risco)}
                     className={cn(
-                      "alvo-estendido flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                      "alvo-estendido flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                       ativo ? "text-fg" : "text-fg-muted line-through opacity-60",
                     )}
                     style={{ borderColor: ativo ? cor(token, 0.6) : undefined, background: ativo ? cor(token, 0.12) : undefined }}

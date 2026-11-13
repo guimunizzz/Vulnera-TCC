@@ -582,12 +582,13 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
           const Icone = ICONE_DO_TIPO[kind];
           return (
             <span key={kind} className="flex items-center gap-1">
-              <Icone className="h-3.5 w-3.5" style={{ color: cor(tokenDoNo({ kind })) }} aria-hidden="true" />
+              <Icone className="h-4 w-4" style={{ color: cor(tokenDoNo({ kind })) }} aria-hidden="true" />
               {LEGENDA_NOME[kind]}
             </span>
           );
         })}
-        <span className="flex items-center gap-2">
+        {/* Quebra também: a 375 px a linha inteira não cabia e a legenda passava por baixo do zoom. */}
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           Severidade:
           {/* As extremas só quando existem (Crítico não existe no DAST; Informativo não existe em vulnerabilidade gerenciada). */}
           {LEGENDA_RISCOS.filter((risk) => (risk !== "CRITICAL" && risk !== "INFO") || visao.nodes.some((n) => n.risk === risk)).map((risk) => (
@@ -599,8 +600,9 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
         </span>
       </div>
 
+      {/* No canto de cima: embaixo a legenda (largura variável) e o zoom ocupam a borda inteira. */}
       {minimapa && (
-        <div className="absolute bottom-3 right-14 overflow-hidden rounded-control border border-subtle bg-surface/90 shadow-raised backdrop-blur">
+        <div className="absolute right-3 top-3 overflow-hidden rounded-control border border-subtle bg-surface/90 shadow-raised backdrop-blur">
           <svg
             width={MINIMAPA.w}
             height={MINIMAPA.h}

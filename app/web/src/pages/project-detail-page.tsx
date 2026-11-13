@@ -204,7 +204,7 @@ export function ProjectDetailPage() {
             <h1 className="min-w-0 break-words text-2xl font-bold text-fg">{project.name}</h1>
             <StatusBadge status={project.status} />
             {criticalOpenCount > 0 && (
-              <span className="rounded-full bg-severity-critical/20 px-2.5 py-1 text-xs font-medium text-severity-critical-ink">
+              <span className="rounded-full bg-severity-critical/20 px-3 py-1 text-xs font-medium text-severity-critical-ink">
                 {criticalOpenCount} crítico{criticalOpenCount > 1 ? "s" : ""} aberto{criticalOpenCount > 1 ? "s" : ""}
               </span>
             )}

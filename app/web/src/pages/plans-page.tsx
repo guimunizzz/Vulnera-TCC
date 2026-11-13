@@ -29,7 +29,7 @@ function EsqueletoDePlano() {
   return (
     <div className="flex flex-col gap-4 rounded-container border border-subtle bg-surface p-6">
       <Skeleton className="h-5 w-24" />
-      <Skeleton className="h-8 w-32" />
+      <Skeleton className="h-8 w-[8rem]" />
       <div className="flex flex-col gap-2 pt-2">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
@@ -110,7 +110,8 @@ export function PlansPage() {
                     to="/register"
                     className="press mt-6 inline-flex h-10 items-center justify-center rounded-control bg-accent px-4 text-sm font-medium text-accent-fg shadow-raised transition-colors duration-fast hover:bg-accent-hover"
                   >
-                    Começar com {plano.name}
+                    {/* Uma string só: num inline-flex, "texto {expr}" vira dois itens e o espaço entre eles some ("Começar comPRO"). */}
+                    {`Começar com ${plano.name}`}
                   </Link>
                 </Card>
               </StaggerItem>

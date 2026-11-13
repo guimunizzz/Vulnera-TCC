@@ -150,7 +150,7 @@ export function ApplicationDashboardPage() {
       <header data-ops-hero="application" className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">Superfície de ataque</p>
-          <h1 className="text-2xl font-bold text-fg">{aplicacao.data?.name ?? <Skeleton className="h-7 w-48" />}</h1>
+          <h1 className="text-2xl font-bold text-fg">{aplicacao.data?.name ?? <Skeleton className="h-8 w-[12rem]" />}</h1>
           {/* Contexto de risco (CP-1): o que esta aplicação é, antes dos números. */}
           {aplicacao.data && <RiskContextChips contexto={aplicacao.data} />}
           <p className="text-sm text-fg-muted">
@@ -335,8 +335,8 @@ function EsqueletoKpi() {
   return (
     <Card className="flex flex-col gap-3">
       <Skeleton className="h-3 w-24" />
-      <Skeleton className="h-9 w-20" />
-      <Skeleton className="h-3 w-28" />
+      <Skeleton className="h-10 w-20" />
+      <Skeleton className="h-3 w-[7rem]" />
     </Card>
   );
 }
@@ -373,7 +373,7 @@ function MttrPorSeveridade({ mttr }: { mttr: Record<string, { medianaDias: numbe
               textoDoValor={`${l.medianaDias} dias, mediana de ${l.amostras} remediações`}
             />
           </div>
-          <span className="w-28 shrink-0 text-right font-mono text-sm text-fg" data-numeric>
+          <span className="w-[7rem] shrink-0 text-right font-mono text-sm text-fg" data-numeric>
             {l.medianaDias} d
             <span className="ml-1 text-xs text-fg-muted">({l.amostras})</span>
           </span>
@@ -473,7 +473,7 @@ function Comparativo({
   aoTentarNovamente: () => void;
 }) {
   if (erro) return <ErrorState aoTentarNovamente={aoTentarNovamente} />;
-  if (carregando) return <Skeleton className="h-64 w-full" />;
+  if (carregando) return <Skeleton className="h-[16rem] w-full" />;
 
   return (
     <Card titulo="Aplicações da empresa" descricao="Ordenável por qualquer coluna. A linha destacada é a aplicação atual." semPadding>

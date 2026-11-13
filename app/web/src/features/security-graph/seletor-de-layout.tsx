@@ -35,7 +35,7 @@ export function SeletorDeLayout({
   disponiveis?: LayoutId[];
 }) {
   return (
-    <div role="group" aria-label="Layout do grafo" className="inline-flex flex-wrap gap-0.5 rounded-control border border-subtle bg-inset p-0.5">
+    <div role="group" aria-label="Layout do grafo" className="inline-flex flex-wrap gap-1 rounded-control border border-subtle bg-inset p-1">
       {LAYOUTS.filter((l) => disponiveis.includes(l.id)).map((l) => {
         const Icone = ICONE[l.id];
         const ativo = valor === l.id;
@@ -47,11 +47,11 @@ export function SeletorDeLayout({
             title={l.descricao}
             onClick={() => aoMudar(l.id)}
             className={cn(
-              "alvo-estendido flex items-center gap-1.5 rounded-control px-2.5 py-1 text-xs font-semibold transition-colors",
+              "alvo-estendido flex items-center gap-2 rounded-control px-3 py-1 text-xs font-semibold transition-colors",
               ativo ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg",
             )}
           >
-            <Icone className="h-3.5 w-3.5" aria-hidden="true" />
+            <Icone className="h-4 w-4" aria-hidden="true" />
             {l.nome}
           </button>
         );

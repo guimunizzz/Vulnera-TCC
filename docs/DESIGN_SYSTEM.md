@@ -304,6 +304,17 @@ linhas deixa o texto colado na borda arredondada.
 não gera CSS e não avisa. O rodapé da landing (`py-14`) e os chips de contexto
 de risco (`gap-1.5`) ficavam sem espaço nenhum por isso.
 
+**Guarda automática (2026-11-13).** `src/test/escala-espacamento.test.ts` lê a
+escala da própria `tailwind.config` e falha, com arquivo e linha, se alguma
+classe de espaçamento/tamanho usar um número fora dela. Regra de correção:
+espaçamento e ícone vão para o passo mais próximo (`gap-1.5` → `gap-2`,
+`h-3.5` → `h-4`); dimensão de componente — altura de gráfico, largura de
+painel, skeleton — não é espaçamento e usa valor explícito em rem
+(`h-80` → `h-[20rem]`). A caça que originou o teste achou 102 ocorrências em 29
+arquivos: radar de maturidade e donut de severidade sem altura, seletor de
+layout colado, minimapa do CyberGraph sobre a legenda. Evidências em
+`docs/evidencias/espacamento/`.
+
 ---
 
 ## 4. Contrato de acessibilidade

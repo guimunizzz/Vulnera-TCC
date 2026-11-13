@@ -38,7 +38,7 @@ function ContagemPorSeveridade({ abertas }: { abertas: Record<SeveridadeVuln, nu
   return (
     <dl className="grid grid-cols-4 gap-2">
       {SEVERIDADES.map((s) => (
-        <div key={s} className="rounded-control border border-subtle bg-inset px-2 py-1.5 text-center">
+        <div key={s} className="rounded-control border border-subtle bg-inset px-2 py-2 text-center">
           <dt className="flex items-center justify-center gap-1 text-[11px] text-fg-muted">
             <span className="h-2 w-2 rounded-full" style={{ background: cor(tokenDoNo({ kind: "FINDING", risk: s })) }} aria-hidden="true" />
             {ROTULO_RISCO[s]}
@@ -59,7 +59,7 @@ function PainelAplicacao({ app, aoSelecionar }: { app: AplicacaoExposta; aoSelec
         <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Aplicação</p>
         <h3 className="break-words text-lg font-semibold text-fg">{app.name}</h3>
         {app.url && <p className="break-all font-mono text-xs text-fg-muted">{app.url}</p>}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           <Badge>{ROTULO_AMBIENTE[app.environment] ?? app.environment}</Badge>
           <Badge tom={app.criticality === "CRITICAL" || app.criticality === "HIGH" ? "atencao" : "neutro"}>
             Criticidade {(ROTULO_CRITICIDADE[app.criticality] ?? app.criticality).toLowerCase()}
@@ -81,7 +81,7 @@ function PainelAplicacao({ app, aoSelecionar }: { app: AplicacaoExposta; aoSelec
         <ContagemPorSeveridade abertas={app.abertas} />
       </div>
       {app.categorias.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Categorias OWASP abertas</p>
           <ul className="space-y-1">
             {app.categorias.map((c) => (
@@ -105,9 +105,9 @@ function PainelAplicacao({ app, aoSelecionar }: { app: AplicacaoExposta; aoSelec
         </div>
       )}
       {app.principais.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Mais graves em aberto</p>
-          <ul className="space-y-1.5">
+          <ul className="space-y-2">
             {app.principais.map((v) => (
               <li key={v.id} className="flex items-start gap-2">
                 <SeverityBadge severidade={v.severityFinal} className="shrink-0" />
@@ -158,7 +158,7 @@ export function PainelExposicao({
               {categoria.aplicacoes.length === 1 ? "ão" : "ões"}. Pior severidade: {ROTULO_RISCO[categoria.piorSeveridade].toLowerCase()}.
             </p>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Aplicações afetadas</p>
             <ul className="space-y-1">
               {categoria.aplicacoes.map((a) => (

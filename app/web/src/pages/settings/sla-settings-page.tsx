@@ -214,7 +214,7 @@ export function SlaSettingsPage() {
           {companyId && politica.isLoading && (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-busy="true">
               <span className="sr-only">Carregando política de SLA</span>
-              {SEVERIDADES.map((s) => <Skeleton key={s.chave} className="h-40 w-full" />)}
+              {SEVERIDADES.map((s) => <Skeleton key={s.chave} className="h-[10rem] w-full" />)}
             </div>
           )}
           {!companyId && !empresas.isError && !minha.isError && !empresas.isLoading && !minha.isLoading && (
@@ -278,7 +278,7 @@ export function SlaSettingsPage() {
       </motion.div>
 
       {historico.isError && <ErrorState titulo="Não foi possível carregar o histórico" descricao={getErrorMessage(historico.error)} aoTentarNovamente={() => void historico.refetch()} />}
-      {historico.isLoading && companyId && <Card><Skeleton className="h-32 w-full" /></Card>}
+      {historico.isLoading && companyId && <Card><Skeleton className="h-[8rem] w-full" /></Card>}
       {historico.data && historico.data.length > 0 && (
         <Card className="sla-history-card" semPadding>
           <div className="border-b border-subtle p-4">

@@ -158,7 +158,7 @@ export function montarMapa({
       topo = predio.altura + 1.35;
     }
     const el = rotulo(
-      "whitespace-nowrap rounded-control border border-subtle bg-surface/90 px-1.5 py-0.5 text-[11px] font-semibold text-fg shadow-raised transition-opacity",
+      "whitespace-nowrap rounded-control border border-subtle bg-surface/90 px-2 py-1 text-[11px] font-semibold text-fg shadow-raised transition-opacity",
       predio.app.name,
       String(predio.app.totalAbertas),
     );

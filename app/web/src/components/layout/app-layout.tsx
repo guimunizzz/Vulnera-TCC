@@ -97,7 +97,8 @@ export function AppLayout() {
       </Drawer>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-sticky flex h-16 items-center justify-between gap-4 border-b border-subtle bg-canvas px-4 lg:px-6">
+        {/* Gaps menores abaixo de sm: a 375px os seis controles passavam 4px da tela em todas as páginas (WEB-FUT-08). */}
+        <header className="sticky top-0 z-sticky flex h-16 items-center justify-between gap-2 border-b border-subtle bg-canvas px-4 sm:gap-4 lg:px-6">
           <div className="flex items-center gap-3">
             <Button
               variant="fantasma"
@@ -116,7 +117,7 @@ export function AppLayout() {
             <QueryLoadingIndicator />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
             <AccessibilityMenu />
             <ThemeToggle compacto />
             <DropdownMenu
