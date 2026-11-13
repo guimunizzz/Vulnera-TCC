@@ -48,6 +48,15 @@ projeto ganha a aba **SAST/SCA**, oculta para CLIENT. O PDF da importação e o
 `downloadBlob` são importados sob demanda, para que o `pdf-lib` não entre no
 chunk da página (o mesmo problema do WEB-FUT-01).
 
+O detalhe da importação tem a aba **Security Graph** (`?aba=grafo`), que
+reaproveita o motor 2D do CyberGraph com um modelo próprio
+(`features/security-graph/code-graph-model.ts`) e é carregada sob demanda. O
+**tour guiado** (`components/tour/`: `TourGuiado`, `useTourAutomatico` e
+`BotaoVerTour`) marca seus alvos com `data-tour="..."`; o item do menu é
+achado por `data-nav="/rota"`. O "visto" fica em `localStorage`
+(`vulnera:tour:<tour>:<usuário>`, `lib/tour.ts`). Para um tour novo, defina os
+passos (seletor, título, texto) e chame `useTourAutomatico(id, telaPronta)`.
+
 Cada página é um chunk próprio, carregado por `paginaLazy`
 (`src/lib/lazy-page.ts`) sob o `LimiteDeRota`
 (`src/components/layout/route-boundary.tsx`): skeleton enquanto baixa e uma

@@ -956,3 +956,20 @@ sumido antes da apresentação.
 que um cliente lê: o ruído já descartado por um humano não entra na lista nem
 no gráfico, mas a contagem aparece na seção de triagem. *Alternativa:* listar
 tudo com o status, o que deixaria o PDF mais longo e ruidoso.
+
+**D17.5 — Security Graph por importação: "onde está".** Aplicação → Código
+(pasta → arquivo) e Dependências (pacote) → achados. *Alternativas:* por
+categoria OWASP ("que tipo"), ou as duas visões com seletor (mais densa).
+
+**D17.6 — Tour só no módulo SAST/SCA.** Na primeira visita à lista e na
+primeira importação aberta, sempre com "Pular tour" e "Ver tour".
+*Alternativa:* um tour da plataforma inteira no primeiro login (maior e fora do
+escopo deste PR).
+
+**D17.7 — "Tour visto" no navegador, por usuário.** `localStorage`, como o tema
+e o menu de acessibilidade; sem migration. *Alternativa:* coluna no usuário,
+que lembraria em qualquer dispositivo, mas com mais trabalho e mudança no
+schema.
+
+**D17.8 — Falsos-positivos ocultos no grafo, com interruptor.** É coerente com
+o PDF. *Alternativa:* sempre visíveis, escondidos só pela severidade.

@@ -36,6 +36,13 @@ escrito à mão:
 | 14 | `14-detalhe-tema-claro.jpg` | tema claro |
 | 15 | `15-detalhe-375px.jpg` | 375 px |
 | 16 | `16-pdf-pagina-{1,2,3}.jpg` + `relatorio-sast-sca-nodegoat-semgrep.pdf` | PDF da 2ª importação (16 páginas): capa, sumário com comparação e "retestar", achados |
+| 18–19 | `18-tour-lista-passo-1-menu.jpg`, `19-tour-lista-passo-2-importar.jpg` | **tour** na primeira visita à lista: holofote no item do menu e no botão de importar, "1 de 5", Pular tour / Voltar / Próximo |
+| 20 | `20-tour-detalhe-abas-com-security-graph.jpg` | tour da importação, passo 2 de 7: as abas Achados, Comparação e **Security Graph**. Depois de pular, o tour não reabre ao recarregar |
+| 21 | `21-security-graph-sast-semgrep.jpg` | **Security Graph** do Semgrep real (NodeGoat, 2ª versão): aplicação → código → pastas → arquivos → achados, 50 nós |
+| 22 | `22-security-graph-no-selecionado.jpg` | nó selecionado: caminho destacado e painel com local, regra, triagem e **Ver na lista para triar**, que leva à aba Achados com a linha aberta |
+| 23 | `23-security-graph-layout-radial.jpg` | o mesmo grafo no layout radial |
+| 24 | `24-security-graph-sca-sbom-trivy.jpg` | grafo do SBOM do Trivy: pacote `bson@1.0.9` aberto com as 2 CVEs (crítica e média) e "corrige em 1.1.4" |
+| 25 | `25-security-graph-375px.jpg` | 375 px |
 | 17 | `17-pos-merge-admin-menu-exposure-graph-e-sast-sca.jpg` | depois do merge da `dev` com o PR #71: o ADMIN vê **Exposure Graph** e **SAST/SCA** no menu e as importações de todos os projetos. O PENTESTER vê SAST/SCA e não vê o Exposure Graph (que é de ADMIN e CLIENT) |
 
 ## Relatórios reais passados pelo parser

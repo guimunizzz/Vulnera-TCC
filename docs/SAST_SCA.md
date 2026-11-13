@@ -36,7 +36,13 @@ por humano, SLA, VRS, remediação e relatório.
    nota) e **promover para vulnerabilidade**.
 5. Na próxima versão do relatório, use **Importar nova versão**. A aba
    **Comparação** mostra o que é novo, o que continua e o que foi resolvido.
-6. **Baixar PDF** gera o relatório da importação no navegador.
+6. A aba **Security Graph** desenha onde estão os problemas (pasta, arquivo e
+   pacote). Clique num nó para ver os detalhes e use **Ver na lista para triar**.
+7. **Baixar PDF** gera o relatório da importação no navegador.
+
+Na primeira visita à página SAST/SCA e na primeira importação aberta, um
+**tour guiado** apresenta cada parte, com **Pular tour**. O botão **Ver tour**
+repete.
 
 Quem acessa: **ADMIN** (todos os projetos) e **PENTESTER** (só os projetos de
 que é membro). CLIENT não vê o módulo, pela mesma razão do DAST: achado de
@@ -116,6 +122,48 @@ reteste), um bloco por achado e apêndice de metodologia. **Falso-positivo fica
 fora da lista e do gráfico, mas é contado**: é o relatório que um cliente lê.
 O `pdf-lib` só é baixado quando alguém pede o PDF.
 
+### Security Graph (por importação)
+
+```
+Aplicação ─┬─ Código (SAST) ── pasta ── arquivo ── achados
+           └─ Dependências (SCA) ── pacote@versão ── CVEs
+```
+
+- Mostra **onde** estão os problemas (decisão D17.5). Cada pasta, arquivo e
+  pacote tem a cor da pior severidade abaixo dele e o total, e pode ser aberto
+  ou recolhido. O diretório comum a todos os caminhos (ex.: `/src/`) sai do
+  nome das pastas.
+- O motor é o mesmo do CyberGraph do DAST e do Exposure Graph: layouts
+  hierárquico, radial, estrela, orgânico e clusters, zoom, minimapa, arrastar,
+  teclado, busca e exportação em PNG. Modelo puro em
+  `features/security-graph/code-graph-model.ts`; tela em `code-graph.tsx`,
+  carregada só quando a aba abre (14 kB).
+- **Falsos-positivos ficam ocultos**, com o interruptor "Falsos-positivos (n)"
+  para mostrar (D17.8). Os filtros de severidade também valem para o grafo.
+- O que começa aberto depende do tamanho: com até 8 pastas ou pacotes e até 30
+  achados, tudo aberto; acima disso, só os ramos. A cada filtro o que começa
+  aberto é recalculado, e por cima disso valem as escolhas da pessoa (abri /
+  recolhi). A busca abre o caminho até o nó achado.
+- Teto de **300 nós**, o mesmo do Security Graph do DAST; acima disso o grafo
+  avisa e a lista continua tendo todos.
+- **Ver na lista para triar** leva o achado para a aba Achados, com os filtros
+  limpos e a linha aberta.
+
+### Tour guiado
+
+- Dois tours (D17.6): **lista** (menu, importar, números e importações) e
+  **importação** (resumo, abas com o Security Graph, filtros, triagem e
+  promoção, nova versão e PDF). Os dois terminam no botão **Ver tour**.
+- Abre sozinho na primeira vez, quando a tela já carregou. **Pular tour**, Esc
+  ou **Concluir** encerram e lembram, **no navegador e por usuário** (D17.7,
+  `localStorage` `vulnera:tour:<tour>:<usuário>`). Em outro navegador aparece
+  de novo, uma vez.
+- Componente próprio, sem dependência (`components/tour/`): holofote sobre o
+  alvo, balão com "2 de 7", foco preso e devolvido, setas para navegar e
+  movimento reduzido respeitado. Passo cujo alvo não está na tela (menu fechado
+  no celular, lista vazia) é pulado; sem nenhum alvo, o tour não conta como
+  visto.
+
 ## API
 
 Todas as rotas exigem login e o papel ADMIN ou PENTESTER; a posse do projeto é
@@ -191,6 +239,8 @@ erros de console.** As capturas estão em [`evidencias/sast-sca/`](evidencias/sa
 | SBOM sem componentes parecia "0 vulnerabilidades" | aviso explicando o lockfile ausente |
 | Recomendação do Semgrep trazia HTML e a propaganda "Enable cross-file analysis... sg.run/pro" | texto puro da ajuda, sem a linha promocional e descartada quando só repete a descrição |
 | PDF: URLs longas passavam da margem; capa com "Empresa" e "Aplicação" trocados | tokens longos quebrados; a API devolve `companyName` e a ferramenta foi para o subtítulo |
+| Teto de 300 nós do grafo passava em 3 (os ancestrais entravam na conta depois dos filhos) | o nó é contado ao entrar nele (teste com 400 achados) |
+| Achado que aparecia ao ligar "falsos-positivos" nascia dentro de um arquivo recolhido | o que começa aberto é recalculado a cada filtro, mantendo as escolhas da pessoa |
 | "Salvar nota" logo depois de mudar o status **desfazia a triagem** (AuditLog: `ACCEPTED_RISK → NEW` em 73 ms) | o controle de triagem guarda o último status confirmado pela API. **O mesmo componente atende o DAST, que também é corrigido** |
 
 ## Limites

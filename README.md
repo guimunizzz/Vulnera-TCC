@@ -236,7 +236,13 @@ pipeline já gera e aplica a ele o fluxo de gestão do produto
 4. Importe a próxima versão: a aba **Comparação** mostra o que é novo, o que
    continua (com a triagem preservada) e o que foi resolvido. Os resolvidos que
    já eram vulnerabilidades ficam marcados para reteste.
-5. **Baixar PDF** gera o relatório da importação.
+5. A aba **Security Graph** mostra onde estão os problemas: aplicação →
+   código (pasta, arquivo) e dependências (pacote) → achados, com os mesmos
+   layouts, zoom e exportação do CyberGraph.
+6. **Baixar PDF** gera o relatório da importação.
+
+Na primeira visita, um **tour guiado** apresenta o módulo (com **Pular tour**;
+**Ver tour** repete).
 
 <table>
   <tr><th>Ponto</th><th>Como funciona</th></tr>
@@ -300,7 +306,7 @@ usuário, escrita e endpoints específicos.
 <table>
   <tr><th>Verificação</th><th>Resultado</th></tr>
   <tr><td>API</td><td>818/819 testes em 55 suítes, já com a `dev` do PR #71 (32 novos: 17 do parser e 15 de integração, com tenancy negativa); tsc limpo. A falha é o FX-I-01 da exportação Excel, que não foi alterada: numa instalação limpa entra o <code>content-disposition</code> 2.x, que tira as aspas do <code>filename</code> (pendência API-FUT-02).</td></tr>
-  <tr><td>Web</td><td>578/578 testes em 65 arquivos (19 novos); build aprovado; lint 0 erros/9 avisos anteriores; contraste 132 pares, 0 falhas.</td></tr>
+  <tr><td>Web</td><td>591/591 testes em 67 arquivos (32 novos, com Security Graph e tour); build aprovado; lint 0 erros/9 avisos anteriores; contraste 132 pares, 0 falhas.</td></tr>
   <tr><td>Ferramentas reais</td><td>Semgrep 1.184.0 e Trivy 0.76.2 contra OWASP NodeGoat e Juice Shop; reimportação depois de uma correção real (6 resolvidos); fluxo completo pela interface com 0 erros de console. Ver <a href="docs/evidencias/sast-sca/README.md">evidências</a>.</td></tr>
 </table>
 

@@ -80,6 +80,18 @@ DAST, e **falso-positivo fica fora da lista e do gráfico, mas é contado**. As
 decisões de interface foram tomadas pelo Rafael em 2026-11-13 (D17 em
 `docs/DECISIONS.md`).
 
+### 7. Security Graph por importação e tour guiado (2026-11-13, 2ª rodada)
+
+O grafo de cada importação reusa o motor 2D do CyberGraph (ADR-051) com um
+modelo próprio, `code-graph-model.ts`: aplicação → código (pasta → arquivo) e
+dependências (pacote) → achados. É o mesmo padrão do Exposure Graph, que
+também traz o seu modelo. Os tipos de nó novos (`CODE`, `FOLDER`, `FILE`,
+`PACKAGE`) entram nas tabelas do motor, e o TypeScript garante que nenhuma
+fique sem eles. O tour é um componente próprio, sem biblioteca, que reaproveita
+`Portal`, `useFocusTrap` e o movimento reduzido. A preferência fica no
+navegador, por usuário, sem migration. As decisões de produto estão em
+D17.5 a D17.8.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -89,6 +101,8 @@ decisões de interface foram tomadas pelo Rafael em 2026-11-13 (D17 em
 | Reutilizar `DastFinding` | o silo do DAST é por usuário e sem projeto; misturar mudaria a tenancy dos dois |
 | Fingerprint só pela linha | qualquer linha inserida acima faria tudo parecer "novo" e perderia a triagem |
 | Truncar relatórios acima do teto | esconderia achados sem aviso; o teto (5.000) recusa com 422 |
+| Biblioteca de tour (driver.js, react-joyride) | dependência nova para algo que cabe num componente, e com outro visual; as peças de acessibilidade já existiam |
+| Guardar "tour visto" no banco | migration e endpoint para uma preferência de interface; o tema e o menu de acessibilidade já vivem no navegador |
 
 ## Consequências
 
