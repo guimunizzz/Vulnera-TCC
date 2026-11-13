@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { makeCompanyController } from "../factories/company.factory";
 import { makeMetricsController } from "../factories/metrics.factory";
+import { makeExposureGraphController } from "../factories/exposure-graph.factory";
 import { makeSlaPolicyController } from "../factories/sla-policy.factory";
 import { authRateLimitMiddleware, endpointRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 import { requireRole } from "../middlewares/require-role.middleware";
@@ -8,6 +9,7 @@ import { requireRole } from "../middlewares/require-role.middleware";
 const router = Router();
 const controller = makeCompanyController();
 const metricsController = makeMetricsController();
+const exposureGraphController = makeExposureGraphController();
 // Política de SLA (CP-2) mora numa sub-rota de Company pela mesma razão das
 // métricas: a URL é aninhada (é governança DA empresa), mas o recurso é outro.
 const slaPolicyController = makeSlaPolicyController();
@@ -16,6 +18,8 @@ router.use(authRateLimitMiddleware);
 
 // rota literal ANTES de paramétrica
 router.get("/me/metrics/comparison", endpointRateLimitMiddleware("expensive"), (req, res) => metricsController.comparison(req, res));
+// Exposure Graph (D8): projeção da company do ator, mesma regra de escopo do comparativo.
+router.get("/me/exposure-graph", endpointRateLimitMiddleware("expensive"), (req, res) => exposureGraphController.get(req, res));
 router.get("/me", (req, res) => controller.me(req, res));
 
 // SLA — sub-rotas de /:id, ANTES de "/:id" por consistência (CLAUDE.md §5.6).

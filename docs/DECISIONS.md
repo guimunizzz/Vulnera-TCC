@@ -817,6 +817,11 @@ valendo como decisão registrada; não há código, rota, tabela nem tela. O nom
 oficial permanece **Exposure Graph / Cadeias de Exposição** — nunca "Attack
 Path", porque o produto não tem dado de alcançabilidade.
 
+> **Atualização 2026-11-09:** a v1 do Exposure Graph foi entregue
+> (`GET /companies/me/exposure-graph` e a tela `/exposure-graph`), seguindo D8 e
+> D9. Ver a seção "CyberGraph em layouts 2D e Exposure Graph" no fim deste
+> arquivo e o ADR-051.
+
 ### Nova — importação da OWASP é CLI, com snapshot versionado
 
 `npm run sync:owasp-playbooks` (rede), `-- --snapshot` (grava
@@ -906,6 +911,23 @@ O merge de `dev` (2026-11-04) trouxe a fonte única de movimento reduzido
 passaram a obedecer a ela. O hook próprio do refactor saiu. O alto contraste
 (texto ≥ 7:1) também impede a montagem das cenas e esconde o pôster da landing,
 porque o teto de opacidade dos glifos foi calculado para AA.
+
+## CyberGraph em layouts 2D e Exposure Graph — 2026-11-09
+
+### Nova — o modo 3D do CyberGraph sai; entram layouts 2D
+
+O 3D do grafo do scan repetia o 2D com menos legibilidade. No lugar: Radial,
+Estrela, Orgânico e Clusters, além do Hierárquico de antes, todos sobre a mesma
+visão agrupada e sem dependência nova (cálculo puro e determinístico em
+`graph-layouts.ts`). Botão "Caminho mais crítico" acende o caminho de exposição
+até o finding de maior risco.
+
+### Nova — Exposure Graph v1 (CP-8), com mapa 3D da superfície de ataque
+
+Projeção do MySQL da empresa do token (mesmo escopo do comparativo), categoria
+OWASP como nó compartilhado entre aplicações, e o 3D reaproveitado como mapa
+onde cada eixo visual é um campo real (abertas, criticidade, severidade,
+exposição). Ver **[[ADR-051 - Layouts 2D no lugar do grafo 3D e Exposure Graph da empresa]]**.
 
 ---
 

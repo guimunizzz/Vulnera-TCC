@@ -31,6 +31,7 @@ const PlansPage = paginaLazy(() => import("./pages/plans-page"), "PlansPage");
 const OnboardingPage = paginaLazy(() => import("./pages/onboarding-page"), "OnboardingPage");
 const DashboardPage = paginaLazy(() => import("./pages/dashboard-page"), "DashboardPage");
 const ApplicationsPage = paginaLazy(() => import("./pages/applications-page"), "ApplicationsPage");
+const ExposureGraphPage = paginaLazy(() => import("./pages/exposure-graph-page"), "ExposureGraphPage");
 const NewAnalysisPage = paginaLazy(() => import("./pages/new-analysis-page"), "NewAnalysisPage");
 const ProjectsPage = paginaLazy(() => import("./pages/projects-page"), "ProjectsPage");
 const ProjectDetailPage = paginaLazy(() => import("./pages/project-detail-page"), "ProjectDetailPage");
@@ -129,6 +130,8 @@ export function App() {
             <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
               <Route path="/applications" element={<ApplicationsPage />} />
               <Route path="/applications/:id/dashboard" element={<ApplicationDashboardPage />} />
+            {/* Exposure Graph (CP-8): a empresa de quem está logado; o backend deriva do token. */}
+            <Route path="/exposure-graph" element={<ExposureGraphPage />} />
               <Route path="/new-analysis" element={<NewAnalysisPage />} />
               {/* SLA (CP-2): governança da empresa — ADMIN e CLIENT (OWNER edita,
                   MEMBER lê; o backend reforça). PENTESTER não chega aqui. */}

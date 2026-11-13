@@ -13,9 +13,11 @@ Tailwind usa os tokens próprios em `src/styles/tokens.css`; os componentes de
 interface ficam em `src/components/ui/`. Motion anima a interface; GSAP com
 ScrollTrigger anima só a narrativa da landing; three.js desenha o fundo
 decorativo (a cena ASCII da landing e a atmosfera da plataforma, pelo kit
-`src/three/`) e o modo 3D do CyberGraph do scan DAST
-(`src/features/security-graph/`, ADR-048; o modo 2D é SVG). Tudo que usa three
-é carregado sob demanda. Os gráficos analíticos usam os componentes de
+`src/three/`) e, desde 2026-11-09, o mapa 3D da superfície de ataque do
+Exposure Graph da empresa (`/exposure-graph`, também pelo kit; ADR-051). O
+CyberGraph do scan e o grafo da empresa são SVG, com cinco layouts
+(`src/features/security-graph/`); o modo 3D do CyberGraph saiu (ADR-051).
+Tudo que usa three é carregado sob demanda. Os gráficos analíticos usam os componentes de
 `src/components/metrics/`.
 
 Este documento descreve o código implementado. As especificações de tokens e

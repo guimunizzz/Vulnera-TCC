@@ -40,7 +40,7 @@ auditoria. O que faltava era tudo o que vem **depois** do achado:
 | CP-5 | Remediation Playbooks + OWASP Top 10 | ✅ |
 | CP-6 | Saved Queries / Watchlists | ✅ |
 | CP-7 | Quadro de remediação + `assignedTo` ponta a ponta | ✅ |
-| CP-8 | Exposure Graph / Cadeias de Exposição | ⛔ não implementado — ver §9 |
+| CP-8 | Exposure Graph / Cadeias de Exposição | ✅ v1 em 2026-11-09 — ver §9 |
 
 ---
 
@@ -205,22 +205,49 @@ enxerga o finding), índices, filtro nos dois construtores com o valor especial
 
 ---
 
-## 9. CP-8 · Exposure Graph — **não implementado**
+## 9. CP-8 · Exposure Graph — ✅ v1 (2026-11-09)
 
-O CP-8 era condicional ("só se todos os gates anteriores estiverem verdes") e
-**não foi entregue nesta rodada**. O que existe é a decisão registrada:
+> **Histórico:** até 2026-11-09 esta seção dizia "não implementado" — o CP-8 era
+> condicional e ficou fora da rodada de 2026-09-15. D8 e D9 continuam valendo e
+> a v1 abaixo segue as duas.
 
-- **D8/D9 em `docs/DECISIONS.md`**: sem graph database; projeção do MySQL; e a
-  cadeia proposta no mapeamento envolvendo `DastFinding` foi **removida da v1**
-  porque o silo DAST (ADR-029) não tem vínculo com `Application` antes da
-  promoção — a regra pressupunha uma relação que o modelo não tem.
-- O nome oficial da feature é **Exposure Graph** / **Cadeias de Exposição**.
-  Nunca "Attack Path": o produto não tem dado de alcançabilidade para afirmar
-  caminho de ataque, e afirmá-lo seria a mesma categoria de erro que o ADR-029
-  recusou ao falar de CVSS estimado.
+**O que é.** `GET /api/companies/me/exposure-graph` projeta do MySQL (sem graph
+database, D8) o estado atual da empresa de quem está logado: aplicações
+**ativas**, vulnerabilidades **abertas** (`OPEN`/`IN_PROGRESS`) por severidade,
+total resolvido (`FIXED`/`CLOSED`), categorias OWASP com algo aberto e as cinco
+abertas mais graves de cada aplicação. Mesmo escopo do comparativo
+(`/companies/me/metrics/comparison`): a empresa vem do usuário autenticado,
+nunca da URL; sem empresa → 404 `COMPANY_NOT_FOUND`. Cinco consultas fixas,
+todas filtrando `companyId` além de `applicationId`. Rate limit `expensive`.
 
-Não há código, rota, tabela nem tela de grafo. Ver §12 para o resto do trabalho
-pendente.
+**Tela.** `/exposure-graph` (ADMIN e CLIENT, item "Exposure Graph" na Sidebar):
+
+- **Grafo** — empresa → aplicações → categorias OWASP. A categoria é um nó
+  **compartilhado**: "A03 · Injection" aberta em quatro aplicações é um nó ligado
+  às quatro (a **cadeia de exposição** da mesma classe de falha). Mesmos layouts
+  e desenho do CyberGraph do scan (Hierárquico, Radial, Estrela, Orgânico,
+  Clusters), filtro "Só expostas à Internet", exportar PNG.
+- **Mapa 3D** — a superfície de ataque como cidade: bairro por ambiente, prédio
+  por aplicação; altura = abertas (log), base = criticidade, cor = pior
+  severidade, antena = `internetFacing`. "Apresentar" percorre da mais grave para
+  a menos grave. Lista de prédios acessível por teclado abaixo do canvas.
+- **Painel** comum às duas abas: contexto de risco da aplicação (CP-1), abertas
+  por severidade, categorias e links para as vulnerabilidades e para o dashboard
+  da aplicação; numa categoria, as aplicações afetadas.
+
+**Limites assumidos (D9 e honestidade de dado):**
+
+- Só `Vulnerability`. Achado DAST ainda não promovido não entra: o silo DAST
+  não tem vínculo com `Application` antes da promoção.
+- Severidade `NONE` (CVSS 0) não entra nas contagens do grafo.
+- "Exposição" é o que a pessoa declarou em `internetFacing`; o produto continua
+  sem dado de alcançabilidade, por isso o nome nunca é "Attack Path".
+
+Decisão: **[[ADR-051 - Layouts 2D no lugar do grafo 3D e Exposure Graph da empresa]]**.
+Testes: `app/api/tests/integration/exposure-graph.test.ts` (inclui isolamento
+entre empresas nos dois sentidos), `tests/unit/exposure-graph.service.test.ts`,
+`app/web/src/features/security-graph/exposure-*.test.ts` e
+`app/web/e2e/exposure-graph.spec.ts`.
 
 ---
 
@@ -271,7 +298,8 @@ Filtros novos em `GET /vulnerabilities`: `slaState`, `vrsMin`, `vrsMax`,
 
 Registrado aqui porque documentação incompleta é pior que ausente:
 
-- **CP-8 (Exposure Graph)** — ver §9.
+- **CP-8 além da v1** — achados DAST não promovidos e alcançabilidade real
+  continuam fora (D9); ver §9.
 - **Pesos do VRS configuráveis por empresa** — tornaria o score incomparável
   entre tenants e exigiria versionar a fórmula junto do histórico.
 - **Conteúdo das ~122 Cheat Sheets** — a v1 guarda o link.
