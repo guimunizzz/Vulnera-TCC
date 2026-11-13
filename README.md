@@ -299,8 +299,8 @@ usuário, escrita e endpoints específicos.
 
 <table>
   <tr><th>Verificação</th><th>Resultado</th></tr>
-  <tr><td>API</td><td>805/806 testes em 53 suítes (32 novos: 17 do parser e 15 de integração, com tenancy negativa); tsc limpo. A falha é o FX-I-01 da exportação Excel, que não foi alterada: numa instalação limpa entra o <code>content-disposition</code> 2.x, que tira as aspas do <code>filename</code> (pendência API-FUT-02).</td></tr>
-  <tr><td>Web</td><td>558/558 testes em 64 arquivos (19 novos); build aprovado; lint 0 erros/9 avisos anteriores; contraste 132 pares, 0 falhas.</td></tr>
+  <tr><td>API</td><td>818/819 testes em 55 suítes, já com a `dev` do PR #71 (32 novos: 17 do parser e 15 de integração, com tenancy negativa); tsc limpo. A falha é o FX-I-01 da exportação Excel, que não foi alterada: numa instalação limpa entra o <code>content-disposition</code> 2.x, que tira as aspas do <code>filename</code> (pendência API-FUT-02).</td></tr>
+  <tr><td>Web</td><td>578/578 testes em 65 arquivos (19 novos); build aprovado; lint 0 erros/9 avisos anteriores; contraste 132 pares, 0 falhas.</td></tr>
   <tr><td>Ferramentas reais</td><td>Semgrep 1.184.0 e Trivy 0.76.2 contra OWASP NodeGoat e Juice Shop; reimportação depois de uma correção real (6 resolvidos); fluxo completo pela interface com 0 erros de console. Ver <a href="docs/evidencias/sast-sca/README.md">evidências</a>.</td></tr>
 </table>
 

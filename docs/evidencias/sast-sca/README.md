@@ -36,6 +36,7 @@ escrito à mão:
 | 14 | `14-detalhe-tema-claro.jpg` | tema claro |
 | 15 | `15-detalhe-375px.jpg` | 375 px |
 | 16 | `16-pdf-pagina-{1,2,3}.jpg` + `relatorio-sast-sca-nodegoat-semgrep.pdf` | PDF da 2ª importação (16 páginas): capa, sumário com comparação e "retestar", achados |
+| 17 | `17-pos-merge-admin-menu-exposure-graph-e-sast-sca.jpg` | depois do merge da `dev` com o PR #71: o ADMIN vê **Exposure Graph** e **SAST/SCA** no menu e as importações de todos os projetos. O PENTESTER vê SAST/SCA e não vê o Exposure Graph (que é de ADMIN e CLIENT) |
 
 ## Relatórios reais passados pelo parser
 
