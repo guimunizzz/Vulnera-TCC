@@ -143,7 +143,6 @@ const MESSAGES: Record<string, string> = {
   UNSUPPORTED_SARIF_VERSION: "Só SARIF 2.1.0 é aceito. Gere o relatório nessa versão.",
   IMPORT_TOO_LARGE: "O relatório tem mais de 5.000 achados. Divida a análise (por pasta ou por severidade) e importe em partes.",
   IMPORT_NOT_FOUND: "Importação não encontrada.",
-  INVALID_OWASP_CATEGORY: "Categoria OWASP inválida.",
 
   // rate limiting (a mensagem com o tempo de espera é montada em useApiError)
   RATE_LIMITED: "Muitas requisições em sequência. Aguarde alguns segundos e tente novamente.",
