@@ -21,6 +21,7 @@ import { EmptyState, ErrorState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/card";
 import { CodeImportDialog } from "../components/code-imports/code-import-dialog";
 import { CodeImportsTable } from "../components/code-imports/code-imports-table";
+import { AjudaImportacao } from "../components/code-imports/code-import-help";
 import { SeverityStrip } from "../components/code-imports/severity-strip";
 import { ultimasPorFonte } from "../lib/code-import";
 import { BotaoVerTour, TourGuiado, type PassoTour } from "../components/tour/tour-guiado";
@@ -53,6 +54,11 @@ const PASSOS_TOUR_LISTA: PassoTour[] = [
     alvo: '[data-tour="sast-importar"]',
     titulo: "Importe o relatório da pipeline",
     texto: "O Vulnera não roda os scanners: envie o SARIF do Semgrep, CodeQL ou Trivy, ou o SBOM CycloneDX, e escolha o projeto.",
+  },
+  {
+    alvo: '[data-tour="sast-ajuda"]',
+    titulo: "Não sabe como gerar o relatório?",
+    texto: "O \"?\" abre o passo a passo: o fluxo, os comandos prontos para copiar (Semgrep, Trivy, CodeQL, GitHub Actions) e o que é bom saber.",
   },
   {
     alvo: '[data-tour="sast-numeros"]',
@@ -104,6 +110,7 @@ export function SastScaPage() {
           <span data-tour="ver-tour">
             <BotaoVerTour aoClicar={tour.abrir} />
           </span>
+          <AjudaImportacao aoImportar={() => setImportando(true)} />
           <Button onClick={() => setImportando(true)} data-tour="sast-importar">
             Importar relatório
           </Button>

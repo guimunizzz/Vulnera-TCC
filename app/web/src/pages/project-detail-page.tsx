@@ -26,6 +26,7 @@ import { TABELA } from "../components/ui/table-estilos";
 import { codeImportsApi } from "../lib/api/code-imports.api";
 import { CodeImportsTable } from "../components/code-imports/code-imports-table";
 import { CodeImportDialog } from "../components/code-imports/code-import-dialog";
+import { AjudaImportacao } from "../components/code-imports/code-import-help";
 import { EmptyState } from "../components/ui/empty-state";
 
 const REPORT_TYPE_LABELS: Record<ReportType, string> = { EXECUTIVE: "Executivo", TECHNICAL: "Técnico" };
@@ -443,7 +444,10 @@ function ProjectCodeImports({ projectId, projectName, aoImportar }: { projectId:
           Relatórios de análise de código (SARIF) e de dependências (SBOM CycloneDX) importados para {projectName}. Cada
           importação é comparada com a anterior da mesma ferramenta.
         </p>
-        <Button onClick={aoImportar}>Importar relatório</Button>
+        <div className="flex items-center gap-2">
+          <AjudaImportacao aoImportar={aoImportar} />
+          <Button onClick={aoImportar}>Importar relatório</Button>
+        </div>
       </div>
       {importsQuery.isLoading && <p className="text-sm text-fg-muted">Carregando importações...</p>}
       {importsQuery.isError && <Alert tom="perigo">Não foi possível carregar as importações deste projeto.</Alert>}
