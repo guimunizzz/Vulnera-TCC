@@ -61,6 +61,8 @@ export const PRIORIDADES = ["Imediato", "Urgente", "Planejado", "Monitorar"] as 
 export const ROTULO_ORIGEM: Record<string, string> = {
   MANUAL: "Manual",
   DAST_IMPORT: "DAST",
+  SAST_IMPORT: "SAST",
+  SCA_IMPORT: "SCA",
 };
 
 export const ROTULO_PERFIL: Record<string, string> = {
