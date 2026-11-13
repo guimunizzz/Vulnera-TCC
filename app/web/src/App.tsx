@@ -52,6 +52,8 @@ const MaturityAssessmentPage = paginaLazy(
 const DastPage = paginaLazy(() => import("./pages/dast-page"), "DastPage");
 const DastScanDetailPage = paginaLazy(() => import("./pages/dast-scan-detail-page"), "DastScanDetailPage");
 const DastScanReportPage = paginaLazy(() => import("./pages/dast-scan-report-page"), "DastScanReportPage");
+const SastScaPage = paginaLazy(() => import("./pages/sast-sca-page"), "SastScaPage");
+const CodeImportDetailPage = paginaLazy(() => import("./pages/code-import-detail-page"), "CodeImportDetailPage");
 const SlaSettingsPage = paginaLazy(() => import("./pages/settings/sla-settings-page"), "SlaSettingsPage");
 const PlaybooksPage = paginaLazy(() => import("./pages/playbooks-page"), "PlaybooksPage");
 const PlaybookDetailPage = paginaLazy(() => import("./pages/playbook-detail-page"), "PlaybookDetailPage");
@@ -149,6 +151,9 @@ export function App() {
             <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
               <Route path="/dast" element={<DastPage />} />
               <Route path="/dast/scans/:id" element={<DastScanDetailPage />} />
+              {/* SAST/SCA (ADR-052) — mesmos papéis do DAST; a API repete a checagem. */}
+              <Route path="/sast-sca" element={<SastScaPage />} />
+              <Route path="/sast-sca/imports/:id" element={<CodeImportDetailPage />} />
             </Route>
           </Route>
 

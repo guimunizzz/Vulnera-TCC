@@ -66,6 +66,28 @@
   pointer-events: none;
 }
 
+/* SAST/SCA (ADR-052): linhas de código estilizadas à direita — o motivo
+   visual é o arquivo-fonte, como o radar é o do DAST. */
+[data-ops-hero="code"]::after {
+  content: "";
+  position: absolute;
+  right: 2rem;
+  top: 1.5rem;
+  bottom: 1.5rem;
+  width: 12rem;
+  background:
+    linear-gradient(90deg, oklch(var(--color-accent-ink) / 0.22) 0 38%, transparent 38%) 0 0 / 100% 1.25rem no-repeat,
+    linear-gradient(90deg, transparent 0 12%, oklch(var(--color-accent-ink) / 0.14) 12% 70%, transparent 70%) 0 1.25rem / 100% 1.25rem no-repeat,
+    linear-gradient(90deg, transparent 0 12%, oklch(var(--color-severity-high-ink) / 0.3) 12% 55%, transparent 55%) 0 2.5rem / 100% 1.25rem no-repeat,
+    linear-gradient(90deg, transparent 0 24%, oklch(var(--color-accent-ink) / 0.12) 24% 88%, transparent 88%) 0 3.75rem / 100% 1.25rem no-repeat,
+    linear-gradient(90deg, transparent 0 12%, oklch(var(--color-accent-ink) / 0.16) 12% 46%, transparent 46%) 0 5rem / 100% 1.25rem no-repeat,
+    linear-gradient(90deg, oklch(var(--color-accent-ink) / 0.2) 0 22%, transparent 22%) 0 6.25rem / 100% 1.25rem no-repeat;
+  background-size: 100% 0.5rem;
+  mask-image: linear-gradient(to left, black 40%, transparent);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
 [data-ops-hero="playbook"] {
   background:
     repeating-linear-gradient(0deg, transparent 0 31px, oklch(var(--color-border-subtle) / 0.3) 32px),

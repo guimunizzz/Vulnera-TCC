@@ -23,6 +23,10 @@ import { generateTechnicalPdf } from "../lib/pdf/technical";
 import type { ProjectStatus } from "../types/project.types";
 import type { ReportType } from "../types/report.types";
 import { TABELA } from "../components/ui/table-estilos";
+import { codeImportsApi } from "../lib/api/code-imports.api";
+import { CodeImportsTable } from "../components/code-imports/code-imports-table";
+import { CodeImportDialog } from "../components/code-imports/code-import-dialog";
+import { EmptyState } from "../components/ui/empty-state";
 
 const REPORT_TYPE_LABELS: Record<ReportType, string> = { EXECUTIVE: "Executivo", TECHNICAL: "Técnico" };
 const REPORT_READY_STATUSES: ProjectStatus[] = ["IN_REVIEW", "COMPLETED"];
@@ -56,7 +60,14 @@ const ANALYSIS_LEVEL_LABELS: Record<string, string> = {
   ADVANCED: "Avançado",
 };
 
-type Tab = "overview" | "findings" | "reports";
+type Tab = "overview" | "findings" | "code" | "reports";
+
+const TAB_LABELS: Record<Tab, string> = {
+  overview: "Visão geral",
+  findings: "Findings",
+  code: "SAST/SCA",
+  reports: "Relatórios",
+};
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -64,6 +75,7 @@ export function ProjectDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPentesterId, setSelectedPentesterId] = useState("");
   const [generatingType, setGeneratingType] = useState<ReportType | null>(null);
+  const [importingCode, setImportingCode] = useState(false);
 
   const role = useAuthStore((s) => s.user?.role);
   const getErrorMessage = useApiError();
@@ -220,7 +232,8 @@ export function ProjectDetailPage() {
       {error && <Alert className="mt-4">{error}</Alert>}
 
       <div className="mt-6 flex gap-1 border-b border-subtle">
-        {(["overview", "findings", "reports"] as Tab[]).map((t) => (
+        {/* SAST/SCA (ADR-052) só para quem pode importar/triar: CLIENT não vê achado não triado. */}
+        {(["overview", "findings", ...(role !== "CLIENT" ? (["code"] as Tab[]) : []), "reports"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -229,7 +242,7 @@ export function ProjectDetailPage() {
               tab === t && "border-accent text-fg",
             )}
           >
-            {t === "overview" ? "Visão geral" : t === "findings" ? "Findings" : "Relatórios"}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
@@ -340,6 +353,12 @@ export function ProjectDetailPage() {
         </div>
       )}
 
+      {tab === "code" && role !== "CLIENT" && <ProjectCodeImports projectId={project.id} projectName={project.name} aoImportar={() => setImportingCode(true)} />}
+      {/* Montado só quando aberto: a página do projeto não paga o diálogo de quem nunca importa. */}
+      {role !== "CLIENT" && importingCode && (
+        <CodeImportDialog aberto={importingCode} aoFechar={() => setImportingCode(false)} projetoFixo={{ id: project.id, name: project.name }} />
+      )}
+
       {tab === "reports" && (
         <div className="mt-6">
           {!projectReady && (
@@ -405,6 +424,37 @@ export function ProjectDetailPage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Aba SAST/SCA do projeto (ADR-052): as importações dele, com atalho para importar. */
+function ProjectCodeImports({ projectId, projectName, aoImportar }: { projectId: string; projectName: string; aoImportar: () => void }) {
+  const importsQuery = useQuery({
+    queryKey: ["code-imports", "project", projectId],
+    queryFn: () => codeImportsApi.list(projectId),
+  });
+  const imports = importsQuery.data ?? [];
+
+  return (
+    <div className="mt-6 flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-sm text-fg-muted">
+          Relatórios de análise de código (SARIF) e de dependências (SBOM CycloneDX) importados para {projectName}. Cada
+          importação é comparada com a anterior da mesma ferramenta.
+        </p>
+        <Button onClick={aoImportar}>Importar relatório</Button>
+      </div>
+      {importsQuery.isLoading && <p className="text-sm text-fg-muted">Carregando importações...</p>}
+      {importsQuery.isError && <Alert tom="perigo">Não foi possível carregar as importações deste projeto.</Alert>}
+      {importsQuery.isSuccess && imports.length === 0 && (
+        <EmptyState
+          titulo="Nenhum relatório importado neste projeto"
+          descricao="Importe o SARIF do Semgrep/CodeQL/Trivy ou o SBOM CycloneDX gerado na pipeline da aplicação."
+          acao={<Button onClick={aoImportar}>Importar relatório</Button>}
+        />
+      )}
+      {imports.length > 0 && <CodeImportsTable imports={imports} mostrarProjeto={false} />}
     </div>
   );
 }
