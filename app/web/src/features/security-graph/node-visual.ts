@@ -12,7 +12,25 @@
  * `cyber-graph-2d.tsx`, `cyber-graph-detalhes.tsx` e `exposure-graph.tsx`.
  */
 
-import { AppWindow, Building2, Bug, Earth, Globe, Layers, Network, Plug, ScanSearch, Server, ShieldAlert, Waypoints, type LucideIcon } from "lucide-react";
+import {
+  AppWindow,
+  Boxes,
+  Building2,
+  Bug,
+  Earth,
+  FileCode2,
+  Folder,
+  Globe,
+  Layers,
+  Network,
+  Package,
+  Plug,
+  ScanSearch,
+  Server,
+  ShieldAlert,
+  Waypoints,
+  type LucideIcon,
+} from "lucide-react";
 import { DAST_RISK_LABELS } from "../../types/dast.types";
 import type { Kind2D, Risco } from "./graph-2d-layout";
 
@@ -29,6 +47,10 @@ export const ICONE_DO_TIPO: Record<Kind2D, LucideIcon> = {
   COMPANY: Building2,
   APPLICATION: AppWindow,
   CATEGORY: ShieldAlert,
+  CODE: Boxes,
+  FOLDER: Folder,
+  FILE: FileCode2,
+  PACKAGE: Package,
 };
 
 export const ROTULO_TIPO: Record<Kind2D, string> = {
@@ -44,6 +66,10 @@ export const ROTULO_TIPO: Record<Kind2D, string> = {
   COMPANY: "Empresa",
   APPLICATION: "Aplicação",
   CATEGORY: "Categoria OWASP",
+  CODE: "Origem",
+  FOLDER: "Pasta",
+  FILE: "Arquivo",
+  PACKAGE: "Pacote",
 };
 
 export const ROTULO_RISCO: Record<Risco, string> = { CRITICAL: "Crítico", ...DAST_RISK_LABELS };
@@ -55,6 +81,8 @@ export function tokenDoNo(no: { kind: Kind2D; risk?: Risco }): string {
   // Aplicação e categoria sem nada aberto: neutras; com algo aberto, na cor do pior.
   if ((no.kind === "APPLICATION" || no.kind === "CATEGORY") && !no.risk) return "--color-chart-axis";
   if (no.kind === "ASSET") return "--color-accent";
+  // Ramo SAST/SCA é estrutura: nunca cor de severidade (pasta, arquivo e pacote sim, pelo pior achado).
+  if (no.kind === "CODE") return "--color-accent";
   if (no.kind === "ENDPOINT") return "--color-chart-3";
   // Ativos de descoberta são estrutura: nunca cor de severidade.
   if (no.kind === "IP") return "--color-chart-1";

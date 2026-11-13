@@ -87,10 +87,14 @@ const RAIO: Record<Kind2D, number> = {
   COMPANY: 36,
   APPLICATION: 27,
   CATEGORY: 23,
+  CODE: 25,
+  FOLDER: 23,
+  FILE: 21,
+  PACKAGE: 21,
 };
 const encurtar = (texto: string, max: number) => (texto.length > max ? `${texto.slice(0, max - 1)}…` : texto);
 const SETAS: readonly string[] = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
-const LEGENDA_TIPOS: Kind2D[] = ["INTERNET", "ASSET", "COMPANY", "APPLICATION", "CATEGORY", "ENDPOINT", "GROUP", "IP", "PORT", "TECH", "SUBDOMAIN"];
+const LEGENDA_TIPOS: Kind2D[] = ["INTERNET", "ASSET", "COMPANY", "APPLICATION", "CATEGORY", "CODE", "FOLDER", "FILE", "PACKAGE", "ENDPOINT", "GROUP", "IP", "PORT", "TECH", "SUBDOMAIN"];
 const LEGENDA_NOME: Record<Kind2D, string> = {
   INTERNET: "Internet",
   ASSET: "Alvo",
@@ -104,6 +108,10 @@ const LEGENDA_NOME: Record<Kind2D, string> = {
   COMPANY: "Empresa",
   APPLICATION: "Aplicação",
   CATEGORY: "Categoria OWASP",
+  CODE: "Origem (SAST/SCA)",
+  FOLDER: "Pasta",
+  FILE: "Arquivo",
+  PACKAGE: "Pacote",
 };
 const LEGENDA_RISCOS: Risco[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"];
 /** O que o número do nó conta, por tipo (rótulo para leitor de tela). */
@@ -113,6 +121,10 @@ const NOME_DO_TOTAL: Partial<Record<Kind2D, string>> = {
   COMPANY: "aplicações",
   APPLICATION: "vulnerabilidades abertas",
   CATEGORY: "vulnerabilidades abertas",
+  CODE: "achados",
+  FOLDER: "achados",
+  FILE: "achados",
+  PACKAGE: "CVEs",
 };
 const MINIMAPA = { w: 168, h: 108 };
 
@@ -143,6 +155,11 @@ function subtitulo(no: No2D): string {
     case "APPLICATION":
     case "CATEGORY":
       return `${no.total ?? 0} abertas`;
+    case "CODE":
+    case "FOLDER":
+    case "FILE":
+    case "PACKAGE":
+      return `${no.total ?? 0} achado${no.total === 1 ? "" : "s"}`;
   }
 }
 
