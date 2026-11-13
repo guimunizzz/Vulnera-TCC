@@ -41,6 +41,30 @@ todas usam `AppLayout`, que fornece navegação, cabeçalho, alternância de tem
 tela inteira. `/dast/scans/:id/report` também é uma tela cheia separada do
 layout.
 
+`/sast-sca` e `/sast-sca/imports/:id` (ADR-052) têm os papéis do DAST (ADMIN e
+PENTESTER). O item do menu tem o selo **new** (`novo: true` em `sidebar.tsx`),
+que é fixo e só sai quando alguém o remove do código (D17.3). A página do
+projeto ganha a aba **SAST/SCA**, oculta para CLIENT. O PDF da importação e o
+`downloadBlob` são importados sob demanda, para que o `pdf-lib` não entre no
+chunk da página (o mesmo problema do WEB-FUT-01).
+
+O detalhe da importação tem a aba **Security Graph** (`?aba=grafo`), que
+reaproveita o motor 2D do CyberGraph com um modelo próprio
+(`features/security-graph/code-graph-model.ts`) e é carregada sob demanda. O
+**tour guiado** (`components/tour/`: `TourGuiado`, `useTourAutomatico` e
+`BotaoVerTour`) marca seus alvos com `data-tour="..."`; o item do menu é
+achado por `data-nav="/rota"`. O "visto" fica em `localStorage`
+(`vulnera:tour:<tour>:<usuário>`, `lib/tour.ts`). Para um tour novo, defina os
+passos (seletor, título, texto) e chame `useTourAutomatico(id, telaPronta)`.
+O botão **?** ao lado de "Importar relatório" (`code-import-help.tsx`, na página
+SAST/SCA e na aba do projeto) abre o guia de como gerar e importar, com
+comandos copiáveis.
+
+`.alvo-estendido` (área de toque de 44 px em controles densos) só aplica
+`position: relative` a hosts sem `absolute`/`fixed`. Por ser CSS fora de
+camada, a regra antiga vencia o utilitário e tirava o "×" do `DialogClose` do
+canto em todos os diálogos.
+
 Cada página é um chunk próprio, carregado por `paginaLazy`
 (`src/lib/lazy-page.ts`) sob o `LimiteDeRota`
 (`src/components/layout/route-boundary.tsx`): skeleton enquanto baixa e uma
@@ -188,7 +212,8 @@ cabeçalho, `data-ops-surface` para superfícies de dados e `data-ops-lift` para
 cards interativos. Variantes de hero usam **os mesmos tokens**, alterando
 composição, luz e borda conforme o contexto. Aplicação destaca superfície de
 ataque; Projeto mostra pipeline; Finding sinaliza ameaça; DAST acrescenta um
-radar CSS discreto; Playbooks lembra uma base de conhecimento; Maturidade e
+radar CSS discreto; SAST/SCA desenha linhas de código estilizadas (uma delas
+na cor de severidade alta); Playbooks lembra uma base de conhecimento; Maturidade e
 Governança mantêm a hierarquia própria. O scan ativo recebe um pequeno pulso
 CSS ao lado de seu progresso real. Não há paleta nem cena 3D por módulo.
 

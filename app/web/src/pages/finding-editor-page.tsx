@@ -223,7 +223,7 @@ export function FindingEditorPage() {
             else createMutation.mutate();
           }}
         >
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-title">Título</Label>
             <Input
               id="finding-title"
@@ -237,7 +237,7 @@ export function FindingEditorPage() {
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-owasp">Categoria OWASP Top 10 2021</Label>
             <select
               id="finding-owasp"
@@ -257,7 +257,7 @@ export function FindingEditorPage() {
             </select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-vector">Vetor CVSS 3.1</Label>
             <Input
               id="finding-vector"
@@ -281,7 +281,7 @@ export function FindingEditorPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-description">Descrição</Label>
             <Textarea
               id="finding-description"
@@ -296,7 +296,7 @@ export function FindingEditorPage() {
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-impact">Impacto</Label>
             <Textarea
               id="finding-impact"
@@ -310,7 +310,7 @@ export function FindingEditorPage() {
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-recommendation">Recomendação</Label>
             <Textarea
               id="finding-recommendation"

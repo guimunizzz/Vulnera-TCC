@@ -83,6 +83,8 @@ model User {
   riskAcceptancesReviewed  RiskAcceptance[]       @relation("RiskAcceptanceReviewer") // CP-4
   riskAcceptancesRevoked   RiskAcceptance[]       @relation("RiskAcceptanceRevoker") // CP-4
   savedQueries             SavedQuery[] // CP-6 — buscas salvas e watchlists
+  codeScanImports          CodeScanImport[]       @relation("CodeScanImportUploader") // ADR-052
+  codeTriagedFindings      CodeFinding[]          @relation("CodeFindingTriagedBy") // ADR-052
 
   @@index([companyId])
 }
@@ -266,10 +268,11 @@ model Project {
   closedAt       DateTime?
   updatedAt      DateTime  @updatedAt
 
-  application     Application     @relation(fields: [applicationId], references: [id])
-  company         Company         @relation(fields: [companyId], references: [id])
+  application     Application      @relation(fields: [applicationId], references: [id])
+  company         Company          @relation(fields: [companyId], references: [id])
   members         ProjectMember[]
   vulnerabilities Vulnerability[]
+  codeScanImports CodeScanImport[] // ADR-052 — importações SARIF/CycloneDX
 
   @@index([companyId])
   @@index([applicationId])
@@ -357,6 +360,9 @@ model Vulnerability {
   // humano (RN10 intacta).
   sourceType          String  @default("MANUAL")
   sourceDastFindingId String? @unique
+  // ADR-052: "SAST_IMPORT" / "SCA_IMPORT" = promovida de um CodeFinding
+  // (SARIF ou CycloneDX importado). Mesma regra do DAST: vetor revisado por humano.
+  sourceCodeFindingId String? @unique
 
   // Foreign keys (cascata de isolamento)
   projectId     String
@@ -421,6 +427,8 @@ model Vulnerability {
   // projeto, com triagem, evidências e comentários próprios. Perde-se o
   // ponteiro pra origem, nunca o achado.
   sourceDastFinding DastFinding? @relation("VulnerabilityFromDastFinding", fields: [sourceDastFindingId], references: [id], onDelete: SetNull)
+  // SetNull pelo mesmo motivo do DAST: apagar a importação não apaga o achado promovido.
+  sourceCodeFinding CodeFinding? @relation("VulnerabilityFromCodeFinding", fields: [sourceCodeFindingId], references: [id], onDelete: SetNull)
 
   evidences       Evidence[]
   comments        VulnerabilityComment[]
@@ -928,7 +936,7 @@ model DastScan {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  requestedBy User            @relation(fields: [requestedById], references: [id])
+  requestedBy User                @relation(fields: [requestedById], references: [id])
   findings    DastFinding[]
   sensorRuns  DastSensorRun[]
   assets      DastObservedAsset[]
@@ -965,14 +973,14 @@ model DastSensorRun {
 // CyberGraph. `parentValue` diz a quem o ativo se liga no grafo (porta → IP,
 // IP → host do alvo).
 model DastObservedAsset {
-  id          String         @id @default(cuid())
+  id          String        @id @default(cuid())
   scanId      String
   kind        DastAssetKind
-  value       String         @db.VarChar(255)
-  parentValue String?        @db.VarChar(255)
-  sensorKey   String         @db.VarChar(32)
+  value       String        @db.VarChar(255)
+  parentValue String?       @db.VarChar(255)
+  sensorKey   String        @db.VarChar(32)
   metadata    Json?
-  createdAt   DateTime       @default(now())
+  createdAt   DateTime      @default(now())
 
   scan DastScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
 
@@ -1063,3 +1071,102 @@ model DastFinding {
 // ============================================================================
 // FIM
 // ============================================================================
+
+// =============================================================================
+// SAST/SCA — importação de relatórios de ferramentas de código (ADR-052)
+// =============================================================================
+//
+// O Vulnera não roda Semgrep/CodeQL/Trivy: ele RECEBE o relatório que a
+// pipeline do cliente já gera (SARIF 2.1.0 ou CycloneDX com seção
+// `vulnerabilities`) e aplica o mesmo fluxo do DAST — triagem no silo e
+// promoção para Vulnerability com vetor CVSS revisado por humano (RN10).
+//
+// Diferente do DastScan, a importação nasce DENTRO da cadeia multi-tenant:
+// pertence a um Project, e companyId é herdado dele (nunca vem do request).
+model CodeScanImport {
+  id                String   @id @default(cuid())
+  projectId         String
+  companyId         String // herdado do Project — filtro multi-tenant
+  format            String   @db.VarChar(16) // SARIF | CYCLONEDX
+  toolName          String   @db.VarChar(100)
+  toolVersion       String?  @db.VarChar(64)
+  fileName          String   @db.VarChar(255)
+  uploadedById      String
+  // Comparação com a importação ANTERIOR do mesmo projeto, formato e
+  // ferramenta (null na primeira). Gravada na importação porque é o retrato
+  // daquele momento: importar de novo depois não reescreve o passado.
+  previousImportId  String?
+  totalFindings     Int      @default(0)
+  newFindings       Int      @default(0)
+  persistedFindings Int      @default(0)
+  resolvedFindings  Int      @default(0)
+  // Só CycloneDX: quantos componentes o SBOM declarou (com ou sem CVE).
+  componentsCount   Int?
+  // Aviso legível quando o arquivo é válido mas incompleto (ex.: SBOM sem
+  // seção `vulnerabilities`, resultados sem localização).
+  warningMessage    String?  @db.Text
+  createdAt         DateTime @default(now())
+
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy User          @relation("CodeScanImportUploader", fields: [uploadedById], references: [id])
+  findings   CodeFinding[]
+
+  @@index([projectId, createdAt])
+  @@index([companyId])
+  @@index([uploadedById])
+}
+
+model CodeFinding {
+  id          String  @id @default(cuid())
+  importId    String
+  projectId   String // desnormalizado: dedup entre importações é por (projectId, fingerprint)
+  companyId   String
+  // sha256 hex — SAST: ferramenta|regra|arquivo|partialFingerprint (ou linha);
+  // SCA: pacote|versão|advisory. Ver utils/code-import/.
+  fingerprint String  @db.VarChar(64)
+  category    String  @db.VarChar(8) // SAST | SCA
+  ruleId      String  @db.VarChar(255)
+  title       String  @db.VarChar(500)
+  severity    String  @db.VarChar(16) // CRITICAL | HIGH | MEDIUM | LOW | INFO
+  cweId       String? @db.VarChar(32)
+
+  // SAST — onde no código
+  filePath  String? @db.Text
+  startLine Int?
+  endLine   Int?
+  snippet   String? @db.Text
+
+  // SCA — qual componente
+  packageName    String? @db.VarChar(500)
+  packageVersion String? @db.VarChar(128)
+  purl           String? @db.Text
+  fixedVersion   String? @db.VarChar(255)
+  advisoryId     String? @db.VarChar(64) // CVE-…, GHSA-…
+  // CVSS declarado pela ferramenta (CycloneDX ratings / SARIF security-severity).
+  // É INFORMAÇÃO da ferramenta: a Vulnerability promovida recalcula do vetor revisado.
+  cvssScore      Float?
+  cvssVector     String? @db.VarChar(255)
+
+  description    String? @db.Text
+  recommendation String? @db.Text
+  helpUri        String? @db.Text
+
+  // Triagem — mesmo enum e semântica do DAST (ADR-032). Na reimportação, um
+  // achado que persiste herda a triagem do anterior (triageInherited = true).
+  triageStatus    DastTriageStatus @default(NEW)
+  triageNote      String?          @db.Text
+  triagedById     String?
+  triagedAt       DateTime?
+  triageInherited Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+
+  codeImport CodeScanImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  triagedBy  User?          @relation("CodeFindingTriagedBy", fields: [triagedById], references: [id])
+
+  promotedVulnerability Vulnerability? @relation("VulnerabilityFromCodeFinding")
+
+  @@unique([importId, fingerprint])
+  @@index([projectId, fingerprint])
+  @@index([importId, triageStatus])
+  @@index([importId, severity])
+}

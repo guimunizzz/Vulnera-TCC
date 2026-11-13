@@ -36,8 +36,8 @@ export function DastScanReportPage() {
     return (
       <div className="p-6" aria-busy="true">
         <span className="sr-only">Carregando relatório do ZAP</span>
-        <Skeleton className="h-8 w-64 bg-inset" />
-        <Skeleton className="mt-4 h-96 w-full bg-inset" />
+        <Skeleton className="h-8 w-[16rem] bg-inset" />
+        <Skeleton className="mt-4 h-[24rem] w-full bg-inset" />
       </div>
     );
   }

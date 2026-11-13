@@ -407,7 +407,7 @@ export function ApplicationsPage() {
             {formError && <Alert>{formError}</Alert>}
 
             {role === "ADMIN" && (
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="app-company">Empresa <span aria-hidden="true" className="text-danger-ink">*</span></Label>
                 <select
                   id="app-company"
@@ -458,12 +458,12 @@ export function ApplicationsPage() {
               </div>
             )}
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="app-name">Nome</Label>
               <Input id="app-name" required value={name} onChange={(e) => setName(e.target.value)} />
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="app-url">URL</Label>
               <Input
                 id="app-url"
@@ -473,7 +473,7 @@ export function ApplicationsPage() {
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="app-description">Descrição</Label>
               <Input id="app-description" value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
@@ -538,13 +538,13 @@ function ApplicationsLoading() {
   return (
     <RegiaoCarregando rotulo="Carregando aplicações">
       <Card semPadding className="overflow-hidden">
-        <div className="border-b border-subtle bg-inset px-4 py-3"><Skeleton className="h-3 w-72" /></div>
+        <div className="border-b border-subtle bg-inset px-4 py-3"><Skeleton className="h-3 w-[18rem]" /></div>
         <div className="flex flex-col gap-0">
           {[0, 1, 2, 3].map((item) => (
             <div key={item} className="grid grid-cols-[1.1fr_1.4fr_2fr] gap-4 border-b border-subtle px-4 py-5 last:border-0">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-6 w-52" />
+              <Skeleton className="h-4 w-[8rem]" />
+              <Skeleton className="h-4 w-[12rem]" />
+              <Skeleton className="h-6 w-[13rem]" />
             </div>
           ))}
         </div>

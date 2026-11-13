@@ -132,6 +132,22 @@
   color: inherit;
 }
 
+/* Selo "new" no canto direito do item (ADR-052). Texto curto em caixa alta
+   sobre o acento tingido: legível nos dois temas sem competir com o item ativo. */
+.app-sidebar-new {
+  margin-inline-start: auto;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid color-mix(in oklch, oklch(var(--color-accent-ink)) 45%, transparent);
+  border-radius: var(--radius-full);
+  background: oklch(var(--color-accent-surface));
+  color: oklch(var(--color-accent-ink));
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .app-sidebar-footer {
   display: flex;
   flex-shrink: 0;

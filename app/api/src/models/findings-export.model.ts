@@ -43,7 +43,7 @@ export type FindingsExportRow = {
   vrsBand: VrsBand | null;
   hasActiveRiskAcceptance: boolean;
   assigneeName: string | null;
-  /** MANUAL | DAST_IMPORT (ADR-032). */
+  /** MANUAL | DAST_IMPORT (ADR-032) | SAST_IMPORT | SCA_IMPORT (ADR-052). */
   sourceType: string;
   /** `CWE-89`. Só existe para finding promovido de DAST. */
   cweId: string | null;

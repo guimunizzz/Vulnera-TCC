@@ -385,7 +385,7 @@ export function DastScanDetailPage() {
         <Breadcrumb itens={[{ rotulo: "DAST", para: "/dast" }, { rotulo: "Carregando..." }]} />
         <div className="mt-6 flex flex-col gap-2" aria-busy="true">
           <span className="sr-only">Carregando scan</span>
-          <Skeleton className="h-8 w-64 bg-inset" />
+          <Skeleton className="h-8 w-[16rem] bg-inset" />
           <Skeleton className="h-24 w-full bg-inset" />
         </div>
       </div>

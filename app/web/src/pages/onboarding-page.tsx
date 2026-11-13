@@ -207,11 +207,11 @@ export function OnboardingPage() {
 
         {step === 1 && (
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="company-name">Nome da empresa</Label>
               <Input id="company-name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="company-cnpj">CNPJ (opcional)</Label>
               <Input
                 id="company-cnpj"

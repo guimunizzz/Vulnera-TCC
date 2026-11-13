@@ -129,7 +129,7 @@ export default function ExposureMap3D({
             </div>
           </>
         ) : (
-          <div role="status" className="flex h-48 items-center justify-center p-6 text-center text-sm text-fg-muted">
+          <div role="status" className="flex h-[12rem] items-center justify-center p-6 text-center text-sm text-fg-muted">
             {falhou || !suportaWebGL2()
               ? "Este navegador não conseguiu iniciar o WebGL. O grafo 2D e a lista abaixo mostram os mesmos dados."
               : "O mapa 3D aparece em telas a partir de 768 px. A lista abaixo e o grafo 2D mostram os mesmos dados."}
@@ -144,7 +144,7 @@ export default function ExposureMap3D({
           </span>
           {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((s) => (
             <span key={s} className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm" style={{ background: css(TOKEN_DA_SEVERIDADE[s]) }} />
+              <span className="inline-block h-2 w-2 rounded-[0.125rem]" style={{ background: css(TOKEN_DA_SEVERIDADE[s]) }} />
               {ROTULO_RISCO[s]}
             </span>
           ))}
@@ -166,7 +166,7 @@ function ListaDePredios({
   aoSelecionar(id: string): void;
 }) {
   return (
-    <ul aria-label="Aplicações no mapa" className="flex flex-wrap gap-1.5">
+    <ul aria-label="Aplicações no mapa" className="flex flex-wrap gap-2">
       {aplicacoes.map((a) => {
         const id = idDaAplicacao(a.id);
         return (
@@ -175,7 +175,7 @@ function ListaDePredios({
               type="button"
               aria-pressed={selecionadoId === id}
               onClick={() => aoSelecionar(id)}
-              className="alvo-estendido flex items-center gap-1.5 rounded-full border border-subtle px-2.5 py-1 text-xs text-fg transition-colors hover:bg-inset aria-pressed:border-accent aria-pressed:bg-accent/10"
+              className="alvo-estendido flex items-center gap-2 rounded-full border border-subtle px-3 py-1 text-xs text-fg transition-colors hover:bg-inset aria-pressed:border-accent aria-pressed:bg-accent/10"
             >
               <span
                 className="h-2 w-2 rounded-full"

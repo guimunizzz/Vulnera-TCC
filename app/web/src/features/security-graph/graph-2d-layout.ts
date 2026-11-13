@@ -25,8 +25,12 @@
 import type { DastObservedAsset, DastRisk } from "../../types/dast.types";
 import type { GraphEdge, GraphNode, GraphNodeKind, SecurityGraph } from "./graph-model";
 
-/** Os três últimos são do Exposure Graph da empresa (aplicação, categoria OWASP), que reusa o mesmo desenho. */
-export type Kind2D = GraphNodeKind | "GROUP" | "COMPANY" | "APPLICATION" | "CATEGORY";
+/**
+ * COMPANY, APPLICATION e CATEGORY são do Exposure Graph da empresa; CODE,
+ * FOLDER, FILE e PACKAGE, do Security Graph das importações SAST/SCA
+ * (ADR-052). Os dois reusam o mesmo desenho.
+ */
+export type Kind2D = GraphNodeKind | "GROUP" | "COMPANY" | "APPLICATION" | "CATEGORY" | "CODE" | "FOLDER" | "FILE" | "PACKAGE";
 
 /** Severidade de finding (DAST) ou de vulnerabilidade gerenciada, que tem também CRITICAL. */
 export type Risco = DastRisk | "CRITICAL";
@@ -83,6 +87,11 @@ export const COLUNA_X: Record<Kind2D, number> = {
   PORT: 710,
   GROUP: 710,
   FINDING: 920,
+  // SAST/SCA: aplicação → ramo → pasta → arquivo/pacote → achado
+  CODE: 290,
+  FOLDER: 500,
+  FILE: 710,
+  PACKAGE: 710,
 };
 /** Acima disso, os filhos estruturais de um ramo começam recolhidos. */
 const MAX_ESTRUTURA_ABERTA = 6;

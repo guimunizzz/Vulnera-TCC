@@ -52,7 +52,7 @@ function StatusCell({ scan, posicaoNaFila }: { scan: DastScan; posicaoNaFila: nu
   const ativo = ACTIVE_DAST_STATUSES.includes(scan.status);
 
   return (
-    <div className="flex min-w-52 flex-col gap-1.5">
+    <div className="flex min-w-[13rem] flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge status={scan.status} />
         {scan.simulated && (
@@ -284,7 +284,7 @@ export function DastPage() {
               )}
             </Field>
 
-            <ul className="flex flex-col gap-1.5 rounded-control border border-subtle bg-inset p-3 text-sm text-fg-muted">
+            <ul className="flex flex-col gap-2 rounded-control border border-subtle bg-inset p-3 text-sm text-fg-muted">
               <li><strong className="text-fg">OWASP ZAP</strong> — descobre URLs com o spider e analisa as respostas, sem testes ativos nem formulários.</li>
               <li><strong className="text-fg">Headers de segurança</strong> — uma requisição à página informada: CSP, HSTS, anti-clickjacking, cookies.</li>
               <li><strong className="text-fg">Certificado SSL/TLS</strong> — um handshake: validade, cadeia, nome do host e versão do protocolo.</li>

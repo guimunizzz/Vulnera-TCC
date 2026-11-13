@@ -321,14 +321,14 @@ export function StyleguidePage() {
         <LadoALado>
           <div className="flex flex-wrap gap-4">
             {ELEVACOES.map(([nome, classe]) => (
-              <div key={nome} className={cn("flex h-20 w-32 items-center justify-center rounded-container bg-surface", classe)}>
+              <div key={nome} className={cn("flex h-20 w-[8rem] items-center justify-center rounded-container bg-surface", classe)}>
                 <span className="font-mono text-xs text-fg-muted">{nome}</span>
               </div>
             ))}
           </div>
           <div className="flex flex-wrap gap-4">
             {RAIOS.map(([nome, classe]) => (
-              <div key={nome} className={cn("flex h-16 w-28 items-center justify-center border border-strong bg-raised", classe)}>
+              <div key={nome} className={cn("flex h-16 w-[7rem] items-center justify-center border border-strong bg-raised", classe)}>
                 <span className="font-mono text-xs text-fg-muted">{nome}</span>
               </div>
             ))}
@@ -449,7 +449,7 @@ export function StyleguidePage() {
           </Button>
 
           <Popover gatilho={<Button variant="secundario">Abrir Popover</Button>}>
-            <div className="flex w-64 flex-col gap-3">
+            <div className="flex w-[16rem] flex-col gap-3">
               <p className="text-sm font-medium text-fg">Período</p>
               <div className="flex flex-wrap gap-2">
                 {["7d", "30d", "90d", "Ano"].map((p) => (

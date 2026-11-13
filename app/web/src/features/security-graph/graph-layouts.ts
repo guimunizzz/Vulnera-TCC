@@ -280,7 +280,7 @@ const ANGULO_DOURADO = Math.PI * (3 - Math.sqrt(5));
 
 /** Ilha de um nó: a severidade dele (ou do pior abaixo dele); Internet, alvo, empresa e o que não tem risco ficam no meio. */
 const ilhaDe = (no: No2D): Risco | "ESTRUTURA" => (CENTRAIS.has(no.kind) ? "ESTRUTURA" : no.risk ?? "ESTRUTURA");
-const CENTRAIS = new Set<No2D["kind"]>(["INTERNET", "ASSET", "COMPANY"]);
+const CENTRAIS = new Set<No2D["kind"]>(["INTERNET", "ASSET", "COMPANY", "CODE"]);
 
 export function layoutClusters(nos: No2D[]): { pos: Posicoes; zonas: Zona[] } {
   const grupos = new Map<Risco | "ESTRUTURA", No2D[]>();

@@ -136,7 +136,7 @@ function CvssCartao({ finding }: { finding: DastFinding }) {
       className="flex items-center gap-3 rounded-control border border-subtle bg-inset/60 p-3"
       style={{ borderLeftColor: cor(token), borderLeftWidth: 3 }}
     >
-      <div className="grid h-14 w-14 shrink-0 place-items-center rounded-control" style={{ background: cor(token, 0.14) }}>
+      <div className="grid h-[3.5rem] w-[3.5rem] shrink-0 place-items-center rounded-control" style={{ background: cor(token, 0.14) }}>
         <span className="font-mono text-xl font-bold" style={{ color: cor(token) }} data-numeric>
           {nota !== null ? nota.toFixed(1) : "—"}
         </span>
@@ -152,7 +152,7 @@ function CvssCartao({ finding }: { finding: DastFinding }) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          {finding.cveId} no NVD (NIST)
+          {`${finding.cveId} no NVD (NIST)`}
           <ExternalLink className="h-3 w-3" aria-hidden="true" />
         </a>
       </div>
@@ -225,10 +225,10 @@ function IconeDoNo({ detalhe, tamanho }: { detalhe: DetalheDoNo; tamanho: "md" |
 function Ficha({ icone: Icone, rotulo, children }: { icone: LucideIcon; rotulo: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 items-start gap-2 rounded-control border border-subtle bg-inset/60 px-3 py-2">
-      <Icone className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
+      <Icone className="mt-1 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
       <div className="min-w-0">
         <dt className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">{rotulo}</dt>
-        <dd className="mt-0.5 break-words text-sm font-medium text-fg">{children}</dd>
+        <dd className="mt-1 break-words text-sm font-medium text-fg">{children}</dd>
       </div>
     </div>
   );
@@ -296,7 +296,7 @@ export function PainelDoNo({
                 <p className="text-xs font-medium uppercase tracking-wide" style={{ color: cor(token) }}>
                   {ROTULO_TIPO[detalhe.kind]}
                 </p>
-                <h3 className="mt-0.5 break-words text-lg font-semibold leading-snug text-fg">{detalhe.label}</h3>
+                <h3 className="mt-1 break-words text-lg font-semibold leading-snug text-fg">{detalhe.label}</h3>
                 <div className="mt-2">
                   <Selos detalhe={detalhe} />
                 </div>
@@ -355,7 +355,7 @@ export function PainelDoNo({
                           className="relative grid h-6 w-6 shrink-0 place-items-center rounded-full border bg-surface"
                           style={{ borderColor: cor(tokenPasso), boxShadow: atual ? `0 0 0 3px ${cor(tokenPasso, 0.25)}` : undefined }}
                         >
-                          <Icone className="h-3.5 w-3.5" style={{ color: cor(tokenPasso) }} />
+                          <Icone className="h-4 w-4" style={{ color: cor(tokenPasso) }} />
                         </span>
                         <span className={`truncate ${atual ? "font-semibold" : "text-fg-secondary"}`}>{passo.label}</span>
                       </button>
@@ -393,7 +393,7 @@ export function PainelDoNo({
 function Referencias({ texto }: { texto: string }) {
   const linhas = texto.split(/\s+/).filter(Boolean);
   return (
-    <ul className="flex flex-col gap-1.5">
+    <ul className="flex flex-col gap-2">
       {linhas.map((linha, i) => (
         <li key={`${linha}-${i}`} className="break-all">
           {/^https?:\/\//i.test(linha) ? (
@@ -401,9 +401,9 @@ function Referencias({ texto }: { texto: string }) {
               href={linha}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-start gap-1.5 text-accent-ink underline-offset-2 hover:underline"
+              className="inline-flex items-start gap-2 text-accent-ink underline-offset-2 hover:underline"
             >
-              <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <ExternalLink className="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
               {linha}
             </a>
           ) : (
@@ -490,7 +490,7 @@ export function ModalDoNo({
                 <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: cor(token) }}>
                   {ROTULO_TIPO[detalhe.kind]}
                 </p>
-                <DialogTitle className="mt-0.5 break-words text-xl leading-snug">{detalhe.label}</DialogTitle>
+                <DialogTitle className="mt-1 break-words text-xl leading-snug">{detalhe.label}</DialogTitle>
                 <div className="mt-2">
                   <Selos detalhe={detalhe} />
                 </div>
@@ -534,7 +534,7 @@ export function ModalDoNo({
                   )}
                   {f.evidence && (
                     <Secao icone={Code2} titulo="Evidência">
-                      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-inset p-2 font-mono text-xs">{f.evidence}</pre>
+                      <pre className="max-h-[12rem] overflow-auto whitespace-pre-wrap break-all rounded bg-inset p-2 font-mono text-xs">{f.evidence}</pre>
                     </Secao>
                   )}
                   <Secao icone={ClipboardCheck} titulo="Triagem">
@@ -587,7 +587,7 @@ export function ModalDoNo({
                             <button
                               type="button"
                               onClick={() => aoSelecionar(`finding:${finding.id}`)}
-                              className="group flex w-full items-center gap-3 border-l-[3px] px-3 py-2.5 text-left text-sm transition-colors hover:bg-hovered"
+                              className="group flex w-full items-center gap-3 border-l-[3px] px-3 py-3 text-left text-sm transition-colors hover:bg-hovered"
                               style={{ borderLeftColor: cor(tokenDoNo({ kind: "FINDING", risk: finding.risk })) }}
                             >
                               <SeverityBadge severidade={SEVERIDADE_DO_RISCO[finding.risk]} className="shrink-0" />
@@ -596,7 +596,7 @@ export function ModalDoNo({
                                 {finding.normalizedUrl}
                               </span>
                               <ChevronRight
-                                className="h-4 w-4 shrink-0 text-fg-muted transition-transform group-hover:translate-x-0.5"
+                                className="h-4 w-4 shrink-0 text-fg-muted transition-transform group-hover:translate-x-1"
                                 aria-hidden="true"
                               />
                             </button>

@@ -929,3 +929,47 @@ OWASP como nó compartilhado entre aplicações, e o 3D reaproveitado como mapa
 onde cada eixo visual é um campo real (abertas, criticidade, severidade,
 exposição). Ver **[[ADR-051 - Layouts 2D no lugar do grafo 3D e Exposure Graph da empresa]]**.
 
+---
+
+## D17 — Importação SAST/SCA: decisões de produto (2026-11-13)
+
+Tomadas pelo Rafael antes da implementação da branch `feat/sast-sca-ingestion`.
+Arquitetura em [ADR-052](Vulnera/07-Decisoes/ADR-052%20-%20Importacao%20SAST%20e%20SCA%20por%20SARIF%20e%20CycloneDX.md);
+uso e validação em [`SAST_SCA.md`](SAST_SCA.md).
+
+**D17.1 — Nome no menu: "SAST/SCA".** Fica no grupo Operação, logo depois de
+DAST, para ADMIN e PENTESTER. É o paralelo direto com "DAST" e o termo que a
+banca reconhece. *Alternativas:* "Análise de código" (mais longo) e "Código"
+(vago).
+
+**D17.2 — Telas: página global + detalhe + aba no projeto.** A página do menu
+lista as importações de todos os projetos visíveis, como o DAST; o projeto
+ganha a aba com as dele. *Alternativa:* só a página global, que deixaria o
+projeto sem mostrar as próprias importações.
+
+**D17.3 — Selo "new" fixo.** Some quando alguém o remover do código
+(`novo: true` em `sidebar.tsx`), não por visita. É previsível na demonstração
+do TCC. *Alternativa:* sumir após a 1ª visita (localStorage), que poderia ter
+sumido antes da apresentação.
+
+**D17.4 — PDF sem falsos-positivos na lista, mas contados.** O relatório é o
+que um cliente lê: o ruído já descartado por um humano não entra na lista nem
+no gráfico, mas a contagem aparece na seção de triagem. *Alternativa:* listar
+tudo com o status, o que deixaria o PDF mais longo e ruidoso.
+
+**D17.5 — Security Graph por importação: "onde está".** Aplicação → Código
+(pasta → arquivo) e Dependências (pacote) → achados. *Alternativas:* por
+categoria OWASP ("que tipo"), ou as duas visões com seletor (mais densa).
+
+**D17.6 — Tour só no módulo SAST/SCA.** Na primeira visita à lista e na
+primeira importação aberta, sempre com "Pular tour" e "Ver tour".
+*Alternativa:* um tour da plataforma inteira no primeiro login (maior e fora do
+escopo deste PR).
+
+**D17.7 — "Tour visto" no navegador, por usuário.** `localStorage`, como o tema
+e o menu de acessibilidade; sem migration. *Alternativa:* coluna no usuário,
+que lembraria em qualquer dispositivo, mas com mais trabalho e mudança no
+schema.
+
+**D17.8 — Falsos-positivos ocultos no grafo, com interruptor.** É coerente com
+o PDF. *Alternativa:* sempre visíveis, escondidos só pela severidade.
