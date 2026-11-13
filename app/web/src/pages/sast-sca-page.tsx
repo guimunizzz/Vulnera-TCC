@@ -23,6 +23,8 @@ import { CodeImportDialog } from "../components/code-imports/code-import-dialog"
 import { CodeImportsTable } from "../components/code-imports/code-imports-table";
 import { SeverityStrip } from "../components/code-imports/severity-strip";
 import { ultimasPorFonte } from "../lib/code-import";
+import { BotaoVerTour, TourGuiado, type PassoTour } from "../components/tour/tour-guiado";
+import { useTourAutomatico } from "../components/tour/use-tour-automatico";
 import type { CodeSeverity } from "../types/code-import.types";
 
 function Kpi({ icone, rotulo, valor, dica }: { icone: React.ReactNode; rotulo: string; valor: string; dica: string }) {
@@ -40,10 +42,36 @@ function Kpi({ icone, rotulo, valor, dica }: { icone: React.ReactNode; rotulo: s
   );
 }
 
+/** Tour da primeira visita ao módulo (ADR-052). Passo sem alvo na tela (menu fechado no celular, lista vazia) é pulado. */
+const PASSOS_TOUR_LISTA: PassoTour[] = [
+  {
+    alvo: '[data-nav="/sast-sca"]',
+    titulo: "SAST/SCA chegou",
+    texto: "Ao lado do DAST: o que está no código (SAST) e nas dependências (SCA) da aplicação, com o mesmo fluxo de triagem, promoção e remediação.",
+  },
+  {
+    alvo: '[data-tour="sast-importar"]',
+    titulo: "Importe o relatório da pipeline",
+    texto: "O Vulnera não roda os scanners: envie o SARIF do Semgrep, CodeQL ou Trivy, ou o SBOM CycloneDX, e escolha o projeto.",
+  },
+  {
+    alvo: '[data-tour="sast-numeros"]',
+    titulo: "Os números de agora",
+    texto: "Contam a última importação de cada ferramenta em cada projeto — reimportar não duplica nada.",
+  },
+  {
+    alvo: '[data-tour="sast-lista"]',
+    titulo: "Cada importação",
+    texto: "Com a distribuição por severidade e o que mudou desde a anterior: ↗ novos, ↘ resolvidos. Abra uma para triar, ver o Security Graph e baixar o PDF.",
+  },
+  { alvo: '[data-tour="ver-tour"]', titulo: "Quer rever?", texto: "O tour fica aqui." },
+];
+
 export function SastScaPage() {
   const [importando, setImportando] = useState(false);
   const importsQuery = useQuery({ queryKey: ["code-imports", "all"], queryFn: () => codeImportsApi.list() });
   const imports = useMemo(() => importsQuery.data ?? [], [importsQuery.data]);
+  const tour = useTourAutomatico("sast-sca-lista", importsQuery.isSuccess);
 
   const resumo = useMemo(() => {
     const ultimas = ultimasPorFonte(imports);
@@ -72,7 +100,14 @@ export function SastScaPage() {
             compare e promova os achados para o fluxo de remediação.
           </p>
         </div>
-        <Button onClick={() => setImportando(true)}>Importar relatório</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <span data-tour="ver-tour">
+            <BotaoVerTour aoClicar={tour.abrir} />
+          </span>
+          <Button onClick={() => setImportando(true)} data-tour="sast-importar">
+            Importar relatório
+          </Button>
+        </div>
       </div>
 
       {importsQuery.isLoading && (
@@ -105,7 +140,7 @@ export function SastScaPage() {
 
       {importsQuery.isSuccess && imports.length > 0 && (
         <>
-          <section aria-label="Resumo das importações mais recentes" className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section aria-label="Resumo das importações mais recentes" data-tour="sast-numeros" className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Kpi
               icone={<FileCode2 size={14} aria-hidden="true" />}
               rotulo="Achados atuais"
@@ -122,11 +157,14 @@ export function SastScaPage() {
           </section>
 
           <h2 className="mb-3 mt-8 text-lg font-semibold text-fg">Importações</h2>
-          <CodeImportsTable imports={imports} />
+          <div data-tour="sast-lista">
+            <CodeImportsTable imports={imports} />
+          </div>
         </>
       )}
 
       <CodeImportDialog aberto={importando} aoFechar={() => setImportando(false)} />
+      <TourGuiado passos={PASSOS_TOUR_LISTA} aberto={tour.aberto} aoFechar={tour.fechar} />
     </div>
   );
 }

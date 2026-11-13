@@ -112,6 +112,26 @@ describe("Detalhe da importação SAST/SCA", () => {
     expect(dast.triage).not.toHaveBeenCalled();
   });
 
+  it("aba Security Graph: falso-positivo oculto até ligar o interruptor, e 'Ver na lista' volta para o achado", async () => {
+    renderPage();
+    await screen.findByText("SQL injection na busca");
+    fireEvent.click(screen.getByRole("tab", { name: /Security Graph/ }));
+
+    const noSql = await screen.findByRole("button", { name: /^Finding: SQL injection na busca/ });
+    expect(screen.getByRole("button", { name: /^Aplicação: App Portal/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Arquivo: db\.js/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Finding: Cookie sem HttpOnly/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("switch", { name: /Falsos-positivos \(1\)/ }));
+    expect(await screen.findByRole("button", { name: /^Finding: Cookie sem HttpOnly/ })).toBeInTheDocument();
+
+    fireEvent.click(noSql);
+    fireEvent.click(screen.getByRole("button", { name: "Ver na lista para triar" }));
+    expect(await screen.findByRole("tab", { name: /Achados/, selected: true })).toBeInTheDocument();
+    // A linha do achado volta aberta, com a triagem à mão.
+    expect(await screen.findByRole("button", { name: "Confirmado" })).toBeInTheDocument();
+  });
+
   it("salvar a nota logo depois de mudar o status não desfaz a triagem (lista ainda desatualizada)", async () => {
     // A API confirma a triagem, mas a lista recarregada continua devolvendo NEW
     // (o estado da corrida vista no fluxo real: ACCEPTED_RISK → NEW em 73 ms).

@@ -104,7 +104,7 @@ export function Sidebar({ aoNavegar, embutida }: { aoNavegar?: () => void; embut
             <ul className="app-sidebar-list">
               {grupo.itens.map(({ icone: Icone, ...item }) => (
                 <li key={item.para}>
-                  <NavLink to={item.para} onClick={aoNavegar} className="app-sidebar-link">
+                  <NavLink to={item.para} onClick={aoNavegar} className="app-sidebar-link" data-nav={item.para}>
                     {({ isActive }) => (
                       <>
                         <Icone size={18} strokeWidth={1.6} aria-hidden="true" focusable="false" />

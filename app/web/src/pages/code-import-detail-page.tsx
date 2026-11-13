@@ -21,8 +21,8 @@
  * http(s) — um `helpUri: "javascript:..."` num SARIF forjado vira texto puro.
  */
 
-import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileDown, Upload } from "lucide-react";
 import { codeImportsApi } from "../lib/api/code-imports.api";
@@ -40,6 +40,8 @@ import { DastTriageControls } from "../components/dast/dast-triage-controls";
 import { SeverityStrip } from "../components/code-imports/severity-strip";
 import { CodePromoteDialog } from "../components/code-imports/code-promote-dialog";
 import { CodeImportDialog } from "../components/code-imports/code-import-dialog";
+import { BotaoVerTour, TourGuiado, type PassoTour } from "../components/tour/tour-guiado";
+import { useTourAutomatico } from "../components/tour/use-tour-automatico";
 import { cn } from "../lib/cn";
 import { FILTROS_INICIAIS, filtrarAchados, urlSegura, type FiltrosAchados } from "../lib/code-import";
 import {
@@ -70,6 +72,44 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+// O grafo (e o motor 2D) só é baixado quando a aba abre.
+const CodeGraph = lazy(() => import("../features/security-graph/code-graph"));
+
+/** Tour da primeira vez que a pessoa abre uma importação (ADR-052). Passo sem alvo na tela é pulado. */
+const PASSOS_TOUR_DETALHE: PassoTour[] = [
+  {
+    alvo: '[data-tour="detalhe-numeros"]',
+    titulo: "O resumo da importação",
+    texto: "Quantos achados vieram, os críticos e altos, quantos faltam triar e, a partir da 2ª importação, o que é novo e o que foi resolvido.",
+  },
+  {
+    alvo: '[data-tour="detalhe-abas"] [role="tablist"]',
+    titulo: "Três jeitos de olhar",
+    texto: "Achados é a lista para triar; Comparação mostra o que mudou desde a importação anterior; Security Graph desenha onde estão os problemas — pasta, arquivo e pacote.",
+  },
+  {
+    alvo: '[data-tour="detalhe-filtros"]',
+    titulo: "Filtre o que importa primeiro",
+    texto: "Severidade, código ou dependência, status da triagem, busca por arquivo, pacote, CVE ou CWE, e só os novos.",
+  },
+  {
+    alvo: '[data-tour="detalhe-tabela"]',
+    titulo: "Trie e promova",
+    texto: "Em Detalhes: marque confirmado, falso-positivo ou risco aceito, e promova o achado a vulnerabilidade do projeto revisando o CVSS. A triagem é herdada nas próximas importações.",
+  },
+  {
+    alvo: '[data-tour="detalhe-reimportar"]',
+    titulo: "Importe a próxima versão",
+    texto: "Depois da correção, rode a ferramenta de novo e importe aqui: o Vulnera compara com esta importação.",
+  },
+  {
+    alvo: '[data-tour="detalhe-pdf"]',
+    titulo: "Relatório em PDF",
+    texto: "Resumo, comparação e cada achado. Falsos-positivos não entram na lista, só na contagem.",
+  },
+  { alvo: '[data-tour="ver-tour"]', titulo: "Quer rever?", texto: "O tour fica aqui. Bom trabalho!" },
+];
+
 export function CodeImportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const getErrorMessage = useApiError();
@@ -79,6 +119,7 @@ export function CodeImportDetailPage() {
   const [reimportando, setReimportando] = useState(false);
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [, setSearchParams] = useSearchParams();
 
   const importQuery = useQuery({ queryKey: ["code-imports", id], queryFn: () => codeImportsApi.getById(id!), enabled: !!id });
   const findingsQuery = useQuery({ queryKey: ["code-imports", id, "findings"], queryFn: () => codeImportsApi.listFindings(id!), enabled: !!id });
@@ -93,6 +134,21 @@ export function CodeImportDetailPage() {
   const porTriar = findings.filter((f) => f.triageStatus === "NEW").length;
   const promovidos = findings.filter((f) => f.promotedVulnerability).length;
   const findingDoDialogo = findings.find((f) => f.id === paraPromover) ?? null;
+  const tour = useTourAutomatico("sast-sca-importacao", importQuery.isSuccess && findingsQuery.isSuccess);
+
+  /** Do Security Graph para a lista: limpa os filtros (que poderiam esconder o achado) e abre a linha dele. */
+  function verNaLista(findingId: string) {
+    setFiltros(FILTROS_INICIAIS);
+    setExpandido(findingId);
+    setSearchParams(
+      (p) => {
+        p.set("aba", "achados");
+        return p;
+      },
+      { replace: true },
+    );
+    window.setTimeout(() => document.getElementById(`achado-${findingId}`)?.scrollIntoView({ block: "center" }), 100);
+  }
 
   async function baixarPdf(): Promise<void> {
     if (!id) return;
@@ -142,7 +198,7 @@ export function CodeImportDetailPage() {
 
   const abaAchados = (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 rounded-container border border-subtle bg-surface p-4">
+      <div data-tour="detalhe-filtros" className="flex flex-col gap-3 rounded-container border border-subtle bg-surface p-4">
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex min-w-campo flex-1 flex-col gap-1 text-xs text-fg-muted">
             Buscar
@@ -222,7 +278,7 @@ export function CodeImportDetailPage() {
       )}
 
       {visiveis.length > 0 && (
-        <div data-ops-surface className="overflow-x-auto rounded-container border border-subtle">
+        <div data-ops-surface data-tour="detalhe-tabela" className="overflow-x-auto rounded-container border border-subtle">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Achados da importação</caption>
             <thead className={TABELA.cabecalho}>
@@ -310,16 +366,20 @@ export function CodeImportDetailPage() {
               {new Date(imp.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secundario" onClick={() => setReimportando(true)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <span data-tour="ver-tour">
+              <BotaoVerTour aoClicar={tour.abrir} />
+            </span>
+            <Button variant="secundario" onClick={() => setReimportando(true)} data-tour="detalhe-reimportar">
               <Upload size={16} aria-hidden="true" /> Importar nova versão
             </Button>
-            <Button onClick={baixarPdf} disabled={gerandoPdf} carregando={gerandoPdf}>
+            <Button onClick={baixarPdf} disabled={gerandoPdf} carregando={gerandoPdf} data-tour="detalhe-pdf">
               <FileDown size={16} aria-hidden="true" /> {gerandoPdf ? "Gerando PDF..." : "Baixar PDF"}
             </Button>
           </div>
         </div>
 
+        <div data-tour="detalhe-numeros" className="flex flex-col gap-5">
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <Numero rotulo="Achados" valor={imp.totalFindings} />
           <Numero rotulo="Críticos" valor={imp.severityCounts.CRITICAL} classe="text-severity-critical-ink" />
@@ -329,6 +389,7 @@ export function CodeImportDetailPage() {
           <Numero rotulo="Resolvidos" valor={imp.previousImportId ? imp.resolvedFindings : null} classe="text-success-ink" />
         </dl>
         <SeverityStrip counts={imp.severityCounts} legenda />
+        </div>
         <p className="text-xs text-fg-muted">
           {promovidos > 0 ? `${promovidos} ${promovidos === 1 ? "achado já é vulnerabilidade" : "achados já são vulnerabilidades"} do projeto. ` : ""}
           {imp.componentsCount != null ? `SBOM com ${imp.componentsCount} componentes declarados. ` : ""}
@@ -347,6 +408,7 @@ export function CodeImportDetailPage() {
         </Alert>
       )}
 
+      <div data-tour="detalhe-abas">
       <Tabs
         className="mt-6"
         paramUrl="aba"
@@ -358,8 +420,20 @@ export function CodeImportDetailPage() {
             contagem: imp.previousImportId ? imp.newFindings + imp.resolvedFindings : undefined,
             conteudo: abaComparacao,
           },
+          {
+            id: "grafo",
+            rotulo: "Security Graph",
+            conteudo: (
+              <Suspense fallback={<Skeleton className="h-24 w-full bg-inset" />}>
+                <CodeGraph key={imp.id} nomeAplicacao={imp.applicationName} findings={findings} aoVerNaLista={verNaLista} />
+              </Suspense>
+            ),
+          },
         ]}
       />
+      </div>
+
+      <TourGuiado passos={PASSOS_TOUR_DETALHE} aberto={tour.aberto} aoFechar={tour.fechar} />
 
       <CodePromoteDialog finding={findingDoDialogo} projetoNome={imp.projectName} aberto={!!paraPromover} aoFechar={() => setParaPromover(null)} />
       {reimportando && <CodeImportDialog aberto={reimportando} aoFechar={() => setReimportando(false)} projetoFixo={{ id: imp.projectId, name: imp.projectName }} />}
