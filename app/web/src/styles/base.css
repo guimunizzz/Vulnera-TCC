@@ -207,7 +207,11 @@ pre {
    `position: relative` no host é o que o ancora.
    --------------------------------------------------------------------------- */
 
-.alvo-estendido {
+/* Só quando o host não está posicionado de outro jeito: este CSS fica fora de
+   camada e venceria o utilitário `absolute` — era o que tirava o "×" do
+   DialogClose do canto (ficava no fluxo do texto). `absolute`/`fixed` também
+   ancoram o ::after. */
+.alvo-estendido:not(.absolute):not(.fixed) {
   position: relative;
 }
 
