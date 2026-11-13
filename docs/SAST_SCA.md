@@ -175,7 +175,7 @@ oficiais) contra os projetos vulneráveis de propósito **OWASP NodeGoat**
 O fluxo inteiro foi feito **pela interface** no navegador, como PENTESTER:
 importar, triar (risco aceito com nota), promover SAST com vetor revisado,
 reimportar depois da correção (triagem herdada, 6 resolvidos, a vulnerabilidade
-promovida aparece para reteste), promover SCA com o vetor do NVD, PDF de 21
+promovida aparece para reteste), promover SCA com o vetor do NVD, PDF de 16
 páginas, SBOM vazio, página global, aba do projeto, tema claro e 375 px. **Zero
 erros de console.** As capturas estão em [`evidencias/sast-sca/`](evidencias/sast-sca/README.md).
 
@@ -189,6 +189,8 @@ erros de console.** As capturas estão em [`evidencias/sast-sca/`](evidencias/sa
 | Versão corrigida vazia no SBOM do Trivy | `affects[].versions` "unaffected" ou o texto "Upgrade X to version Y" |
 | Vetor 3.0 escolhido mesmo havendo 3.1 | v3.1 tem prioridade; 3.0 tem o prefixo convertido no rascunho |
 | SBOM sem componentes parecia "0 vulnerabilidades" | aviso explicando o lockfile ausente |
+| Recomendação do Semgrep trazia HTML e a propaganda "Enable cross-file analysis... sg.run/pro" | texto puro da ajuda, sem a linha promocional e descartada quando só repete a descrição |
+| PDF: URLs longas passavam da margem; capa com "Empresa" e "Aplicação" trocados | tokens longos quebrados; a API devolve `companyName` e a ferramenta foi para o subtítulo |
 | "Salvar nota" logo depois de mudar o status **desfazia a triagem** (AuditLog: `ACCEPTED_RISK → NEW` em 73 ms) | o controle de triagem guarda o último status confirmado pela API. **O mesmo componente atende o DAST, que também é corrigido** |
 
 ## Limites

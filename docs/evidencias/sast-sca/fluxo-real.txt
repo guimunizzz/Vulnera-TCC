@@ -2,13 +2,13 @@ login ok
 📸 01-menu-sast-sca-new-e-estado-vazio
 projeto: Pentest API — Integração B2B
 📸 02-dialogo-importar-sarif
-importação 1: http://localhost:3100/sast-sca/imports/cmweuujgr009rbr4gpl8f1cb2 · 35 de 35 achados
+importação 1: http://localhost:3100/sast-sca/imports/cmwevdd5l0003brxcvbudok23 · 35 de 35 achados
 📸 03-detalhe-importacao-semgrep-nodegoat
 triagem risco aceito ok
 📸 04-achado-expandido-triagem-e-detalhe
 📸 05-promover-sast-vetor-revisado
 promoção SAST ok
-importação 2: http://localhost:3100/sast-sca/imports/cmweuumv700b2br4g51ustkhb
+importação 2: http://localhost:3100/sast-sca/imports/cmwevdgid001ebrxc1x7bz2g9
 📸 06-reimportacao-novos-resolvidos-triagem-herdada
 📸 07-triagem-herdada-na-reimportacao
 📸 08-comparacao-resolvidos-com-vulnerabilidade-para-retestar

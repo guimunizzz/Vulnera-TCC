@@ -35,7 +35,7 @@ escrito à mão:
 | 13 | `13-aba-sast-sca-no-projeto.jpg` | aba SAST/SCA dentro do projeto |
 | 14 | `14-detalhe-tema-claro.jpg` | tema claro |
 | 15 | `15-detalhe-375px.jpg` | 375 px |
-| 16 | `16-pdf-pagina-{1,2,3}.jpg` + `relatorio-sast-sca-nodegoat-semgrep.pdf` | PDF da 2ª importação (21 páginas): capa, sumário com comparação e "retestar", achados |
+| 16 | `16-pdf-pagina-{1,2,3}.jpg` + `relatorio-sast-sca-nodegoat-semgrep.pdf` | PDF da 2ª importação (16 páginas): capa, sumário com comparação e "retestar", achados |
 
 ## Relatórios reais passados pelo parser
 
