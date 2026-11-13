@@ -660,17 +660,30 @@ animação: ele exige que o percentual **suba** e que as fases nomeadas do ZAP
 apareçam na tela. Uma barra estimada por tempo passaria na primeira asserção e
 falharia na segunda.
 
-### 11.5 CyberGraph (2D e 3D)
+### 11.5 CyberGraph (layouts 2D)
 
 A aba **CyberGraph** do detalhe do scan desenha o caminho de exposição
-Internet → alvo → endpoint → finding com os findings do próprio scan, em dois
-modos com a mesma seleção: **2D** (padrão, SVG, sem WebGL) e **3D** (Three.js,
-só baixado quando escolhido; sem WebGL o botão fica desabilitado). A escolha
-fica no `localStorage` do navegador. Decisão e garantias em
-[[ADR-048 - Grafo 3D do scan DAST na area autenticada]] (seção "Evolução").
+Internet → alvo → endpoint → finding com os findings do próprio scan, em SVG
+(sem WebGL, cada nó é um botão focável). **O modo 3D saiu em 2026-11-09**
+([[ADR-051 - Layouts 2D no lugar do grafo 3D e Exposure Graph da empresa]]);
+no lugar dele há cinco layouts sobre o mesmo grafo. O histórico do 3D está em
+[[ADR-048 - Grafo 3D do scan DAST na area autenticada]].
 
-- **Barra:** Recentralizar · Restaurar layout · Exportar PNG · 2D/3D, e o selo
-  "Fontes: …" com os sensores que rodaram no scan.
+- **Barra:** Recentralizar · Caminho mais crítico · Restaurar layout · Exportar
+  PNG · seletor de layout, e o selo "Fontes: …" com os sensores que rodaram no
+  scan.
+- **Layouts:** **Hierárquico** (padrão; colunas Internet → alvo → endpoint →
+  findings), **Radial** (alvo no centro, um anel por nível, setor proporcional ao
+  tamanho do ramo), **Estrela** (cada ramo é um hub com os filhos em leque),
+  **Orgânico** (forças: o que está ligado fica perto, como no Lens da Wiz) e
+  **Clusters** (ilhas por severidade com nome e contagem; Internet e alvo no
+  meio). Trocar de layout desliza os nós para o lugar novo (sem animação com
+  movimento reduzido) e reenquadra. Grupos, filtro, busca e seleção valem para
+  todos. A escolha fica no `localStorage`; posições arrastadas valem só para o
+  layout em que foram feitas.
+- **Caminho mais crítico:** seleciona o finding de maior risco (abrindo o grupo
+  dele), centraliza e acende o caminho de exposição até a Internet. Desabilitado
+  quando o filtro de severidade esconde todos os findings.
 - **Ativos de descoberta (2026-10-31):** além dos endpoints, o alvo ganha ramos
   de **IP** (com as portas abertas, as tecnologias dos CPEs e o grupo "CVEs"),
   **tecnologia** (fingerprint) e **Subdomínios** (recolhido quando há mais de 6).
@@ -682,45 +695,25 @@ fica no `localStorage` do navegador. Decisão e garantias em
   desmarcados e a legenda diz quantos estão aparecendo.
 - **Zoom:** botões + / − / ajustar no canto do palco (a roda continua valendo
   com o grafo em foco); no 2D, `+` e `-` no teclado.
-- **Exportar PNG:** no 2D, o grafo inteiro em 2×, com as cores do tema atual;
-  no 3D, a cena como está na tela, com os nomes visíveis desenhados por cima.
-- **2D:** colunas Internet → alvo → endpoint → "Findings (N)". Clicar no grupo
+- **Exportar PNG:** o grafo inteiro em 2×, no layout atual (com as ilhas, em
+  Clusters), com as cores do tema atual. O nome do arquivo leva o layout.
+- **Hierárquico:** colunas Internet → alvo → endpoint → "Findings (N)". Clicar no grupo
   expande os findings dele (eles saem do grupo deslizando e voltam para ele ao
   fechar); arestas em degradê; o caminho selecionado ganha fluxo animado e o resto
   esmaece.
-- **Grupos no 3D:** o 3D começa com os mesmos grupos fechados do 2D. Endpoint, IP
-  e "Subdomínios" mostram `▸ N` antes do nome; clique ou Espaço abre e fecha, com
-  os objetos crescendo a partir do pai. O estado é o mesmo nos dois modos.
 - **Painel e modal:** clicar num nó mostra o painel (tipo, severidade, triagem,
   caminho de exposição clicável); "Expandir detalhes", duplo clique ou
-  Shift+Enter (2D) / Enter (3D) abrem o modal. O modal é só leitura; "Triar em
+  Shift+Enter abrem o modal. O modal é só leitura; "Triar em
   Achados" leva à linha do finding na aba Achados, com os filtros limpos.
-- **Arrastar:** nós podem ser arrastados livremente nos dois modos (no 3D, num
-  plano de frente para a câmera); arestas seguem. **Restaurar layout** volta ao
+- **Arrastar:** nós podem ser arrastados livremente; arestas seguem. **Restaurar layout** volta ao
   padrão. As posições não são salvas no servidor.
-- **3D:** endpoints empilhados na vertical (leve curva em profundidade) e
-  findings em grade de frente para a câmera. Cada objeto tem o nome fixo logo
-  abaixo; quando dois nomes colidiriam na tela, some o de menor prioridade
-  (selecionado/hover, estrutura, findings do mais grave ao mais leve) até a
-  câmera girar ou o nó ganhar hover. Com um nó selecionado só os nomes do
-  caminho concorrem.
-
-| Objeto 3D | Representa |
-| --- | --- |
-| Globo com meridianos e órbita | Internet (exposição) |
-| Rack de servidor com LEDs | o host do `targetUrl` |
-| Porta hexagonal | um `normalizedUrl` distinto |
-| Cristal na cor da severidade | um `DastFinding`; HIGH ganha halo pulsante |
-| Porta hexagonal com núcleo do acento | o IP público do alvo |
-| Porta hexagonal menor, núcleo neutro | porta aberta, tecnologia ou subdomínio |
-
-- **Interação:** arrastar o fundo move a vista (2D) ou gira (3D); com o grafo em
-  foco, a roda aproxima; **Recentralizar** volta ao enquadramento inicial.
-- **Teclado:** 2D — um único ponto de Tab no grafo; as setas andam entre os
-  nós (← → entre colunas, ↑ ↓ na coluna), Enter seleciona, Shift+Enter abre o
-  modal, Esc limpa. 3D — Tab foca a cena, setas percorrem os nós, Enter abre,
-  Esc limpa.
-- **2D:** legenda de tipos e severidades; minimapa opcional pelo botão no grupo
+- **Interação:** arrastar o fundo move a vista; com o grafo em foco, a roda
+  aproxima; **Recentralizar** volta ao enquadramento inicial.
+- **Teclado:** um único ponto de Tab no grafo; as setas andam entre os nós
+  (no Hierárquico ← → entre colunas e ↑ ↓ na coluna; nos outros layouts, o nó
+  mais próximo num cone de 120° na direção da seta), Enter seleciona,
+  Shift+Enter abre o modal, Esc limpa.
+- **Legenda e minimapa:** legenda de tipos e severidades; minimapa opcional pelo botão no grupo
   de zoom (clicar/arrastar move a vista). Fica desligado por padrão: fixo sobre o
   grafo, ele sempre pode cobrir algum nó.
 - **Sensores:** a faixa "Sensores deste scan" (acima das abas) mostra o status
@@ -735,10 +728,6 @@ fica no `localStorage` do navegador. Decisão e garantias em
   alvo desmarca a autorização. A demonstração (sem tocar a rede) é um link
   secundário. Um scan real que conclui com sensor indisponível mostra
   "Análise concluída com avisos" com o motivo.
-- **3D em máquina fraca:** se a média de quadro passar de 25 ms (~40 FPS), a
-  cena baixa a resolução e, se ainda faltar, desliga bloom e sombra dinâmica,
-  avisando na tela. Um aviso também conta quantos nomes estão ocultos por
-  colisão.
 - **Limites:** até 300 nós (corta INFO antes de HIGH e avisa). A aba
   **Achados** continua sendo a visão de trabalho.
 - **Escopo honesto:** usa só o que o ZAP já grava. Sensores, `ObservedAsset`,
@@ -747,8 +736,13 @@ fica no `localStorage` do navegador. Decisão e garantias em
   divergência de exposição.
 
 Código: `app/web/src/features/security-graph/` (`graph-model.ts` monta o grafo,
-`graph-2d-layout.ts` e `cyber-graph-2d.tsx` o 2D, `scene/` o 3D,
-`cyber-graph.tsx` a aba). Evidências: `docs/evidencias/security-graph/`.
+`graph-2d-layout.ts` agrupa e posiciona o Hierárquico, `graph-layouts.ts` os
+outros layouts, `cyber-graph-2d.tsx` desenha, `cyber-graph.tsx` é a aba).
+Evidências: `docs/evidencias/security-graph/` e `docs/evidencias/cybergraph-layouts/`.
+
+O mesmo desenho e os mesmos layouts servem ao **Exposure Graph** da empresa
+(`/exposure-graph`), que tem também o mapa 3D da superfície de ataque; ver
+`docs/EXPOSURE_REMEDIATION.md` §9.
 
 ---
 

@@ -4,8 +4,9 @@
  * O QUE FAZ
  * Dirige a aba CyberGraph do detalhe de um scan DAST de ponta a ponta: grupo de
  * findings, painel, modal, "Triar em Achados", busca, filtro por severidade,
- * arrastar e restaurar o layout, teclado, exportar PNG, modo 3D (com grupos que
- * abrem e fecham) e movimento reduzido.
+ * arrastar e restaurar o layout, teclado, exportar PNG, troca de layout
+ * (radial, estrela, orgânico, clusters), caminho mais crítico e movimento
+ * reduzido. O modo 3D saiu (ADR-051).
  *
  * POR QUE EXISTE
  * Os testes de unidade cobrem layout e montagem do detalhe; a fiação entre SVG,
@@ -37,17 +38,18 @@ async function criarScanSimulado(request: APIRequestContext): Promise<string> {
   return id as string;
 }
 
-async function abrirCyberGraph(page: Page, scanId: string, modo: "2D" | "3D" = "2D"): Promise<void> {
+const grafo2d = (page: Page) => page.locator('svg[aria-roledescription="grafo"]');
+const painel = (page: Page) => page.getByRole("complementary", { name: "Detalhes do nó" });
+
+async function abrirCyberGraph(page: Page, scanId: string): Promise<void> {
   // Os ativos (IP, portas, CVEs) chegam depois dos findings e mudam o layout: interagir antes disso clica no nó errado.
   const ativos = page.waitForResponse((r) => r.url().endsWith(`/dast/scans/${scanId}/assets`));
   await page.goto(`/dast/scans/${scanId}`);
   await ativos;
   await page.getByRole("tab", { name: "CyberGraph" }).click();
-  await page.getByRole("button", { name: modo, exact: true }).click();
+  await expect(grafo2d(page)).toBeVisible();
 }
 
-const grafo2d = (page: Page) => page.locator('svg[aria-roledescription="grafo"]');
-const painel = (page: Page) => page.getByRole("complementary", { name: "Detalhes do nó" });
 
 test.describe("CyberGraph", () => {
   let scanId: string;
@@ -57,6 +59,9 @@ test.describe("CyberGraph", () => {
   });
 
   test.beforeEach(async ({ page }) => {
+    // Cada abertura do scan faz ~5 GETs e o limite por usuário é 1/s com rajada de 10:
+    // sem esse respiro, a suíte inteira tropeça em 429 (WEB-FUT-06), não em bug do grafo.
+    await page.waitForTimeout(5_000);
     await login(page, "pentester");
   });
 
@@ -154,51 +159,39 @@ test.describe("CyberGraph", () => {
     await abrirCyberGraph(page, scanId);
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Exportar PNG" }).click();
-    expect((await download).suggestedFilename()).toMatch(/^cybergraph-.+-2d\.png$/);
+    expect((await download).suggestedFilename()).toMatch(/^cybergraph-.+-hierarquico\.png$/);
   });
 
-  test("CG-06 — modo 3D monta a cena com nomes e exporta PNG", async ({ page }) => {
+  test("CG-06 — cada layout redesenha o mesmo grafo, mantém a seleção e é lembrado", async ({ page }) => {
     await abrirCyberGraph(page, scanId);
-    const botao3d = page.getByRole("button", { name: "3D", exact: true });
-    test.skip(await botao3d.isDisabled(), "navegador do teste sem WebGL 2");
-    await botao3d.click();
-    const canvas = page.locator('canvas[aria-roledescription="grafo 3D"]');
-    test.skip(!(await canvas.isVisible({ timeout: 20_000 }).catch(() => false)), "WebGL não iniciou neste ambiente");
-    await expect(canvas).toHaveCount(1);
-    // Nomes fixos: um por nó, na camada de rótulos sobre o canvas.
-    await expect(page.locator('canvas[aria-roledescription="grafo 3D"] ~ div[aria-hidden="true"] > div').first()).toBeAttached();
-    const download = page.waitForEvent("download");
-    await page.getByRole("button", { name: "Exportar PNG" }).click();
-    expect((await download).suggestedFilename()).toMatch(/^cybergraph-.+-3d\.png$/);
+    const nos = grafo2d(page).locator('g[role="button"]');
+    const total = await nos.count();
+    const alvo = grafo2d(page).locator('g[role="button"][aria-label^="Alvo"]');
+    await alvo.click();
+    const layouts = page.getByRole("group", { name: "Layout do grafo" });
+    for (const nome of ["Radial", "Estrela", "Orgânico", "Clusters"]) {
+      const antes = await alvo.getAttribute("transform");
+      await layouts.getByRole("button", { name: nome }).click();
+      await expect(layouts.getByRole("button", { name: nome })).toHaveAttribute("aria-pressed", "true");
+      await expect(nos).toHaveCount(total);
+      await expect(alvo).not.toHaveAttribute("transform", antes ?? "");
+      await expect(alvo).toHaveAttribute("aria-pressed", "true");
+    }
+    // Clusters desenha as ilhas por severidade atrás dos nós.
+    await expect(grafo2d(page).getByText(/^Estrutura · \d+$/)).toBeVisible();
+    // A escolha fica salva (localStorage); volta ao padrão para não vazar para os outros casos.
+    expect(await page.evaluate(() => localStorage.getItem("vulnera:cybergraph-layout"))).toBe("clusters");
+    await page.getByRole("group", { name: "Layout do grafo" }).getByRole("button", { name: "Hierárquico" }).click();
   });
 
-  test("CG-09 — no 3D os grupos começam fechados e Espaço abre e fecha o do endpoint", async ({ page }) => {
+  test("CG-09 — Caminho mais crítico seleciona o finding de maior risco e acende o caminho até a Internet", async ({ page }) => {
     await abrirCyberGraph(page, scanId);
-    // Nome de um endpoint pelo 2D, onde cada nó é um botão com título.
-    const endpoint = (await grafo2d(page).locator('g[role="button"][aria-label^="Endpoint"] title').first().textContent()) ?? "";
-    expect(endpoint).not.toBe("");
-
-    const botao3d = page.getByRole("button", { name: "3D", exact: true });
-    test.skip(await botao3d.isDisabled(), "navegador do teste sem WebGL 2");
-    await botao3d.click();
-    const canvas = page.locator('canvas[aria-roledescription="grafo 3D"]');
-    test.skip(!(await canvas.isVisible({ timeout: 20_000 }).catch(() => false)), "WebGL não iniciou neste ambiente");
-    const visiveis = async () => Number((await canvas.getAttribute("aria-label"))?.match(/(\d+) de \d+ nós visíveis/)?.[1]);
-    await expect(canvas).toHaveAttribute("aria-label", /\d+ de \d+ nós visíveis/);
-    const fechado = await visiveis();
-    // Grupo fechado: selo "▸ N" antes do nome, na camada de rótulos.
-    const rotulos = page.locator('canvas[aria-roledescription="grafo 3D"] ~ div[aria-hidden="true"]');
-    await expect(rotulos.getByText(/^▸ \d+$/).first()).toBeAttached();
-
-    await page.getByLabel("Buscar nó no grafo").fill(endpoint);
-    await page.getByLabel("Buscar nó no grafo").press("Enter");
-    await expect(painel(page).getByRole("heading", { name: endpoint })).toBeVisible();
-    await canvas.focus();
-    await page.keyboard.press(" ");
-    await expect.poll(visiveis).toBeGreaterThan(fechado);
-    await expect(rotulos.getByText(/^▾ \d+$/).first()).toBeAttached();
-    await page.keyboard.press(" ");
-    await expect.poll(visiveis).toBe(fechado);
+    await page.getByRole("button", { name: "Caminho mais crítico" }).click();
+    const selecionado = grafo2d(page).locator('g[role="button"][aria-pressed="true"]');
+    await expect(selecionado).toHaveCount(1);
+    await expect(selecionado).toHaveAttribute("aria-label", /^Finding: .+, risco alto/);
+    await expect(grafo2d(page).locator(".cg-fluxo").first()).toBeAttached();
+    await expect(painel(page).getByText("Caminho de exposição")).toBeVisible();
   });
 
   test.describe("com movimento reduzido", () => {
