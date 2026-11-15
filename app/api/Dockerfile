@@ -33,12 +33,13 @@ RUN apk add --no-cache python3 make g++ docker-cli
 # dizia que estava corrigido. Restaurado no CP-0 da iniciativa Exposure &
 # Remediation — se algum dia a linha sumir de um dos dois, este comentário
 # volta a mentir.
-RUN npm install -g npm@11
+# Cache do npm no BuildKit (fora da imagem): mudar o package.json não rebaixa tudo.
+RUN --mount=type=cache,target=/root/.npm npm install -g npm@11
 
 # Manifesto primeiro pra aproveitar cache de layer: só reinstala deps se
 # package.json mudar, não a cada alteração de código-fonte.
 COPY package.json ./
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm npm install
 
 COPY tsconfig.json ./
 COPY prisma ./prisma
@@ -58,9 +59,11 @@ RUN npm run build
 # registrada em ADR-031. Em host Linux o socket costuma ser root:docker (GID
 # 999/998) — nesse caso use `group_add` no compose com o GID local, em vez
 # deste GID 0.
+#
+# chown só onde a API grava (o .xlsx vai pro /tmp): `chown -R /app` duplicava o node_modules (~450 MB).
 RUN addgroup -S vulnera && adduser -S vulnera -G vulnera \
   && addgroup vulnera root \
-  && mkdir -p uploads dast-reports && chown -R vulnera:vulnera /app
+  && mkdir -p uploads dast-reports && chown vulnera:vulnera uploads dast-reports
 USER vulnera
 
 EXPOSE 3001
