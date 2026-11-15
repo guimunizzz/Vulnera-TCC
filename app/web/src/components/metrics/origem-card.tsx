@@ -40,7 +40,7 @@ export function OrigemCard({ applicationId, abertosPorOrigem, filaDeTriagem, car
             {SOURCE_TYPES.map((o) => {
               const n = abertosPorOrigem[o] ?? 0;
               const rotulo = (
-                <span className="flex w-[4.5rem] shrink-0">
+                <span className="flex w-[6.5rem] shrink-0">
                   <OrigemBadge sourceType={o} />
                 </span>
               );

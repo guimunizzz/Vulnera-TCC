@@ -134,9 +134,16 @@
 
 /* Selo "new" no canto direito do item (ADR-052). Texto curto em caixa alta
    sobre o acento tingido: legível nos dois temas sem competir com o item ativo. */
+/* O rótulo não quebra ("Threat Intel" + selo cabia em duas linhas a 216 px). */
+.app-sidebar-link > span:not(.app-sidebar-new):not(.sr-only) {
+  min-width: 0;
+  white-space: nowrap;
+}
+
 .app-sidebar-new {
   margin-inline-start: auto;
-  padding: 0 var(--space-2);
+  flex-shrink: 0;
+  padding: 0 var(--space-1);
   border: var(--border-width) solid color-mix(in oklch, oklch(var(--color-accent-ink)) 45%, transparent);
   border-radius: var(--radius-full);
   background: oklch(var(--color-accent-surface));
@@ -144,7 +151,7 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   line-height: var(--leading-sm);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 

@@ -20,7 +20,7 @@
 
 import { NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Clock3, FileCode2, FileText, Folder, LayoutDashboard, Monitor, Network, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Check, Clock3, FileCode2, FileText, Folder, LayoutDashboard, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { savedQueriesApi } from "../../lib/api/saved-queries.api";
@@ -55,6 +55,8 @@ const GRUPOS: GrupoNav[] = [
     itens: [
       { para: "/applications", rotulo: "Aplicações", papeis: ["ADMIN", "CLIENT"], icone: Monitor },
       { para: "/exposure-graph", rotulo: "Exposure Graph", papeis: ["ADMIN", "CLIENT"], icone: Network },
+      // Threat Intel (ADR-053): os três papéis — o que cada um pode fazer em cada empresa a API decide.
+      { para: "/threat-intel", rotulo: "Threat Intel", icone: Radar, novo: true },
       { para: "/projects", rotulo: "Projetos", icone: Folder },
       // Os papéis são os mesmos das rotas; agrupar não amplia o acesso.
       { para: "/findings", rotulo: "Findings", papeis: ["ADMIN", "PENTESTER"], icone: Search },

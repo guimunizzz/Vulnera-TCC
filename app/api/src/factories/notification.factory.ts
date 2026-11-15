@@ -10,11 +10,12 @@
 
 import { prisma } from "../database/prisma.database";
 import { UserRepository } from "../repositories/user.repository";
+import { NotificationRepository } from "../repositories/notification.repository";
 import { NotificationService } from "../services/notification.service";
 import { NotificationController } from "../controllers/notification.controller";
 
 export function makeNotificationController(): NotificationController {
   const userRepository = new UserRepository(prisma);
-  const service = new NotificationService(userRepository);
+  const service = new NotificationService(userRepository, new NotificationRepository(prisma));
   return new NotificationController(service);
 }

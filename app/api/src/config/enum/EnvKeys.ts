@@ -69,4 +69,7 @@ export enum EnvKeys {
   TRUST_PROXY_HOPS = "TRUST_PROXY_HOPS",
   // Chave OPCIONAL da API do NVD (NIST): sem ela, 5 consultas a cada 30 s; com ela, 50.
   NVD_API_KEY = "NVD_API_KEY",
+  // Threat Intel (ADR-053): sincronização periódica com NVD, OSV, CISA KEV e EPSS.
+  THREAT_INTEL_SYNC_ENABLED = "THREAT_INTEL_SYNC_ENABLED",
+  THREAT_INTEL_SYNC_INTERVAL_MIN = "THREAT_INTEL_SYNC_INTERVAL_MIN",
 }
