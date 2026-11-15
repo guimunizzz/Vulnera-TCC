@@ -6,6 +6,11 @@
 
 ## Status
 
+**✅ 2026-11-15 — INT-AI-04B1, ativação técnica Gemini local concluída (100%).** Chave somente no `.env` ignorado; modelo `gemini-3.5-flash-lite`. Zero scans ativos antes da recriação exclusiva da API, mantendo imagem/volumes e IDs de banco/Web/Mailhog. Provedor HTTP 200/STOP; rota autenticada por token interno efêmero HTTP 200 com `source: gemini`; health/Web HTTP 200. Chave não aparece nos logs da API ou nos arquivos versionados. Nenhuma configuração de cobrança foi alterada. Evidências sanitizadas em `output/agent-ai-dev-merge/` (local e ignorado). Registro anterior INT-AI-04B desdobrado abaixo; a confirmação de gratuidade não é inferida de uma resposta bem-sucedida.
+
+- [x] INT-AI-04B1 — Configuração privada e chamada real Gemini na stack local.
+- [ ] INT-AI-04B2 — Responsável confirmar Free Tier e substituir a credencial compartilhada em chat.
+
 **✅ 2026-11-15 — INT-AI-04A, guia da configuração Gemini gratuita preparado.** Fontes oficiais reconferidas; projeto Free sem faturamento, chave privada, verificação eventual por celular, `.env` na raiz do Compose e recriação da API apenas sem scans ativos. Texto no `gemini-3.5-flash-lite` elegível ao Free Tier; selo Gemini e Usage necessários para comprovar a integração. Nenhum segredo/arquivo privado/cobrança/serviço alterado. Guia em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
 
 - [x] INT-AI-04A — Requisitos, condições de custo/cartão e passo a passo revisados.

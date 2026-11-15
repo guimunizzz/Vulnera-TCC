@@ -76,9 +76,11 @@ Requisitos: conta Google com acesso ao AI Studio (18 anos ou mais), projeto Free
 
 As [cotas](https://aistudio.google.com/docs/rate-limits) variam por modelo/projeto e não equivalem aos buckets do Vulnera. No Free Tier, exceder cota gera limitação; não é autorização para migrar ao pago. Se o projeto já estiver no plano pago, chamadas podem gerar cobranças. O Free Tier também permite uso do conteúdo para melhoria dos produtos Google: use documentação e dados fictícios, sem informações confidenciais.
 
-**Estado desta orientação:** nenhum `.env` real, cartão, projeto Google ou serviço foi configurado por esta tarefa. A configuração e a chamada real com a chave do responsável continuam pendentes. A API foi consultada somente por indicadores de presença, sem imprimir chave ou outros segredos.
+**Estado histórico da orientação inicial:** nenhum `.env` real, cartão, projeto Google ou serviço havia sido configurado naquela etapa. A configuração e a chamada real com a chave do responsável estavam pendentes.
 
-Os placeholders estão em `app/api/.env.example`; arquivos `.env` reais são privados e não foram editados pela entrega. Mantenha a configuração já necessária à API (banco, JWT, `PORT`, etc.). Variáveis do assistente são opcionais no boot e lidas por `EnvVar`/`EnvKeys`, exclusivamente no backend.
+**Atualização operacional em 2026-11-15:** mediante solicitação explícita, chave cadastrada apenas no `.env` ignorado da raiz e API configurada em modo `gemini` com `gemini-3.5-flash-lite`. Confirmados zero scans ativos; recriada somente a API, sem rebuild, mantendo imagem e volumes. Google respondeu HTTP 200/STOP; rota `/api/assistant/chat`, autenticada com token interno efêmero de 60 s, respondeu HTTP 200 com `source: gemini`. Health/Web HTTP 200 e banco/Web/Mailhog sem recriação. Nenhuma chave/token foi incluída em log ou commit. Esta prova técnica não verifica o tier de faturamento: o responsável ainda deve confirmá-lo no AI Studio. A credencial compartilhada em chat deve ser substituída por uma nova, inserida diretamente no arquivo privado; depois reaplique a API sem scans ativos.
+
+Os placeholders estão em `app/api/.env.example`; arquivos `.env` reais são privados. A implementação inicial não os alterou; a ativação local posterior está registrada acima. Mantenha a configuração já necessária à API (banco, JWT, `PORT`, etc.). Variáveis do assistente são opcionais no boot e lidas por `EnvVar`/`EnvKeys`, exclusivamente no backend.
 
 ```dotenv
 ASSISTANT_MODE=local

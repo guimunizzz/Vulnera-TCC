@@ -16,6 +16,11 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-15 — Configuração local Gemini ativada e validada (100% da ativação técnica; tier de faturamento ainda não confirmado).** Por solicitação explícita, chave cadastrada somente no `.env` ignorado da raiz, modo `gemini` e modelo `gemini-3.5-flash-lite`. Consulta somente leitura confirmou zero scans QUEUED/RUNNING antes do restart. Comparação do Compose mostrou mudanças exclusivamente nas três variáveis do assistente; somente a API foi recriada, com a mesma imagem e volumes. Teste mínimo Google HTTP 200/STOP (22 tokens); chamada à rota autenticada com token interno efêmero de 60 s retornou HTTP 200, `source: gemini`, mensagem e três ações. Health e Web HTTP 200; banco/Web/Mailhog conservaram IDs, chave ausente dos logs da API. Sem alteração de código/schema/dados ou faturamento Google. Smoke técnico não equivale a login/navegador. **Pendências do responsável:** confirmar Free Tier no AI Studio e substituir a credencial compartilhada em chat. Marcos anteriores de ausência de chave/chamada são históricos e ficam superados por este registro.
+
+- [x] INT-AI-04B1 — Cadastrar a chave privadamente no ambiente local e validar o provedor e a rota real do assistente.
+- [ ] INT-AI-04B2 — Confirmar o tier do projeto Google e substituir a chave compartilhada, sem publicar segredos.
+
 **✅ 2026-11-15 — Orientação da primeira configuração Gemini/Free Tier preparada (100% do guia; ativação real pendente).** Código/configuração/Compose e documentação oficial Google reconferidos: `gemini-3.5-flash-lite` com texto gratuito no Free Tier; faturamento pago separado e verificação de alguns projetos por celular. Guia `docs/ASSISTENTE_VULNERA.md` detalha projeto/chave privados, tier sem cobrança, `.env` da raiz para Docker, recriação apenas da API sem scans ativos e confirmação pelo selo Gemini/Usage. Nenhuma chave solicitada em chat, cobrança/cartão ativado, `.env` real editado ou container recriado. Validação Gemini ao vivo depende da configuração privada do responsável; não marcada como entregue.
 
 - [x] INT-AI-04A — Conferir requisitos/cobrança e preparar o passo a passo de configuração gratuita.
