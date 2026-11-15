@@ -47,6 +47,37 @@ O Free Tier pode usar entradas e respostas para melhoria dos produtos Google, in
 
 ## Configuração
 
+### Primeira configuração gratuita no Docker — conferida em 2026-11-15
+
+Para usar somente texto no `gemini-3.5-flash-lite`, a [tabela oficial](https://aistudio.google.com/docs/pricing#gemini-3.5-flash-lite) mantém entrada e saída gratuitas no Free Tier. O [faturamento pago](https://aistudio.google.com/docs/billing) é uma etapa separada: exige vincular uma conta de cobrança e pode exigir pré-pagamento. Para o ensaio gratuito, escolha um projeto Free sem faturamento vinculado; não avance por Set up billing/Upgrade/compra de créditos. Criar uma chave não comprova que o projeto é gratuito: confira o tier do projeto.
+
+Requisitos: conta Google com acesso ao AI Studio (18 anos ou mais), projeto Free, chave privada desse projeto, modelo disponível e internet na API. Docker/API/web já estão preparados no Vulnera. Alguns projetos/contas exigem [verificação por QR no celular](https://aistudio.google.com/docs/verification); ela é distinta de ativar o plano pago.
+
+1. Abra [Google AI Studio](https://aistudio.google.com/) com sua conta e aceite os termos. Em Projects, use o projeto padrão gratuito ou crie um projeto para o Vulnera.
+2. Confirme que o projeto está em Free Tier, sem cobrança vinculada. Se pedir verificação, siga o fluxo de Verify project pelo celular. Não ative faturamento para resolver essa etapa.
+3. Em [API keys](https://aistudio.google.com/api-keys), escolha Create API key e o projeto gratuito. Guarde a chave somente na máquina/ambiente do backend; nunca em chat, screenshot, código, frontend ou commit.
+4. Para o Compose, acrescente ao `.env` da **raiz**, ao lado de `docker-compose.yml`, sem substituir o conteúdo que já existir:
+
+   ```dotenv
+   ASSISTANT_MODE=gemini
+   GEMINI_API_KEY=COLE_A_CHAVE_SOMENTE_NO_ARQUIVO_LOCAL
+   GEMINI_MODEL=gemini-3.5-flash-lite
+   ```
+
+   Esse `.env` é ignorado pelo Git. O Compose lê essas variáveis e as encaminha à API. O arquivo `app/api/.env` sozinho não configura a interpolação do Compose. Não use prefixo `VITE_` para a chave. A alternativa de entrada oculta no PowerShell está abaixo.
+5. Quando não houver scans em execução, aplique somente a configuração da API na raiz do repositório:
+
+   ```powershell
+   docker compose up -d --no-deps --force-recreate api
+   ```
+
+   Não exige rebuild por mudar apenas variáveis. Reinicia a API; dados/volumes são preservados. O watchdog de boot pode encerrar scans ativos como órfãos, por isso a condição de não haver scans em andamento. Não foi executado por esta orientação.
+6. Entre em `http://localhost:8086`, abra Ajuda e envie “Como solicito uma análise?”. A resposta precisa mostrar **Gemini** para comprovar a chamada externa. **Ajuda local** continua disponível, mas não comprova que a chave/modelo/cota funcionaram. Consulte [Usage](https://aistudio.google.com/usage) e [Rate limits](https://aistudio.google.com/rate-limit) no AI Studio.
+
+As [cotas](https://aistudio.google.com/docs/rate-limits) variam por modelo/projeto e não equivalem aos buckets do Vulnera. No Free Tier, exceder cota gera limitação; não é autorização para migrar ao pago. Se o projeto já estiver no plano pago, chamadas podem gerar cobranças. O Free Tier também permite uso do conteúdo para melhoria dos produtos Google: use documentação e dados fictícios, sem informações confidenciais.
+
+**Estado desta orientação:** nenhum `.env` real, cartão, projeto Google ou serviço foi configurado por esta tarefa. A configuração e a chamada real com a chave do responsável continuam pendentes. A API foi consultada somente por indicadores de presença, sem imprimir chave ou outros segredos.
+
 Os placeholders estão em `app/api/.env.example`; arquivos `.env` reais são privados e não foram editados pela entrega. Mantenha a configuração já necessária à API (banco, JWT, `PORT`, etc.). Variáveis do assistente são opcionais no boot e lidas por `EnvVar`/`EnvKeys`, exclusivamente no backend.
 
 ```dotenv

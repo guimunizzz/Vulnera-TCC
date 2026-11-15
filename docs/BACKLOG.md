@@ -6,6 +6,11 @@
 
 ## Status
 
+**✅ 2026-11-15 — INT-AI-04A, guia da configuração Gemini gratuita preparado.** Fontes oficiais reconferidas; projeto Free sem faturamento, chave privada, verificação eventual por celular, `.env` na raiz do Compose e recriação da API apenas sem scans ativos. Texto no `gemini-3.5-flash-lite` elegível ao Free Tier; selo Gemini e Usage necessários para comprovar a integração. Nenhum segredo/arquivo privado/cobrança/serviço alterado. Guia em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
+
+- [x] INT-AI-04A — Requisitos, condições de custo/cartão e passo a passo revisados.
+- [ ] INT-AI-04B — Responsável configurar projeto/chave/modelo privadamente e validar Gemini ao vivo; sem ativação automática de faturamento.
+
 **✅ 2026-11-15 — INT-AI-03, QA Docker e correções de acessibilidade (100%).** Builds reais API/Web aprovados, API Linux **905/905** e Web Linux **659/659**, lint/contraste aprovados. Dois defeitos `label-content-name-mismatch` encontrados (assistente e marca de login/cadastro) e corrigidos após autorização, sem mudar o visual ou as ações; teste de roteamento passa a aguardar o portal sem mudar a implementação. Check Web final **659/659**, focal Linux **36/36**, e2e final **7/7** com axe sem regras desativadas. Smoke real por três perfis e seis etapas de importação/triagem/grafo/PDF aprovados em cópia isolada; containers e dados existentes preservados. Relatório [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).
 
 - [x] INT-AI-03 — QA Docker complementar, investigação e correção autorizada dos nomes acessíveis.
