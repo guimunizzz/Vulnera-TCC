@@ -56,7 +56,7 @@ Requisitos: conta Google com acesso ao AI Studio (18 anos ou mais), projeto Free
 1. Abra [Google AI Studio](https://aistudio.google.com/) com sua conta e aceite os termos. Em Projects, use o projeto padrão gratuito ou crie um projeto para o Vulnera.
 2. Confirme que o projeto está em Free Tier, sem cobrança vinculada. Se pedir verificação, siga o fluxo de Verify project pelo celular. Não ative faturamento para resolver essa etapa.
 3. Em [API keys](https://aistudio.google.com/api-keys), escolha Create API key e o projeto gratuito. Guarde a chave somente na máquina/ambiente do backend; nunca em chat, screenshot, código, frontend ou commit.
-4. Para o Compose, acrescente ao `.env` da **raiz**, ao lado de `docker-compose.yml`, sem substituir o conteúdo que já existir:
+4. Para o Compose, copie o [`.env.example` da raiz](../.env.example) para `.env` em uma instalação nova. Se já houver `.env`, preserve seu conteúdo e ajuste apenas as variáveis abaixo. Esse arquivo fica na **raiz**, ao lado de `docker-compose.yml`:
 
    ```dotenv
    ASSISTANT_MODE=gemini

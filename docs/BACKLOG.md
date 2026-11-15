@@ -6,6 +6,10 @@
 
 ## Status
 
+**✅ 2026-11-15 — INT-AI-04D, onboarding de configuração no clone (100%).** `.env.example` da raiz contém apenas valores públicos e chave vazia; README/guia explicam onde copiar, como preservar `.env` existente e a diferença entre Docker e host. Compose validado com o template e ajuda local padrão. Clones/pulls recebem o modelo, enquanto a credencial deve ser fornecida privadamente por instalação. Runtime e `.env` real preservados.
+
+- [x] INT-AI-04D — Template Docker da raiz e instruções reproduzíveis sem versionar a chave.
+
 **✅ 2026-11-15 — INT-AI-04B1, ativação técnica Gemini local concluída (100%).** Chave somente no `.env` ignorado; modelo `gemini-3.5-flash-lite`. Zero scans ativos antes da recriação exclusiva da API, mantendo imagem/volumes e IDs de banco/Web/Mailhog. Provedor HTTP 200/STOP; rota autenticada por token interno efêmero HTTP 200 com `source: gemini`; health/Web HTTP 200. Chave não aparece nos logs da API ou nos arquivos versionados. Nenhuma configuração de cobrança foi alterada. Evidências sanitizadas em `output/agent-ai-dev-merge/` (local e ignorado). Registro anterior INT-AI-04B desdobrado abaixo; a confirmação de gratuidade não é inferida de uma resposta bem-sucedida.
 
 - [x] INT-AI-04B1 — Configuração privada e chamada real Gemini na stack local.

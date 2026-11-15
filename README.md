@@ -110,6 +110,25 @@ docker compose up -d --build
 docker compose ps
 ```
 
+O assistente inicia com ajuda local. Para habilitar Gemini no Docker, copie
+[`.env.example`](.env.example) para `.env` **na raiz**, ao lado de
+`docker-compose.yml`, e preencha a chave somente nesse arquivo privado:
+
+```dotenv
+ASSISTANT_MODE=gemini
+GEMINI_API_KEY=COLE_SUA_CHAVE_SOMENTE_NO_ENV_LOCAL
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
+
+Se já existir `.env`, acrescente ou ajuste apenas essas variáveis, preservando
+as demais. O `.env` é ignorado pelo Git; o exemplo versionado mantém a chave
+vazia. Cada instalação precisa receber sua credencial privadamente; clonar ou
+fazer pull não baixa segredos. `app/api/.env` é usado na execução pelo host e
+não substitui o `.env` da raiz para o Compose. Confira o Free Tier no AI Studio
+antes de usar. Para aplicar mudanças nas variáveis de uma stack existente,
+recrie somente a API **sem scans ativos**, conforme o
+[guia do assistente](docs/ASSISTENTE_VULNERA.md#configuração).
+
 Quando a API estiver saudável, prepare os dados de demonstração em uma
 instalação nova:
 

@@ -16,6 +16,10 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-15 — Configuração reproduzível do assistente para novos clones (100%).** Adicionado `.env.example` na raiz para o Compose, com chave vazia, modelo e modo local seguro; README e guia distinguem esse arquivo de `app/api/.env` usado no host. Instruções preservam arquivos privados existentes e explicam a entrega privada da credencial por instalação. Template validado pelo `docker compose --env-file .env.example config`, sem imprimir sua saída completa; ajuda local padrão e chave vazia confirmadas. `.env` real não alterado, nenhum serviço reiniciado e nenhum segredo publicado. Sem mudança de comportamento da aplicação ou dependências.
+
+- [x] INT-AI-04D — Versionar somente o modelo de configuração Docker e documentar a ativação privada do Gemini após clone/pull.
+
 **✅ 2026-11-15 — Configuração local Gemini ativada e validada (100% da ativação técnica; tier de faturamento ainda não confirmado).** Por solicitação explícita, chave cadastrada somente no `.env` ignorado da raiz, modo `gemini` e modelo `gemini-3.5-flash-lite`. Consulta somente leitura confirmou zero scans QUEUED/RUNNING antes do restart. Comparação do Compose mostrou mudanças exclusivamente nas três variáveis do assistente; somente a API foi recriada, com a mesma imagem e volumes. Teste mínimo Google HTTP 200/STOP (22 tokens); chamada à rota autenticada com token interno efêmero de 60 s retornou HTTP 200, `source: gemini`, mensagem e três ações. Health e Web HTTP 200; banco/Web/Mailhog conservaram IDs, chave ausente dos logs da API. Sem alteração de código/schema/dados ou faturamento Google. Smoke técnico não equivale a login/navegador. **Pendências do responsável:** confirmar Free Tier no AI Studio e substituir a credencial compartilhada em chat. Marcos anteriores de ausência de chave/chamada são históricos e ficam superados por este registro.
 
 - [x] INT-AI-04B1 — Cadastrar a chave privadamente no ambiente local e validar o provedor e a rota real do assistente.
