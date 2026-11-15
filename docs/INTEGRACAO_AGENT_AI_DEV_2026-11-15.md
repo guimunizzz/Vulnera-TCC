@@ -2,6 +2,8 @@
 
 # Integração de feature/agent-ai com dev — 15/11/2026
 
+> **Complemento posterior no mesmo dia:** o Docker foi disponibilizado e a rodada Linux confirmou API 905/905 e Web 659/659. A varredura ampliada encontrou dois problemas de nome acessível, corrigidos mediante autorização; os e2e finais passaram 7/7. O relato de indisponibilidade Docker abaixo pertence à primeira rodada e fica preservado como histórico. Detalhes e limites em [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).
+
 ## Escopo e referências
 
 - Feature original: `69af46c9f0ab0dded6813d177884827e3c1b3aa3`.

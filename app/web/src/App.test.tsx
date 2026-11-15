@@ -93,7 +93,7 @@ describe("Roteamento de App", () => {
       const view = renderApp(route);
       const allowed = (roles as readonly string[]).includes(role);
       expect(await screen.findByRole("heading", { name: allowed ? heading : "Olá, Rafael" })).toBeInTheDocument();
-      expect(screen.getAllByTestId("assistant-root")).toHaveLength(1);
+      expect(await screen.findAllByTestId("assistant-root")).toHaveLength(1);
       if (!allowed) expect(screen.queryByRole("heading", { name: heading })).not.toBeInTheDocument();
       view.unmount();
     }
@@ -103,14 +103,15 @@ describe("Roteamento de App", () => {
     limparAuth();
     renderApp("/login");
     // Cenário e páginas de acesso são lazy (um lote só): espera o primeiro paint.
-    const logo = await screen.findByRole("link", { name: "Vulnera — página inicial" });
+    const logo = await screen.findByRole("link", { name: "Vulnera Security — página inicial" });
+    expect(logo).toHaveTextContent("VULNERA SECURITY");
 
     fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
     expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("assistant-root")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Nome" })).toBeRequired();
-    expect(screen.getByRole("link", { name: "Vulnera — página inicial" })).toBe(logo);
+    expect(screen.getByRole("link", { name: "Vulnera Security — página inicial" })).toBe(logo);
 
     fireEvent.click(screen.getByRole("link", { name: "Entrar" }));
     expect(await screen.findByRole("heading", { name: "Entrar" })).toBeInTheDocument();
@@ -138,7 +139,7 @@ describe("Roteamento de App", () => {
     renderApp("/dashboard");
 
     expect(await screen.findByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
-    expect(screen.getAllByTestId("assistant-root")).toHaveLength(1);
+    expect(await screen.findAllByTestId("assistant-root")).toHaveLength(1);
   });
 
   it("ROTA-04 — '/' com sessão continua mostrando a landing, não expulsa quem já está logado", () => {
@@ -156,7 +157,8 @@ describe("Roteamento de App", () => {
     logar("ADMIN");
     renderApp(route);
     expect(await screen.findByText(route === "/onboarding" ? "Onboarding de teste" : "Relatório de teste")).toBeInTheDocument();
-    expect(screen.getAllByTestId("assistant-root")).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Abrir Assistente Vulnera" })).toBeInTheDocument();
+    // O portal monta pelo efeito seguinte, independentemente da pagina lazy.
+    expect(await screen.findAllByTestId("assistant-root")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Ajuda — abrir Assistente Vulnera" })).toBeInTheDocument();
   });
 });

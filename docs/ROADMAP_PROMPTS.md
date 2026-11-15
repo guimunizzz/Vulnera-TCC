@@ -1174,3 +1174,11 @@ Resolução e validação na própria feature, sem alterar os marcos das fases o
 - **Validação:** check API Node 22 com lint sem erros e 905/905 testes; check Web 659/659, contraste 132/132; builds aprovados. Chrome: 12/12 originais e 11 verificações com login/API reais, sem erros de página/CSP.
 - **Preservação/desvios:** backups só locais; sem schema, migrations, dependências declaradas, mobile ou guias protegidos alterados. Bancos novos temporários por indisponibilidade do Docker; execução completa Node 24 sem relatório, integração validada no Node 22. Gemini ao vivo não executado.
 - **Relatório:** [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md); registros antigos com ADR-048 do assistente correspondem à atual ADR-054, sem substituir a ADR-048 do grafo DAST.
+
+### Complemento Docker — ✅ Concluído em 2026-11-15
+
+- **Branch/base:** `feature/agent-ai`, rodada iniciada em `be93212`; publicação somente da feature com identidade `iannxz`, sem merge na dev ou deploy existente.
+- **Validação Linux:** API 905/905, Web 659/659, lint/contraste e builds reais aprovados em stack isolada.
+- **Achados e autorização:** dois nomes acessíveis divergentes do texto visível; descrições e separador textual corrigidos após explicação e aprovação, preservando visual/ações. Asserção do portal estabilizada somente no teste.
+- **Validação final:** Web 659/659, focal Linux 36/36, e2e acessibilidade/Exposure Graph 7/7; smoke real de três perfis e seis etapas de importação/triagem/grafo/PDF.
+- **Histórico e limites:** relato anterior de Docker indisponível preservado como primeira rodada; não é mais bloqueio. Sem Gemini ao vivo ou scans externos. [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).

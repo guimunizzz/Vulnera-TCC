@@ -86,7 +86,7 @@ function AssistantSession({ role }: { role: UserRole }) {
         onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
         onFocusCapture={() => setFocus(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocus(false); }}>
         <button ref={launcher} type="button" className="assistant-launcher" data-testid="assistant-launcher"
-          aria-label="Abrir Assistente Vulnera" aria-expanded={open} aria-controls="assistant-panel"
+          aria-label="Ajuda — abrir Assistente Vulnera" aria-expanded={open} aria-controls="assistant-panel"
           onClick={() => { if (!blocked) setOpen((previous) => !previous); }}>
           <AssistantMascot /><span aria-hidden="true">Ajuda</span>
         </button>

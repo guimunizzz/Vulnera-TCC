@@ -6,6 +6,11 @@
 
 ## Status
 
+**✅ 2026-11-15 — INT-AI-03, QA Docker e correções de acessibilidade (100%).** Builds reais API/Web aprovados, API Linux **905/905** e Web Linux **659/659**, lint/contraste aprovados. Dois defeitos `label-content-name-mismatch` encontrados (assistente e marca de login/cadastro) e corrigidos após autorização, sem mudar o visual ou as ações; teste de roteamento passa a aguardar o portal sem mudar a implementação. Check Web final **659/659**, focal Linux **36/36**, e2e final **7/7** com axe sem regras desativadas. Smoke real por três perfis e seis etapas de importação/triagem/grafo/PDF aprovados em cópia isolada; containers e dados existentes preservados. Relatório [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).
+
+- [x] INT-AI-03 — QA Docker complementar, investigação e correção autorizada dos nomes acessíveis.
+- [ ] INT-AI-FUT-03 — Avaliar separadamente a lentidão de `chown -R /app` no build Web (106–143 s observados; branch `chore/docker-build-leve` não incorporada nesta rodada).
+
 **✅ 2026-11-15 — Integração preparatória da feature/agent-ai com a dev concluída (100% do escopo de resolução/validação).** Os sete conflitos foram compostos na feature, com ambas as origens no histórico, 30 rotas preservadas e comparação dos arquivos exclusivos. API check no Node 22: **905/905**, lint sem erros; Web check: **659/659**, contraste **132/132**; builds aprovados. Navegador: **12/12** originais + **11 verificações** com login/API reais em bancos descartáveis, sem erros de página/CSP. Contexto novo e imports corrigidos mediante autorização; JavaScript de vulnerabilidades idêntico após remover os imports. ADR-054 distingue o assistente da ADR-048 do grafo. Commits de código `2e2ead6`, `da21fc7`, `05735a7`, todos `iannxz`. Publicação somente da feature; merge na dev/deploy não executados, backups somente locais. Relatório [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md). Marcos parciais abaixo são históricos e foram concluídos por esta entrada.
 
 - [x] INT-AI-02 — Contextos, ADRs, checks/builds/navegador e preparação revisada para publicação da feature.

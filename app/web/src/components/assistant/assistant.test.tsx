@@ -35,7 +35,7 @@ function mount(role: UserRole = "CLIENT", route = "/dashboard") {
 }
 
 async function open() {
-  fireEvent.click(await screen.findByRole("button", { name: "Abrir Assistente Vulnera" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Ajuda — abrir Assistente Vulnera" }));
   return screen.findByRole("dialog", { name: "Assistente Vulnera" });
 }
 
@@ -212,7 +212,7 @@ describe("Assistente autenticado", () => {
     await screen.findByText(responseText);
     fireEvent.keyDown(panel, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Abrir Assistente Vulnera" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Ajuda — abrir Assistente Vulnera" })).toHaveFocus();
     await open();
     expect(screen.getByText(responseText)).toBeInTheDocument();
   });
@@ -225,7 +225,7 @@ describe("Assistente autenticado", () => {
     screen.getByRole("link", { name: "Ir para projeto" }).focus();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Abrir Assistente Vulnera" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Ajuda — abrir Assistente Vulnera" })).toHaveFocus();
     expect(assistantApi.chat).toHaveBeenCalledTimes(1);
   });
 
@@ -255,7 +255,7 @@ describe("Movimento e overlays", () => {
     fireEvent.mouseEnter(mascot);
     expect(mascot).toHaveAttribute("data-pause-reasons", "hover");
     fireEvent.mouseLeave(mascot);
-    const launcher = screen.getByRole("button", { name: "Abrir Assistente Vulnera" });
+    const launcher = screen.getByRole("button", { name: "Ajuda — abrir Assistente Vulnera" });
     fireEvent.focus(launcher);
     expect(mascot.getAttribute("data-pause-reasons")).toContain("focus");
     fireEvent.blur(launcher);
@@ -277,7 +277,7 @@ describe("Movimento e overlays", () => {
     mount();
     const root = await screen.findByTestId("assistant-root");
     expect(root).toHaveAttribute("hidden");
-    expect(screen.queryByRole("button", { name: "Abrir Assistente Vulnera" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ajuda — abrir Assistente Vulnera" })).not.toBeInTheDocument();
     modal.remove();
     await waitFor(() => expect(root).not.toHaveAttribute("hidden"));
     const parent = root.parentElement!;

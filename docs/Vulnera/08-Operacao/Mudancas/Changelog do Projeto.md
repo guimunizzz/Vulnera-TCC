@@ -9,6 +9,23 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-15 — QA Docker complementar e nomes acessíveis
+
+**✅ 100% da rodada.** Docker disponibilizado após a integração inicial;
+builds dos Dockerfiles reais aprovados, API Linux 905/905 e Web Linux 659/659.
+Stack de QA separada com banco/volumes próprios; containers existentes intactos.
+
+Axe encontrou nomes acessíveis incompletos em Ajuda e na marca do login/cadastro.
+Após esclarecimento e autorização do usuário, ajustados apenas os `aria-label`
+e o separador textual da marca, com geometria visual preservada. Testes atualizados;
+uma asserção síncrona do portal passou a aguardar sua montagem sem mudar o produto.
+Check Web final 659/659, focal Linux 36/36, e2e final 7/7 com todas as regras do axe.
+Smoke real por três perfis e fluxo SARIF/triagem/nota/Security Graph/PDF aprovados.
+
+Sem alterações de API, schema, dependências, mobile ou guias protegidos; publicação
+restrita à feature/agent-ai com identidade iannxz. Sem merge na dev ou deploy da stack
+existente. Relatório: `docs/QA_DOCKER_AGENT_AI_2026-11-15.md`.
+
 ## 2026-11-15 — feature/agent-ai compatível com a dev
 
 **✅ Resolução e validação concluídas (100% do escopo).** Na própria feature,
