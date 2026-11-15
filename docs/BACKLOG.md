@@ -11,6 +11,10 @@
 - [x] INT-AI-04B1 — Configuração privada e chamada real Gemini na stack local.
 - [ ] INT-AI-04B2 — Responsável confirmar Free Tier e substituir a credencial compartilhada em chat.
 
+**✅ 2026-11-15 — INT-AI-04C, geração dinâmica conferida (100%).** Duas perguntas inéditas à rota real: 2/2 HTTP 200 com `source: gemini` e mensagens distintas do fallback local computado em memória. Analogia de biblioteca recebeu limitação ao domínio; pergunta sobre estados/retrabalho de Projetos recebeu duas frases com os prefixos exclusivos solicitados “Sequência:” e “Retorno:” (777 ms), ausentes do catálogo estático. Smoke autenticado por tokens efêmeros, sem escrita no banco, alteração de runtime ou exposição de credenciais.
+
+- [x] INT-AI-04C — Verificar origem Gemini e adaptação a uma pergunta/formato inéditos contra a ajuda predefinida.
+
 **✅ 2026-11-15 — INT-AI-04A, guia da configuração Gemini gratuita preparado.** Fontes oficiais reconferidas; projeto Free sem faturamento, chave privada, verificação eventual por celular, `.env` na raiz do Compose e recriação da API apenas sem scans ativos. Texto no `gemini-3.5-flash-lite` elegível ao Free Tier; selo Gemini e Usage necessários para comprovar a integração. Nenhum segredo/arquivo privado/cobrança/serviço alterado. Guia em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
 
 - [x] INT-AI-04A — Requisitos, condições de custo/cartão e passo a passo revisados.

@@ -21,6 +21,10 @@
 - [x] INT-AI-04B1 — Cadastrar a chave privadamente no ambiente local e validar o provedor e a rota real do assistente.
 - [ ] INT-AI-04B2 — Confirmar o tier do projeto Google e substituir a chave compartilhada, sem publicar segredos.
 
+**✅ 2026-11-15 — Verificação adicional de geração dinâmica Gemini (100%; duas chamadas reais).** Perguntas inéditas enviadas à rota autenticada com tokens internos efêmeros: ambas HTTP 200 e `source: gemini`, com mensagens diferentes do fallback local calculado separadamente em memória. A primeira pediu analogia de biblioteca e recebeu recusa por limitação ao conteúdo documentado. A segunda perguntou estados/retrabalho de Projetos exigindo duas frases iniciadas por “Sequência:” e “Retorno:”; em 777 ms, Gemini respeitou o formato, ausente dos tópicos predefinidos, e explicou corretamente o retorno de Em revisão para Em andamento. Sem alteração de configuração, código, dados ou containers; prova via HTTP, sem interação de navegador. Chave e tokens não publicados.
+
+- [x] INT-AI-04C — Comparar respostas reais a perguntas inéditas com o fallback local e verificar adaptação de formato solicitada.
+
 **✅ 2026-11-15 — Orientação da primeira configuração Gemini/Free Tier preparada (100% do guia; ativação real pendente).** Código/configuração/Compose e documentação oficial Google reconferidos: `gemini-3.5-flash-lite` com texto gratuito no Free Tier; faturamento pago separado e verificação de alguns projetos por celular. Guia `docs/ASSISTENTE_VULNERA.md` detalha projeto/chave privados, tier sem cobrança, `.env` da raiz para Docker, recriação apenas da API sem scans ativos e confirmação pelo selo Gemini/Usage. Nenhuma chave solicitada em chat, cobrança/cartão ativado, `.env` real editado ou container recriado. Validação Gemini ao vivo depende da configuração privada do responsável; não marcada como entregue.
 
 - [x] INT-AI-04A — Conferir requisitos/cobrança e preparar o passo a passo de configuração gratuita.
