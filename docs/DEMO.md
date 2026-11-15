@@ -14,6 +14,10 @@
 > Pré-requisito: `docker compose up --build` rodando (banco + API + web —
 > ver README raiz) **e** o seed executado (`npm run db:seed` dentro de
 > `app/api`, ou `docker compose exec api npm run db:seed`).
+>
+> **Banco cheio para demonstrar tudo (recomendado):** `npm run seed:all:docker`
+> na raiz (com a stack de pé) ou `npm run seed:all` (API local). Ver
+> [Seed completo](#seed-completo-npm-run-seedall) abaixo.
 
 ---
 
@@ -35,6 +39,70 @@
 | CLIENT (owner, TechNova) | `owner@technova.demo` | `demo12345` |
 | CLIENT (membro, TechNova) | `fernanda@technova.demo` | `demo12345` |
 | PENTESTER | `bruno.pentester@vulnera.local` ou `camila.pentester@vulnera.local` | `senha12345` |
+
+Com o `seed:all`, entram também (mesmas senhas por perfil):
+
+| Perfil | E-mail | Senha |
+| --- | --- | --- |
+| PENTESTER | `diego.pentester@vulnera.local` | `senha12345` |
+| CLIENT (owner, Banco Aurora Digital) | `owner@aurora.demo` | `demo12345` |
+| CLIENT (membro, Banco Aurora Digital) | `rafaela@aurora.demo` | `demo12345` |
+| CLIENT (owner, Clínica Vida+ Saúde) | `owner@vidamais.demo` | `demo12345` |
+| CLIENT (membro, Clínica Vida+ Saúde) | `julia@vidamais.demo` | `demo12345` |
+| CLIENT (owner, Rota Express Logística) | `owner@rotaexpress.demo` | `demo12345` |
+| CLIENT (owner, Mercado Verde — aguardando aprovação) | `owner@mercadoverde.demo` | `demo12345` |
+
+---
+
+## Seed completo (`npm run seed:all`)
+
+Um comando popula o banco com volume e com todas as features. Leva de 2 a 4
+minutos.
+
+| Onde você está | Comando |
+| --- | --- |
+| Stack Docker de pé (`docker compose up`) | `npm run seed:all:docker` na raiz |
+| API local (`app/api` com `.env`) | `npm run seed:all` na raiz, ou `npm run db:seed:all` em `app/api` |
+
+O comando roda, em ordem:
+
+1. `seed`: o cenário curado da TechNova;
+2. `seed-playbooks`: o catálogo OWASP;
+3. `seed-cenarios`;
+4. os backfills de SLA e VRS.
+
+O `seed-cenarios` acrescenta:
+
+- **3 empresas novas**, cada uma num plano e num setor, com aplicações de
+  contexto de risco variado:
+  - Banco Aurora (Enterprise, fintech, 5 aplicações);
+  - Clínica Vida+ (PRO, saúde, 4 aplicações);
+  - Rota Express (BASIC, logística, 2 aplicações).
+- **Mercado Verde**, uma empresa na fila de aprovação do admin.
+- **~600 achados com histórico de 150 dias** (criação, andamento, correção,
+  reabertura e encerramento no AuditLog), comentários, evidências, ajuste
+  manual de severidade, responsáveis, um aceite de risco por projeto e
+  buscas salvas.
+- **SAST/SCA reais:** Semgrep e Trivy contra o OWASP NodeGoat, no projeto
+  "Revisão de código — Portal do Cliente" da TechNova. Inclui uma 2ª
+  importação que mostra **"Correção não confirmada"**. O SBOM do Internet
+  Banking alimenta as sugestões do inventário do banco.
+- **DAST real:** dois scans do OWASP ZAP na loja da TechNova, com triagem e
+  promoções.
+- **Threat Intel:** inventário por empresa (Log4j, Spring, Apache httpd,
+  Laravel Ignition…) e uma **sincronização real** com NVD, OSV, CISA KEV e
+  EPSS, com triagem e promoção.
+
+É idempotente: rodar de novo não duplica nada. Para começar do zero, use
+`npm run db:reset --workspace=app/api` e depois o `seed:all`.
+
+> ⚠️ A sincronização de Threat Intel precisa de Internet. O NVD sem chave é
+> instável: se ele falhar, o seed avisa e continua, e o OSV e o KEV ainda
+> trazem os casamentos. Depois, rode **Sincronizar agora** na tela de
+> Threat Intel.
+
+As telas com esses dados estão em `docs/evidencias/seed-all/`. A procedência
+dos relatórios reais está em `app/api/prisma/seeds/cenarios/fixtures/MANIFEST.md`.
 
 ---
 
@@ -223,7 +291,9 @@
   solicitou não aprova; troque de usuário.
 - **Quer reiniciar do zero**: `docker compose down -v` apaga tudo
   (inclusive o volume do banco) — depois `docker compose up --build` +
-  `npm run db:seed`.
+  `npm run db:seed` (ou `npm run seed:all:docker` para o banco completo).
+- **Threat Intel vazio ou só com KEV/OSV**: o NVD não respondeu durante o
+  seed — clicar em **Sincronizar agora** na tela de Threat Intel.
 
 ---
 
