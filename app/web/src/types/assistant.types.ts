@@ -6,10 +6,11 @@ import type { UserRole } from "./auth.types";
 
 export type AssistantScreen = "dashboard" | "projects" | "project-detail" | "applications" | "application-dashboard"
   | "new-analysis" | "findings" | "finding-detail" | "finding-editor" | "dast" | "dast-detail" | "dast-report"
-  | "remediation" | "playbooks" | "playbook-detail" | "sla-settings" | "maturity" | "subscriptions" | "onboarding";
+  | "remediation" | "playbooks" | "playbook-detail" | "sla-settings" | "maturity" | "subscriptions" | "onboarding"
+  | "sast-sca" | "code-import-detail" | "threat-intel" | "exposure-graph";
 
 export type AssistantActionId = "dashboard" | "projects" | "applications" | "new-analysis" | "findings" | "dast"
-  | "remediation" | "playbooks" | "sla-settings";
+  | "remediation" | "playbooks" | "sla-settings" | "sast-sca" | "threat-intel" | "exposure-graph";
 
 export interface AssistantHistoryMessage { role: "user" | "assistant"; content: string }
 export interface AssistantChatInput { question: string; screen: AssistantScreen; history: AssistantHistoryMessage[] }

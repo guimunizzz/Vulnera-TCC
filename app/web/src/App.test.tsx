@@ -27,6 +27,10 @@ vi.mock("./pages/landing-page", () => ({
 }));
 vi.mock("./pages/onboarding-page", () => ({ OnboardingPage: () => <div>Onboarding de teste</div> }));
 vi.mock("./pages/dast-scan-report-page", () => ({ DastScanReportPage: () => <div>Relatório de teste</div> }));
+vi.mock("./pages/sast-sca-page", () => ({ SastScaPage: () => <h1>SAST/SCA de teste</h1> }));
+vi.mock("./pages/code-import-detail-page", () => ({ CodeImportDetailPage: () => <h1>Importação de teste</h1> }));
+vi.mock("./pages/threat-intel-page", () => ({ ThreatIntelPage: () => <h1>Threat Intel de teste</h1> }));
+vi.mock("./pages/exposure-graph-page", () => ({ ExposureGraphPage: () => <h1>Exposure Graph de teste</h1> }));
 
 function limparAuth(): void {
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
@@ -78,6 +82,23 @@ beforeAll(async () => {
 afterEach(limparAuth);
 
 describe("Roteamento de App", () => {
+  it.each([
+    ["/sast-sca", "SAST/SCA de teste", ["ADMIN", "PENTESTER"]],
+    ["/sast-sca/imports/ficticio", "Importação de teste", ["ADMIN", "PENTESTER"]],
+    ["/threat-intel", "Threat Intel de teste", ["ADMIN", "CLIENT", "PENTESTER"]],
+    ["/exposure-graph", "Exposure Graph de teste", ["ADMIN", "CLIENT"]],
+  ] as const)("preserva os guards da dev e uma instancia do assistente em %s", async (route, heading, roles) => {
+    for (const role of ["ADMIN", "CLIENT", "PENTESTER"] as const) {
+      logar(role);
+      const view = renderApp(route);
+      const allowed = (roles as readonly string[]).includes(role);
+      expect(await screen.findByRole("heading", { name: allowed ? heading : "Olá, Rafael" })).toBeInTheDocument();
+      expect(screen.getAllByTestId("assistant-root")).toHaveLength(1);
+      if (!allowed) expect(screen.queryByRole("heading", { name: heading })).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
   it("permite alternar entre login e cadastro mantendo o cenário de acesso", async () => {
     limparAuth();
     renderApp("/login");

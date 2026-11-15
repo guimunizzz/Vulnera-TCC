@@ -9,11 +9,11 @@ export const ASSISTANT_SCREENS = [
   "dashboard", "projects", "project-detail", "applications", "application-dashboard",
   "new-analysis", "findings", "finding-detail", "finding-editor", "dast", "dast-detail",
   "dast-report", "remediation", "playbooks", "playbook-detail", "sla-settings", "maturity",
-  "subscriptions", "onboarding",
+  "subscriptions", "onboarding", "sast-sca", "code-import-detail", "threat-intel", "exposure-graph",
 ] as const;
 export type AssistantScreen = (typeof ASSISTANT_SCREENS)[number];
 export type AssistantActionId = "dashboard" | "projects" | "applications" | "new-analysis" |
-  "findings" | "dast" | "remediation" | "playbooks" | "sla-settings";
+  "findings" | "dast" | "remediation" | "playbooks" | "sla-settings" | "sast-sca" | "threat-intel" | "exposure-graph";
 export interface AssistantHistoryMessage { role: "user" | "assistant"; content: string }
 export interface AssistantChatDTO { question: string; screen: AssistantScreen; history: AssistantHistoryMessage[] }
 export interface AssistantActionDTO { id: AssistantActionId; label: string }

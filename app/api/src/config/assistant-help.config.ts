@@ -1,7 +1,7 @@
 /**
  * Ajuda versionada conferida contra páginas, guards e serviços do Vulnera.
  * Evita enviar o repositório ou registros ao provedor; consumida pelo serviço
- * de recuperação e pela alternativa local da apresentação (versão 2026-10-23).
+ * de recuperação e pela alternativa local da apresentação (atualizada em 2026-11-15).
  */
 import type { UserRole } from "../models/user.model";
 import type { AssistantActionId, AssistantTopic } from "../models/assistant.model";
@@ -17,6 +17,9 @@ export const ASSISTANT_ACTIONS: Record<AssistantActionId, { label: string; path:
   remediation: { label: "Abrir remediação", path: "/remediation", roles: ["ADMIN", "PENTESTER"] },
   playbooks: { label: "Abrir playbooks", path: "/playbooks", roles: ALL },
   "sla-settings": { label: "Abrir configuração de SLA", path: "/settings/sla", roles: ["ADMIN", "CLIENT"] },
+  "sast-sca": { label: "Abrir SAST/SCA", path: "/sast-sca", roles: ["ADMIN", "PENTESTER"] },
+  "threat-intel": { label: "Abrir Threat Intel", path: "/threat-intel", roles: ALL },
+  "exposure-graph": { label: "Abrir Exposure Graph", path: "/exposure-graph", roles: ["ADMIN", "CLIENT"] },
 };
 
 export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
@@ -100,5 +103,23 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
     screens: ["onboarding", "subscriptions"], roles: ALL, actions: ["dashboard", "applications", "projects"],
     guidance: "O onboarding prepara a empresa e a assinatura. Assinaturas pendentes precisam de aprovação administrativa; contratar um plano não é um pagamento real. A solicitação de projeto verifica assinatura ativa e limites. Se uma etapa não estiver disponível, consulte a situação na tela e peça orientação ao responsável pelo acesso.",
     byRole: { PENTESTER: "Como PENTESTER, seu trabalho ocorre nos projetos atribuídos; o cadastro comercial da empresa é conduzido pelo CLIENT ou ADMIN." },
+  },
+  {
+    id: "sast-sca", title: "Importação SAST/SCA", keywords: ["sast", "sca", "sarif", "cyclonedx", "sbom", "semgrep", "trivy", "importacao", "importo"],
+    screens: ["sast-sca", "code-import-detail"], roles: ALL, actions: ["sast-sca", "projects"],
+    guidance: "1. Abra SAST/SCA e use Importar relatório para escolher um projeto autorizado e enviar SARIF ou CycloneDX. O botão de ajuda explica como gerar o relatório; o Vulnera não executa esses scanners.\n2. Abra a importação para conferir os achados, o Security Graph e o PDF.\n3. Faça a triagem e revise o CVSS ao promover um achado para Vulnerability. Reimportar compara com a execução anterior; uma correção não confirmada exige decisão humana para reabrir a vulnerabilidade. O assistente apenas orienta e não importa, tria ou promove dados.",
+    byRole: { CLIENT: "SAST/SCA é restrito a ADMIN e PENTESTER autorizado. Como CLIENT, acompanhe pelos seus projetos os findings já publicados; não há acesso à lista ou aos relatórios brutos das importações.", PENTESTER: "Como PENTESTER, você acessa apenas importações dos projetos aos quais foi atribuído." },
+  },
+  {
+    id: "threat-intel", title: "Threat Intel e inventário de tecnologias", keywords: ["threat intel", "inventario de tecnologias", "cve", "cves", "kev", "epss", "nvd", "osv"],
+    screens: ["threat-intel"], roles: ALL, actions: ["threat-intel"],
+    guidance: "Threat Intel cruza o inventário de tecnologias da empresa com CVEs publicadas. Consulte as abas Afeta você, Inventário, Feed e Fontes; KEV indica exploração conhecida e EPSS estima a probabilidade de exploração. Tecnologias observadas pelo DAST e pelo SBOM entram como sugestões para confirmação. A API determina quais empresas e ações cada pessoa pode acessar. O assistente não consulta o inventário, não sincroniza fontes e não confirma, tria ou promove registros.",
+    byRole: { ADMIN: "ADMIN pode administrar o inventário, triar, promover e sincronizar agora; a promoção continua vinculada ao projeto de destino.", CLIENT: "CLIENT vê somente sua empresa. OWNER pode editar o inventário e triar; MEMBER consulta. CLIENT não promove findings nem dispara sincronização.", PENTESTER: "PENTESTER vê empresas com projetos atribuídos, pode triar e promover somente em projeto autorizado; não edita inventário nem dispara sincronização." },
+  },
+  {
+    id: "exposure-graph", title: "Exposure Graph da empresa", keywords: ["exposure", "exposure graph", "grafo da empresa", "superficie de ataque", "mapa 3d"],
+    screens: ["exposure-graph"], roles: ALL, actions: ["exposure-graph", "projects"],
+    guidance: "Abra Exposure Graph para ver as aplicações ativas da empresa do usuário, as categorias OWASP e os achados abertos por severidade e origem (DAST, SAST, SCA e manual). Alterne o grafo 2D e o mapa 3D e selecione uma aplicação para ver o contexto e navegar para os detalhes. É uma visualização dos dados existentes, não uma comprovação de caminho de ataque nem um novo scan. É necessário ter empresa vinculada; ADMIN sem empresa não tem grafo próprio. O assistente não consulta ou altera esses dados.",
+    byRole: { PENTESTER: "Exposure Graph é restrito a ADMIN e CLIENT com empresa vinculada. Como PENTESTER, acompanhe o contexto dos projetos atribuídos; o assistente não oferece atalho para esse grafo." },
   },
 ];

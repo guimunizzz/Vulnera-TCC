@@ -58,6 +58,56 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+describe("Compatibilidade com os modulos atuais da dev", () => {
+  it("mantem assistente, SAST/SCA, Threat Intel e Exposure Graph registrados e autenticados no app real", async () => {
+    const { app } = await import("../../src/app");
+    expect((await request(app).post("/api/assistant/chat").send(QUESTION)).status).toBe(401);
+    for (const route of ["/api/code-imports", "/api/threat-intel/overview", "/api/companies/me/exposure-graph"]) {
+      expect((await request(app).get(route)).status).toBe(401);
+    }
+  });
+
+  it.each([
+    ["sast-sca", "SARIF", "sast-sca"],
+    ["code-import-detail", "SARIF", "sast-sca"],
+    ["threat-intel", "CVEs", "threat-intel"],
+    ["exposure-graph", "2D", "exposure-graph"],
+  ] as const)("reconhece %s sem confundir com Dashboard", async (screen, text, action) => {
+    const { app, generate } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const res = await request(app).post("/api/assistant/chat").set("Authorization", bearer("ADMIN"))
+      .send({ question: "O que posso fazer nesta tela?", screen, history: [] });
+    expect(res.status).toBe(200);
+    expect(res.body.source).toBe("local");
+    expect(res.body.message).toContain(text);
+    expect(res.body.actions.map((item: { id: string }) => item.id)).toContain(action);
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["CLIENT", "sast-sca", "Como importo um relatório SAST/SCA?", "SAST/SCA é restrito", "sast-sca"],
+    ["CLIENT", "code-import-detail", "O que posso fazer nesta tela?", "SAST/SCA é restrito", "sast-sca"],
+    ["PENTESTER", "exposure-graph", "O que representa o Exposure Graph?", "Exposure Graph é restrito", "exposure-graph"],
+  ] as const)("mantem a restricao de %s em %s", async (role, screen, question, text, forbiddenAction) => {
+    const { app } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const res = await request(app).post("/api/assistant/chat").set("Authorization", bearer(role))
+      .send({ question, screen, history: [] });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toContain(text);
+    expect(res.body.actions.map((item: { id: string }) => item.id)).not.toContain(forbiddenAction);
+  });
+
+  it.each<UserRole>(["ADMIN", "CLIENT", "PENTESTER"])("orienta Threat Intel para %s sem conceder permissoes", async (role) => {
+    const { app } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const res = await request(app).post("/api/assistant/chat").set("Authorization", bearer(role))
+      .send({ question: "O que posso fazer nesta tela?", screen: "threat-intel", history: [] });
+    expect(res.status).toBe(200);
+    expect(res.body.actions).toEqual([{ id: "threat-intel", label: "Abrir Threat Intel" }]);
+    expect(res.body.message).toContain("O assistente não consulta o inventário");
+    if (role === "CLIENT") expect(res.body.message).toContain("CLIENT não promove findings nem dispara sincronização");
+    if (role === "PENTESTER") expect(res.body.message).toContain("não edita inventário nem dispara sincronização");
+  });
+});
+
 describe("Assistente HTTP", () => {
   it("exige autenticação e não gera texto por GET", async () => {
     const { app, generate } = makeApp();

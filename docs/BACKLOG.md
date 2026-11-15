@@ -6,6 +6,10 @@
 
 ## Status
 
+**🚧 2026-11-15 — INT-AI-02A implementada e validada no Web.** Assistente reconhece quatro telas novas e oferece três atalhos adicionais, sem remover os antigos ou ampliar permissões. API focal 58/58; Web focal 57/57 e check completo 659/659. Builds aprovados; Chrome com CSP: 12/12 cenários originais e 11 verificações com login/API reais em banco descartável, sem erros. Suíte completa API em repetição no Node 22; decisão sobre dois imports não usados e fechamento documental/publicação pendentes.
+
+- [x] INT-AI-02A — Adaptar contextos SAST/SCA, importação, Threat Intel e Exposure Graph; preservar guards e sessão.
+
 **🚧 2026-11-15 — feature/agent-ai sobre a dev (7/7 conflitos resolvidos; validação final pendente).** Backups somente locais de `69af46c`/`ac96859`; sem rebase/force push ou alteração da dev. Baseline: API 847/847 e Web 614/614; focais após composição: API 47/47 e Web 45/45. Todas as 30 rotas e os arquivos exclusivos de cada lado preservados. Dois imports não usados da API são bloqueio anterior do lint. Contexto de SAST/SCA, Threat Intel e Exposure Graph autorizado pelo usuário; próxima etapa antes de publicar os commits da feature com identidade `iannxz`.
 
 - [x] INT-AI-01 — Preservar referências locais, medir baseline e resolver os sete conflitos combinando funcionalidades.

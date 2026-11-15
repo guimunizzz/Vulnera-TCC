@@ -35,7 +35,8 @@ export class AssistantHelpService {
 
   guidance(topic: AssistantTopic, role: UserRole): string {
     if (role === "PENTESTER" && ["applications", "new-analysis"].includes(topic.id)) return topic.byRole?.[role] ?? topic.guidance;
-    if (role === "CLIENT" && topic.id === "dast-reports") return topic.byRole?.[role] ?? topic.guidance;
+    if (role === "CLIENT" && ["dast-reports", "sast-sca"].includes(topic.id)) return topic.byRole?.[role] ?? topic.guidance;
+    if (role === "PENTESTER" && topic.id === "exposure-graph") return topic.byRole?.[role] ?? topic.guidance;
     // A restrição aparece antes dos passos para não orientar acesso impossível.
     return [topic.byRole?.[role], topic.guidance].filter(Boolean).join("\n\n");
   }

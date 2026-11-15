@@ -15,6 +15,10 @@ describe("Contexto fechado do assistente", () => {
     ["/dast/scans/private-scan/report", "dast-report"],
     ["/companies/private-company/maturity", "maturity"],
     ["/onboarding", "onboarding"], ["/settings/sla/", "sla-settings"],
+    ["/sast-sca?projectId=private-project", "sast-sca"],
+    ["/sast-sca/imports/private-import?secret=value#graph", "code-import-detail"],
+    ["/threat-intel?empresa=private-company&match=private-match", "threat-intel"],
+    ["/exposure-graph/", "exposure-graph"],
   ])("normaliza %s em %s", (route, expected) => expect(assistantScreen(route)).toBe(expected));
 
   it("não transforma nomes de propriedades ou URLs em atalhos", () => {
@@ -23,8 +27,15 @@ describe("Contexto fechado do assistente", () => {
     }
     expect(assistantDestination("dast", "CLIENT")).toBeUndefined();
     expect(assistantDestination("applications", "PENTESTER")).toBeUndefined();
+    expect(assistantDestination("sast-sca", "CLIENT")).toBeUndefined();
+    expect(assistantDestination("exposure-graph", "PENTESTER")).toBeUndefined();
+    expect(assistantDestination("sast-sca", "PENTESTER")?.path).toBe("/sast-sca");
+    expect(assistantDestination("exposure-graph", "CLIENT")?.path).toBe("/exposure-graph");
+    for (const role of ["ADMIN", "CLIENT", "PENTESTER"] as const) {
+      expect(assistantDestination("threat-intel", role)?.path).toBe("/threat-intel");
+    }
     expect(assistantDestination("projects", "CLIENT")?.path).toBe("/projects");
-    expect(Object.keys(ASSISTANT_ACTIONS)).toHaveLength(9);
+    expect(Object.keys(ASSISTANT_ACTIONS)).toHaveLength(12);
   });
 
   it("envia até seis mensagens, mil caracteres por mensagem e quatro mil no total", () => {

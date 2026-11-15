@@ -16,6 +16,10 @@
 
 ## 1. Estado geral do projeto
 
+**🚧 2026-11-15 — Contexto do assistente compatível com os módulos novos (implementação concluída; validação geral API pendente).** Após autorização explícita, adicionadas quatro telas normalizadas (SAST/SCA, detalhe da importação, Threat Intel e Exposure Graph), três tópicos e três atalhos fechados, preservando os anteriores e os guards da dev. Ajuda não concede escrita, sincronização ou acesso a projetos/empresas; IDs/query strings não entram no contexto. Focais API 58/58 e Web 57/57; check Web 659/659 e builds aprovados. Chrome no build com CSP: matriz original 12/12 e 11 verificações com API/login/logout reais em banco descartável, sem erros de página/CSP, com conversa preservada ao navegar e bloqueios por perfil. Suíte API completa em repetição no Node 22. Remoção dos imports antigos ainda aguarda resposta; arquivo de vulnerabilidade preservado até decisão. Próxima entrega: relatório final, referências ADR e publicação da feature.
+
+- [x] INT-AI-02A — Contexto e ações das telas novas com as permissões existentes, testes focais e validação Web/navegador.
+
 **🚧 2026-11-15 — Integração da dev na feature/agent-ai: conflitos resolvidos (7/7; validação final pendente).** Originais preservadas em referências de backup somente locais: feature `69af46c` e dev `ac96859`. Baseline da dev: API 847/847, Web 614/614, contraste e builds aprovados; lint API bloqueado por dois imports não usados anteriores. Merge combina as configurações, os históricos e o assistente com todas as rotas, guards, lazy loading e acessibilidade da dev. Comparação confirma 1.171 arquivos exclusivos da dev e 109 exclusivos da feature sem diferenças; 30 rotas preservadas. Focais após resolução: API 47/47 e Web 45/45. Pendente: contexto das telas novas (autorizado pelo usuário), revisão da colisão ADR-048, validação completa e publicação somente da feature. Nenhum merge na dev, reset/seed de dados existentes ou alteração de schema desta integração. Identidade Git/GitHub confirmada como `iannxz`.
 
 - [x] INT-AI-01 — Backups locais, baseline dos dois workspaces e composição dos sete conflitos sem descartar um lado.

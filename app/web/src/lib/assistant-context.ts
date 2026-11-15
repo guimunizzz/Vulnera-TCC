@@ -19,6 +19,9 @@ export const ASSISTANT_ACTIONS: Record<AssistantActionId, AssistantDestination> 
   remediation: { id: "remediation", label: "Abrir remediação", path: "/remediation", roles: ANALYSTS },
   playbooks: { id: "playbooks", label: "Abrir playbooks", path: "/playbooks", roles: ALL },
   "sla-settings": { id: "sla-settings", label: "Abrir configuração de SLA", path: "/settings/sla", roles: CUSTOMERS },
+  "sast-sca": { id: "sast-sca", label: "Abrir SAST/SCA", path: "/sast-sca", roles: ANALYSTS },
+  "threat-intel": { id: "threat-intel", label: "Abrir Threat Intel", path: "/threat-intel", roles: ALL },
+  "exposure-graph": { id: "exposure-graph", label: "Abrir Exposure Graph", path: "/exposure-graph", roles: CUSTOMERS },
 };
 
 export const ASSISTANT_SCREEN_LABELS: Record<AssistantScreen, string> = {
@@ -27,6 +30,8 @@ export const ASSISTANT_SCREEN_LABELS: Record<AssistantScreen, string> = {
   "finding-detail": "Detalhes do finding", "finding-editor": "Editor de finding", dast: "DAST", "dast-detail": "Detalhes do scan",
   "dast-report": "Relatório DAST", remediation: "Remediação", playbooks: "Playbooks", "playbook-detail": "Detalhes do playbook",
   "sla-settings": "Configuração de SLA", maturity: "Maturidade", subscriptions: "Assinaturas", onboarding: "Primeiros passos",
+  "sast-sca": "SAST/SCA", "code-import-detail": "Detalhes da importação SAST/SCA",
+  "threat-intel": "Threat Intel", "exposure-graph": "Exposure Graph",
 };
 
 export function assistantDestination(id: unknown, role: UserRole): AssistantDestination | undefined {
@@ -45,6 +50,8 @@ const SCREEN_ROUTES: readonly [RegExp, AssistantScreen][] = [
   [/^\/remediation$/, "remediation"], [/^\/playbooks$/, "playbooks"], [/^\/playbooks\/[^/]+$/, "playbook-detail"],
   [/^\/settings\/sla$/, "sla-settings"], [/^\/companies\/[^/]+\/maturity$/, "maturity"],
   [/^\/admin\/subscriptions$/, "subscriptions"], [/^\/onboarding$/, "onboarding"],
+  [/^\/sast-sca$/, "sast-sca"], [/^\/sast-sca\/imports\/[^/]+$/, "code-import-detail"],
+  [/^\/threat-intel$/, "threat-intel"], [/^\/exposure-graph$/, "exposure-graph"],
 ];
 
 export function assistantScreen(pathname: string): AssistantScreen {
@@ -58,6 +65,9 @@ export function assistantSuggestions(screen: AssistantScreen, role: UserRole): s
     : screen.startsWith("dast") ? "Como funciona a triagem do DAST?"
     : screen === "sla-settings" ? "Como funciona o SLA?"
     : screen.startsWith("playbook") || screen === "remediation" ? "Como uso os playbooks?"
+    : screen === "sast-sca" || screen === "code-import-detail" ? "Como importo um relatório SAST/SCA?"
+    : screen === "threat-intel" ? "Como funciona o inventário de tecnologias?"
+    : screen === "exposure-graph" ? "O que representa o Exposure Graph?"
     : role === "PENTESTER" ? "Como acompanho meus projetos?" : "Como solicito uma análise?";
   return ["O que posso fazer nesta tela?", context, "Qual a diferença entre CVSS e VRS?"];
 }

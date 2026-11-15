@@ -63,6 +63,21 @@ afterEach(() => {
 });
 
 describe("Assistente autenticado", () => {
+  it.each([
+    ["/sast-sca", "sast-sca"],
+    ["/sast-sca/imports/private-import?secret=value", "code-import-detail"],
+    ["/threat-intel?empresa=private-company", "threat-intel"],
+    ["/exposure-graph", "exposure-graph"],
+  ])("envia somente o contexto normalizado da nova tela %s", async (route, expectedScreen) => {
+    mount("ADMIN", route);
+    await open();
+    submit("O que posso fazer nesta tela?");
+    await waitFor(() => expect(assistantApi.chat).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(assistantApi.chat).mock.calls[0][0]).toEqual({
+      question: "O que posso fazer nesta tela?", screen: expectedScreen, history: [],
+    });
+  });
+
   it("não chama a API na montagem, abertura, sugestão, digitação, refoco ou navegação", async () => {
     mount();
     expect(await screen.findByTestId("assistant-root")).toBeInTheDocument();
