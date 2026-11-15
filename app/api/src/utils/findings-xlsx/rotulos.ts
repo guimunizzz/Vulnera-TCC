@@ -63,6 +63,7 @@ export const ROTULO_ORIGEM: Record<string, string> = {
   DAST_IMPORT: "DAST",
   SAST_IMPORT: "SAST",
   SCA_IMPORT: "SCA",
+  THREAT_INTEL: "Threat Intel",
 };
 
 export const ROTULO_PERFIL: Record<string, string> = {

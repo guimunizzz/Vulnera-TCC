@@ -8,6 +8,12 @@ data: 2026-09-05
 
 # ADR-030 - Execução assíncrona sem fila (watchdog em vez de Redis/BullMQ)
 
+> [!warning] Supersedido PARCIALMENTE pelo [[ADR-053 - Threat Intel com inventario de tecnologias e sincronizacao agendada]] (2026-11-15)
+> Continua valendo: sem fila externa, execução em segundo plano no processo da
+> API e expiração preguiçosa onde dá. Mudou: a Threat Intel tem um agendador
+> (`setInterval` no `server.ts`), porque uma CVE nova só chega ao Vulnera se
+> alguém for buscá-la.
+
 ## Contexto
 
 Um scan DAST leva minutos (spider + active scan do ZAP) — a resposta de `POST /dast/scans` não pode esperar o scan terminar. Isso exige algum mecanismo de execução em background. A abordagem padrão de mercado é uma fila (Redis + BullMQ/Bee-Queue): o request enfileira um job, um worker separado processa, o estado vive na fila.

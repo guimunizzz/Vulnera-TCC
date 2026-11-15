@@ -205,11 +205,12 @@ describe("tokensToParams", () => {
   it("origem (visão unificada): apelidos, caixa livre e complemento", () => {
     expect(tokensToParams(parseQuery("origem = sast_import, SCA_IMPORT")).get("sourceType")).toBe("SAST_IMPORT,SCA_IMPORT");
     expect(tokensToParams(parseQuery("fonte = DAST_IMPORT")).get("sourceType")).toBe("DAST_IMPORT");
-    // "tudo que não é manual" = as três lentes automáticas
+    // "tudo que não é manual" = as lentes automáticas (DAST, SAST, SCA e Threat Intel)
     expect(tokensToParams(parseQuery("origem != MANUAL")).get("sourceType")!.split(",").sort()).toEqual([
       "DAST_IMPORT",
       "SAST_IMPORT",
       "SCA_IMPORT",
+      "THREAT_INTEL",
     ]);
     expect(parseQuery("origem = GITHUB")[0]!.kind).toBe("invalid");
     // A URL volta como chip (link compartilhado do painel da aplicação).

@@ -68,6 +68,8 @@ export interface ParsedCodeReport {
   toolVersion: string | null;
   findings: ParsedCodeFinding[];
   componentsCount: number | null;
+  /** Só CycloneDX: os componentes do SBOM (alimentam as sugestões do inventário da Threat Intel, ADR-053). */
+  components: { name: string; version: string | null; purl: string | null }[];
   warnings: string[];
 }
 
@@ -362,6 +364,7 @@ function parseSarif(doc: Json): ParsedCodeReport {
     toolVersion,
     findings: fecharFingerprintsSarif(pendentes),
     componentsCount: null,
+    components: [],
     warnings,
   };
 }
@@ -557,6 +560,7 @@ function parseCycloneDx(doc: Json): ParsedCodeReport {
     toolVersion: tool.version,
     findings: dedupe(findings, warnings),
     componentsCount: counter.n,
+    components: [...components.values()],
     warnings,
   };
 }

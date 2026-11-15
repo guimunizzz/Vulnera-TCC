@@ -6,6 +6,15 @@
 
 ## Status
 
+**✅ 2026-11-15 — Threat Intel: CVEs publicadas contra o inventário de tecnologias, com notificação.** Branch `feat/threat-intel` (sobre a `feat/unified-origin-view`). Inventário por empresa (pacote via OSV, produto via CPE/NVD) que se alimenta do uso como **sugestão** (SBOM importado e fingerprint do DAST); sincronização agendada dentro da API com **NVD, OSV, CISA KEV e FIRST EPSS** (ADR-053 supersede parcialmente o ADR-030); aba "Afeta você" com KEV, EPSS, versão corrigida, triagem e promoção para `Vulnerability` (`THREAT_INTEL`, A06); feed de CVEs publicadas; aba Fontes; **sino de notificações** no topo (CVE nova com CVSS ≥ 7 ou KEV, CVE antiga que entra no KEV; o que já existia ao mapear não notifica). Tenancy nos dois sentidos, 404 para recurso de outra empresa. Validado com fontes **reais** (KEV 1.781, feed do NVD 811 CVEs, SBOM do NodeGoat → 90 CVEs, scan DAST real → sugestão do nginx, NVD fora do ar → PARTIAL com o motivo); a notificação foi mostrada por **simulação controlada e rotulada**. API **847/847**, web **614/614**, lint 0 erros, contraste OK. Ver ADR-053, D19, `docs/THREAT_INTEL.md` e `docs/evidencias/threat-intel/`.
+
+- [ ] TI-FUT-01 — Lock de sincronização no banco para mais de uma instância da API (hoje a flag é por processo).
+- [ ] TI-FUT-02 — Notificação por e-mail (MailHog já está no compose) e push mobile para KEV.
+- [ ] TI-FUT-03 — Cache dos detalhes do OSV por `modified` (hoje rebusca a cada execução).
+- [ ] TI-FUT-04 — Casamento por produto depende de o NVD ter analisado a CVE (`configurations`); avaliar usar o `cpeApplicability`/`affected` novo da API 2.0 ou o CVE Services quando o NVD atrasar.
+- [ ] TI-FUT-05 — O SBOM do próprio Vulnera (Trivy sobre o `package-lock.json` gerado localmente) tem **47 vulnerabilidades**: triar e atualizar as dependências (ver `docs/evidencias/threat-intel/`).
+- [ ] TI-FUT-06 — No menu lateral, "Threat Intel" com o selo *new* quebra em duas linhas a 216 px; ajustar o rótulo ou o selo.
+
 **✅ 2026-11-15 — Visão unificada DAST + SAST + SCA, "Correção não confirmada" e três correções.** Branch `feat/unified-origin-view`. Origem (`sourceType`) vira dimensão em Achados (filtro, faceta, coluna, campo `origem` na busca, buscas salvas e Excel), no painel da aplicação (cartão "Por origem" + fila de triagem do código, só para ADMIN; `null` para CLIENT) e no Exposure Graph (abertas por origem e selo nas mais graves), sem schema novo. CODE-FUT-03: a reimportação sugere reabrir a vulnerabilidade `FIXED` cujo achado continua no relatório importado depois da correção (só na importação mais recente; botão com confirmação, `FIXED → IN_PROGRESS` do ADR-033). Validado com dados **reais** nas três origens (Semgrep e Trivy contra o NodeGoat, scan real do ZAP contra um nginx descartável), pelo navegador, com 0 erros de console. API **823/823**, web **605/605**, lint 0 erros, contraste OK, E2E `exposure-graph` 3/3. Ver D18, `docs/evidencias/visao-unificada/` e `docs/SAST_SCA.md`.
 
 - [x] CODE-FUT-03 — ✅ 2026-11-15 (ver acima e `SAST_SCA.md` §Reimportação).

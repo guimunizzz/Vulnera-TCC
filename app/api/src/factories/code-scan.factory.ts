@@ -15,6 +15,7 @@ import { ApplicationRepository } from "../repositories/application.repository";
 import { CodeScanService } from "../services/code-scan.service";
 import { CodeScanController } from "../controllers/code-scan.controller";
 import { makeSlaPolicyService } from "./sla-policy.factory";
+import { makeTechSuggestionService } from "./threat-intel.factory";
 
 export function makeCodeScanService(): CodeScanService {
   return new CodeScanService(
@@ -25,6 +26,7 @@ export function makeCodeScanService(): CodeScanService {
     new AuditLogRepository(prisma),
     makeSlaPolicyService(),
     new ApplicationRepository(prisma),
+    makeTechSuggestionService(),
   );
 }
 

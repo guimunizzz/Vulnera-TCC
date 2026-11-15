@@ -22,6 +22,7 @@ import { FingerprintSensor } from "../services/sensors/fingerprint.sensor";
 import { InternetDbSensor } from "../services/sensors/internetdb.sensor";
 import { CrtShSensor } from "../services/sensors/crtsh.sensor";
 import { NvdCveService } from "../services/sensors/nvd-cve.service";
+import { makeTechSuggestionService } from "./threat-intel.factory";
 import { CveRecordRepository } from "../repositories/cve-record.repository";
 import { EnvVar } from "../config/EnvVar";
 import { EnvKeys } from "../config/enum/EnvKeys";
@@ -38,7 +39,7 @@ export function makeDastScanService(): DastScanService {
   // Sensores passivos rodam depois do ZAP, na ordem desta lista.
   const nvd = new NvdCveService(new CveRecordRepository(prisma), EnvVar.getOptional(EnvKeys.NVD_API_KEY, "").trim() || null);
   const sensors = [new HeadersSensor(), new SslSensor(), new FingerprintSensor(), new InternetDbSensor(nvd), new CrtShSensor()];
-  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog, sensors);
+  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog, sensors, makeTechSuggestionService());
 }
 
 export function makeDastScanController(): DastScanController {

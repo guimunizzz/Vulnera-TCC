@@ -57,7 +57,7 @@ function ContagemPorSeveridade({ abertas }: { abertas: Record<SeveridadeVuln, nu
 /** Visão unificada: as mesmas abertas pelas lentes que as encontraram (DAST, SAST, SCA, manual). */
 function ContagemPorOrigem({ porOrigem }: { porOrigem: Record<string, number> }) {
   return (
-    <dl className="grid grid-cols-4 gap-2" aria-label="Abertas por origem">
+    <dl className="grid grid-cols-3 gap-2 sm:grid-cols-5" aria-label="Abertas por origem">
       {SOURCE_TYPES.map((o) => (
         <div key={o} className="flex flex-col items-center gap-1 rounded-control border border-subtle bg-inset px-2 py-2">
           <dt>

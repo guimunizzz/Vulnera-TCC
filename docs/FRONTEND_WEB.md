@@ -60,6 +60,15 @@ O botão **?** ao lado de "Importar relatório" (`code-import-help.tsx`, na pág
 SAST/SCA e na aba do projeto) abre o guia de como gerar e importar, com
 comandos copiáveis.
 
+`/threat-intel` (ADR-053) é dos três papéis, também com selo **new**; o que cada
+um pode fazer (inventário, triagem, promoção, sincronizar) vem do `permissoes`
+do resumo da API, não da tela. Aba, empresa e CVE em foco ficam na URL
+(`?empresa=&aba=afeta&match=`), que é para onde o **sino de notificações**
+(`components/notifications/notification-bell.tsx`, no topo do `AppLayout`) leva.
+O sino consulta só a contagem a cada 60 s e busca a lista ao abrir; navega
+apenas para rota interna. Para caber o sino a 375 px, a marca "Vulnera" do topo
+sai abaixo de `sm` (o menu hambúrguer continua).
+
 `.alvo-estendido` (área de toque de 44 px em controles densos) só aplica
 `position: relative` a hosts sem `absolute`/`fixed`. Por ser CSS fora de
 camada, a regra antiga vencia o utilitário e tirava o "×" do `DialogClose` do

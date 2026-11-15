@@ -66,6 +66,22 @@ const MESSAGES: Record<string, string> = {
   INVALID_SLA_DAYS: "Cada prazo precisa ser um número inteiro entre 1 e 365 dias.",
   INVALID_SLA_STATE: "Estado de SLA inválido.",
   INVALID_SOURCE_TYPE: "Origem inválida: use DAST, SAST, SCA ou manual.",
+  // Threat Intel (ADR-053)
+  TECH_ASSET_ALREADY_EXISTS: "Esta tecnologia já está no inventário.",
+  TECH_ASSET_ALREADY_CONFIRMED: "Esta tecnologia já foi confirmada.",
+  TECH_ASSET_NOT_SUGGESTED: "Só uma sugestão pode ser descartada.",
+  TECH_ASSET_NOT_FOUND: "Tecnologia não encontrada.",
+  THREAT_MATCH_NOT_FOUND: "CVE não encontrada para esta empresa.",
+  INVALID_ECOSYSTEM: "Escolha um ecossistema da lista.",
+  MISSING_PACKAGE_NAME: "Informe o nome do pacote.",
+  INVALID_PACKAGE_NAME: "Nome de pacote inválido.",
+  MISSING_CPE_PRODUCT: "Informe o fabricante e o produto.",
+  INVALID_CPE_PRODUCT: "Fabricante ou produto inválido: use o nome do dicionário CPE (minúsculas, sem espaços).",
+  INVALID_CPE_PART: "Tipo de produto inválido.",
+  INVALID_TECH_KIND: "Escolha pacote ou produto.",
+  INVALID_VERSION: "Versão inválida.",
+  INVALID_DAYS: "Período inválido (1 a 30 dias).",
+  CPE_SEARCH_UNAVAILABLE: "A busca no dicionário do NVD não respondeu agora. Digite o fabricante e o produto à mão.",
   // VRS (CP-3)
   INVALID_VRS_RANGE: "Faixa de prioridade inválida — use inteiros entre 0 e 100, com o mínimo abaixo do máximo.",
 
