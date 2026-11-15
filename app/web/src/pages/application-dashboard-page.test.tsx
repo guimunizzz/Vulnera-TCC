@@ -47,6 +47,7 @@ const periodo = { de: "2026-09-01T00:00:00.000Z", ate: "2026-10-01T00:00:00.000Z
 const summary: MetricsSummary = {
   applicationId: "app-1", periodo, totalFindings: 0, totalAbertos: 0, totalRemediados: 0,
   taxaRemediacao: 0, riskScore: 0, abertosPorSeveridade: {}, porCategoriaOwasp: {},
+  abertosPorOrigem: {}, filaDeTriagem: null,
   aging: { ate7Dias: 0, de7A30Dias: 0, de30A90Dias: 0, mais90Dias: 0 },
   mttrPorSeveridade: Object.fromEntries(["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((severity) => [
     severity, { medianaDias: null, amostras: 0 },

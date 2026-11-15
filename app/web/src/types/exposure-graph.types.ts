@@ -20,6 +20,8 @@ export interface VulnPrincipal {
   severityFinal: string;
   status: string;
   owaspCategory: string;
+  /** Origem: MANUAL | DAST_IMPORT | SAST_IMPORT | SCA_IMPORT. */
+  sourceType: string;
 }
 
 export interface AplicacaoExposta {
@@ -31,6 +33,8 @@ export interface AplicacaoExposta {
   internetFacing: boolean;
   dataSensitivity: string;
   abertas: Record<SeveridadeVuln, number>;
+  /** As mesmas abertas por origem (visão unificada); só origens com abertas. */
+  abertasPorOrigem: Record<string, number>;
   totalAbertas: number;
   totalResolvidas: number;
   piorSeveridade: SeveridadeVuln | null;

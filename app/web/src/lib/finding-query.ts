@@ -35,7 +35,7 @@
  * `components/findings/findings-table.tsx` e `hooks/use-findings.ts`.
  */
 
-import { OWASP_CATEGORIES, SLA_FILTER_VALUES } from "../types/vulnerability.types";
+import { OWASP_CATEGORIES, SLA_FILTER_VALUES, SOURCE_TYPES } from "../types/vulnerability.types";
 import { RISK_ACCEPTANCE_FILTER_VALUES } from "../types/risk-acceptance.types";
 
 /* ==========================================================================
@@ -49,6 +49,7 @@ export type FilterField =
   | "severidade"
   | "status"
   | "owasp"
+  | "origem"
   | "sla"
   | "vrsMin"
   | "vrsMax"
@@ -83,6 +84,8 @@ export const CAMPOS: Record<FilterField, DefinicaoDeCampo> = {
   severidade: { param: "severity", tipo: "enum", valores: SEVERIDADES, rotulo: "severidade" },
   status: { param: "status", tipo: "enum", valores: STATUS, rotulo: "status" },
   owasp: { param: "owaspCategory", tipo: "enum", valores: OWASP_CATEGORIES, rotulo: "categoria OWASP" },
+  // Visão unificada: de onde o finding veio (DAST, SAST, SCA ou manual).
+  origem: { param: "sourceType", tipo: "enum", valores: SOURCE_TYPES, rotulo: "origem" },
   sla: { param: "slaState", tipo: "enum", valores: SLA, rotulo: "SLA" },
   vrsMin: { param: "vrsMin", tipo: "numero", rotulo: "VRS mínimo" },
   vrsMax: { param: "vrsMax", tipo: "numero", rotulo: "VRS máximo" },
@@ -119,6 +122,9 @@ const APELIDOS: Record<string, FilterField> = {
   estado: "status",
   owasp: "owasp",
   categoria: "owasp",
+  origem: "origem",
+  source: "origem",
+  fonte: "origem",
   titulo: "titulo",
   title: "titulo",
   busca: "titulo",
@@ -150,6 +156,7 @@ export const DESCRICAO_DOS_CAMPOS: Record<FilterField, { descricao: string; exem
   severidade: { descricao: "Gravidade do achado", exemplo: "severidade = HIGH, CRITICAL" },
   status: { descricao: "Em que ponto do ciclo está", exemplo: "status != CLOSED" },
   owasp: { descricao: "Categoria do OWASP Top 10", exemplo: "owasp = A03" },
+  origem: { descricao: "De onde veio: DAST, SAST, SCA ou manual", exemplo: "origem = SAST_IMPORT, SCA_IMPORT" },
   sla: { descricao: "Prazo de remediação", exemplo: "sla = BREACHED, DUE_SOON" },
   vrsMin: { descricao: "Piso da prioridade contextual", exemplo: "vrsMin = 40" },
   vrsMax: { descricao: "Teto da prioridade contextual", exemplo: "vrsMax = 84" },

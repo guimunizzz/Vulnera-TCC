@@ -98,6 +98,8 @@ export interface CodeImportComparison {
   introduced: CodeComparisonEntry[];
   persisted: CodeComparisonEntry[];
   resolved: CodeComparisonEntry[];
+  /** CODE-FUT-03: vulnerabilidade FIXED cujo achado reapareceu depois da correção (só na importação mais recente). */
+  reopenCandidates: CodeComparisonEntry[];
 }
 
 export const CODE_SEVERITY_ORDER: CodeSeverity[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"];

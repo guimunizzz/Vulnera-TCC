@@ -65,6 +65,7 @@ const MESSAGES: Record<string, string> = {
   // SLA (CP-2)
   INVALID_SLA_DAYS: "Cada prazo precisa ser um número inteiro entre 1 e 365 dias.",
   INVALID_SLA_STATE: "Estado de SLA inválido.",
+  INVALID_SOURCE_TYPE: "Origem inválida: use DAST, SAST, SCA ou manual.",
   // VRS (CP-3)
   INVALID_VRS_RANGE: "Faixa de prioridade inválida — use inteiros entre 0 e 100, com o mínimo abaixo do máximo.",
 

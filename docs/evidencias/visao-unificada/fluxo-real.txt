@@ -1,0 +1,18 @@
+vulnerabilidade SAST cmwhag92a0018brf8y0xj4ldu marcada FIXED
+reimportação cmwhajjii006pbrf8xokitv0g: 35 achados, 35 continuam
+📸 01-correcao-nao-confirmada-aviso
+📸 02-reabrir-confirmacao
+📸 03-reaberta-aviso-some
+status depois de reabrir pela tela: IN_PROGRESS
+📸 04-detalhe-finding-selo-origem-sast
+📸 05-achados-coluna-origem
+📸 06-achados-filtro-origem-com-contagens
+📸 07-achados-tres-lentes-dast-sast-sca
+📸 08-painel-aplicacao-por-origem-admin
+📸 09-do-painel-para-achados-filtrados-sca
+CLIENT vê fila de triagem? não; links no cartão: 0
+📸 10-painel-aplicacao-por-origem-client-sem-fila
+📸 11-exposure-graph-aplicacao-por-origem
+375px: scrollWidth do painel = 365
+📸 12-painel-por-origem-375px
+erros de console: 0

@@ -155,8 +155,8 @@ CORS_ORIGIN=http://localhost:3000
 DAST_ZAP_NETWORK=
 ```
 
-O exemplo legado contém `SERVER_PORT`; a API atual lê `PORT`. Configure os
-segredos JWT locais e não versione o `.env`.
+A API lê `PORT` (o `.env.example` já usa esse nome). Configure os segredos
+JWT locais e não versione o `.env`.
 
 ```bash
 cd app/api

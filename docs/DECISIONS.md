@@ -973,3 +973,41 @@ schema.
 
 **D17.8 — Falsos-positivos ocultos no grafo, com interruptor.** É coerente com
 o PDF. *Alternativa:* sempre visíveis, escondidos só pela severidade.
+
+---
+
+## D18 — Visão unificada DAST + SAST + SCA por aplicação (2026-11-15)
+
+Pedido do Rafael na sessão de 2026-11-14/15 (resposta 10b), entregue na branch
+`feat/unified-origin-view` junto com CODE-FUT-03, API-FUT-01, API-FUT-02 e
+SG-FUT-09. Sem schema novo: a dimensão é o `Vulnerability.sourceType` que já
+existia (ADR-032/ADR-052).
+
+**D18.1 — Onde aparece: Achados, painel da aplicação e Exposure Graph.**
+Filtro e coluna **Origem** em Achados (`?sourceType=`, faceta `source`, campo
+`origem` na barra de busca, buscas salvas e Excel), cartão "Por origem" no
+painel da aplicação e quebra por origem no painel do Exposure Graph.
+*Alternativa:* uma tela nova só de origem, que repetiria o que as três já fazem.
+
+**D18.2 — Conta o promovido e mostra a fila do código.** Os números são de
+`Vulnerability` (o que alguém já revisou); ao lado, a **fila de triagem**:
+achados SAST/SCA com triagem `NEW` na importação mais recente de cada
+ferramenta. *Alternativa:* só os promovidos, que esconderia o trabalho pendente.
+O DAST cru fica fora porque o scan ainda não sabe a que aplicação pertence
+(SG-FUT-04b).
+
+**D18.3 — CLIENT vê a origem, não a fila.** O CLIENT não enxerga o módulo
+SAST/SCA (ADR-052): a API devolve `filaDeTriagem: null` para ele e o cartão não
+oferece links (ele também não tem as rotas de Achados e SAST/SCA).
+*Alternativa:* mostrar a contagem a todos, o que vazaria trabalho de triagem
+ainda não validado.
+
+**D18.4 — "Abertos" segue a regra existente.** A quebra por origem usa a mesma
+definição de `abertosPorSeveridade` (OPEN + IN_PROGRESS, ignorando o filtro de
+status do painel). Uma regra diferente só para a origem faria os dois números do
+mesmo painel discordarem.
+
+**D18.5 — Reabrir é sugestão (CODE-FUT-03).** A reimportação aponta a
+vulnerabilidade `FIXED` cujo achado continua no relatório importado **depois** do
+último `→ FIXED`, só na importação mais recente da ferramenta; o botão usa o
+`FIXED → IN_PROGRESS` do ADR-033 com confirmação. Nada reabre sozinho.

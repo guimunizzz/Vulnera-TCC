@@ -23,7 +23,9 @@ const api = vi.hoisted(() => ({
   importReport: vi.fn(),
 }));
 const dast = vi.hoisted(() => ({ triage: vi.fn() }));
+const vulns = vi.hoisted(() => ({ transition: vi.fn() }));
 vi.mock("../lib/api/code-imports.api", () => ({ codeImportsApi: api }));
+vi.mock("../lib/api/vulnerabilities.api", () => ({ vulnerabilitiesApi: vulns }));
 vi.mock("../lib/api/dast.api", () => ({ dastApi: dast }));
 vi.mock("../lib/api/projects.api", () => ({ projectsApi: { list: async () => [] } }));
 
@@ -75,6 +77,7 @@ beforeEach(() => {
     introduced: [{ fingerprint: "novo", title: "SQL injection na busca", severity: "CRITICAL", category: "SAST", location: "src/db.js:42", promotedVulnerability: null }],
     persisted: [],
     resolved: [],
+    reopenCandidates: [],
   });
   api.triage.mockResolvedValue(FINDINGS[0]);
 });
@@ -130,6 +133,34 @@ describe("Detalhe da importação SAST/SCA", () => {
     expect(await screen.findByRole("tab", { name: /Achados/, selected: true })).toBeInTheDocument();
     // A linha do achado volta aberta, com a triagem à mão.
     expect(await screen.findByRole("button", { name: "Confirmado" })).toBeInTheDocument();
+  });
+
+  it("CODE-FUT-03: sem candidata a reabrir, o aviso não aparece", async () => {
+    renderPage();
+    await screen.findByText("SQL injection na busca");
+    expect(screen.queryByText("Correção não confirmada")).not.toBeInTheDocument();
+  });
+
+  it("CODE-FUT-03: Reabrir confirma e chama a transição de retorno do ADR-033", async () => {
+    const promovida = { id: "v1", projectId: "p1", severityFinal: "CRITICAL", status: "FIXED" };
+    api.compare.mockResolvedValue({
+      headImport: IMPORT,
+      baseImport: { ...IMPORT, id: "imp-1", previousImportId: null },
+      introduced: [{ fingerprint: "novo", title: "SQL injection na busca", severity: "CRITICAL", category: "SAST", location: "src/db.js:42", promotedVulnerability: promovida }],
+      persisted: [],
+      resolved: [],
+      reopenCandidates: [{ fingerprint: "novo", title: "SQL injection na busca", severity: "CRITICAL", category: "SAST", location: "src/db.js:42", promotedVulnerability: promovida }],
+    });
+    vulns.transition.mockResolvedValue({ id: "v1", status: "IN_PROGRESS" });
+    renderPage();
+
+    expect(await screen.findByText("Correção não confirmada")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "abrir vulnerabilidade" })).toHaveAttribute("href", "/findings/v1");
+    fireEvent.click(screen.getByRole("button", { name: /Reabrir/ }));
+    const dialogo = await screen.findByRole("dialog", { name: "Reabrir vulnerabilidade?" });
+    expect(vulns.transition).not.toHaveBeenCalled();
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Reabrir" }));
+    await waitFor(() => expect(vulns.transition).toHaveBeenCalledWith("v1", "IN_PROGRESS"));
   });
 
   it("salvar a nota logo depois de mudar o status não desfaz a triagem (lista ainda desatualizada)", async () => {

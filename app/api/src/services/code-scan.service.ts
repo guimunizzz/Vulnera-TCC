@@ -99,6 +99,12 @@ export interface CodeImportComparison {
   persisted: CodeComparisonEntry[];
   /** Sumiu do relatório novo. Se foi promovido, a Vulnerability é candidata a reteste/FIXED — decisão humana. */
   resolved: CodeComparisonEntry[];
+  /**
+   * CODE-FUT-03: está NESTE relatório, mas a Vulnerability promovida foi marcada FIXED ANTES dele
+   * ser importado — a correção não se confirmou. Só a importação mais recente da ferramenta
+   * sugere (uma mais nova pode já não ter o achado). É sugestão: reabrir é decisão humana.
+   */
+  reopenCandidates: CodeComparisonEntry[];
 }
 
 export class CodeScanService {
@@ -428,14 +434,29 @@ export class CodeScanService {
     const headSet = new Set(headFindings.map((f) => f.fingerprint));
     const baseSet = new Set(baseFindings.map((f) => f.fingerprint));
     const bySeverity = (a: CodeComparisonEntry, b: CodeComparisonEntry) => CODE_SEVERITY_ORDER[a.severity] - CODE_SEVERITY_ORDER[b.severity];
+    const headEntries = headFindings.map(toEntry);
 
     return {
       headImport: (await this.withSeverityCounts([head]))[0],
       baseImport: base ? (await this.withSeverityCounts([base]))[0] : null,
-      introduced: headFindings.filter((f) => !baseSet.has(f.fingerprint)).map(toEntry).sort(bySeverity),
-      persisted: headFindings.filter((f) => baseSet.has(f.fingerprint)).map(toEntry).sort(bySeverity),
+      introduced: headEntries.filter((e) => !baseSet.has(e.fingerprint)).sort(bySeverity),
+      persisted: headEntries.filter((e) => baseSet.has(e.fingerprint)).sort(bySeverity),
       resolved: baseFindings.filter((f) => !headSet.has(f.fingerprint)).map(toEntry).sort(bySeverity),
+      reopenCandidates: (await this.reopenCandidates(head, headEntries)).sort(bySeverity),
     };
+  }
+
+  private async reopenCandidates(head: CodeScanImportWithUploader, entries: CodeComparisonEntry[]): Promise<CodeComparisonEntry[]> {
+    const corrigidas = entries.filter((e) => e.promotedVulnerability?.status === "FIXED");
+    if (corrigidas.length === 0) return [];
+    const latest = await this.repository.findLatestComparable(head.projectId, head.format, head.toolName);
+    if (latest?.id !== head.id) return [];
+    const fixedAt = await this.auditLogRepository.findLastFixedAtByEntityIds([...new Set(corrigidas.map((e) => e.promotedVulnerability!.id))]);
+    // Sem → FIXED na trilha não há como provar a ordem: não sugere.
+    return corrigidas.filter((e) => {
+      const quando = fixedAt.get(e.promotedVulnerability!.id);
+      return quando !== undefined && quando < head.createdAt;
+    });
   }
 
   // ==========================================================================

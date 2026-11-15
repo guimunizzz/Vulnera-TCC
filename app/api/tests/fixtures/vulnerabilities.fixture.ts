@@ -22,6 +22,8 @@ export interface SeedVulnerabilityInput {
   severityCalculated?: string;
   severityFinal?: string;
   status?: string;
+  /** Origem (ADR-032/052): MANUAL (default do schema) | DAST_IMPORT | SAST_IMPORT | SCA_IMPORT. */
+  sourceType?: string;
   /**
    * Data de criação forçada — o `@default(now())` do schema não serve pra
    * testar filtro de intervalo, que precisa de findings em datas diferentes e
@@ -46,6 +48,7 @@ export async function seedVulnerability(input: SeedVulnerabilityInput): Promise<
       severityCalculated,
       severityFinal: input.severityFinal ?? severityCalculated,
       status: input.status ?? "OPEN",
+      ...(input.sourceType ? { sourceType: input.sourceType } : {}),
       ...(input.createdAt ? { createdAt: input.createdAt } : {}),
     },
   });

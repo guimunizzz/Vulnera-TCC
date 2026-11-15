@@ -28,6 +28,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Alert } from "../components/ui/alert";
 import { SeverityBadge } from "../components/ui/badge";
 import { StatusBadge } from "../components/ui/badge";
+import { OrigemBadge } from "../components/findings/origem-badge";
 import { OverrideSeverityDialog } from "../components/findings/override-severity-dialog";
 import { EvidenceUploader } from "../components/findings/evidence-uploader";
 import { CommentTimeline } from "../components/findings/comment-timeline";
@@ -170,6 +171,7 @@ export function FindingEditorPage() {
             <div className="mt-2 flex items-center gap-2">
               <StatusBadge status={existing.status} />
               <SeverityBadge severidade={existing.severityFinal} />
+              <OrigemBadge sourceType={existing.sourceType} />
               {existing.severityFinal !== existing.severityCalculated && (
                 <span className="text-xs text-fg-muted">(calculada: {existing.severityCalculated})</span>
               )}

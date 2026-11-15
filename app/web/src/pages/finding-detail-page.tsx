@@ -41,6 +41,7 @@ import { Skeleton } from "../components/ui/card";
 import { Badge, SeverityBadge, StatusBadge } from "../components/ui/badge";
 import { RiskContextChips } from "../components/applications/risk-context-chips";
 import { SlaBadge } from "../components/findings/sla-badge";
+import { OrigemBadge } from "../components/findings/origem-badge";
 import { VrsBadge } from "../components/findings/vrs-badge";
 import { RiskAcceptancePanel } from "../components/findings/risk-acceptance-panel";
 import { HowToFixPanel } from "../components/findings/how-to-fix-panel";
@@ -145,6 +146,7 @@ export function FindingDetailPage() {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={finding.status} />
             <SeverityBadge severidade={finding.severityFinal} cvss={finding.cvssScore} />
+            <OrigemBadge sourceType={finding.sourceType} />
             {/* Risco aceito é um badge AO LADO do status (CP-4), nunca no lugar
                 dele: o finding continua aberto, e a tela precisa mostrar isso. */}
             {finding.sla?.state === "ACCEPTED" && <Badge tom="acento">Risco aceito</Badge>}

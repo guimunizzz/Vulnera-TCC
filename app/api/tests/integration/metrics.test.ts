@@ -26,6 +26,7 @@
  *   MET-15  insights · lista nunca volta vazia
  *   MET-16  comparação entre aplicações da company
  *   MET-17  validação de query string
+ *   MET-19  summary  · abertos por origem (DAST/SAST/SCA/manual) e fila de triagem do código
  *
  *   TEN-14  summary     · CLIENT de outra company → 403
  *   TEN-15  timeseries  · CLIENT de outra company → 403
@@ -170,6 +171,58 @@ describe("Métricas analíticas (Fase 6.5)", () => {
     expect(res.body.abertosPorSeveridade).toEqual({ CRITICAL: 1, HIGH: 0, MEDIUM: 1, LOW: 0, NONE: 0 });
     // Só os ABERTOS entram: 9.0²/10 + 6.0²/10 = 8.1 + 3.6 = 11.7
     expect(res.body.riskScore).toBe(11.7);
+  });
+
+  it("MET-19 — visão unificada: abertos por origem e fila de triagem do código (só a importação mais recente)", async () => {
+    const c = await cenario();
+    const base = { projectId: c.project.id, applicationId: c.application.id, companyId: c.company.id, createdBy: c.pentester.id };
+    const comOrigem = async (sourceType: string, status: string) => {
+      const v = await finding({ ...base, cvss: 7.5, severidade: "HIGH", status, criadoEm: diasAtras(5) });
+      await prisma.vulnerability.update({ where: { id: v.id }, data: { sourceType } });
+    };
+    await comOrigem("DAST_IMPORT", "OPEN");
+    await comOrigem("SAST_IMPORT", "OPEN");
+    await comOrigem("SAST_IMPORT", "IN_PROGRESS");
+    await comOrigem("SCA_IMPORT", "CLOSED"); // fechado não conta
+    await comOrigem("MANUAL", "OPEN");
+
+    // Fila de triagem: duas importações do Semgrep (só a mais recente conta) e uma do Trivy.
+    const importacao = (format: string, toolName: string, createdAt: Date) =>
+      prisma.codeScanImport.create({
+        data: { projectId: c.project.id, companyId: c.company.id, format, toolName, fileName: "r.json", uploadedById: c.pentester.id, createdAt },
+      });
+    const achado = (importId: string, category: string, fingerprint: string, triageStatus: "NEW" | "CONFIRMED") =>
+      prisma.codeFinding.create({
+        data: { importId, projectId: c.project.id, companyId: c.company.id, fingerprint, category, ruleId: "r", title: "t", severity: "HIGH", triageStatus },
+      });
+    const antiga = await importacao("SARIF", "Semgrep OSS", diasAtras(3));
+    for (const fp of ["a", "b", "c"]) await achado(antiga.id, "SAST", fp, "NEW");
+    const recente = await importacao("SARIF", "Semgrep OSS", diasAtras(1));
+    await achado(recente.id, "SAST", "a", "NEW");
+    await achado(recente.id, "SAST", "b", "NEW");
+    await achado(recente.id, "SAST", "c", "CONFIRMED");
+    const sbom = await importacao("CYCLONEDX", "trivy", diasAtras(2));
+    await achado(sbom.id, "SCA", "lodash", "NEW");
+
+    const doPentester = await request(app)
+      .get(rota(c.application.id, "summary"))
+      .set("Authorization", `Bearer ${await loginAs(app, c.pentester.email, SENHA)}`);
+    expect(doPentester.status).toBe(200);
+    expect(doPentester.body.abertosPorOrigem).toEqual({ DAST_IMPORT: 1, SAST_IMPORT: 2, MANUAL: 1 });
+    expect(doPentester.body.filaDeTriagem).toEqual({ SAST: 2, SCA: 1 });
+
+    // Segue o período do painel como os demais números (abertos = OPEN + IN_PROGRESS, como por
+    // severidade); a fila de triagem é o estado de agora e não muda com o período.
+    const depois = await request(app)
+      .get(`${rota(c.application.id, "summary")}?from=${diasAtras(4).toISOString()}`)
+      .set("Authorization", `Bearer ${await loginAs(app, c.pentester.email, SENHA)}`);
+    expect(depois.body.abertosPorOrigem).toEqual({});
+    expect(depois.body.filaDeTriagem).toEqual({ SAST: 2, SCA: 1 });
+
+    // ...e o CLIENT, que não enxerga o módulo SAST/SCA, recebe a origem mas não a fila.
+    const doCliente = await request(app).get(rota(c.application.id, "summary")).set("Authorization", `Bearer ${c.token}`);
+    expect(doCliente.body.abertosPorOrigem).toEqual({ DAST_IMPORT: 1, SAST_IMPORT: 2, MANUAL: 1 });
+    expect(doCliente.body.filaDeTriagem).toBeNull();
   });
 
   it("MET-02 — risk score bate com a soma feita direto no banco", async () => {

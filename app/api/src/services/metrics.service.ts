@@ -183,12 +183,17 @@ export class MetricsService {
     // não casa NADA, e as agregações de risco e aging zeravam em silêncio.
     const filtro: FiltroMetricas = { ...opcoes, applicationId, de, ate };
 
-    const bloco = await this.calcularBloco(filtro, agora);
+    const [bloco, fila] = await Promise.all([
+      this.calcularBloco(filtro, agora),
+      // CLIENT não vê o módulo SAST/SCA (ADR-052): nem a contagem do que ainda está em triagem.
+      actor.role === "CLIENT" ? Promise.resolve(null) : this.repository.contarFilaDeTriagemDeCodigo(applicationId),
+    ]);
 
     const dto: MetricsSummaryDTO = {
       applicationId,
       periodo: { de: de.toISOString(), ate: ate.toISOString() },
       ...bloco,
+      filaDeTriagem: fila ? Object.fromEntries(fila.map((l) => [l.chave, l.total])) : null,
     };
 
     if (compararComAnterior) {
@@ -213,7 +218,7 @@ export class MetricsService {
 
   /** As métricas de uma janela, sem o envelope. Reutilizado na comparação. */
   private async calcularBloco(filtro: FiltroMetricas, agora: Date) {
-    const [total, abertosPorSev, remediados, risco, agingBruto, owasp, tempos] = await Promise.all([
+    const [total, abertosPorSev, remediados, risco, agingBruto, owasp, tempos, origens] = await Promise.all([
       this.repository.contarTotal(filtro),
       this.repository.contarAbertosPorSeveridade(filtro),
       this.repository.contarRemediados(filtro),
@@ -221,6 +226,7 @@ export class MetricsService {
       this.repository.contarAgingDeAbertos(filtro, agora),
       this.repository.contarPorCategoriaOwasp(filtro),
       this.repository.listarTemposDeRemediacao(filtro),
+      this.repository.contarAbertosPorOrigem(filtro),
     ]);
 
     const abertosPorSeveridade = preencherSeveridades(abertosPorSev);
@@ -241,6 +247,7 @@ export class MetricsService {
         mais90Dias: agingBruto.mais90Dias ?? 0,
       } satisfies AgingDTO,
       porCategoriaOwasp: Object.fromEntries(owasp.map((o) => [o.chave, o.total])),
+      abertosPorOrigem: Object.fromEntries(origens.map((o) => [o.chave, o.total])),
     };
   }
 

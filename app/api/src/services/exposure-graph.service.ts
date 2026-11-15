@@ -121,8 +121,10 @@ export function montarAplicacoesDoGrafo(entrada: EntradaExposureGraph): Aplicaca
 
   const aplicacoes = entrada.aplicacoes.map((app): AplicacaoDoGrafoDTO => {
     const abertas: Record<SeveridadeDoGrafo, number> = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+    const abertasPorOrigem: Record<string, number> = {};
     for (const l of (abertasDe.get(app.id) ?? []).filter(ehSeveridadeDoGrafo)) {
       abertas[l.severityFinal] += l.total;
+      abertasPorOrigem[l.sourceType] = (abertasPorOrigem[l.sourceType] ?? 0) + l.total;
     }
     const totalAbertas = SEVERIDADES_DO_GRAFO.reduce((soma, s) => soma + abertas[s], 0);
 
@@ -135,6 +137,7 @@ export function montarAplicacoesDoGrafo(entrada: EntradaExposureGraph): Aplicaca
       internetFacing: app.internetFacing,
       dataSensitivity: app.dataSensitivity,
       abertas,
+      abertasPorOrigem,
       totalAbertas,
       totalResolvidas: resolvidasDe.get(app.id) ?? 0,
       piorSeveridade: SEVERIDADES_DO_GRAFO.find((s) => abertas[s] > 0) ?? null,
@@ -184,7 +187,7 @@ function montarPrincipais(linhas: LinhaPrincipalAberta[]): PrincipalAbertaDTO[] 
         a.id.localeCompare(b.id),
     )
     .slice(0, LIMITE_PRINCIPAIS)
-    .map(({ id, title, severityFinal, status, owaspCategory }) => ({ id, title, severityFinal, status, owaspCategory }));
+    .map(({ id, title, severityFinal, status, owaspCategory, sourceType }) => ({ id, title, severityFinal, status, owaspCategory, sourceType }));
 }
 
 /** Pior severidade primeiro; empate pelo maior número de abertas; depois pelo nome. */
