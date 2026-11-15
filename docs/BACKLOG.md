@@ -6,6 +6,10 @@
 
 ## Status
 
+**✅ 2026-11-15 — INT-AI-02B: lint API desbloqueado (100% da correção pontual).** Autorizada a remoção exclusiva dos imports não usados `UserEntity`/`UserResponseDTO`; nenhum método alterado. Lint aprovado; suíte integrada 905/905 no Node 22 e Web 659/659. `npm run check` API completo em execução após a correção; fechamento/publicação da integração pendentes.
+
+- [x] INT-AI-02B — Corrigir exclusivamente os dois imports não usados da API após autorização.
+
 **🚧 2026-11-15 — INT-AI-02A implementada e validada no Web.** Assistente reconhece quatro telas novas e oferece três atalhos adicionais, sem remover os antigos ou ampliar permissões. API focal 58/58; Web focal 57/57 e check completo 659/659. Builds aprovados; Chrome com CSP: 12/12 cenários originais e 11 verificações com login/API reais em banco descartável, sem erros. Suíte completa API em repetição no Node 22; decisão sobre dois imports não usados e fechamento documental/publicação pendentes.
 
 - [x] INT-AI-02A — Adaptar contextos SAST/SCA, importação, Threat Intel e Exposure Graph; preservar guards e sessão.

@@ -16,6 +16,10 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-15 — Lint anterior da API desbloqueado por autorização do usuário (100% da correção pontual).** Removidos exclusivamente `UserEntity` e `UserResponseDTO` do import não utilizado de `vulnerability.service.ts`; `AssigneeCandidateDTO` mantido como import de tipo. Nenhum método/regra/resposta alterado. Lint API aprovado. Suíte completa integrada no Node 22: 905/905 testes em 58 suítes; `npm run check` completo em execução após a correção. Web permanece validado com 659/659. Integração/publicação final pendentes.
+
+- [x] INT-AI-02B — Remover apenas os dois imports não usados, mediante autorização explícita, preservando a lógica da dev.
+
 **🚧 2026-11-15 — Contexto do assistente compatível com os módulos novos (implementação concluída; validação geral API pendente).** Após autorização explícita, adicionadas quatro telas normalizadas (SAST/SCA, detalhe da importação, Threat Intel e Exposure Graph), três tópicos e três atalhos fechados, preservando os anteriores e os guards da dev. Ajuda não concede escrita, sincronização ou acesso a projetos/empresas; IDs/query strings não entram no contexto. Focais API 58/58 e Web 57/57; check Web 659/659 e builds aprovados. Chrome no build com CSP: matriz original 12/12 e 11 verificações com API/login/logout reais em banco descartável, sem erros de página/CSP, com conversa preservada ao navegar e bloqueios por perfil. Suíte API completa em repetição no Node 22. Remoção dos imports antigos ainda aguarda resposta; arquivo de vulnerabilidade preservado até decisão. Próxima entrega: relatório final, referências ADR e publicação da feature.
 
 - [x] INT-AI-02A — Contexto e ações das telas novas com as permissões existentes, testes focais e validação Web/navegador.
