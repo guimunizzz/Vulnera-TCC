@@ -6,6 +6,15 @@
 
 ## Status
 
+**✅ 2026-11-15 — AI-UI-00, plano do novo visual preparado (100% do planejamento; implementação pendente).** Branch local `refactor/assistant-ui`, originada da `feature/agent-ai` em `63c4696`. Plano em [ASSISTENTE_VISUAL_PLANO.md](ASSISTENTE_VISUAL_PLANO.md) com direção/prévia, implementação, responsividade/acessibilidade, regressões e entrega. Preferência do usuário pendente; sem alteração de produto ou runtime.
+
+- [x] AI-UI-00 — Branch e planejamento da refatoração visual.
+- [ ] AI-UI-01 — Definir direção visual e revisar comparativo desktop/celular.
+- [ ] AI-UI-02 — Implementar mascote, botão, painel e estados conforme a direção escolhida.
+- [ ] AI-UI-03 — Validar responsividade e acessibilidade.
+- [ ] AI-UI-04 — Executar checks/build e smoke dos fluxos preservados.
+- [ ] AI-UI-05 — Documentar resultados, revisar diff e preparar PR para a base adequada.
+
 **✅ 2026-11-15 — INT-AI-04E, instruções nos `.env.example` (100%).** Modelo da raiz inclui o fluxo de clone/pull até validação Gemini, preservação de `.env`, distribuição privada da credencial e restart somente sem scans ativos. Modelo da API explica o uso no host e remete ao modelo Docker. Alteração apenas de comentários/docs; padrões local/chave vazia/modelo preservados e Compose validado sem reiniciar serviços. Publicação restrita à `feature/agent-ai`, como `iannxz`.
 
 - [x] INT-AI-04E — Passo a passo nos modelos de ambiente, revisão e publicação na branch atual.

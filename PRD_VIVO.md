@@ -16,6 +16,12 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-15 — Planejamento da refatoração visual do assistente concluído (100% do planejamento; implementação 0%).** Criada a branch `refactor/assistant-ui` diretamente de `feature/agent-ai` em `63c4696`, com árvore limpa e origem remota conferida. Componentes, estilos, movimento, sessão e scripts examinados; plano em `docs/ASSISTENTE_VISUAL_PLANO.md`, com checkpoints de direção/prévia, implementação, acessibilidade, regressões e entrega. Preferência estética perguntada ao usuário e ainda pendente. Contratos Gemini/local, permissões, sessão, modais e envio explícito devem ser preservados. Nesta etapa, nenhum arquivo de produto, segredo, dado ou container alterado; testes anteriores registrados apenas como referência histórica. Branch nova permanece local.
+
+- [x] AI-UI-00 — Criar branch a partir da agent-ai, investigar e registrar o plano visual.
+- [ ] AI-UI-01 — Definir direção e revisar a prévia com o usuário.
+- [ ] AI-UI-02..05 — Implementar o visual, validar acessibilidade/regressões e preparar entrega conforme o plano.
+
 **✅ 2026-11-15 — Instruções completas dentro dos modelos de ambiente (100%).** A pedido do usuário, `.env.example` da raiz agora explica preparação, cópia sem substituir `.env` existente, obtenção privada da chave, modo/modelo, primeira subida, aplicação exclusiva da API sem scans ativos e validação por selo/`source: gemini`. Modelo de `app/api` distingue host de Compose e aponta para o guia. Valores padrão continuam idênticos: modo local, chave vazia e modelo configurável. Compose validado com o template; diff sem erros e arquivos alterados conferidos contra o segredo privado. Nenhuma credencial real ou configuração runtime alterada. Commit/publicação somente na `feature/agent-ai`, com identidade `iannxz`.
 
 - [x] INT-AI-04E — Incluir passo a passo comentado nos `.env.example` e publicar na branch atual.
