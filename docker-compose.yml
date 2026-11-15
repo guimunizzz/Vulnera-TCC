@@ -33,7 +33,8 @@ services:
     volumes:
       - vulnera-db-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      # 127.0.0.1 (TCP), não localhost (socket): na 1ª subida o servidor temporário do init responde no socket e a API morria com P1001.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
       interval: 5s
       timeout: 5s
       retries: 10
