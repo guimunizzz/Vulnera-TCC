@@ -6,6 +6,12 @@
 
 ## Status
 
+**✅ 2026-11-15 — Integração preparatória da feature/agent-ai com a dev concluída (100% do escopo de resolução/validação).** Os sete conflitos foram compostos na feature, com ambas as origens no histórico, 30 rotas preservadas e comparação dos arquivos exclusivos. API check no Node 22: **905/905**, lint sem erros; Web check: **659/659**, contraste **132/132**; builds aprovados. Navegador: **12/12** originais + **11 verificações** com login/API reais em bancos descartáveis, sem erros de página/CSP. Contexto novo e imports corrigidos mediante autorização; JavaScript de vulnerabilidades idêntico após remover os imports. ADR-054 distingue o assistente da ADR-048 do grafo. Commits de código `2e2ead6`, `da21fc7`, `05735a7`, todos `iannxz`. Publicação somente da feature; merge na dev/deploy não executados, backups somente locais. Relatório [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md). Marcos parciais abaixo são históricos e foram concluídos por esta entrada.
+
+- [x] INT-AI-02 — Contextos, ADRs, checks/builds/navegador e preparação revisada para publicação da feature.
+- [ ] INT-AI-FUT-01 — Revisar e integrar o PR na dev; deploy do ambiente em etapa separada.
+- [ ] INT-AI-FUT-02 — Investigar overflow anterior de página a 320 px (340 px com chat fechado/aberto), sem ampliar o escopo desta integração.
+
 **✅ 2026-11-15 — INT-AI-02B: lint API desbloqueado (100% da correção pontual).** Autorizada a remoção exclusiva dos imports não usados `UserEntity`/`UserResponseDTO`; nenhum método alterado. Lint aprovado; suíte integrada 905/905 no Node 22 e Web 659/659. `npm run check` API completo em execução após a correção; fechamento/publicação da integração pendentes.
 
 - [x] INT-AI-02B — Corrigir exclusivamente os dois imports não usados da API após autorização.
@@ -17,7 +23,7 @@
 **🚧 2026-11-15 — feature/agent-ai sobre a dev (7/7 conflitos resolvidos; validação final pendente).** Backups somente locais de `69af46c`/`ac96859`; sem rebase/force push ou alteração da dev. Baseline: API 847/847 e Web 614/614; focais após composição: API 47/47 e Web 45/45. Todas as 30 rotas e os arquivos exclusivos de cada lado preservados. Dois imports não usados da API são bloqueio anterior do lint. Contexto de SAST/SCA, Threat Intel e Exposure Graph autorizado pelo usuário; próxima etapa antes de publicar os commits da feature com identidade `iannxz`.
 
 - [x] INT-AI-01 — Preservar referências locais, medir baseline e resolver os sete conflitos combinando funcionalidades.
-- [ ] INT-AI-02 — Contexto das telas novas, referências ADR sem colisão, checks/builds/navegador e publicação da feature.
+- [x] INT-AI-02 — Contexto das telas novas, referências ADR sem colisão, checks/builds/navegador e preparação da publicação da feature (concluído no marco final de 15/11).
 
 **✅ 2026-11-15 — Threat Intel: CVEs publicadas contra o inventário de tecnologias, com notificação.** Branch `feat/threat-intel` (sobre a `feat/unified-origin-view`). Inventário por empresa (pacote via OSV, produto via CPE/NVD) que se alimenta do uso como **sugestão** (SBOM importado e fingerprint do DAST); sincronização agendada dentro da API com **NVD, OSV, CISA KEV e FIRST EPSS** (ADR-053 supersede parcialmente o ADR-030); aba "Afeta você" com KEV, EPSS, versão corrigida, triagem e promoção para `Vulnerability` (`THREAT_INTEL`, A06); feed de CVEs publicadas; aba Fontes; **sino de notificações** no topo (CVE nova com CVSS ≥ 7 ou KEV, CVE antiga que entra no KEV; o que já existia ao mapear não notifica). Tenancy nos dois sentidos, 404 para recurso de outra empresa. Validado com fontes **reais** (KEV 1.781, feed do NVD 811 CVEs, SBOM do NodeGoat → 90 CVEs, scan DAST real → sugestão do nginx, NVD fora do ar → PARTIAL com o motivo); a notificação foi mostrada por **simulação controlada e rotulada**. API **847/847**, web **614/614**, lint 0 erros, contraste OK. Ver ADR-053, D19, `docs/THREAT_INTEL.md` e `docs/evidencias/threat-intel/`.
 

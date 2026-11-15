@@ -9,6 +9,31 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-15 — feature/agent-ai compatível com a dev
+
+**✅ Resolução e validação concluídas (100% do escopo).** Na própria feature,
+merge de `ac96859` preservando `69af46c`, com sete conflitos compostos e todas
+as 30 rotas mantidas. Backups somente locais; autor/committer `iannxz`.
+Commits de código: `2e2ead6` (merge), `da21fc7` (contexto dos módulos novos)
+e `05735a7` (somente dois imports não usados, mediante autorização).
+
+- Contexto SAST/SCA, importação, Threat Intel e Exposure Graph autorizado;
+  17 tópicos e 12 atalhos, preservando os anteriores e as permissões.
+- ADR-054 do assistente renumerada da ADR-048 criada na feature; decisão
+  ADR-048 do grafo DAST e demais históricos preservados, links atualizados.
+- API check Node 22: 905/905 em 58 suítes, lint sem erros; Web check 659/659,
+  contraste 132/132; builds aprovados. Serviços do assistente: 100% de linhas.
+- Chrome no build com CSP: 12/12 cenários originais e 11 verificações com
+  login/API reais em banco descartável, sem erros de página/CSP.
+- Sem schema/migration/dependências declaradas/mobile/guias protegidos novos,
+  reset de dados existentes, merge na dev ou deploy; backups não publicados.
+- Limites: Docker backend indisponível e execução completa Node 24 sem
+  relatório; integração validada no Node 22. Overflow de página anterior em
+  320 px registrado, sem alteração incidental. Gemini ao vivo não executado.
+
+Relatório: `docs/INTEGRACAO_AGENT_AI_DEV_2026-11-15.md`; artefatos brutos locais
+em `output/agent-ai-dev-merge/`. Os marcos antigos abaixo são históricos.
+
 ## 2026-10-23 — Assistente Vulnera, Fases 1–6 entregues
 
 **✅ 7/7 fases, 100% da implementação e validação local previstas.**

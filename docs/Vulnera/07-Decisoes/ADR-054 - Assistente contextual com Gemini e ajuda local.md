@@ -2,13 +2,13 @@
 type: decisao
 tags: [decision, assistente, ia, gemini, escopo]
 status: vigente
-codigo: ADR-048
+codigo: ADR-054
 data: 2026-10-23
 ---
 
 <!-- Registra a reintrodução limitada da IA como orientação contextual, suas fronteiras e alternativa local; consumido pela implementação, pelos mantenedores e pela banca. -->
 
-# ADR-048 — Assistente contextual com Gemini e ajuda local
+# ADR-054 — Assistente contextual com Gemini e ajuda local
 
 ## Contexto
 
@@ -49,3 +49,7 @@ Esta decisão registra a autorização de escopo do pedido atual, sem editar reg
 Fases 1–6 entregues: endpoint autenticado, base de 14 tópicos, gateway opcional, limites compartilhados e interface contextual com sessão em memória. Foram aprovados 47 testes focais API, 45 focais web, check web com 400 testes, 13 verificações HTTP locais e 12 cenários no build servido em 8086, além dos três perfis com login real e fluxo CLIENT pela UI. Serviços novos atingiram 100% de cobertura de linhas; builds host/Docker aprovados. Guia em [ASSISTENTE_VULNERA.md](../../ASSISTENTE_VULNERA.md); resultados completos e limitações em [VALIDACAO.md](../../../output/assistant/VALIDACAO.md).
 
 A configuração runtime consultada sem expor valores não continha chave/modelo Gemini; validação ao vivo permanece pendente. O check global API continua sujeito a dois imports antigos não usados e a incompatibilidade anterior da assertion de header Excel com o Express instalado, documentadas separadamente. A nota de criação com implementação pendente acima é preservada como histórico da Fase 0.
+
+## Identificação na integração — 2026-11-15
+
+Esta decisão foi criada como ADR-048 na feature/agent-ai em 23/10/2026. A dev passou a usar ADR-048 para o grafo DAST. Na integração, a decisão do assistente recebeu ADR-054, com conteúdo e histórico preservados e links atualizados; a ADR-048 do grafo permanece intacta. Menções históricas ao ADR-048 do assistente correspondem agora a esta decisão.

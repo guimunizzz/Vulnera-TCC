@@ -217,7 +217,7 @@ src/
 8. Maturidade + Polimento + Apresentação
 
 > **Histórico de escopo:** a IA acima era sugestão de findings, retirada em
-> 03/08/2026 (ADR-017). Em 23/10/2026, ADR-048 introduziu exclusivamente o
+> 03/08/2026 (ADR-017). Em 23/10/2026, ADR-054 (originalmente ADR-048 na branch do assistente) introduziu exclusivamente o
 > Assistente Vulnera de orientação na web, com Gemini opcional e ajuda local;
 > não reativou o recurso antigo nem IA no mobile. Ver `ASSISTENTE_VULNERA.md`.
 

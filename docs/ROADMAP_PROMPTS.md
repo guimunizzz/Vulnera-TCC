@@ -1136,6 +1136,8 @@ partindo de `dev`, com espera visual fluida quando necessária.
 
 # Assistente Vulnera — orientação contextual (pedido de 2026-10-23)
 
+> **Identificação atual da decisão:** ADR-054; criada como ADR-048 na feature em 23/10/2026. A ADR-048 da dev pertence ao grafo DAST. Os marcos numéricos abaixo preservam o histórico original; links atuais e integração em [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
+
 Este plano tem numeração própria de 0 a 6; não renumera as fases originais do MVP. A Fase 0 seguiu a pausa de AGENTS §0.2 S1; na continuação de 23/10/2026 o usuário autorizou executar todas as fases sem pausas, mantendo relatórios de checkpoint em atualizações. Os guias protegidos não foram editados. Preservar o escopo detalhado e as fronteiras registradas no [plano](ASSISTENTE_VULNERA_PLANO.md) e no ADR-048.
 
 | Fase | Prompt de execução / resultado exigido | Status |
@@ -1159,3 +1161,16 @@ Este plano tem numeração própria de 0 a 6; não renumera as fases originais d
 - **Entrega:** `docs/ASSISTENTE_VULNERA_PLANO.md`, ADR-048, PRD/BACKLOG/ROADMAP/Changelog e nota de evolução no Contexto Mestre. Nove ações confirmadas; onboarding e relatório DAST ficam fora de AppLayout, exigindo contêiner autenticado compartilhado.
 - **Validação:** web e health API HTTP 200. Lint API, builds API/web e check web bloqueados por dependências npm ausentes no host (`eslint`/`tsc`); testes não executados. Conta Free Tier e integração ao vivo com Gemini não validadas.
 - **Decisões/desvios:** retorno da IA restrito à orientação por pedido explícito, modelo recomendado conforme documentação oficial atual, ajuda local padrão e nenhuma migration/dependência nova planejada. Riscos de TTL/evicção do limiter e banco de teste registrados. Histórico do corte de IA e alterações anteriores preservados; nenhum arquivo protegido, `.env`, schema, container ou dado alterado.
+
+## Integração com a dev — ✅ Concluída em 2026-11-15
+
+Resolução e validação na própria feature, sem alterar os marcos das fases originais. Contexto das telas novas e remoção dos dois imports não usados autorizados explicitamente. Todas as rotas e funcionalidades dos dois lados preservadas; decisão do assistente identificada agora como ADR-054.
+
+### Histórico da integração
+
+- **Branch/base:** `feature/agent-ai`, original `69af46c`, dev incorporada `ac96859`.
+- **Commits de código:** `2e2ead6`, `da21fc7`, `05735a7`; autor/committer `iannxz`.
+- **PR:** nenhuma aberta nesta tarefa; feature preparada para comparação com dev. Merge na dev e deploy são posteriores.
+- **Validação:** check API Node 22 com lint sem erros e 905/905 testes; check Web 659/659, contraste 132/132; builds aprovados. Chrome: 12/12 originais e 11 verificações com login/API reais, sem erros de página/CSP.
+- **Preservação/desvios:** backups só locais; sem schema, migrations, dependências declaradas, mobile ou guias protegidos alterados. Bancos novos temporários por indisponibilidade do Docker; execução completa Node 24 sem relatório, integração validada no Node 22. Gemini ao vivo não executado.
+- **Relatório:** [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md); registros antigos com ADR-048 do assistente correspondem à atual ADR-054, sem substituir a ADR-048 do grafo DAST.
