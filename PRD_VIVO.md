@@ -16,6 +16,10 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-15 — Instruções completas dentro dos modelos de ambiente (100%).** A pedido do usuário, `.env.example` da raiz agora explica preparação, cópia sem substituir `.env` existente, obtenção privada da chave, modo/modelo, primeira subida, aplicação exclusiva da API sem scans ativos e validação por selo/`source: gemini`. Modelo de `app/api` distingue host de Compose e aponta para o guia. Valores padrão continuam idênticos: modo local, chave vazia e modelo configurável. Compose validado com o template; diff sem erros e arquivos alterados conferidos contra o segredo privado. Nenhuma credencial real ou configuração runtime alterada. Commit/publicação somente na `feature/agent-ai`, com identidade `iannxz`.
+
+- [x] INT-AI-04E — Incluir passo a passo comentado nos `.env.example` e publicar na branch atual.
+
 **✅ 2026-11-15 — Configuração reproduzível do assistente para novos clones (100%).** Adicionado `.env.example` na raiz para o Compose, com chave vazia, modelo e modo local seguro; README e guia distinguem esse arquivo de `app/api/.env` usado no host. Instruções preservam arquivos privados existentes e explicam a entrega privada da credencial por instalação. Template validado pelo `docker compose --env-file .env.example config`, sem imprimir sua saída completa; ajuda local padrão e chave vazia confirmadas. `.env` real não alterado, nenhum serviço reiniciado e nenhum segredo publicado. Sem mudança de comportamento da aplicação ou dependências.
 
 - [x] INT-AI-04D — Versionar somente o modelo de configuração Docker e documentar a ativação privada do Gemini após clone/pull.

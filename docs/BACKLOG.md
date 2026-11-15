@@ -6,6 +6,10 @@
 
 ## Status
 
+**✅ 2026-11-15 — INT-AI-04E, instruções nos `.env.example` (100%).** Modelo da raiz inclui o fluxo de clone/pull até validação Gemini, preservação de `.env`, distribuição privada da credencial e restart somente sem scans ativos. Modelo da API explica o uso no host e remete ao modelo Docker. Alteração apenas de comentários/docs; padrões local/chave vazia/modelo preservados e Compose validado sem reiniciar serviços. Publicação restrita à `feature/agent-ai`, como `iannxz`.
+
+- [x] INT-AI-04E — Passo a passo nos modelos de ambiente, revisão e publicação na branch atual.
+
 **✅ 2026-11-15 — INT-AI-04D, onboarding de configuração no clone (100%).** `.env.example` da raiz contém apenas valores públicos e chave vazia; README/guia explicam onde copiar, como preservar `.env` existente e a diferença entre Docker e host. Compose validado com o template e ajuda local padrão. Clones/pulls recebem o modelo, enquanto a credencial deve ser fornecida privadamente por instalação. Runtime e `.env` real preservados.
 
 - [x] INT-AI-04D — Template Docker da raiz e instruções reproduzíveis sem versionar a chave.
