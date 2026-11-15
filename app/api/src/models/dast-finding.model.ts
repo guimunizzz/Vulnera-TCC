@@ -32,6 +32,13 @@ export type DastFindingResponseDTO = {
   wascId: string | null;
   url: string;
   normalizedUrl: string;
+  /** Sensor de origem: "zap" ou um sensor passivo ("headers"). */
+  sensorKey: string;
+  /** CVE potencial (sensor internetdb) e o CVSS do NVD; null nos demais findings. */
+  cveId: string | null;
+  cvssScore: number | null;
+  cvssVersion: string | null;
+  cvssVector: string | null;
   param: string | null;
   evidence: string | null;
   description: string | null;
@@ -82,6 +89,11 @@ export class DastFindingEntity {
       wascId: this.data.wascId,
       url: this.data.url,
       normalizedUrl: this.data.normalizedUrl,
+      sensorKey: this.data.sensorKey,
+      cveId: this.data.cveId,
+      cvssScore: this.data.cvssScore,
+      cvssVersion: this.data.cvssVersion,
+      cvssVector: this.data.cvssVector,
       param: this.data.param,
       evidence: this.data.evidence,
       description: this.data.description,

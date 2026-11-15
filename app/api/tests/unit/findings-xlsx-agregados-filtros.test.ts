@@ -81,6 +81,7 @@ function consulta(sobre: Partial<VulnerabilityQuery> = {}): VulnerabilityQuery {
     severities: [],
     statuses: [],
     owaspCategories: [],
+    sourceTypes: [],
     slaStates: [],
     riskAcceptances: [],
     assignedToIds: [],
@@ -271,6 +272,7 @@ describe("findings-xlsx · nome do arquivo e filtros", () => {
       { semResponsavel: true },
       { createdFrom: new Date() },
       { riskAcceptances: ["NONE"] },
+      { sourceTypes: ["DAST_IMPORT"] },
     ] as Partial<VulnerabilityQuery>[]) {
       expect(temFiltroAtivo(consulta(sobre))).toBe(true);
     }
@@ -284,6 +286,7 @@ describe("findings-xlsx · nome do arquivo e filtros", () => {
         severities: ["CRITICAL", "HIGH"],
         statuses: ["OPEN"],
         owaspCategories: ["A03"],
+        sourceTypes: ["SAST_IMPORT", "SCA_IMPORT"],
         slaStates: ["BREACHED"],
         vrsMin: 40,
         vrsMax: 80,
@@ -300,6 +303,7 @@ describe("findings-xlsx · nome do arquivo e filtros", () => {
     expect(mapa["Severidade"]).toBe("Crítica, Alta");
     expect(mapa["Status"]).toBe("Aberto");
     expect(mapa["OWASP Top 10"]).toBe("A03 · Injection");
+    expect(mapa["Origem"]).toBe("SAST, SCA");
     expect(mapa["SLA"]).toBe("Vencido");
     expect(mapa["VRS"]).toBe("de 40 a 80");
     expect(mapa["Aceite de risco"]).toBe("Vigente");

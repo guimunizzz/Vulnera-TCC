@@ -14,7 +14,7 @@
 
 import type { VulnerabilityQuery } from "../../models/vulnerability.model";
 import type { LinhaDeFiltro } from "./planilha";
-import { ROTULO_SEVERIDADE, ROTULO_STATUS, rotuloOwasp } from "./rotulos";
+import { ROTULO_ORIGEM, ROTULO_SEVERIDADE, ROTULO_STATUS, rotuloOwasp } from "./rotulos";
 import { carimboDeArquivo, relogioSP } from "./tempo";
 
 /** id → nome por dimensão; só o que o ator pode ver (ver `rotulosDoFiltro` no repository). */
@@ -69,6 +69,7 @@ export function temFiltroAtivo(q: VulnerabilityQuery): boolean {
     q.severities.length > 0 ||
     q.statuses.length > 0 ||
     q.owaspCategories.length > 0 ||
+    q.sourceTypes.length > 0 ||
     q.slaStates.length > 0 ||
     q.vrsMin !== undefined ||
     q.vrsMax !== undefined ||
@@ -94,6 +95,7 @@ export function descreverFiltros(q: VulnerabilityQuery, rotulos: RotulosResolvid
   add("Severidade", traduzir(q.severities, ROTULO_SEVERIDADE));
   add("Status", traduzir(q.statuses, ROTULO_STATUS));
   add("OWASP Top 10", q.owaspCategories.map(rotuloOwasp).join(", "));
+  add("Origem", traduzir(q.sourceTypes, ROTULO_ORIGEM));
   add("SLA", traduzir(q.slaStates, ROTULO_SLA_FILTRO));
 
   if (q.vrsMin !== undefined && q.vrsMax !== undefined) add("VRS", `de ${q.vrsMin} a ${q.vrsMax}`);
@@ -150,6 +152,7 @@ export function filtroParaAuditoria(q: VulnerabilityQuery): Record<string, unkno
     severities: q.severities,
     statuses: q.statuses,
     owaspCategories: q.owaspCategories,
+    sourceTypes: q.sourceTypes,
     slaStates: q.slaStates,
     vrsMin: q.vrsMin,
     vrsMax: q.vrsMax,

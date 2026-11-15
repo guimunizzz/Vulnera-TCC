@@ -86,7 +86,7 @@ export function HowToFixPanel({ owaspCategory, companyId }: Props) {
                       onClick={() => setSelecionado(p.id)}
                       aria-pressed={ativo}
                       className={[
-                        "flex min-h-touch items-center gap-2 rounded-control border px-3 py-1.5 text-sm",
+                        "flex min-h-touch items-center gap-2 rounded-control border px-3 py-2 text-sm",
                         ativo ? "border-accent bg-accent-surface text-accent-ink" : "border-subtle text-fg-secondary",
                       ].join(" ")}
                     >
@@ -99,7 +99,7 @@ export function HowToFixPanel({ owaspCategory, companyId }: Props) {
             </ul>
           )}
 
-          {detalhe.isLoading && <Skeleton className="h-40 w-full" />}
+          {detalhe.isLoading && <Skeleton className="h-[10rem] w-full" />}
           {detalhe.isError && <Alert tom="atencao">{getErrorMessage(detalhe.error)}</Alert>}
           {detalhe.data && (
             <>

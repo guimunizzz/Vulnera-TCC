@@ -28,6 +28,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Alert } from "../components/ui/alert";
 import { SeverityBadge } from "../components/ui/badge";
 import { StatusBadge } from "../components/ui/badge";
+import { OrigemBadge } from "../components/findings/origem-badge";
 import { OverrideSeverityDialog } from "../components/findings/override-severity-dialog";
 import { EvidenceUploader } from "../components/findings/evidence-uploader";
 import { CommentTimeline } from "../components/findings/comment-timeline";
@@ -170,6 +171,7 @@ export function FindingEditorPage() {
             <div className="mt-2 flex items-center gap-2">
               <StatusBadge status={existing.status} />
               <SeverityBadge severidade={existing.severityFinal} />
+              <OrigemBadge sourceType={existing.sourceType} />
               {existing.severityFinal !== existing.severityCalculated && (
                 <span className="text-xs text-fg-muted">(calculada: {existing.severityCalculated})</span>
               )}
@@ -223,7 +225,7 @@ export function FindingEditorPage() {
             else createMutation.mutate();
           }}
         >
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-title">Título</Label>
             <Input
               id="finding-title"
@@ -237,7 +239,7 @@ export function FindingEditorPage() {
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-owasp">Categoria OWASP Top 10 2021</Label>
             <select
               id="finding-owasp"
@@ -257,7 +259,7 @@ export function FindingEditorPage() {
             </select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-vector">Vetor CVSS 3.1</Label>
             <Input
               id="finding-vector"
@@ -281,7 +283,7 @@ export function FindingEditorPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-description">Descrição</Label>
             <Textarea
               id="finding-description"
@@ -296,7 +298,7 @@ export function FindingEditorPage() {
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-impact">Impacto</Label>
             <Textarea
               id="finding-impact"
@@ -310,7 +312,7 @@ export function FindingEditorPage() {
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="finding-recommendation">Recomendação</Label>
             <Textarea
               id="finding-recommendation"

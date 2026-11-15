@@ -126,6 +126,39 @@ export class MetricsRepository {
     return linhas.map((l) => ({ chave: l.owaspCategory, total: l._count._all }));
   }
 
+  /** Findings ABERTOS agrupados por origem (`sourceType`). */
+  async contarAbertosPorOrigem(f: FiltroMetricas): Promise<LinhaContagem[]> {
+    const linhas = await this.prisma.vulnerability.groupBy({
+      by: ["sourceType"],
+      where: { ...this.where(f), status: { in: STATUS_ABERTOS } },
+      _count: { _all: true },
+    });
+    return linhas.map((l) => ({ chave: l.sourceType, total: l._count._all }));
+  }
+
+  /**
+   * Achados de código com triagem NEW na importação MAIS RECENTE de cada
+   * (projeto, formato, ferramenta) da aplicação — a mesma noção de "atual" da
+   * comparação entre importações. Somar todas as importações contaria o mesmo
+   * achado uma vez por reimportação.
+   */
+  async contarFilaDeTriagemDeCodigo(applicationId: string): Promise<LinhaContagem[]> {
+    const linhas = await this.prisma.$queryRaw<{ chave: string; total: bigint | number }[]>`
+      SELECT cf.category AS chave, COUNT(*) AS total
+      FROM CodeFinding cf
+      JOIN CodeScanImport ci ON ci.id = cf.importId
+      JOIN Project p ON p.id = ci.projectId
+      WHERE p.applicationId = ${applicationId}
+        AND cf.triageStatus = 'NEW'
+        AND ci.createdAt = (
+          SELECT MAX(c2.createdAt) FROM CodeScanImport c2
+          WHERE c2.projectId = ci.projectId AND c2.format = ci.format AND c2.toolName = ci.toolName
+        )
+      GROUP BY cf.category
+    `;
+    return linhas.map((l) => ({ chave: l.chave, total: Number(l.total) }));
+  }
+
   async contarRemediados(f: FiltroMetricas): Promise<number> {
     return this.prisma.vulnerability.count({
       where: { ...this.where(f), status: { in: STATUS_REMEDIADOS } },

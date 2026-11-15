@@ -21,6 +21,7 @@ import { StatusBadge } from "../ui/badge";
 import { LinkButton } from "../ui/button";
 import { KpiCard } from "./kpi-card";
 import { SeverityDonut } from "./severity-donut";
+import { DashboardCarregando } from "./dashboard-carregando";
 
 export function ClientDashboard() {
   const resumo = useFindingsResumo();
@@ -29,7 +30,7 @@ export function ClientDashboard() {
     queryFn: companiesApi.me,
   });
 
-  if (resumo.carregando) return <p className="text-fg-muted">Carregando...</p>;
+  if (resumo.carregando) return <DashboardCarregando rotulo="Carregando o dashboard da empresa" />;
 
   const remediados = (resumo.porStatus.FIXED ?? 0) + (resumo.porStatus.CLOSED ?? 0);
   const remediatedPct = resumo.total > 0 ? Math.round((remediados / resumo.total) * 100) : 0;
@@ -37,11 +38,12 @@ export function ClientDashboard() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Total de findings" value={resumo.total} />
-        <KpiCard label="Remediados" value={`${remediatedPct}%`} />
+        <KpiCard label="Total de findings" value={resumo.total} legenda="No escopo da sua empresa" />
+        <KpiCard label="Remediados" value={`${remediatedPct}%`} legenda="Corrigidos ou encerrados" />
         <KpiCard
           label="Críticos em aberto"
           value={resumo.criticosAbertos}
+          legenda={resumo.criticosAbertos > 0 ? "Prioridade de tratamento" : "Nada crítico em aberto"}
           accentClassName={resumo.criticosAbertos > 0 ? "text-severity-critical-ink" : undefined}
         />
       </div>

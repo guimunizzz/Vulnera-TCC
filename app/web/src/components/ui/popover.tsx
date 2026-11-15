@@ -74,6 +74,8 @@ export interface PopoverProps {
   /** Controlado de fora (opcional). Sem isto, o popover controla a si mesmo. */
   aberto?: boolean;
   aoMudarAberto?: (aberto: boolean) => void;
+  /** Nome do painel para o leitor de tela (`aria-label`), quando não há título ligado. */
+  rotulo?: string;
   className?: string;
 }
 
@@ -84,6 +86,7 @@ export function Popover({
   alinhamento = "start",
   aberto: abertoExterno,
   aoMudarAberto,
+  rotulo,
   className,
 }: PopoverProps) {
   const [abertoInterno, setAbertoInterno] = useState(false);
@@ -132,6 +135,7 @@ export function Popover({
               ref={refPainel}
               id={id}
               role="dialog"
+              aria-label={rotulo}
               data-side={posicao?.ladoFinal ?? lado}
               variants={ancorado}
               initial="inicial"

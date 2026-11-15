@@ -20,7 +20,7 @@
 
 import { NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Clock3, FileText, Folder, LayoutDashboard, Monitor, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Check, Clock3, FileCode2, FileText, Folder, LayoutDashboard, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { savedQueriesApi } from "../../lib/api/saved-queries.api";
@@ -33,6 +33,11 @@ interface ItemNav {
   icone: LucideIcon;
   /** Se definido, só esses papéis veem o item. */
   papeis?: UserRole[];
+  /**
+   * Selo "new" no canto do item. Fixo de propósito (decisão de 2026-11-13):
+   * some quando alguém tirar daqui, não por visita — previsível na demo.
+   */
+  novo?: boolean;
 }
 
 interface GrupoNav {
@@ -49,11 +54,16 @@ const GRUPOS: GrupoNav[] = [
     rotulo: "Operação",
     itens: [
       { para: "/applications", rotulo: "Aplicações", papeis: ["ADMIN", "CLIENT"], icone: Monitor },
+      { para: "/exposure-graph", rotulo: "Exposure Graph", papeis: ["ADMIN", "CLIENT"], icone: Network },
+      // Threat Intel (ADR-053): os três papéis — o que cada um pode fazer em cada empresa a API decide.
+      { para: "/threat-intel", rotulo: "Threat Intel", icone: Radar, novo: true },
       { para: "/projects", rotulo: "Projetos", icone: Folder },
       // Os papéis são os mesmos das rotas; agrupar não amplia o acesso.
       { para: "/findings", rotulo: "Findings", papeis: ["ADMIN", "PENTESTER"], icone: Search },
       { para: "/remediation", rotulo: "Remediação", papeis: ["ADMIN", "PENTESTER"], icone: ShieldCheck },
       { para: "/dast", rotulo: "DAST", papeis: ["ADMIN", "PENTESTER"], icone: ScanLine },
+      // ADR-052 — importação de relatórios SAST (SARIF) e SCA (CycloneDX).
+      { para: "/sast-sca", rotulo: "SAST/SCA", papeis: ["ADMIN", "PENTESTER"], icone: FileCode2, novo: true },
       { para: "/playbooks", rotulo: "Playbooks", icone: FileText },
     ],
   },
@@ -96,11 +106,14 @@ export function Sidebar({ aoNavegar, embutida }: { aoNavegar?: () => void; embut
             <ul className="app-sidebar-list">
               {grupo.itens.map(({ icone: Icone, ...item }) => (
                 <li key={item.para}>
-                  <NavLink to={item.para} onClick={aoNavegar} className="app-sidebar-link">
+                  <NavLink to={item.para} onClick={aoNavegar} className="app-sidebar-link" data-nav={item.para}>
                     {({ isActive }) => (
                       <>
                         <Icone size={18} strokeWidth={1.6} aria-hidden="true" focusable="false" />
                         <span>{item.rotulo}</span>
+                        {item.novo && (
+                          <span className="app-sidebar-new">new</span>
+                        )}
                         {isActive && <span className="sr-only">(página atual)</span>}
                       </>
                     )}

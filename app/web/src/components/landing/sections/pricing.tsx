@@ -11,8 +11,9 @@
 
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
+import { DESLOCAMENTO_MOTION_LANDING, ESCALA_LANDING, MOLA_LANDING } from "../motion/tokens";
 
 const MotionLink = motion.create(Link);
 
@@ -59,23 +60,46 @@ const PLANS: Plan[] = [
   },
 ];
 
+/**
+ * Moldura ASCII do plano recomendado: os glifos circulam pelo perímetro
+ * (topo → direita, direita ↓, base ←, esquerda ↑). É só `transform` em CSS
+ * (`.vx-borda-ascii` em landing.css): barato, fluido e parado com movimento
+ * reduzido ou com a seção fora da tela. Os outros planos não têm moldura.
+ */
+const PADRAO_BORDA = "=-·-".repeat(60);
+
+function BordaAscii() {
+  return (
+    <div className="vx-borda-ascii" aria-hidden="true">
+      {(["topo", "direita", "base", "esquerda"] as const).map((lado) => (
+        <span key={lado} className={`vx-borda-ascii-lado vx-borda-ascii-${lado}`}>
+          <span className="vx-borda-ascii-faixa">{PADRAO_BORDA}</span>
+        </span>
+      ))}
+      {(["se", "sd", "ie", "id"] as const).map((canto) => (
+        <span key={canto} className={`vx-borda-ascii-canto vx-borda-ascii-${canto}`}>+</span>
+      ))}
+    </div>
+  );
+}
+
 export default function Pricing() {
   return (
-    <section id="planos" className="vx-grid-bg flex min-h-screen items-center bg-[var(--vx-bg)] px-6 py-24">
-      <div className="mx-auto w-full max-w-6xl">
-        <Reveal className="text-center">
-          <GlitchHeading className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+    <section id="planos" data-ato="5" className="vx-grid-bg flex min-h-screen items-center px-6 py-24">
+      <div className="vx-superficie mx-auto w-full max-w-6xl">
+        <Reveal className="text-center" variante="fade">
+          <TituloDecodificado className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Planos que cabem na sua empresa.
-          </GlitchHeading>
+          </TituloDecodificado>
           <p className="mt-4 text-[var(--vx-text-2)]">Comece pelo Basic, escale quando precisar.</p>
         </Reveal>
 
         <div className="mt-16 grid grid-cols-1 items-stretch gap-8 md:grid-cols-3">
           {PLANS.map((plan, i) => (
-            <Reveal key={plan.name} delay={i * 150} className="flex">
+            <Reveal key={plan.name} ordem={i} className="flex">
               <motion.div
-                whileHover={{ y: -6 }}
-                transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                whileHover={{ y: -DESLOCAMENTO_MOTION_LANDING.elevacao }}
+                transition={MOLA_LANDING.cartao}
                 className={`relative flex w-full flex-col rounded-[6px] bg-[var(--vx-bg-2)] p-8 transition-shadow duration-[300ms] ${
                   plan.highlight
                     ? "border-2 border-[var(--vx-accent)] shadow-[0_0_36px_rgba(var(--vx-accent-rgb),0.25)] md:scale-105"
@@ -84,8 +108,9 @@ export default function Pricing() {
                       : "border border-[rgba(var(--vx-neutral-rgb),0.25)] hover:border-[rgba(var(--vx-accent-rgb),0.4)]"
                 }`}
               >
+                {plan.highlight && <BordaAscii />}
                 {plan.highlight && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-[6px] bg-[var(--vx-accent)] px-3 py-1 font-mono text-[10px] font-bold tracking-widest text-[var(--vx-on-accent)]">
+                  <span className="absolute -top-3 left-1/2 z-[1] -translate-x-1/2 rounded-[6px] bg-[var(--vx-accent)] px-3 py-1 font-mono text-[10px] font-bold tracking-widest text-[var(--vx-on-accent)]">
                     MAIS POPULAR
                   </span>
                 )}
@@ -108,7 +133,7 @@ export default function Pricing() {
 
                 <MotionLink
                   to="/register"
-                  whileTap={{ scale: 0.97 }}
+                  whileTap={{ scale: ESCALA_LANDING.toque }}
                   className={`mt-10 rounded-[6px] px-6 py-3 text-center font-mono text-sm font-bold tracking-wide transition-all duration-[300ms] ${
                     plan.highlight
                       ? "bg-[var(--vx-accent)] text-[var(--vx-on-accent)] hover:shadow-[0_0_24px_rgba(var(--vx-accent-rgb),0.6)]"

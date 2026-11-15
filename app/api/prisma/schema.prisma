@@ -83,6 +83,10 @@ model User {
   riskAcceptancesReviewed  RiskAcceptance[]       @relation("RiskAcceptanceReviewer") // CP-4
   riskAcceptancesRevoked   RiskAcceptance[]       @relation("RiskAcceptanceRevoker") // CP-4
   savedQueries             SavedQuery[] // CP-6 — buscas salvas e watchlists
+  codeScanImports          CodeScanImport[]       @relation("CodeScanImportUploader") // ADR-052
+  codeTriagedFindings      CodeFinding[]          @relation("CodeFindingTriagedBy") // ADR-052
+  techAssetsCreated        TechAsset[]            @relation("TechAssetCreatedBy") // ADR-053
+  threatMatchesTriaged     ThreatMatch[]          @relation("ThreatMatchTriagedBy") // ADR-053
 
   @@index([companyId])
 }
@@ -141,6 +145,8 @@ model Company {
   riskAcceptances RiskAcceptance[] // CP-4 — aceites formais de risco da empresa
   playbooks       RemediationPlaybook[] // CP-5 — playbooks customizados da empresa
   savedQueries    SavedQuery[] // CP-6 — buscas compartilhadas com a empresa
+  techAssets      TechAsset[] // ADR-053 — inventário de tecnologias (Threat Intel)
+  threatMatches   ThreatMatch[] // ADR-053 — CVEs que afetam o inventário
 
   @@index([planId])
 }
@@ -266,10 +272,11 @@ model Project {
   closedAt       DateTime?
   updatedAt      DateTime  @updatedAt
 
-  application     Application     @relation(fields: [applicationId], references: [id])
-  company         Company         @relation(fields: [companyId], references: [id])
+  application     Application      @relation(fields: [applicationId], references: [id])
+  company         Company          @relation(fields: [companyId], references: [id])
   members         ProjectMember[]
   vulnerabilities Vulnerability[]
+  codeScanImports CodeScanImport[] // ADR-052 — importações SARIF/CycloneDX
 
   @@index([companyId])
   @@index([applicationId])
@@ -357,6 +364,12 @@ model Vulnerability {
   // humano (RN10 intacta).
   sourceType          String  @default("MANUAL")
   sourceDastFindingId String? @unique
+  // ADR-052: "SAST_IMPORT" / "SCA_IMPORT" = promovida de um CodeFinding
+  // (SARIF ou CycloneDX importado). Mesma regra do DAST: vetor revisado por humano.
+  sourceCodeFindingId String? @unique
+  // ADR-053: "THREAT_INTEL" = promovida de um ThreatMatch (CVE publicada que
+  // afeta o inventário). Mesma regra: vetor CVSS revisado por humano.
+  sourceThreatMatchId String? @unique
 
   // Foreign keys (cascata de isolamento)
   projectId     String
@@ -421,6 +434,9 @@ model Vulnerability {
   // projeto, com triagem, evidências e comentários próprios. Perde-se o
   // ponteiro pra origem, nunca o achado.
   sourceDastFinding DastFinding? @relation("VulnerabilityFromDastFinding", fields: [sourceDastFindingId], references: [id], onDelete: SetNull)
+  // SetNull pelo mesmo motivo do DAST: apagar a importação não apaga o achado promovido.
+  sourceCodeFinding CodeFinding? @relation("VulnerabilityFromCodeFinding", fields: [sourceCodeFindingId], references: [id], onDelete: SetNull)
+  sourceThreatMatch ThreatMatch? @relation("VulnerabilityFromThreatMatch", fields: [sourceThreatMatchId], references: [id], onDelete: SetNull)
 
   evidences       Evidence[]
   comments        VulnerabilityComment[]
@@ -797,12 +813,15 @@ model MaturityScore {
 model Notification {
   id          String   @id @default(cuid())
   userId      String
+  // ADR-053 usa: "THREAT_MATCH" | "THREAT_DIGEST" | "THREAT_KEV" (a central in-app nasce com a Threat Intel).
   category    String // "FINDING_CRITICAL" | "STATUS_CHANGE" | "COMMENT" | "TICKET"
   title       String
   message     String   @db.Text
   isRead      Boolean  @default(false)
   sentAsPush  Boolean  @default(false)
   sentAsEmail Boolean  @default(false)
+  // ADR-053: para onde a notificação leva (rota da web).
+  link        String?  @db.VarChar(512)
   createdAt   DateTime @default(now())
 
   @@index([userId])
@@ -856,6 +875,19 @@ enum DastRisk {
   MEDIUM
   LOW
   INFO
+}
+
+// Resultado de um sensor passivo num scan (spec "Sensores e Security Graph").
+// "Sem dados" nunca pode parecer "seguro": por isso o status é explícito e
+// NO_DATA/UNAVAILABLE/ERROR aparecem na tela em vez de virar lista vazia.
+//   NOT_APPLICABLE — o sensor não se aplica ao alvo (ex.: fonte pública p/ IP privado)
+//   UNAVAILABLE    — o alvo ou o serviço externo não respondeu
+enum DastSensorStatus {
+  OK
+  NO_DATA
+  NOT_APPLICABLE
+  UNAVAILABLE
+  ERROR
 }
 
 // Triagem de um DastFinding pelo pentester, DENTRO do silo DAST (ADR-032).
@@ -915,8 +947,10 @@ model DastScan {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  requestedBy User          @relation(fields: [requestedById], references: [id])
+  requestedBy User                @relation(fields: [requestedById], references: [id])
   findings    DastFinding[]
+  sensorRuns  DastSensorRun[]
+  assets      DastObservedAsset[]
 
   @@index([requestedById])
   @@index([status])
@@ -925,6 +959,65 @@ model DastScan {
   // VarChar(2048), índice completo estouraria o teto de bytes por índice do
   // MySQL (o projeto já foi mordido nisso duas vezes, ver §2 do CLAUDE.md).
   @@index([status, targetUrl(length: 191)])
+}
+
+// Uma execução de sensor dentro de um scan: o ZAP e, depois dele no mesmo job,
+// os sensores passivos (hoje só `headers`). Falha de sensor não derruba o scan:
+// fica registrada aqui e o scan conclui com aviso.
+model DastSensorRun {
+  id         String           @id @default(cuid())
+  scanId     String
+  sensorKey  String           @db.VarChar(32)
+  status     DastSensorStatus
+  message    String?          @db.Text
+  startedAt  DateTime
+  finishedAt DateTime
+  durationMs Int
+
+  scan DastScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([scanId, sensorKey])
+}
+
+// O que os sensores de descoberta OBSERVARAM sobre o alvo — não é achado, é
+// topologia: IP, portas abertas, tecnologias e subdomínios. Alimenta o
+// CyberGraph. `parentValue` diz a quem o ativo se liga no grafo (porta → IP,
+// IP → host do alvo).
+model DastObservedAsset {
+  id          String        @id @default(cuid())
+  scanId      String
+  kind        DastAssetKind
+  value       String        @db.VarChar(255)
+  parentValue String?       @db.VarChar(255)
+  sensorKey   String        @db.VarChar(32)
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+
+  scan DastScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([scanId, kind, value])
+}
+
+enum DastAssetKind {
+  IP
+  PORT
+  TECHNOLOGY
+  SUBDOMAIN
+}
+
+// Cache GLOBAL das CVEs consultadas no NVD (NIST). Dado público: não tem
+// tenant nem dono. Existe porque o NVD sem chave aceita 5 consultas a cada
+// 30 s — sem cache, cada scan repetiria as mesmas consultas lentas.
+model CveRecord {
+  id          String    @id @db.VarChar(32) // "CVE-2021-44228"
+  description String?   @db.Text
+  cvssScore   Float?
+  cvssVersion String?   @db.VarChar(8)
+  cvssVector  String?   @db.VarChar(255)
+  cweId       String?   @db.VarChar(32)
+  publishedAt DateTime?
+  references  Json?
+  fetchedAt   DateTime  @default(now())
 }
 
 // DastFinding — um alerta do ZAP já normalizado (1 instance = 1 finding).
@@ -948,6 +1041,17 @@ model DastFinding {
   solution      String?  @db.Text
   reference     String?  @db.Text
   createdAt     DateTime @default(now())
+  // Sensor que originou o finding. Os sensores passivos usam pluginId com
+  // namespace (`sensor:headers:csp-ausente`), então o fingerprint e a
+  // deduplicação continuam com a mesma fórmula.
+  sensorKey     String   @default("zap") @db.VarChar(32)
+  // Só para findings de CVE (sensor internetdb): a CVE é POTENCIAL — deduzida
+  // pela versão do software, nunca testada no alvo. O CVSS vem do NVD (NIST)
+  // e fica copiado aqui para o finding não mudar se o NVD reavaliar depois.
+  cveId         String?  @db.VarChar(32)
+  cvssScore     Float?
+  cvssVersion   String?  @db.VarChar(8)
+  cvssVector    String?  @db.VarChar(255)
 
   // ---------------------------------------------------------------------
   // Triagem dentro do silo (ADR-032). Não substitui a promoção pra
@@ -978,3 +1082,241 @@ model DastFinding {
 // ============================================================================
 // FIM
 // ============================================================================
+
+// =============================================================================
+// SAST/SCA — importação de relatórios de ferramentas de código (ADR-052)
+// =============================================================================
+//
+// O Vulnera não roda Semgrep/CodeQL/Trivy: ele RECEBE o relatório que a
+// pipeline do cliente já gera (SARIF 2.1.0 ou CycloneDX com seção
+// `vulnerabilities`) e aplica o mesmo fluxo do DAST — triagem no silo e
+// promoção para Vulnerability com vetor CVSS revisado por humano (RN10).
+//
+// Diferente do DastScan, a importação nasce DENTRO da cadeia multi-tenant:
+// pertence a um Project, e companyId é herdado dele (nunca vem do request).
+model CodeScanImport {
+  id                String   @id @default(cuid())
+  projectId         String
+  companyId         String // herdado do Project — filtro multi-tenant
+  format            String   @db.VarChar(16) // SARIF | CYCLONEDX
+  toolName          String   @db.VarChar(100)
+  toolVersion       String?  @db.VarChar(64)
+  fileName          String   @db.VarChar(255)
+  uploadedById      String
+  // Comparação com a importação ANTERIOR do mesmo projeto, formato e
+  // ferramenta (null na primeira). Gravada na importação porque é o retrato
+  // daquele momento: importar de novo depois não reescreve o passado.
+  previousImportId  String?
+  totalFindings     Int      @default(0)
+  newFindings       Int      @default(0)
+  persistedFindings Int      @default(0)
+  resolvedFindings  Int      @default(0)
+  // Só CycloneDX: quantos componentes o SBOM declarou (com ou sem CVE).
+  componentsCount   Int?
+  // Aviso legível quando o arquivo é válido mas incompleto (ex.: SBOM sem
+  // seção `vulnerabilities`, resultados sem localização).
+  warningMessage    String?  @db.Text
+  createdAt         DateTime @default(now())
+
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy User          @relation("CodeScanImportUploader", fields: [uploadedById], references: [id])
+  findings   CodeFinding[]
+
+  @@index([projectId, createdAt])
+  @@index([companyId])
+  @@index([uploadedById])
+}
+
+model CodeFinding {
+  id          String  @id @default(cuid())
+  importId    String
+  projectId   String // desnormalizado: dedup entre importações é por (projectId, fingerprint)
+  companyId   String
+  // sha256 hex — SAST: ferramenta|regra|arquivo|partialFingerprint (ou linha);
+  // SCA: pacote|versão|advisory. Ver utils/code-import/.
+  fingerprint String  @db.VarChar(64)
+  category    String  @db.VarChar(8) // SAST | SCA
+  ruleId      String  @db.VarChar(255)
+  title       String  @db.VarChar(500)
+  severity    String  @db.VarChar(16) // CRITICAL | HIGH | MEDIUM | LOW | INFO
+  cweId       String? @db.VarChar(32)
+
+  // SAST — onde no código
+  filePath  String? @db.Text
+  startLine Int?
+  endLine   Int?
+  snippet   String? @db.Text
+
+  // SCA — qual componente
+  packageName    String? @db.VarChar(500)
+  packageVersion String? @db.VarChar(128)
+  purl           String? @db.Text
+  fixedVersion   String? @db.VarChar(255)
+  advisoryId     String? @db.VarChar(64) // CVE-…, GHSA-…
+  // CVSS declarado pela ferramenta (CycloneDX ratings / SARIF security-severity).
+  // É INFORMAÇÃO da ferramenta: a Vulnerability promovida recalcula do vetor revisado.
+  cvssScore      Float?
+  cvssVector     String? @db.VarChar(255)
+
+  description    String? @db.Text
+  recommendation String? @db.Text
+  helpUri        String? @db.Text
+
+  // Triagem — mesmo enum e semântica do DAST (ADR-032). Na reimportação, um
+  // achado que persiste herda a triagem do anterior (triageInherited = true).
+  triageStatus    DastTriageStatus @default(NEW)
+  triageNote      String?          @db.Text
+  triagedById     String?
+  triagedAt       DateTime?
+  triageInherited Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+
+  codeImport CodeScanImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  triagedBy  User?          @relation("CodeFindingTriagedBy", fields: [triagedById], references: [id])
+
+  promotedVulnerability Vulnerability? @relation("VulnerabilityFromCodeFinding")
+
+  @@unique([importId, fingerprint])
+  @@index([projectId, fingerprint])
+  @@index([importId, triageStatus])
+  @@index([importId, severity])
+}
+
+// ============================================================================
+// Threat Intelligence (ADR-053)
+// ============================================================================
+// A empresa mapeia as tecnologias que usa (inventário); a sincronização traz as
+// CVEs publicadas (NVD), os avisos de pacotes (OSV), o catálogo de exploração
+// ativa (CISA KEV) e a probabilidade de exploração (EPSS), e cruza com o
+// inventário. O que afeta vira ThreatMatch; o que é novo e grave vira
+// Notification. Nada disso é Vulnerability até alguém promover com CVSS revisado.
+
+// Uma tecnologia do inventário da EMPRESA (D19.3). Dois tipos, porque cada um
+// casa com uma fonte diferente:
+//   PACKAGE — ecossistema + nome (+ versão), casado pelo OSV;
+//   PRODUCT — fabricante + produto do dicionário CPE (+ versão), casado pelo NVD.
+// `status`: SUGGESTED (veio de um SBOM ou do fingerprint do DAST e espera
+// alguém confirmar), CONFIRMED (entra na sincronização) ou DISMISSED (descartada;
+// fica gravada para não ser sugerida de novo).
+model TechAsset {
+  id           String    @id @default(cuid())
+  companyId    String
+  kind         String    @db.VarChar(16) // PACKAGE | PRODUCT
+  ecosystem    String?   @db.VarChar(32) // PACKAGE: npm | PyPI | Maven | Go | NuGet | RubyGems | crates.io | Packagist
+  packageName  String?   @db.VarChar(255)
+  cpePart      String?   @db.VarChar(1) // PRODUCT: a | o | h
+  cpeVendor    String?   @db.VarChar(128)
+  cpeProduct   String?   @db.VarChar(128)
+  // null = versão não informada: casa com qualquer versão e o alerta diz
+  // "versão não confirmada" (nunca finge precisão que não tem).
+  version      String?   @db.VarChar(64)
+  displayName  String    @db.VarChar(255)
+  status       String    @default("CONFIRMED") @db.VarChar(16)
+  source       String    @db.VarChar(16) // MANUAL | SBOM | FINGERPRINT
+  sourceRef    String?   @db.VarChar(64) // id da importação ou do scan de origem
+  // Chave normalizada (tipo|ecossistema|nome|versão ou tipo|parte|fabricante|produto|versão):
+  // impede duplicar a mesma tecnologia na empresa, inclusive entre sugestões.
+  identityKey  String    @db.VarChar(400)
+  createdById  String?
+  confirmedAt  DateTime?
+  // Última vez que a sincronização consultou as fontes por esta tecnologia.
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User?         @relation("TechAssetCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  matches   ThreatMatch[]
+
+  @@unique([companyId, identityKey])
+  @@index([companyId, status])
+  @@index([status, kind])
+}
+
+// Catálogo GLOBAL de avisos (CVE do NVD ou aviso do OSV). Dado público: sem
+// tenant, como o CveRecord do DAST. O id é a CVE quando existe (o OSV traz a CVE
+// em `aliases`), senão o id do aviso (GHSA-..., PYSEC-...), para a mesma falha
+// não aparecer duas vezes.
+model ThreatAdvisory {
+  id             String    @id @db.VarChar(64)
+  aliases        Json?
+  source         String    @db.VarChar(16) // NVD | OSV | KEV
+  title          String?   @db.VarChar(500)
+  description    String?   @db.Text
+  cvssScore      Float?
+  cvssVersion    String?   @db.VarChar(8)
+  cvssVector     String?   @db.VarChar(255)
+  // Faixa da nota (CRITICAL | HIGH | MEDIUM | LOW | NONE); null = sem nota publicada.
+  severity       String?   @db.VarChar(16)
+  cweId          String?   @db.VarChar(32)
+  publishedAt    DateTime?
+  modifiedAt     DateTime?
+  references     Json?
+  // CISA KEV: explorada ativamente. `kevAddedAt` é quando entrou no catálogo.
+  kev            Boolean   @default(false)
+  kevAddedAt     DateTime?
+  kevDueDate     DateTime?
+  kevRansomware  Boolean   @default(false)
+  // FIRST EPSS: probabilidade de exploração nos próximos 30 dias (0..1).
+  epssScore      Float?
+  epssPercentile Float?
+  epssAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  matches ThreatMatch[]
+
+  @@index([publishedAt])
+  @@index([kev, kevAddedAt])
+}
+
+// Uma CVE que afeta uma tecnologia do inventário. `companyId` desnormalizado do
+// TechAsset para o filtro multi-tenant direto.
+model ThreatMatch {
+  id               String           @id @default(cuid())
+  companyId        String
+  assetId          String
+  advisoryId       String           @db.VarChar(64)
+  // true = a tecnologia tinha versão e a fonte confirmou que ela é afetada.
+  versionConfirmed Boolean          @default(false)
+  // true = publicada ANTES de a tecnologia entrar no inventário: é exposição
+  // que já existia, aparece mas não notifica (D19.7).
+  preexisting      Boolean          @default(false)
+  fixedVersion     String?          @db.VarChar(128)
+  triageStatus     DastTriageStatus @default(NEW)
+  triageNote       String?          @db.Text
+  triagedById      String?
+  triagedAt        DateTime?
+  notifiedAt       DateTime?
+  // Quando notificou que a CVE entrou no KEV (evento à parte da publicação).
+  kevNotifiedAt    DateTime?
+  createdAt        DateTime         @default(now())
+
+  company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  asset     TechAsset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  advisory  ThreatAdvisory @relation(fields: [advisoryId], references: [id], onDelete: Cascade)
+  triagedBy User?          @relation("ThreatMatchTriagedBy", fields: [triagedById], references: [id], onDelete: SetNull)
+
+  promotedVulnerability Vulnerability? @relation("VulnerabilityFromThreatMatch")
+
+  @@unique([assetId, advisoryId])
+  @@index([companyId, triageStatus])
+  @@index([advisoryId])
+}
+
+// Uma execução da sincronização: quando, quem disparou e o resultado de cada fonte.
+model ThreatSyncRun {
+  id            String    @id @default(cuid())
+  trigger       String    @db.VarChar(16) // SCHEDULED | MANUAL | ASSET
+  status        String    @db.VarChar(16) // RUNNING | OK | PARTIAL | FAILED
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
+  // Por fonte: { ok, itens, erro } — o que a tela de Fontes mostra.
+  sources       Json?
+  newAdvisories Int       @default(0)
+  newMatches    Int       @default(0)
+  notifications Int       @default(0)
+  errorMessage  String?   @db.Text
+
+  @@index([startedAt])
+}

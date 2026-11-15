@@ -33,7 +33,6 @@ import { Button } from "../components/ui/button";
 import { DashboardAtmosphere } from "../components/dashboard/hero/dashboard-atmosphere";
 import { NumeroAnimado } from "../motion/components";
 import { useMotion } from "../motion/use-motion";
-import "../components/dashboard/hero/dashboard-hero.css";
 import "./findings-page.css";
 
 export function FindingsPage() {
@@ -131,7 +130,7 @@ export function FindingsPage() {
             {severidadesDoResumo
               .filter((s) => (porSeveridade[s] ?? 0) > 0)
               .map((s) => (
-                <motion.div key={s} variants={item} data-ambient-card className="findings-severity-card relative overflow-hidden rounded-container border border-subtle p-4">
+                <motion.div key={s} variants={item} className="findings-severity-card relative overflow-hidden rounded-container border border-subtle p-4">
                   <div aria-hidden="true" className="findings-card-orbit" />
                   <dt className="relative">
                     <SeverityBadge severidade={s} />

@@ -1,0 +1,20 @@
+diff --git a/PRD_VIVO.md b/PRD_VIVO.md
+index 1b9af35..af58abc 100644
+--- a/PRD_VIVO.md
++++ b/PRD_VIVO.md
+@@ -20,0 +21,2 @@
++**✅ 2026-10-06 — Mensagem da release `dev` → `main` preparada (100% da redação).** `output/release-dev-main-2026-10-06.md` contém título sugerido, badges Shields.io, funcionalidades, 18 casos de uso, três diagramas Mermaid, compatibilidade, evidências históricas e limitações. Comparação remota após fetch: `origin/dev` em `33f6438` contra `origin/main` em `195e85d`; 31 commits exclusivos (21 sem merge/10 merges), seis PRs incorporadas (#44–#49), 176 arquivos alterados. Recursos já na main foram tratados como contexto. Suíte/build/scanner não reexecutados nesta preparação; sem abertura de PR, commit, push, merge ou tag. O estado das fases de implementação permanece o registrado abaixo.
++
+@@ -477,0 +480,2 @@ Rafael decide quando commitar.
++**✅ 2026-10-06 — Preparação da mensagem de release `dev` → `main` (100% da redação).** Artefato em `output/release-dev-main-2026-10-06.md`, baseado no intervalo remoto `195e85d..33f6438`: funcionalidades novas, 18 casos de uso, três diagramas, badges, seis PRs e 21 commits sem merge detalhados. Evidências de cada entrega foram diferenciadas de uma execução unificada atual. Registradas ressalvas de lint API, concorrência de Project e SAST `needs_review`; o plano SAST referenciado no histórico não está presente no snapshot versionado comparado. Preparação documental apenas, sem suíte/build/scanner, alteração de código/schema, publicação de PR, commit, push, merge ou tag.
++
+diff --git a/docs/BACKLOG.md b/docs/BACKLOG.md
+index e7e1b3d..61fcc56 100644
+--- a/docs/BACKLOG.md
++++ b/docs/BACKLOG.md
+@@ -16,0 +17,5 @@
++✅ **2026-10-06 — Mensagem da release `dev` → `main` preparada (100% da redação).** `output/release-dev-main-2026-10-06.md` compara os snapshots remotos `33f6438`/`195e85d`: 31 commits exclusivos (21 sem merge e 10 merges), seis PRs (#44–#49), 176 arquivos. Descrição detalhada com título, badges, 18 casos de uso, três diagramas Mermaid, contratos, evidências históricas e limitações; abertura manual pelo usuário. Sem suíte/build/scanner, commit, push, merge ou tag nesta preparação.
++
++- [x] **RELEASE-DESCRICAO-2026-10:** documentar tudo da dev ainda ausente na main, distinguindo melhorias de módulos já entregues e validação histórica de checks atuais. Redação concluída em 2026-10-06.
++- [ ] **RELEASE-REVISAO-2026-10:** conferir checks do PR e avaliar ressalvas de lint API, concorrência de Project e SAST `needs_review` antes da integração. O plano SAST citado nos docs não está presente no snapshot versionado comparado; sua disponibilização continua pendente.
++

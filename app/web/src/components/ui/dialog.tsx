@@ -121,7 +121,8 @@ export function Dialog({ aberto, aoFechar, children, tamanho = "md", fecharAoCli
                 animate="visivel"
                 exit="saindo"
                 className={cn(
-                  "w-full rounded-overlay border border-subtle bg-overlay p-6 shadow-modal",
+                  // relative: o DialogClose (absolute right-4 top-4) ancora no canto do painel, não no fluxo do texto.
+                  "relative w-full rounded-overlay border border-subtle bg-overlay p-6 shadow-modal",
                   TAMANHOS[tamanho],
                   className,
                 )}

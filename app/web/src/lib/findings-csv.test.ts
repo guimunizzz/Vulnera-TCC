@@ -35,6 +35,7 @@ const base: FindingListItem = {
   hasActiveRiskAcceptance: false,
   assignedTo: null,
   assigneeName: null,
+  sourceType: "MANUAL",
 };
 
 const linhas = (csv: string) => csv.replace(/^\uFEFF/, "").trim().split("\r\n");

@@ -219,7 +219,7 @@ function IntervaloPersonalizado({
   const invalido = Boolean(inicio && fim && inicio > fim);
 
   return (
-    <div className="flex w-64 flex-col gap-3">
+    <div className="flex w-[16rem] flex-col gap-3">
       <p className="text-sm font-medium text-fg">Intervalo personalizado</p>
       {/* `<input type="date">` nativo: traz o calendário do sistema, é
           navegável por teclado e é localizado pelo próprio navegador — um
@@ -272,7 +272,7 @@ function MultiSelecao({
         </Button>
       }
     >
-      <fieldset className="flex w-56 flex-col gap-1">
+      <fieldset className="flex w-[14rem] flex-col gap-1">
         <legend className="mb-2 text-sm font-medium text-fg">{rotulo}</legend>
         {opcoes.map((o) => (
           <label
@@ -347,7 +347,7 @@ function BuscaComDebounce({ valorInicial, aoMudar }: { valorInicial: string; aoM
       onChange={(e) => setTexto(e.target.value)}
       placeholder="Buscar por título…"
       aria-label="Buscar findings por título ou descrição"
-      className="h-8 w-48 text-xs"
+      className="h-8 w-[12rem] text-xs"
       prefixo={
         <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" aria-hidden="true">
           <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.6" />

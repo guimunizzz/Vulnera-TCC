@@ -48,6 +48,7 @@ import { SLA_DAYS_MAX, SLA_DAYS_MIN, type SlaPolicy, type UpsertSlaPolicyInput }
 import { useMotion } from "../../motion/use-motion";
 import { DURACAO, EASE } from "../../motion/tokens";
 import "./sla-settings-page.css";
+import { TABELA } from "../../components/ui/table-estilos";
 
 const SEVERIDADES = [
   { chave: "criticalDays", rotulo: "Crítica", dica: "CVSS 9.0–10.0", tom: "critical" },
@@ -213,7 +214,7 @@ export function SlaSettingsPage() {
           {companyId && politica.isLoading && (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-busy="true">
               <span className="sr-only">Carregando política de SLA</span>
-              {SEVERIDADES.map((s) => <Skeleton key={s.chave} className="h-40 w-full" />)}
+              {SEVERIDADES.map((s) => <Skeleton key={s.chave} className="h-[10rem] w-full" />)}
             </div>
           )}
           {!companyId && !empresas.isError && !minha.isError && !empresas.isLoading && !minha.isLoading && (
@@ -277,7 +278,7 @@ export function SlaSettingsPage() {
       </motion.div>
 
       {historico.isError && <ErrorState titulo="Não foi possível carregar o histórico" descricao={getErrorMessage(historico.error)} aoTentarNovamente={() => void historico.refetch()} />}
-      {historico.isLoading && companyId && <Card><Skeleton className="h-32 w-full" /></Card>}
+      {historico.isLoading && companyId && <Card><Skeleton className="h-[8rem] w-full" /></Card>}
       {historico.data && historico.data.length > 0 && (
         <Card className="sla-history-card" semPadding>
           <div className="border-b border-subtle p-4">
@@ -287,7 +288,7 @@ export function SlaSettingsPage() {
           <ScrollArea rotulo="Histórico das políticas de SLA">
             <table className="min-w-[42rem] w-full text-left text-sm">
               <caption className="sr-only">Versões da política de SLA desta empresa</caption>
-              <thead className="bg-inset text-xs uppercase tracking-wide text-fg-muted">
+              <thead className={TABELA.cabecalho}>
                 <tr>
                   <th className="px-4 py-3 font-medium">Desde</th>
                   <th className="px-4 py-3 font-medium">Crítica</th>
@@ -299,7 +300,7 @@ export function SlaSettingsPage() {
               </thead>
               <motion.tbody variants={lista} initial={jaMostrouHistorico.current ? false : "inicial"} animate="visivel">
                 {historico.data.map((p: SlaPolicy) => (
-                  <motion.tr key={p.id} variants={item} data-active={p.isActive || undefined} className="sla-history-row border-t border-subtle text-fg-secondary">
+                  <motion.tr key={p.id} variants={item} data-active={p.isActive || undefined} className={`sla-history-row text-fg-secondary ${TABELA.linha}`}>
                     <td className="px-4 py-3"><time dateTime={p.createdAt}>{new Date(p.createdAt).toLocaleDateString("pt-BR")}</time></td>
                     <td className="px-4 py-3 font-mono tabular-nums text-severity-critical-ink">{p.criticalDays}d</td>
                     <td className="px-4 py-3 font-mono tabular-nums text-severity-high-ink">{p.highDays}d</td>

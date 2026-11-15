@@ -34,7 +34,7 @@
  * teste SQ-U-08 existe exatamente para prender os dois arquivos juntos.
  */
 
-import { OWASP_CATEGORIES, SEVERITY_ORDER, VULNERABILITY_SORT_FIELDS } from "../models/vulnerability.model";
+import { OWASP_CATEGORIES, SEVERITY_ORDER, VULNERABILITY_SORT_FIELDS, VULNERABILITY_SOURCE_TYPES } from "../models/vulnerability.model";
 import type { VulnerabilityStatus } from "../models/vulnerability.model";
 import { SLA_FILTER_VALUES } from "./sla.util";
 
@@ -92,6 +92,7 @@ const PARAMETROS: Record<string, { lista: boolean; valido: Validador }> = {
   severity: { lista: true, valido: eUmDe(SEVERITIES) },
   status: { lista: true, valido: eUmDe(STATUSES) },
   owaspCategory: { lista: true, valido: eUmDe(OWASP_CATEGORIES) },
+  sourceType: { lista: true, valido: eUmDe(VULNERABILITY_SOURCE_TYPES) },
   slaState: { lista: true, valido: eUmDe(SLA_FILTER_VALUES) },
   riskAcceptance: { lista: true, valido: eUmDe(RISK_ACCEPTANCE_FILTER_VALUES) },
   // Responsável (CP-7). `none` é o valor especial de "sem responsável" — a

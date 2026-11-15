@@ -45,6 +45,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { Checkbox } from "./checkbox";
+import { TABELA } from "./table-estilos";
 
 export type DirecaoOrdem = "asc" | "desc";
 
@@ -180,10 +181,10 @@ export function Table<T>({
       <table className="w-full border-collapse text-sm">
         <caption className={cn("py-2 text-left text-xs text-fg-muted", !legendaVisivel && "sr-only")}>{legenda}</caption>
 
-        <thead>
+        <thead className={TABELA.cabecalho}>
           <tr className="border-b border-subtle">
             {selecionavel && (
-              <th scope="col" className="w-12 px-3 py-2">
+              <th scope="col" className={cn("w-12", TABELA.th)}>
                 <Checkbox
                   rotulo={<span className="sr-only">Selecionar todas as linhas</span>}
                   checked={todasSelecionadas}
@@ -201,10 +202,10 @@ export function Table<T>({
                   scope="col"
                   aria-sort={ordenadaPor ? (ordem!.direcao === "asc" ? "ascending" : "descending") : ordenavel ? "none" : undefined}
                   className={cn(
-                    "px-3 py-2 text-xs font-semibold uppercase text-fg-muted",
+                    TABELA.th,
                     c.alinhamento === "direita" ? "text-right" : "text-left",
                     c.ocultarEmTelaEstreita && "hidden md:table-cell",
-                    primeiraColunaFixa && i === 0 && !selecionavel && "sticky left-0 z-sticky bg-surface",
+                    primeiraColunaFixa && i === 0 && !selecionavel && "sticky left-0 z-sticky bg-inset",
                     c.larguraClassName,
                   )}
                 >
@@ -268,7 +269,7 @@ export function Table<T>({
                 )}
               >
                 {selecionavel && (
-                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <td className={TABELA.celula} onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       rotulo={<span className="sr-only">Selecionar {rotuloDaLinha?.(linha) ?? id}</span>}
                       checked={marcada}
@@ -290,7 +291,8 @@ export function Table<T>({
                       key={c.id}
                       scope={Tag === "th" ? "row" : undefined}
                       className={cn(
-                        "px-3 py-3 font-regular text-fg",
+                        TABELA.celula,
+                        "font-regular text-fg",
                         c.alinhamento === "direita" && "text-right tabular-nums",
                         c.ocultarEmTelaEstreita && "hidden md:table-cell",
                         primeiraColunaFixa && Tag === "th" && "sticky left-0 z-sticky bg-surface text-left",

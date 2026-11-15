@@ -90,6 +90,7 @@ severidade = HIGH, CRITICAL AND status != CLOSED
 | `severidade` | Severidade final do finding | `CRITICAL` `HIGH` `MEDIUM` `LOW` `NONE` |
 | `status` | Estado atual | `OPEN` `IN_PROGRESS` `FIXED` `CLOSED` |
 | `owasp` | Categoria OWASP Top 10 2021 | `A01` a `A10` |
+| `origem` | De onde o finding veio (visão unificada, 2026-11-15) | `DAST_IMPORT` `SAST_IMPORT` `SCA_IMPORT` `MANUAL` |
 | `projeto` | Projeto de análise | nome, escolhido na lista |
 | `aplicacao` | Aplicação analisada | nome, escolhido na lista |
 | `empresa` | Empresa dona do finding | nome, escolhido na lista — **só ADMIN** |
@@ -98,6 +99,11 @@ severidade = HIGH, CRITICAL AND status != CLOSED
 **Acento e caixa não importam**, nem no campo nem no valor: `aplicação`,
 `aplicacao`, `Severidade = high` e `severidade = HIGH` são equivalentes. Os
 nomes em inglês também funcionam (`severity`, `status`, `company`, `project`).
+`origem` também aceita `fonte` e `source`; na API o parâmetro é `sourceType`
+(valor fora do vocabulário → 400 `INVALID_SOURCE_TYPE`). `origem != MANUAL`
+traz as três lentes automáticas juntas. A coluna **Origem** da tabela mostra o
+mesmo selo (DAST, SAST, SCA ou Manual), e o painel da aplicação abre esta
+lista já filtrada por origem.
 
 ### Operadores
 
@@ -130,7 +136,7 @@ pode aparecer na segunda forma — é o mesmo recorte, escrito por extenso.
 
 ## 5. As contagens ao lado de cada opção
 
-Abrindo **Severidade**, **Status** ou **OWASP**, cada opção mostra um número:
+Abrindo **Severidade**, **Status**, **OWASP** ou **Origem**, cada opção mostra um número:
 
 ```
 Crítica   4

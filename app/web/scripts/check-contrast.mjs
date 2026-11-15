@@ -22,11 +22,16 @@
  *   - texto normal ................ 4.5:1
  *   - texto grande (≥24px ou ≥19px bold) . 3.0:1
  *   - elemento gráfico / borda de controle . 3.0:1
+ *
+ * ALTO CONTRASTE (opção do menu de acessibilidade, tokens.css §11) usa a régua
+ * AAA (WCAG 1.4.6): texto 7:1, texto grande 4.5:1. Elemento gráfico segue em
+ * 3:1 — o WCAG não define nível AAA para ele.
  */
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { gammaDecodifica, oklchParaSrgbNormalizado } from "../src/design/oklch.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const TOKENS_CSS = resolve(AQUI, "../src/styles/tokens.css");
@@ -36,55 +41,19 @@ const TOKENS_CSS = resolve(AQUI, "../src/styles/tokens.css");
 // ---------------------------------------------------------------------------
 
 /**
- * OKLCH → OKLab. H em graus.
- * A matemática vem do artigo original do Björn Ottosson (2020); reimplementada
- * aqui à mão de propósito, para não trazer uma dependência de cor só pra isso.
- */
-function oklchParaOklab(L, C, H) {
-  const rad = (H * Math.PI) / 180;
-  return { L, a: C * Math.cos(rad), b: C * Math.sin(rad) };
-}
-
-/** OKLab → sRGB linear (ainda sem gamma, ainda podendo estourar o gamut). */
-function oklabParaLinearSrgb({ L, a, b }) {
-  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
-  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
-  const s_ = L - 0.0894841775 * a - 1.291485548 * b;
-
-  const l = l_ * l_ * l_;
-  const m = m_ * m_ * m_;
-  const s = s_ * s_ * s_;
-
-  return {
-    r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    b: -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
-  };
-}
-
-const gammaCodifica = (x) => (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
-const gammaDecodifica = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
-
-/**
- * OKLCH → sRGB 8-bit.
+ * OKLCH → sRGB 8-bit, mais a luminância relativa do que é EXIBIDO (pós-clamp).
  *
- * O clamp importa e é reportado: uma cor OKLCH fora do gamut sRGB é exibida
- * pelo navegador em outra cor que não a pedida. Se medíssemos o contraste da
- * cor teórica em vez da exibida, a medição seria mentira. `foraDeGamut` avisa.
+ * A conversão em si vive em `src/design/oklch.mjs`, compartilhada com a paleta
+ * das cenas three.js — a régua do contraste e a cor pintada no WebGL são a
+ * mesma conta. Se medíssemos a cor teórica em vez da exibida, a medição seria
+ * mentira; `foraDeGamut` avisa quando o navegador clampa.
  */
 function oklchParaSrgb(L, C, H) {
-  const linear = oklabParaLinearSrgb(oklchParaOklab(L, C, H));
-  const cru = [linear.r, linear.g, linear.b].map(gammaCodifica);
-  const foraDeGamut = cru.some((v) => v < -0.0005 || v > 1.0005);
-  const clamped = cru.map((v) => Math.min(1, Math.max(0, v)));
+  const { rgb, foraDeGamut } = oklchParaSrgbNormalizado(L, C, H);
   return {
-    rgb: clamped.map((v) => Math.round(v * 255)),
+    rgb: rgb.map((v) => Math.round(v * 255)),
     foraDeGamut,
-    // luminância relativa é calculada a partir do que É EXIBIDO (pós-clamp)
-    luminancia:
-      0.2126 * gammaDecodifica(clamped[0]) +
-      0.7152 * gammaDecodifica(clamped[1]) +
-      0.0722 * gammaDecodifica(clamped[2]),
+    luminancia: 0.2126 * gammaDecodifica(rgb[0]) + 0.7152 * gammaDecodifica(rgb[1]) + 0.0722 * gammaDecodifica(rgb[2]),
   };
 }
 
@@ -200,7 +169,8 @@ const PARES = [
   ["--color-success", "--color-bg-surface", "grafico", "Série 'resolvidos' em gráfico"],
 ];
 
-const MINIMO = { texto: 4.5, "texto-grande": 3.0, grafico: 3.0 };
+const MINIMO_AA = { texto: 4.5, "texto-grande": 3.0, grafico: 3.0 };
+const MINIMO_AAA = { texto: 7.0, "texto-grande": 4.5, grafico: 3.0 };
 
 // ---------------------------------------------------------------------------
 // Execução
@@ -214,25 +184,36 @@ const blocos = lerBlocos(css);
 const base = {};
 for (const b of blocos) if (b.seletor === ":root") Object.assign(base, b.vars);
 
+// O bloco escuro de alto contraste cita `[data-theme="light"]` dentro do
+// `:not(...)`; sem separar os blocos de contraste, ele vazaria para o claro.
+const ehAltoContraste = (b) => b.seletor.includes("data-alto-contraste");
+
 const escopoDark = { ...base };
 for (const b of blocos) {
-  if (b.seletor.includes('[data-theme="dark"]')) Object.assign(escopoDark, b.vars);
+  if (!ehAltoContraste(b) && b.seletor.includes('[data-theme="dark"]')) Object.assign(escopoDark, b.vars);
 }
 const escopoLight = { ...base };
 for (const b of blocos) {
-  if (b.seletor.includes('[data-theme="light"]')) Object.assign(escopoLight, b.vars);
+  if (!ehAltoContraste(b) && b.seletor.includes('[data-theme="light"]')) Object.assign(escopoLight, b.vars);
+}
+const escopoDarkAlto = { ...escopoDark };
+const escopoLightAlto = { ...escopoLight };
+for (const b of blocos.filter(ehAltoContraste)) {
+  Object.assign(b.seletor.includes(":not(") ? escopoDarkAlto : escopoLightAlto, b.vars);
 }
 
 const temas = [
-  ["dark", escopoDark],
-  ["light", escopoLight],
+  ["dark", escopoDark, MINIMO_AA],
+  ["light", escopoLight, MINIMO_AA],
+  ["dark + alto contraste (AAA)", escopoDarkAlto, MINIMO_AAA],
+  ["light + alto contraste (AAA)", escopoLightAlto, MINIMO_AAA],
 ];
 
 let falhas = 0;
 let foraDeGamut = 0;
 const linhas = [];
 
-for (const [nomeTema, escopo] of temas) {
+for (const [nomeTema, escopo, minimos] of temas) {
   for (const [fgNome, bgNome, tipo, rotulo] of PARES) {
     const fg = resolver(fgNome, escopo);
     const bg = resolver(bgNome, escopo);
@@ -244,7 +225,7 @@ for (const [nomeTema, escopo] of temas) {
     const cFg = oklchParaSrgb(...fg);
     const cBg = oklchParaSrgb(...bg);
     const razao = contraste(cFg.luminancia, cBg.luminancia);
-    const min = MINIMO[tipo];
+    const min = minimos[tipo];
     const passa = razao >= min;
     if (!passa) falhas++;
     if (cFg.foraDeGamut || cBg.foraDeGamut) foraDeGamut++;
@@ -306,7 +287,7 @@ if (foraDeGamut > 0) {
   console.error("⚠ Algum par medido usa cor clampada — a razão acima é a da cor EXIBIDA, não a do token.");
 }
 if (falhas > 0) {
-  console.error(`\n✗ ${falhas} par(es) abaixo do mínimo WCAG AA.`);
+  console.error(`\n✗ ${falhas} par(es) abaixo do mínimo.`);
   process.exit(1);
 }
-console.log("\n✓ Todos os pares atendem WCAG 2.1 AA nos dois temas.");
+console.log("\n✓ Todos os pares atendem WCAG 2.1 AA nos dois temas e AAA no alto contraste.");

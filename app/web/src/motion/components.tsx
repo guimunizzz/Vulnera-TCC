@@ -19,10 +19,20 @@
  * Dashboards (CP5), listas de findings, KPIs, e o `AppLayout` (rota).
  */
 
-import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useSpring } from "motion/react";
+import { AnimatePresence, MotionConfig, motion, useMotionValue, useMotionValueEvent, useSpring } from "motion/react";
+import { useMovimentoReduzido } from "../design/accessibility";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMotion } from "./use-motion";
 import { STAGGER_MAX_ITENS } from "./tokens";
+
+/**
+ * Leva o movimento reduzido (sistema OU menu de acessibilidade) a todo
+ * componente `motion`, inclusive os que não passam por `useMotion()`: "always"
+ * corta deslocamento, escala e layout e mantém opacidade e cor.
+ */
+export function ConfiguracaoDeMovimento({ children }: { children: ReactNode }) {
+  return <MotionConfig reducedMotion={useMovimentoReduzido() ? "always" : "user"}>{children}</MotionConfig>;
+}
 
 /* ==========================================================================
    Lista escalonada

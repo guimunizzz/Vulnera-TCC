@@ -1,0 +1,52 @@
+{
+  "rotulo": "atmosfera-viva",
+  "quando": "2026-11-03T12:20:02.269Z",
+  "landingParada": {
+    "quadrosDaCenaPorSegundo": 56.4,
+    "fpsNavegador": 56.4,
+    "p95ms": 18.3,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "landingRolando": {
+    "quadrosDaCenaPorSegundo": 54.6,
+    "fpsNavegador": 54.6,
+    "p95ms": 18.5,
+    "engasgos": 0.029,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "landingGota": {
+    "quadrosDaCenaPorSegundo": 56.2,
+    "fpsNavegador": 56.9,
+    "p95ms": 18.3,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaParada": {
+    "quadrosDaCenaPorSegundo": 56.2,
+    "fpsNavegador": 56.5,
+    "p95ms": 18.4,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaGota": {
+    "quadrosDaCenaPorSegundo": 56.3,
+    "fpsNavegador": 56.3,
+    "p95ms": 18.3,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  },
+  "plataformaRolando": {
+    "quadrosDaCenaPorSegundo": 56.6,
+    "fpsNavegador": 56.6,
+    "p95ms": 18.4,
+    "engasgos": 0,
+    "tarefasLongas": 0,
+    "tarefaLongaMaxMs": 0
+  }
+}

@@ -2,8 +2,9 @@
  * dashboard-page.test.tsx
  *
  * O QUE FAZ
- * Protege o roteamento dos três papéis e o contrato de degradação do hero
- * compartilhado do dashboard.
+ * Protege o roteamento dos três papéis, o cabeçalho compacto compartilhado
+ * (Fase 5 do refactor web-motion-3d), os atalhos por papel e o contrato de
+ * degradação da atmosfera.
  *
  * POR QUE EXISTE
  * O redesign visual não pode trocar o conteúdo de um papel, expor o canvas à
@@ -14,7 +15,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "../design/theme-provider";
 import { useAuthStore } from "../store/auth.store";
@@ -22,6 +23,12 @@ import type { UserRole } from "../types/auth.types";
 import { DashboardPage } from "./dashboard-page";
 
 const preferenciaMovimento = vi.hoisted(() => ({ reduzido: false }));
+const resumo = vi.hoisted(() => ({ criticosAbertos: 0, carregando: false }));
+
+vi.mock("../hooks/use-findings", () => ({
+  STATUS_ABERTOS: ["OPEN", "IN_PROGRESS", "FIXED"],
+  useFindingsResumo: () => resumo,
+}));
 
 vi.mock("../motion/use-motion", async () => {
   const original = await vi.importActual<typeof import("../motion/use-motion")>("../motion/use-motion");
@@ -30,6 +37,10 @@ vi.mock("../motion/use-motion", async () => {
     useMotion: () => ({ ...original.useMotion(), reduzido: preferenciaMovimento.reduzido }),
   };
 });
+
+// O contrato aqui é o da PÁGINA (canvas decorativo, único, gate). A cena em si
+// é coberta por use-dashboard-scene.test.tsx e pelos testes de src/three/.
+vi.mock("../components/dashboard/hero/use-dashboard-scene", () => ({ useDashboardScene: () => undefined }));
 
 vi.mock("../components/dashboard/admin-dashboard", () => ({
   AdminDashboard: () => <p>Conteúdo ADMIN</p>,
@@ -92,6 +103,11 @@ function instalarMatchMedia(resultado: (query: string) => boolean): void {
   });
 }
 
+/** O gate só monta o canvas com WebGL2; o jsdom não o expõe. */
+function simularWebGL2(): void {
+  vi.stubGlobal("WebGL2RenderingContext", class {});
+}
+
 function simularViewportMovel(): void {
   definirLarguraDaJanela(375);
   instalarMatchMedia((query) => query.includes("max-width: 767px"));
@@ -104,8 +120,11 @@ beforeEach(() => {
 
 afterEach(() => {
   preferenciaMovimento.reduzido = false;
+  resumo.criticosAbertos = 0;
+  resumo.carregando = false;
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   definirLarguraDaJanela(1024);
   instalarMatchMedia(() => false);
 });
@@ -134,6 +153,7 @@ describe("DashboardPage", () => {
   });
 
   it("DASH-VIS-04 — canvas lazy é estritamente decorativo", async () => {
+    simularWebGL2();
     renderDashboard("ADMIN");
 
     await waitFor(() => {
@@ -148,7 +168,7 @@ describe("DashboardPage", () => {
     preferenciaMovimento.reduzido = true;
     renderDashboard("ADMIN");
 
-    expect(screen.getByTestId("dashboard-hero-fallback")).toBeInTheDocument();
+    expect(document.querySelector(".dashboard-atmosphere-fallback")).toBeInTheDocument();
     expect(document.querySelector("canvas[data-dashboard-ambient='true']")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
   });
@@ -157,12 +177,13 @@ describe("DashboardPage", () => {
     simularViewportMovel();
     renderDashboard("CLIENT");
 
-    expect(screen.getByTestId("dashboard-hero-fallback")).toBeInTheDocument();
+    expect(document.querySelector(".dashboard-atmosphere-fallback")).toBeInTheDocument();
     expect(document.querySelector("canvas[data-dashboard-ambient='true']")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
   });
 
   it("DASH-VIS-07 — canvas único sobrevive a rerender e remount sem duplicação", async () => {
+    simularWebGL2();
     const view = renderDashboard("ADMIN");
 
     await waitFor(() => {
@@ -182,30 +203,68 @@ describe("DashboardPage", () => {
     remount.unmount();
   });
 
-  it("DASH-VIS-08 — mantém o fallback quando WebGL2 não está disponível", async () => {
+  it("DASH-VIS-08 — sem WebGL2 mantém o fallback e não monta canvas", async () => {
     // jsdom não expõe WebGL2: este é o caminho normal de degradação da cena.
+    // Desde o kit (Fase 2), o gate decide antes do lazy: sem WebGL2 o chunk de
+    // three nem é pedido, então não existe canvas vazio por cima do fallback.
     expect("WebGL2RenderingContext" in window).toBe(false);
     renderDashboard("ADMIN");
 
-    expect(screen.getByTestId("dashboard-hero-fallback")).toBeInTheDocument();
-    await waitFor(() => {
-      const canvas = document.querySelector("canvas[data-dashboard-ambient='true']");
-      expect(canvas).toBeInTheDocument();
-      expect(canvas).toHaveAttribute("data-ready", "false");
-    });
+    expect(document.querySelector(".dashboard-atmosphere-fallback")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
+    // Dá tempo a um eventual lazy resolver antes de afirmar a ausência.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.querySelector("canvas[data-dashboard-ambient='true']")).not.toBeInTheDocument();
   });
 
-  it("DASH-VIS-09 — compartilha a mesma abertura visual entre os três papéis", () => {
-    const roles: UserRole[] = ["ADMIN", "CLIENT", "PENTESTER"];
+  it("DASH-VIS-09 — compartilha o mesmo cabeçalho entre os três papéis, com o escopo de cada um", () => {
+    const escopos: Record<UserRole, string> = {
+      ADMIN: "Visão geral da plataforma",
+      CLIENT: "Visão geral da empresa",
+      PENTESTER: "Sua operação",
+    };
 
-    for (const role of roles) {
+    for (const role of Object.keys(escopos) as UserRole[]) {
       const view = renderDashboard(role);
 
       expect(screen.getByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
-      expect(screen.getByText("Bem-vindo à Vulnera. Esta é a sua área de trabalho.")).toBeInTheDocument();
-      expect(screen.getByTestId("dashboard-hero-fallback")).toBeInTheDocument();
+      expect(screen.getByText(escopos[role])).toBeInTheDocument();
+      expect(document.querySelector(".dashboard-atmosphere-fallback")).toBeInTheDocument();
 
       view.unmount();
     }
+  });
+
+  it("DASH-VIS-10 — linha de contexto leva ao recorte dos críticos em aberto", () => {
+    resumo.criticosAbertos = 3;
+    renderDashboard("ADMIN");
+
+    expect(screen.getByText("3 críticos")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Revisar críticos" })).toHaveAttribute(
+      "href",
+      "/findings?severity=CRITICAL&status=OPEN,IN_PROGRESS,FIXED",
+    );
+  });
+
+  it("DASH-VIS-11 — sem crítico: mensagem calma e atalho para a triagem geral", () => {
+    renderDashboard("CLIENT");
+
+    expect(screen.getByText("Nenhum finding crítico em aberto no seu escopo.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Explorar findings" })).toHaveAttribute("href", "/findings");
+  });
+
+  it("DASH-VIS-12 — atalhos só para as rotas que o papel pode abrir", () => {
+    const atalhos = (role: UserRole) => {
+      const view = renderDashboard(role);
+      const nav = screen.getByRole("navigation", { name: "Continue seu trabalho" });
+      const rotulos = within(nav).getAllByRole("link").map((link) => link.textContent);
+      view.unmount();
+      return rotulos;
+    };
+
+    expect(atalhos("ADMIN")).toEqual(["Aplicações", "Projetos", "Findings"]);
+    expect(atalhos("CLIENT")).toEqual(["Aplicações", "Projetos", "Findings"]);
+    // /applications é ADMIN/CLIENT; o pentester ganha DAST no lugar.
+    expect(atalhos("PENTESTER")).toEqual(["Projetos", "Findings", "DAST"]);
   });
 });

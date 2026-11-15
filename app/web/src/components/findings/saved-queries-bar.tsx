@@ -130,7 +130,7 @@ export function SavedQueriesBar() {
               onClick={() => abrir(q)}
               aria-current={jaSalva?.id === q.id ? "true" : undefined}
               className={[
-                "flex min-h-touch items-center gap-2 rounded-l-control border px-3 py-1.5 text-sm",
+                "flex min-h-touch items-center gap-2 rounded-l-control border px-3 py-2 text-sm",
                 jaSalva?.id === q.id
                   ? "border-accent bg-accent-surface text-accent-ink"
                   : "border-subtle text-fg-secondary hover:text-fg",
@@ -151,7 +151,7 @@ export function SavedQueriesBar() {
                 type="button"
                 onClick={() => remover.mutate(q.id)}
                 aria-label={`Remover a busca salva ${q.name}`}
-                className="min-h-touch rounded-r-control border border-l-0 border-subtle px-2 py-1.5 text-sm text-fg-muted hover:text-danger-ink"
+                className="min-h-touch rounded-r-control border border-l-0 border-subtle px-2 py-2 text-sm text-fg-muted hover:text-danger-ink"
               >
                 ×
               </button>

@@ -1,0 +1,373 @@
+{
+  "marker": "QA-20261015-mv9hcuic",
+  "mode": "admin",
+  "resources": {
+    "marker": "QA-20261015-mv9hcuic",
+    "accounts": [
+      {
+        "id": "cmv9hd71o000bph01ggsu0pru",
+        "email": "qa-20261015-mv9hcuic-tenanta@qa.invalid",
+        "role": "CLIENT"
+      },
+      {
+        "id": "cmv9hdc38000rph01s0ffh4ao",
+        "email": "qa-20261015-mv9hcuic-tenantb@qa.invalid",
+        "role": "CLIENT"
+      }
+    ],
+    "plan": {
+      "id": "cmue2b97t0002pxogt92g8h8p",
+      "name": "Enterprise",
+      "maxApplications": 999,
+      "maxProjects": 999,
+      "includesRemediation": true,
+      "price": 0,
+      "isActive": true,
+      "createdAt": "2026-09-23T12:11:31.049Z"
+    },
+    "admin": {
+      "id": "cmue2b9em0003pxogpar7imm9",
+      "role": "ADMIN",
+      "companyId": null
+    },
+    "pentester": {
+      "id": "cmue2bah00021pxogddrlvrbq",
+      "role": "PENTESTER",
+      "companyId": null,
+      "savedQueryId": "cmv9hjbui003eph01ivs4j7mg"
+    },
+    "pentester2": {
+      "id": "cmue2bahl0022pxogx2omuva0",
+      "role": "PENTESTER",
+      "companyId": null
+    },
+    "demoOwner": {
+      "id": "cmue2b9pj0009pxog1a70dp6u",
+      "role": "CLIENT",
+      "companyId": "cmue2b9ey0005pxogfcfrjmw2"
+    },
+    "demoMember": {
+      "id": "cmue2bapv0024pxogwfkf9vqp",
+      "role": "CLIENT",
+      "companyId": "cmue2b9ey0005pxogfcfrjmw2"
+    },
+    "tenantA": {
+      "userId": "cmv9hd71o000bph01ggsu0pru",
+      "companyId": "cmv9hd79c000fph012iomwajn",
+      "subscriptionId": "cmv9hd8r8000hph01t2ajx882",
+      "applicationId": "cmv9hda2r000nph012g2hu7q9",
+      "projectId": "cmv9hdb8i000pph01zb0tb5c4",
+      "vulnerabilityId": "cmv9hdgf60019ph01d1q43fuf",
+      "savedQueryId": "cmv9hg2cw001pph01oo421xi8",
+      "riskFindingId": "cmv9hitce002lph01k1qor9ib",
+      "acceptanceId": "cmv9hixbi0038ph014geg3ol2",
+      "assessmentId": "cmv9hkdrc003rph013tx7u2gj",
+      "executiveReportId": "cmv9hlffk0042ph01r5rdoa84"
+    },
+    "tenantB": {
+      "userId": "cmv9hdc38000rph01s0ffh4ao",
+      "companyId": "cmv9hdc8j000vph01tez6ofrk",
+      "subscriptionId": "cmv9hdddh000xph010mzntt2f",
+      "applicationId": "cmv9hdejx0013ph01xv8n6x1l",
+      "projectId": "cmv9hdfne0015ph01lswcu2pf"
+    },
+    "systemPlaybookId": "cmue2bnng0001pxxcutdv6ap6"
+  },
+  "results": [
+    {
+      "id": "login-admin",
+      "method": "POST",
+      "url": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "login-pentester",
+      "method": "POST",
+      "url": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "sla-before",
+      "method": "GET",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "sla-invalid-fraction",
+      "method": "PUT",
+      "url": "/companies/cmv9hd79c000fph012iomwajn/sla-policy",
+      "actor": "admin",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_SLA_DAYS"
+      }
+    },
+    {
+      "id": "sla-policy-create",
+      "method": "PUT",
+      "url": "/companies/cmv9hd79c000fph012iomwajn/sla-policy",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "sla-policy-does-not-reapply",
+      "method": "GET",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "sla-save-keeps-existing-deadline",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Saving policy preserves existing finding deadline"
+    },
+    {
+      "id": "sla-history",
+      "method": "GET",
+      "url": "/companies/cmv9hd79c000fph012iomwajn/sla-policy/history",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "risk-admin-approve",
+      "method": "POST",
+      "url": "/risk-acceptances/cmv9hixbi0038ph014geg3ol2/approve",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "risk-detail-after-approve",
+      "method": "GET",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "risk-keeps-finding-open",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Finding OPEN, SLA ACCEPTED"
+    },
+    {
+      "id": "risk-revoke",
+      "method": "POST",
+      "url": "/risk-acceptances/cmv9hixbi0038ph014geg3ol2/revoke",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "risk-detail-after-revoke",
+      "method": "GET",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "risk-revoke-preserves-open",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Finding OPEN, SLA ON_TRACK, pause 3356"
+    },
+    {
+      "id": "maturity-catalog-admin",
+      "method": "GET",
+      "url": "/maturity/catalog",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "maturity-create",
+      "method": "POST",
+      "url": "/maturity/assessments",
+      "actor": "admin",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "maturity-invalid-score",
+      "method": "POST",
+      "url": "/maturity/assessments/cmv9hkdrc003rph013tx7u2gj/scores",
+      "actor": "admin",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_SCORE_VALUE"
+      }
+    },
+    {
+      "id": "maturity-partial-batch-error",
+      "method": "POST",
+      "url": "/maturity/assessments/cmv9hkdrc003rph013tx7u2gj/scores",
+      "actor": "admin",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_SCORE_VALUE"
+      }
+    },
+    {
+      "id": "maturity-after-rejected-batch",
+      "method": "GET",
+      "url": "/maturity/assessments/cmv9hd79c000fph012iomwajn/latest",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "maturity-rejected-batch-atomic",
+      "type": "assertion",
+      "pass": false,
+      "detail": {
+        "scoreCount": 1,
+        "overallScore": 0,
+        "level": "BASIC"
+      }
+    },
+    {
+      "id": "maturity-valid-batch",
+      "method": "POST",
+      "url": "/maturity/assessments/cmv9hkdrc003rph013tx7u2gj/scores",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "maturity-average",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Average 3, level INTERMEDIATE"
+    },
+    {
+      "id": "maturity-assigned-pentester-read",
+      "method": "GET",
+      "url": "/maturity/assessments/cmv9hd79c000fph012iomwajn/latest",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "project-report-early-denied",
+      "method": "GET",
+      "url": "/projects/cmv9hdb8i000pph01zb0tb5c4/report-data",
+      "actor": "admin",
+      "status": 422,
+      "expected": 422,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "PROJECT_NOT_READY_FOR_REPORT"
+      }
+    },
+    {
+      "id": "project-transition-progress",
+      "method": "POST",
+      "url": "/projects/cmv9hdb8i000pph01zb0tb5c4/transition",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "project-transition-review",
+      "method": "POST",
+      "url": "/projects/cmv9hdb8i000pph01zb0tb5c4/transition",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "project-report-ready",
+      "method": "GET",
+      "url": "/projects/cmv9hdb8i000pph01zb0tb5c4/report-data",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "report-consolidation",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Consolidated report contains QA finding and maturity"
+    },
+    {
+      "id": "report-executive-metadata",
+      "method": "POST",
+      "url": "/reports",
+      "actor": "admin",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "report-invalid-type",
+      "method": "POST",
+      "url": "/reports",
+      "actor": "admin",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_TYPE"
+      }
+    }
+  ]
+}

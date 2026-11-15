@@ -31,12 +31,15 @@ import { useLocation, useNavigate, useOutlet } from "react-router-dom";
 import { Sidebar } from "./sidebar";
 import { Button, Drawer, DrawerBody, DrawerHeader, DropdownMenu, Avatar } from "../ui";
 import { ThemeToggle } from "../../design/theme-toggle";
+import { NotificationBell } from "../notifications/notification-bell";
+import { AccessibilityMenu } from "../../design/accessibility-menu";
 import { TransicaoDeRota } from "../../motion/components";
 import { useAuthStore } from "../../store/auth.store";
 import { authApi } from "../../lib/api/auth.api";
 import { DashboardAtmosphere } from "../dashboard/hero/dashboard-atmosphere";
 import { AmbientHostContext } from "../dashboard/hero/ambient-host-context";
 import { QueryLoadingIndicator } from "./query-loading-indicator";
+import { LimiteDeRota } from "./route-boundary";
 import "./operations-backdrop.css";
 import "./module-surfaces.css";
 
@@ -96,7 +99,8 @@ export function AppLayout() {
       </Drawer>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-sticky flex h-16 items-center justify-between gap-4 border-b border-subtle bg-canvas px-4 lg:px-6">
+        {/* Gaps menores abaixo de sm: a 375px os seis controles passavam 4px da tela em todas as páginas (WEB-FUT-08). */}
+        <header className="sticky top-0 z-sticky flex h-16 items-center justify-between gap-2 border-b border-subtle bg-canvas px-4 sm:gap-4 lg:px-6">
           <div className="flex items-center gap-3">
             <Button
               variant="fantasma"
@@ -111,11 +115,14 @@ export function AppLayout() {
                 <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </Button>
-            <span className="font-semibold text-fg lg:hidden">Vulnera</span>
+            {/* Abaixo de sm a marca sai do topo: com o sino (ADR-053) os controles não cabiam em 375 px. */}
+            <span className="hidden font-semibold text-fg sm:inline lg:hidden">Vulnera</span>
             <QueryLoadingIndicator />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
+            <NotificationBell />
+            <AccessibilityMenu />
             <ThemeToggle compacto />
             <DropdownMenu
               rotulo="Conta"
@@ -141,7 +148,10 @@ export function AppLayout() {
           <div className="operations-content relative">
             <AmbientHostContext.Provider value={true}>
               <TransicaoDeRota chave={location.pathname}>
-                {outlet}
+                {/* Dentro da transição: cada rota tem o próprio limite, a saída
+                    continua mostrando a página anterior já carregada e só a área
+                    de conteúdo espera o chunk — sidebar e cabeçalho ficam. */}
+                <LimiteDeRota variante="conteudo">{outlet}</LimiteDeRota>
               </TransicaoDeRota>
             </AmbientHostContext.Provider>
           </div>

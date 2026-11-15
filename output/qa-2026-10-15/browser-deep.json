@@ -1,0 +1,177 @@
+{
+  "startedAt": "2026-10-15T12:00:07.471Z",
+  "checks": [
+    {
+      "name": "cancelar aprovação mantém pedido",
+      "ok": true
+    },
+    {
+      "name": "aprovar assinatura por confirmação UI",
+      "ok": true
+    },
+    {
+      "name": "assinatura aprovada sai da fila",
+      "ok": true
+    },
+    {
+      "name": "criar aplicação por UI após assinatura ativa",
+      "ok": false
+    },
+    {
+      "name": "CVSS calcula 9.8 em tempo real",
+      "ok": true
+    },
+    {
+      "name": "criar finding via UI",
+      "ok": true
+    },
+    {
+      "name": "limpar Impacto/Recomendação persiste em finding",
+      "ok": false,
+      "detail": {
+        "status": 429,
+        "impact": "Impacto QA preenchido",
+        "recommendation": "Recomendação QA preenchida",
+        "payload": {
+          "title": "QA-20261015-UI-mv9hhdmd SQL Injection no parâmetro de pesquisa com impacto no acesso aos dados confidenciais dos clientes",
+          "description": "Registro de QA para validação da apresentação, sem vulnerabilidade real.",
+          "owaspCategory": "A03",
+          "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+        }
+      }
+    },
+    {
+      "name": "upload acessível por teclado",
+      "ok": false,
+      "detail": {
+        "tag": "DIV",
+        "tabIndex": -1,
+        "role": null,
+        "inputDisplay": "none"
+      }
+    },
+    {
+      "name": "upload TXT real",
+      "ok": true
+    },
+    {
+      "name": "DAST demo concluído com aviso",
+      "ok": true
+    },
+    {
+      "name": "demo bloqueia promoção",
+      "ok": true
+    },
+    {
+      "name": "download DAST PDF",
+      "ok": true
+    },
+    {
+      "name": "logout UI e guarda de rota",
+      "ok": true
+    },
+    {
+      "name": "acesso privado encerrado após logout",
+      "ok": true
+    }
+  ],
+  "observations": [
+    {
+      "name": "dast-expandido",
+      "width": 1440,
+      "scrollWidth": 1430,
+      "violations": []
+    },
+    {
+      "name": "dast-mobile",
+      "width": 375,
+      "scrollWidth": 365,
+      "violations": []
+    }
+  ],
+  "errors": [
+    {
+      "flow": "finding",
+      "error": "page.waitForEvent: Timeout 15000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================"
+    },
+    {
+      "flow": "relatorios",
+      "error": "page.waitForEvent: Timeout 15000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================"
+    }
+  ],
+  "created": {
+    "application": {
+      "code": "RATE_LIMITED",
+      "message": "Muitas requisições. Tente novamente em alguns segundos.",
+      "retryAfterSeconds": 1
+    },
+    "finding": {
+      "sla": {
+        "state": "ON_TRACK",
+        "startedAt": "2026-10-15T12:00:16.348Z",
+        "dueAt": "2026-10-17T12:00:16.348Z",
+        "dueSoonAt": "2026-10-17T02:24:16.348Z",
+        "remainingMs": 172799633,
+        "pausedMs": 0,
+        "policyId": "cmv9hk3ih003kph0195edp6rd"
+      },
+      "vrs": {
+        "score": 91,
+        "band": "IMEDIATO",
+        "factors": {
+          "formula": "v1",
+          "cvss": 9.8,
+          "basePoints": 59,
+          "factors": [
+            {
+              "name": "criticality",
+              "value": "HIGH",
+              "points": 10
+            },
+            {
+              "name": "environment",
+              "value": "PROD",
+              "points": 7
+            },
+            {
+              "name": "internetFacing",
+              "value": true,
+              "points": 8
+            },
+            {
+              "name": "dataSensitivity",
+              "value": "CONFIDENTIAL",
+              "points": 7
+            }
+          ],
+          "raw": 91,
+          "score": 91,
+          "band": "IMEDIATO",
+          "computedAt": "2026-10-15T12:00:16.348Z"
+        },
+        "computedAt": "2026-10-15T12:00:16.348Z"
+      },
+      "id": "cmv9hljab004aph01ppagkm3y",
+      "title": "QA-20261015-UI-mv9hhdmd SQL Injection no parâmetro de pesquisa com impacto no acesso aos dados confidenciais dos clientes",
+      "description": "Registro de QA para validação da apresentação, sem vulnerabilidade real.",
+      "owaspCategory": "A03",
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "cvssScore": 9.8,
+      "severityCalculated": "CRITICAL",
+      "severityFinal": "CRITICAL",
+      "severityOverrideReason": null,
+      "impact": "Impacto QA preenchido",
+      "recommendation": "Recomendação QA preenchida",
+      "status": "OPEN",
+      "aiAssisted": false,
+      "projectId": "cmv9hdb8i000pph01zb0tb5c4",
+      "applicationId": "cmv9hda2r000nph012g2hu7q9",
+      "companyId": "cmv9hd79c000fph012iomwajn",
+      "createdBy": "cmue2b9em0003pxogpar7imm9",
+      "assignedTo": null,
+      "createdAt": "2026-10-15T12:00:16.348Z",
+      "updatedAt": "2026-10-15T12:00:16.355Z"
+    }
+  },
+  "finishedAt": "2026-10-15T12:00:58.077Z"
+}

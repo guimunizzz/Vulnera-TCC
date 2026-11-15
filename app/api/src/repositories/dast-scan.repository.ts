@@ -15,7 +15,8 @@
  *    mentindo.
  */
 
-import type { PrismaClient, DastScan, DastScanStatus } from "@prisma/client";
+import type { PrismaClient, Prisma, DastScan, DastScanStatus, DastSensorRun, DastSensorStatus, DastObservedAsset } from "@prisma/client";
+import type { ObservedAsset } from "../services/sensors/sensor.types";
 import type { CandidateFinding, RiskCounters } from "../services/dast-findings.service";
 
 export interface CreateDastScanInput {
@@ -37,6 +38,15 @@ export interface UpdateDastScanInput {
   phase?: string | null;
   simulated?: boolean;
   warningMessage?: string | null;
+}
+
+export interface SaveSensorRunInput {
+  sensorKey: string;
+  status: DastSensorStatus;
+  message: string | null;
+  startedAt: Date;
+  finishedAt: Date;
+  durationMs: number;
 }
 
 export class DastScanRepository {
@@ -112,5 +122,38 @@ export class DastScanRepository {
       await tx.dastScan.update({ where: { id: scanId }, data: counters });
       return counters;
     });
+  }
+
+  /** Upsert por (scan, sensor): reprocessar o mesmo scan substitui o registro, não duplica. */
+  async saveSensorRun(scanId: string, run: SaveSensorRunInput): Promise<DastSensorRun> {
+    return this.prisma.dastSensorRun.upsert({
+      where: { scanId_sensorKey: { scanId, sensorKey: run.sensorKey } },
+      create: { scanId, ...run },
+      update: run,
+    });
+  }
+
+  /** Ativos são topologia do scan: o mesmo (tipo, valor) visto por dois sensores fica com o primeiro. */
+  async saveAssets(scanId: string, sensorKey: string, assets: ObservedAsset[]): Promise<void> {
+    if (assets.length === 0) return;
+    await this.prisma.dastObservedAsset.createMany({
+      data: assets.map((a) => ({
+        scanId,
+        sensorKey,
+        kind: a.kind,
+        value: a.value.slice(0, 255),
+        parentValue: a.parentValue?.slice(0, 255) ?? null,
+        metadata: (a.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  async findAssets(scanId: string): Promise<DastObservedAsset[]> {
+    return this.prisma.dastObservedAsset.findMany({ where: { scanId }, orderBy: [{ kind: "asc" }, { value: "asc" }] });
+  }
+
+  async findSensorRuns(scanId: string): Promise<DastSensorRun[]> {
+    return this.prisma.dastSensorRun.findMany({ where: { scanId }, orderBy: { startedAt: "asc" } });
   }
 }

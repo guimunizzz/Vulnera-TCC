@@ -16,7 +16,7 @@
  * (docs/DAST-DOCKER-GAP.md §5).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dastApi } from "../lib/api/dast.api";
@@ -35,9 +35,12 @@ import { generateDastReportPdf } from "../lib/pdf/dast-report";
 import { DastTriageControls } from "../components/dast/dast-triage-controls";
 import { DastPromoteDialog } from "../components/dast/dast-promote-dialog";
 import { DastComparePanel } from "../components/dast/dast-compare-panel";
+import { DastSensorStrip } from "../components/dast/dast-sensor-strip";
 import {
   ACTIVE_DAST_STATUSES,
   DAST_RISK_LABELS,
+  DAST_SENSOR_LABELS,
+  severidadeCvss,
   DAST_TRIAGE_LABELS,
   DAST_TRIAGE_TONES,
   labelDaFase,
@@ -45,6 +48,10 @@ import {
   type DastRisk,
   type DastTriageStatus,
 } from "../types/dast.types";
+import { TABELA } from "../components/ui/table-estilos";
+
+// O CyberGraph só é baixado quando a aba abre; o `three` do modo 3D, só quando a pessoa escolhe o 3D.
+const CyberGraph = lazy(() => import("../features/security-graph/cyber-graph"));
 
 function formatElapsed(totalSeconds: number): string {
   const min = Math.floor(totalSeconds / 60);
@@ -104,11 +111,28 @@ function FindingRow({
   const promovido = finding.promotedVulnerability;
   return (
     <>
-      <tr className="border-t border-subtle">
+      <tr className={TABELA.linha}>
         <td className="px-4 py-3">
           <SeverityBadge severidade={finding.risk} />
         </td>
-        <td className="px-4 py-3 text-fg">{finding.title}</td>
+        <td className="px-4 py-3 text-fg">
+          {finding.title}
+          {/* Origem fora do ZAP fica explícita: o mesmo tema (ex.: CSP) pode vir das duas fontes. */}
+          {finding.sensorKey !== "zap" && (
+            <Badge tom="acento" className="ml-2 align-middle normal-case" title={DAST_SENSOR_LABELS[finding.sensorKey] ?? finding.sensorKey}>
+              sensor {finding.sensorKey}
+            </Badge>
+          )}
+          {finding.cveId && (
+            <Badge
+              tom="atencao"
+              className="ml-2 align-middle normal-case"
+              title={finding.cvssVector ?? "CVSS ainda não consultado no NVD"}
+            >
+              {finding.cvssScore != null ? `CVSS ${finding.cvssScore.toFixed(1)} · ${severidadeCvss(finding.cvssScore)}` : "CVSS pendente"}
+            </Badge>
+          )}
+        </td>
         {/* Coluna de triagem: é o que o pentester varre com os olhos pra saber
             o que ainda falta olhar, por isso vem antes da URL. */}
         <td className="px-4 py-3">
@@ -237,7 +261,7 @@ export function DastScanDetailPage() {
   // Aba ativa da área de resultado: a lista de achados ou o diff com uma
   // execução anterior. Comparação é uma pergunta diferente ("a correção
   // funcionou?") e merece o próprio espaço em vez de disputar a mesma tabela.
-  const [aba, setAba] = useState<"findings" | "comparacao">("findings");
+  const [aba, setAba] = useState<"findings" | "comparacao" | "grafo">("findings");
   const [findingParaPromover, setFindingParaPromover] = useState<DastFinding | null>(null);
 
   const scanQuery = useQuery({
@@ -260,6 +284,18 @@ export function DastScanDetailPage() {
   const findingsQuery = useQuery({
     queryKey: ["dast", "scans", id, "findings"],
     queryFn: () => dastApi.listFindings(id!),
+    enabled: !!id && scan?.status === "COMPLETED",
+  });
+
+  // Status de cada sensor (ZAP + passivos). Scans anteriores aos sensores devolvem lista vazia.
+  const sensorsQuery = useQuery({
+    queryKey: ["dast", "scans", id, "sensors"],
+    queryFn: () => dastApi.listSensors(id!),
+    enabled: !!id && scan?.status === "COMPLETED",
+  });
+  const assetsQuery = useQuery({
+    queryKey: ["dast", "scans", id, "assets"],
+    queryFn: () => dastApi.listAssets(id!),
     enabled: !!id && scan?.status === "COMPLETED",
   });
 
@@ -314,6 +350,19 @@ export function DastScanDetailPage() {
     [findingsQuery.data, findingParaPromover],
   );
 
+  // Do CyberGraph para a lista: limpa os filtros (que poderiam esconder o
+  // finding), abre a linha dele e a traz para a tela, onde ficam triagem e promoção.
+  function verNaLista(findingId: string): void {
+    setRiskFilter("");
+    setTriageFilter("");
+    setSearch("");
+    setExpandedId(findingId);
+    setAba("findings");
+    window.setTimeout(() => {
+      document.getElementById(`finding-detalhe-${findingId}`)?.scrollIntoView({ block: "center" });
+    }, 0);
+  }
+
   async function handleDownloadPdf(): Promise<void> {
     if (!id) return;
     setIsGeneratingPdf(true);
@@ -336,7 +385,7 @@ export function DastScanDetailPage() {
         <Breadcrumb itens={[{ rotulo: "DAST", para: "/dast" }, { rotulo: "Carregando..." }]} />
         <div className="mt-6 flex flex-col gap-2" aria-busy="true">
           <span className="sr-only">Carregando scan</span>
-          <Skeleton className="h-8 w-64 bg-inset" />
+          <Skeleton className="h-8 w-[16rem] bg-inset" />
           <Skeleton className="h-24 w-full bg-inset" />
         </div>
       </div>
@@ -440,9 +489,18 @@ export function DastScanDetailPage() {
         </Alert>
       )}
 
+      {/* Real concluído com ressalva (ex.: um sensor não conseguiu medir): o resultado vale, mas incompleto. */}
+      {scan.status === "COMPLETED" && !scan.simulated && scan.warningMessage && (
+        <Alert tom="atencao" className="mt-4" titulo="Análise concluída com avisos">
+          {scan.warningMessage}
+        </Alert>
+      )}
+
       {scan.status === "FAILED" && (
-        <Alert tom="perigo" className="mt-4">
-          Scan falhou: {scan.errorMessage ?? "erro desconhecido"}
+        <Alert tom="perigo" className="mt-4" titulo="A análise não pôde ser concluída">
+          {/* O código técnico (ex.: TARGET_ACCESS_FAILED) fica no banco e no log; a pessoa lê só o motivo. */}
+          {scan.errorMessage?.replace(/^[A-Z][A-Z0-9_]+:\s*/, "") ||
+            "Erro desconhecido. Confira se o endereço está acessível a partir do servidor do Vulnera e tente de novo."}
         </Alert>
       )}
 
@@ -461,6 +519,8 @@ export function DastScanDetailPage() {
             <RiskCountCard risk="INFO" value={scan.alertsInfo} />
           </div>
 
+          <DastSensorStrip sensores={sensorsQuery.data ?? []} findings={findingsQuery.data ?? []} />
+
           {/* Abas: "achados" é a lista de sempre; "comparação" responde se a
               correção funcionou. São perguntas diferentes — juntar as duas na
               mesma tela deixaria as duas piores. */}
@@ -469,6 +529,7 @@ export function DastScanDetailPage() {
               [
                 ["findings", `Achados (${findingsQuery.data?.length ?? 0})`],
                 ["comparacao", "Comparar com execução anterior"],
+                ["grafo", "CyberGraph"],
               ] as const
             ).map(([chave, rotulo]) => (
               <button
@@ -490,6 +551,18 @@ export function DastScanDetailPage() {
           </div>
 
           {aba === "comparacao" && <DastComparePanel scanId={scan.id} />}
+
+          {aba === "grafo" && findingsQuery.data && (
+            <Suspense fallback={<Skeleton className="mt-4 h-[28rem] w-full bg-inset" />}>
+              <CyberGraph
+                targetUrl={scan.targetUrl}
+                findings={findingsQuery.data}
+                sensores={sensorsQuery.data ?? []}
+                ativos={assetsQuery.data ?? []}
+                aoVerNaLista={verNaLista}
+              />
+            </Suspense>
+          )}
 
           {aba === "findings" && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -564,7 +637,7 @@ export function DastScanDetailPage() {
           {aba === "findings" && filteredFindings.length > 0 && (
             <div className="mt-4 overflow-x-auto rounded-container border border-subtle">
               <table className="w-full text-left text-sm">
-                <thead className="bg-surface text-fg-muted">
+                <thead className={TABELA.cabecalho}>
                   <tr>
                     <th className="px-4 py-3 font-medium">Risco</th>
                     <th className="px-4 py-3 font-medium">Título</th>

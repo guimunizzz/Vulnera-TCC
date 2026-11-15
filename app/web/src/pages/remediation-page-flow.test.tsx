@@ -24,7 +24,7 @@ const finding: FindingListItem = {
   projectId: "project-1", projectName: "Pentest Web", applicationId: "app-1", applicationName: "Portal",
   companyId: "company-1", companyName: "TechNova", slaState: "ON_TRACK", slaDueAt: null,
   slaRemainingMs: null, vrsScore: null, vrsBand: null, hasActiveRiskAcceptance: false,
-  assignedTo: null, assigneeName: null,
+  assignedTo: null, assigneeName: null, sourceType: "MANUAL",
 };
 
 describe("RemediationPage — mudança confirmada", () => {
@@ -36,7 +36,7 @@ describe("RemediationPage — mudança confirmada", () => {
     vi.mocked(vulnerabilitiesApi.search).mockImplementation(async () => ({
       data: [{ ...finding, status }],
       pagination: { page: 1, pageSize: 100, total: 1, totalPages: 1 },
-      facets: { severity: {}, status: {}, owasp: {}, company: {} },
+      facets: { severity: {}, status: {}, owasp: {}, company: {}, source: {} },
     }));
     vi.mocked(vulnerabilitiesApi.transition).mockImplementation(() => new Promise((resolve) => { confirmar = resolve; }));
 

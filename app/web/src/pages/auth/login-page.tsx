@@ -1,6 +1,6 @@
 /** Login centralizado, com identidade visual e animações restritas a esta rota. */
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { authApi } from "../../lib/api/auth.api";
@@ -20,6 +20,20 @@ export function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
   const mensagemDeErro = useApiError();
+
+  // Todo login bem-sucedido vai para /dashboard (abaixo), então o código dessa
+  // página é baixado no tempo ocioso enquanto a pessoa digita. Mesmo módulo do
+  // `lazy()` de App.tsx: o navegador reaproveita o download na navegação.
+  useEffect(() => {
+    const baixar = () => void import("../dashboard-page").catch(() => undefined);
+    // Nem todo navegador (nem o jsdom) implementa requestIdleCallback.
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(baixar);
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(baixar, 0);
+    return () => window.clearTimeout(id);
+  }, []);
 
   async function enviar(event: FormEvent): Promise<void> {
     event.preventDefault();

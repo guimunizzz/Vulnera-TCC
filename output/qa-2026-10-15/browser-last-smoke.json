@@ -1,0 +1,39 @@
+{
+  "checks": [
+    {
+      "name": "busca salva UI em janela isolada",
+      "ok": true,
+      "detail": {
+        "status": 201
+      }
+    },
+    {
+      "name": "pin na sidebar após salvar",
+      "ok": true
+    },
+    {
+      "name": "tema claro aplicado",
+      "ok": true
+    },
+    {
+      "name": "triagem DAST status e nota por UI",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "name": "triagem DAST persiste após reload",
+      "ok": true
+    },
+    {
+      "name": "CLIENT não deve receber link bloqueado de remediação",
+      "ok": false,
+      "detail": {
+        "actual": "/dashboard"
+      }
+    }
+  ],
+  "errors": [],
+  "finishedAt": "2026-10-15T12:10:35.959Z"
+}

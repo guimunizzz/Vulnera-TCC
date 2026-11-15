@@ -23,6 +23,10 @@ export async function cleanDatabase(): Promise<void> {
   // RiskAcceptance (CP-4) antes de Vulnerability — FK Cascade cuidaria, mas
   // explícito é mais seguro e mantém a ordem legível de cima para baixo.
   await prisma.riskAcceptance.deleteMany();
+  // CodeFinding/CodeScanImport (ADR-052) antes de Vulnerability/Project/User:
+  // uploadedById é RESTRICT, como o requestedById do DastScan.
+  await prisma.codeFinding.deleteMany();
+  await prisma.codeScanImport.deleteMany();
   await prisma.evidence.deleteMany();
   await prisma.vulnerabilityComment.deleteMany();
   await prisma.vulnerability.deleteMany();
@@ -40,6 +44,11 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.maturityControl.deleteMany();
   await prisma.maturityDomain.deleteMany();
   await prisma.notification.deleteMany();
+  // Threat Intel (ADR-053): os casamentos antes do inventário e do catálogo; o catálogo é global.
+  await prisma.threatMatch.deleteMany();
+  await prisma.techAsset.deleteMany();
+  await prisma.threatAdvisory.deleteMany();
+  await prisma.threatSyncRun.deleteMany();
   await prisma.report.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.passwordResetToken.deleteMany();
