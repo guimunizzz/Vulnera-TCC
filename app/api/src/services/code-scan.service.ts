@@ -36,6 +36,7 @@ import type { VulnerabilityRepository } from "../repositories/vulnerability.repo
 import type { AuditLogRepository } from "../repositories/audit-log.repository";
 import type { ApplicationRepository } from "../repositories/application.repository";
 import type { SlaPolicyService } from "./sla-policy.service";
+import type { TechSuggestionService } from "./threat-intel/tech-suggestion.service";
 import type { UserRole } from "../models/user.model";
 import {
   emptySeverityCounts,
@@ -116,6 +117,8 @@ export class CodeScanService {
     private readonly auditLogRepository: AuditLogRepository,
     private readonly slaPolicyService: SlaPolicyService,
     private readonly applicationRepository: ApplicationRepository,
+    /** Threat Intel (ADR-053): componentes de um SBOM viram sugestão no inventário da empresa. Opcional. */
+    private readonly techSuggestions?: Pick<TechSuggestionService, "sugerirDoSbom">,
   ) {}
 
   // ==========================================================================
@@ -172,6 +175,15 @@ export class CodeScanService {
       },
       rows,
     );
+
+    // D19.5: o SBOM alimenta o inventário como SUGESTÃO; falhar aqui não desfaz a importação.
+    if (report.components.length > 0 && this.techSuggestions) {
+      try {
+        await this.techSuggestions.sugerirDoSbom(project.companyId, created.id, report.components);
+      } catch (err) {
+        console.warn(`[SAST/SCA] falha ao sugerir tecnologias da importação ${created.id}`, err);
+      }
+    }
 
     await this.auditLogRepository.create({
       actorId: actor.userId,

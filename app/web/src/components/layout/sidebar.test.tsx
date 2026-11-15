@@ -46,8 +46,18 @@ describe("Sidebar — SAST/SCA", () => {
     expect(screen.queryByRole("link", { name: /SAST\/SCA/ })).not.toBeInTheDocument();
   });
 
-  it("só o item novo tem o selo", () => {
+  it("só os itens novos têm o selo (SAST/SCA e Threat Intel, ADR-053)", () => {
     renderComo("ADMIN");
-    expect(screen.getAllByText("new")).toHaveLength(1);
+    expect(screen.getAllByText("new")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: /Threat Intel/ })).toHaveTextContent("new");
+    expect(screen.getByRole("link", { name: /SAST\/SCA/ })).toHaveTextContent("new");
+  });
+
+  it("Threat Intel aparece para os três papéis", () => {
+    for (const papel of ["ADMIN", "PENTESTER", "CLIENT"] as const) {
+      const { unmount } = renderComo(papel);
+      expect(screen.getByRole("link", { name: /Threat Intel/ })).toHaveAttribute("href", "/threat-intel");
+      unmount();
+    }
   });
 });

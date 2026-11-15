@@ -88,6 +88,37 @@
   pointer-events: none;
 }
 
+/* Threat Intel (ADR-053): avisos chegando — cada linha é um ponto de
+   severidade e uma barra de título, como no feed; a segunda está na cor de
+   perigo (a CVE explorada, KEV). O DAST tem radar, o SAST tem código. */
+[data-ops-hero="threat"]::after {
+  content: "";
+  position: absolute;
+  right: 2rem;
+  top: 1.75rem;
+  width: 13rem;
+  height: 9rem;
+  --linha: 1.5rem;
+  background:
+    radial-gradient(circle at 0.3rem 50%, oklch(var(--color-severity-high-ink) / 0.55) 0.22rem, transparent 0.26rem) 0 0 / 100% var(--linha) no-repeat,
+    linear-gradient(90deg, transparent 0 1rem, oklch(var(--color-accent-ink) / 0.2) 1rem 72%, transparent 72%) 0 0.6rem / 100% 0.3rem no-repeat,
+    radial-gradient(circle at 0.3rem 50%, oklch(var(--color-danger-ink) / 0.8) 0.22rem, transparent 0.26rem) 0 var(--linha) / 100% var(--linha) no-repeat,
+    linear-gradient(90deg, transparent 0 1rem, oklch(var(--color-danger-ink) / 0.38) 1rem 88%, transparent 88%) 0 calc(var(--linha) + 0.6rem) / 100% 0.3rem no-repeat,
+    radial-gradient(circle at 0.3rem 50%, oklch(var(--color-severity-medium-ink) / 0.5) 0.22rem, transparent 0.26rem) 0 calc(var(--linha) * 2) / 100% var(--linha) no-repeat,
+    linear-gradient(90deg, transparent 0 1rem, oklch(var(--color-accent-ink) / 0.16) 1rem 58%, transparent 58%) 0 calc(var(--linha) * 2 + 0.6rem) / 100% 0.3rem no-repeat,
+    radial-gradient(circle at 0.3rem 50%, oklch(var(--color-severity-high-ink) / 0.4) 0.22rem, transparent 0.26rem) 0 calc(var(--linha) * 3) / 100% var(--linha) no-repeat,
+    linear-gradient(90deg, transparent 0 1rem, oklch(var(--color-accent-ink) / 0.13) 1rem 80%, transparent 80%) 0 calc(var(--linha) * 3 + 0.6rem) / 100% 0.3rem no-repeat,
+    radial-gradient(circle at 0.3rem 50%, oklch(var(--color-severity-low-ink) / 0.4) 0.22rem, transparent 0.26rem) 0 calc(var(--linha) * 4) / 100% var(--linha) no-repeat,
+    linear-gradient(90deg, transparent 0 1rem, oklch(var(--color-accent-ink) / 0.1) 1rem 64%, transparent 64%) 0 calc(var(--linha) * 4 + 0.6rem) / 100% 0.3rem no-repeat;
+  mask-image: linear-gradient(to bottom, black 45%, transparent);
+  pointer-events: none;
+}
+
+/* Abaixo de lg o texto do cabeçalho ocupa a largura toda: o motivo sai. */
+@media (max-width: 1023px) {
+  [data-ops-hero="threat"]::after { display: none; }
+}
+
 [data-ops-hero="playbook"] {
   background:
     repeating-linear-gradient(0deg, transparent 0 31px, oklch(var(--color-border-subtle) / 0.3) 32px),

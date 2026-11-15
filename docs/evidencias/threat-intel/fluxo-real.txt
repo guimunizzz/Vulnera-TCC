@@ -1,0 +1,35 @@
+SBOM do Vulnera importado no Pentest Web — Portal E-commerce: 391 componentes
+sino: Notificações: 1 não lida
+📸 01-menu-threat-intel-new-e-sino-com-contagem
+📸 02-sino-aberto-notificacao-da-simulacao
+📸 03-notificacao-leva-a-cve-aberta
+📸 04-afeta-voce-cves-reais-do-nodegoat
+📸 05-detalhe-cve-real-epss-versao-corrigida
+📸 06-promover-cve-para-vulnerabilidade
+📸 07-achados-com-origem-threat-intel
+📸 08-inventario-sugestoes-do-sbom-e-confirmados
+busca CPE: resultados do NVD
+📸 09-adicionar-produto-busca-no-dicionario-cpe
+📸 10-feed-cves-publicadas-no-nvd
+📸 11-fontes-execucoes-reais-com-nvd-503
+CLIENT MEMBER: botão de triagem? não; promover? não
+📸 12-cliente-membro-somente-leitura
+375px: scrollWidth = 365 (refeita depois de tirar a marca do topo abaixo de sm; a 1ª medição deu 401)
+📸 13-threat-intel-375px
+erros de console: 0
+
+--- recaptura depois do polimento visual (2026-11-15) ---
+📸 01-menu-threat-intel-new-e-sino-com-contagem
+📸 02-sino-aberto-notificacao-da-simulacao
+📸 03-notificacao-leva-a-cve-aberta
+📸 04-afeta-voce-cves-reais-do-nodegoat
+📸 05-detalhe-cve-real-epss-versao-corrigida
+📸 08-inventario-sugestoes-do-sbom-e-confirmados
+📸 10-feed-cves-publicadas-no-nvd
+📸 11-fontes-execucoes-reais-com-nvd-503
+CLIENT MEMBER: triagem? não
+📸 12-cliente-membro-somente-leitura
+375px: scrollWidth = 365
+📸 13-threat-intel-375px
+📸 14-tema-claro-dona-da-empresa
+erros de console: 0

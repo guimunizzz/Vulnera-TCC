@@ -53,6 +53,7 @@ import {
 import type { DastWatchdog, WatchdogRunContext, WatchdogSnapshot } from "./dast-watchdog.service";
 import { extractFindingsFromReport, type RiskCounters } from "./dast-findings.service";
 import type { Sensor, SensorResult } from "./sensors/sensor.types";
+import type { TechSuggestionService } from "./threat-intel/tech-suggestion.service";
 import type { DastObservedAsset, DastSensorRun } from "@prisma/client";
 import type { UserRole } from "../models/user.model";
 
@@ -105,6 +106,8 @@ export class DastScanService {
     private readonly watchdog: DastWatchdog,
     /** Sensores passivos que rodam depois do ZAP, no mesmo job (spec "Sensores e Security Graph"). */
     private readonly sensors: Sensor[],
+    /** Threat Intel (ADR-053): tecnologias vistas pelo fingerprint viram sugestão no inventário. Opcional. */
+    private readonly techSuggestions?: Pick<TechSuggestionService, "sugerirDoScan">,
   ) {}
 
   async create(actor: Actor, dto: CreateDastScanDTO): Promise<DastScanEntity> {
@@ -346,6 +349,8 @@ export class DastScanService {
       findings: [],
     });
 
+    const tecnologias: { nome: string; versao: string | null }[] = [];
+    const cpes: string[] = [];
     for (const sensor of this.sensors) {
       const inicio = new Date();
       let resultado: SensorResult;
@@ -354,6 +359,11 @@ export class DastScanService {
         resultado = await sensor.run({ targetUrl: scan.targetUrl, simulated, signal, pulso });
         if (resultado.findings.length > 0) await this.repository.persistFindingsAndUpdateCounters(scan.id, resultado.findings);
         if (resultado.assets?.length) await this.repository.saveAssets(scan.id, sensor.key, resultado.assets);
+        for (const a of resultado.assets ?? []) {
+          if (a.kind !== "TECHNOLOGY") continue;
+          if (typeof a.metadata?.cpe === "string") cpes.push(a.metadata.cpe);
+          else if (typeof a.metadata?.nome === "string") tecnologias.push({ nome: a.metadata.nome, versao: typeof a.metadata.versao === "string" ? a.metadata.versao : null });
+        }
       } catch (err) {
         resultado = { status: "ERROR", message: `Falha no sensor ${sensor.key}: ${(err as Error).message}`, findings: [] };
       }
@@ -361,6 +371,14 @@ export class DastScanService {
       if (resultado.status === "UNAVAILABLE" || resultado.status === "ERROR") {
         avisos.push(`Sensor ${sensor.key}: ${resultado.message ?? resultado.status}`);
         this.watchdog.raise("warn", scan.id, `Sensor ${sensor.key} ${resultado.status}: ${resultado.message ?? ""}`);
+      }
+    }
+    // Threat Intel (D19.5): só de scan real — tecnologia de resultado simulado não existe no alvo.
+    if (!simulated && this.techSuggestions && (tecnologias.length > 0 || cpes.length > 0)) {
+      try {
+        await this.techSuggestions.sugerirDoScan(scan.id, scan.targetUrl, tecnologias, cpes);
+      } catch (err) {
+        console.warn(`[DAST] falha ao sugerir tecnologias do scan ${scan.id} para o inventário`, err);
       }
     }
     return avisos;

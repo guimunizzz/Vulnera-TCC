@@ -43,14 +43,14 @@ const contagens = () =>
 describe("PainelExposicao — origem", () => {
   it("aplicação: abertas por origem (zeros inclusive) e selo na principal", () => {
     renderPainel(idDaAplicacao("a1"));
-    // ordem DAST, SAST, SCA, Manual
-    expect(contagens()).toEqual(["1", "2", "0", "0"]);
+    // ordem DAST, SAST, SCA, Threat Intel, Manual
+    expect(contagens()).toEqual(["1", "2", "0", "0", "0"]);
     const item = screen.getByRole("link", { name: "SQLi no login" }).closest("li")!;
     expect(within(item).getByLabelText("Origem: SAST")).toBeInTheDocument();
   });
 
   it("empresa: soma as origens de todas as aplicações", () => {
     renderPainel(null);
-    expect(contagens()).toEqual(["1", "2", "3", "0"]);
+    expect(contagens()).toEqual(["1", "2", "3", "0", "0"]);
   });
 });

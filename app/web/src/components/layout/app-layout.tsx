@@ -30,6 +30,7 @@ import { useLocation, useNavigate, useOutlet } from "react-router-dom";
 import { Sidebar } from "./sidebar";
 import { Button, Drawer, DrawerBody, DrawerHeader, DropdownMenu, Avatar } from "../ui";
 import { ThemeToggle } from "../../design/theme-toggle";
+import { NotificationBell } from "../notifications/notification-bell";
 import { AccessibilityMenu } from "../../design/accessibility-menu";
 import { TransicaoDeRota } from "../../motion/components";
 import { useAuthStore } from "../../store/auth.store";
@@ -113,11 +114,13 @@ export function AppLayout() {
                 <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </Button>
-            <span className="font-semibold text-fg lg:hidden">Vulnera</span>
+            {/* Abaixo de sm a marca sai do topo: com o sino (ADR-053) os controles não cabiam em 375 px. */}
+            <span className="hidden font-semibold text-fg sm:inline lg:hidden">Vulnera</span>
             <QueryLoadingIndicator />
           </div>
 
           <div className="flex items-center gap-1 sm:gap-3">
+            <NotificationBell />
             <AccessibilityMenu />
             <ThemeToggle compacto />
             <DropdownMenu

@@ -16,6 +16,7 @@ import { riskAcceptanceRoutes } from "./risk-acceptance.routes";
 import { remediationPlaybookRoutes } from "./remediation-playbook.routes";
 import { savedQueryRoutes } from "./saved-query.routes";
 import { codeScanRoutes } from "./code-scan.routes";
+import { threatIntelRoutes } from "./threat-intel.routes";
 
 const router = Router();
 
@@ -44,5 +45,7 @@ router.use("/saved-queries", savedQueryRoutes);
 
 // ADR-052 — importação de relatórios SAST (SARIF) e SCA (CycloneDX) por projeto.
 router.use("/code-imports", codeScanRoutes);
+// Threat Intel (ADR-053) — inventário, CVEs que afetam a empresa, feed e sincronização.
+router.use("/threat-intel", threatIntelRoutes);
 
 export { router as apiRoutes };

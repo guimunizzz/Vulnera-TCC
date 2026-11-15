@@ -1011,3 +1011,48 @@ mesmo painel discordarem.
 vulnerabilidade `FIXED` cujo achado continua no relatório importado **depois** do
 último `→ FIXED`, só na importação mais recente da ferramenta; o botão usa o
 `FIXED → IN_PROGRESS` do ADR-033 com confirmação. Nada reabre sozinho.
+
+---
+
+## D19 — Threat Intel: decisões de produto (2026-11-14)
+
+Respostas do Rafael às 9 perguntas feitas antes da implementação (branch
+`feat/threat-intel`). Arquitetura em
+[ADR-053](Vulnera/07-Decisoes/ADR-053%20-%20Threat%20Intel%20com%20inventario%20de%20tecnologias%20e%20sincronizacao%20agendada.md);
+uso e validação em [`THREAT_INTEL.md`](THREAT_INTEL.md).
+
+**D19.1 — Fontes: NVD + CISA KEV + FIRST EPSS + OSV.** *Alternativa:* GitHub
+Advisory, que pede token e cujos avisos o OSV já agrega.
+
+**D19.2 — Sincronização agendada dentro da API** (`setInterval`, como o
+watchdog do DAST) + "Sincronizar agora" para o ADMIN. Supersede parcialmente o
+ADR-030. *Alternativas:* só sob demanda (não cumpre "avisar quando sai") ou um
+worker separado (mais um serviço no compose).
+
+**D19.3 — Inventário por EMPRESA.** *Alternativa:* por aplicação (casa com o
+contexto de risco, mas repete a mesma biblioteca em cada aplicação). Registrado
+porque o schema dizia "sem tags, primeiro passo rumo a CMDB" — este é esse
+passo, autorizado.
+
+**D19.4 — Item estruturado:** pacote (ecossistema + nome + versão, OSV) ou
+produto (fabricante + produto do dicionário CPE + versão, NVD). Sem versão,
+"versão não confirmada". *Alternativa:* texto livre (casamento impreciso).
+
+**D19.5 — Alimentação automática como SUGESTÃO**, a partir do SBOM importado e
+do fingerprint do DAST. Ninguém entra na vigilância sem confirmação.
+
+**D19.6 — Notificação in-app (sino), para todos os papéis da empresa, quando
+CVSS ≥ 7 ou KEV.** *Alternativas:* e-mail (MailHog no compose) e push mobile,
+que ficaram fora desta versão.
+
+**D19.7 — O que já existia ao mapear aparece, mas não notifica.** Só o que é
+publicado depois (ou entra no KEV depois) gera aviso.
+
+**D19.8 — Triagem + promoção para Vulnerability** (`THREAT_INTEL`, A06, CVSS
+revisado). *Alternativa:* só visualizar.
+
+**D19.9 — Papéis:** ADMIN e CLIENT OWNER editam o inventário; todos os papéis
+da empresa veem; o PENTESTER vê as empresas dos projetos de que é membro.
+Decorrência registrada no ADR-053 §7: CLIENT OWNER e PENTESTER membro triam;
+promover é de ADMIN e PENTESTER membro do projeto de destino (a regra de
+escrita de Vulnerability); "Sincronizar agora" é só do ADMIN.

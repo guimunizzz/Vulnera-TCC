@@ -24,11 +24,11 @@ function renderCard(props: Partial<Parameters<typeof OrigemCard>[0]> = {}) {
 }
 
 describe("OrigemCard", () => {
-  it("mostra as quatro origens com o número escrito, inclusive zero", () => {
+  it("mostra as cinco origens com o número escrito, inclusive zero", () => {
     renderCard();
     const lista = screen.getByRole("list", { name: "Findings em aberto por origem" });
     const linhas = within(lista).getAllByRole("listitem");
-    expect(linhas.map((l) => l.textContent)).toEqual(["DAST1", "SAST3", "SCA0", "Manual2"]);
+    expect(linhas.map((l) => l.textContent)).toEqual(["DAST1", "SAST3", "SCA0", "Threat Intel0", "Manual2"]);
   });
 
   it("ADMIN: cada origem com abertos leva a Achados filtrados; a fila leva ao SAST/SCA", () => {
