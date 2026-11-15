@@ -66,7 +66,13 @@ do resumo da API, não da tela. Aba, empresa e CVE em foco ficam na URL
 (`?empresa=&aba=afeta&match=`), que é para onde o **sino de notificações**
 (`components/notifications/notification-bell.tsx`, no topo do `AppLayout`) leva.
 O sino consulta só a contagem a cada 60 s e busca a lista ao abrir; navega
-apenas para rota interna. Para caber o sino a 375 px, a marca "Vulnera" do topo
+apenas para rota interna. O cabeçalho da página é um **boletim**
+(`components/threat-intel/boletim.tsx`): o título é o estado real ("N CVEs
+críticas ou altas afetam M tecnologias da empresa"), a exploração ativa (KEV)
+abre o texto na cor de perigo, e abaixo vêm a distribuição por severidade (a
+mesma `SeverityStrip` do SAST/SCA) e a saúde de cada fonte na última
+sincronização completa. O motivo do módulo é `data-ops-hero="threat"`: uma
+pilha de avisos chegando, com a linha KEV na cor de perigo. Para caber o sino a 375 px, a marca "Vulnera" do topo
 sai abaixo de `sm` (o menu hambúrguer continua).
 
 `.alvo-estendido` (área de toque de 44 px em controles densos) só aplica

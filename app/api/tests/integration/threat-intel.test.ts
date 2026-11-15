@@ -297,6 +297,9 @@ describe("Threat Intel — sincronização e notificações", () => {
     expect(m).toMatchObject({ preexisting: true, versionConfirmed: true, fixedVersion: "4.17.21", triageStatus: "NEW" });
     expect(m.advisory).toMatchObject({ id: "CVE-2021-23337", cvssScore: 9.1, epssScore: 0.42 });
     expect(await prisma.notification.count()).toBe(0);
+    // O resumo do cabeçalho: abertas por severidade e tecnologias afetadas.
+    const resumo = await request(app).get("/api/threat-intel/overview").set(auth(c.t.ownerA));
+    expect(resumo.body.casamentos).toMatchObject({ abertosPorSeveridade: { CRITICAL: 1 }, tecnologiasAfetadas: 1, criticosAbertos: 1, novosSemana: 0 });
     const run = await prisma.threatSyncRun.findFirstOrThrow({ where: { trigger: "ASSET" } });
     expect(run).toMatchObject({ status: "OK", newMatches: 1, notifications: 0 });
   });

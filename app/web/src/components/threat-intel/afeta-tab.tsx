@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Flame } from "lucide-react";
+import { CircleHelp, ExternalLink, Flame, History } from "lucide-react";
 import { threatIntelApi } from "../../lib/api/threat-intel.api";
 import { useApiError } from "../../hooks/use-api-error";
 import { Badge, SeverityBadge } from "../ui/badge";
@@ -101,8 +101,8 @@ export function AfetaTab({ companyId, permissoes, matchInicial }: { companyId: s
                 <th scope="col" className={TABELA.th}>CVE</th>
                 <th scope="col" className={TABELA.th}>Severidade</th>
                 <th scope="col" className={TABELA.th}>Tecnologia</th>
-                <th scope="col" className={cn(TABELA.th, "hidden md:table-cell")}>Exploração</th>
-                <th scope="col" className={cn(TABELA.th, "hidden md:table-cell")}>Corrigida em</th>
+                <th scope="col" className={cn(TABELA.th, "hidden md:table-cell")} title="Probabilidade de exploração em 30 dias (FIRST EPSS)">EPSS</th>
+                <th scope="col" className={cn(TABELA.th, "hidden md:table-cell")}>Correção</th>
                 <th scope="col" className={TABELA.th}>Triagem</th>
                 <th scope="col" className={TABELA.th}>
                   <span className="sr-only">Ações</span>
@@ -153,7 +153,8 @@ function LinhaCasamento({
   return (
     <>
       <tr id={`cve-${m.id}`} className={cn(TABELA.linha, aberta && "bg-inset")}>
-        <td className={TABELA.celula}>
+        {/* Explorada ativamente: a borda de perigo marca a linha inteira, antes de qualquer leitura. */}
+        <td className={TABELA.celula} style={a.kev ? { boxShadow: "inset 3px 0 0 0 oklch(var(--color-danger-ink))" } : undefined}>
           <span className="flex flex-col gap-1">
             <span className="flex flex-wrap items-center gap-2 font-mono text-sm font-semibold text-fg">
               {a.id}
@@ -173,18 +174,24 @@ function LinhaCasamento({
         <td className={TABELA.celula}>
           <span className="flex flex-col gap-1">
             <span className="text-sm text-fg">{m.asset.displayName}</span>
-            <span className="flex flex-wrap gap-1">
-              {!m.versionConfirmed && <Badge tom="atencao">versão não confirmada</Badge>}
-              {m.preexisting && <Badge title="Publicada antes de a tecnologia entrar no inventário: não gerou notificação.">já existia ao mapear</Badge>}
-            </span>
+            {!m.versionConfirmed && (
+              <span className="inline-flex items-center gap-1 text-xs text-warning-ink">
+                <CircleHelp size={12} aria-hidden="true" /> versão não confirmada
+              </span>
+            )}
+            {m.preexisting && (
+              <span className="inline-flex items-center gap-1 text-xs text-fg-muted" title="Publicada antes de a tecnologia entrar no inventário: não gerou notificação.">
+                <History size={12} aria-hidden="true" /> já existia ao mapear
+              </span>
+            )}
           </span>
         </td>
         <td className={cn(TABELA.celula, "hidden md:table-cell")}>
-          <span className="text-sm text-fg" title="EPSS: probabilidade de exploração nos próximos 30 dias">
-            EPSS {pct(a.epssScore)}
-          </span>
+          <MedidorEpss score={a.epssScore} percentil={a.epssPercentile} />
         </td>
-        <td className={cn(TABELA.celula, "hidden font-mono text-xs md:table-cell")}>{m.fixedVersion ?? "—"}</td>
+        <td className={cn(TABELA.celula, "hidden whitespace-nowrap font-mono text-xs md:table-cell", m.fixedVersion ? "text-success-ink" : "text-fg-muted")}>
+          {m.fixedVersion ?? "sem correção"}
+        </td>
         <td className={TABELA.celula}>
           <Badge tom={DAST_TRIAGE_TONES[m.triageStatus]}>{DAST_TRIAGE_LABELS[m.triageStatus]}</Badge>
         </td>
@@ -268,5 +275,25 @@ function Dado({ rotulo, valor }: { rotulo: string; valor: string }) {
       <dt className="text-xs font-medium uppercase text-fg-muted">{rotulo}</dt>
       <dd className="mt-1 break-words text-sm text-fg">{valor}</dd>
     </div>
+  );
+}
+
+/**
+ * EPSS como medidor: a barra mostra a probabilidade de exploração em 30 dias e
+ * o número fica escrito ao lado (a cor nunca carrega a informação sozinha).
+ * A barra usa o percentil, que separa melhor as CVEs de probabilidade baixa.
+ */
+function MedidorEpss({ score, percentil }: { score: number | null; percentil: number | null }) {
+  if (score === null) return <span className="text-xs text-fg-muted">sem EPSS</span>;
+  const p = percentil ?? 0;
+  return (
+    <span className="flex items-center gap-2" title={`EPSS ${pct(score)} de probabilidade de exploração em 30 dias · percentil ${pct(percentil)}`}>
+      <span className="h-2 w-16 overflow-hidden rounded-full bg-inset" aria-hidden="true">
+        <span className={cn("block h-full rounded-full", p >= 0.95 ? "bg-danger" : p >= 0.8 ? "bg-severity-high" : "bg-accent")} style={{ width: `${Math.max(6, p * 100)}%` }} />
+      </span>
+      <span className="font-mono text-xs text-fg" data-numeric>
+        {pct(score)}
+      </span>
+    </span>
   );
 }

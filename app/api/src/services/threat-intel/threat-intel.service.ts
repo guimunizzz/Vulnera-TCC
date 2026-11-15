@@ -139,17 +139,18 @@ export class ThreatIntelService {
 
   async resumo(actor: Actor, companyId: string | undefined) {
     const e = await this.escopo(actor, companyId);
-    const [inventario, casamentos, ultimas] = await Promise.all([
+    const [inventario, casamentos, ultima] = await Promise.all([
       this.assets.contarPorStatus(e.companyId),
       this.repository.resumoDeCasamentos(e.companyId),
-      this.repository.ultimasExecucoes(1),
+      // Backfill de uma tecnologia só consulta OSV/NVD daquela tecnologia: a saúde das fontes vem da última completa.
+      this.repository.ultimaExecucaoCompleta(),
     ]);
     return {
       companyId: e.companyId,
       permissoes: e.permissoes,
       inventario: { confirmados: inventario.CONFIRMED ?? 0, sugeridos: inventario.SUGGESTED ?? 0, descartados: inventario.DISMISSED ?? 0 },
       casamentos,
-      ultimaExecucao: ultimas[0] ? toExecucaoDTO(ultimas[0]) : null,
+      ultimaExecucao: ultima ? toExecucaoDTO(ultima) : null,
       sincronizando: this.sync.emAndamento(),
     };
   }

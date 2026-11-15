@@ -43,7 +43,15 @@ export interface ResumoTI {
   companyId: string;
   permissoes: PermissoesThreatIntel;
   inventario: { confirmados: number; sugeridos: number; descartados: number };
-  casamentos: { porTriagem: Partial<Record<DastTriageStatus, number>>; kevAbertos: number; criticosAbertos: number; novosSemana: number };
+  casamentos: {
+    porTriagem: Partial<Record<DastTriageStatus, number>>;
+    kevAbertos: number;
+    criticosAbertos: number;
+    novosSemana: number;
+    /** CVEs em aberto por severidade (chave "NONE" para sem nota). */
+    abertosPorSeveridade: Record<string, number>;
+    tecnologiasAfetadas: number;
+  };
   ultimaExecucao: ExecucaoSync | null;
   sincronizando: boolean;
 }

@@ -32,12 +32,17 @@ apagada de `ThreatSyncRun`, para a aba Fontes mostrar só execuções reais. Ger
 
 ## Capturas
 
+01–05, 08 e 10–14 foram refeitas depois do polimento visual (boletim no
+cabeçalho, EPSS como medidor, menu sem quebra). Para refazer o sino, a
+notificação da simulação do ADMIN foi marcada de novo como não lida no banco.
+06, 07 e 09 não mudaram de layout e são da primeira rodada.
+
 | # | Arquivo | O que prova |
 |---|---|---|
 | 01 | `01-menu-threat-intel-new-e-sino-com-contagem` | Item **Threat Intel** com selo *new* e o sino com a contagem |
 | 02 | `02-sino-aberto-notificacao-da-simulacao` | O painel do sino com a notificação (simulação rotulada) |
 | 03 | `03-notificacao-leva-a-cve-aberta` | Clicar leva à aba "Afeta você" com a CVE já aberta |
-| 04 | `04-afeta-voce-cves-reais-do-nodegoat` | Resumo (críticas/altas, KEV, novas, inventário) e as CVEs reais, com "já existia ao mapear". O "Novas em 7 dias = 1" é o aviso da simulação |
+| 04 | `04-afeta-voce-cves-reais-do-nodegoat` | O cabeçalho como boletim: "62 CVEs críticas ou altas afetam 42 tecnologias da TechNova", a distribuição por severidade, a saúde das fontes (NVD em vermelho: a última execução completa pegou o 503) e as CVEs reais. O "1 foi publicada nos últimos 7 dias" é o aviso da simulação |
 | 05 | `05-detalhe-cve-real-epss-versao-corrigida` | CVE-2021-23337: CVSS, EPSS 20% (percentil 98), versão corrigida 4.17.21, CWE, aliases, referências e triagem |
 | 06 | `06-promover-cve-para-vulnerabilidade` | Rascunho: projeto, título, vetor do aviso com score calculado, A06 |
 | 07 | `07-achados-com-origem-threat-intel` | A vulnerabilidade promovida em Achados, origem **Threat Intel** (visão unificada D18) |
@@ -47,6 +52,7 @@ apagada de `ThreatSyncRun`, para a aba Fontes mostrar só execuções reais. Ger
 | 11 | `11-fontes-execucoes-reais-com-nvd-503` | Execuções reais por fonte, inclusive a PARTIAL com o NVD em 503 |
 | 12 | `12-cliente-membro-somente-leitura` | CLIENT MEMBER vê tudo e não tria, não promove, não edita |
 | 13 | `13-threat-intel-375px` | 375 px sem rolagem horizontal (a 1ª medição deu 401 px por causa do sino no topo; corrigido tirando a marca do topo abaixo de `sm`) |
+| 14 | `14-tema-claro-dona-da-empresa` | Tema claro, como a dona da empresa (CLIENT OWNER) |
 
 ## Testes
 

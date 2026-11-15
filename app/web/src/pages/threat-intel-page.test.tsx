@@ -39,7 +39,7 @@ function resumo(permissoes: PermissoesThreatIntel = TODAS): ResumoTI {
     companyId: "c1",
     permissoes,
     inventario: { confirmados: 2, sugeridos: 1, descartados: 0 },
-    casamentos: { porTriagem: { NEW: 2 }, kevAbertos: 1, criticosAbertos: 2, novosSemana: 1 },
+    casamentos: { porTriagem: { NEW: 2 }, kevAbertos: 1, criticosAbertos: 2, novosSemana: 1, abertosPorSeveridade: { CRITICAL: 1, HIGH: 1 }, tecnologiasAfetadas: 1 },
     ultimaExecucao: null,
     sincronizando: false,
   };
@@ -128,9 +128,11 @@ beforeEach(() => {
 });
 
 describe("Threat Intel", () => {
-  it("mostra o resumo e as CVEs com KEV, pré-existente e versão não confirmada", async () => {
+  it("o cabeçalho diz o estado com os números reais, KEV primeiro; a lista mostra KEV, pré-existente e versão não confirmada", async () => {
     renderPage();
-    expect(await screen.findByRole("heading", { name: "CVEs que afetam o que você usa" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "2 CVEs críticas ou altas afetam 1 tecnologia da TechNova" })).toBeInTheDocument();
+    expect(screen.getByText(/1 está sendo explorada ativamente/)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Distribuição por severidade/ })).toBeInTheDocument();
     const kev = (await screen.findByText("CVE-2026-0001")).closest("tr")!;
     expect(within(kev).getByText("KEV")).toBeInTheDocument();
     expect(within(kev).getByText("versão não confirmada")).toBeInTheDocument();

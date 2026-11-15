@@ -194,18 +194,43 @@ export class ThreatIntelRepository {
     };
   }
 
-  /** Contagens do resumo: por triagem, críticas/altas em aberto e KEV, da empresa. */
-  async resumoDeCasamentos(companyId: string): Promise<{ porTriagem: Record<string, number>; kevAbertos: number; criticosAbertos: number; novosSemana: number }> {
+  /**
+   * Contagens do resumo da empresa: por triagem, críticas/altas em aberto, KEV, novas na semana,
+   * abertas por severidade e quantas tecnologias têm alguma CVE em aberto.
+   */
+  async resumoDeCasamentos(companyId: string): Promise<{
+    porTriagem: Record<string, number>;
+    kevAbertos: number;
+    criticosAbertos: number;
+    novosSemana: number;
+    abertosPorSeveridade: Record<string, number>;
+    tecnologiasAfetadas: number;
+  }> {
     const base = { companyId, asset: { status: "CONFIRMED" } };
     const abertos = { ...base, triageStatus: { in: ["NEW", "CONFIRMED"] as DastTriageStatus[] } };
     const semana = new Date(Date.now() - 7 * 24 * 3600_000);
-    const [linhas, kevAbertos, criticosAbertos, novosSemana] = await Promise.all([
+    const [linhas, kevAbertos, criticosAbertos, novosSemana, abertas] = await Promise.all([
       this.prisma.threatMatch.groupBy({ by: ["triageStatus"], where: base, _count: { _all: true } }),
       this.prisma.threatMatch.count({ where: { ...abertos, advisory: { kev: true } } }),
       this.prisma.threatMatch.count({ where: { ...abertos, advisory: { severity: { in: ["CRITICAL", "HIGH"] } } } }),
       this.prisma.threatMatch.count({ where: { ...base, preexisting: false, createdAt: { gte: semana } } }),
+      // groupBy do Prisma não agrupa por campo de relação (advisory.severity): lê só as duas colunas.
+      // shortcut: agrega em memória; trocar por SQL agrupado se a empresa passar de dezenas de milhares de CVEs abertas.
+      this.prisma.threatMatch.findMany({ where: abertos, select: { assetId: true, advisory: { select: { severity: true } } } }),
     ]);
-    return { porTriagem: Object.fromEntries(linhas.map((l) => [l.triageStatus, l._count._all])), kevAbertos, criticosAbertos, novosSemana };
+    const abertosPorSeveridade: Record<string, number> = {};
+    for (const a of abertas) {
+      const s = a.advisory.severity ?? "NONE";
+      abertosPorSeveridade[s] = (abertosPorSeveridade[s] ?? 0) + 1;
+    }
+    return {
+      porTriagem: Object.fromEntries(linhas.map((l) => [l.triageStatus, l._count._all])),
+      kevAbertos,
+      criticosAbertos,
+      novosSemana,
+      abertosPorSeveridade,
+      tecnologiasAfetadas: new Set(abertas.map((a) => a.assetId)).size,
+    };
   }
 
   async buscarCasamento(id: string): Promise<CasamentoCompleto | null> {
@@ -289,6 +314,14 @@ export class ThreatIntelRepository {
       data: { status: "FAILED", finishedAt: new Date(), errorMessage: "interrompida (o servidor reiniciou no meio)" },
     });
     return r.count;
+  }
+
+  /** A última execução completa (agendada ou manual) já encerrada — a "saúde das fontes" do cabeçalho. */
+  async ultimaExecucaoCompleta(): Promise<ThreatSyncRun | null> {
+    return this.prisma.threatSyncRun.findFirst({
+      where: { trigger: { in: ["SCHEDULED", "MANUAL"] }, status: { not: "RUNNING" } },
+      orderBy: { startedAt: "desc" },
+    });
   }
 
   async ultimasExecucoes(limite: number): Promise<ThreatSyncRun[]> {

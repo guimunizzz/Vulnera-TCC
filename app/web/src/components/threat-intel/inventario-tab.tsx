@@ -29,6 +29,8 @@ import { cn } from "../../lib/cn";
 import { ECOSSISTEMAS, ROTULO_ORIGEM_ATIVO, type AtivoTI, type PermissoesThreatIntel, type ProdutoCpe } from "../../types/threat-intel.types";
 
 const CLASSE_SELECT = "h-touch w-full rounded-control border border-default bg-surface px-3 text-sm text-fg";
+// Poucas de início: a lista confirmada (o que de fato está vigiado) não pode ficar a 50 linhas de distância.
+const SUGESTOES_INICIAIS = 8;
 const MAX_SUGESTOES_VISIVEIS = 50;
 
 export function InventarioTab({ companyId, permissoes }: { companyId: string; permissoes: PermissoesThreatIntel }) {
@@ -36,6 +38,7 @@ export function InventarioTab({ companyId, permissoes }: { companyId: string; pe
   const getErrorMessage = useApiError();
   const [adicionando, setAdicionando] = useState(false);
   const [busca, setBusca] = useState("");
+  const [todasSugestoes, setTodasSugestoes] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const consulta = useQuery({ queryKey: ["threat-intel", "assets", companyId], queryFn: () => threatIntelApi.assets(companyId) });
@@ -51,7 +54,16 @@ export function InventarioTab({ companyId, permissoes }: { companyId: string; pe
   const filtro = busca.trim().toLowerCase();
   const casa = (a: AtivoTI) => !filtro || a.displayName.toLowerCase().includes(filtro);
   const sugeridos = useMemo(() => (consulta.data ?? []).filter((a) => a.status === "SUGGESTED"), [consulta.data]);
-  const confirmados = useMemo(() => (consulta.data ?? []).filter((a) => a.status === "CONFIRMED"), [consulta.data]);
+  // Quem tem mais CVEs primeiro: é por onde a pessoa começa a atualizar.
+  const confirmados = useMemo(
+    () => (consulta.data ?? []).filter((a) => a.status === "CONFIRMED").sort((x, y) => y.casamentos - x.casamentos || x.displayName.localeCompare(y.displayName)),
+    [consulta.data],
+  );
+  const porOrigem = useMemo(() => {
+    const n = { SBOM: 0, FINGERPRINT: 0, MANUAL: 0 };
+    for (const a of sugeridos) n[a.source] += 1;
+    return n;
+  }, [sugeridos]);
   const sugeridosVisiveis = sugeridos.filter(casa);
   const confirmadosVisiveis = confirmados.filter(casa);
 
@@ -85,7 +97,10 @@ export function InventarioTab({ companyId, permissoes }: { companyId: string; pe
                 Sugestões ({sugeridos.length})
               </h3>
               <p className="text-xs text-fg-muted">
-                O Vulnera viu estas tecnologias num SBOM importado ou no fingerprint de um scan DAST. Só entram na vigilância depois de confirmadas.
+                {[porOrigem.SBOM > 0 && `${porOrigem.SBOM} vieram de SBOMs importados no SAST/SCA`, porOrigem.FINGERPRINT > 0 && `${porOrigem.FINGERPRINT} do fingerprint de scans DAST`]
+                  .filter(Boolean)
+                  .join(" e ")}
+                . Só entram na vigilância depois de confirmadas.
               </p>
             </div>
             {permissoes.editarInventario && (
@@ -95,7 +110,7 @@ export function InventarioTab({ companyId, permissoes }: { companyId: string; pe
             )}
           </div>
           <ul className="flex flex-col divide-y divide-subtle">
-            {sugeridosVisiveis.slice(0, MAX_SUGESTOES_VISIVEIS).map((a) => (
+            {sugeridosVisiveis.slice(0, todasSugestoes ? MAX_SUGESTOES_VISIVEIS : SUGESTOES_INICIAIS).map((a) => (
               <li key={a.id} className="flex flex-wrap items-center gap-2 py-2">
                 <span className="min-w-0 flex-1 text-sm text-fg">{a.displayName}</span>
                 <Badge tom="acento">{ROTULO_ORIGEM_ATIVO[a.source]}</Badge>
@@ -112,9 +127,14 @@ export function InventarioTab({ companyId, permissoes }: { companyId: string; pe
               </li>
             ))}
           </ul>
-          {sugeridosVisiveis.length > MAX_SUGESTOES_VISIVEIS && (
+          {!todasSugestoes && sugeridosVisiveis.length > SUGESTOES_INICIAIS && (
+            <Button variant="fantasma" size="sm" className="self-start" onClick={() => setTodasSugestoes(true)}>
+              Mostrar mais ({sugeridosVisiveis.length - SUGESTOES_INICIAIS})
+            </Button>
+          )}
+          {todasSugestoes && sugeridosVisiveis.length > MAX_SUGESTOES_VISIVEIS && (
             <p className="text-xs text-fg-muted">
-              Mostrando {MAX_SUGESTOES_VISIVEIS} de {sugeridosVisiveis.length}. Use a busca, ou "Confirmar todas".
+              Mostrando {MAX_SUGESTOES_VISIVEIS} de {sugeridosVisiveis.length}. Use a busca para achar uma específica, ou "Confirmar todas".
             </p>
           )}
         </section>
@@ -149,13 +169,17 @@ export function InventarioTab({ companyId, permissoes }: { companyId: string; pe
                   <td className={TABELA.celula}>
                     <span className="flex flex-col gap-1">
                       <span className="text-fg">{a.displayName}</span>
-                      {!a.version && <Badge tom="atencao">sem versão: casa com qualquer versão</Badge>}
+                      {!a.version && <span className="text-xs text-warning-ink">sem versão: casa com qualquer versão</span>}
                     </span>
                   </td>
                   <td className={TABELA.celula}>{a.kind === "PACKAGE" ? `Pacote ${a.ecosystem}` : "Produto (CPE)"}</td>
                   <td className={cn(TABELA.celula, "hidden sm:table-cell")}>{ROTULO_ORIGEM_ATIVO[a.source]}</td>
-                  <td className={TABELA.celula} data-numeric>
-                    {a.casamentos}
+                  <td className={TABELA.celula}>
+                    {a.casamentos > 0 ? (
+                      <Badge tom="perigo">{a.casamentos === 1 ? "1 CVE" : `${a.casamentos} CVEs`}</Badge>
+                    ) : (
+                      <span className="text-xs text-fg-muted">nenhuma</span>
+                    )}
                   </td>
                   <td className={cn(TABELA.celula, "hidden text-fg-muted md:table-cell")}>
                     {a.lastSyncedAt ? new Date(a.lastSyncedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "na fila"}

@@ -22,7 +22,7 @@ import { EmptyState, ErrorState } from "../ui/empty-state";
 import { TABELA } from "../ui/table-estilos";
 import { cn } from "../../lib/cn";
 import { ROTULO_FONTE, type ExecucaoSync, type PermissoesThreatIntel } from "../../types/threat-intel.types";
-import { pct } from "../../lib/threat-intel";
+import { haQuanto, pct } from "../../lib/threat-intel";
 
 const CLASSE_SELECT = "h-touch rounded-control border border-default bg-surface px-3 text-sm text-fg";
 const ROTULO_GATILHO: Record<ExecucaoSync["trigger"], string> = { SCHEDULED: "Agendada", MANUAL: "Manual", ASSET: "Inventário" };
@@ -88,8 +88,8 @@ export function FeedTab({ companyId }: { companyId: string }) {
             </thead>
             <tbody>
               {consulta.data!.map((a) => (
-                <tr key={a.id} className={cn(TABELA.linha, a.afeta && "bg-danger-surface")}>
-                  <td className={TABELA.celula}>
+                <tr key={a.id} className={TABELA.linha}>
+                  <td className={TABELA.celula} style={a.afeta ? { boxShadow: "inset 3px 0 0 0 oklch(var(--color-danger-ink))" } : undefined}>
                     <span className="flex flex-col gap-1">
                       <span className="flex flex-wrap items-center gap-2 font-mono text-sm font-semibold text-fg">
                         <a className="hover:underline" href={`https://nvd.nist.gov/vuln/detail/${encodeURIComponent(a.id)}`} target="_blank" rel="noopener noreferrer">
@@ -109,7 +109,7 @@ export function FeedTab({ companyId }: { companyId: string }) {
                     {a.severity ? <SeverityBadge severidade={a.severity} cvss={a.cvssScore ?? undefined} /> : <span className="text-xs text-fg-muted">sem nota ainda</span>}
                   </td>
                   <td className={cn(TABELA.celula, "hidden text-fg-muted md:table-cell")}>
-                    {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString("pt-BR") : a.kevAddedAt ? `KEV ${new Date(a.kevAddedAt).toLocaleDateString("pt-BR")}` : "—"}
+                    {a.publishedAt ? haQuanto(a.publishedAt) : a.kevAddedAt ? `no KEV ${haQuanto(a.kevAddedAt)}` : "—"}
                   </td>
                   <td className={cn(TABELA.celula, "hidden md:table-cell")}>{pct(a.epssScore)}</td>
                   <td className={TABELA.celula}>{a.afeta ? <Badge tom="perigo">Afeta você</Badge> : <span className="text-xs text-fg-muted">não casa com o inventário</span>}</td>
