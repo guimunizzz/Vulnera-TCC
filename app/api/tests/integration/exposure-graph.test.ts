@@ -144,6 +144,8 @@ describe("Exposure Graph (D8)", () => {
     expect(p.dataSensitivity).toBe("CONFIDENTIAL");
 
     expect(p.abertas).toEqual({ CRITICAL: 2, HIGH: 2, MEDIUM: 1, LOW: 1 });
+    // Visão unificada: as mesmas abertas por origem (todas manuais no cenário).
+    expect(p.abertasPorOrigem).toEqual({ MANUAL: 6 });
     expect(p.totalAbertas).toBe(6);
     expect(p.totalResolvidas).toBe(3);
     expect(p.piorSeveridade).toBe("CRITICAL");
@@ -210,7 +212,7 @@ describe("Exposure Graph (D8)", () => {
     ]);
     expect(principais).toHaveLength(5);
     // Só os campos do contrato, sem data de criação.
-    expect(Object.keys(principais[0]).sort()).toEqual(["id", "owaspCategory", "severityFinal", "status", "title"]);
+    expect(Object.keys(principais[0]).sort()).toEqual(["id", "owaspCategory", "severityFinal", "sourceType", "status", "title"]);
     expect(principais[1].status).toBe("IN_PROGRESS");
   });
 

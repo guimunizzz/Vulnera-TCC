@@ -40,6 +40,7 @@ const principal = (id: string, applicationId: string, severityFinal: string, dia
   severityFinal,
   status: "OPEN",
   owaspCategory: "A03",
+  sourceType: "DAST_IMPORT",
   applicationId,
   createdAt: new Date(Date.UTC(2026, 0, 1) + diaMs),
 });
@@ -49,10 +50,10 @@ describe("montarAplicacoesDoGrafo (unit)", () => {
     const entrada = vazia();
     entrada.aplicacoes = [app("a1", "Portal")];
     entrada.abertasPorAplicacao = [
-      { applicationId: "a1", severityFinal: "CRITICAL", total: 2 },
-      { applicationId: "a1", severityFinal: "HIGH", total: 3 },
-      { applicationId: "a1", severityFinal: "NONE", total: 9 },
-      { applicationId: "a1", severityFinal: "DESCONHECIDA", total: 4 },
+      { applicationId: "a1", severityFinal: "CRITICAL", sourceType: "MANUAL", total: 2 },
+      { applicationId: "a1", severityFinal: "HIGH", sourceType: "SAST_IMPORT", total: 3 },
+      { applicationId: "a1", severityFinal: "NONE", sourceType: "MANUAL", total: 9 },
+      { applicationId: "a1", severityFinal: "DESCONHECIDA", sourceType: "MANUAL", total: 4 },
     ];
 
     const [p] = montarAplicacoesDoGrafo(entrada);
@@ -61,6 +62,8 @@ describe("montarAplicacoesDoGrafo (unit)", () => {
     expect(p.abertas).toEqual({ CRITICAL: 2, HIGH: 3, MEDIUM: 0, LOW: 0 });
     expect(p.totalAbertas).toBe(5);
     expect(p.piorSeveridade).toBe("CRITICAL");
+    // Visão unificada: as mesmas 5 por origem; NONE e desconhecidas também ficam de fora aqui.
+    expect(p.abertasPorOrigem).toEqual({ MANUAL: 2, SAST_IMPORT: 3 });
   });
 
   it("EXG-U-02 — categoria usa a PIOR severidade entre as suas linhas, e corta principais em 5", () => {
@@ -90,13 +93,14 @@ describe("montarAplicacoesDoGrafo (unit)", () => {
     expect(p.principais.map((x) => x.id)).toEqual(["c1", "c2", "h1", "h2", "m1"]);
     // createdAt não vaza para o contrato.
     expect(Object.keys(p.principais[0])).not.toContain("createdAt");
+    expect(p.principais[0].sourceType).toBe("DAST_IMPORT");
   });
 
   it("EXG-U-03 — aplicação sem abertas tem piorSeveridade null e vai para o fim", () => {
     const entrada = vazia();
     entrada.aplicacoes = [app("a1", "Zerada"), app("a2", "Com média")];
     entrada.resolvidasPorAplicacao = [{ applicationId: "a1", total: 4 }];
-    entrada.abertasPorAplicacao = [{ applicationId: "a2", severityFinal: "MEDIUM", total: 1 }];
+    entrada.abertasPorAplicacao = [{ applicationId: "a2", severityFinal: "MEDIUM", sourceType: "MANUAL", total: 1 }];
 
     const aplicacoes = montarAplicacoesDoGrafo(entrada);
 
@@ -114,9 +118,9 @@ describe("montarAplicacoesDoGrafo (unit)", () => {
     const entrada = vazia();
     entrada.aplicacoes = [app("a1", "Pequena"), app("a2", "Grande"), app("a3", "Crítica")];
     entrada.abertasPorAplicacao = [
-      { applicationId: "a1", severityFinal: "MEDIUM", total: 1 },
-      { applicationId: "a2", severityFinal: "MEDIUM", total: 4 },
-      { applicationId: "a3", severityFinal: "CRITICAL", total: 1 },
+      { applicationId: "a1", severityFinal: "MEDIUM", sourceType: "MANUAL", total: 1 },
+      { applicationId: "a2", severityFinal: "MEDIUM", sourceType: "MANUAL", total: 4 },
+      { applicationId: "a3", severityFinal: "CRITICAL", sourceType: "MANUAL", total: 1 },
     ];
 
     const aplicacoes = montarAplicacoesDoGrafo(entrada);

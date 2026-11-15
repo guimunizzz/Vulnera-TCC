@@ -235,6 +235,16 @@ todas filtrando `companyId` além de `applicationId`. Rate limit `expensive`.
   por severidade, categorias e links para as vulnerabilidades e para o dashboard
   da aplicação; numa categoria, as aplicações afetadas.
 
+**Visão unificada DAST + SAST + SCA (2026-11-15, D18).** As abertas de cada
+aplicação também saem **por origem** (`abertasPorOrigem`: DAST, SAST, SCA ou
+manual), da mesma consulta agrupada também por `sourceType` (continuam cinco
+consultas), e cada uma das cinco principais traz o selo da origem. O painel
+mostra a quebra na aplicação e somada na empresa. A mesma dimensão aparece no
+filtro e na coluna **Origem** de Achados (`?sourceType=`) e no cartão "Por
+origem" do painel da aplicação, que para o ADMIN inclui a fila de triagem do
+código (achados SAST/SCA ainda `NEW` na importação mais recente de cada
+ferramenta; `null` para o CLIENT, que não vê o módulo SAST/SCA).
+
 **Limites assumidos (D9 e honestidade de dado):**
 
 - Só `Vulnerability`. Achado DAST ainda não promovido não entra: o silo DAST
@@ -264,6 +274,7 @@ entre empresas nos dois sentidos), `tests/unit/exposure-graph.service.test.ts`,
 
 - **`VULN-LIST-07b`** — compara os conjuntos de resultados dos dois caminhos.
 - **`ASSIGN-07` / `ASSIGN-08`** — o mesmo para responsável e para "sem dono".
+- **`VULN-LIST-15`** — o mesmo para origem (`sourceType`, visão unificada).
 - **`VULN-LIST-09`** — filtros **compostos** combinam entre si.
 
 > ⚠️ O `VULN-LIST-09` nasceu de um bug real encontrado no CP-7: cada filtro

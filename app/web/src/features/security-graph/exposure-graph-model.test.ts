@@ -13,6 +13,7 @@ const app = (id: string, extra: Partial<AplicacaoExposta> = {}): AplicacaoExpost
   internetFacing: false,
   dataSensitivity: "INTERNAL",
   abertas: { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 },
+  abertasPorOrigem: {},
   totalAbertas: 0,
   totalResolvidas: 0,
   piorSeveridade: null,

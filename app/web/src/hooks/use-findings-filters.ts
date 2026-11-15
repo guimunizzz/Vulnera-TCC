@@ -57,6 +57,7 @@ export type FindingFilters = {
   severity: string | string[];
   status: string | string[];
   owaspCategory: string | string[];
+  sourceType: string | string[];
   slaState: string | string[];
   vrsMin: string | string[];
   vrsMax: string | string[];
@@ -75,6 +76,7 @@ const PARAMS_DO_FILTRO = [
   "severity",
   "status",
   "owaspCategory",
+  "sourceType",
   "slaState",
   "vrsMin",
   "vrsMax",

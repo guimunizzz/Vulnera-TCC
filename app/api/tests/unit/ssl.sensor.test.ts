@@ -100,4 +100,11 @@ describe("motivoDeRede", () => {
     );
     expect(motivoDeRede({ code: "ALGO_NOVO" })).toBe("falha de rede ao falar com o alvo (ALGO_NOVO)");
   });
+
+  // SG-FUT-09: o fetch com AbortSignal.timeout rejeita com DOMException de code NUMÉRICO 23.
+  it("timeout do fetch vira texto legível, não o código numérico do DOM", () => {
+    const erro = new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    expect(erro.code).toBe(23);
+    expect(motivoDeRede(erro)).toBe("o alvo não respondeu dentro do tempo limite (TimeoutError)");
+  });
 });

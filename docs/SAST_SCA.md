@@ -97,6 +97,17 @@ NodeGoat sumiam.
   análise. Se ele já era uma vulnerabilidade, a comparação mostra o link para
   ela e o PDF marca "retestar". O status da vulnerabilidade **não muda
   sozinho**: fechar é uma decisão humana, com o reteste.
+- **Correção não confirmada (CODE-FUT-03, 2026-11-15).** O caminho inverso:
+  quando o achado **está** no relatório e a vulnerabilidade promovida dele foi
+  marcada `FIXED` **antes** da importação desse relatório, o detalhe mostra o
+  aviso "Correção não confirmada" com o botão **Reabrir**. Reabrir pede
+  confirmação e usa a transição de retorno `FIXED → IN_PROGRESS` do ADR-033
+  ("validação reprovada": SLA recomeça, fica no AuditLog). A API decide quem
+  entra (`reopenCandidates` do `GET /code-imports/:id/compare`): o achado pode
+  ter sido promovido numa importação antiga (casa por projeto + fingerprint),
+  só a importação **mais recente** da ferramenta sugere (uma mais nova pode já
+  não ter o achado) e a data comparada é a do **último** `→ FIXED` da trilha.
+  Nada é reaberto sozinho.
 
 ### Promoção para vulnerabilidade
 

@@ -48,6 +48,8 @@ import {
 } from "../components/ui";
 import { FilterBar } from "../components/metrics/filter-bar";
 import { KpiCard } from "../components/metrics/kpi-card";
+import { OrigemCard } from "../components/metrics/origem-card";
+import { useAuthStore } from "../store/auth.store";
 import {
   DonutDeSeveridade,
   GraficoCriadosVersusResolvidos,
@@ -63,6 +65,8 @@ export function ApplicationDashboardPage() {
   const [params] = useSearchParams();
   const aba = params.get("aba") ?? "postura";
   const controles = useFiltrosMetricas(id);
+  // Só o ADMIN chega a Achados e SAST/SCA a partir daqui (o CLIENT não tem as rotas).
+  const ehAdmin = useAuthStore((s) => s.user?.role) === "ADMIN";
   const { paraApi, filtros, aplicarRecorte } = controles;
 
   // A chave inclui a query serializada: é o que faz o cache separar recortes
@@ -243,6 +247,14 @@ export function ApplicationDashboardPage() {
                     aoSelecionar={(dias) => dias > 0 && aplicarRecorte({ agingMinDias: dias })}
                   />
                 </div>
+
+                <OrigemCard
+                  applicationId={id}
+                  abertosPorOrigem={s?.abertosPorOrigem}
+                  filaDeTriagem={s?.filaDeTriagem}
+                  carregando={carregando}
+                  comLinks={ehAdmin}
+                />
 
                 <Card titulo="Tempo mediano de remediação" descricao="Mediana por severidade — a média seria destruída por um único finding esquecido.">
                   {carregando || !s ? (

@@ -40,6 +40,7 @@ import { DastTriageControls } from "../components/dast/dast-triage-controls";
 import { SeverityStrip } from "../components/code-imports/severity-strip";
 import { CodePromoteDialog } from "../components/code-imports/code-promote-dialog";
 import { CodeImportDialog } from "../components/code-imports/code-import-dialog";
+import { CodeReopenSuggestion } from "../components/code-imports/code-reopen-suggestion";
 import { BotaoVerTour, TourGuiado, type PassoTour } from "../components/tour/tour-guiado";
 import { useTourAutomatico } from "../components/tour/use-tour-automatico";
 import { cn } from "../lib/cn";
@@ -407,6 +408,7 @@ export function CodeImportDetailPage() {
           {erro}
         </Alert>
       )}
+      <CodeReopenSuggestion itens={compareQuery.data?.reopenCandidates ?? []} />
 
       <div data-tour="detalhe-abas">
       <Tabs

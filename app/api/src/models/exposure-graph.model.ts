@@ -30,6 +30,8 @@ export interface PrincipalAbertaDTO {
   severityFinal: SeveridadeDoGrafo;
   status: string;
   owaspCategory: string;
+  /** Origem: MANUAL | DAST_IMPORT | SAST_IMPORT | SCA_IMPORT. */
+  sourceType: string;
 }
 
 export interface CategoriaDoGrafoDTO {
@@ -47,6 +49,8 @@ export interface AplicacaoDoGrafoDTO {
   internetFacing: boolean;
   dataSensitivity: string;
   abertas: Record<SeveridadeDoGrafo, number>;
+  /** As mesmas abertas por origem (DAST, SAST, SCA, manual); soma = `totalAbertas`. Só origens com abertas. */
+  abertasPorOrigem: Record<string, number>;
   totalAbertas: number;
   totalResolvidas: number;
   /** Pior severidade entre as abertas; `null` quando não há nenhuma aberta. */

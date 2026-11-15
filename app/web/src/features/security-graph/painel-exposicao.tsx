@@ -19,6 +19,8 @@ import { Link } from "react-router-dom";
 import { Globe } from "lucide-react";
 import { LinkButton } from "../../components/ui/button";
 import { Badge, SeverityBadge } from "../../components/ui/badge";
+import { OrigemBadge } from "../../components/findings/origem-badge";
+import { SOURCE_TYPES } from "../../types/vulnerability.types";
 import type { AplicacaoExposta, ExposureGraph, SeveridadeVuln } from "../../types/exposure-graph.types";
 import {
   categoriasDaEmpresa,
@@ -45,6 +47,24 @@ function ContagemPorSeveridade({ abertas }: { abertas: Record<SeveridadeVuln, nu
           </dt>
           <dd className="font-mono text-base font-semibold text-fg" data-numeric>
             {abertas[s]}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Visão unificada: as mesmas abertas pelas lentes que as encontraram (DAST, SAST, SCA, manual). */
+function ContagemPorOrigem({ porOrigem }: { porOrigem: Record<string, number> }) {
+  return (
+    <dl className="grid grid-cols-4 gap-2" aria-label="Abertas por origem">
+      {SOURCE_TYPES.map((o) => (
+        <div key={o} className="flex flex-col items-center gap-1 rounded-control border border-subtle bg-inset px-2 py-2">
+          <dt>
+            <OrigemBadge sourceType={o} />
+          </dt>
+          <dd className="font-mono text-base font-semibold text-fg" data-numeric>
+            {porOrigem[o] ?? 0}
           </dd>
         </div>
       ))}
@@ -80,6 +100,10 @@ function PainelAplicacao({ app, aoSelecionar }: { app: AplicacaoExposta; aoSelec
         </p>
         <ContagemPorSeveridade abertas={app.abertas} />
       </div>
+      <div className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Por origem</p>
+        <ContagemPorOrigem porOrigem={app.abertasPorOrigem ?? {}} />
+      </div>
       {app.categorias.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Categorias OWASP abertas</p>
@@ -111,6 +135,9 @@ function PainelAplicacao({ app, aoSelecionar }: { app: AplicacaoExposta; aoSelec
             {app.principais.map((v) => (
               <li key={v.id} className="flex items-start gap-2">
                 <SeverityBadge severidade={v.severityFinal} className="shrink-0" />
+                <span className="shrink-0">
+                  <OrigemBadge sourceType={v.sourceType} />
+                </span>
                 <Link to={`/findings/${v.id}`} className="min-w-0 break-words text-sm text-accent-ink hover:underline">
                   {v.title}
                 </Link>
@@ -142,6 +169,10 @@ export function PainelExposicao({
   const somadas = SEVERIDADES.reduce(
     (acc, s) => ({ ...acc, [s]: dados.aplicacoes.reduce((t, a) => t + a.abertas[s], 0) }),
     {} as Record<SeveridadeVuln, number>,
+  );
+  const porOrigem = SOURCE_TYPES.reduce<Record<string, number>>(
+    (acc, o) => ({ ...acc, [o]: dados.aplicacoes.reduce((t, a) => t + (a.abertasPorOrigem?.[o] ?? 0), 0) }),
+    {},
   );
 
   return (
@@ -195,6 +226,7 @@ export function PainelExposicao({
             </p>
           </div>
           <ContagemPorSeveridade abertas={somadas} />
+          <ContagemPorOrigem porOrigem={porOrigem} />
           <p className="text-xs text-fg-muted">
             Selecione uma aplicação ou categoria para ver o contexto. Os dados são o estado atual das vulnerabilidades gerenciadas (abertas e em
             andamento); achados DAST ainda não triados não entram, porque não têm vínculo com a aplicação antes da promoção.

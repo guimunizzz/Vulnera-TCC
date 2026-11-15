@@ -44,6 +44,7 @@ const finding: FindingListItem = {
   hasActiveRiskAcceptance: false,
   assignedTo: null,
   assigneeName: null,
+  sourceType: "MANUAL",
 };
 
 function renderMenu() {

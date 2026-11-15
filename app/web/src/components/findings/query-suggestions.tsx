@@ -47,7 +47,7 @@ import {
   type FilterField,
 } from "../../lib/finding-query";
 import { ROTULO_SEVERIDADE, type Severidade } from "../ui/badge";
-import { OWASP_CATEGORIES, OWASP_LABELS, type FacetCounts } from "../../types/vulnerability.types";
+import { OWASP_CATEGORIES, OWASP_LABELS, SOURCE_TYPES, SOURCE_TYPE_LABELS, type FacetCounts } from "../../types/vulnerability.types";
 
 /** Uma entrada da caixa. `inserir` é o texto que vai para a barra. */
 export interface Sugestao {
@@ -78,7 +78,7 @@ export interface QuerySuggestionsProps {
   aberta: boolean;
   /** Campos que o contexto escondeu (ex.: `projeto` dentro de um projeto). */
   camposOcultos: FilterField[];
-  facetas?: { severity: FacetCounts; status: FacetCounts; owasp: FacetCounts };
+  facetas?: { severity: FacetCounts; status: FacetCounts; owasp: FacetCounts; source?: FacetCounts };
   entidades?: EntidadesSugeriveis;
   /** Chamado quando a pessoa escolhe. */
   aoEscolher: (sugestao: Sugestao, contexto: ContextoDeSugestao) => void;
@@ -162,6 +162,15 @@ function montarSugestoes(
       rotulo: OWASP_LABELS[o],
       apoio: o,
       contagem: facetas?.owasp?.[o],
+    }));
+  }
+
+  if (field === "origem") {
+    return SOURCE_TYPES.filter((o) => casa(o) || casa(SOURCE_TYPE_LABELS[o])).map((o) => ({
+      inserir: o,
+      rotulo: SOURCE_TYPE_LABELS[o],
+      apoio: o,
+      contagem: facetas?.source?.[o],
     }));
   }
 

@@ -36,6 +36,8 @@ export interface AplicacaoBrutaDoGrafo {
 export interface LinhaAbertasPorAplicacao {
   applicationId: string;
   severityFinal: string;
+  /** Origem (MANUAL | DAST_IMPORT | SAST_IMPORT | SCA_IMPORT) — visão unificada por aplicação. */
+  sourceType: string;
   total: number;
 }
 
@@ -57,6 +59,7 @@ export interface LinhaPrincipalAberta {
   severityFinal: string;
   status: string;
   owaspCategory: string;
+  sourceType: string;
   applicationId: string;
   createdAt: Date;
 }
@@ -83,7 +86,8 @@ export class ExposureGraphRepository {
   /** Abertas por aplicação e severidade. `NONE` fica de fora pela cláusula `in`. */
   async contarAbertasPorAplicacao(companyId: string, applicationIds: string[]): Promise<LinhaAbertasPorAplicacao[]> {
     const linhas = await this.prisma.vulnerability.groupBy({
-      by: ["applicationId", "severityFinal"],
+      // `sourceType` no mesmo groupBy: a quebra por origem sai desta consulta, sem uma sexta.
+      by: ["applicationId", "severityFinal", "sourceType"],
       where: {
         companyId,
         applicationId: { in: applicationIds },
@@ -92,7 +96,12 @@ export class ExposureGraphRepository {
       },
       _count: { _all: true },
     });
-    return linhas.map((l) => ({ applicationId: l.applicationId, severityFinal: l.severityFinal, total: l._count._all }));
+    return linhas.map((l) => ({
+      applicationId: l.applicationId,
+      severityFinal: l.severityFinal,
+      sourceType: l.sourceType,
+      total: l._count._all,
+    }));
   }
 
   async contarResolvidasPorAplicacao(companyId: string, applicationIds: string[]): Promise<LinhaResolvidasPorAplicacao[]> {
@@ -145,10 +154,10 @@ export class ExposureGraphRepository {
     limitePorAplicacao: number,
   ): Promise<LinhaPrincipalAberta[]> {
     return this.prisma.$queryRaw<LinhaPrincipalAberta[]>`
-      SELECT t.id, t.title, t.severityFinal, t.status, t.owaspCategory, t.applicationId, t.createdAt
+      SELECT t.id, t.title, t.severityFinal, t.status, t.owaspCategory, t.sourceType, t.applicationId, t.createdAt
       FROM (
         SELECT
-          v.id, v.title, v.severityFinal, v.status, v.owaspCategory, v.applicationId, v.createdAt,
+          v.id, v.title, v.severityFinal, v.status, v.owaspCategory, v.sourceType, v.applicationId, v.createdAt,
           ROW_NUMBER() OVER (
             PARTITION BY v.applicationId
             ORDER BY

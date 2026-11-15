@@ -58,10 +58,24 @@ export class AuditLogRepository {
    * consulta inteira sem o guarda.
    */
   async findFirstFixedAtByEntityIds(vulnerabilityIds: string[]): Promise<Map<string, Date>> {
+    return this.fixedAtByEntityIds(vulnerabilityIds, "MIN");
+  }
+
+  /**
+   * O ÚLTIMO → FIXED de cada finding. Com o retorno FIXED → IN_PROGRESS (ADR-033) um finding
+   * pode ser corrigido mais de uma vez; "esta correção ainda vale?" (CODE-FUT-03) compara com a
+   * mais recente, não com a primeira.
+   */
+  async findLastFixedAtByEntityIds(vulnerabilityIds: string[]): Promise<Map<string, Date>> {
+    return this.fixedAtByEntityIds(vulnerabilityIds, "MAX");
+  }
+
+  private async fixedAtByEntityIds(vulnerabilityIds: string[], agregado: "MIN" | "MAX"): Promise<Map<string, Date>> {
     const saida = new Map<string, Date>();
     if (vulnerabilityIds.length === 0) return saida;
+    // Prisma.raw só recebe uma das duas constantes acima, nunca texto de fora.
     const linhas = await this.prisma.$queryRaw<{ entityId: string; fixedAt: Date }[]>`
-      SELECT a.entityId, MIN(a.createdAt) AS fixedAt
+      SELECT a.entityId, ${Prisma.raw(agregado)}(a.createdAt) AS fixedAt
       FROM AuditLog a
       WHERE a.entityType = 'Vulnerability'
         AND a.action = 'STATUS_CHANGE'

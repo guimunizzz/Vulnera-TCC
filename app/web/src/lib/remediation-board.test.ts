@@ -27,9 +27,10 @@ function resposta(page: number, total: number, quantidade: number): FindingSearc
       hasActiveRiskAcceptance: false,
       assignedTo: null,
       assigneeName: null,
+      sourceType: "MANUAL",
     })),
     pagination: { page, pageSize: 100, total, totalPages: Math.ceil(total / 100) },
-    facets: { severity: {}, status: {}, owasp: {}, company: {} },
+    facets: { severity: {}, status: {}, owasp: {}, company: {}, source: {} },
   };
 }
 

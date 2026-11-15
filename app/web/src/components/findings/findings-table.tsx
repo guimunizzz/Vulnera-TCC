@@ -66,7 +66,8 @@ import { useFindingsExport } from "../../hooks/use-findings-export";
 import { BotaoExportarExcel } from "./botao-exportar-excel";
 import { useEntidadesSugeriveis } from "../../hooks/use-entidades-sugeriveis";
 import { Alert } from "../ui/alert";
-import { OWASP_CATEGORIES, OWASP_LABELS, type OwaspCategory } from "../../types/vulnerability.types";
+import { OWASP_CATEGORIES, OWASP_LABELS, SOURCE_TYPES, SOURCE_TYPE_LABELS, type OwaspCategory } from "../../types/vulnerability.types";
+import { OrigemBadge } from "./origem-badge";
 import type { FacetCounts, FindingListItem } from "../../types/vulnerability.types";
 
 export type ColumnKey =
@@ -76,6 +77,7 @@ export type ColumnKey =
   | "status"
   | "sla"
   | "owasp"
+  | "origin"
   | "project"
   | "application"
   | "company"
@@ -225,6 +227,13 @@ export function FindingsTable({
             {f.owaspCategory}
           </span>
         ),
+      },
+      {
+        // Visão unificada: DAST, SAST, SCA ou manual, lado a lado na mesma lista.
+        chave: "origin",
+        id: "origin",
+        cabecalho: "Origem",
+        celula: (f) => <OrigemBadge sourceType={f.sourceType} />,
       },
       {
         chave: "project",
@@ -404,7 +413,7 @@ function BarraDeFiltros({
   carregando,
 }: {
   filtros: ReturnType<typeof useFindingsFilters>;
-  facetas: { severity: FacetCounts; status: FacetCounts; owasp: FacetCounts } | undefined;
+  facetas: { severity: FacetCounts; status: FacetCounts; owasp: FacetCounts; source?: FacetCounts } | undefined;
   campoVisivel: (field: FilterField) => boolean;
   camposOcultos: FilterField[];
   entidades: EntidadesSugeriveis;
@@ -520,6 +529,16 @@ function BarraDeFiltros({
             }))}
             estaAtivo={(v) => filtros.estaAtivo("owasp", v)}
             aoAlternar={(v) => filtros.alternarValor("owasp", v)}
+            carregando={carregando}
+          />
+        )}
+
+        {campoVisivel("origem") && (
+          <MultiSelecao
+            rotulo="Origem"
+            opcoes={SOURCE_TYPES.map((o) => ({ valor: o, rotulo: SOURCE_TYPE_LABELS[o], contagem: facetas?.source?.[o] }))}
+            estaAtivo={(v) => filtros.estaAtivo("origem", v)}
+            aoAlternar={(v) => filtros.alternarValor("origem", v)}
             carregando={carregando}
           />
         )}

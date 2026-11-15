@@ -24,8 +24,11 @@ const MOTIVOS: Record<string, string> = {
 
 /** Código mais específico disponível: `cause.code` (fetch/undici), `code` (net/tls) ou o nome do erro. */
 export function codigoDoErro(erro: unknown): string {
-  const e = erro as { code?: string; name?: string; cause?: { code?: string } };
-  return e?.cause?.code ?? e?.code ?? e?.name ?? "ERRO_DESCONHECIDO";
+  const e = erro as { code?: unknown; name?: unknown; cause?: { code?: unknown } };
+  // Só código em texto: o DOMException do `AbortSignal.timeout` traz `code` NUMÉRICO (23, legado
+  // do DOM), que venceria o nome `TimeoutError` e chegaria à tela como "(23)" (SG-FUT-09).
+  const texto = (v: unknown) => (typeof v === "string" && v !== "" ? v : undefined);
+  return texto(e?.cause?.code) ?? texto(e?.code) ?? texto(e?.name) ?? "ERRO_DESCONHECIDO";
 }
 
 export function motivoDeRede(erro: unknown): string {

@@ -14,6 +14,8 @@
  *   CODE-PRO-02  promover de novo → 409; o MESMO achado reimportado também → 409 e aparece como promovido
  *   CODE-PRO-03  vetor inválido → 400 e nada é criado
  *   CODE-PRO-04  SCA: rascunho A06 com vetor da ferramenta; promovida vira SCA_IMPORT
+ *   CODE-REO-01  vulnerabilidade FIXED cujo achado reaparece DEPOIS da correção é sugerida para reabrir
+ *                (só na importação mais recente; nada é reaberto sozinho) — CODE-FUT-03
  *   CODE-AUD-01  importar, triar e promover geram AuditLog
  */
 
@@ -354,6 +356,54 @@ describe("Importação SAST/SCA — triagem e promoção", () => {
     const again = await request(app).post(`/api/code-imports/findings/${f2.id}/promote`).set(auth(tokenA)).send(body);
     expect(again.status).toBe(409);
     expect(await prisma.vulnerability.count()).toBe(1);
+  });
+
+  it("CODE-REO-01 achado de vulnerabilidade FIXED que reaparece depois da correção é sugerido para reabrir", async () => {
+    const { tokenA, projectA } = await seedCenario();
+    const comX = sarif([{ ruleId: "sqli", file: "a.js", line: 1, fp: "x" }]);
+    const semX = sarif([{ ruleId: "xss", file: "b.js", line: 2, fp: "y" }]);
+    const espera = () => new Promise((r) => setTimeout(r, 25)); // a ordem é por data (ms)
+    const transicao = (id: string, toStatus: string) =>
+      request(app).post(`/api/vulnerabilities/${id}/transition`).set(auth(tokenA)).send({ toStatus });
+    const sugeridos = async (importId: string) =>
+      (await request(app).get(`/api/code-imports/${importId}/compare`).set(auth(tokenA))).body.reopenCandidates.map(
+        (e: { fingerprint: string; promotedVulnerability: { id: string } }) => e.promotedVulnerability.id,
+      );
+
+    const imp1 = await importar(tokenA, projectA.id, comX);
+    const [f1] = (await request(app).get(`/api/code-imports/${imp1.body.id}/findings`).set(auth(tokenA))).body;
+    const vuln = await request(app)
+      .post(`/api/code-imports/findings/${f1.id}/promote`)
+      .set(auth(tokenA))
+      .send({ title: "SQLi", description: "d", owaspCategory: "A03", cvssVector: VETOR });
+    await espera();
+    expect((await transicao(vuln.body.id, "IN_PROGRESS")).status).toBe(200);
+    expect((await transicao(vuln.body.id, "FIXED")).status).toBe(200);
+    // O relatório 1 é ANTERIOR à correção: não prova que ela falhou.
+    expect(await sugeridos(imp1.body.id)).toEqual([]);
+
+    await espera();
+    const imp2 = await importar(tokenA, projectA.id, semX); // sumiu: correção parece valer
+    expect(await sugeridos(imp2.body.id)).toEqual([]);
+    await espera();
+    const imp3 = await importar(tokenA, projectA.id, comX); // voltou depois do FIXED
+    expect(await sugeridos(imp3.body.id)).toEqual([vuln.body.id]);
+    const cmp3 = (await request(app).get(`/api/code-imports/${imp3.body.id}/compare`).set(auth(tokenA))).body;
+    expect(cmp3.introduced.map((e: { fingerprint: string }) => e.fingerprint)).toEqual(cmp3.reopenCandidates.map((e: { fingerprint: string }) => e.fingerprint));
+
+    // Só a importação mais recente da ferramenta sugere.
+    await espera();
+    const imp4 = await importar(tokenA, projectA.id, semX);
+    expect(await sugeridos(imp3.body.id)).toEqual([]);
+    expect(await sugeridos(imp4.body.id)).toEqual([]);
+
+    // Reaberta (FIXED → IN_PROGRESS, ADR-033), deixa de ser sugerida; nada é reaberto sozinho.
+    await espera();
+    const imp5 = await importar(tokenA, projectA.id, comX);
+    expect(await sugeridos(imp5.body.id)).toEqual([vuln.body.id]);
+    expect((await prisma.vulnerability.findUniqueOrThrow({ where: { id: vuln.body.id } })).status).toBe("FIXED");
+    expect((await transicao(vuln.body.id, "IN_PROGRESS")).status).toBe(200);
+    expect(await sugeridos(imp5.body.id)).toEqual([]);
   });
 
   it("CODE-PRO-03 vetor inválido → 400 e nada é criado", async () => {
