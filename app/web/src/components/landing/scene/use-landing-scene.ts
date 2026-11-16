@@ -5,7 +5,8 @@
  * Monta a cena narrativa da landing: um quad em tela cheia, fixo atrás do
  * conteúdo, que conta o ato atual do scroll (0 a 5 —
  * `docs/LANDING_NARRATIVA.md`). Atos 0–2 em células de caractere ASCII; a
- * partir do ato 3 as células viram pinceladas (`pintura.ts`, ADR-054).
+ * partir do ato 3 as células viram o material escolhido em `materiais.ts`:
+ * terreno, grafo ou pintura (ADR-054).
  *
  * POR QUE EXISTE / COMO
  * - Renderer, loop, pausa com aba oculta, perda de contexto, descarte e cores
@@ -33,7 +34,7 @@ import { lerCorDoToken, observarTema } from "../../../three/palette";
 import { criarGotas } from "../../../three/gotas";
 import { criarGradeDeCelulas } from "../../../three/grade-celulas";
 import { criarAtlasAscii, type AtlasAscii } from "../../../three/ascii";
-import { criarPintura } from "./pintura";
+import { criarMaterialDaCena } from "./materiais";
 import { gsap, ScrollTrigger } from "../motion/gsap";
 import { EASE_LANDING, SCRUB_LANDING } from "../motion/tokens";
 import {
@@ -42,6 +43,7 @@ import {
   FONTE_LANDING_PX,
   FPS_CENA,
   GLIFOS,
+  lerMaterialDaCena,
   MAX_DPR_CENA,
   OPACIDADE_CENA,
   PESO_FONTE_LANDING,
@@ -129,8 +131,9 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
     };
     // Passada 1 (uma vez por célula) → textura; a passada 2 lê dela. As duas
     // compartilham os mesmos objetos de uniform.
-    // Camada de tinta dos atos 3–5; `uVirada` é dela e as duas passadas leem.
-    const pintura = criarPintura();
+    // Material dos atos 3–5 (terreno, grafo ou pintura, pela URL); `uVirada` é
+    // dele e as duas passadas leem.
+    const pintura = criarMaterialDaCena(lerMaterialDaCena(window.location.search), uniformes);
     Object.assign(uniformes, pintura.uniformesDaTela);
     const grade = criarGradeDeCelulas(FRAGMENT_CELULAS, uniformes);
     // O shader ignora a câmera; o renderer só exige uma.

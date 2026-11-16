@@ -8,6 +8,7 @@
  * rolagem da página inteira e a virada do ato 3 (progresso 2,4 → 3,6).
  *
  * Uso: node medir.cjs [base] [dpr] [saida.json]   (Chrome com janela, GPU real)
+ * CENA=terreno|grafo|pintura escolhe o material dos atos 3-5.
  * Só leitura; precisa do app no ar.
  */
 const { chromium } = require('../../node_modules/playwright');
@@ -70,7 +71,7 @@ const [base = 'http://localhost:5179', dpr = '1'] = process.argv.slice(2);
     raf(contar);
   });
   const page = await ctx.newPage();
-  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  await page.goto(base + '/' + (process.env.CENA ? '?cena=' + process.env.CENA : ''), { waitUntil: 'networkidle' });
   await page.waitForSelector('canvas[data-landing-scene][data-ready="true"]');
   await page.waitForTimeout(1500);
 

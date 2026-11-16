@@ -108,6 +108,33 @@ Três detalhes fazem a tinta parecer tinta de verdade:
 > vez" numa folha só, os valores muito pequenos nunca chegam a zero: sobra uma
 > mancha fantasma para sempre. Com duas folhas dá para apagar de verdade.
 
+> [!NOTE]
+> **A pintura é um de três materiais.** Enquanto se decide qual fica, os atos
+> 3, 4 e 5 podem ser desenhados de três jeitos, escolhidos pelo endereço da
+> página: `/?cena=pintura` (o que está explicado acima), `/?cena=terreno` e
+> `/?cena=grafo`. Sem nada no endereço, abre o terreno.
+
+## Parte 2b — o terreno e o grafo (3D de verdade)
+
+A pintura é plana. O terreno e o grafo usam **profundidade**: existe uma
+câmera, como num jogo, e as coisas mais perto dela aparecem maiores.
+
+- **O truque do encaixe.** No começo a câmera olha a tela de frente, na
+  distância exata em que o "chão" 3D tem o tamanho da tela. Cada célula do
+  chão fica em cima do seu símbolo. Aí a câmera vai inclinando conforme você
+  rola, e o chão que era a página vira uma paisagem.
+- **Terreno.** O chão é uma malha de pontinhos ligados. Cada pontinho sobe ou
+  desce conforme uma fórmula de altura. As falhas viram quatro montes: quanto
+  mais grave, mais alto. Corrigir uma falha é **achatar o monte**. As linhas
+  em volta dos montes são curvas de nível, como num mapa de relevo.
+- **Grafo.** Cada falha vira uma bolinha (um **nó**) ligada por uma linha (uma
+  **aresta**) a um nó maior, que por sua vez se liga ao centro do grupo. É o
+  desenho de "o que está ligado a quê". Corrigir uma falha é **soltar a linha**
+  e deixar a bolinha ir embora.
+
+Nos dois, a placa de vídeo não guarda onde cada coisa está: ela calcula tudo
+de novo a cada quadro a partir do número da célula, como na pintura.
+
 ## Parte 3 — a virada (ato 3)
 
 A virada usa as duas partes ao mesmo tempo. Uma onda atravessa a tela da

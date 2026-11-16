@@ -26,6 +26,15 @@ supersedes-parcialmente: ADR-050
 > **continua** ASCII nos atos 0–2, mas os atos 3–5 passam a ser pintura. E a
 > camada de tinta pode usar DPR até 2, acima do teto de 1,5 do kit — só ela.
 
+> [!warning] Em revisão desde 2026-11-16
+> Depois de ver a pintura na página, o Rafael disse não ter certeza se gostou
+> e pediu para explorar mais o three.js. A landing passou a ter três materiais
+> para os atos 3–5 — **terreno** (padrão), **grafo** e **pintura** — escolhidos
+> por `?cena=` na URL, para comparar. Este ADR continua descrevendo a pintura
+> e a troca de material no ato 3, que valem; o que está em aberto é **qual**
+> material fica. A decisão final vira um ADR novo. Ver
+> `docs/LANDING_NARRATIVA.md` §11.
+
 ## Contexto
 
 A cena narrativa da landing conta seis atos enquanto a página rola: funciona →

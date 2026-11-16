@@ -219,6 +219,15 @@ sozinha (`PINTURA.qualidade`). Explicação para iniciantes em
 [COMO_FUNCIONA_O_FUNDO.md](COMO_FUNCIONA_O_FUNDO.md); roteiro e medições em
 [LANDING_NARRATIVA.md](LANDING_NARRATIVA.md) §10.
 
+**Três materiais nos atos 3–5 (2026-11-16, em avaliação).** Além da pintura,
+a cena tem dois materiais 3D: `scene/terreno.ts` (mapa topográfico do risco,
+o padrão) e `scene/grafo.ts` (nós e arestas no espaço), sobre a base
+`scene/cena-3d.ts` (câmera em perspectiva, alvo fora da tela, GLSL comum).
+`scene/materiais.ts` escolhe pelo `?cena=` da URL. Os três implementam a mesma
+interface (`Pintura`), então o hook e a composição não mudam. O kit
+`src/three/` não foi alterado por esta parte. Ver
+[LANDING_NARRATIVA.md](LANDING_NARRATIVA.md) §11.
+
 **Conteúdo da landing (mesma entrega).** As seções passaram a afirmar só o que
 o código faz: saiu o card "IA para Findings" (ADR-017), entraram DAST com
 OWASP ZAP (com o limite dito na página), importação SAST/SCA, Threat Intel,

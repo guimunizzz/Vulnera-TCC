@@ -119,3 +119,13 @@ export function avaliarQualidade({ nivel, lentos }: Qualidade, delta: number): Q
   if (acumulado >= PINTURA.quadrosParaRebaixar && nivel < PINTURA.qualidade.length - 1) return { nivel: nivel + 1, lentos: 0 };
   return { nivel, lentos: acumulado };
 }
+
+/**
+ * Quanto da correção possível de um grupo já aconteceu (0 a 1): colore o monte
+ * e o nó central nas cenas 3D. Baixa fica sempre em 0; a média chega a 0,5
+ * porque só a metade dela é corrigida.
+ */
+export function curaDoGrupo(severidade: Falha, p: number): number {
+  const corrigivel = severidade >= 3 ? 1 : severidade === 2 ? 0.5 : 0;
+  return corrigivel * fracaoCorrigida(severidade, 1, 0.5, p);
+}

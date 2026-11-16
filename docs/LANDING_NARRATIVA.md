@@ -278,6 +278,7 @@ Regras que continuam valendo:
 | 2026-11-04 | Moldura ASCII animada no plano recomendado e varredura de glifos na troca de seção, no sentido da rolagem (§7.1). |
 | 2026-11-15 | **Do ASCII para a pintura** (pedido do Rafael, ADR-054): atos 0–2 mais densos (célula 12 × 18 px, fonte a 13 px) e atos 3–5 em pinceladas que seguem um campo de fluxo, com camada de tinta em ping-pong, halos e granulado (§10). Pôster com a mesma célula. Conteúdo das seções revisado contra o código. |
 | 2026-11-16 | Tinta com mais corpo (pedido do Rafael): massas largas por baixo, cerdas e pincel seco, mistura molhada e relevo iluminado (§10.6). |
+| 2026-11-16 | **Três materiais para os atos 3–5** (pedido do Rafael: explorar mais o three.js): terreno topográfico (padrão) e grafo de nós, em 3D com câmera em perspectiva, ao lado da pintura; escolha por `?cena=` enquanto ele compara (§11). |
 
 ### Boas práticas consultadas (2026-10-27)
 
@@ -421,3 +422,98 @@ tabela da §10.3 são da primeira versão):
 > Xe. A mistura molhada e o relevo somam seis leituras de textura por pixel;
 > numa GPU integrada isso pesa mais do que aqui. O tamanho dos chunks não foi
 > medido de novo depois desta mudança.
+
+## 11. Três materiais para os atos 3–5 (2026-11-16)
+
+> [!IMPORTANT]
+> **Em avaliação.** Depois de ver a pintura na página, o Rafael disse não ter
+> certeza se gostou e pediu para explorar mais o three.js. Os atos 3–5 passaram
+> a ter três materiais, escolhidos pela URL, para comparar no navegador. A
+> escolha definitiva ainda não foi feita; quando for, vira ADR e os outros dois
+> saem (ou ficam, se a decisão for essa).
+
+| URL | Material | O que a célula vira |
+|---|---|---|
+| `/` ou `/?cena=terreno` | **Terreno** (padrão) | A grade ganha relevo: um mapa topográfico do risco. |
+| `/?cena=grafo` | **Grafo** | As células viram nós no espaço, ligados por arestas. |
+| `/?cena=pintura` | **Pintura** (§10) | Pinceladas num campo de fluxo. |
+
+O roteiro, a virada em onda, as faixas de progresso de cada ato (§10.1) e o
+pôster de fallback são os mesmos nos três. Atos 0–2 não mudam.
+
+### 11.1 Como os três convivem
+
+```mermaid
+flowchart LR
+  URL["?cena= na URL"] --> M["materiais.ts<br/>criarMaterialDaCena"]
+  M --> T["terreno.ts"]
+  M --> G["grafo.ts"]
+  M --> P["pintura.ts"]
+  T --> B["cena-3d.ts<br/>câmera · alvo fora da tela"]
+  G --> B
+  B -->|"textura sRGB + uniforms de tela"| C["Passada de tela<br/>(shaders.ts)"]
+  P -->|"textura sRGB + uniforms de tela"| C
+```
+
+Os três entregam a mesma coisa à cena — uma textura com alfa pré-multiplicado
+e os mesmos uniforms de tela (interface `Pintura`) — então a passada de
+composição e o hook não sabem qual está ativo. O teto de alfa, os halos, o
+granulado e a gota do clique valem para os três.
+
+### 11.2 O mundo 3D (terreno e grafo)
+
+| Parte | Como funciona |
+|---|---|
+| **Unidades** | px CSS, origem no centro da tela. Sem inclinação, o plano z = 0 é a própria tela: a célula ASCII cai exatamente em cima do seu glifo. É isso que faz a virada ler como transformação. |
+| **Câmera** | Perspectiva (35°), a uma distância em que o plano preenche a tela. Ela gira em volta do eixo horizontal conforme a virada avança: 46° no terreno, 14° no grafo. |
+| **Sem profundidade nem MSAA** | O terreno é desenhado do fundo para a frente (ordem do pintor); linhas, nós e glifos têm a borda suavizada na conta. |
+| **Sem estado** | Posição, cor e ligação saem do número da instância (a célula ASCII) no vértice. Nenhum buffer por nó, nenhuma textura de posição. |
+| **Mesmas falhas** | O mesmo hash por célula do shader ASCII: o `@` que estava na página é o que sobe para o monte ou voa para o aglomerado. |
+
+> [!WARNING]
+> **A câmera se move.** A §2 deste roteiro dizia "sem câmera em movimento". Nas
+> cenas 3D ela inclina, mas presa ao scroll: parou de rolar, a câmera para; e
+> nada vem na direção de quem lê. Com "reduzir animações" a cena nem monta
+> (pôster). Se a decisão final for 3D, a §2 precisa ser reescrita junto.
+
+### 11.3 Terreno
+
+| Ato | O que acontece |
+|---|---|
+| **3 · Organizar** | A grade inclina e ondula. Cada glifo de falha se ergue numa haste e salta para o monte da sua severidade; os quatro montes crescem nas laterais, com curvas de nível. Crítica é o mais alto (196 px), baixa o mais baixo (74 px). |
+| **4 · Corrigir** | Do mais alto para o mais baixo, o monte fica verde e afunda. Os glifos viram `✓`, sobem e somem. |
+| **5 · Estável** | Planície calma, luz quente; fica um morro de baixa e metade do de média. |
+
+A altura é uma função (`altura()` em `terreno.ts`): ondulação mais quatro
+montes analíticos de crista serrilhada. A grade e as curvas de nível são
+desenhadas no fragmento com a largura medida em pixels de tela (`fwidth`):
+ficam nítidas de perto e somem antes de virar moiré ao longe. Os glifos são
+cartazes que amostram o mesmo atlas da cena ASCII.
+
+### 11.4 Grafo
+
+| Ato | O que acontece |
+|---|---|
+| **3 · Organizar** | 20% das células viram "poeira" (o sistema que funciona) em várias profundidades, ligadas a vizinhos. Cada falha voa até um de quatro aglomerados que giram: nó central → 5 nós intermediários → falhas. Os dois grupos de cada lado se ligam. |
+| **4 · Corrigir** | A falha fica verde, a aresta se solta, o nó sobe e some. O grupo resolvido perde os intermediários e fica com o nó central, verde. |
+| **5 · Estável** | Giro mais lento, luz quente, o aglomerado de baixa continua, discreto. |
+
+A estrutura é uma árvore de propósito: a ligação precisa ser calculável dos
+dois lados sem busca. A ideia conversa com o Exposure Graph do produto (alvo →
+endpoint → achados), mas é ilustração: nenhum nó é dado real.
+
+### 11.5 Medição (RTX 3060 Ti, 1440 × 900, build de produção)
+
+| Material | Parado no ato 3 | Rolando a virada | Rolando a página | Long tasks |
+|---|---|---|---|---|
+| Terreno, DPR 1 | 59,8 fps | 57,9 fps | 59,6 fps | 0 |
+| Terreno, DPR 2 | 60,1 fps | 58,0 fps | 59,6 fps | 0 |
+| Grafo, DPR 1 | 59,8 fps | 58,2 fps | 59,5 fps | 0 |
+| Grafo, DPR 2 | 59,9 fps | 57,9 fps | 59,6 fps | 0 |
+
+Maior intervalo entre quadros na virada: 50 ms nos quatro casos. Vale o aviso
+da §10.3: **não medido em Iris Xe**. As cenas 3D não têm camada de acumulação
+nem relevo por pixel, então a expectativa é custarem menos que a pintura, mas
+o tempo de GPU medido aqui oscila demais (0,9 a 3,1 ms) para afirmar isso.
+
+Capturas em `docs/evidencias/landing-pintura/terreno/` e `.../grafo/`.

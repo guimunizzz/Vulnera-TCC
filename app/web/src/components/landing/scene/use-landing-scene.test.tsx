@@ -89,6 +89,8 @@ describe("useLandingScene", () => {
       "--color-severity-low", "--color-severity-medium", "--color-severity-high", "--color-severity-critical",
       "--color-success",
       "--vx-indigo", "--vx-accent-soft", "--vx-success", "--vx-yellow",
+      // O material padrão (terreno) parte da cor de fundo da página.
+      "--vx-bg",
     ]));
   });
 

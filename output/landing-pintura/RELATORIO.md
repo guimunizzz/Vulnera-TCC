@@ -97,3 +97,37 @@ Docs atualizados: LANDING_NARRATIVA.md §10.6, COMO_FUNCIONA_O_FUNDO.md.
 Próximo: igual (LP-FUT-01..04).
 =================
 ```
+
+## Adendo — 2026-11-16: terreno e grafo (three.js em 3D)
+
+```
+=== RELATÓRIO ===
+Feito: dois materiais 3D para os atos 3–5, ao lado da pintura, escolhidos por
+  ?cena= na URL. Terreno (padrão): a grade vira mapa topográfico, glifos de
+  falha pousam em quatro montes que afundam ao corrigir. Grafo: células viram
+  nós, falhas se ligam a quatro aglomerados que giram.
+Arquivos: scene/cena-3d.ts, scene/terreno.ts, scene/grafo.ts,
+  scene/materiais.ts, scene/config.ts, scene/pintura-logica.ts,
+  scene/use-landing-scene.ts, .eslintrc.json, testes e docs.
+Testes: lint 0 erros · contraste OK · vitest 654/656 (as mesmas 2 falhas do
+  arquivo não rastreado) · e2e landing.spec.ts 10/10 no container :8086.
+Desempenho medido (RTX 3060 Ti, build de produção, DPR 1 / DPR 2):
+  terreno: parado 59,8 / 60,1 · virada 57,9 / 58,0 · página 59,6 / 59,6
+  grafo:   parado 59,8 / 59,9 · virada 58,2 / 57,9 · página 59,5 / 59,6
+  0 long tasks; maior intervalo na virada 50 ms.
+Docs atualizados: LANDING_NARRATIVA.md §11, ADR-054 (aviso de revisão),
+  FRONTEND_WEB.md, COMO_FUNCIONA_O_FUNDO.md, BACKLOG.md; evidências em
+  docs/evidencias/landing-pintura/terreno e /grafo.
+⚠️ Atenção do Rafael:
+  - "terreno e grafo, aplique na landing" foi lido como: os dois na página
+    real, lado a lado com a pintura, com o terreno como padrão. Se a ideia era
+    um só, ou os dois na mesma cena, é ajuste pequeno.
+  - A câmera inclina com o scroll, o que contraria a regra "sem câmera em
+    movimento" da §2 do roteiro. Está presa ao scroll e não roda com
+    "reduzir animações"; a regra precisa ser revista se o 3D ficar.
+  - O pôster (celular, movimento reduzido) continua ASCII nos três.
+  - PRD_VIVO.md não foi atualizado: a entrega está em avaliação, não concluída.
+  - Não medido em Iris Xe. Chunks não remedidos.
+Próximo: LP-FUT-05 (escolher o material) e LP-FUT-06 (pôster), além de 01–04.
+=================
+```

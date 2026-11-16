@@ -220,3 +220,65 @@ export const PINTURA = {
   freioEstavel: 0.45,
   discricaoDaBaixa: 0.4,
 } as const;
+
+/**
+ * Materiais dos atos 3–5. Os três contam o mesmo roteiro (organizar →
+ * corrigir → estável) e nascem da mesma virada; muda o que a célula vira:
+ *   - "terreno": a grade ganha relevo e vira um mapa topográfico do risco;
+ *   - "grafo":   as células viram nós no espaço, ligados por arestas;
+ *   - "pintura": pinceladas num campo de fluxo (ADR-054).
+ * Escolha pela URL (`/?cena=grafo`) enquanto o Rafael compara os três
+ * (2026-11-16); sem parâmetro vale o padrão.
+ */
+export const MATERIAIS_DA_CENA = ["terreno", "grafo", "pintura"] as const;
+export type MaterialDaCena = (typeof MATERIAIS_DA_CENA)[number];
+export const MATERIAL_PADRAO: MaterialDaCena = "terreno";
+
+/** Material pedido na query string (`?cena=`); valor ausente ou desconhecido cai no padrão. */
+export function lerMaterialDaCena(busca: string): MaterialDaCena {
+  const pedido = new URLSearchParams(busca).get("cena");
+  return (MATERIAIS_DA_CENA as readonly string[]).includes(pedido ?? "") ? (pedido as MaterialDaCena) : MATERIAL_PADRAO;
+}
+
+/**
+ * Cenas 3D (terreno e grafo). O mundo é medido em px CSS, com a origem no
+ * centro da tela: sem inclinação, o plano z = 0 coincide com a tela e cada
+ * célula ASCII cai exatamente sobre o seu glifo. A câmera inclina conforme a
+ * virada avança — presa ao scroll, nunca sozinha.
+ */
+export const CENA_3D = {
+  campoDeVisaoGraus: 35,
+  terreno: {
+    inclinacaoGraus: 46,
+    /** Espaçamento dos vértices da malha e da grade desenhada sobre ela (2 × a célula ASCII). */
+    malhaPx: 24,
+    gradePx: [24, 36],
+    /** Uma curva de nível a cada tantos px de altitude. */
+    curvaDeNivelPx: 15,
+    /** Ondulação calma do terreno sem falhas. */
+    ondulacaoPx: 30,
+    /** Altura do monte de cada severidade (baixa → crítica) com todo o risco em aberto. */
+    alturaDosMontesPx: [74, 108, 150, 196],
+    /** Meio-eixos do monte no plano: comprido no sentido da margem (cordilheira). */
+    raioDoMontePx: [96, 190],
+    /**
+     * Centro dos montes no plano, em frações da meia largura e da meia altura.
+     * Mais afastados em y que os grupos 2D porque a inclinação encurta o eixo;
+     * os da frente (y negativo) ficam mais para dentro em x porque a
+     * perspectiva os empurra para fora da tela.
+     */
+    centros: [[-0.93, 0.7], [-0.77, -0.34], [0.93, 0.7], [0.77, -0.34]],
+  },
+  grafo: {
+    inclinacaoGraus: 14,
+    /** Fração das células que vira "poeira": os nós calmos do sistema. */
+    densidadeDaPoeira: 0.2,
+    profundidadeDaPoeiraPx: 440,
+    /** Cada grupo tem um nó central e tantos nós intermediários em volta. */
+    subnosPorGrupo: 5,
+    raioDosSubnosPx: 70,
+    raioDasFalhasPx: [16, 46],
+    /** Giro dos aglomerados, em rad/s (desacelera no ato 5). */
+    giroRadS: 0.22,
+  },
+} as const;

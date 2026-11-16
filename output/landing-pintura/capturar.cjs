@@ -1,10 +1,11 @@
-﻿/**
+/**
  * Captura a landing em cada ato para o ciclo de autocrítica visual da
  * pintura (ADR-054). Além dos seis atos, tira quadros no meio da virada
  * (progresso ~2,8 a 3,3), que é o momento que precisa "ler" de longe.
  *
  * Uso: node capturar.cjs <base> <pasta> [larguraxaltura] [modo]
  *   modo: normal | reduzido | contraste
+ * CENA=terreno|grafo|pintura escolhe o material dos atos 3-5 (padrão: o da página).
  * Precisa do app no ar (Vite dev ou container web). Só leitura.
  */
 const { chromium } = require('../../node_modules/playwright');
@@ -42,7 +43,7 @@ const QUADROS = [
     const erros = [];
     page.on('console', (m) => { if (m.type() === 'error' || /THREE|WebGL|shader/i.test(m.text())) erros.push(m.text().slice(0, 600)); });
     page.on('pageerror', (e) => erros.push(e.message));
-    await page.goto(base + '/', { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.goto(base + '/' + (process.env.CENA ? '?cena=' + process.env.CENA : ''), { waitUntil: 'domcontentloaded', timeout: 120000 });
     await page.waitForSelector('section[data-ato="5"]', { timeout: 120000 });
     await page.waitForTimeout(3000);
     const estado = await page.evaluate(() => ({

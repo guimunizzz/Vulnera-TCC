@@ -60,6 +60,10 @@
         "src/components/landing/scene/use-landing-scene.ts",
         "src/components/landing/scene/shaders.ts",
         "src/components/landing/scene/pintura.ts",
+        "src/components/landing/scene/cena-3d.ts",
+        "src/components/landing/scene/terreno.ts",
+        "src/components/landing/scene/grafo.ts",
+        "src/components/landing/scene/materiais.ts",
         "src/features/security-graph/exposure-map-scene.ts"
       ],
       "rules": { "no-restricted-imports": "off" }
