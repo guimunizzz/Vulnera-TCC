@@ -35,7 +35,7 @@
  */
 
 import * as THREE from "three";
-import { GOTA, MAX_GOTAS } from "../../../three/gotas";
+import { MAX_PINGS, PING } from "../../../three/pings";
 import { lerCorDoToken } from "../../../three/palette";
 import { TERRENO } from "./config";
 import {
@@ -91,8 +91,11 @@ export interface Terreno {
   aquecer(renderer: THREE.WebGLRenderer): void;
   /** Um quadro. Antes da virada não desenha nada. */
   desenhar(renderer: THREE.WebGLRenderer, tempo: number, delta: number, progresso: number): void;
-  /** Clique no fundo (px do buffer da tela, y para cima): vira onda sísmica no relevo. */
-  gota(xBuffer: number, yBuffer: number, tempo: number): void;
+  /**
+   * Ping de scanner: clique no fundo (px do buffer da tela, y para cima). O
+   * anel corre pelo relevo a partir do ponto do plano embaixo do cursor.
+   */
+  ping(xBuffer: number, yBuffer: number, tempo: number): void;
   descartar(): void;
 }
 
@@ -121,8 +124,8 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
     uSeveridade: { value: cores(4) },
     uMontes: { value: Array.from({ length: 4 }, () => new THREE.Vector3()) },
     uCorrecao: { value: Array.from({ length: 4 }, () => new THREE.Vector3(2, 0, 0)) },
-    uOndas: { value: Array.from({ length: MAX_GOTAS }, () => new THREE.Vector3(0, 0, -1e4)) },
-    uOndasAtivas: { value: 0 },
+    uPingsNoPlano: { value: Array.from({ length: MAX_PINGS }, () => new THREE.Vector3(0, 0, -1e4)) },
+    uPingsAtivos: { value: 0 },
     // Grafo sobre o terreno.
     uFormado: { value: 0 },
     uCura: { value: [0, 0, 0, 0] },
@@ -183,7 +186,11 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
     ...comum, uniforms: uniformes, vertexShader: VERTEX_NO, fragmentShader: FRAGMENT_NO,
   }));
   const glifos = new THREE.Mesh(quad(-1), new THREE.ShaderMaterial({
-    ...comum, uniforms: { ...uniformes, ...atlas }, vertexShader: VERTEX_GLIFO, fragmentShader: FRAGMENT_GLIFO,
+    ...comum,
+    // Só os dois uniforms do atlas vêm de fora; o resto é do terreno.
+    uniforms: { ...uniformes, uAtlas: atlas.uAtlas, uTotalGlifos: atlas.uTotalGlifos },
+    vertexShader: VERTEX_GLIFO,
+    fragmentShader: FRAGMENT_GLIFO,
   }));
   const cena = new THREE.Scene();
   // Posições saem do shader; a ordem de inclusão é a ordem de desenho: as
@@ -197,8 +204,8 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
 
   let qualidade: Qualidade = { nivel: 0, lentos: 0 };
   let ritmo = 0;
-  let proximaOnda = 0;
-  let ultimaOnda = -1e4;
+  let proximoPing = 0;
+  let ultimoPing = -1e4;
   const tela = { largura: 1, altura: 1, dpr: 1, celula: new THREE.Vector2(1, 1) };
   const ponto = new THREE.Vector3();
   const raio = new THREE.Raycaster();
@@ -326,8 +333,8 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
       uniformes.uRitmo.value = ritmo;
       uniformes.uProgresso.value = progresso;
       uniformes.uEstavel.value = estabilidade(progresso);
-      // Sem onda viva o laço das ondas nem roda no vértice.
-      uniformes.uOndasAtivas.value = tempo - ultimaOnda < GOTA.duracao ? 1 : 0;
+      // Sem ping vivo o laço dos pings nem roda.
+      uniformes.uPingsAtivos.value = tempo - ultimoPing < PING.duracao ? 1 : 0;
       uniformes.uFormado.value = chegadaAoGrupo(progresso, 0.5);
       uniformes.uRede.value = redeDeMonitoramento(progresso);
       uniformes.uFinal.value = epilogo(progresso);
@@ -353,14 +360,14 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
       qualidade = avaliarQualidade(qualidade, delta);
       if (qualidade.nivel !== anterior) ajustar();
     },
-    gota(xBuffer, yBuffer, tempo) {
+    ping(xBuffer, yBuffer, tempo) {
       // Do pixel clicado ao ponto do plano z = 0 embaixo dele, com a câmera como está.
       ponto.set(xBuffer / (tela.largura * tela.dpr) * 2 - 1, yBuffer / (tela.altura * tela.dpr) * 2 - 1, 0);
       raio.setFromCamera(new THREE.Vector2(ponto.x, ponto.y), camera);
       if (!raio.ray.intersectPlane(plano, ponto)) return;
-      uniformes.uOndas.value[proximaOnda].set(ponto.x, ponto.y, tempo);
-      proximaOnda = (proximaOnda + 1) % MAX_GOTAS;
-      ultimaOnda = tempo;
+      uniformes.uPingsNoPlano.value[proximoPing].set(ponto.x, ponto.y, tempo);
+      proximoPing = (proximoPing + 1) % MAX_PINGS;
+      ultimoPing = tempo;
     },
     descartar() {
       alvo.dispose();

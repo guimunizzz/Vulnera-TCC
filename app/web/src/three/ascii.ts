@@ -91,7 +91,7 @@ float hashCelula(vec2 p) {
 }
 
 // Cobertura (0 a 1) do glifo "indice" no ponto "pos" (px) da sua célula. A
-// versão com posição existe para a onda das gotas, que lê a grade deslocada.
+// versão com posição serve a quem lê a grade deslocada.
 float coberturaDoGlifoEm(float indice, vec2 pos) {
   vec2 local = fract(pos / uCelula);
   vec2 uv = vec2((floor(indice) + local.x) / uTotalGlifos, local.y);

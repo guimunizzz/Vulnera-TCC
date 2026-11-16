@@ -203,7 +203,7 @@ ScrollTrigger único e os `data-ato` das seções não mudaram.
 | Atos 3–5 em terreno 3D: malha deslocada por uma função de altura, quatro montes por severidade, sombra, curvas de nível e os glifos de falha como cartazes | `scene/terreno.ts`, `scene/terreno-shaders.ts`, `scene/terreno-logica.ts` |
 | Composição: a passada de tela lê o alvo do terreno (alfa pré-multiplicado, `highp`) e soma os halos | `scene/shaders.ts`, `scene/use-landing-scene.ts` |
 | Epílogo: o progresso segue de 5 a 6 até o fim da rolagem (rede de monitoramento, órbita da câmera, horizonte que amanhece); grafo como camada do terreno; pulsos, sonar e varredura de luz contínuos | `scene/use-landing-scene.ts` (marco do fim da página), `scene/terreno*.ts` |
-| Clique no fundo: gota nos atos ASCII, onda sísmica no relevo a partir da virada | `three/gotas.ts` (`aoCair` passa o ponto e o instante), `scene/terreno.ts` |
+| Clique no fundo: **ping de scanner** no lugar da gota d'água — anel de glifos que revela as falhas escondidas nos atos ASCII, anel de luz que corre pelo relevo a partir da virada | `three/pings.ts` (substitui `three/gotas.ts`), `scene/shaders.ts`, `scene/terreno*.ts` |
 | Token novo da paleta da landing: `--vx-indigo` (sombra e neblina do terreno) | `landing.css` |
 | Pôster com a mesma célula da cena (12 × 18 px, fonte a 13 px); continua ASCII nos seis atos | `scene/landing-poster.tsx` |
 | Contraste: o teste cobre o terreno (cores × tom claro × teto de alfa × halo) | `scene/scene-contrast.test.ts` (CTR-04) |
@@ -211,8 +211,8 @@ ScrollTrigger único e os `data-ato` das seções não mudaram.
 > [!NOTE]
 > A atmosfera da área autenticada (`components/dashboard/hero/`) não foi
 > tocada. No kit `src/three/` só entraram dois parâmetros opcionais
-> (`criarAtlasAscii` e `aoCair` das gotas); sem eles o comportamento é o de
-> antes.
+> do `criarAtlasAscii` (célula e peso), e `gotas.ts` deu lugar a `pings.ts`,
+> que só a landing usa.
 
 > [!WARNING]
 > **A câmera do terreno se move**, presa ao scroll (inclina 46° durante a

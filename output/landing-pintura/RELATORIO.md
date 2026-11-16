@@ -228,3 +228,44 @@ Docs atualizados: LANDING_NARRATIVA.md §3 e §12.7, ADR-055 §6,
 Próximo: LP-FUT-01, 02, 03, 04 e 06.
 =================
 ```
+
+## Adendo — 2026-11-16: ping de scanner no lugar da gota
+
+```
+=== RELATÓRIO ===
+Feito:
+  - O clique no fundo dispara um ping de scanner (anel de radar) em vez da
+    gota d'água. ASCII: anel de glifos ciano que revela as falhas escondidas
+    na cor da severidade. Terreno: anel de luz que corre pelo relevo; glifos,
+    nós e arestas tocados piscam; no epílogo ele se propaga pela rede.
+  - Saíram a refração de água da passada de tela e a onda sísmica que
+    deformava a malha.
+  - Engasgo de ~200 ms (LP-FUT-02) diagnosticado: custo de primeira passada do
+    Chrome com perfil vazio, não da página. medir.cjs agora aquece.
+Arquivos:
+  novos     three/pings.ts, three/pings.test.ts
+  removidos three/gotas.ts, three/gotas.test.ts
+  alterados scene/shaders.ts, terreno-shaders.ts, terreno.ts,
+            use-landing-scene.ts, config.ts, terreno.test.ts, three/ascii.ts
+            (comentário), output/landing-pintura/medir.cjs, docs
+Testes: lint 0 erros · contraste OK · vitest 644/646 (as mesmas 2 falhas do
+  arquivo não rastreado) · e2e landing.spec.ts 7/7 no container :8086.
+Desempenho medido, aquecido (RTX 3060 Ti, build de produção, DPR 1 / DPR 2):
+  parado 60 fps em todos os atos · rolando a virada 59,6 / 59,3 (0 quadros
+  > 25 ms, maior intervalo 13 ms) · rolando a página 58,6 / 58,5 ·
+  0 long tasks. Primeira passada, sem aquecer: virada a 54 fps.
+Docs atualizados: LANDING_NARRATIVA.md §5.1 e §12.8, ADR-055 §5,
+  COMO_FUNCIONA_O_FUNDO.md (Parte 5), FRONTEND_WEB.md, BACKLOG.md (LP-FUT-02
+  fechado), PRD_VIVO.md; três capturas do ping em
+  docs/evidencias/landing-terreno/.
+⚠️ Atenção do Rafael:
+  - A primeira versão do ping ficou fraca demais (quase invisível); reforcei
+    o anel antes de fechar. Se ainda achar discreto ou forte, os números
+    estão em PING (three/pings.ts).
+  - Dois comentários em components/dashboard/hero/ ainda dizem "a gota ficou
+    só na landing". Não mexi: a área autenticada está fora do escopo.
+  - Chunks não remedidos depois desta mudança.
+  - Iris Xe continua sem medição (LP-FUT-01).
+Próximo: LP-FUT-01, 03, 04 e 06.
+=================
+```

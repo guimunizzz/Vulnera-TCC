@@ -85,8 +85,7 @@ O que continua valendo da intenção original:
 ### 4. Relevo é função; nada é guardado
 
 A altura do terreno é uma função avaliada no vértice: ondulação calma, quatro
-montes de crista erodida, as selas que os ligam em cordilheira e a onda do
-clique. Normal, sombra projetada (marcha curta em direção à luz) e luz de
+montes de crista erodida e as selas que os ligam em cordilheira. Normal, sombra projetada (marcha curta em direção à luz) e luz de
 contorno saem dela. Posição, cor e glifo de cada falha saem do número da
 instância. Não há textura de altura, de posição, nem alvo em ponto flutuante.
 
@@ -95,11 +94,18 @@ sem buffer de profundidade e sem MSAA: a malha é desenhada do fundo para a fren
 linhas têm a borda suavizada na conta. A passada de tela compõe esse alvo com
 o ASCII e os halos, com o mesmo teto de alfa que o teste de contraste cobre.
 
-### 5. O clique vira onda no relevo
+### 5. O clique é um ping de scanner
 
-Nos atos ASCII o clique continua sendo a gota que ondula a grade. A partir da
-virada, o ponto clicado é projetado no plano e vira uma onda sísmica que
-levanta a malha de verdade; os glifos balançam em cima dela.
+O clique no fundo era uma gota d'água que ondulava a grade (e, numa primeira
+versão do terreno, uma onda sísmica que levantava a malha). O Rafael achou a
+gota sem sentido, e ela foi trocada: o clique dispara um **pulso de radar**,
+um anel que se abre a partir do ponto, e o que ele toca responde. Nos atos
+ASCII, a falha escondida aparece na cor da severidade por um instante; no
+terreno, o anel corre pelo relevo como uma linha de luz e acende glifos, nós e
+arestas. É o que o produto faz — procurar — e conversa com o sonar dos montes.
+
+A interação continua sendo só por clique, ignorando alvos interativos e o
+teclado, e não existe com "reduzir animações".
 
 ### 6. A história vai até o fim da página, e o grafo vive em cima do terreno
 
@@ -147,7 +153,8 @@ em `docs/evidencias/landing-terreno/alternativas/`.
   profundidade de verdade.
 - Código menor que com a pintura: saíram `pintura.ts`, `grafo.ts`, a base
   genérica de material e `src/three/acumulacao.ts`. O kit voltou ao que era,
-  mais dois parâmetros opcionais (`criarAtlasAscii` e `aoCair` das gotas).
+  com `criarAtlasAscii` aceitando célula e peso, e `gotas.ts` trocado por
+  `pings.ts`.
 - A lógica do terreno é testável sem WebGL (`terreno-logica.ts`).
 
 **Custos e limites**

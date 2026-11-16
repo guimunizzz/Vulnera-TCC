@@ -12,78 +12,78 @@
   {
     "trecho": "parado-ato0-ascii",
     "segundos": 3.01,
-    "fpsDoMonitor": 60.2,
-    "fpsDaCena": 60.2,
+    "fpsDoMonitor": 239.9,
+    "fpsDaCena": 59.9,
     "acima25ms": 0,
-    "maiorIntervaloMs": 17,
+    "maiorIntervaloMs": 4,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 2.771
+    "gpuMsPorQuadroDaCena": 0.566
   },
   {
     "trecho": "parado-ato2-ascii",
     "segundos": 3.01,
-    "fpsDoMonitor": 60.1,
-    "fpsDaCena": 60.1,
+    "fpsDoMonitor": 239.9,
+    "fpsDaCena": 60.2,
     "acima25ms": 0,
-    "maiorIntervaloMs": 17,
+    "maiorIntervaloMs": 4,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 1.562
+    "gpuMsPorQuadroDaCena": 0.607
   },
   {
     "trecho": "parado-ato3-terreno",
     "segundos": 3.01,
-    "fpsDoMonitor": 60.2,
-    "fpsDaCena": 60.2,
+    "fpsDoMonitor": 239.8,
+    "fpsDaCena": 60,
     "acima25ms": 0,
-    "maiorIntervaloMs": 17,
+    "maiorIntervaloMs": 8,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 3.771
+    "gpuMsPorQuadroDaCena": 1
   },
   {
     "trecho": "parado-ato5-terreno",
-    "segundos": 3.01,
-    "fpsDoMonitor": 60,
-    "fpsDaCena": 60,
+    "segundos": 3,
+    "fpsDoMonitor": 239.9,
+    "fpsDaCena": 59.9,
     "acima25ms": 0,
-    "maiorIntervaloMs": 17,
+    "maiorIntervaloMs": 4,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 3.308
+    "gpuMsPorQuadroDaCena": 0.824
   },
   {
     "trecho": "parado-epilogo-rede",
     "segundos": 3,
-    "fpsDoMonitor": 59.9,
+    "fpsDoMonitor": 240.1,
     "fpsDaCena": 59.9,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 4,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 0.923
+  },
+  {
+    "trecho": "rolando-virada-2.4-a-3.6",
+    "segundos": 2.96,
+    "fpsDoMonitor": 225.4,
+    "fpsDaCena": 59.6,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 13,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 0.887
+  },
+  {
+    "trecho": "rolando-pagina-inteira",
+    "segundos": 6.18,
+    "fpsDoMonitor": 181.7,
+    "fpsDaCena": 58.6,
     "acima25ms": 0,
     "maiorIntervaloMs": 17,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 3.292
-  },
-  {
-    "trecho": "rolando-virada-2.4-a-3.6",
-    "segundos": 2.24,
-    "fpsDoMonitor": 58.1,
-    "fpsDaCena": 58.1,
-    "acima25ms": 1,
-    "maiorIntervaloMs": 33,
-    "longTasks": 0,
-    "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 1.805
-  },
-  {
-    "trecho": "rolando-pagina-inteira",
-    "segundos": 7.85,
-    "fpsDoMonitor": 59.4,
-    "fpsDaCena": 59.4,
-    "acima25ms": 5,
-    "maiorIntervaloMs": 33,
-    "longTasks": 0,
-    "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 1.774
+    "gpuMsPorQuadroDaCena": 0.722
   }
 ]

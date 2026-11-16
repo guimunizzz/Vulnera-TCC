@@ -116,6 +116,20 @@ const [base = 'http://localhost:5179', dpr = '1'] = process.argv.slice(2);
     }
   };
 
+  // Aquecimento: uma rolagem completa antes de medir. Com perfil vazio (como o
+  // Playwright abre) o Chrome paga um custo de primeira vez — ~50 ms ao entrar em
+  // "Recursos" e ~200 ms um pouco depois — que acontece igual com a cena
+  // desligada e não se repete na segunda passada (medido em 2026-11-16).
+  // AQUECER=0 mede a primeira passada, com esse custo dentro.
+  if (process.env.AQUECER !== '0') {
+    await page.mouse.move(720, 450);
+    const fundo = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+    for (let y = 0; y < fundo; y += 240) { await page.mouse.wheel(0, 240); await page.waitForTimeout(40); }
+    await page.waitForTimeout(600);
+    await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await page.waitForTimeout(800);
+  }
+
   const resultados = [];
   for (const [rotulo, p] of [['parado-ato0-ascii', 0], ['parado-ato2-ascii', 1.6], ['parado-ato3-terreno', 3.5], ['parado-ato5-terreno', 5], ['parado-epilogo-rede', 5.6]]) {
     await irPara(p);

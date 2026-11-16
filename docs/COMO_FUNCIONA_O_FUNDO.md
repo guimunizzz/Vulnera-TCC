@@ -90,13 +90,12 @@ Não existe um "desenho" do relevo guardado em lugar nenhum. Existe uma
 altura dele. A cada quadro, a GPU pergunta essa fórmula para cada vértice da
 malha e levanta o vértice até lá.
 
-A fórmula soma quatro coisas:
+A fórmula soma três coisas:
 
 1. uma **ondulação calma**, que respira devagar;
 2. **quatro montes**, um para cada gravidade de falha. Quanto mais grave, mais
    alto. Eles têm cristas e ravinas para não parecerem um sino liso;
-3. as **selas**, uma faixa de terra que liga os dois montes de cada lado;
-4. a **onda do clique** (mais abaixo).
+3. as **selas**, uma faixa de terra que liga os dois montes de cada lado.
 
 Como é uma fórmula, mudar o relevo é só mudar um número: "o monte da crítica
 agora tem 30% da altura".
@@ -156,12 +155,19 @@ aceita conviver com um pouco de risco.
 
 ## Parte 5 — o clique
 
-Clicar no fundo solta uma onda:
+Clicar no fundo dispara um **ping**, como o de um radar ou sonar: um anel que
+se abre a partir do ponto clicado. O que o anel toca responde:
 
-- nos atos de caracteres, ela **entorta a leitura** da grade, como texto visto
-  através da água;
-- no terreno, ela entra na **função de altura**: anéis que se afastam do ponto
-  clicado e levantam a malha de verdade. Os símbolos balançam em cima.
+- nos atos de caracteres, as **falhas escondidas aparecem** por um instante,
+  com o símbolo e a cor da gravidade. Você está "escaneando" aquele pedaço,
+  que é o que o Vulnera faz;
+- no terreno, o anel corre pelo relevo como uma **linha de luz**, subindo e
+  descendo as encostas, e os símbolos e os nós por onde ele passa piscam.
+
+A conta é a mesma nos dois: para cada ponto, "a que distância estou do
+clique, e a frente do anel já chegou aqui?". No terreno, antes de fazer essa
+conta, o ponto clicado na tela é **projetado** no chão 3D: traça-se uma linha
+da câmera, passando pelo cursor, até ela tocar o chão.
 
 ## Parte 6 — o grafo e o fim da página
 
@@ -243,7 +249,7 @@ apagadas, e a passada 1 nem roda.
 | `components/landing/scene/use-landing-scene.ts` | Liga tudo: scroll, loop, tema, descarte. |
 | `components/landing/scene/landing-poster.tsx` | O pôster de caracteres (plano B). |
 | `three/grade-celulas.ts` · `three/ascii.ts` | A folha das células e o atlas de símbolos. |
-| `three/gotas.ts` | O clique no fundo. |
+| `three/pings.ts` | O clique no fundo (ping de scanner). |
 | `three/gate.ts` | Decide se a cena pode montar, antes de baixar o three.js. |
 
 </details>

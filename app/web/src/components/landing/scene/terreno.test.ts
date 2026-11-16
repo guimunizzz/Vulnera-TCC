@@ -21,7 +21,7 @@
  *   TER-10  antes da virada o terreno não desenha e a camada fica inativa
  *   TER-11  depois da virada desenha no próprio alvo e devolve o renderer
  *   TER-12  o halo fica dentro da tela, do lado certo, com o risco do grupo
- *   TER-13  o clique vira onda no ponto do plano embaixo do cursor
+ *   TER-13  o ping do clique nasce no ponto do plano embaixo do cursor
  *   TER-14  aquecer e descartar não lançam nem deixam a camada ligada
  *   TER-15  epílogo: com o marco do fim da página o progresso vai de 5 a 6;
  *           a rede nasce nesse trecho e o horizonte amanhece só no fim
@@ -260,7 +260,7 @@ describe("Montagem do terreno", () => {
     expect(Math.min(alta.x, critica.x)).toBeGreaterThan(LARGURA / 2);
   });
 
-  it("TER-13 — o clique vira onda no ponto do plano embaixo do cursor", () => {
+  it("TER-13 — o ping do clique nasce no ponto do plano embaixo do cursor", () => {
     const terreno = montar();
     const { renderer } = rendererFalso();
     // Antes da virada a câmera olha de frente: o centro da tela é a origem do plano.
@@ -270,18 +270,18 @@ describe("Montagem do terreno", () => {
     terreno.desenhar(renderer, 1, 1 / 60, 3.6);
     const cena = malha.mock.calls[0][0] as THREE.Scene;
     const uniformes = ((cena.children[0] as THREE.Mesh).material as THREE.ShaderMaterial).uniforms;
-    expect(uniformes.uOndasAtivas.value).toBe(0);
-    terreno.gota(LARGURA / 2, ALTURA / 2, 1.5);
-    const onda = (uniformes.uOndas.value as THREE.Vector3[])[0];
-    expect(onda.x).toBeCloseTo(0, 3);
-    expect(onda.y).toBeCloseTo(0, 3);
-    expect(onda.z).toBe(1.5);
+    expect(uniformes.uPingsAtivos.value).toBe(0);
+    terreno.ping(LARGURA / 2, ALTURA / 2, 1.5);
+    const ping = (uniformes.uPingsNoPlano.value as THREE.Vector3[])[0];
+    expect(ping.x).toBeCloseTo(0, 3);
+    expect(ping.y).toBeCloseTo(0, 3);
+    expect(ping.z).toBe(1.5);
     // Um clique à direita cai à direita no plano.
-    terreno.gota(LARGURA * 0.9, ALTURA / 2, 1.6);
-    expect((uniformes.uOndas.value as THREE.Vector3[])[1].x).toBeGreaterThan(200);
-    // Com onda viva, o próximo quadro liga o laço das ondas no vértice.
+    terreno.ping(LARGURA * 0.9, ALTURA / 2, 1.6);
+    expect((uniformes.uPingsNoPlano.value as THREE.Vector3[])[1].x).toBeGreaterThan(200);
+    // Com ping vivo, o próximo quadro liga o laço dos pings no shader.
     terreno.desenhar(renderer, 1.7, 1 / 60, 3.6);
-    expect(uniformes.uOndasAtivas.value).toBe(1);
+    expect(uniformes.uPingsAtivos.value).toBe(1);
   });
 
   it("TER-18 — o grafo entra no desenho: instâncias para a rede, as falhas e os montes", () => {

@@ -31,7 +31,7 @@ import * as THREE from "three";
 import { montarCena, type CenaMontada } from "../../../three/scene-host";
 import { descartarCena } from "../../../three/dispose";
 import { lerCorDoToken, observarTema } from "../../../three/palette";
-import { criarGotas } from "../../../three/gotas";
+import { criarPings } from "../../../three/pings";
 import { criarGradeDeCelulas } from "../../../three/grade-celulas";
 import { criarAtlasAscii, type AtlasAscii } from "../../../three/ascii";
 import { criarTerreno, type Terreno } from "./terreno";
@@ -94,16 +94,16 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
     let pararDeObservarTema: (() => void) | undefined;
     let tamanho: ResizeObserver | undefined;
     let gatilho: ScrollTrigger | undefined;
-    // Clique no fundo = gota d'água (src/three/gotas.ts): ondulação da grade
-    // nos atos ASCII, onda sísmica no relevo a partir da virada.
-    // O terreno precisa dos uniforms das gotas e as gotas avisam o terreno:
-    // a ligação é feita logo depois que ele é criado.
-    const ligacao: { gota?: Terreno["gota"] } = {};
-    const gotas = criarGotas({
+    // Clique no fundo = ping de scanner (src/three/pings.ts): um anel de
+    // glifos nos atos ASCII, um anel que corre pelo relevo a partir da virada.
+    // O terreno é criado depois (precisa do atlas) e recebe cada ping já com o
+    // ponto em px do buffer: a ligação é feita logo depois que ele é criado.
+    const ligacao: { ping?: Terreno["ping"] } = {};
+    const pings = criarPings({
       canvas,
       tempoAtual: () => tempo,
       dpr: () => cena?.renderer.getPixelRatio() ?? 1,
-      aoCair: (x, y, quando) => ligacao.gota?.(x, y, quando),
+      aoPingar: (x, y, quando) => ligacao.ping?.(x, y, quando),
     });
     // O loop lê daqui; o ScrollTrigger escreve (suavizado).
     const progresso = { valor: 0 };
@@ -116,8 +116,8 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       uCelula: { value: new THREE.Vector2(CELULA_LANDING_PX, CELULA_LANDING_PX * 2) },
       uResolucao: { value: new THREE.Vector2(1, 1) },
       uProgresso: { value: 0 },
-      ...gotas.uniformes,
-      uGotasAtivas: { value: 0 },
+      ...pings.uniformes,
+      uPingsAtivos: { value: 0 },
       uTique: { value: 0 },
       uAlfaSaudavel: { value: OPACIDADE_CENA.saudavel },
       uAlfaDestaque: { value: OPACIDADE_CENA.destaque },
@@ -138,7 +138,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
     // Terreno dos atos 3–5; `uVirada` é dele e as duas passadas leem. Ele
     // desenha os glifos de falha com o mesmo atlas da cena ASCII.
     const terreno = criarTerreno(uniformes);
-    ligacao.gota = terreno.gota;
+    ligacao.ping = terreno.ping;
     Object.assign(uniformes, terreno.uniformesDaTela);
     const grade = criarGradeDeCelulas(FRAGMENT_CELULAS, uniformes);
     // O shader ignora a câmera; o renderer só exige uma.
@@ -196,7 +196,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       uniformes.uProgresso.value = p;
       uniformes.uTempo.value = tempo;
       uniformes.uTique.value = tique;
-      uniformes.uGotasAtivas.value = gotas.ativa(tempo) ? 1 : 0;
+      uniformes.uPingsAtivos.value = pings.ativo(tempo) ? 1 : 0;
       terreno.desenhar(renderer, tempo, delta, p);
       // Com a virada completa todas as células estão apagadas: a passada 1 é pulada.
       if (terreno.uniformesDaTela.uVirada.value < 0.999) grade.desenhar(renderer);
@@ -214,7 +214,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       grade.descartar();
       terreno.descartar();
       gatilho?.kill();
-      gotas.parar();
+      pings.parar();
       gsap.killTweensOf(progresso);
       tamanho?.disconnect();
       pararDeObservarTema?.();

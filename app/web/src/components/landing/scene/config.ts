@@ -224,8 +224,6 @@ export const TERRENO = {
   /** Sombra projetada: passos da marcha em direção à luz e até onde ela vai. */
   passosDaSombra: 8,
   alcanceDaSombraPx: 240,
-  /** Onda sísmica do clique: quanto ela levanta a malha. */
-  amplitudeDaOndaPx: 13,
 
   // --- Grafo sobre o terreno e vida contínua (animam mesmo com a página parada).
   /** O nó central flutua acima do cume de cada monte, ligado aos glifos dele. */

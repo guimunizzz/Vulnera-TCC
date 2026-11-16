@@ -7,9 +7,9 @@
  *      tamanho da grade, `src/three/grade-celulas.ts`) e decide, pelo
  *      progresso (0 a 5, um por ato), glifo, cor e alfa. A partir da virada
  *      (ato 3, ADR-055) cada célula esmaece e o terreno nasce no lugar.
- *   2. FRAGMENT_TELA roda por pixel: lê a célula, aplica a onda da gota,
- *      carimba o glifo do atlas (`src/three/ascii.ts`) com scanlines e compõe
- *      a camada 3D do terreno (`terreno.ts`) e os halos dos montes.
+ *   2. FRAGMENT_TELA roda por pixel: lê a célula, carimba o glifo do atlas
+ *      (`src/three/ascii.ts`) com scanlines e compõe a camada 3D do terreno
+ *      (`terreno.ts`) e os halos dos montes.
  * Estética de terminal hacker (ASCII, scanlines, glitch raro, acentos neon),
  * sem logos nem assets de terceiros.
  *
@@ -17,10 +17,12 @@
  * Nenhum vértice por caractere, nenhuma geometria por ato. As duas passadas
  * existem por desempenho: a lógica só muda por célula e, por pixel, custava
  * ~250× mais do que precisa (rolagem a 31 fps na GPU integrada, 2026-11-03).
- * Movimento contínuo (uTempo, 60 fps): o campo respira, o alerta pulsa em
- * curva suave e a gota do clique (`src/three/gotas.ts`) ondula. Só a troca
- * de glifo e o glitch seguem em "tiques" — trocar caractere é discreto por
- * natureza.
+ * Movimento contínuo (uTempo, 60 fps): o campo respira e o alerta pulsa em
+ * curva suave. Só a troca de glifo e o glitch seguem em "tiques" — trocar
+ * caractere é discreto por natureza.
+ * O clique no fundo é um ping de scanner (`src/three/pings.ts`): um anel de
+ * glifos se abre a partir do ponto e, por onde passa, a falha escondida
+ * aparece na cor da severidade por um instante.
  *
  * Os atos seguem `docs/LANDING_NARRATIVA.md` §3. O espelho sem animação está
  * em `estadoDaCelula` (layout.ts), usado pelo pôster — que continua contando
@@ -32,7 +34,7 @@
  */
 
 import { GLSL_ASCII } from "../../../three/ascii";
-import { GLSL_GOTAS, GOTA } from "../../../three/gotas";
+import { glslDoPing } from "../../../three/pings";
 import { GLSL_LER_CELULAS } from "../../../three/grade-celulas";
 import { PROPORCAO_FALHAS } from "./layout";
 import { GLIFO, TRANSICAO_CENA, VINHETA } from "./config";
@@ -51,6 +53,10 @@ uniform float uProgresso;
 uniform float uTique;
 uniform float uTempo;
 uniform float uVirada;
+// Ping de scanner: pontos em px do buffer; sem ping vivo o laço nem roda.
+uniform float uPingsAtivos;
+uniform float uDpr;
+${glslDoPing({ funcao: "pingNaTela", uniforme: "uPings", pxPorUnidade: "uDpr" })}
 uniform float uAlfaSaudavel;
 uniform float uAlfaDestaque;
 uniform float uAlfaFeixe;
@@ -129,6 +135,30 @@ void main() {
     }
   }
 
+  // --- Ping de scanner (clique no fundo): o anel é feito de glifos da rampa,
+  // em neon, e o que ele toca responde — a falha escondida aparece na cor da
+  // severidade e some com o eco. Nunca passa do alfa de destaque, o limite
+  // que o teste de contraste garante.
+  if (uPingsAtivos > 0.5) {
+    vec2 ping = pingNaTela((celula + 0.5) * uCelula);
+    float eco = max(ping.x, ping.y);
+    float alfaDoAnel = uAlfaDestaque * ping.x;
+    if (alfaDoAnel > alfa) {
+      // Os glifos mais cheios da rampa (":" a "="): o anel precisa ler de longe.
+      indice = ${GLIFO.rampaInicio + 2}.0 + floor(ping.x * ${(GLIFO.rampaTotal - 2.01).toFixed(2)});
+      cor = ${COR.neon}.0;
+      alfa = alfaDoAnel;
+    }
+    if (falha > 0.5 && uAlfaDestaque * eco >= alfa * 0.6) {
+      indice = glifoDaSeveridade(sev);
+      cor = corDaSeveridade(sev);
+      alfa = max(alfa, uAlfaDestaque * eco);
+    } else {
+      // O campo calmo só acende um pouco quando o anel passa.
+      alfa = min(alfa * (1.0 + 0.8 * eco), max(alfa, uAlfaDestaque));
+    }
+  }
+
   // --- Varredura (ato 2): blocos neon com franja magenta logo atrás.
   float presenca = sin(trecho * 3.14159);
   float distanciaFeixe = abs(clip.x - feixeX) * grade.x * 0.5;
@@ -171,14 +201,11 @@ void main() {
 }
 `;
 
-/** Passada 2: por pixel — gota, glifo do atlas, scanlines e a camada do terreno. */
+/** Passada 2: por pixel — glifo do atlas, scanlines e a camada do terreno. */
 export const FRAGMENT_TELA = /* glsl */ `
 ${GLSL_ASCII}
-${GLSL_GOTAS}
 ${GLSL_LER_CELULAS}
 
-uniform float uGotasAtivas;
-uniform float uAlfaDestaque;
 uniform vec3 uCorBase;
 uniform vec3 uCorNeon;
 uniform vec3 uCorGlitch;
@@ -213,31 +240,11 @@ void main() {
 
   // Depois da virada completa não há glifo: pula a leitura do atlas.
   if (uVirada < 0.999) {
-    // Água: nos atos ASCII a onda da gota desloca a leitura da grade
-    // (refração). No terreno a onda é do relevo (terreno.ts), não daqui.
-    // Sem gota viva, o laço das gotas nem roda.
-    vec4 onda = uGotasAtivas > 0.5 ? ondaDasGotas(gl_FragCoord.xy) * (1.0 - uVirada) : vec4(0.0);
-    vec2 pos = gl_FragCoord.xy - onda.xy * uCelula.x * ${GOTA.deslocamentoCelulas.toFixed(2)};
-    vec4 dado = lerCelula(celulaEm(pos));
-    float indice = byte(dado.r);
-    vec3 cor = corPorId(byte(dado.g));
-    float alfa = dado.b;
-
-    // Crista da onda: um anel de glifos da rampa, puxado para o neon. Nunca passa
-    // do alfa de destaque — o limite que o teste de contraste garante.
-    float crista = smoothstep(0.04, 0.45, onda.z);
-    float alfaOnda = uAlfaDestaque * crista;
-    if (alfaOnda > alfa) {
-      indice = ${GLIFO.rampaInicio}.0 + floor(crista * ${(GLIFO.rampaTotal - 0.01).toFixed(2)});
-      cor = mix(uCorBase, uCorNeon, crista);
-      alfa = alfaOnda;
-    }
-    alfa = max(alfa, min(alfa * (1.0 + 0.6 * onda.w), uAlfaDestaque));
-
+    vec4 dado = lerCelula(celulaDaTela());
     // Scanlines: uma linha de pixel a cada três, mais escura.
     float scanline = 1.0 - 0.18 * step(2.0, mod(floor(gl_FragCoord.y), 3.0));
-    float cobertura = coberturaDoGlifoEm(indice, pos) * alfa * scanline;
-    saida = vec4(linearToOutputTexel(vec4(cor, 1.0)).rgb * cobertura, cobertura);
+    float cobertura = coberturaDoGlifo(byte(dado.r)) * dado.b * scanline;
+    saida = vec4(linearToOutputTexel(vec4(corPorId(byte(dado.g)), 1.0)).rgb * cobertura, cobertura);
   }
 
   if (uCamadaAtiva > 0.5) {

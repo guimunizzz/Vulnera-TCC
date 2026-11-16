@@ -158,21 +158,27 @@ flowchart LR
 - Detalhes visuais: scanlines a cada 3 linhas de pixel e, raramente, uma faixa
   de "glitch" que desloca duas células — os dois só no WebGL.
 
-## 5.1 Gota d'água (clique no fundo)
+## 5.1 Ping de scanner (clique no fundo)
 
-Um clique no fundo — e **só** clique: nada segue o ponteiro — deixa cair uma
-gota, e ondulações circulares se espalham pelo campo de caracteres, na landing
-e na área autenticada (`src/three/gotas.ts`).
+> [!NOTE]
+> **Trocado em 2026-11-16.** Até aqui o clique deixava cair uma **gota d'água**
+> que ondulava a grade (e, por algumas horas, uma onda sísmica no terreno). O
+> Rafael achou a gota sem sentido: água não faz parte da história. O clique
+> passou a fazer o que o produto faz — procurar.
+
+Um clique no fundo — e **só** clique: nada segue o ponteiro — dispara um pulso
+de radar: um anel se abre a partir do ponto, e o que ele toca responde
+(`src/three/pings.ts`).
 
 | Parte | Como funciona |
 |---|---|
 | Quem conta como "fundo" | O canvas segue `pointer-events: none`; o clique é ouvido na janela e ignorado quando o alvo é interativo (link, botão, campo, item de menu, aba, diálogo), quando é o botão direito ou quando vem do teclado (`detail = 0`). |
-| Física | Até 6 gotas simultâneas; frente a 320 px/s, pacote gaussiano de 70 px, cristas a cada 34 px, some em 2,4 s, perde força com tempo e distância. |
-| Visual | Nos atos ASCII, a onda **refrata** a grade (a leitura das células é deslocada, como texto visto pela água) e a crista desenha um anel de glifos da rampa, puxado para o ciano. |
-| No terreno (atos 3–5) | O ponto clicado é projetado no plano e vira uma **onda sísmica** na função de altura: anéis que levantam a malha de verdade (13 px de amplitude), com os glifos balançando em cima. Mesma velocidade e duração da gota; sem onda viva o laço nem roda no vértice. |
-| Contraste | O anel nunca passa do alfa de destaque (landing) nem do teto do campo (plataforma): a garantia de AA não muda com a gota. |
-| Custo | A cena já desenha todo quadro; sem gota viva o laço das ondas nem roda (desvio por uniform). Medido: 60 fps com a gota, na landing e na plataforma. |
-| Movimento reduzido | A cena nem monta; não há gota. |
+| Física | Até 6 pings simultâneos; frente a 420 px/s, anel de 22 px de meia largura, some em 2,2 s e perde força com o tempo e com a distância. Atrás da frente fica um eco que se apaga em ~240 px. |
+| Atos 0–2 (ASCII) | O anel é feito de glifos da rampa (`:` a `=`) em ciano. Por onde passa, a **falha escondida aparece** na cor e no glifo da severidade e some com o eco — quem clica "escaneia" aquele pedaço antes de a varredura do ato 2 fazer isso de vez. Tudo decidido na passada de células; a passada de tela não sabe do ping. |
+| Atos 3–5 (terreno) | O ponto clicado é projetado no plano 3D. O anel corre pelo relevo como uma linha de luz ciano que acompanha as encostas; a grade e as curvas de nível ficam acesas mais um instante; glifos, nós e arestas que ele toca crescem e clareiam. No epílogo ele se propaga pela rede. |
+| Contraste | O anel e o eco nunca passam do alfa de destaque (ASCII) nem do teto de alfa da camada (terreno): a garantia de AA não muda com o ping. |
+| Custo | Sem ping vivo o laço nem roda (desvio por uniform), nas duas passadas e no terreno. A malha não se deforma mais com o clique. |
+| Movimento reduzido | A cena nem monta; não há ping. |
 
 ## 6. Cores e legibilidade
 
@@ -303,6 +309,7 @@ Regras que continuam valendo:
 | 2026-11-16 | **Três materiais para os atos 3–5** (pedido do Rafael: explorar mais o three.js): terreno topográfico (padrão) e grafo de nós, em 3D com câmera em perspectiva, ao lado da pintura; escolha por `?cena=` enquanto ele compara (§11). |
 | 2026-11-16 | **Terreno escolhido como material final** (ADR-055): pintura, grafo e `?cena=` removidos. Terreno com erosão, sombra projetada, luz de contorno, neblina com cor, correção em varredura e onda sísmica no clique; regra de câmera do §2 revista (§12). |
 | 2026-11-16 | **Epílogo e grafo sobre o terreno** (pedido do Rafael: o fundo parava depois de Maturidade): o progresso segue de 5 a 6 até o fim da página, com rede de monitoramento, órbita da câmera e horizonte que amanhece; nó sobre cada monte ligado aos glifos; pulsos, sonar e varredura de luz animam com a página parada (§12.7). |
+| 2026-11-16 | **Ping de scanner no lugar da gota** (o Rafael achou a gota sem sentido): o clique dispara um anel de radar que revela as falhas escondidas no ASCII e corre pelo relevo e pela rede no terreno (§5.1). Engasgo de ~200 ms na virada diagnosticado como custo de primeira passada do navegador; medição passa a aquecer (§12.8). |
 
 ### Boas práticas consultadas (2026-10-27)
 
@@ -584,7 +591,7 @@ flowchart LR
 |---|---|
 | **Mundo** | px CSS, origem no centro da tela. Câmera em perspectiva (35°) à distância em que o plano z = 0 preenche a tela: sem inclinação, a célula ASCII cai em cima do seu glifo. |
 | **Malha** | Plano de 1,8 × a largura por 2,8 × a altura da tela (inclinado, o fundo encolhe e a frente cresce), um vértice a cada 24 px. Desenhada do fundo para a frente: o preenchimento translúcido da encosta da frente vela a de trás sem buffer de profundidade. |
-| **Altura** | `altura(p)` no vértice: ondulação em duas escalas + quatro montes + as selas que ligam os dois de cada lado + a onda do clique. Cada monte tem contorno deslocado por ruído, um pico secundário e cristas em três escalas. |
+| **Altura** | `altura(p)` no vértice: ondulação em duas escalas + quatro montes + as selas que ligam os dois de cada lado. Cada monte tem contorno deslocado por ruído, um pico secundário e cristas em três escalas. |
 | **Luz** | Por vértice. Normal por diferença finita (3 avaliações da altura), sombra projetada por uma marcha de 8 passos em direção à luz (até 240 px, só contra os montes) e luz de contorno pelo ângulo entre a normal e a câmera. |
 | **Linhas** | No fragmento, com a largura em px de tela (`fwidth`): grade de 24 × 36 px (duas células ASCII) e uma curva de nível a cada 15 px de altitude. Apagam-se quando ficam mais juntas que ~2 px (sem moiré). |
 | **Correção** | O vértice passa a altitude relativa dentro do monte; o fragmento compara com a frente da varredura. Acima da frente, verde; na frente, uma faixa de luz. |
@@ -702,6 +709,41 @@ que a região depois de "Recursos" entra na tela e reproduz com a cena
 desligada. O chunk lazy da cena foi para **45,91 kB** (gzip 16,71); o bundle
 inicial continua em 492,80 kB. Continua valendo o aviso da §12.3: **não
 medido em Iris Xe**.
+
+### 12.8 Ping de scanner e o engasgo de primeira passada (2026-11-16)
+
+O clique no fundo deixou de ser gota d'água e virou **ping de scanner** — ver
+a §5.1. No terreno, saiu a onda sísmica que deformava a malha: o anel agora é
+luz sobre o relevo, e a função de altura ficou mais simples.
+
+**Engasgo de conteúdo (LP-FUT-02) diagnosticado.** O intervalo de ~200 ms que
+aparecia nas medições da virada não é da cena nem do conteúdo da página:
+
+| Teste | Resultado |
+|---|---|
+| Rolar 2,4 → 3,6 com a cena ligada | intervalos de ~54 ms (y ≈ 2190) e ~200 ms (y ≈ 3870) |
+| A mesma rolagem com a cena desligada (alto contraste) | os mesmos dois intervalos |
+| A mesma rolagem uma **segunda vez**, no mesmo navegador | **nenhum** intervalo acima de 40 ms |
+
+É um custo de primeira vez do processo do Chrome com perfil vazio, que é como
+o Playwright abre o navegador. Não há long task (não é JavaScript). O
+`medir.cjs` passou a fazer uma rolagem de aquecimento antes de medir, como o
+`diag-desenhos.cjs` já fazia (`SEGUNDA_PASSAGEM`); `AQUECER=0` mede a primeira
+passada, com o custo dentro.
+
+Medição final, **aquecida** (RTX 3060 Ti, 1440 × 900, build de produção):
+
+| Trecho | DPR 1 | DPR 2 |
+|---|---|---|
+| Parado, ato 0 (ASCII) | 59,9 fps · 0 quadros > 25 ms | 60,0 fps · 0 |
+| Parado, ato 3 (terreno) | 60,0 fps · 0 | 60,1 fps · 0 |
+| Parado, epílogo (rede) | 59,9 fps · 0 | 59,9 fps · 0 |
+| Rolando a virada (2,4 → 3,6) | **59,6 fps · 0 · maior intervalo 13 ms** | **59,3 fps · 0 · 13 ms** |
+| Rolando a página inteira | 58,6 fps · 0 · 17 ms | 58,5 fps · 0 · 21 ms |
+
+Long tasks: **0** em todos os trechos. Na primeira passada (sem aquecer) a
+virada mede 54 fps, com os dois intervalos acima dentro. Continua valendo o
+aviso da §12.3: **não medido em Iris Xe**.
 
 ### 12.6 O que foi descartado
 

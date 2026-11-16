@@ -8,8 +8,8 @@
  *
  * COMO
  * - O relevo é uma FUNÇÃO (`altura`): ondulação calma + quatro montes de
- *   crista erodida + as selas que os ligam em cordilheira + a onda sísmica do
- *   clique. Não há textura de altura nem nada guardado: o vértice calcula.
+ *   crista erodida + as selas que os ligam em cordilheira. Não há textura de
+ *   altura nem nada guardado: o vértice calcula.
  * - Luz por vértice: a normal sai da função por diferença finita, a sombra
  *   projetada é uma marcha curta em direção à luz, e a luz de contorno acende
  *   a crista que está de lado para a câmera.
@@ -28,6 +28,9 @@
  * - Vida contínua (anima com a página parada): pulsos que correm pelas
  *   arestas, anéis de sonar que saem dos montes, uma faixa de luz que varre o
  *   relevo e os glifos balançando na haste.
+ * - Ping de scanner (clique no fundo): o ponto clicado chega projetado no
+ *   plano; o anel acende a grade e as curvas de nível por onde corre, e os
+ *   glifos, nós e arestas que ele toca piscam.
  *
  * As contas de narrativa espelham `terreno-logica.ts`, onde são testadas.
  * Não use crase dentro destes templates: fecha a string JS (ADR-026).
@@ -36,7 +39,7 @@
  * `terreno.ts` e `shaders.ts` (só `GLSL_VIRADA`).
  */
 
-import { GOTA, MAX_GOTAS } from "../../../three/gotas";
+import { glslDoPing } from "../../../three/pings";
 import { GLIFO, TERRENO } from "./config";
 import { PROPORCAO_FALHAS } from "./layout";
 
@@ -76,9 +79,19 @@ uniform vec3 uQuente;
 uniform vec3 uMontes[4];
 // x = frente da varredura verde (altitude relativa), y = força do verde, z = força da faixa.
 uniform vec3 uCorrecao[4];
-// Ondas sísmicas do clique: xy = ponto do plano, z = instante.
-uniform vec3 uOndas[${MAX_GOTAS}];
-uniform float uOndasAtivas;
+// Pings de scanner do clique: xy = ponto do plano (px), z = instante.
+uniform float uPingsAtivos;
+${glslDoPing({ funcao: "pingNoPlano", uniforme: "uPingsNoPlano", pxPorUnidade: "1.0" })}
+// O ping no ponto p do plano: x = o anel passando, y = o eco atrás dele (0 a 1).
+// Sem ping vivo o laço nem roda.
+vec2 pingAqui(vec2 p) {
+  return uPingsAtivos > 0.5 ? pingNoPlano(p) : vec2(0.0);
+}
+// Quanto o ping acende o que está em p (glifo, nó, aresta).
+float ecoDoPing(vec2 p) {
+  vec2 ping = pingAqui(p);
+  return max(ping.x, ping.y * 0.6);
+}
 // Grafo: quanto os montes já se formaram, a cura de cada um (0 a 1), quanto da
 // rede do epílogo já nasceu e quanto do epílogo já passou.
 uniform float uFormado;
@@ -162,27 +175,10 @@ float alturaDosMontes(vec2 p) {
   return h;
 }
 
-// Onda sísmica do clique: anéis que se afastam do ponto e perdem força.
-float ondasDoClique(vec2 p) {
-  float h = 0.0;
-  for (int i = 0; i < ${MAX_GOTAS}; i++) {
-    float t = uTempo - uOndas[i].z;
-    if (t < 0.0 || t > ${f(GOTA.duracao)}) continue;
-    float d = length(p - uOndas[i].xy);
-    float x = d - t * ${f(GOTA.velocidadePx)};
-    float vida = 1.0 - t / ${f(GOTA.duracao)};
-    h += sin(x * ${f((2 * Math.PI) / (GOTA.comprimentoPx * 2))})
-      * exp(-(x * x) / ${f((GOTA.larguraPx * 1.4) ** 2)}) * vida * vida / (1.0 + d / 420.0);
-  }
-  return h * ${f(TERRENO.amplitudeDaOndaPx)};
-}
-
 float altura(vec2 p) {
   float onda = (ruido(p * 0.0042 + uRitmo * 0.035) - 0.5) * ${f(TERRENO.ondulacaoPx)}
     + (ruido(p * 0.011 - uRitmo * 0.027) - 0.5) * ${f(TERRENO.ondulacaoPx * 0.4)};
-  float h = onda * uVirada + alturaDosMontes(p);
-  if (uOndasAtivas > 0.5) h += ondasDoClique(p) * uVirada;
-  return h;
+  return onda * uVirada + alturaDosMontes(p);
 }
 
 // Sombra projetada (1 = no sol, 0 = na sombra): marcha em direção à luz e vê
@@ -318,14 +314,19 @@ void main() {
   float distanciaDaVarredura = (vPlano.y - posicao) / 70.0;
   float varredura = exp(-distanciaDaVarredura * distanciaDaVarredura) * mix(0.35, 1.0, uEstavel);
 
-  // Na sombra as linhas perdem força; a faixa da correção, o sonar e a
-  // varredura acendem as que tocam.
+  // Ping de scanner: o anel do clique corre pelo relevo como uma linha de luz,
+  // e as linhas por onde ele acabou de passar ficam acesas mais um instante.
+  vec2 ping = pingAqui(vPlano);
+
+  // Na sombra as linhas perdem força; a faixa da correção, o sonar, a
+  // varredura e o ping acendem as que tocam.
   float alfaDaLinha = clamp(
     (grade * mix(0.3, 0.5, alto) + curva * 0.9) * (1.0 - 0.45 * vLuz.z) * (1.0 + 0.9 * varredura)
-      + faixa * 0.55 + sonar * (0.16 + 0.5 * grade),
+      + faixa * 0.55 + sonar * (0.16 + 0.5 * grade) + ping.x * 0.8 + ping.y * 0.55 * max(grade, curva),
     0.0, 1.0);
   vec3 corDaLinha = mix(corBase, vec3(1.0), ${f(TERRENO.tomClaro)} * clamp(luz * curva + faixa + 0.6 * varredura, 0.0, 1.0));
   corDaLinha = mix(corDaLinha, corDoSonar / max(sonar, 1e-4), clamp(sonar, 0.0, 1.0) * 0.8);
+  corDaLinha = mix(corDaLinha, mix(uCorDoAcento, vec3(1.0), ${f(TERRENO.tomClaro)}), clamp(ping.x + ping.y * 0.6, 0.0, 1.0));
 
   vec4 saida = vec4(corDoFundo * alfaDoFundo, alfaDoFundo);
   saida = vec4(corDaLinha * alfaDaLinha, alfaDaLinha) + saida * (1.0 - alfaDaLinha);
@@ -436,7 +437,10 @@ bool marcadorDaCelula(float id, out Marcador m) {
   if (severidade < 1.5) m.alfa *= 1.0 - ${f(TERRENO.discricaoDaBaixa)} * uEstavel;
   // O glifo da severidade vira "✓" quando a correção passa da metade.
   m.glifo = corrigida > 0.4 ? ${GLIFO.ok}.0 : ${GLIFO.baixa - 1}.0 + severidade;
-  m.escala = mix(1.0, 1.3, h3);
+  // O ping do clique toca o glifo: ele cresce e clareia por um instante.
+  float eco = ecoDoPing(xy);
+  m.cor = mix(m.cor, vec3(1.0), ${f(TERRENO.tomClaro)} * eco);
+  m.escala = mix(1.0, 1.3, h3) * (1.0 + 0.35 * eco);
   m.grupo = g;
   m.chegada = chegada;
   m.corrigida = corrigida;
@@ -602,6 +606,10 @@ void main() {
   }
 
   if (alfa < 0.004) { gl_Position = FORA; return; }
+  // O ping se propaga pela rede: a aresta acende quando o anel passa pelo meio dela.
+  float eco = ecoDoPing(0.5 * (a.xy + b.xy));
+  alfa = min(1.0, alfa * (1.0 + 1.8 * eco));
+  cor = mix(cor, vec3(1.0), ${f(TERRENO.tomClaro)} * eco);
   float desloc;
   gl_Position = segmento(a, b, position.x, position.y, meia, desloc);
   vLinha = vec2(desloc, meia);
@@ -653,6 +661,11 @@ void main() {
   }
 
   if (alfa < 0.004) { gl_Position = FORA; return; }
+  // O ping toca o nó: ele cresce e acende por um instante.
+  float eco = ecoDoPing(centro.xy);
+  raioPx *= 1.0 + 0.5 * eco;
+  alfa = min(1.0, alfa * (1.0 + eco));
+  cor = mix(cor, vec3(1.0), ${f(TERRENO.tomClaro)} * eco);
   // O cartaz tem 3× o raio do disco: o resto é o brilho e o anel.
   gl_Position = cartaz(centro, position.xy, vec2(raioPx * 3.0));
   vCanto = position.xy;
