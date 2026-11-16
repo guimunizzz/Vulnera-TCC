@@ -26,6 +26,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileDown, Upload } from "lucide-react";
 import { codeImportsApi } from "../lib/api/code-imports.api";
+import { beginAssistantFeedback } from "../lib/assistant-feedback";
 import { useApiError } from "../hooks/use-api-error";
 import { Breadcrumb } from "../components/ui/navigation";
 import { Alert } from "../components/ui/alert";
@@ -153,6 +154,7 @@ export function CodeImportDetailPage() {
 
   async function baixarPdf(): Promise<void> {
     if (!id) return;
+    const feedback = beginAssistantFeedback();
     setErro(null);
     setGerandoPdf(true);
     try {
@@ -165,7 +167,9 @@ export function CodeImportDetailPage() {
       ]);
       const blob = await generateCodeImportReportPdf(data);
       downloadBlob(blob, `sast-sca-${slugify(data.import.projectName)}-${slugify(data.import.toolName)}-${data.import.createdAt.slice(0, 10)}.pdf`);
+      feedback("report-ready");
     } catch (err) {
+      feedback("operation-error");
       setErro(getErrorMessage(err));
     } finally {
       setGerandoPdf(false);

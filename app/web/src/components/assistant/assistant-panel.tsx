@@ -2,8 +2,11 @@
  * Painel não modal da orientação, com texto seguro, histórico rolável e atalhos fechados.
  * Consumido pelo assistente autenticado; prioriza a conversa e mantém posição independente do arraste.
  */
-import { useEffect, useRef, useState, type RefObject } from "react";
-import { ArrowUp, Trash2, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
+import { motion, useIsPresent } from "motion/react";
+import { ArrowUp, Minus, Trash2, X } from "lucide-react";
+import { useMotion } from "../../motion/use-motion";
+import { DESLOCAMENTO, DURACAO, EASE } from "../../motion/tokens";
 import { assistantDestination, assistantSuggestions, ASSISTANT_SCREEN_LABELS } from "../../lib/assistant-context";
 import type { UserRole } from "../../types/auth.types";
 import type { AssistantActionId, AssistantScreen } from "../../types/assistant.types";
@@ -15,13 +18,19 @@ interface Props {
   role: UserRole;
   conversation: ReturnType<typeof useAssistantConversation>;
   onClose: () => void;
+  onMinimize: () => void;
+  draft: string;
+  onDraftChange: (draft: string) => void;
   onNavigate: (action: AssistantActionId) => void;
   inputRef: RefObject<HTMLTextAreaElement>;
   animationsPaused?: boolean;
 }
 
-export function AssistantPanel({ screen, role, conversation, onClose, onNavigate, inputRef, animationsPaused = false }: Props) {
-  const [draft, setDraft] = useState("");
+export function AssistantPanel({ screen, role, conversation, onClose, onMinimize, draft, onDraftChange: setDraft, onNavigate, inputRef, animationsPaused = false }: Props) {
+  const present = useIsPresent();
+  const section = useRef<HTMLElement>(null);
+  const { reduzido } = useMotion();
+  const quiet = reduzido || animationsPaused;
   const { messages, pending, error, send, clear } = conversation;
   const end = useRef<HTMLDivElement>(null);
   const lastMessage = messages[messages.length - 1];
@@ -31,6 +40,7 @@ export function AssistantPanel({ screen, role, conversation, onClose, onNavigate
       onClick={() => { setDraft(suggestion); inputRef.current?.focus(); }}>{suggestion}</button>)}
   </div>;
   useEffect(() => { end.current?.scrollIntoView({ block: "nearest", behavior: "instant" }); }, [messages, pending, error]);
+  useLayoutEffect(() => { section.current?.toggleAttribute("inert", !present); }, [present]);
 
   function clearConversation() {
     clear();
@@ -39,11 +49,17 @@ export function AssistantPanel({ screen, role, conversation, onClose, onNavigate
   }
 
   return (
-    <section id="assistant-panel" role="dialog" aria-label="Assistente Vulnera" aria-describedby="assistant-context" className="assistant-panel">
+    <motion.section ref={section} id="assistant-panel" role="dialog" aria-label="Assistente Vulnera" aria-describedby="assistant-context" className="assistant-panel"
+      aria-hidden={!present || undefined}
+      initial={{ opacity: 0, y: quiet ? 0 : DESLOCAMENTO.ancorado, scale: quiet ? 1 : 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: quiet ? 0 : DESLOCAMENTO.ancorado, scale: quiet ? 1 : 0.985 }}
+      transition={{ duration: quiet ? DURACAO.instant : present ? DURACAO.slow : DURACAO.fast, ease: EASE.out }}>
       <header className="assistant-panel-header">
         <span className="assistant-panel-avatar"><AssistantMascot activity={activity} paused={animationsPaused || messages.length === 0} reactionKey={lastMessage?.id} /></span>
         <div className="assistant-panel-title"><h2>Vuvu</h2><p id="assistant-context">Assistente Vulnera · {ASSISTANT_SCREEN_LABELS[screen]}</p></div>
         <button type="button" className="assistant-icon-button" aria-label="Limpar conversa" onClick={clearConversation}><Trash2 size={17} /></button>
+        <button type="button" className="assistant-icon-button" aria-label="Recolher Vuvu" title="Modo discreto" onClick={onMinimize}><Minus size={19} /></button>
         <button type="button" className="assistant-icon-button" aria-label="Fechar assistente" onClick={onClose}><X size={19} /></button>
       </header>
 
@@ -89,6 +105,6 @@ export function AssistantPanel({ screen, role, conversation, onClose, onNavigate
         <span id="assistant-count" className={draft.length >= 800 ? "assistant-count" : "sr-only"}>{draft.length}/1.000</span>
         <p id="assistant-privacy" className="assistant-privacy">Não compartilhe dados confidenciais.</p>
       </div>
-    </section>
+    </motion.section>
   );
 }

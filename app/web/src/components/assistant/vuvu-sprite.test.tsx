@@ -6,6 +6,7 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AssistantMascot } from "./assistant-mascot";
 import { vuvuCanLook, vuvuFrame, vuvuLookFrame } from "./vuvu-sprite";
+import { smoothVuvuGaze, stableVuvuLook } from "./vuvu-gaze";
 
 const preference = vi.hoisted(() => ({ reduced: false }));
 vi.mock("../../motion/use-motion", () => ({ useMotion: () => ({ reduzido: preference.reduced }) }));
@@ -80,5 +81,34 @@ describe("Vuvu em tempo real", () => {
     fireEvent.error(view.container.querySelector("img")!);
     expect(view.container.querySelector(".vuvu-fallback")).toHaveTextContent("V");
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("amortece o percurso e não alterna entre direções com pequenas oscilações na borda", () => {
+    const first = smoothVuvuGaze({ x: 100, y: 0 }, { x: 0, y: -100 }, 16);
+    expect(first.x).toBeGreaterThan(0); expect(first.x).toBeLessThan(100);
+    expect(first.y).toBeLessThan(0); expect(first.y).toBeGreaterThan(-100);
+    const up = { row: 9, column: 0 };
+    for (const degrees of [10, 12, 11, 14, -14]) {
+      const angle = degrees * Math.PI / 180;
+      expect(stableVuvuLook({ x: Math.sin(angle) * 100, y: -Math.cos(angle) * 100 }, up)).toEqual(up);
+    }
+    expect(stableVuvuLook({ x: 100, y: 0 }, up)).toEqual({ row: 9, column: 4 });
+  });
+
+  it("mantém o olhar quando o mouse se aproxima do centro e encerra o RAF ao estabilizar", () => {
+    const view = render(<AssistantMascot trackPointer />);
+    const sprite = view.container.querySelector(".vuvu-sprite")!;
+    vi.spyOn(sprite, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 100 } as DOMRect);
+    fireEvent(window, new MouseEvent("pointermove", { clientX: 150, clientY: 50 }));
+    act(() => vi.advanceTimersByTime(32));
+    expect(sprite).toHaveAttribute("data-frame", "9:4");
+    fireEvent(window, new MouseEvent("pointermove", { clientX: 51, clientY: 50 }));
+    act(() => vi.advanceTimersByTime(100));
+    expect(sprite).toHaveAttribute("data-frame", "9:4");
+    fireEvent(window, new MouseEvent("pointermove", { clientX: 50, clientY: -50 }));
+    act(() => vi.advanceTimersByTime(1000));
+    expect(sprite).toHaveAttribute("data-frame", "9:0");
+    expect(vi.getTimerCount()).toBe(0);
+    view.unmount(); expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -1,5 +1,10 @@
 # BACKLOG.md — Vulnera
 
+**✅ 2026-11-16 — AI-UI-08: quatro melhorias implementadas (100% do código; aplicação principal em fechamento).** Entrada/saída do chat, olhar suave, reações confirmadas e modo discreto. Web 690/690, contraste 132/132, build e navegador/axe 16/16. Sem backend, novas chamadas Gemini ou artefatos de QA publicados. ADR-055 e `QA_VUVU_FLUIDEZ_2026-11-16.md` registram os limites e a cadência medida.
+
+- [x] AI-UI-08 — Quatro melhorias autorizadas, com validação de falhas parciais e isolamento de sessão.
+- [ ] AI-UI-09 — Aplicar somente a Web principal e verificar preservação após o restart.
+
 **✅ 2026-11-16 — AI-UI-07 concluída (100%).** Após autorização do usuário, somente Web atualizada em `localhost:8086` com a Vuvu de `6e7e467`. Gestos, atlas e painel conferidos com navegador/sessão efêmera; zero POST ao assistente e zero erros de página/CSP. Web/API HTTP 200. API/DB/Mailhog/volumes, contagens e `.env` preservados; imagem anterior somente local. Sem seed/reset ou artefato de QA publicado. Detalhes em `QA_VUVU_INTERACOES_2026-11-16.md`.
 
 - [x] AI-UI-07 — Aplicação autorizada exclusivamente do frontend principal e verificação de preservação.

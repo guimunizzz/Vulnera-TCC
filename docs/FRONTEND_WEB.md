@@ -348,6 +348,16 @@ alto contraste, modais e aba oculta continuam interrompendo quadros animados.
 Chat compacto mantém histórico/origem/atalhos, com sugestões recolhidas após a
 primeira pergunta e contador discreto próximo do limite.
 
+Na evolução seguinte de 16/11, o painel usa presença Motion para entrada/saída;
+ao fechar, fica inerte e fora da árvore acessível durante a animação. O rascunho
+fica na sessão, preservado ao fechar/recolher. Modo discreto exibe apenas um
+ícone de 44 px, sem reexpansão por resultados. Olhar com filtro/histerese e
+mistura breve de poses; RAF encerra ao estabilizar. `lib/assistant-feedback.ts`
+recebe somente dois tipos de resultado, com assinante capturado no início da
+ação e isolamento após troca de sessão. Integra os três fluxos PDF e falhas
+finais de mutations, preservando callbacks/erros/retries. Nada é enviado ao
+Gemini por esses sinais. Ver ADR-055 e `QA_VUVU_FLUIDEZ_2026-11-16.md`.
+
 Personalidade autorizada aplicada também ao Gemini, preservando as fronteiras
 do backend. Visual e nova voz foram aplicados ao Docker local após autorização,
 com banco/volumes preservados. Prévias com dados fictícios e testes:

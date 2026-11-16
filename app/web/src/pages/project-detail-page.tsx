@@ -20,6 +20,7 @@ import { cn } from "../lib/cn";
 import { downloadBlob } from "../lib/pdf/base";
 import { generateExecutivePdf } from "../lib/pdf/executive";
 import { generateTechnicalPdf } from "../lib/pdf/technical";
+import { beginAssistantFeedback } from "../lib/assistant-feedback";
 import type { ProjectStatus } from "../types/project.types";
 import type { ReportType } from "../types/report.types";
 import { TABELA } from "../components/ui/table-estilos";
@@ -165,12 +166,14 @@ export function ProjectDetailPage() {
   // registra o metadado no servidor. O servidor nunca vê o PDF em si.
   const generateReportMutation = useMutation({
     mutationFn: async (type: ReportType) => {
+      const feedback = beginAssistantFeedback();
       setGeneratingType(type);
       const data = await reportsApi.getReportData(id!);
       const blob = type === "EXECUTIVE" ? await generateExecutivePdf(data) : await generateTechnicalPdf(data);
       const fileName = `relatorio-${type === "EXECUTIVE" ? "executivo" : "tecnico"}-${slugify(project?.name ?? id!)}.pdf`;
       downloadBlob(blob, fileName);
       await reportsApi.create(id!, type);
+      feedback("report-ready");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reports", "byProject", id] });

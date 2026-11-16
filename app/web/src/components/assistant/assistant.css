@@ -5,6 +5,8 @@
   color: oklch(var(--color-text-primary)); font-family: "Inter Variable", var(--font-sans);
 }
 .assistant-root[hidden] { display: none; }
+.assistant-mascot[hidden] { display: none; }
+.assistant-root .assistant-discreet-button { position: absolute; right: var(--space-2); bottom: var(--space-6); display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid oklch(var(--color-border-strong)); border-radius: var(--radius-full); background: oklch(var(--color-bg-surface)); color: oklch(var(--color-accent-ink)); box-shadow: var(--elevation-raised); }
 .assistant-root button, .assistant-root textarea, .assistant-panel { pointer-events: auto; }
 .assistant-root button { cursor: pointer; font: inherit; }
 .assistant-root button:disabled { cursor: default; opacity: .55; }
@@ -13,6 +15,7 @@
 }
 .vuvu-sprite { position: relative; display: block; width: 100%; aspect-ratio: 12 / 13; overflow: hidden; pointer-events: none; user-select: none; contain: paint; }
 .vuvu-sprite > img { position: absolute; top: 0; left: 0; display: block; width: 800%; height: 1100%; max-width: none; object-fit: fill; transform-origin: 0 0; }
+.vuvu-sprite > .vuvu-previous-frame { opacity: 0; }
 .vuvu-six-seven { aspect-ratio: 1; }
 .vuvu-six-seven > img { width: 400%; height: 200%; }
 .vuvu-fallback { display: grid; place-items: center; width: 100%; height: 100%; color: oklch(var(--color-accent-ink)); font-size: var(--text-3xl); font-weight: var(--weight-bold); }
@@ -29,8 +32,9 @@
   width: min(400px, calc(100% - 32px)); height: min(560px, calc(100dvh - 176px)); max-height: calc(100dvh - 32px);
   display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; border: 1px solid oklch(var(--color-border-strong));
   border-radius: var(--radius-overlay); background: oklch(var(--color-bg-surface)); box-shadow: var(--elevation-modal);
-  font-size: var(--text-sm); line-height: var(--leading-sm); animation: vuvu-panel-in var(--duration-base) var(--ease-out) both;
+  font-size: var(--text-sm); line-height: var(--leading-sm); transform-origin: bottom right; will-change: transform, opacity;
 }
+.assistant-panel[aria-hidden="true"] { pointer-events: none; }
 .assistant-panel-header { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid oklch(var(--color-border-subtle)); flex-shrink: 0; }
 .assistant-panel-avatar { flex: 0 0 36px; width: 36px; height: 40px; overflow: hidden; }
 .assistant-panel-avatar .vuvu-sprite { width: 48px; margin: -5px -6px 0; }
@@ -74,7 +78,6 @@
 .assistant-count { display: block; text-align: right; margin-top: var(--space-2); color: oklch(var(--color-text-secondary)); font-size: var(--text-xs); }
 .assistant-privacy { margin: var(--space-3) 0 0; text-align: center; color: oklch(var(--color-text-secondary)); font-size: var(--text-xs); line-height: var(--leading-base); }
 @keyframes vuvu-thinking { 0%, 70%, 100% { opacity: .4; transform: translateY(0); } 35% { opacity: 1; transform: translateY(-3px); } }
-@keyframes vuvu-panel-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .assistant-root[data-animations-paused] *, .vuvu-sprite[data-vuvu-paused] { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .assistant-root * { animation: none !important; transition: none !important; } }
 @media (max-width: 639px) {

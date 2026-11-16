@@ -16,6 +16,11 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-16 — Quatro melhorias da Vuvu implementadas e validadas (100% do código; aplicação principal em fechamento).** Na branch visual, chat com entrada/saída animadas e saída inerte; olhar amortecido/misturado sem salto de hover; reações locais apenas a resultados confirmados, com isolamento de sessão; modo discreto preservando conversa/rascunho/posição, sem reexpansão por evento. Web **690/690**, contraste **132/132**, build e navegador **16/16**, sem erros de página/CSP; perfil de cadência estável, sem promessa de FPS fixo. ADR-055 registra a fronteira dos sinais, sem dados de negócio/Gemini. Backend, schema, permissões, dependências, atlas e configuração privada preservados. Relatório `docs/QA_VUVU_FLUIDEZ_2026-11-16.md`; artefatos brutos somente locais.
+
+- [x] AI-UI-08 — Implementar exclusivamente as quatro melhorias escolhidas e validar fluxos/sessão/preferências.
+- [ ] AI-UI-09 — Aplicar a Web validada em 8086 e conferir preservação dos demais serviços/dados.
+
 **✅ 2026-11-16 — Vuvu atualizada no ambiente principal após autorização (100%).** Imagem Web construída a partir de `6e7e467`; recriado exclusivamente `vulnera-web` com `--no-deps --no-build`. Zero scans na conferência; imagem anterior guardada somente localmente. Navegador autenticado em `localhost:8086` confirmou atlas original/novo, personagem parada, ausência da pausa, six seven único sem abrir chat, arraste com reação sem abertura ao soltar e painel compacto/foco. Nenhum POST do assistente, erro de página ou CSP. Web/API HTTP 200; IDs/imagens/início/mounts de API/DB/Mailhog, contagens de negócio e `.env` preservados. Sem aplicar código novo à API, seed/reset ou publicação de artefatos. O marco anterior de prévia sem deploy permanece como histórico e fica superado por esta aplicação autorizada.
 
 - [x] AI-UI-07 — Aplicar somente a Web principal e conferir gestos/visual e preservação dos demais serviços/dados.

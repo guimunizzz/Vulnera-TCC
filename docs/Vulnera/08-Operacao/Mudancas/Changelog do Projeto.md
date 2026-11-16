@@ -9,6 +9,18 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Fluidez, resultados confirmados e modo discreto da Vuvu
+
+**✅ AI-UI-08, 100% do código.** Quatro melhorias escolhidas: chat com
+entrada/saída inerte, olhar amortecido e mistura de poses, reações locais a
+PDF concluído/erro de ação e modo discreto sem expansão automática. Conversa,
+rascunho e posição preservados. Sinais sem registros/IDs e isolados por sessão;
+falhas parciais não comemoradas, callbacks/erros/retries mantidos. ADR-055.
+Web 690/690, contraste 132/132, build e navegador 16/16; perfil de cadência
+estável e sem tarefas longas no ensaio. Sem backend, dependências ou Gemini
+extra; atlas preservados. Aplicação Web principal no checkpoint seguinte.
+Relatório `docs/QA_VUVU_FLUIDEZ_2026-11-16.md`; artefatos brutos apenas locais.
+
 ## 2026-11-16 — Vuvu com novas interações aplicada à Web principal
 
 **✅ 100%; AI-UI-07.** Usuário autorizou aplicar a versão de `6e7e467` em

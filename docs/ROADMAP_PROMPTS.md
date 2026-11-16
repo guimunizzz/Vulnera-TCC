@@ -1136,6 +1136,13 @@ partindo de `dev`, com espera visual fluida quando necessária.
 
 # Assistente Vulnera — orientação contextual (pedido de 2026-10-23)
 
+### Histórico de fluidez e modo discreto — ✅ Concluída em 2026-11-16 (código)
+
+- **Branch/base:** `refactor/assistant-ui`, `9504cd9`; PR #77/dev intactos. Usuário escolheu somente quatro melhorias, excluindo as demais sugestões.
+- **Resultado:** entrada/saída do chat, olhar amortecido/misturado, reações locais de resultado e modo discreto, com conversa/rascunho/posição na sessão. ADR-055 registra a decisão.
+- **Validação:** Web 690/690, contraste 132/132, build; 11 regressões e cinco novos cenários de navegador, zero erros de página/CSP/axe. Ensaio de cadência estável, sem alegar FPS universal.
+- **Limites:** sem backend/schema/dependência nova, Gemini adicional, persistência após reload ou promessa de arquivo salvo no disco. Aplicação exclusiva da Web principal no checkpoint AI-UI-09. [Relatório](QA_VUVU_FLUIDEZ_2026-11-16.md).
+
 ### Histórico da evolução de interação — ✅ Concluída em 2026-11-16
 
 - **Aplicação posterior autorizada (AI-UI-07):** Web de `6e7e467` construída e aplicada exclusivamente em `localhost:8086`. Smoke real de gestos/atlas/painel e Web/API HTTP 200; sem POST do assistente ou erros de página/CSP. API/DB/Mailhog/volumes, contagens e `.env` preservados; nenhum seed/reset. Backup de imagem e artefatos de QA apenas locais. Este registro supera o estado de prévia sem aplicação indicado no checkpoint inicial abaixo.

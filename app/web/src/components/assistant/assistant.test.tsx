@@ -9,6 +9,7 @@ import { AuthenticatedLayout } from "../layout/authenticated-layout";
 import { useAuthStore } from "../../store/auth.store";
 import { assistantApi } from "../../lib/api/assistant.api";
 import { assistantBounds } from "./use-assistant-motion";
+import { beginAssistantFeedback } from "../../lib/assistant-feedback";
 import type { AuthResponse, UserRole } from "../../types/auth.types";
 import type { AssistantChatResponse } from "../../types/assistant.types";
 
@@ -261,6 +262,48 @@ describe("Assistente autenticado", () => {
 });
 
 describe("Arraste, surpresa e overlays", () => {
+  it("recolhe sem perder conversa, rascunho ou posição e permanece discreta após um evento", async () => {
+    mount();
+    const mascot = await screen.findByTestId("assistant-mascot");
+    const launcher = screen.getByTestId("assistant-launcher");
+    fireEvent.keyDown(launcher, { key: "ArrowLeft" });
+    await open(); submit(); await screen.findByText(responseText);
+    fireEvent.change(screen.getByRole("textbox", { name: "Sua pergunta" }), { target: { value: "Ainda escrevendo" } });
+    fireEvent.click(screen.getByRole("button", { name: "Recolher Vuvu" }));
+    expect(mascot).toHaveAttribute("hidden"); expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const restore = screen.getByRole("button", { name: "Mostrar Vuvu" });
+    expect(restore).toHaveFocus();
+    act(() => beginAssistantFeedback()("report-ready"));
+    expect(restore).toBeInTheDocument(); expect(mascot).toHaveAttribute("hidden");
+    fireEvent.click(restore); await open();
+    expect(screen.getByText(responseText)).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Sua pergunta" })).toHaveValue("Ainda escrevendo");
+    expect(assistantApi.chat).toHaveBeenCalledTimes(1);
+  });
+
+  it("reage localmente ao relatório confirmado e ao erro, sem abrir chat ou enviar pergunta", async () => {
+    mount();
+    const launcher = await screen.findByTestId("assistant-launcher");
+    act(() => beginAssistantFeedback()("report-ready"));
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "answered");
+    act(() => beginAssistantFeedback()("operation-error"));
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "error");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+  });
+
+  it("não repete a reação de uma resposta antiga ao encerrar a expressão de erro", async () => {
+    mount(); await open(); submit(); await screen.findByText(responseText);
+    fireEvent.click(screen.getByRole("button", { name: "Fechar assistente" }));
+    await waitFor(() => expect(document.getElementById("assistant-panel")).toBeNull());
+    vi.useFakeTimers();
+    const sprite = screen.getByTestId("assistant-launcher").querySelector(".vuvu-sprite");
+    act(() => beginAssistantFeedback()("operation-error"));
+    expect(sprite).toHaveAttribute("data-vuvu-state", "error");
+    act(() => vi.advanceTimersByTime(2100));
+    expect(sprite).not.toHaveAttribute("data-vuvu-state", "answered");
+    expect(assistantApi.chat).toHaveBeenCalledTimes(1);
+  });
   it("não oferece pausa nem passeia por hover, foco ou abertura do chat", async () => {
     mount();
     const mascot = await screen.findByTestId("assistant-mascot");

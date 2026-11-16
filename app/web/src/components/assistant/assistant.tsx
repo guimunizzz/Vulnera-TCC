@@ -3,13 +3,14 @@
  * Consumida por AuthenticatedLayout; respeita os modais existentes e isola cada nova sessão.
  */
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { MessageCircle } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Portal } from "../ui/_internal/portal";
 import { useAuthStore } from "../../store/auth.store";
 import { usePreferenciasAcessibilidade } from "../../design/accessibility";
 import { assistantDestination, assistantScreen } from "../../lib/assistant-context";
+import { subscribeAssistantFeedback, type AssistantFeedback } from "../../lib/assistant-feedback";
 import type { UserRole } from "../../types/auth.types";
 import { AssistantMascot } from "./assistant-mascot";
 import { AssistantPanel } from "./assistant-panel";
@@ -31,29 +32,56 @@ function AssistantSession({ role }: { role: UserRole }) {
   const screen = assistantScreen(pathname);
   const conversation = useAssistantConversation(role);
   const [open, setOpen] = useState(false);
+  const [discreet, setDiscreet] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [feedback, setFeedback] = useState<{ type: AssistantFeedback; key: number } | null>(null);
   const [celebrating, setCelebrating] = useState(false);
   const [celebrationKey, setCelebrationKey] = useState(0);
-  const [hover, setHover] = useState(false);
   const [focus, setFocus] = useState(false);
   const [blocked, setBlocked] = useState(() => !!document.querySelector('[aria-modal="true"]'));
   const root = useRef<HTMLDivElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const quietLauncher = useRef<HTMLButtonElement>(null);
   const { altoContraste, escalaFonte } = usePreferenciasAcessibilidade();
   const clickTimer = useRef<ReturnType<typeof setTimeout>>();
   const danceTimer = useRef<ReturnType<typeof setTimeout>>();
   const clickStartOpen = useRef(false);
-  const movement = useAssistantMotion(blocked);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout>>();
+  const feedbackBlocked = useRef(false);
+  const feedbackSequence = useRef(0);
+  const currentMessage = useRef<number>();
+  const answerBeforeFeedback = useRef<number>();
+  const movement = useAssistantMotion(blocked || discreet);
   const animationsPaused = blocked || altoContraste || movement.reasons.includes("hidden") || movement.reasons.includes("reduced");
   const lastMessage = conversation.messages[conversation.messages.length - 1];
-  const activity = movement.dragging ? "dragging" : celebrating ? "six-seven" : conversation.pending ? "thinking" : conversation.error ? "error" : hover ? "playful" : focus ? "greeting"
-    : lastMessage?.role === "assistant" ? "answered" : "idle";
+  currentMessage.current = lastMessage?.id;
+  feedbackBlocked.current = animationsPaused || discreet || movement.dragging || celebrating || conversation.pending || open;
+  const activity = movement.dragging ? "dragging" : celebrating ? "six-seven" : feedback ? feedback.type === "report-ready" ? "answered" : "error" : conversation.pending ? "thinking" : conversation.error ? "error" : focus ? "greeting"
+    : lastMessage?.role === "assistant" && lastMessage.id !== answerBeforeFeedback.current ? "answered" : "idle";
 
-  useEffect(() => () => { clearTimeout(clickTimer.current); clearTimeout(danceTimer.current); }, []);
+  useEffect(() => () => { clearTimeout(clickTimer.current); clearTimeout(danceTimer.current); clearTimeout(feedbackTimer.current); }, []);
+
+  useEffect(() => subscribeAssistantFeedback((type) => {
+    if (feedbackBlocked.current) return;
+    clearTimeout(feedbackTimer.current);
+    answerBeforeFeedback.current = currentMessage.current;
+    setFeedback({ type, key: ++feedbackSequence.current });
+    feedbackTimer.current = setTimeout(() => setFeedback(null), 2000);
+  }), []);
 
   useEffect(() => {
-    if (blocked) { clearTimeout(clickTimer.current); clearTimeout(danceTimer.current); setCelebrating(false); }
-  }, [blocked]);
+    if (blocked || discreet) {
+      clearTimeout(clickTimer.current); clearTimeout(danceTimer.current); clearTimeout(feedbackTimer.current);
+      setCelebrating(false); setFeedback(null);
+    }
+  }, [blocked, discreet]);
+
+  useEffect(() => {
+    if (discreet && !blocked) quietLauncher.current?.focus({ preventScroll: true });
+    // Recolher transfere o foco; fechar outro modal não o rouba da página.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discreet]);
 
   function dance() {
     clearTimeout(clickTimer.current);
@@ -109,9 +137,10 @@ function AssistantSession({ role }: { role: UserRole }) {
       onKeyDown={(event) => {
         if (!blocked && open && event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); close(); }
       }}>
-      <motion.div className="assistant-mascot" data-testid="assistant-mascot" data-motion={movement.state}
+      {discreet && <button ref={quietLauncher} type="button" className="assistant-discreet-button" aria-label="Mostrar Vuvu" title="Mostrar Vuvu"
+        onClick={() => { setDiscreet(false); requestAnimationFrame(() => launcher.current?.focus({ preventScroll: true })); }}><MessageCircle size={20} aria-hidden="true" /></button>}
+      <motion.div className="assistant-mascot" data-testid="assistant-mascot" data-motion={movement.state} hidden={discreet}
         data-pause-reasons={movement.reasons.join(" ")} style={{ x: movement.x, y: movement.y }}
-        onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
         onFocusCapture={() => setFocus(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocus(false); }}>
         <button ref={launcher} type="button" className="assistant-launcher" data-testid="assistant-launcher"
           aria-label="Ajuda — abrir Assistente Vulnera" aria-expanded={open} aria-controls="assistant-panel"
@@ -131,14 +160,17 @@ function AssistantSession({ role }: { role: UserRole }) {
             if (event.detail === 1) { clickStartOpen.current = open; clickTimer.current = setTimeout(() => setOpen((previous) => !previous), 280); }
           }}
           onDoubleClick={(event) => { event.preventDefault(); if (!blocked && !movement.suppressClick()) { setOpen(clickStartOpen.current); dance(); } }}>
-          <AssistantMascot activity={activity} paused={animationsPaused || (open && !celebrating && !movement.dragging)} trackPointer={!open}
-            reactionKey={celebrating ? `dance-${celebrationKey}` : lastMessage?.id} movingLeft={movement.movingLeft} />
+          <AssistantMascot activity={activity} paused={animationsPaused || discreet || (open && !celebrating && !movement.dragging)} trackPointer={!open && !discreet}
+            reactionKey={celebrating ? `dance-${celebrationKey}` : feedback ? `feedback-${feedback.key}` : lastMessage?.id} movingLeft={movement.movingLeft} />
           <span className="assistant-launcher-label" aria-hidden="true"><MessageCircle size={13} />Ajuda</span>
         </button>
         <span id="assistant-mascot-instructions" className="sr-only">Clique para abrir a ajuda. Arraste ou use as setas para mover a Vuvu; Home volta ao canto. Duplo clique ou Shift e Enter faz o six seven.</span>
       </motion.div>
-      {open && <AssistantPanel screen={screen} role={role} conversation={conversation} inputRef={input} onClose={close} animationsPaused={animationsPaused}
-        onNavigate={(id) => { const destination = assistantDestination(id, role); if (!blocked && destination) navigate(destination.path); }} />}
+      <AnimatePresence initial={false}>
+        {open && !discreet && <AssistantPanel key="assistant-panel" screen={screen} role={role} conversation={conversation} inputRef={input} onClose={close} animationsPaused={animationsPaused}
+          draft={draft} onDraftChange={setDraft} onMinimize={() => { setOpen(false); setDiscreet(true); }}
+          onNavigate={(id) => { const destination = assistantDestination(id, role); if (!blocked && destination) navigate(destination.path); }} />}
+      </AnimatePresence>
     </div>
   </Portal>;
 }
