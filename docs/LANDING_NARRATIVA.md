@@ -1,7 +1,7 @@
 <!--
-  O que faz: roteiro da cena narrativa ASCII da landing pública — o que cada
-  ato mostra, em que seção, em que faixa do scroll e como degrada — e da
-  atmosfera ASCII discreta da área autenticada.
+  O que faz: roteiro da cena narrativa da landing pública (ASCII nos atos 0–2,
+  pintura nos atos 3–5) — o que cada ato mostra, em que seção, em que faixa do
+  scroll e como degrada — e da atmosfera ASCII discreta da área autenticada.
   Por que existe: a cena conta uma história que precisa ser entendida por
   quem nunca usou uma ferramenta de segurança; o roteiro vem antes do código.
   Quem consome: Rafael, banca/apresentação e quem mexer em
@@ -16,6 +16,14 @@
 > primeira versão, um campo de **pontos** WebGL, foi substituída por uma cena de **caracteres ASCII**
 > depois do retorno do Rafael (os pontos pareciam genéricos e pesados). O
 > roteiro dos seis atos não mudou; mudou o material. Ver §8.
+
+> [!NOTE]
+> **Estado (2026-11-15):** os atos 3–5 passaram de ASCII para **pintura**
+> (direção "Do ASCII para a pintura", estilo expressivo, aprovada pelo Rafael
+> num protótipo; ADR-054). De novo o roteiro não mudou, mudou o material. As
+> §3, §4 e §5 abaixo descrevem a cena atual; a técnica, o orçamento medido e a
+> degradação da pintura estão na **§10**. O pôster (fallback) continua
+> contando os seis atos em ASCII.
 
 ## 1. A ideia em uma frase
 
@@ -68,9 +76,9 @@ meio da tela; entre duas seções, ele cresce em linha reta.
 | **0 · Funciona** | "O sistema está rodando." | Hero | Campo calmo: rampa `. · : - + =` e binário `0 1`, esparso no centro (atrás do título) e mais cheio nas laterais (vinheta). | O mesmo campo, parado. |
 | **1 · Mas tem falhas** | "Nem tudo está bem — e não dá pra ver de longe." | O problema | ≈ 4,5% das células viram `!` e pulsam de leve, ainda sem cor de severidade. | `!` nas mesmas células. |
 | **2 · Encontrar** | "O Vulnera varre e acha." | Como funciona | Uma varredura vertical em blocos `░▒▓█` ciano, com franja magenta, atravessa a tela; ao passar, cada `!` revela o glifo e a cor da severidade (`%` baixa, `#` média, `×` alta, `@` crítica). | Varredura parada no meio, severidades já reveladas. |
-| **3 · Organizar** | "Cada falha vai para o seu lugar." | Recursos, Comparativo, Demo | As falhas saem da grade e formam quatro grupos nas laterais, onde não há texto: menos graves à esquerda, mais graves à direita. | Os quatro grupos. |
-| **4 · Corrigir** | "Corrigido, sai da lista." | Maturidade | Começa pelo mais grave: crítica e alta sempre, média pela metade, baixa nunca. O que foi corrigido vira `✓` verde e o grupo se dissolve. | `✓` nas células corrigidas; baixa e metade da média seguem nos grupos. |
-| **5 · Estável** | "Sob controle." | Planos, FAQ, Time, Chamada final | Campo calmo de novo, com `✓` assentados e o risco residual (baixa) em acompanhamento. | Idem. |
+| **3 · Organizar** | "Cada falha vai para o seu lugar." | Recursos, Comparativo, Demo | **A virada:** cada célula se desfaz em pincelada, em onda da esquerda para a direita. As falhas viram pinceladas na cor da severidade, migram para quatro grupos nas laterais (menos graves à esquerda, mais graves à direita) e giram em volta deles. | Os quatro grupos, em ASCII. |
+| **4 · Corrigir** | "Corrigido, sai da lista." | Maturidade | Pintura. Começa pelo mais grave: crítica e alta sempre, média pela metade, baixa nunca. A pincelada corrigida fica verde, sobe e se dissolve. | `✓` nas células corrigidas; baixa e metade da média seguem nos grupos. |
+| **5 · Estável** | "Sob controle." | Planos, FAQ, Time, Chamada final | Pintura. O fluxo desacelera 45%, as cores puxam para uma luz quente vinda de cima e o grupo de baixa continua, discreto (risco residual aceito). | Campo calmo, `✓` assentados e a baixa em acompanhamento. |
 
 > [!TIP]
 > O "baixa nunca é corrigida" é deliberado: mostra **priorização** e risco
@@ -80,7 +88,8 @@ meio da tela; entre duas seções, ele cresce em linha reta.
 
 | Situação | O que a pessoa vê |
 |---|---|
-| WebGL2, sem movimento reduzido, tela ≥ 768 px | A cena WebGL completa. |
+| WebGL2, sem movimento reduzido, tela ≥ 768 px | A cena WebGL completa: ASCII nos atos 0–2, pintura nos atos 3–5. |
+| Máquina que não segura a cadência na pintura | A pintura desce de degrau sozinha: tinta a DPR 1,5 com 75% das pinceladas, depois DPR 1 com 50% (§10). |
 | Movimento reduzido (do sistema ou do menu de acessibilidade) | O pôster ASCII do ato atual. A troca de ato é um **crossfade** (só opacidade, `--duration-slow`); nenhum glifo anda, não há pulso nem varredura. |
 | Sem WebGL2, sem canvas 2D para o atlas, ou falha ao baixar a cena | O pôster, com a mesma troca por ato. |
 | Contexto WebGL perdido no meio da sessão | A cena some e o pôster, que sempre esteve embaixo, assume. |
@@ -267,6 +276,7 @@ Regras que continuam valendo:
 | 2026-11-04 | Seções menos monótonas (§7.1): glitch só no hero e na chamada final, títulos que se decodificam, entrada por tipo de conteúdo, loops pausados fora da tela e chamada final só com GSAP + CSS. |
 | 2026-11-04 | Boot de terminal de ~1 s no hero, uma vez por sessão, pulável e ausente com movimento reduzido (§7.1). |
 | 2026-11-04 | Moldura ASCII animada no plano recomendado e varredura de glifos na troca de seção, no sentido da rolagem (§7.1). |
+| 2026-11-15 | **Do ASCII para a pintura** (pedido do Rafael, ADR-054): atos 0–2 mais densos (célula 12 × 18 px, fonte a 13 px) e atos 3–5 em pinceladas que seguem um campo de fluxo, com camada de tinta em ping-pong, halos e granulado (§10). Pôster com a mesma célula. Conteúdo das seções revisado contra o código. |
 
 ### Boas práticas consultadas (2026-10-27)
 
@@ -284,3 +294,96 @@ Fontes: [Utsubo — 100 Three.js tips (2026)](https://www.utsubo.com/blog/threej
 [Recriando os design systems de Stripe, Linear e Vercel](https://opendesigner.io/pt-br/blog/recreating-stripe-linear-vercel-design-systems-with-design-md)
 (guias práticos, não pesquisa acadêmica; os números de contraste e
 desempenho vêm dos nossos testes e medições).
+
+## 10. Pintura — atos 3 a 5 (2026-11-15, ADR-054)
+
+> [!TIP]
+> Quer a versão sem jargão? Leia `docs/COMO_FUNCIONA_O_FUNDO.md`.
+
+### 10.1 O que se vê
+
+| Momento | Progresso | O que acontece |
+|---|---|---|
+| **Virada** | 2,55 → 3,45 | Uma onda cruza a tela da esquerda para a direita. Em cada célula o glifo esmaece e uma pincelada nasce no lugar; na frente da onda as pinceladas nascem mais largas e mais claras. |
+| **Chegada aos grupos** | 3,0 → 3,75 | As pinceladas de falha deixam a célula de origem e chegam em espiral ao grupo da sua severidade, onde passam a girar. Menos graves giram num sentido, mais graves no outro. |
+| **Corrigir** | 3,75 → 4,6 | Crítica primeiro, depois alta, depois a metade sorteada da média. A pincelada fica verde, sobe e se dissolve. Baixa nunca. |
+| **Estável** | 4,5 → 5 | Fluxo 45% mais lento, luz quente de cima, baixa 40% mais discreta. |
+
+A virada usa uma onda mais marcada que a do protótipo (peso 1,1 na posição
+horizontal e 0,35 no ruído, contra 0,4 e 0,4): em tela grande ela lê como uma
+frente que avança, e não como um esmaecer geral.
+
+### 10.2 Como é desenhado
+
+```mermaid
+flowchart LR
+  P["Progresso 0–5"] --> L["pintura-logica.ts<br/>virada · risco dos grupos · velocidade"]
+  L -->|uniforms| V["Vértice das pinceladas<br/>1 fita por instância"]
+  V --> A2["Alvo B: quadro anterior<br/>esmaecido + pinceladas novas"]
+  A1["Alvo A: tinta do<br/>quadro anterior"] -->|"× 0,915 − piso"| A2
+  A2 -. "troca (ping-pong)" .-> A1
+  A2 --> T["Passada de tela<br/>ASCII + tinta + halos + granulado"]
+  C["Passada de células<br/>(pulada depois da virada)"] --> T
+```
+
+| Parte | Como funciona |
+|---|---|
+| **Pinceladas** | Uma malha instanciada, uma draw call. ~6.500 fitas numa tela de 1440 × 900 (escala com a área, entre 3.500 e 9.000), em grade com jitter, mais densas nas bordas. Largura 1,4–4,4 px, comprimento 12–38 px, vida 1,8–4,4 s; a largura segue `sen(π · idade / vida)`: nada pisca nem salta. |
+| **Campo de fluxo** | `a = 1,7·sen(x·0,0042 + t·0,12) + 1,3·cos(y·0,0057 − t·0,09) + 0,9·sen((x−y)·0,0021 + t·0,05)`, congelado no instante em que a pincelada nasce. Perto de um grupo com risco em aberto o fluxo vira redemoinho. |
+| **Posição sem estado** | O vértice integra o campo a partir do ponto de nascimento (6 passos). Não há textura de posição nem alvo em ponto flutuante. |
+| **Falhas** | Uma instância por célula ASCII × 3, com o mesmo hash do shader de células: a pincelada nasce exatamente onde o glifo esmaece. |
+| **Camada de tinta** | `src/three/acumulacao.ts`: dois alvos RGBA8 em ping-pong. A tinta desbota 8,5% por quadro (corrigido pelo tempo do quadro) e cada pincelada pinta com alfa 0,4. |
+| **Cor partida** | 5 matizes (`--vx-indigo`, `--vx-accent`, `--vx-accent-soft`, `--vx-cyan`, `--vx-magenta` mais raro) × 3 tons, por manchas grandes que derivam devagar. Tudo lido dos tokens em runtime. |
+| **Relevo** | Em 45% das pinceladas, um filete claro de 0,7 px fora do centro, e a borda oposta 20% mais escura. |
+| **Halos e granulado** | Na passada de tela: uma luz suave atrás de cada grupo, proporcional ao risco que resta, e uma trama fina modulando a tinta. |
+| **Gota no clique** | Nos atos ASCII, o anel de glifos de sempre. Sobre a pintura, a gota só refrata a tinta e clareia a crista. |
+
+### 10.3 Orçamento medido
+
+> [!WARNING]
+> Medido numa **NVIDIA RTX 3060 Ti**, Chrome com janela, 1440 × 900. O alvo
+> do orçamento é uma GPU integrada **classe Iris Xe**, que **não estava
+> disponível** nesta sessão. Os números abaixo provam que não há long task nem
+> engasgo de CPU e dão o custo relativo de GPU; **não** provam os 55 fps na
+> Iris Xe. Para medir nela: `node output/landing-pintura/medir.cjs` (com o app
+> no ar em `:5179`, ou passando a base como primeiro argumento).
+
+| Trecho | DPR 1 (tela e tinta a 1×) | DPR 2 (tela a 1,5×, tinta a 2×) |
+|---|---|---|
+| Parado, ato 0 (ASCII) | 60 fps · 0 quadro(s) > 25 ms · 0 long task(s) · GPU 1,546 ms | 59,8 fps · 0 quadro(s) > 25 ms · 0 long task(s) · GPU 1,891 ms |
+| Parado, ato 2 (ASCII) | 60 fps · 0 quadro(s) > 25 ms · 0 long task(s) · GPU 1,083 ms | 60 fps · 0 quadro(s) > 25 ms · 0 long task(s) · GPU 1,516 ms |
+| Parado, ato 3 (pintura) | 60,1 fps · 0 quadro(s) > 25 ms · 0 long task(s) · GPU 2,548 ms | 59,9 fps · 0 quadro(s) > 25 ms · 0 long task(s) · GPU 3,385 ms |
+| Parado, ato 5 (pintura) | 59,7 fps · 0 quadro(s) > 25 ms · 0 long task(s) · GPU 2,597 ms | 59,8 fps · 0 quadro(s) > 25 ms · 0 long task(s) · GPU 4,056 ms |
+| Rolando a virada (2,4 → 3,6) | 57,5 fps · 2 quadro(s) > 25 ms · 0 long task(s) · GPU 1,345 ms | 57,7 fps · 1 quadro(s) > 25 ms · 0 long task(s) · GPU 2,056 ms |
+| Rolando a página inteira | 59,5 fps · 4 quadro(s) > 25 ms · 0 long task(s) · GPU 1,301 ms | 59,5 fps · 4 quadro(s) > 25 ms · 0 long task(s) · GPU 2,102 ms |
+
+O tempo de GPU é o da cena inteira por quadro (`EXT_disjoint_timer_query_webgl2`);
+serve para comparar trechos, não como número absoluto. A pintura custa cerca
+de duas vezes o ASCII.
+
+| Item | Antes (`dev`) | Depois |
+|---|---|---|
+| Chunk lazy da cena (`landing-scene-canvas`) | 15,61 kB (gzip 6,52) | 30,36 kB (gzip 11,88) |
+| Chunk da landing (`landing-root`) | 185,29 kB (gzip 66,95) | 189,73 kB (gzip 68,56) |
+| Bundle inicial (`index`) | 492,77 kB (gzip 160,20) | 492,80 kB (gzip 160,22) |
+
+### 10.4 Degraus de qualidade
+
+| Degrau | DPR da tinta | Pinceladas |
+|---|---|---|
+| 0 (padrão) | até 2 | 100% |
+| 1 | até 1,5 | 75% |
+| 2 | 1 | 50% |
+
+A pintura desce um degrau quando 90 quadros seguidos passam de 1/48 s (um
+quadro rápido desconta dois lentos, então um engasgo isolado da página não
+conta). Não sobe de volta na mesma visita. A tela continua em DPR ≤ 1,5
+(ADR-050); só a camada de tinta vai além.
+
+### 10.5 Legibilidade
+
+`scene-contrast.test.ts` (CTR-04) calcula o pior caso da tinta atrás da
+superfície do texto: cada cor da pintura (5 matizes, severidades, verde da
+correção, luz quente) × cada tom (escuro, médio, claro e o filete do relevo),
+com a tinta no teto de alfa (0,9) por cima de um halo no máximo (0,16),
+atenuada pela superfície de 94%. Exige ≥ 4,5:1 para todo texto, nos dois temas.

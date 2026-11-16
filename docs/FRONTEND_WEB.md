@@ -154,7 +154,7 @@ flowchart TB
 
   subgraph landing["Landing pública"]
     gsap["GSAP + ScrollTrigger<br/>components/landing/motion"]
-    cena["Cena ASCII narrativa<br/>components/landing/scene"]
+    cena["Cena narrativa: ASCII (atos 0–2)<br/>e pintura (atos 3–5)<br/>components/landing/scene"]
     poster["Pôster ASCII estático"]
   end
 
@@ -168,6 +168,7 @@ flowchart TB
     host["scene-host · loop · dispose"]
     pal["palette.ts<br/>cor lida dos tokens"]
     ascii["ascii · grade-celulas · gotas"]
+    acum["acumulacao.ts<br/>camada de tinta (ping-pong)"]
   end
 
   pref --> motion
@@ -182,14 +183,47 @@ flowchart TB
   atmos --> host
   host --> pal
   host --> ascii
+  cena --> acum
 ```
 
 | Situação | Landing | Plataforma |
 |---|---|---|
-| WebGL2, tela ≥ 768 px, sem preferência | cena ASCII a 60 fps | atmosfera ASCII a 60 fps |
+| WebGL2, tela ≥ 768 px, sem preferência | cena a 60 fps: ASCII nos atos 0–2, pintura nos atos 3–5 | atmosfera ASCII a 60 fps |
 | Movimento reduzido (sistema ou menu) | pôster do ato atual, troca por fade | fundo CSS parado |
 | Alto contraste do menu | fundo liso, sem pôster | fundo CSS |
 | Tela < 768 px, sem WebGL2 ou falha do chunk | pôster | fundo CSS |
+
+### Landing: do ASCII para a pintura (2026-11-15, ADR-054)
+
+A cena da landing troca de material no ato 3. O roteiro, o canvas fixo, o
+ScrollTrigger único e os `data-ato` das seções não mudaram.
+
+| O que mudou | Onde |
+|---|---|
+| Atos 0–2 mais densos: célula 12 × 18 px, fonte a 13 px, peso 600 (antes 12 × 26 px, glifo a ~20 px) | `scene/config.ts`, `three/ascii.ts` (o atlas aceita tamanho de célula e peso) |
+| Atos 3–5 em pintura: ~6.500 pinceladas que seguem um campo de fluxo, tinta que acumula e desbota, halos e granulado | `scene/pintura.ts`, `scene/pintura-logica.ts`, `scene/shaders.ts` (composição) |
+| Módulo novo no kit: camada de acumulação com dois alvos em ping-pong | `three/acumulacao.ts` |
+| A passada de tela sai com alfa pré-multiplicado e `highp` (a tinta é lida por pixel) | `scene/use-landing-scene.ts` |
+| Token novo da paleta da landing: `--vx-indigo` (matiz mais escuro da tinta) | `landing.css` |
+| Pôster com a mesma célula da cena (12 × 18 px, fonte a 13 px) | `scene/landing-poster.tsx` |
+| Contraste: o teste cobre a tinta (cores × tons × teto de alfa × halo) | `scene/scene-contrast.test.ts` (CTR-04) |
+
+> [!NOTE]
+> A atmosfera da área autenticada (`components/dashboard/hero/`) não foi
+> tocada. `criarAtlasAscii` ganhou um parâmetro opcional; sem ele o
+> comportamento é o de antes.
+
+A camada de tinta é a única parte que pode passar do teto de DPR 1,5 do kit
+(vai até 2). Se a máquina não segura a cadência, a pintura desce de degrau
+sozinha (`PINTURA.qualidade`). Explicação para iniciantes em
+[COMO_FUNCIONA_O_FUNDO.md](COMO_FUNCIONA_O_FUNDO.md); roteiro e medições em
+[LANDING_NARRATIVA.md](LANDING_NARRATIVA.md) §10.
+
+**Conteúdo da landing (mesma entrega).** As seções passaram a afirmar só o que
+o código faz: saiu o card "IA para Findings" (ADR-017), entraram DAST com
+OWASP ZAP (com o limite dito na página), importação SAST/SCA, Threat Intel,
+visão unificada e Exposure Graph. A lista do que foi removido e por quê está
+em `output/landing-pintura/RELATORIO.md`.
 
 ## Fundo único da área autenticada
 
