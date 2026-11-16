@@ -169,7 +169,7 @@ Quando a própria aplicação limita uma requisição, preserva HTTP 429, `code:
 
 Os contadores reiniciam com o processo e não são coordenados entre várias instâncias. Fechar a aba ou recarregar termina a conversa; outra aba possui memória própria. Sem internet externa, a demonstração pressupõe que a **API local continue funcionando**. Ajuda local não equivale a Gemini ao vivo.
 
-O passeio pausa com hover, foco, conversa aberta, modal, aba oculta, alto contraste ou controle manual. Em tela estreita, a posição fica estável; as expressões ainda podem reagir à conversa. Movimento reduzido, alto contraste e pausa manual interrompem também os quadros animados. Sob modal ou em aba oculta, não há loop ativo. O painel tem Escape, retorno de foco, rolagem acessível e controles de 44px; a plataforma continua utilizável durante uma falha externa.
+Na branch visual, a Vuvu fica onde você a coloca: arraste por mouse/toque ou use as setas com o botão focado; Home volta ao canto. Não há passeio, inércia, flutuação contínua ou botão de pausa. O arraste tem expressão própria e não abre a conversa ao soltar. Duplo clique, ou Shift+Enter com foco, faz o “six seven” uma vez (2,88 s), sem envio externo. Movimento reduzido, alto contraste, modal e aba oculta interrompem quadros animados; a posição continua controlável por interação. O painel compacto mantém contexto, origem Gemini/Ajuda local, atalhos, Escape, retorno de foco, rolagem e alvos de 44px. Sugestões ficam recolhidas durante a conversa; contador aparece próximo do limite. A plataforma continua utilizável durante uma falha externa. Evolução de 2026-11-16, posterior ao PR #77; os marcos históricos do passeio original permanecem documentados.
 
 ## Preparar a apresentação
 

@@ -2,6 +2,8 @@
 
 # Plano de ação — visual do Assistente Vulnera
 
+> **Evolução autorizada em 2026-11-16:** o usuário pediu retirar o passeio e o botão de pausa, permitir arraste com reação própria e limpar o chat. Escolheu duplo clique como surpresa para o novo atlas “six seven”; alternativa acessível por Shift+Enter. Posição controlada por ponteiro/setas, sem inércia, Home para voltar ao canto, limites recalculados no resize; footprint atual 112×128. Sugestões recolhidas após o início da conversa, origem e atalhos preservados. Esta evolução substitui os requisitos antigos de passeio/pausa abaixo; não altera API, personalidade ou permissões.
+
 ## Objetivo e ponto de partida
 
 Melhorar a apresentação e a leitura do assistente, mantendo os contratos, permissões e fluxos já entregues. O usuário definiu a Vuvu fornecida como personagem e autorizou aplicar também sua personalidade às respostas do Gemini.

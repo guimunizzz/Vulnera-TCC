@@ -57,6 +57,8 @@ Esta decisão foi criada como ADR-048 na feature/agent-ai em 23/10/2026. A dev p
 
 ## Evolução Vuvu — 2026-11-15
 
+> **Atualização autorizada de interação — 2026-11-16:** passeio, flutuação e botão de pausa citados nos registros anteriores foram substituídos por posição controlada por arraste/teclado. O usuário escolheu duplo clique para o novo atlas six seven, uma execução de 2,88 s e alternativa por Shift+Enter; não abre conversa nem solicita geração. Preferências/contextos restritivos continuam interrompendo animações e o repouso não mantém loop. Chat compacto preserva origem, contexto, atalhos e sessão. Backend/personalidade inalterados. Detalhes em `docs/QA_VUVU_INTERACOES_2026-11-16.md`; o registro abaixo permanece histórico.
+
 O responsável forneceu o atlas animado da Vuvu e sua personalidade, autorizando explicitamente aplicá-la também às respostas Gemini. A personagem é renderizada a partir do PNG local original, sem WebGL, nova dependência ou serviço de animação. Quadros e 16 direções de olhar respondem a eventos da interface; coordenadas de cursor não entram na conversa nem saem do navegador. O player pausa por preferências, modal, aba oculta e controle manual, sem render React a cada quadro.
 
 O tom acolhedor e curioso não amplia o escopo desta ADR: perfis, ajuda documentada, operações proibidas e limites permanecem. A apresentação da Vuvu também funciona localmente. O painel mantém o modelo não modal e a conversa em memória; a altura/rolagem se adapta ao texto ampliado. Evidências em [QA_VUVU_UI_2026-11-15.md](../../QA_VUVU_UI_2026-11-15.md).

@@ -1136,6 +1136,13 @@ partindo de `dev`, com espera visual fluida quando necessária.
 
 # Assistente Vulnera — orientação contextual (pedido de 2026-10-23)
 
+### Histórico da evolução de interação — ✅ Concluída em 2026-11-16
+
+- **Branch/base:** `refactor/assistant-ui`, `2abbd9b`; sem PR novo ou alteração do PR #77.
+- **Pedido/escolha:** retirar passeio/pausa, arrastar com reação e limpar o chat; usuário escolheu duplo clique para o six seven. Alternativa por Shift+Enter, sem execução automática.
+- **Validação:** 43/43 focais, Web 677/677, contraste 132/132, build e navegador de produção/axe 11/11; mouse, toque por CDP, teclado e texto 200%.
+- **Desvios/limites:** prévia antiga com CSS incompleto substituída por preview de produção separado; roteiro adaptado ao Escape já existente. Sem API, schema, configuração privada ou deploy em 8086. [Relatório](QA_VUVU_INTERACOES_2026-11-16.md).
+
 ### Histórico da revisão PR #77 — ✅ Concluída em 2026-11-16
 
 - **Branches/PR:** `feature/agent-ai` → [#77](https://github.com/guimunizzz/Vulnera-TCC/pull/77), base dev `e6a445c`; propagação separada para `refactor/assistant-ui` por `f31b678`, sem visual novo no PR #77.

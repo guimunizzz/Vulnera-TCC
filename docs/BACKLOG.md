@@ -1,5 +1,9 @@
 # BACKLOG.md — Vulnera
 
+**✅ 2026-11-16 — AI-UI-06 concluída (100%).** Vuvu com posição por arraste/teclado, sem passeio/pausa, six seven por duplo clique/Shift+Enter e chat compacto. Origem, sugestões, atalhos, sessão e privacidade preservados. Web 677/677, contraste 132/132, build e navegador/axe 11/11. Atlas original sem edição, somente branch visual; sem backend ou deploy principal. Ver `docs/QA_VUVU_INTERACOES_2026-11-16.md`.
+
+- [x] AI-UI-06 — Interações solicitadas e limpeza visual, com testes de mouse/toque/teclado, preferências e responsividade.
+
 **✅ 2026-11-16 — PR #77 e propagação visual concluídos (100%; 4/4 entregas).** Oito comentários conferidos; API/Web na feature 922/659 e na Vuvu 923/671, contraste 132/132 e builds aprovados. Merge visual `f31b678` mantém atlas, código visual e personalidade, com as novas regras de produto/privacidade. Duas branches publicadas como iannxz; dev e ambiente principal preservados. Nova aprovação humana permanece pendente. Histórico intermediário abaixo preservado; matriz em `docs/REVISAO_PR77_2026-11-16.md`.
 
 - [ ] PR77-FUT-01 — Acompanhar a espera intermitente no teste de Security Graph do detalhe SAST/SCA sob execução concorrente: uma falha inicial; focal 7/7 e repetição completa com dois processos 671/671, sem alterar fonte ou teste.

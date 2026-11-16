@@ -1,103 +1,116 @@
 /**
- * Passeio lento pelas bordas, com valores Motion em vez de renders a cada quadro.
- * Consumido pelo mascote; mantém limites da viewport e cancela animações/timers nas pausas.
+ * Posiciona a Vuvu somente por arraste ou teclado, sem passeio ou inércia.
+ * Consumido pelo launcher; captura o ponteiro e mantém a personagem dentro da viewport.
  */
-import { useEffect, useRef, useState } from "react";
-import { animate, useMotionValue } from "motion/react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useMotionValue } from "motion/react";
 import { useMotion } from "../../motion/use-motion";
 
-// Compartilhado com o CSS pelo componente: arte, rótulo e pausa cabem no mesmo limite.
-export const ASSISTANT_FOOTPRINT = { width: 144, height: 128 } as const;
-const WIDTH = ASSISTANT_FOOTPRINT.width;
-const HEIGHT = ASSISTANT_FOOTPRINT.height;
+export const ASSISTANT_FOOTPRINT = { width: 112, height: 128 } as const;
 const MARGIN = 16;
+const DRAG_THRESHOLD = 6;
 
 function visibleViewport() {
   return {
-    width: Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth),
-    height: Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight),
+    width: Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth, window.visualViewport?.width ?? Infinity),
+    height: Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight, window.visualViewport?.height ?? Infinity),
   };
 }
 
 export function assistantBounds(width: number, height: number) {
-  return {
-    right: Math.max(0, width - WIDTH - MARGIN),
-    bottom: Math.max(0, height - HEIGHT - MARGIN),
-    top: Math.min(128, Math.max(0, height - HEIGHT - MARGIN)),
-    middle: Math.max(MARGIN, Math.floor(width * 0.55) - WIDTH),
-  };
+  const left = Math.min(MARGIN, Math.max(0, width - ASSISTANT_FOOTPRINT.width));
+  const top = Math.min(MARGIN, Math.max(0, height - ASSISTANT_FOOTPRINT.height));
+  return { left, top, right: Math.max(left, width - ASSISTANT_FOOTPRINT.width - MARGIN), bottom: Math.max(top, height - ASSISTANT_FOOTPRINT.height - MARGIN) };
 }
 
-export function useAssistantMotion(pauseReasons: string[]) {
-  const { reduzido } = useMotion();
-  const [viewport, setViewport] = useState(visibleViewport);
-  const [hidden, setHidden] = useState(document.hidden);
-  const [moving, setMoving] = useState(false);
-  const bounds = assistantBounds(viewport.width, viewport.height);
-  const x = useMotionValue(bounds.right);
-  const y = useMotionValue(bounds.bottom);
-  const nextPoint = useRef(0);
-  const compact = viewport.width < 640;
-  const reasons = [...pauseReasons, ...(reduzido ? ["reduced"] : []), ...(compact ? ["compact"] : []), ...(hidden ? ["hidden"] : [])];
-  const paused = reasons.length > 0;
+interface Gesture {
+  id: number; startX: number; startY: number; x: number; y: number;
+  target: HTMLButtonElement; dragged: boolean; lastX: number;
+}
 
-  useEffect(() => {
-    const resize = () => {
-      const { width, height } = visibleViewport();
-      const limits = assistantBounds(width, height);
-      // Um resize não deixa a sentinela temporariamente fora da tela enquanto anima de volta.
-      x.set(limits.right);
-      y.set(limits.bottom);
-      nextPoint.current = 0;
-      setViewport({ width, height });
-    };
-    const visibility = () => setHidden(document.hidden);
-    window.addEventListener("resize", resize);
-    document.addEventListener("visibilitychange", visibility);
-    return () => {
-      window.removeEventListener("resize", resize);
-      document.removeEventListener("visibilitychange", visibility);
-    };
+export function useAssistantMotion(blocked: boolean) {
+  const { reduzido } = useMotion();
+  const viewport = visibleViewport();
+  const initial = assistantBounds(viewport.width, viewport.height);
+  const x = useMotionValue(initial.right);
+  const y = useMotionValue(initial.bottom);
+  const [hidden, setHidden] = useState(document.hidden);
+  const [dragging, setDragging] = useState(false);
+  const gesture = useRef<Gesture | null>(null);
+  const suppressClick = useRef(false);
+  const movingLeft = useRef(false);
+
+  const finish = useCallback(() => {
+    const current = gesture.current;
+    gesture.current = null;
+    if (current) {
+      suppressClick.current = current.dragged;
+      if (current.target.hasPointerCapture?.(current.id)) current.target.releasePointerCapture(current.id);
+    }
+    setDragging(false);
+  }, []);
+
+  const place = useCallback((nextX: number, nextY: number) => {
+    const currentViewport = visibleViewport();
+    const bounds = assistantBounds(currentViewport.width, currentViewport.height);
+    x.set(Math.max(bounds.left, Math.min(bounds.right, nextX)));
+    y.set(Math.max(bounds.top, Math.min(bounds.bottom, nextY)));
   }, [x, y]);
 
   useEffect(() => {
-    if (reduzido || compact) {
-      x.set(bounds.right);
-      y.set(bounds.bottom);
-    }
-    if (paused) { setMoving(false); return; }
-    let timer: ReturnType<typeof setTimeout>;
-    let controls: Array<{ stop: () => void }> = [];
-    let stopped = false;
-    const points = [
-      { x: bounds.right, y: bounds.top }, { x: bounds.right, y: bounds.bottom },
-      { x: Math.min(bounds.middle, bounds.right), y: bounds.bottom }, { x: bounds.right, y: bounds.bottom },
-    ];
-    const step = () => {
-      if (stopped) return;
-      const target = points[nextPoint.current % points.length];
-      nextPoint.current += 1;
-      // Ao retomar, completa a borda atual antes de escolher outra; nunca corta o centro.
-      const needsCorner = (x.get() < bounds.right - 1 && target.y !== bounds.bottom)
-        || (y.get() < bounds.bottom - 1 && target.x !== bounds.right);
-      const destination = needsCorner
-        ? { x: bounds.right, y: bounds.bottom } : target;
-      const distance = Math.hypot(destination.x - x.get(), destination.y - y.get());
-      const duration = Math.max(8, distance / 22); // Aproximadamente 22px/s: passeio ambiental, não transição de UI.
-      setMoving(true);
-      controls = [animate(x, destination.x, { duration, ease: "linear" }), animate(y, destination.y, { duration, ease: "linear" })];
-      timer = setTimeout(() => {
-        setMoving(false);
-        timer = setTimeout(step, 2_800);
-      }, duration * 1_000);
-    };
-    timer = setTimeout(step, 2_800);
+    const resize = () => { finish(); place(x.get(), y.get()); };
+    const visibility = () => { if (document.hidden) finish(); setHidden(document.hidden); };
+    window.addEventListener("resize", resize);
+    window.addEventListener("blur", finish);
+    window.visualViewport?.addEventListener("resize", resize);
+    document.addEventListener("visibilitychange", visibility);
     return () => {
-      stopped = true;
-      clearTimeout(timer);
-      controls.forEach((control) => control.stop());
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("blur", finish);
+      window.visualViewport?.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", visibility);
+      const current = gesture.current;
+      gesture.current = null;
+      if (current?.target.hasPointerCapture?.(current.id)) current.target.releasePointerCapture(current.id);
     };
-  }, [paused, reduzido, compact, bounds.right, bounds.bottom, bounds.top, bounds.middle, x, y]);
+  }, [finish, place, x, y]);
 
-  return { x, y, reasons, state: reduzido || compact ? "static" : paused ? "paused" : moving ? "moving" : "resting" };
+  useEffect(() => { if (blocked) finish(); }, [blocked, finish]);
+
+  function pointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const current = gesture.current;
+    if (!current || current.id !== event.pointerId || blocked || document.hidden) return;
+    const dx = event.clientX - current.startX;
+    const dy = event.clientY - current.startY;
+    if (!current.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    if (!current.dragged) { current.dragged = true; setDragging(true); }
+    movingLeft.current = event.clientX < current.lastX;
+    current.lastX = event.clientX;
+    place(current.x + dx, current.y + dy);
+  }
+
+  return {
+    x, y, dragging, movingLeft: () => movingLeft.current, suppressClick: () => suppressClick.current,
+    reasons: [...(reduzido ? ["reduced"] : []), ...(hidden ? ["hidden"] : []), ...(blocked ? ["modal"] : [])],
+    state: dragging ? "dragging" : "static",
+    moveBy: (dx: number, dy: number) => { if (!blocked && !document.hidden) place(x.get() + dx, y.get() + dy); },
+    reset: () => { if (!blocked) { const currentViewport = visibleViewport(); const bounds = assistantBounds(currentViewport.width, currentViewport.height); place(bounds.right, bounds.bottom); } },
+    handlers: {
+      onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
+        if (blocked || document.hidden || event.button !== 0 || event.isPrimary === false || gesture.current) return;
+        suppressClick.current = false;
+        gesture.current = { id: event.pointerId, startX: event.clientX, startY: event.clientY, x: x.get(), y: y.get(), target: event.currentTarget, dragged: false, lastX: event.clientX };
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      },
+      onPointerMove: pointerMove,
+      onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>) => {
+        if (gesture.current?.id !== event.pointerId) return;
+        pointerMove(event);
+        if (gesture.current?.dragged) event.preventDefault();
+        finish();
+      },
+      onPointerCancel: (event: ReactPointerEvent<HTMLButtonElement>) => { if (gesture.current?.id === event.pointerId) finish(); },
+      onLostPointerCapture: (event: ReactPointerEvent<HTMLButtonElement>) => { if (gesture.current?.id === event.pointerId) finish(); },
+    },
+  };
 }

@@ -53,6 +53,17 @@ beforeEach(() => {
   Object.defineProperty(window, "innerWidth", { value: 1_024, writable: true, configurable: true });
   Object.defineProperty(window, "innerHeight", { value: 768, writable: true, configurable: true });
   Object.defineProperty(document, "hidden", { value: false, configurable: true });
+  vi.stubGlobal("PointerEvent", class extends MouseEvent {
+    readonly pointerId: number;
+    readonly pointerType: string;
+    readonly isPrimary: boolean;
+    constructor(type: string, options: PointerEventInit = {}) {
+      super(type, options);
+      this.pointerId = options.pointerId ?? 1;
+      this.pointerType = options.pointerType ?? "mouse";
+      this.isPrimary = options.isPrimary ?? true;
+    }
+  });
   vi.mocked(assistantApi.chat).mockResolvedValue(localResponse);
 });
 
@@ -60,6 +71,7 @@ afterEach(() => {
   cleanup();
   useAuthStore.getState().clearAuth();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe("Assistente autenticado", () => {
@@ -248,22 +260,20 @@ describe("Assistente autenticado", () => {
   });
 });
 
-describe("Movimento e overlays", () => {
-  it("pausa por hover, foco, preferência manual, chat e aba oculta", async () => {
+describe("Arraste, surpresa e overlays", () => {
+  it("não oferece pausa nem passeia por hover, foco ou abertura do chat", async () => {
     mount();
     const mascot = await screen.findByTestId("assistant-mascot");
     fireEvent.mouseEnter(mascot);
-    expect(mascot).toHaveAttribute("data-pause-reasons", "hover");
+    expect(mascot).toHaveAttribute("data-motion", "static");
     fireEvent.mouseLeave(mascot);
     const launcher = screen.getByRole("button", { name: "Ajuda — abrir Assistente Vulnera" });
     fireEvent.focus(launcher);
-    expect(mascot.getAttribute("data-pause-reasons")).toContain("focus");
+    expect(mascot).toHaveAttribute("data-motion", "static");
     fireEvent.blur(launcher);
-    fireEvent.click(screen.getByRole("button", { name: "Pausar movimento" }));
-    expect(mascot.getAttribute("data-pause-reasons")).toContain("manual");
-    fireEvent.click(screen.getByRole("button", { name: "Retomar movimento" }));
+    expect(screen.queryByRole("button", { name: /Pausar movimento|Retomar movimento/ })).not.toBeInTheDocument();
     await open();
-    expect(mascot.getAttribute("data-pause-reasons")).toContain("chat");
+    expect(mascot).toHaveAttribute("data-motion", "static");
     Object.defineProperty(document, "hidden", { value: true, configurable: true });
     fireEvent(document, new Event("visibilitychange"));
     expect(mascot.getAttribute("data-pause-reasons")).toContain("hidden");
@@ -297,24 +307,87 @@ describe("Movimento e overlays", () => {
     window.innerWidth = 320;
     window.innerHeight = 568;
     fireEvent(window, new Event("resize"));
-    expect(mascot.getAttribute("data-pause-reasons")).toContain("compact");
-    expect(assistantBounds(320, 568)).toEqual({ right: 160, bottom: 424, top: 128, middle: 32 });
-    expect(assistantBounds(320, 140).bottom).toBe(0);
+    expect(assistantBounds(320, 568)).toEqual({ left: 16, right: 192, bottom: 424, top: 16 });
+    expect(assistantBounds(320, 140).bottom).toBe(12);
     expect(assistantApi.chat).not.toHaveBeenCalled();
   });
 
-  it("não chama a API durante o passeio autônomo e limpa seus timers", async () => {
+  it("permanece no lugar após um minuto e limpa seus timers", async () => {
     vi.useFakeTimers();
     const view = mount();
     await act(async () => {});
     const mascot = screen.getByTestId("assistant-mascot");
-    act(() => vi.advanceTimersByTime(3_000));
-    expect(mascot).toHaveAttribute("data-motion", "moving");
+    const position = mascot.style.transform;
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(mascot).toHaveAttribute("data-motion", "static");
+    expect(mascot.style.transform).toBe(position);
     expect(assistantApi.chat).not.toHaveBeenCalled();
     view.unmount();
     const remaining = vi.getTimerCount();
     act(() => vi.advanceTimersByTime(60_000));
     expect(vi.getTimerCount()).toBeLessThanOrEqual(remaining);
+  });
+
+  it.each(["mouse", "touch"])("arrasta por %s com animação e não abre chat ao soltar", async (pointerType) => {
+    mount();
+    const launcher = await screen.findByTestId("assistant-launcher");
+    const mascot = screen.getByTestId("assistant-mascot");
+    fireEvent.pointerDown(launcher, { pointerId: 1, pointerType, button: 0, clientX: 950, clientY: 680 });
+    fireEvent.pointerMove(launcher, { pointerId: 1, pointerType, clientX: 750, clientY: 480 });
+    expect(mascot).toHaveAttribute("data-motion", "dragging");
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "dragging");
+    fireEvent.pointerUp(launcher, { pointerId: 1, pointerType, clientX: 750, clientY: 480 });
+    fireEvent.click(launcher, { detail: 1 });
+    expect(mascot).toHaveAttribute("data-motion", "static");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+    fireEvent.keyDown(launcher, { key: "Enter", shiftKey: true });
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "six-seven");
+  });
+
+  it("cancela o arraste sem ficar preso e ignora um segundo ponteiro", async () => {
+    mount();
+    const launcher = await screen.findByTestId("assistant-launcher");
+    const mascot = screen.getByTestId("assistant-mascot");
+    fireEvent.pointerDown(launcher, { pointerId: 1, button: 0, clientX: 950, clientY: 680 });
+    fireEvent.pointerMove(launcher, { pointerId: 2, clientX: 700, clientY: 400 });
+    expect(mascot).toHaveAttribute("data-motion", "static");
+    fireEvent.pointerMove(launcher, { pointerId: 1, clientX: 700, clientY: 400 });
+    fireEvent.pointerCancel(launcher, { pointerId: 1 });
+    expect(mascot).toHaveAttribute("data-motion", "static");
+    fireEvent.pointerDown(launcher, { pointerId: 3, button: 0, clientX: 700, clientY: 400 });
+    fireEvent.pointerMove(launcher, { pointerId: 3, clientX: 600, clientY: 300 });
+    expect(mascot).toHaveAttribute("data-motion", "dragging");
+    fireEvent(window, new Event("blur"));
+    expect(mascot).toHaveAttribute("data-motion", "static");
+  });
+
+  it("distingue clique simples, duplo clique e não repete o six seven", async () => {
+    vi.useFakeTimers();
+    mount();
+    await act(async () => {});
+    const launcher = screen.getByTestId("assistant-launcher");
+    fireEvent.click(launcher, { detail: 1 });
+    fireEvent.click(launcher, { detail: 2 });
+    fireEvent.doubleClick(launcher);
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "six-seven");
+    act(() => vi.advanceTimersByTime(2880));
+    expect(launcher.querySelector(".vuvu-sprite")).not.toHaveAttribute("data-vuvu-state", "six-seven");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+    fireEvent.click(launcher, { detail: 1 });
+    act(() => vi.advanceTimersByTime(280));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("mantém a surpresa desligada com movimento reduzido e permite abrir ajuda pelo teclado", async () => {
+    motionPreference.reduced = true;
+    mount();
+    const launcher = await screen.findByTestId("assistant-launcher");
+    fireEvent.keyDown(launcher, { key: "Enter", shiftKey: true });
+    expect(launcher.querySelector(".vuvu-sprite")).not.toHaveAttribute("data-vuvu-state", "six-seven");
+    fireEvent.click(launcher, { detail: 0 });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("oferece campo e controles acessíveis sem transformar o painel em modal", async () => {

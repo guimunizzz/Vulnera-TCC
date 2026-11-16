@@ -5,7 +5,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useMotion } from "../../motion/use-motion";
 import spritesheet from "../../assets/vuvu/spritesheet.png";
-import { VUVU_ATLAS, vuvuCanLook, vuvuFrame, vuvuLookFrame, type VuvuActivity } from "./vuvu-sprite";
+import sixSeven from "../../assets/vuvu/six-seven.png";
+import { VUVU_ATLAS, VUVU_SIX_SEVEN, vuvuCanLook, vuvuFrame, vuvuIsAnimating, vuvuLookFrame, type VuvuActivity } from "./vuvu-sprite";
 
 interface Props {
   activity?: VuvuActivity;
@@ -21,6 +22,7 @@ export function AssistantMascot({ activity = "idle", paused = false, trackPointe
   const image = useRef<HTMLImageElement>(null);
   const direction = useRef(movingLeft);
   const [failed, setFailed] = useState(false);
+  const geometry = activity === "six-seven" ? VUVU_SIX_SEVEN : VUVU_ATLAS;
   direction.current = movingLeft;
 
   useEffect(() => {
@@ -45,14 +47,14 @@ export function AssistantMascot({ activity = "idle", paused = false, trackPointe
       }
       const key = `${frame.row}:${frame.column}`;
       if (key !== lastFrame) {
-        atlas.style.transform = `translate(${-frame.column * 100 / VUVU_ATLAS.columns}%, ${-frame.row * 100 / VUVU_ATLAS.rows}%)`;
+        atlas.style.transform = `translate(${-frame.column * 100 / geometry.columns}%, ${-frame.row * 100 / geometry.rows}%)`;
         element.dataset.frame = key;
         lastFrame = key;
       }
     };
     const tick = () => {
       paint();
-      if (!paused && !reduzido && !document.hidden) timer = setTimeout(tick, 120);
+      if (!paused && !reduzido && !document.hidden && vuvuIsAnimating(activity, performance.now() - started)) timer = setTimeout(tick, 120);
     };
     const restart = () => { clearTimeout(timer); started = performance.now(); tick(); };
     const move = (event: PointerEvent) => {
@@ -74,10 +76,10 @@ export function AssistantMascot({ activity = "idle", paused = false, trackPointe
       window.removeEventListener("pointermove", move);
       document.documentElement.removeEventListener("pointerleave", leave);
     };
-  }, [activity, paused, reduzido, trackPointer, reactionKey, failed]);
+  }, [activity, paused, reduzido, trackPointer, reactionKey, failed, geometry]);
 
-  return <span ref={root} className="vuvu-sprite" data-vuvu-state={activity} data-vuvu-paused={paused || reduzido || undefined} aria-hidden="true">
-    {failed ? <span className="vuvu-fallback">V</span> : <img ref={image} src={spritesheet} alt="" draggable={false}
-      width={1536} height={2288} onError={() => setFailed(true)} />}
+  return <span ref={root} className={`vuvu-sprite${activity === "six-seven" ? " vuvu-six-seven" : ""}`} data-vuvu-state={activity} data-vuvu-paused={paused || reduzido || undefined} aria-hidden="true">
+    {failed ? <span className="vuvu-fallback">V</span> : <img ref={image} src={activity === "six-seven" ? sixSeven : spritesheet} alt="" draggable={false}
+      width={geometry.cellWidth * geometry.columns} height={geometry.cellHeight * geometry.rows} onError={() => setFailed(true)} />}
   </span>;
 }

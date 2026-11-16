@@ -9,6 +9,21 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Vuvu controlada por arraste, six seven e chat compacto
+
+**✅ 100%.** Usuário pediu retirar passeio/pausa e limpar o chat; escolheu
+duplo clique para o six seven fornecido. Arraste mouse/toque com captura,
+limites e reação própria; setas/Home e Shift+Enter acessíveis. Sem movimento
+espacial autônomo ou loop de repouso. Dança de 2,88 s, sem rede ou abertura
+do chat. Cabeçalho e compositor compactos, sugestões recolhidas durante a
+conversa, origem e atalhos mantidos. Arte copiada sem editar pixels.
+
+Focais 43/43; check Web 677/677, contraste 132/132, build e navegador/axe
+11/11. Prévia de produção separada em 4190 após diagnosticar estilos
+incompletos da prévia dev antiga. Sem API/schema/dependência/chave nova,
+PR #77 modificado ou deploy/restart principal. Entrega somente na branch
+visual, como iannxz. Relatório: `docs/QA_VUVU_INTERACOES_2026-11-16.md`.
+
 ## 2026-11-16 — Revisão PR #77 fechada nas duas branches
 
 **✅ 100%; 4/4 entregas.** Feature com oito comentários conferidos e propagação

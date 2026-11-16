@@ -51,7 +51,7 @@ describe("Vuvu em tempo real", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("pausa manual e movimento reduzido mantêm quadro neutro sem loop", () => {
+  it("pausa contextual e movimento reduzido mantêm quadro neutro sem loop", () => {
     const view = render(<AssistantMascot activity="playful" paused />);
     expect(view.container.querySelector(".vuvu-sprite")).toHaveAttribute("data-frame", "0:0");
     expect(vi.getTimerCount()).toBe(0);
@@ -59,6 +59,19 @@ describe("Vuvu em tempo real", () => {
     view.rerender(<AssistantMascot activity="thinking" />);
     act(() => vi.advanceTimersByTime(5000));
     expect(view.container.querySelector(".vuvu-sprite")).toHaveAttribute("data-frame", "0:0");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("repouso não agenda animação e o six seven usa o atlas de oito poses por 2,88 segundos", () => {
+    const view = render(<AssistantMascot />);
+    expect(vi.getTimerCount()).toBe(0);
+    view.rerender(<AssistantMascot activity="six-seven" />);
+    const sprite = view.container.querySelector(".vuvu-sprite")!;
+    expect(sprite.querySelector("img")).toHaveAttribute("width", "2048");
+    act(() => vi.advanceTimersByTime(840));
+    expect(sprite).toHaveAttribute("data-frame", "1:3");
+    expect(vuvuCanLook("six-seven", 5000)).toBe(false);
+    act(() => vi.advanceTimersByTime(2200));
     expect(vi.getTimerCount()).toBe(0);
   });
 
