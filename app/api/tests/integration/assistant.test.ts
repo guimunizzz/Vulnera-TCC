@@ -279,6 +279,18 @@ describe("Ajuda e orçamento determinísticos", () => {
 });
 
 describe("Gateway Gemini real com transporte simulado", () => {
+  it("apresenta a Vuvu também no modo local sem depender do provedor", async () => {
+    const { app, generate } = makeApp({ config: { ...GEMINI, mode: "local", apiKey: "" } });
+    for (const question of ["Quem é você?", "Quem é a Vuvu?"]) {
+      const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer())
+        .send({ question, screen: "dashboard", history: [] });
+      expect(response.status).toBe(200);
+      expect(response.body.source).toBe("local");
+      expect(response.body.message).toContain("Sou a Vuvu");
+    }
+    expect(generate).not.toHaveBeenCalled();
+  });
+
   it("envia uma chamada oficial limitada sem identidade nem ferramentas", async () => {
     const fetcher = jest.fn().mockResolvedValue(textResponse());
     const gateway = new GeminiService(GEMINI, fetcher as unknown as typeof fetch);
@@ -291,6 +303,9 @@ describe("Gateway Gemini real com transporte simulado", () => {
     const body = JSON.parse(options.body);
     expect(body.generationConfig).toEqual({ maxOutputTokens: 500, thinkingConfig: { thinkingLevel: "MINIMAL" } });
     expect(body.systemInstruction.parts[0].text).toContain("PERFIL AUTENTICADO: CLIENT");
+    expect(body.systemInstruction.parts[0].text).toContain("Você é a Vuvu");
+    expect(body.systemInstruction.parts[0].text).toContain("não diga que verificou, corrigiu ou concluiu uma operação");
+    expect(body.systemInstruction.parts[0].text).toContain("Use exclusivamente os trechos de ajuda fornecidos");
     expect(body).not.toHaveProperty("tools");
     expect(body).not.toHaveProperty("userId");
     expect(body.store).toBe(false);

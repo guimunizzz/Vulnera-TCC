@@ -24,7 +24,7 @@ export const ASSISTANT_ACTIONS: Record<AssistantActionId, { label: string; path:
 
 export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
   {
-    id: "overview", title: "Dashboard e visão geral", keywords: ["dashboard", "visao geral", "plataforma", "inicio", "indicadores"],
+    id: "overview", title: "Dashboard e visão geral", keywords: ["dashboard", "visao geral", "plataforma", "inicio", "indicadores", "quem e voce", "quem e a vuvu"],
     screens: ["dashboard"], roles: ALL, actions: ["projects", "playbooks"],
     guidance: "O Vulnera organiza aplicações, projetos de análise, findings e acompanhamento da correção. O dashboard resume o que seu perfil pode acessar. Abra Projetos para acompanhar uma análise.",
     byRole: { ADMIN: "Como ADMIN, você tem visão administrativa global; os detalhes continuam nas telas de cada recurso.", CLIENT: "Como CLIENT, você acompanha a própria empresa e os findings dentro dos projetos.", PENTESTER: "Como PENTESTER, você acompanha os projetos aos quais foi atribuído e suas atividades de análise." },

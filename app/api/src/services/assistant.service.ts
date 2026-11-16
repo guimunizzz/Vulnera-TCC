@@ -42,7 +42,7 @@ export class AssistantService {
     }
     const first = topics[0];
     // A pergunta por conceito não deve ganhar uma instrução operacional alheia.
-    const prefix = normalizeAssistantText(dto.question).includes("quem e voce") ? "Sou o Assistente Vulnera.\n\n" : "";
+    const prefix = /\bquem e (?:voce|a vuvu)\b/.test(normalizeAssistantText(dto.question)) ? "Sou a Vuvu, sua assistente no Vulnera.\n\n" : "";
     return { source: "local", actions, message: `${prefix}${this.help.guidance(first, actor.role)}` };
   }
 }
