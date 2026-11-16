@@ -16,6 +16,8 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-16 — Pedidos do PR #77 implementados, validados e publicados na feature (100% das correções; propagação visual em fechamento).** Oito comentários conferidos em `docs/REVISAO_PR77_2026-11-16.md`: 29 tópicos de produto, 74 artefatos fora do índice com cópias locais preservadas, configuração concreta privada. API check 922/922 (58 suítes), Web check 659/659 e contraste 132/132; builds e smoke por três perfis aprovados. Uma chamada Gemini real HTTP 200 confirmou governança de aceite/SLA. Dev e6a445c incorporada sem conflitos; sem seed/reset, schema, dependências, guias protegidos ou deploy no ambiente principal. EACCES inicial do QA resolvido exclusivamente na imagem local de testes. Histórico anterior de execução abaixo preservado.
+
 **🚧 2026-11-16 — Revisão do PR #77 em execução.** Pedidos de `rafafrd` reconferidos: ampliar ajuda somente de domínio/produto, retirar artefatos/cobertura/uploads do versionamento e manter o identificador real do modelo no ambiente privado. Na `feature/agent-ai`, criados backups exclusivamente locais das duas branches e retirados do índice 74 artefatos (71 de `output/assistant`, três de cobertura antiga), com hashes das cópias locais preservados. Resumo histórico humano realocado para `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`, referências atualizadas; fontes de Jest/Vitest e fixtures preservadas. `.gitignore` passa a cobrir output, cobertura e temporários. Contexto/configuração/validação/publicação e propagação para a Vuvu seguem pendentes. A dev avançou com Docker/seed; mudanças serão preservadas, sem seed/reset ou deploy nesta revisão.
 
 - [x] PR77-01 — Limpar o índice e prevenir artefatos gerados, mantendo cópias locais e resumo histórico.
