@@ -163,6 +163,28 @@ Clicar no fundo solta uma onda:
 - no terreno, ela entra na **função de altura**: anéis que se afastam do ponto
   clicado e levantam a malha de verdade. Os símbolos balançam em cima.
 
+## Parte 6 — o grafo e o fim da página
+
+Um **grafo** é um desenho de "o que está ligado a quê": bolinhas (os **nós**)
+e linhas entre elas (as **arestas**). No fundo ele aparece de dois jeitos:
+
+- **Em cima de cada monte** flutua um nó. Dele sai uma linha para cada falha
+  daquele monte. Quando a falha é corrigida, a linha se solta.
+- **No fim da página**, depois dos planos, uma **rede** de nós verdes nasce
+  sobre a planície e vai se espalhando conforme você rola. É a ideia de que o
+  sistema, agora organizado, está sendo vigiado.
+
+Como a GPU não guarda nada, ela precisa descobrir sozinha quem se liga a quem.
+O truque: os nós da rede ficam numa grade invisível, e cada um só pode se
+ligar aos vizinhos da direita, de trás e da diagonal. Assim os dois lados da
+linha chegam à mesma resposta sem procurar.
+
+Também é aqui que o fundo ganha **vida própria**. Até a página parada tem
+coisa se mexendo: pontinhos de luz correndo pelas linhas, anéis saindo dos
+montes como um sonar, uma faixa de luz varrendo o chão, e os símbolos
+balançando. A **câmera**, não: ela continua só obedecendo à rolagem. No fim,
+ela dá uma voltinha e abaixa, e o horizonte clareia como um amanhecer.
+
 ## O caminho de um quadro
 
 ```mermaid
@@ -173,9 +195,9 @@ flowchart TD
   Dec -- "sim: tem terreno" --> T0
 
   subgraph Terreno["Terreno (numa folha de rascunho)"]
-    T0["Inclina a câmera<br/>conforme o progresso"] --> T1["1. Malha: levanta cada vértice<br/>pela função de altura"]
-    T1 --> T2["2. Hastes das falhas"]
-    T2 --> T3["3. Símbolos das falhas"]
+    T0["Posiciona a câmera<br/>conforme o progresso"] --> T1["1. Malha: levanta cada vértice<br/>pela função de altura"]
+    T1 --> T2["2. Linhas do grafo<br/>e hastes das falhas"]
+    T2 --> T3["3. Nós do grafo<br/>e símbolos das falhas"]
   end
 
   subgraph Letras["Caracteres (duas passadas)"]

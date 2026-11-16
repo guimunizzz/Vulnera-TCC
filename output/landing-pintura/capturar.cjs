@@ -19,7 +19,7 @@ fs.mkdirSync(pasta, { recursive: true });
 // Fração do trecho entre o ato k e o k+1 em que cada quadro é tirado.
 const QUADROS = [
   ['ato0', 0], ['ato1', 1], ['ato2', 1.5], ['virada-a', 2.85], ['virada-b', 3.05],
-  ['ato3', 3.5], ['ato4', 4.1], ['ato4-fim', 4.45], ['ato5', 5],
+  ['ato3', 3.5], ['ato4', 4.1], ['ato4-fim', 4.45], ['ato5', 5], ['epilogo', 5.5], ['fim', 6],
 ];
 
 (async () => {
@@ -58,8 +58,10 @@ const QUADROS = [
           const s = document.querySelector(`section[data-ato="${a}"]`);
           return Math.max(0, s.getBoundingClientRect().top + scrollY - innerHeight / 2);
         };
+        // Depois do ato 5 vem o epílogo: do marco de "Planos" ao fim da rolagem.
+        const fim = document.documentElement.scrollHeight - innerHeight;
         const a = Math.min(4, Math.floor(p));
-        const y = topo(a) + (topo(a + 1) - topo(a)) * (p - a);
+        const y = p > 5 ? topo(5) + (fim - topo(5)) * (p - 5) : topo(a) + (topo(a + 1) - topo(a)) * (p - a);
         scrollTo({ top: Math.min(y, document.documentElement.scrollHeight - innerHeight), behavior: 'instant' });
       }, progresso);
       await page.waitForTimeout(2200);

@@ -99,8 +99,10 @@ const [base = 'http://localhost:5179', dpr = '1'] = process.argv.slice(2);
   }, rotulo);
   const irPara = (p) => page.evaluate((prog) => {
     const topo = (a) => (a === 0 ? 0 : Math.max(0, document.querySelector(`section[data-ato="${a}"]`).getBoundingClientRect().top + scrollY - innerHeight / 2));
+    // Depois do ato 5 vem o epílogo: do marco de "Planos" ao fim da rolagem.
+    const fim = document.documentElement.scrollHeight - innerHeight;
     const a = Math.min(4, Math.floor(prog));
-    scrollTo({ top: topo(a) + (topo(a + 1) - topo(a)) * (prog - a), behavior: 'instant' });
+    scrollTo({ top: prog > 5 ? topo(5) + (fim - topo(5)) * (prog - 5) : topo(a) + (topo(a + 1) - topo(a)) * (prog - a), behavior: 'instant' });
     return scrollY;
   }, p);
   const rolar = async (ate) => {
@@ -115,7 +117,7 @@ const [base = 'http://localhost:5179', dpr = '1'] = process.argv.slice(2);
   };
 
   const resultados = [];
-  for (const [rotulo, p] of [['parado-ato0-ascii', 0], ['parado-ato2-ascii', 1.6], ['parado-ato3-terreno', 3.5], ['parado-ato5-terreno', 5]]) {
+  for (const [rotulo, p] of [['parado-ato0-ascii', 0], ['parado-ato2-ascii', 1.6], ['parado-ato3-terreno', 3.5], ['parado-ato5-terreno', 5], ['parado-epilogo-rede', 5.6]]) {
     await irPara(p);
     await page.waitForTimeout(1500);
     await zerar();

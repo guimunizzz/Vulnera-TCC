@@ -3,7 +3,8 @@
  *
  * O QUE FAZ
  * GLSL do terreno dos atos 3–5 (ADR-055): a malha do relevo, os glifos de
- * falha que pousam nos montes e as hastes que os prendem ao chão.
+ * falha que pousam nos montes, as hastes que os prendem ao chão e o grafo
+ * que vive em cima dele (nó de cada monte e a rede do epílogo).
  *
  * COMO
  * - O relevo é uma FUNÇÃO (`altura`): ondulação calma + quatro montes de
@@ -20,6 +21,13 @@
  *   translúcido: a encosta da frente vela a de trás sem buffer de profundidade.
  * - Os glifos são cartazes que amostram o MESMO atlas da cena ASCII e saem das
  *   mesmas células (mesmo hash): o "@" da página é o "@" que sobe para o monte.
+ * - Grafo: um nó flutua sobre cada cume, ligado aos glifos daquele monte; no
+ *   epílogo, uma rede de nós nasce sobre a planície. Como a ligação precisa
+ *   ser calculável dos dois lados sem busca, a rede é uma treliça com jitter
+ *   e cada nó se liga a vizinhos em deslocamentos fixos.
+ * - Vida contínua (anima com a página parada): pulsos que correm pelas
+ *   arestas, anéis de sonar que saem dos montes, uma faixa de luz que varre o
+ *   relevo e os glifos balançando na haste.
  *
  * As contas de narrativa espelham `terreno-logica.ts`, onde são testadas.
  * Não use crase dentro destes templates: fecha a string JS (ADR-026).
@@ -71,6 +79,17 @@ uniform vec3 uCorrecao[4];
 // Ondas sísmicas do clique: xy = ponto do plano, z = instante.
 uniform vec3 uOndas[${MAX_GOTAS}];
 uniform float uOndasAtivas;
+// Grafo: quanto os montes já se formaram, a cura de cada um (0 a 1), quanto da
+// rede do epílogo já nasceu e quanto do epílogo já passou.
+uniform float uFormado;
+uniform float uCura[4];
+uniform float uRede;
+uniform float uFinal;
+// Treliça da rede no plano: colunas e linhas, e o canto de onde ela parte (px).
+uniform vec2 uGradeDaRede;
+uniform vec2 uOrigemDaRede;
+
+const vec2 RAIO_DO_MONTE = ${vec(TERRENO.raioDoMontePx)};
 
 ${GLSL_VIRADA}
 
@@ -99,7 +118,6 @@ float nasceuEm(vec2 plano, float sorteio) {
 /** O relevo: só no vértice. */
 const GLSL_RELEVO = /* glsl */ `
 const float ALTURA_DO_MONTE[4] = float[4](${TERRENO.alturaDosMontesPx.map(f).join(", ")});
-const vec2 RAIO_DO_MONTE = ${vec(TERRENO.raioDoMontePx)};
 const vec3 LUZ = normalize(${vec(TERRENO.luz)});
 
 // Cristas em três escalas: a encosta tem espinhaços e ravinas, não é um sino liso.
@@ -281,9 +299,33 @@ void main() {
   // Grade (a herança das células) e curvas de nível (o mapa do risco).
   float grade = max(linhaEm(celula.x, 1.0), linhaEm(celula.y, 1.0));
   float curva = linhaEm(vAltura / ${f(TERRENO.curvaDeNivelPx)}, 1.3) * smoothstep(5.0, 16.0, vAltura);
-  // Na sombra as linhas perdem força; a faixa da correção acende as dela.
-  float alfaDaLinha = clamp((grade * mix(0.3, 0.5, alto) + curva * 0.9) * (1.0 - 0.45 * vLuz.z) + faixa * 0.55, 0.0, 1.0);
-  vec3 corDaLinha = mix(corBase, vec3(1.0), ${f(TERRENO.tomClaro)} * clamp(luz * curva + faixa, 0.0, 1.0));
+
+  // Sonar: de tempos em tempos um anel sai de cada monte e corre pelo chão,
+  // na cor dele. Quanto mais risco em aberto, mais forte; o monte resolvido cala.
+  float sonar = 0.0;
+  vec3 corDoSonar = vec3(0.0);
+  for (int i = 0; i < 4; i++) {
+    if (uMontes[i].z < 0.05) continue;
+    float fase = fract(uTempo / ${f(TERRENO.periodoDoSonarS)} + float(i) * 0.27);
+    float d = (length((vPlano - uMontes[i].xy) / RAIO_DO_MONTE) - fase * 2.8) / 0.07;
+    float anel = exp(-d * d) * (1.0 - fase) * (1.0 - fase) * uMontes[i].z;
+    sonar += anel;
+    corDoSonar += mix(uSeveridade[i], uSucesso, uCura[i]) * anel;
+  }
+  // Varredura: uma faixa de luz atravessa o relevo do fundo para a frente.
+  // Ganha força no ato 5, quando o terreno está calmo e ela é o que se move.
+  float posicao = mix(1.7, -1.0, fract(uTempo / ${f(TERRENO.periodoDaVarreduraS)})) * uTela.y;
+  float distanciaDaVarredura = (vPlano.y - posicao) / 70.0;
+  float varredura = exp(-distanciaDaVarredura * distanciaDaVarredura) * mix(0.35, 1.0, uEstavel);
+
+  // Na sombra as linhas perdem força; a faixa da correção, o sonar e a
+  // varredura acendem as que tocam.
+  float alfaDaLinha = clamp(
+    (grade * mix(0.3, 0.5, alto) + curva * 0.9) * (1.0 - 0.45 * vLuz.z) * (1.0 + 0.9 * varredura)
+      + faixa * 0.55 + sonar * (0.16 + 0.5 * grade),
+    0.0, 1.0);
+  vec3 corDaLinha = mix(corBase, vec3(1.0), ${f(TERRENO.tomClaro)} * clamp(luz * curva + faixa + 0.6 * varredura, 0.0, 1.0));
+  corDaLinha = mix(corDaLinha, corDoSonar / max(sonar, 1e-4), clamp(sonar, 0.0, 1.0) * 0.8);
 
   vec4 saida = vec4(corDoFundo * alfaDoFundo, alfaDoFundo);
   saida = vec4(corDaLinha * alfaDaLinha, alfaDaLinha) + saida * (1.0 - alfaDaLinha);
@@ -296,8 +338,9 @@ void main() {
   // Neblina com cor: ao longe o relevo puxa para a cor profunda e depois some,
   // em vez de terminar numa aresta.
   float longe = smoothstep(uDistancia * 1.02, uDistancia * 1.8, vDistancia);
-  vec3 corDaNeblina = mix(uFundo, uCorProfunda, 0.6);
-  float alfaComNeblina = max(saida.a, longe * 0.2);
+  // Epílogo: o horizonte amanhece — a neblina do fundo puxa para a luz quente.
+  vec3 corDaNeblina = mix(mix(uFundo, uCorProfunda, 0.6), uQuente, uFinal * 0.5);
+  float alfaComNeblina = max(saida.a, longe * (0.2 + 0.3 * uFinal));
   saida = vec4(mix(saida.rgb, corDaNeblina * alfaComNeblina, longe * 0.7), alfaComNeblina);
   float some = 1.0 - smoothstep(uDistancia * 1.3, uDistancia * 2.0, vDistancia);
 
@@ -333,6 +376,11 @@ vec4 segmento(vec3 a, vec3 b, float t, float lado, float meia, out float desloc)
   return clip;
 }
 
+// O que está longe some na neblina, como o terreno.
+float neblinaEm(float distancia) {
+  return 1.0 - smoothstep(uDistancia * 1.3, uDistancia * 2.0, distancia);
+}
+
 struct Marcador {
   vec3 pe;      // ponto do terreno embaixo dele
   vec3 cabeca;  // onde o glifo está
@@ -340,11 +388,13 @@ struct Marcador {
   float alfa;
   float glifo;
   float escala;
+  int grupo;        // monte da severidade (0 baixa … 3 crítica)
+  float chegada;    // 0 na página, 1 no monte
+  float corrigida;  // 0 em aberto, 1 corrigida
 };
 
-// Devolve false quando a célula não tem falha (a instância não desenha).
-bool marcadorDaInstancia(out Marcador m) {
-  float id = float(gl_InstanceID);
+// Devolve false quando a célula "id" não tem falha (a instância não desenha).
+bool marcadorDaCelula(float id, out Marcador m) {
   vec2 cel = vec2(mod(id, uGradeAscii.x), floor(id / uGradeAscii.x));
   if (hashCelula(cel + 41.0) > ${f(PROPORCAO_FALHAS)}) return false;
   float severidade = 1.0 + floor(hashCelula(cel + 53.0) * 4.0);
@@ -372,7 +422,8 @@ bool marcadorDaInstancia(out Marcador m) {
   vec2 pouso = uMontes[g].xy + RAIO_DO_MONTE * 0.78 * sqrt(h1) * vec2(cos(h2 * 6.2832), sin(h2 * 6.2832));
   vec2 xy = mix(casa, pouso, chegada);
   float chao = altura(xy);
-  float haste = mix(9.0, 24.0, h3) * nasceu;
+  // A haste balança de leve: o glifo nunca fica parado.
+  float haste = (mix(9.0, 24.0, h3) + 2.2 * sin(uTempo * 1.5 + h1 * 40.0)) * nasceu;
   // Da página ao monte em salto; corrigida, sobe e some.
   float z = chao + haste + sin(PI * chegada) * 78.0 + corrigida * corrigida * 130.0;
 
@@ -386,7 +437,39 @@ bool marcadorDaInstancia(out Marcador m) {
   // O glifo da severidade vira "✓" quando a correção passa da metade.
   m.glifo = corrigida > 0.4 ? ${GLIFO.ok}.0 : ${GLIFO.baixa - 1}.0 + severidade;
   m.escala = mix(1.0, 1.3, h3);
+  m.grupo = g;
+  m.chegada = chegada;
+  m.corrigida = corrigida;
   return m.alfa > 0.004;
+}
+
+// --- Grafo sobre o terreno.
+
+// Nó central de um monte: flutua acima do cume e sobe e desce com ele.
+vec3 noDoMonte(int i) {
+  vec2 centro = uMontes[i].xy;
+  return vec3(centro, altura(centro) + ${f(TERRENO.alturaDoNoDoMontePx)} + 5.0 * sin(uTempo * 0.9 + float(i) * 1.7));
+}
+// Cor do nó: a da severidade, virando verde conforme o grupo é corrigido.
+vec3 corDoMonte(int i) {
+  return mix(mix(uSeveridade[i], uSucesso, uCura[i]), uQuente, uEstavel * 0.22);
+}
+
+// Nó "q" da treliça da rede de monitoramento (epílogo). Devolve false quando o
+// ponto da treliça não tem nó ou a rede ainda não chegou ali.
+bool noDaRede(vec2 q, out vec3 pos, out float nasceu) {
+  if (q.x < 0.0 || q.y < 0.0 || q.x >= uGradeDaRede.x || q.y >= uGradeDaRede.y) return false;
+  if (hashCelula(q + 301.0) > ${f(TERRENO.densidadeDaRede)}) return false;
+  float h = hashCelula(q + 323.0);
+  vec2 jitter = vec2(hashCelula(q + 311.0), hashCelula(q + 317.0)) - 0.5;
+  vec2 xy = uOrigemDaRede + (q + 0.5 + jitter * 0.62) * ${f(TERRENO.malhaDaRedePx)};
+  // A rede se espalha como a virada: da esquerda para a direita.
+  nasceu = viradaLocal(uRede, clamp(xy.x / uTela.x + 0.5, 0.0, 1.0), h);
+  if (nasceu < 0.004) return false;
+  float flutua = mix(${f(TERRENO.alturaDaRedePx[0])}, ${f(TERRENO.alturaDaRedePx[1])}, h) * nasceu
+    + 3.0 * sin(uTempo * 1.1 + h * 40.0);
+  pos = vec3(xy, altura(xy) + flutua);
+  return true;
 }
 `;
 
@@ -401,7 +484,7 @@ varying vec4 vCor;
 
 void main() {
   Marcador m;
-  if (!marcadorDaInstancia(m)) {
+  if (!marcadorDaCelula(float(gl_InstanceID), m)) {
     gl_Position = FORA;
     return;
   }
@@ -440,10 +523,13 @@ ${GLSL_MARCADOR}
 // x = distância ao eixo (px, com sinal), y = meia largura (px).
 varying vec2 vLinha;
 varying vec4 vCor;
+varying vec3 vPulso;
 
 void main() {
+  // A haste não leva pulso.
+  vPulso = vec3(0.0);
   Marcador m;
-  if (!marcadorDaInstancia(m)) {
+  if (!marcadorDaCelula(float(gl_InstanceID), m)) {
     gl_Position = FORA;
     return;
   }
@@ -455,12 +541,161 @@ void main() {
 }
 `;
 
-/** Fragmento de linha: borda suavizada na conta, alfa pré-multiplicado. */
-export const FRAGMENT_HASTE = /* glsl */ `
+/**
+ * Arestas do grafo, numa draw call. A instância decide o que é:
+ *   [0, 3R)        rede do epílogo: nó da treliça ↔ três vizinhos fixos
+ *   [3R, 3R + C)   nó do monte ↔ glifo da célula (só as células com falha)
+ *   as 2 últimas   os dois montes de cada lado, ligados
+ * (R = pontos da treliça, C = células ASCII.)
+ */
+export const VERTEX_ARESTA = /* glsl */ `
+${GLSL_COMUM}
+${GLSL_RELEVO}
+${GLSL_MARCADOR}
+
 varying vec2 vLinha;
 varying vec4 vCor;
+// x = posição ao longo (0 a 1), y = fase do pulso, z = força do pulso.
+varying vec3 vPulso;
+
 void main() {
-  float alfa = clamp(vLinha.y + 0.5 - abs(vLinha.x), 0.0, 1.0) * vCor.a;
-  gl_FragColor = vec4(vCor.rgb * alfa, alfa);
+  float id = float(gl_InstanceID);
+  float totalDaRede = uGradeDaRede.x * uGradeDaRede.y * 3.0;
+  float totalDeCelulas = uGradeAscii.x * uGradeAscii.y;
+  vec3 a;
+  vec3 b;
+  vec3 cor;
+  float alfa;
+  float meia = 0.35;
+  float pulso = 0.0;
+
+  if (id < totalDaRede) {
+    float ponto = floor(id / 3.0);
+    vec2 q = vec2(mod(ponto, uGradeDaRede.x), floor(ponto / uGradeDaRede.x));
+    float qual = mod(id, 3.0);
+    vec2 vizinho = q + (qual < 0.5 ? vec2(1.0, 0.0) : qual < 1.5 ? vec2(0.0, 1.0) : vec2(1.0, 1.0));
+    float nasceuA;
+    float nasceuB;
+    if (!noDaRede(q, a, nasceuA) || !noDaRede(vizinho, b, nasceuB)) { gl_Position = FORA; return; }
+    cor = mix(uCorDoAcento, uSucesso, 0.5);
+    alfa = min(nasceuA, nasceuB) * 0.34;
+    // Metade das arestas leva um pulso: a rede está viva, alguém está olhando.
+    pulso = step(0.5, hashCelula(q + qual * 7.0 + 331.0));
+  } else if (id < totalDaRede + totalDeCelulas) {
+    Marcador m;
+    if (!marcadorDaCelula(id - totalDaRede, m)) { gl_Position = FORA; return; }
+    a = noDoMonte(m.grupo);
+    b = m.cabeca;
+    cor = m.cor;
+    // A aresta só aparece quando o glifo pousa, e se solta quando ele é corrigido.
+    alfa = m.alfa * 0.46 * smoothstep(0.75, 1.0, m.chegada) * (1.0 - smoothstep(0.0, 0.5, m.corrigida));
+    pulso = step(0.6, hashCelula(vec2(id, 337.0)));
+  } else {
+    // Os dois montes de cada lado se ligam: é uma rede, não quatro ilhas.
+    int g = id < totalDaRede + totalDeCelulas + 0.5 ? 0 : 2;
+    a = noDoMonte(g);
+    b = noDoMonte(g + 1);
+    cor = mix(corDoMonte(g), corDoMonte(g + 1), 0.5);
+    alfa = 0.45 * uFormado;
+    meia = 0.5;
+    pulso = 1.0;
+  }
+
+  if (alfa < 0.004) { gl_Position = FORA; return; }
+  float desloc;
+  gl_Position = segmento(a, b, position.x, position.y, meia, desloc);
+  vLinha = vec2(desloc, meia);
+  vCor = vec4(cor, alfa * neblinaEm(gl_Position.w));
+  vPulso = vec3(position.x, hashCelula(vec2(id, 341.0)), pulso);
+}
+`;
+
+/**
+ * Nós do grafo, numa draw call: [0, R) os nós da rede do epílogo; os 4
+ * últimos, o nó central de cada monte.
+ */
+export const VERTEX_NO = /* glsl */ `
+${GLSL_COMUM}
+${GLSL_RELEVO}
+${GLSL_MARCADOR}
+
+varying vec2 vCanto;
+// x = raio do disco (fração do cartaz), y = força do anel.
+varying vec2 vForma;
+varying vec4 vCor;
+
+void main() {
+  float id = float(gl_InstanceID);
+  float totalDaRede = uGradeDaRede.x * uGradeDaRede.y;
+  vec3 centro;
+  vec3 cor;
+  float alfa;
+  float raioPx;
+  float anel = 0.0;
+
+  if (id < totalDaRede) {
+    vec2 q = vec2(mod(id, uGradeDaRede.x), floor(id / uGradeDaRede.x));
+    float nasceu;
+    if (!noDaRede(q, centro, nasceu)) { gl_Position = FORA; return; }
+    float h = hashCelula(q + 347.0);
+    raioPx = mix(2.0, 3.4, h);
+    cor = mix(uCorDoAcento, uSucesso, 0.35 + 0.4 * h);
+    alfa = nasceu * mix(0.6, 1.0, h);
+  } else {
+    int g = int(id - totalDaRede);
+    centro = noDoMonte(g);
+    raioPx = 6.5;
+    anel = 1.0;
+    cor = corDoMonte(g);
+    // O nó fica mesmo com o monte resolvido: verde, é o que restou a vigiar.
+    alfa = uFormado;
+    if (g == 0) alfa *= 1.0 - ${f(TERRENO.discricaoDaBaixa)} * uEstavel;
+  }
+
+  if (alfa < 0.004) { gl_Position = FORA; return; }
+  // O cartaz tem 3× o raio do disco: o resto é o brilho e o anel.
+  gl_Position = cartaz(centro, position.xy, vec2(raioPx * 3.0));
+  vCanto = position.xy;
+  vForma = vec2(1.0 / 3.0, anel);
+  vCor = vec4(cor, alfa * neblinaEm(gl_Position.w));
+}
+`;
+
+export const FRAGMENT_NO = /* glsl */ `
+uniform float uTempo;
+varying vec2 vCanto;
+varying vec2 vForma;
+varying vec4 vCor;
+
+void main() {
+  float r = length(vCanto);
+  float borda = fwidth(r);
+  float disco = 1.0 - smoothstep(vForma.x - borda, vForma.x + borda, r);
+  // Anel em volta dos nós dos montes, pulsando devagar.
+  float raioDoAnel = vForma.x * (1.9 + 0.25 * sin(uTempo * 1.4));
+  float anel = vForma.y * (1.0 - smoothstep(borda, borda * 2.5, abs(r - raioDoAnel)));
+  float brilho = exp(-r * r * 7.0) * 0.4;
+  float alfa = clamp(disco + anel * 0.8 + brilho, 0.0, 1.0) * vCor.a * (1.0 - smoothstep(0.9, 1.0, r));
+  // O miolo é um tom mais claro: o nó parece aceso.
+  vec3 cor = mix(vCor.rgb, vec3(1.0), ${f(TERRENO.tomClaro)} * disco);
+  gl_FragColor = vec4(cor * alfa, alfa);
+}
+`;
+
+/**
+ * Fragmento de linha (hastes e arestas): borda suavizada na conta, alfa
+ * pré-multiplicado e, nas arestas, um pulso de luz que corre de uma ponta à outra.
+ */
+export const FRAGMENT_LINHA = /* glsl */ `
+uniform float uTempo;
+varying vec2 vLinha;
+varying vec4 vCor;
+varying vec3 vPulso;
+void main() {
+  float d = (vPulso.x - fract(uTempo * 0.35 + vPulso.y)) / 0.09;
+  float pulso = exp(-d * d) * vPulso.z;
+  float alfa = clamp(vLinha.y + 0.5 - abs(vLinha.x), 0.0, 1.0) * min(1.0, vCor.a * (1.0 + 2.2 * pulso));
+  vec3 cor = mix(vCor.rgb, vec3(1.0), ${f(TERRENO.tomClaro)} * pulso);
+  gl_FragColor = vec4(cor * alfa, alfa);
 }
 `;

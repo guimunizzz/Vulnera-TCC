@@ -135,8 +135,9 @@ Próximo: LP-FUT-05 (escolher o material) e LP-FUT-06 (pôster), além de 01–0
 ## Adendo — 2026-11-16: terreno como material final (ADR-055)
 
 > [!NOTE]
-> Este adendo é o estado final. Os blocos acima ficam como histórico da
-> branch (pintura, tinta com mais corpo, comparação de três materiais).
+> Este adendo e o seguinte (epílogo e grafo) são o estado final. Os blocos
+> acima ficam como histórico da branch (pintura, tinta com mais corpo,
+> comparação de três materiais).
 
 ```
 === RELATÓRIO ===
@@ -186,5 +187,44 @@ Docs atualizados: ADR-055 (novo), ADR-054 (substituído), LANDING_NARRATIVA.md
     nos montes.
 Próximo: LP-FUT-01 (Iris Xe), 02 (engasgo de conteúdo), 03 (Demo real),
   04 (planos pela API), 06 (pôster do terreno).
+=================
+```
+
+## Adendo — 2026-11-16: epílogo, grafo sobre o terreno e vida contínua
+
+```
+=== RELATÓRIO ===
+Feito:
+  - O fundo não para mais depois de "Planos": o progresso segue de 5 a 6 até
+    o fim da rolagem (epílogo). Nesse trecho uma rede de nós verdes nasce
+    sobre a planície, a câmera orbita 5° e baixa 7°, e o horizonte amanhece.
+  - Grafo como camada do terreno: um nó flutua sobre cada cume, ligado aos
+    glifos daquele monte (a aresta se solta na correção); os montes de cada
+    lado se ligam; a rede do epílogo cobre a planície.
+  - Vida contínua: pulsos nas arestas, sonar saindo dos montes a cada 6 s,
+    varredura de luz a cada 9 s, glifos e nós balançando.
+Arquivos: scene/terreno-shaders.ts, terreno.ts, terreno-logica.ts, config.ts,
+  use-landing-scene.ts (marco do fim da página), terreno.test.ts, docs.
+Testes: lint 0 erros · contraste OK · vitest 643/645 (as mesmas 2 falhas do
+  arquivo não rastreado) · e2e landing.spec.ts 7/7 no container :8086.
+Desempenho medido (RTX 3060 Ti, build de produção, DPR 1 / DPR 2):
+  parado no epílogo 59,9 / 59,9 fps · parado no ato 3 60,2 / 60,3 ·
+  rolando a virada 58,1 / 56,8 · rolando a página 59,4 / 59,7 · 0 long tasks
+  chunk lazy da cena 45,91 kB (gzip 16,71); bundle inicial 492,80 kB
+Docs atualizados: LANDING_NARRATIVA.md §3 e §12.7, ADR-055 §6,
+  COMO_FUNCIONA_O_FUNDO.md (Parte 6), FRONTEND_WEB.md, BACKLOG.md,
+  PRD_VIVO.md; evidências refeitas em 1440 e 768 px, com os quadros
+  "epilogo" e "fim" (70 arquivos, 7,3 MB).
+⚠️ Atenção do Rafael:
+  - Agora há animação que roda sozinha (pulsos, sonar, varredura, balanço).
+    A câmera e a narrativa continuam presas ao scroll. Registrei a distinção
+    no ADR-055 §6; se preferir tudo preso ao scroll, é só desligar os quatro.
+  - O intervalo de 150 ms que apareceu na virada em DPR 2 é o engasgo de
+    conteúdo já registrado (LP-FUT-02), não a cena.
+  - Mais duas draw calls e mais conta no vértice: reforça a necessidade de
+    medir em Iris Xe (LP-FUT-01).
+  - Revisão a olho: 1440 px nos dois temas (atos 3, 4, epílogo e fim).
+    768 px foi capturado sem erro, não revisado.
+Próximo: LP-FUT-01, 02, 03, 04 e 06.
 =================
 ```

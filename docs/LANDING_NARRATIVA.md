@@ -78,6 +78,13 @@ Sistemas. Por isso:
 
 ## 3. Os seis atos
 
+> [!NOTE]
+> **Epílogo (2026-11-16).** O progresso narrativo não para mais em 5. O ato 5
+> abre em "Planos", mas a página ainda tem FAQ, Time e a chamada final, e o
+> fundo ficava parado nesse trecho todo. Agora ele segue de **5 a 6**, e o 6 é
+> alcançado no fim da rolagem. O que acontece nesse trecho está na §12.7. Não
+> é um sétimo ato: o pôster e os `data-ato` continuam com seis.
+
 A página não muda de estrutura: as seções HTML rolam normalmente, sem
 scroll-jacking, sem biblioteca de smooth scroll e sem bloco fixado. A cena
 fica num canvas fixo atrás do conteúdo e lê um único número, o **progresso
@@ -295,6 +302,7 @@ Regras que continuam valendo:
 | 2026-11-16 | Tinta com mais corpo (pedido do Rafael): massas largas por baixo, cerdas e pincel seco, mistura molhada e relevo iluminado (§10.6). |
 | 2026-11-16 | **Três materiais para os atos 3–5** (pedido do Rafael: explorar mais o three.js): terreno topográfico (padrão) e grafo de nós, em 3D com câmera em perspectiva, ao lado da pintura; escolha por `?cena=` enquanto ele compara (§11). |
 | 2026-11-16 | **Terreno escolhido como material final** (ADR-055): pintura, grafo e `?cena=` removidos. Terreno com erosão, sombra projetada, luz de contorno, neblina com cor, correção em varredura e onda sísmica no clique; regra de câmera do §2 revista (§12). |
+| 2026-11-16 | **Epílogo e grafo sobre o terreno** (pedido do Rafael: o fundo parava depois de Maturidade): o progresso segue de 5 a 6 até o fim da página, com rede de monitoramento, órbita da câmera e horizonte que amanhece; nó sobre cada monte ligado aos glifos; pulsos, sonar e varredura de luz animam com a página parada (§12.7). |
 
 ### Boas práticas consultadas (2026-10-27)
 
@@ -635,10 +643,70 @@ iluminadas (30% em direção ao branco), com a camada no teto de alfa (0,9) por
 cima de um halo no máximo (0,16), atenuada pela superfície de 94%. Exige
 ≥ 4,5:1 para todo texto, nos dois temas.
 
+### 12.7 Epílogo, grafo sobre o terreno e vida contínua (2026-11-16)
+
+Pedido do Rafael no mesmo dia: "adicione mais animações; quando rolo depois de
+Maturidade de Segurança, o fundo para. Tente usar o grafo também." Três
+respostas, todas dentro do terreno:
+
+**1. Epílogo — a história vai até o rodapé.**
+
+| Progresso | O que acontece |
+|---|---|
+| 4,7 → 5,9 | **Rede de monitoramento.** Nós verdes nascem flutuando sobre a planície e se ligam por arestas, espalhando-se da esquerda para a direita (a mesma onda da virada). É o "sob controle" desenhado: o que foi organizado agora é vigiado. |
+| 3,45 → 6 | A câmera **orbita** 5° em volta do terreno. Começa só depois da virada, para a célula continuar em cima do glifo enquanto os dois se cruzam. |
+| 5 → 6 | A câmera **baixa** mais 7° em direção ao horizonte, e a neblina do fundo puxa para a luz quente: o horizonte **amanhece** na chamada final. |
+
+O hook acrescenta um marco no fim da rolagem (`use-landing-scene.ts`), e
+`mapearProgresso` — que não mudou — passa a devolver até 6.
+
+**2. O grafo voltou, como camada do terreno.** Descartado como material
+(§12.6), ele ficou como o que liga as coisas:
+
+| Elemento | Como funciona |
+|---|---|
+| **Nó do monte** | Um nó com anel flutua 42 px acima de cada cume, na cor da severidade; fica verde conforme o grupo é corrigido e permanece depois que o monte afunda (é o que restou a vigiar). |
+| **Nó ↔ glifos** | Uma aresta liga o nó a cada glifo do monte: aparece quando o glifo pousa e se solta quando ele é corrigido. |
+| **Monte ↔ monte** | Os dois nós de cada lado se ligam. |
+| **Rede do epílogo** | Treliça de 84 px sobre o plano, com jitter; 55% dos pontos viram nó, cada um ligado a três vizinhos fixos (direita, fundo, diagonal). A ligação é calculável dos dois lados sem busca. |
+
+Duas draw calls a mais (arestas e nós), as duas instanciadas e sem buffer por
+nó. No total o alvo do terreno recebe cinco: malha, arestas, hastes, nós,
+glifos.
+
+**3. Vida contínua — anima com a página parada.**
+
+| Animação | Detalhe |
+|---|---|
+| **Pulsos nas arestas** | Um ponto de luz corre de uma ponta à outra: em metade das arestas da rede, em parte das que ligam nó e glifo, e nas que ligam os montes. |
+| **Sonar** | A cada 6 s um anel sai de cada monte e corre pelo chão, na cor dele; quanto mais risco em aberto, mais forte. O monte resolvido cala. |
+| **Varredura de luz** | A cada 9 s uma faixa atravessa o relevo do fundo para a frente, acendendo a grade. Ganha força no ato 5. |
+| **Glifos e nós** | O glifo balança na haste; o nó do monte sobe e desce, e o anel dele pulsa. |
+
+Tudo isso é decoração e some com "reduzir animações" (a cena nem monta).
+
+Medição com o epílogo e o grafo (mesma máquina e protocolo da §12.3, que
+mostra os números de antes):
+
+| Trecho | DPR 1 | DPR 2 |
+|---|---|---|
+| Parado, ato 3 (terreno) | 60,2 fps · 0 quadros > 25 ms | 60,3 fps · 0 |
+| Parado, ato 5 (terreno) | 60,0 fps · 0 | 60,1 fps · 0 |
+| Parado, epílogo (rede) | 59,9 fps · 0 | 59,9 fps · 0 |
+| Rolando a virada | 58,1 fps · 1 quadro > 25 ms · maior intervalo 33 ms | 56,8 fps · 4 · 150 ms |
+| Rolando a página inteira | 59,4 fps · 5 · 33 ms | 59,7 fps · 2 · 33 ms |
+
+Long tasks: **0** em todos os trechos. O intervalo de 150 ms na virada em DPR
+2 é o engasgo de conteúdo já registrado (LP-FUT-02): aparece na primeira vez
+que a região depois de "Recursos" entra na tela e reproduz com a cena
+desligada. O chunk lazy da cena foi para **45,91 kB** (gzip 16,71); o bundle
+inicial continua em 492,80 kB. Continua valendo o aviso da §12.3: **não
+medido em Iris Xe**.
+
 ### 12.6 O que foi descartado
 
 | Alternativa | Estado |
 |---|---|
 | Pintura (§10) | Removida. Uma amostra das capturas em `docs/evidencias/landing-terreno/alternativas/`. |
-| Grafo (§11) | Removido. Idem. |
+| Grafo (§11) | Removido como material. Voltou no mesmo dia como camada sobre o terreno (§12.7). |
 | `src/three/acumulacao.ts` (camada em ping-pong) | Removido do kit: só a pintura usava. |

@@ -11,6 +11,12 @@
  *                      a encosta e o monte afunda; os glifos viram "✓" e somem
  *   Ato 5 · Estável    planície calma, luz quente, um morro baixo que fica
  *                      (risco residual aceito)
+ *   Epílogo (5 → 6)    até o fim da página: uma rede de nós nasce sobre a
+ *                      planície, a câmera orbita e baixa, o horizonte amanhece
+ *
+ * Em cima do terreno vive um grafo: um nó sobre cada cume, ligado aos glifos
+ * daquele monte, e a rede do epílogo. Pulsos nas arestas, sonar nos montes e
+ * a varredura de luz animam mesmo com a página parada.
  *
  * COMO
  * - Mundo em px CSS, origem no centro da tela. Sem inclinação, o plano z = 0
@@ -18,7 +24,7 @@
  *   que a virada lê como transformação, não como troca de cena.
  * - A câmera gira em volta do eixo horizontal da tela conforme a virada
  *   avança. O movimento é do scroll: parou de rolar, a câmera para.
- * - Três draw calls (malha, hastes, glifos) num alvo fora da tela, sem buffer
+ * - Cinco draw calls (malha, arestas, hastes, nós, glifos) num alvo fora da tela, sem buffer
  *   de profundidade e sem MSAA. A passada de tela (`shaders.ts`) compõe esse
  *   alvo com o ASCII, os halos e o teto de alfa que o teste de contraste cobre.
  * - Nada é guardado por vértice ou por glifo: tudo sai da função de altura e
@@ -33,11 +39,12 @@ import { GOTA, MAX_GOTAS } from "../../../three/gotas";
 import { lerCorDoToken } from "../../../three/palette";
 import { TERRENO } from "./config";
 import {
-  alturaDoMonte, avaliarQualidade, correcaoDoMonte, estabilidade, riscoDoGrupo, ritmoDaCena, suavizar,
-  viradaGlobal, type Qualidade,
+  alturaDoMonte, avaliarQualidade, cameraDoTerreno, chegadaAoGrupo, correcaoDoMonte, curaDoGrupo, epilogo,
+  estabilidade, redeDeMonitoramento, riscoDoGrupo, ritmoDaCena, viradaGlobal, type Qualidade,
 } from "./terreno-logica";
 import {
-  FRAGMENT_GLIFO, FRAGMENT_HASTE, FRAGMENT_TERRENO, VERTEX_GLIFO, VERTEX_HASTE, VERTEX_TERRENO,
+  FRAGMENT_GLIFO, FRAGMENT_LINHA, FRAGMENT_NO, FRAGMENT_TERRENO, VERTEX_ARESTA, VERTEX_GLIFO, VERTEX_HASTE,
+  VERTEX_NO, VERTEX_TERRENO,
 } from "./terreno-shaders";
 
 /** Tokens lidos em runtime; trocam junto com o tema. Tudo em sRGB no shader. */
@@ -116,6 +123,13 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
     uCorrecao: { value: Array.from({ length: 4 }, () => new THREE.Vector3(2, 0, 0)) },
     uOndas: { value: Array.from({ length: MAX_GOTAS }, () => new THREE.Vector3(0, 0, -1e4)) },
     uOndasAtivas: { value: 0 },
+    // Grafo sobre o terreno.
+    uFormado: { value: 0 },
+    uCura: { value: [0, 0, 0, 0] },
+    uRede: { value: 0 },
+    uFinal: { value: 0 },
+    uGradeDaRede: { value: new THREE.Vector2(1, 1) },
+    uOrigemDaRede: { value: new THREE.Vector2(0, 0) },
   };
 
   const camera = new THREE.PerspectiveCamera(TERRENO.campoDeVisaoGraus, 1, 1, 10);
@@ -160,14 +174,22 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
     return geometria;
   };
   const hastes = new THREE.Mesh(quad(0), new THREE.ShaderMaterial({
-    ...comum, uniforms: uniformes, vertexShader: VERTEX_HASTE, fragmentShader: FRAGMENT_HASTE,
+    ...comum, uniforms: uniformes, vertexShader: VERTEX_HASTE, fragmentShader: FRAGMENT_LINHA,
+  }));
+  const arestas = new THREE.Mesh(quad(0), new THREE.ShaderMaterial({
+    ...comum, uniforms: uniformes, vertexShader: VERTEX_ARESTA, fragmentShader: FRAGMENT_LINHA,
+  }));
+  const nos = new THREE.Mesh(quad(-1), new THREE.ShaderMaterial({
+    ...comum, uniforms: uniformes, vertexShader: VERTEX_NO, fragmentShader: FRAGMENT_NO,
   }));
   const glifos = new THREE.Mesh(quad(-1), new THREE.ShaderMaterial({
     ...comum, uniforms: { ...uniformes, ...atlas }, vertexShader: VERTEX_GLIFO, fragmentShader: FRAGMENT_GLIFO,
   }));
   const cena = new THREE.Scene();
-  // Posições saem do shader; a ordem de inclusão é a ordem de desenho.
-  [malha, hastes, glifos].forEach((objeto, ordem) => {
+  // Posições saem do shader; a ordem de inclusão é a ordem de desenho: as
+  // linhas ficam por baixo dos nós e dos glifos que elas ligam.
+  const objetos = [malha, arestas, hastes, nos, glifos];
+  objetos.forEach((objeto, ordem) => {
     objeto.frustumCulled = false;
     objeto.renderOrder = ordem;
     cena.add(objeto);
@@ -229,16 +251,32 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
     });
     uniformesDaTela.uRaioDoHalo.value = TERRENO.raioDoHaloPx * tela.dpr;
     montarMalha(degrau.malhaPx);
-    const grade = uniformes.uGradeAscii.value;
-    hastes.geometry.instanceCount = grade.x * grade.y;
-    glifos.geometry.instanceCount = grade.x * grade.y;
+    const celulas = uniformes.uGradeAscii.value.x * uniformes.uGradeAscii.value.y;
+    hastes.geometry.instanceCount = celulas;
+    glifos.geometry.instanceCount = celulas;
+    // Treliça da rede sobre o mesmo plano da malha (ver montarMalha).
+    const colunas = Math.ceil((tela.largura * 1.8) / TERRENO.malhaDaRedePx);
+    const linhas = Math.ceil((tela.altura * 2.85) / TERRENO.malhaDaRedePx);
+    uniformes.uGradeDaRede.value.set(colunas, linhas);
+    uniformes.uOrigemDaRede.value.set(-tela.largura * 0.9, -tela.altura);
+    // A ordem das faixas de instância é a do shader (VERTEX_ARESTA e VERTEX_NO).
+    arestas.geometry.instanceCount = colunas * linhas * 3 + celulas + 2;
+    nos.geometry.instanceCount = colunas * linhas + 4;
   }
 
-  function apontarCamera(virada: number): void {
-    const angulo = THREE.MathUtils.degToRad(TERRENO.inclinacaoGraus) * suavizar(0, 1, virada);
+  function apontarCamera(progresso: number): void {
+    const { inclinacao, orbita } = cameraDoTerreno(progresso);
+    const teta = THREE.MathUtils.degToRad(inclinacao);
+    const psi = THREE.MathUtils.degToRad(orbita);
     const distancia = uniformes.uDistancia.value;
-    camera.position.set(0, -distancia * Math.sin(angulo), distancia * Math.cos(angulo));
-    camera.up.set(0, 1, 0);
+    // Gira em volta do centro do plano: primeiro inclina, depois orbita.
+    camera.position.set(
+      distancia * Math.sin(teta) * Math.sin(psi),
+      -distancia * Math.sin(teta) * Math.cos(psi),
+      distancia * Math.cos(teta),
+    );
+    // "Para cima" na tela é o fundo do terreno visto de onde a câmera está.
+    camera.up.set(-Math.sin(psi), Math.cos(psi), 0);
     camera.lookAt(0, 0, 0);
     camera.updateMatrixWorld();
   }
@@ -272,7 +310,7 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
     aquecer(renderer) {
       // Um quadro com a virada completa compila os três programas no carregamento.
       uniformes.uVirada.value = 1;
-      apontarCamera(1);
+      apontarCamera(TERRENO.virada[1]);
       renderizar(renderer);
       uniformes.uVirada.value = 0;
     },
@@ -290,8 +328,12 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
       uniformes.uEstavel.value = estabilidade(progresso);
       // Sem onda viva o laço das ondas nem roda no vértice.
       uniformes.uOndasAtivas.value = tempo - ultimaOnda < GOTA.duracao ? 1 : 0;
-      apontarCamera(virada);
+      uniformes.uFormado.value = chegadaAoGrupo(progresso, 0.5);
+      uniformes.uRede.value = redeDeMonitoramento(progresso);
+      uniformes.uFinal.value = epilogo(progresso);
+      apontarCamera(progresso);
       SEVERIDADES.forEach((severidade, i) => {
+        uniformes.uCura.value[i] = curaDoGrupo(severidade, progresso);
         const monte = uniformes.uMontes.value[i];
         monte.z = alturaDoMonte(severidade, progresso);
         const { frente, verde, faixa } = correcaoDoMonte(severidade, progresso);
@@ -322,7 +364,7 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
     },
     descartar() {
       alvo.dispose();
-      [malha, hastes, glifos].forEach((objeto) => {
+      objetos.forEach((objeto) => {
         objeto.geometry.dispose();
         objeto.material.dispose();
       });

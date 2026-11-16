@@ -173,6 +173,14 @@ export const TERRENO = {
   /** No ato 5 o relevo ondula 45% mais devagar e a baixa fica mais discreta. */
   freioEstavel: 0.45,
   discricaoDaBaixa: 0.4,
+  /**
+   * Epílogo: o ato 5 abre em "Planos", mas a página ainda tem FAQ, Time e a
+   * chamada final. Para o fundo não parar ali, o progresso segue de 5 até este
+   * valor, alcançado no fim da rolagem (pedido do Rafael, 2026-11-16).
+   */
+  progressoFinal: 6,
+  /** A rede de monitoramento nasce sobre a planície nesta faixa do progresso. */
+  rede: [4.7, 5.9],
 
   // --- Composição: entram no teste de contraste (scene-contrast.test.ts).
   /** Teto do alfa da camada 3D na composição. */
@@ -188,6 +196,10 @@ export const TERRENO = {
   campoDeVisaoGraus: 35,
   /** Inclinação no fim da virada. A câmera só se move com o scroll (ADR-055). */
   inclinacaoGraus: 46,
+  /** Do fim da virada ao fim da página a câmera orbita isto em volta do terreno... */
+  orbitaGraus: 5,
+  /** ...e no epílogo baixa mais isto, em direção ao horizonte. */
+  inclinacaoDoEpilogoGraus: 7,
 
   // --- Relevo.
   /** Grade desenhada sobre a malha: duas células ASCII (12 × 18 px) por quadro. */
@@ -214,6 +226,18 @@ export const TERRENO = {
   alcanceDaSombraPx: 240,
   /** Onda sísmica do clique: quanto ela levanta a malha. */
   amplitudeDaOndaPx: 13,
+
+  // --- Grafo sobre o terreno e vida contínua (animam mesmo com a página parada).
+  /** O nó central flutua acima do cume de cada monte, ligado aos glifos dele. */
+  alturaDoNoDoMontePx: 42,
+  /** Rede do epílogo: treliça no plano, fração dos pontos que vira nó e a que altura ele flutua. */
+  malhaDaRedePx: 84,
+  densidadeDaRede: 0.55,
+  alturaDaRedePx: [26, 84],
+  /** Um anel de sonar sai de cada monte a cada tantos segundos. */
+  periodoDoSonarS: 6,
+  /** Uma faixa de luz varre o relevo, do fundo para a frente, a cada tantos segundos. */
+  periodoDaVarreduraS: 9,
 
   /**
    * Degraus de qualidade. O primeiro é o padrão: a camada pode passar do teto

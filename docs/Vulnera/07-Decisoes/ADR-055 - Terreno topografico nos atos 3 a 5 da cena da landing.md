@@ -90,8 +90,8 @@ clique. Normal, sombra projetada (marcha curta em direção à luz) e luz de
 contorno saem dela. Posição, cor e glifo de cada falha saem do número da
 instância. Não há textura de altura, de posição, nem alvo em ponto flutuante.
 
-Três draw calls (malha, hastes, glifos) num alvo fora da tela, sem buffer de
-profundidade e sem MSAA: a malha é desenhada do fundo para a frente e as
+Cinco draw calls (malha, arestas, hastes, nós, glifos) num alvo fora da tela,
+sem buffer de profundidade e sem MSAA: a malha é desenhada do fundo para a frente e as
 linhas têm a borda suavizada na conta. A passada de tela compõe esse alvo com
 o ASCII e os halos, com o mesmo teto de alfa que o teste de contraste cobre.
 
@@ -101,7 +101,25 @@ Nos atos ASCII o clique continua sendo a gota que ondula a grade. A partir da
 virada, o ponto clicado é projetado no plano e vira uma onda sísmica que
 levanta a malha de verdade; os glifos balançam em cima dela.
 
-### 6. Degradação e qualidade
+### 6. A história vai até o fim da página, e o grafo vive em cima do terreno
+
+Acréscimo do mesmo dia, depois de o Rafael notar que o fundo parava em
+"Planos" (o último `data-ato`) e pedir mais animação, "usando o grafo também".
+
+- **Epílogo.** O progresso narrativo segue de 5 a 6, e o 6 é alcançado no fim
+  da rolagem. Nesse trecho uma rede de nós nasce sobre a planície, a câmera
+  orbita e baixa em direção ao horizonte, e o horizonte amanhece. Não é um
+  sétimo ato: `data-ato` e pôster continuam com seis.
+- **Grafo como camada.** Descartado como material, o grafo ficou como o que
+  liga as coisas: um nó flutua sobre cada cume, ligado aos glifos daquele
+  monte (a aresta se solta quando a falha é corrigida), e a rede do epílogo
+  cobre a planície. Mesma técnica do resto: instâncias, nada guardado.
+- **Vida contínua.** Pulsos correm pelas arestas, anéis de sonar saem dos
+  montes e uma faixa de luz varre o relevo, mesmo com a página parada. O que
+  continua preso ao scroll é a **câmera** (§3) e a **narrativa**; os detalhes
+  podem se mexer sozinhos, como o ASCII dos atos 0–2 sempre fez.
+
+### 7. Degradação e qualidade
 
 Movimento reduzido, tela abaixo de 768 px, sem WebGL2, falha do chunk ou
 contexto perdido: pôster ASCII (que conta os seis atos em ASCII). Alto
@@ -117,7 +135,7 @@ em `docs/evidencias/landing-terreno/alternativas/`.
 | Alternativa | Por que não |
 |---|---|
 | **Pintura** (ADR-054) | Bonita, mas plana: não usa o que o three.js tem de melhor. Mesmo com massas, cerdas e relevo iluminado, o Rafael não se convenceu ("não sei se gostei das tintas"). Também era a mais cara: camada de acumulação com mistura molhada e relevo por pixel. |
-| **Grafo** | Conversa com o Exposure Graph do produto, mas lê pior de longe (pontos e linhas finas) e a metáfora pede explicação. Preterido pelo Rafael em favor do terreno. |
+| **Grafo** (como material) | Conversa com o Exposure Graph do produto, mas lê pior de longe (pontos e linhas finas) e a metáfora pede explicação. Preterido pelo Rafael em favor do terreno — e reaproveitado como camada sobre ele (§6). |
 | **Manter os três por `?cena=`** | Serviu para comparar. Como produto final seria código morto e três conjuntos de shader para manter. |
 | **Manter ASCII nos seis atos** | Estado anterior ao ADR-054: a metade "boa" da história não se distinguia da metade "ruim". |
 

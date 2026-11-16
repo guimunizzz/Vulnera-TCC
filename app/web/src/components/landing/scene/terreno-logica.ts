@@ -105,6 +105,38 @@ export function alturaDoMonte(severidade: Falha, p: number): number {
   return chegadaAoGrupo(p, 0.5) * (1 - parteCorrigivel(severidade) * afundado);
 }
 
+/**
+ * Quanto da correção possível de um grupo já aconteceu (0 a 1): colore o nó
+ * que flutua sobre o monte. Baixa fica em 0; a média chega a 0,5 porque só a
+ * metade dela é corrigida.
+ */
+export function curaDoGrupo(severidade: Falha, p: number): number {
+  return parteCorrigivel(severidade) * correcaoDoGrupo(severidade, p);
+}
+
+/** Quanto da rede de monitoramento do epílogo já nasceu (0 a 1). */
+export function redeDeMonitoramento(p: number): number {
+  return suavizar(TERRENO.rede[0], TERRENO.rede[1], p);
+}
+
+/** Quanto do epílogo (do ato 5 ao fim da página) já passou: 0 em 5, 1 em `progressoFinal`. */
+export function epilogo(p: number): number {
+  return suavizar(5, TERRENO.progressoFinal, p);
+}
+
+/**
+ * Para onde a câmera olha no progresso `p`, em graus. A inclinação cresce com
+ * a virada e mais um pouco no epílogo; a órbita só começa depois da virada,
+ * para a célula ASCII continuar em cima do seu glifo enquanto os dois se cruzam.
+ * Tudo função do scroll: parou de rolar, a câmera para.
+ */
+export function cameraDoTerreno(p: number): { inclinacao: number; orbita: number } {
+  return {
+    inclinacao: TERRENO.inclinacaoGraus * suavizar(0, 1, viradaGlobal(p)) + TERRENO.inclinacaoDoEpilogoGraus * epilogo(p),
+    orbita: TERRENO.orbitaGraus * suavizar(TERRENO.virada[1], TERRENO.progressoFinal, p),
+  };
+}
+
 export interface CorrecaoDoMonte {
   /**
    * Altitude relativa (1 = cume, 0 = base) da frente da varredura: acima dela

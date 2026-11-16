@@ -23,15 +23,24 @@
  *   TER-12  o halo fica dentro da tela, do lado certo, com o risco do grupo
  *   TER-13  o clique vira onda no ponto do plano embaixo do cursor
  *   TER-14  aquecer e descartar não lançam nem deixam a camada ligada
+ *   TER-15  epílogo: com o marco do fim da página o progresso vai de 5 a 6;
+ *           a rede nasce nesse trecho e o horizonte amanhece só no fim
+ *   TER-16  câmera: de frente antes da virada (a célula cai sobre o glifo),
+ *           sem órbita enquanto ASCII e terreno se cruzam, e nunca para de
+ *           se mover até o fim da página
+ *   TER-17  cura do grupo (cor do nó do monte): baixa nunca, média até a
+ *           metade, alta e crítica inteiras
+ *   TER-18  o grafo entra no desenho: arestas e nós têm instâncias para a
+ *           rede, para as falhas e para os montes
  */
 
 import * as THREE from "three";
 import { describe, expect, it, vi } from "vitest";
-import { TERRENO } from "./config";
+import { TERRENO, mapearProgresso } from "./config";
 import { criarTerreno } from "./terreno";
 import {
-  alturaDoMonte, avaliarQualidade, chegadaAoGrupo, correcaoDoMonte, estabilidade, fracaoCorrigida, riscoDoGrupo,
-  ritmoDaCena, viradaGlobal, viradaLocal,
+  alturaDoMonte, avaliarQualidade, cameraDoTerreno, chegadaAoGrupo, correcaoDoMonte, curaDoGrupo, epilogo,
+  estabilidade, fracaoCorrigida, redeDeMonitoramento, riscoDoGrupo, ritmoDaCena, viradaGlobal, viradaLocal,
 } from "./terreno-logica";
 
 const LARGURA = 1440;
@@ -148,6 +157,46 @@ describe("Lógica do terreno", () => {
     for (let i = 0; i < TERRENO.quadrosParaRebaixar * 3; i += 1) q = avaliarQualidade(q, 1 / 30);
     expect(q.nivel).toBe(TERRENO.qualidade.length - 1);
   });
+
+  it("TER-15 — epílogo: o progresso segue até o fim da página e a rede nasce nele", () => {
+    // Os marcos dos seis atos mais o do fim da rolagem (use-landing-scene.ts).
+    const marcos = [0, 1000, 2000, 3000, 6000, 7000, 10000];
+    expect(mapearProgresso(7000, marcos)).toBe(5);
+    expect(mapearProgresso(8500, marcos)).toBe(5.5);
+    expect(mapearProgresso(10000, marcos)).toBe(TERRENO.progressoFinal);
+    expect(redeDeMonitoramento(4.5)).toBe(0);
+    expect(redeDeMonitoramento(TERRENO.progressoFinal)).toBe(1);
+    // Em "Planos" (p = 5) a rede já começou, mas falta a maior parte: sobra história para o resto da página.
+    expect(redeDeMonitoramento(5)).toBeGreaterThan(0);
+    expect(redeDeMonitoramento(5)).toBeLessThan(0.3);
+    expect(epilogo(5)).toBe(0);
+    expect(epilogo(TERRENO.progressoFinal)).toBe(1);
+  });
+
+  it("TER-16 — câmera: de frente antes da virada e em movimento até o fim", () => {
+    expect(cameraDoTerreno(0)).toEqual({ inclinacao: 0, orbita: 0 });
+    expect(cameraDoTerreno(2.5)).toEqual({ inclinacao: 0, orbita: 0 });
+    // Durante a virada só inclina: a órbita tiraria a célula de cima do glifo.
+    for (const p of passos(TERRENO.virada[0], TERRENO.virada[1], 0.05)) expect(cameraDoTerreno(p).orbita).toBe(0);
+    expect(cameraDoTerreno(TERRENO.virada[1]).inclinacao).toBeCloseTo(TERRENO.inclinacaoGraus, 6);
+    const fim = cameraDoTerreno(TERRENO.progressoFinal);
+    expect(fim.inclinacao).toBeCloseTo(TERRENO.inclinacaoGraus + TERRENO.inclinacaoDoEpilogoGraus, 6);
+    expect(fim.orbita).toBeCloseTo(TERRENO.orbitaGraus, 6);
+    // Depois de "Planos" a câmera continua andando: era ali que o fundo parava.
+    const depoisDePlanos = passos(5, TERRENO.progressoFinal, 0.1).map((p) => cameraDoTerreno(p));
+    depoisDePlanos.slice(1, -1).forEach((camera, i) => {
+      expect(camera.orbita).toBeGreaterThan(depoisDePlanos[i].orbita);
+      expect(camera.inclinacao).toBeGreaterThan(depoisDePlanos[i].inclinacao);
+    });
+  });
+
+  it("TER-17 — cura do grupo: baixa nunca, média até a metade, alta e crítica inteiras", () => {
+    for (const p of passos(0, TERRENO.progressoFinal, 0.25)) expect(curaDoGrupo(1, p)).toBe(0);
+    expect(curaDoGrupo(2, 5)).toBeCloseTo(0.5, 6);
+    expect(curaDoGrupo(3, 5)).toBeCloseTo(1, 6);
+    expect(curaDoGrupo(4, 5)).toBeCloseTo(1, 6);
+    expect(curaDoGrupo(4, 3.5)).toBe(0);
+  });
 });
 
 function rendererFalso() {
@@ -233,6 +282,30 @@ describe("Montagem do terreno", () => {
     // Com onda viva, o próximo quadro liga o laço das ondas no vértice.
     terreno.desenhar(renderer, 1.7, 1 / 60, 3.6);
     expect(uniformes.uOndasAtivas.value).toBe(1);
+  });
+
+  it("TER-18 — o grafo entra no desenho: instâncias para a rede, as falhas e os montes", () => {
+    const terreno = montar();
+    const { renderer } = rendererFalso();
+    terreno.desenhar(renderer, 1, 1 / 60, 5.5);
+    const cena = (renderer.render as ReturnType<typeof vi.fn>).mock.calls[0][0] as THREE.Scene;
+    // Ordem de desenho: malha, arestas, hastes, nós, glifos.
+    expect(cena.children).toHaveLength(5);
+    const [, arestas, hastes, nos, glifos] = cena.children.map((o) => (o as THREE.Mesh).geometry as THREE.InstancedBufferGeometry);
+    const celulas = 120 * 50;
+    const uniformes = ((cena.children[0] as THREE.Mesh).material as THREE.ShaderMaterial).uniforms;
+    const rede = (uniformes.uGradeDaRede.value as THREE.Vector2).x * (uniformes.uGradeDaRede.value as THREE.Vector2).y;
+    expect(rede).toBeGreaterThan(100);
+    expect(hastes.instanceCount).toBe(celulas);
+    expect(glifos.instanceCount).toBe(celulas);
+    // Rede (3 vizinhos por ponto) + uma aresta por célula + as 2 que ligam os montes de cada lado.
+    expect(arestas.instanceCount).toBe(rede * 3 + celulas + 2);
+    // Nós da rede + o nó de cada um dos 4 montes.
+    expect(nos.instanceCount).toBe(rede + 4);
+    // No epílogo a rede está nascendo e o horizonte começou a amanhecer.
+    expect(uniformes.uRede.value).toBeGreaterThan(0.3);
+    expect(uniformes.uFinal.value).toBeCloseTo(0.5, 6);
+    expect(uniformes.uFormado.value).toBe(1);
   });
 
   it("TER-14 — aquecer e descartar não lançam nem deixam a camada ligada", () => {

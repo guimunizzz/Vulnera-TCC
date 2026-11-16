@@ -155,6 +155,10 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       const secoes = Array.from(document.querySelectorAll<HTMLElement>("section[data-ato]"))
         .sort((a, b) => Number(a.dataset.ato) - Number(b.dataset.ato));
       marcos = calcularMarcos(secoes.map((s) => s.getBoundingClientRect().top + window.scrollY), window.innerHeight);
+      // Epílogo: o progresso segue do último ato até o fim da rolagem, para o
+      // fundo não parar em "Planos" (TERRENO.progressoFinal).
+      const fim = document.documentElement.scrollHeight - window.innerHeight;
+      marcos.push(Math.max(fim, (marcos[marcos.length - 1] ?? 0) + 1));
     }
 
     function desenhar(renderer: THREE.WebGLRenderer, delta: number): void {

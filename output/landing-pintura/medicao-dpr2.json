@@ -12,35 +12,35 @@
   {
     "trecho": "parado-ato0-ascii",
     "segundos": 3.01,
-    "fpsDoMonitor": 59.8,
-    "fpsDaCena": 59.8,
+    "fpsDoMonitor": 59.9,
+    "fpsDaCena": 59.9,
     "acima25ms": 0,
     "maiorIntervaloMs": 17,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 3.062
+    "gpuMsPorQuadroDaCena": 2.841
   },
   {
     "trecho": "parado-ato2-ascii",
-    "segundos": 3.01,
-    "fpsDoMonitor": 60.2,
-    "fpsDaCena": 60.2,
+    "segundos": 3,
+    "fpsDoMonitor": 60,
+    "fpsDaCena": 60,
     "acima25ms": 0,
     "maiorIntervaloMs": 17,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 1.415
+    "gpuMsPorQuadroDaCena": 1.942
   },
   {
     "trecho": "parado-ato3-terreno",
-    "segundos": 3.01,
-    "fpsDoMonitor": 60.1,
-    "fpsDaCena": 60.1,
+    "segundos": 3,
+    "fpsDoMonitor": 60.3,
+    "fpsDaCena": 60.3,
     "acima25ms": 0,
     "maiorIntervaloMs": 17,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 2.641
+    "gpuMsPorQuadroDaCena": 4.928
   },
   {
     "trecho": "parado-ato5-terreno",
@@ -51,28 +51,39 @@
     "maiorIntervaloMs": 17,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 4.29
+    "gpuMsPorQuadroDaCena": 4.449
+  },
+  {
+    "trecho": "parado-epilogo-rede",
+    "segundos": 3,
+    "fpsDoMonitor": 59.9,
+    "fpsDaCena": 59.9,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 17,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 4.792
   },
   {
     "trecho": "rolando-virada-2.4-a-3.6",
-    "segundos": 3.06,
-    "fpsDoMonitor": 58.6,
-    "fpsDaCena": 58.6,
-    "acima25ms": 1,
-    "maiorIntervaloMs": 50,
+    "segundos": 4.1,
+    "fpsDoMonitor": 56.8,
+    "fpsDaCena": 56.8,
+    "acima25ms": 4,
+    "maiorIntervaloMs": 150,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 2.511
+    "gpuMsPorQuadroDaCena": 3.206
   },
   {
     "trecho": "rolando-pagina-inteira",
-    "segundos": 7.8,
-    "fpsDoMonitor": 59.5,
-    "fpsDaCena": 59.5,
-    "acima25ms": 4,
+    "segundos": 7.95,
+    "fpsDoMonitor": 59.7,
+    "fpsDaCena": 59.7,
+    "acima25ms": 2,
     "maiorIntervaloMs": 33,
     "longTasks": 0,
     "maiorLongTaskMs": 0,
-    "gpuMsPorQuadroDaCena": 2.447
+    "gpuMsPorQuadroDaCena": 2.892
   }
 ]
