@@ -1,5 +1,8 @@
 # BACKLOG.md — Vulnera
 
+**? 2026-11-16 ? Pedidos do PR #77 implementados e validados na feature (100% das corre??es; publica??o/propaga??o em fechamento).** Oito coment?rios conferidos em `docs/REVISAO_PR77_2026-11-16.md`: 29 t?picos de produto, 74 artefatos fora do ?ndice com c?pias locais preservadas, configura??o concreta privada. API check 922/922 (58 su?tes), Web check 659/659 e contraste 132/132; builds e smoke por tr?s perfis aprovados. Uma chamada Gemini real HTTP 200 confirmou governan?a de aceite/SLA. Dev e6a445c incorporada sem conflitos; sem seed/reset, schema, depend?ncias, guias protegidos ou deploy no ambiente principal. EACCES inicial do QA resolvido exclusivamente na imagem local de testes. Hist?rico anterior de execu??o abaixo preservado.
+
+
 > **v4 · 2026-08-03.** Substitui a versão por sprints com divisão por pessoa (Rafael/Guilherme/Iann). Agora é **fase e checkpoint**, execução solo-delegada.
 > Estimativas em horas-equivalentes — servem para dimensionar risco e revisão, não para prever o tempo do agente.
 > **Entrega: 25/10/2026.**

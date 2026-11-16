@@ -18,6 +18,7 @@ Esta decisão registra a autorização de escopo do pedido atual, sem editar reg
 
 ## Decisão
 
+- **Esclarecimento PR #77 (2026-11-16):** ajuda curada exclusivamente de domínio/produto, conferida contra o comportamento vigente, sem ingestão de documentação arquitetural ou de desenvolvimento. Catálogo atual de 29 tópicos; até três e 6.000 caracteres por chamada. Identificador concreto do modelo apenas no ambiente privado; exemplos vazios, fixture sintética e alternativa local quando uma resposta reproduz valores privados configurados. O histórico Git não foi reescrito. Ver `docs/ASSISTENTE_CONTEUDO_PRODUTO.md` e `docs/REVISAO_PR77_2026-11-16.md`.
 - Reintroduzir IA apenas como **Assistente Vulnera**, para explicar telas, processos e conceitos em PT-BR. Nenhuma geração de findings, cálculo de severidade, leitura de registros reais, preenchimento ou alteração de dados, execução de scans ou integração mobile.
 - Usar base curta de ajuda versionada e recuperação simples por tela/termos/histórico limitado. Não adicionar embeddings, banco vetorial, conversas persistidas, migration, repository vazio ou infraestrutura nova.
 - Integrar Gemini Developer API por `fetch` em gateway injetável, com endpoint oficial fixo e uma chamada por pergunta explícita. Chave somente no backend, via `EnvVar`/`EnvKeys`; chave/modelo ausentes não impedem inicialização.

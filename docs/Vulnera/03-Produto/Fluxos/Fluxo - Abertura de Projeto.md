@@ -6,6 +6,14 @@ status: ativo
 
 # Fluxo - Abertura de Projeto
 
+## Fluxo vigente ? conferido em 2026-11-16
+
+A solicita??o cria um projeto PENDING. O fluxo atual ? PENDING ? IN_PROGRESS ? IN_REVIEW ? COMPLETED, com retorno IN_REVIEW ? IN_PROGRESS. A aplica??o precisa estar ativa, ter empresa com assinatura ativa e capacidade no plano; um projeto j? existente bloqueia outro para a mesma aplica??o, inclusive conclu?do. A op??o de remedia??o exige plano que inclua o servi?o. CLIENT/ADMIN autorizado solicitam; PENTESTER acompanha os projetos atribu?dos. Criar o projeto n?o inicia um scan automaticamente.
+
+## Planejamento original ? hist?rico
+
+REQUESTED/TRIAGE/PLANNED e a regra descrita abaixo como apenas um projeto ativo n?o representam a implementa??o atual.
+
 ## Objetivo
 Permitir que o cliente solicite uma análise de segurança para uma Application, gerando um Project em status `REQUESTED`.
 

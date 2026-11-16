@@ -9,6 +9,24 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Atendimento da revisão do PR #77 na feature
+
+Oito comentários conferidos: catálogo de 17 para 29 tópicos de domínio/produto,
+sem documentação técnica no contexto; 74 artefatos retirados do índice com cópias
+locais e hashes preservados; ignore de cobertura/temporários; modelo concreto
+retirado dos arquivos públicos atuais sem reescrever histórico. Fontes de testes,
+fixtures e permissões preservadas. Notas antigas de produto marcadas como históricas
+quando divergiam do código atual.
+
+Dev `e6a445c` incorporada sem conflitos, preservando Docker/seed da equipe.
+API Node 22: lint e 922/922; Web: lint, 659/659, contraste 132/132 e build.
+Imagens reais e smoke de três perfis aprovados em QA isolado. Chamada Gemini
+real HTTP 200 com pergunta fictícia. Primeira suíte API encontrou EACCES no
+diretório temporário; repetição aprovada com permissão somente na imagem local
+de testes, sem alterar Dockerfiles do produto. Sem deploy/restart no ambiente
+principal; Vuvu permanece em localhost:8086. Propagação à branch visual em
+checkpoint separado. Matriz: `docs/REVISAO_PR77_2026-11-16.md`.
+
 ## 2026-11-15 — QA Docker complementar e nomes acessíveis
 
 **✅ 100% da rodada.** Docker disponibilizado após a integração inicial;
