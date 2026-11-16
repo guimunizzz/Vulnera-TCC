@@ -10,7 +10,7 @@ import { makeAssistantController } from "../../src/factories/assistant.factory";
 import type { AssistantConfig } from "../../src/config/assistant.config";
 import { loadAssistantConfig } from "../../src/config/assistant.config";
 import { createRateLimitConfig, type TokenBucketPolicy } from "../../src/config/rate-limit.config";
-import { ASSISTANT_ACTIONS } from "../../src/config/assistant-help.config";
+import { ASSISTANT_ACTIONS, ASSISTANT_TOPICS } from "../../src/config/assistant-help.config";
 import { AssistantHelpService } from "../../src/services/assistant-help.service";
 import { GeminiService } from "../../src/services/gemini.service";
 import { RateLimitService, TenantRateLimitResolver } from "../../src/services/rate-limit.service";
@@ -105,6 +105,65 @@ describe("Compatibilidade com os modulos atuais da dev", () => {
     expect(res.body.message).toContain("O assistente não consulta o inventário");
     if (role === "CLIENT") expect(res.body.message).toContain("CLIENT não promove findings nem dispara sincronização");
     if (role === "PENTESTER") expect(res.body.message).toContain("não edita inventário nem dispara sincronização");
+  });
+});
+
+describe("Conhecimento de domínio e produto", () => {
+  it.each([
+    ["Qual a diferença entre DAST e SAST?", "Resultados brutos de ferramentas"],
+    ["Qual o escopo da análise e o nível da análise?", "inclusive concluído"],
+    ["Posso reabrir um finding corrigido?", "Fechado é terminal"],
+    ["O que é OWASP A03?", "A03 injeção"],
+    ["Quais as métricas do CVSS?", "oito métricas"],
+    ["Como a criticidade e a exposição à internet afetam a prioridade contextual?", "Prazo de SLA e origem"],
+    ["Salvar política e reaplicar mudam prazos antigos?", "não altera prazos já atribuídos"],
+    ["Posso aprovar meu próprio pedido de risco aceito?", "não pode aprovar o próprio pedido"],
+    ["Como compartilhar busca salva em uma watchlist?", "guarda filtros, não uma cópia"],
+    ["Como funciona o checklist e a conformidade da maturidade?", "média simples"],
+    ["Qual a diferença entre OWNER e MEMBER?", "continuam sendo CLIENT"],
+    ["Como marcar todas como lidas no sino de notificações?", "não aprova uma assinatura"],
+  ])("orienta a pergunta de produto: %s", async (question, expected) => {
+    const { app, generate } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("ADMIN"))
+      .send({ question, screen: "dashboard", history: [] });
+    expect(response.status).toBe(200);
+    expect(response.body.source).toBe("local");
+    expect(response.body.message).toContain(expected);
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it("explica ao CLIENT o ciclo do finding sem conceder transições ou atalho global", async () => {
+    const { app } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("CLIENT"))
+      .send({ question: "Posso reabrir um finding corrigido?", screen: "finding-detail", history: [] });
+    expect(response.body.message).toContain("CLIENT acompanha em leitura");
+    expect(response.body.actions.map((action: { id: string }) => action.id)).not.toContain("findings");
+  });
+
+  it("orienta PENTESTER sobre escopo sem conceder solicitação de análise", async () => {
+    const { app } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("PENTESTER"))
+      .send({ question: "Como definir o escopo da análise?", screen: "project-detail", history: [] });
+    expect(response.body.message).toContain("CLIENT ou ADMIN");
+    expect(response.body.actions.map((action: { id: string }) => action.id)).not.toContain("new-analysis");
+  });
+
+  it("envia contexto curado e limitado, sem documentos de arquitetura ou desenvolvimento", async () => {
+    const forbidden = /\b(?:Prisma|Express|React|JWT|Dockerfile|middleware|controllers?|repositories?|migrations?|schema)\b|\/api\/|GEMINI_(?:MODEL|API_KEY)|systemInstruction|Factory Method/i;
+    const help = new AssistantHelpService();
+    for (const role of ["ADMIN", "CLIENT", "PENTESTER"] as const) {
+      for (const topic of ASSISTANT_TOPICS.filter((item) => item.roles.includes(role))) {
+        expect(help.context([topic], role)).not.toMatch(forbidden);
+      }
+    }
+    const { app, generate } = makeApp();
+    await request(app).post("/api/assistant/chat").set("Authorization", bearer())
+      .send({ question: "Quais as métricas do CVSS?", screen: "finding-detail", history: [] });
+    const input = generate.mock.calls[0][0];
+    expect(input.help).toContain("oito métricas");
+    expect(input.help.length).toBeLessThanOrEqual(6000);
+    expect(input.help).not.toMatch(forbidden);
+    expect(input).not.toHaveProperty("sources");
   });
 });
 
@@ -301,6 +360,8 @@ describe("Gateway Gemini real com transporte simulado", () => {
     const body = JSON.parse(options.body);
     expect(body.generationConfig).toEqual({ maxOutputTokens: 500, thinkingConfig: { thinkingLevel: "MINIMAL" } });
     expect(body.systemInstruction.parts[0].text).toContain("PERFIL AUTENTICADO: CLIENT");
+    expect(body.systemInstruction.parts[0].text).toContain("exclusivamente domínio e produto");
+    expect(body.systemInstruction.parts[0].text).toContain("Não explique arquitetura de software");
     expect(body).not.toHaveProperty("tools");
     expect(body).not.toHaveProperty("userId");
     expect(body.store).toBe(false);

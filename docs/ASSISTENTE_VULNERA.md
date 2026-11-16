@@ -34,6 +34,12 @@ A decisão atual é **ADR-054**, originalmente criada como ADR-048 na branch do 
 
 O contexto externo contém a pergunta, até seis mensagens anteriores, uma tela conhecida sem parâmetros/query string, o perfil autenticado e trechos da ajuda. Não consulta registros, formulários ou DOM para construir o prompt. Perguntas com padrões reconhecíveis de e-mail, URL, identificador ou credencial recebem orientação local, sem envio ao provedor. Isso não é um detector infalível de informação confidencial: use somente documentação e dados fictícios.
 
+### Conteúdo ampliado na revisão do PR #77
+
+O catálogo atual tem **29 tópicos**, com os 17 anteriores preservados e 12 aprofundamentos de domínio/produto: tipos/origens de achados, escopo e elegibilidade, ciclo de findings, OWASP, métricas CVSS, contexto/VRS, política/ciclo SLA, governança do aceite, buscas/watchlists, checklist de maturidade, papéis na empresa e notificações. As fontes e divergências históricas estão em [ASSISTENTE_CONTEUDO_PRODUTO.md](ASSISTENTE_CONTEUDO_PRODUTO.md).
+
+A curadoria é versionada em linguagem de usuário e conferida no código; a documentação técnica, arquitetura e desenvolvimento não são carregados no prompt. O assistente recupera até três tópicos e 6.000 caracteres. Regras e atalhos continuam determinados pela aplicação, sem ler registros reais nem executar operações.
+
 ## Preparar o Free Tier
 
 O responsável escolhe o modelo permitido no seu projeto e preenche seu identificador somente no ambiente privado. Consulte o [catálogo](https://ai.google.dev/gemini-api/docs/models), a [tabela de preços](https://ai.google.dev/gemini-api/docs/pricing) e o [ciclo de vida](https://ai.google.dev/gemini-api/docs/deprecations) antes de configurar; disponibilidade e cotas podem mudar. O identificador concreto foi omitido dos arquivos públicos atuais no atendimento ao PR #77, sem reescrever os commits históricos.

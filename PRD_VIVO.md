@@ -19,7 +19,7 @@
 **🚧 2026-11-16 — Revisão do PR #77 em execução.** Pedidos de `rafafrd` reconferidos: ampliar ajuda somente de domínio/produto, retirar artefatos/cobertura/uploads do versionamento e manter o identificador real do modelo no ambiente privado. Na `feature/agent-ai`, criados backups exclusivamente locais das duas branches e retirados do índice 74 artefatos (71 de `output/assistant`, três de cobertura antiga), com hashes das cópias locais preservados. Resumo histórico humano realocado para `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`, referências atualizadas; fontes de Jest/Vitest e fixtures preservadas. `.gitignore` passa a cobrir output, cobertura e temporários. Contexto/configuração/validação/publicação e propagação para a Vuvu seguem pendentes. A dev avançou com Docker/seed; mudanças serão preservadas, sem seed/reset ou deploy nesta revisão.
 
 - [x] PR77-01 — Limpar o índice e prevenir artefatos gerados, mantendo cópias locais e resumo histórico.
-- [ ] PR77-02 — Ampliar conteúdo de domínio/produto conferido no código.
+- [x] PR77-02 — Catálogo ampliado de 17 para 29 tópicos, curado do domínio/produto e conferido no código; sem leitura bruta de docs técnicos. Rastreamento em `docs/ASSISTENTE_CONTEUDO_PRODUTO.md`; focal API 75/75.
 - [x] PR77-03 — Identificador real omitido dos exemplos/docs atuais; fixtures sintéticas e proteção contra reprodução da configuração na resposta. Ambiente privado preservado; histórico Git não reescrito. Focal API 60/60.
 - [ ] PR77-04 — Validar, publicar e levar as correções à branch da Vuvu sem perder seu visual/personalidade.
 

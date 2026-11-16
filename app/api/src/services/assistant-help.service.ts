@@ -24,7 +24,8 @@ export class AssistantHelpService {
       let score = 0;
       for (const keyword of topic.keywords) {
         const term = normalizeAssistantText(keyword);
-        if (` ${question} `.includes(` ${term} `)) score += 8;
+        // Expressões específicas de produto prevalecem sobre um termo genérico isolado.
+        if (` ${question} `.includes(` ${term} `)) score += 8 + Math.min(12, (term.split(" ").length - 1) * 4);
         else if (continuation && history && ` ${history} `.includes(` ${term} `)) score += 1;
       }
       if (topic.screens.includes(dto.screen) && contextual && !hasCurrentMatch) score += 15;

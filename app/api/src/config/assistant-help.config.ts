@@ -5,6 +5,7 @@
  */
 import type { UserRole } from "../models/user.model";
 import type { AssistantActionId, AssistantTopic } from "../models/assistant.model";
+import { ASSISTANT_PRODUCT_TOPICS } from "./assistant-product-help.config";
 
 const ALL: readonly UserRole[] = ["ADMIN", "CLIENT", "PENTESTER"];
 export const ASSISTANT_ACTIONS: Record<AssistantActionId, { label: string; path: string; roles: readonly UserRole[] }> = {
@@ -24,9 +25,9 @@ export const ASSISTANT_ACTIONS: Record<AssistantActionId, { label: string; path:
 
 export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
   {
-    id: "overview", title: "Dashboard e visão geral", keywords: ["dashboard", "visao geral", "plataforma", "inicio", "indicadores"],
+    id: "overview", title: "Dashboard e visão geral", keywords: ["dashboard", "visao geral", "plataforma", "inicio", "indicadores", "o que e vulnera", "o que e o vulnera", "para que serve o vulnera"],
     screens: ["dashboard"], roles: ALL, actions: ["projects", "playbooks"],
-    guidance: "O Vulnera organiza aplicações, projetos de análise, findings e acompanhamento da correção. O dashboard resume o que seu perfil pode acessar. Abra Projetos para acompanhar uma análise.",
+    guidance: "O Vulnera organiza o trabalho de uma consultoria de segurança com suas empresas-clientes: aplicações representam os sistemas avaliados, projetos definem o trabalho de análise e findings registram vulnerabilidades e sua correção. O dashboard resume o que seu perfil pode acessar; indicadores de risco, prazo e origem têm significados diferentes e não comprovam exploração. Abra Projetos para acompanhar uma análise. O assistente explica a plataforma, mas não executa operações nem consulta os dados reais da conta.",
     byRole: { ADMIN: "Como ADMIN, você tem visão administrativa global; os detalhes continuam nas telas de cada recurso.", CLIENT: "Como CLIENT, você acompanha a própria empresa e os findings dentro dos projetos.", PENTESTER: "Como PENTESTER, você acompanha os projetos aos quais foi atribuído e suas atividades de análise." },
   },
   {
@@ -73,13 +74,13 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
   {
     id: "sla", title: "SLA de remediação", keywords: ["sla", "prazo", "prazos", "vencido", "vencimento", "politica"],
     screens: ["sla-settings", "remediation"], roles: ALL, actions: ["sla-settings", "projects"],
-    guidance: "SLA é o prazo de remediação aplicado pelo Vulnera segundo a política e a severidade do finding. A tela do finding mostra o prazo e o estado. Aceites de risco aprovados podem pausar o prazo conforme as regras da plataforma. O assistente explica o conceito sem calcular datas ou mudar políticas.",
+    guidance: "SLA é o prazo de remediação em dias corridos, segundo a política e a severidade do finding. A tela mostra prazo e situação; sem SLA não significa estar no prazo. Salvar uma política vale para novos findings; reaplicar aos abertos é ação separada, exclusiva de ADMIN. Aceite de risco aprovado vigente pausa o relógio sem corrigir o achado. O assistente explica o conceito sem calcular datas ou mudar políticas.",
     byRole: { ADMIN: "ADMIN pode configurar políticas e reaplicar SLA pela funcionalidade existente.", CLIENT: "Em Configuração de SLA, CLIENT OWNER pode configurar a política da empresa; CLIENT MEMBER apenas consulta. A reaplicação é de ADMIN.", PENTESTER: "PENTESTER acompanha o prazo no finding e na remediação; não acessa a configuração de SLA." },
   },
   {
     id: "risk-acceptance", title: "Aceite de risco", keywords: ["aceite", "aceitar risco", "justificativa", "aprovacao", "revogar", "compensatorio"],
     screens: ["finding-detail"], roles: ALL, actions: ["projects"],
-    guidance: "Aceite de risco é uma decisão registrada separadamente do status do finding, com justificativa, validade e histórico. ADMIN, CLIENT OWNER ou PENTESTER autorizado podem solicitar. ADMIN ou CLIENT OWNER decidem a solicitação. Não equivale a corrigir a vulnerabilidade. Use a seção de aceite no finding autorizado; o assistente não solicita nem aprova nada.",
+    guidance: "Aceite de risco é uma decisão registrada separadamente do status do finding, com justificativa de negócio, validade e histórico. ADMIN, CLIENT OWNER ou PENTESTER autorizado podem solicitar. ADMIN ou CLIENT OWNER autorizados decidem, mas ninguém pode aprovar o próprio pedido, nem ADMIN. PENTESTER não aprova; CLIENT MEMBER acompanha. Aceitar risco não equivale a corrigir ou fechar a vulnerabilidade. Use a seção de aceite no finding autorizado; o assistente não solicita nem aprova nada.",
   },
   {
     id: "remediation", title: "Remediação e playbooks", keywords: ["remediacao", "corrigir", "correcao", "playbook", "playbooks", "quadro", "responsavel"],
@@ -113,7 +114,7 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
   {
     id: "threat-intel", title: "Threat Intel e inventário de tecnologias", keywords: ["threat intel", "inventario de tecnologias", "cve", "cves", "kev", "epss", "nvd", "osv"],
     screens: ["threat-intel"], roles: ALL, actions: ["threat-intel"],
-    guidance: "Threat Intel cruza o inventário de tecnologias da empresa com CVEs publicadas. Consulte as abas Afeta você, Inventário, Feed e Fontes; KEV indica exploração conhecida e EPSS estima a probabilidade de exploração. Tecnologias observadas pelo DAST e pelo SBOM entram como sugestões para confirmação. A API determina quais empresas e ações cada pessoa pode acessar. O assistente não consulta o inventário, não sincroniza fontes e não confirma, tria ou promove registros.",
+    guidance: "Threat Intel cruza o inventário de tecnologias da empresa com CVEs publicadas. Consulte as abas Afeta você, Inventário, Feed e Fontes; KEV indica exploração conhecida e EPSS estima a probabilidade de exploração. Uma CVE publicada ou um indicador KEV/EPSS não comprova ataque à sua empresa. Tecnologias observadas pelo DAST e pelo SBOM entram como sugestões para confirmação. As permissões da plataforma determinam quais empresas e ações cada pessoa pode acessar. O assistente não consulta o inventário, não sincroniza fontes e não confirma, tria ou promove registros.",
     byRole: { ADMIN: "ADMIN pode administrar o inventário, triar, promover e sincronizar agora; a promoção continua vinculada ao projeto de destino.", CLIENT: "CLIENT vê somente sua empresa. OWNER pode editar o inventário e triar; MEMBER consulta. CLIENT não promove findings nem dispara sincronização.", PENTESTER: "PENTESTER vê empresas com projetos atribuídos, pode triar e promover somente em projeto autorizado; não edita inventário nem dispara sincronização." },
   },
   {
@@ -122,4 +123,5 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
     guidance: "Abra Exposure Graph para ver as aplicações ativas da empresa do usuário, as categorias OWASP e os achados abertos por severidade e origem (DAST, SAST, SCA e manual). Alterne o grafo 2D e o mapa 3D e selecione uma aplicação para ver o contexto e navegar para os detalhes. É uma visualização dos dados existentes, não uma comprovação de caminho de ataque nem um novo scan. É necessário ter empresa vinculada; ADMIN sem empresa não tem grafo próprio. O assistente não consulta ou altera esses dados.",
     byRole: { PENTESTER: "Exposure Graph é restrito a ADMIN e CLIENT com empresa vinculada. Como PENTESTER, acompanhe o contexto dos projetos atribuídos; o assistente não oferece atalho para esse grafo." },
   },
+  ...ASSISTANT_PRODUCT_TOPICS,
 ];

@@ -9,7 +9,7 @@
 **🚧 2026-11-16 — Atendimento do PR #77.** Limpeza de 74 artefatos do índice concluída, preservando hashes/cópias locais e fontes de testes. Resumo histórico manual realocado para docs e links atualizados; padrões de output/cobertura/temporários adicionados ao `.gitignore`. Restam contexto de produto, configuração privada do modelo, checks e publicação nas branches correspondentes. Nenhum deploy ou alteração de dados de negócio nesta revisão.
 
 - [x] PR77-01 — Limpeza do versionamento sem apagar as evidências locais nem os testes de código.
-- [ ] PR77-02 — Curadoria de domínio/produto com rastreabilidade para docs e comportamento implementado.
+- [x] PR77-02 — Curadoria de 29 tópicos (12 novos), com rastreabilidade e diferenças de documentos antigos registradas. Até três tópicos/6.000 caracteres, permissões mantidas; focal API 75/75.
 - [x] PR77-03 — Modelo real omitido da versão pública atual; campos vazios nos exemplos, fixture sintética e fallback se a resposta reproduzir a configuração privada. Histórico anterior preservado; focal API 60/60.
 - [ ] PR77-04 — Conferir pedidos, validar, publicar e propagar preservando a Vuvu.
 
