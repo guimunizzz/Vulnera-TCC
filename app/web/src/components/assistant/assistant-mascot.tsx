@@ -1,14 +1,83 @@
 /**
- * Sentinela vetorial da ajuda, desenhada com a geometria e o violeta do Vulnera.
- * Consumida pelo disparador e cabeçalho do painel; decorativa, sem imagem externa ou animação 3D.
+ * Reproduz a arte original da Vuvu e seus olhares em resposta à interação real.
+ * Atualiza somente o elemento gráfico, sem renders por quadro; consumido pelo botão e painel.
  */
-export function AssistantMascot() {
-  return (
-    <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
-      <path d="M24 5v5M20 5h8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M12 16c0-3.3 2.7-6 6-6h12c3.3 0 6 2.7 6 6v15l-12 9-12-9V16Z" fill="currentColor" fillOpacity=".12" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <rect x="15" y="16" width="18" height="12" rx="5" fill="currentColor" fillOpacity=".16" />
-      <path d="M19 21v2m10-2v2M20 31l4 3 4-3M8 20v7m32-7v7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+import { useEffect, useRef, useState } from "react";
+import { useMotion } from "../../motion/use-motion";
+import spritesheet from "../../assets/vuvu/spritesheet.png";
+import { VUVU_ATLAS, vuvuCanLook, vuvuFrame, vuvuLookFrame, type VuvuActivity } from "./vuvu-sprite";
+
+interface Props {
+  activity?: VuvuActivity;
+  paused?: boolean;
+  trackPointer?: boolean;
+  reactionKey?: string | number;
+  movingLeft?: () => boolean;
+}
+
+export function AssistantMascot({ activity = "idle", paused = false, trackPointer = false, reactionKey, movingLeft }: Props) {
+  const { reduzido } = useMotion();
+  const root = useRef<HTMLSpanElement>(null);
+  const image = useRef<HTMLImageElement>(null);
+  const direction = useRef(movingLeft);
+  const [failed, setFailed] = useState(false);
+  direction.current = movingLeft;
+
+  useEffect(() => {
+    const element = root.current;
+    const atlas = image.current;
+    if (!element || !atlas || failed) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let raf = 0;
+    let started = performance.now();
+    let pointer: { x: number; y: number } | null = null;
+    let lastFrame = "";
+    const paint = () => {
+      const elapsed = performance.now() - started;
+      const stopped = paused || reduzido || document.hidden;
+      let frame = stopped ? { row: 0, column: 0 } : vuvuFrame(activity, elapsed, direction.current?.());
+      if (!stopped && trackPointer && pointer && vuvuCanLook(activity, elapsed)) {
+        const box = element.getBoundingClientRect();
+        const dx = pointer.x - (box.left + box.width / 2);
+        const dy = pointer.y - (box.top + box.height / 2);
+        const distance = Math.hypot(dx, dy);
+        if (distance > 36 && distance < 720) frame = vuvuLookFrame(dx, dy);
+      }
+      const key = `${frame.row}:${frame.column}`;
+      if (key !== lastFrame) {
+        atlas.style.transform = `translate(${-frame.column * 100 / VUVU_ATLAS.columns}%, ${-frame.row * 100 / VUVU_ATLAS.rows}%)`;
+        element.dataset.frame = key;
+        lastFrame = key;
+      }
+    };
+    const tick = () => {
+      paint();
+      if (!paused && !reduzido && !document.hidden) timer = setTimeout(tick, 120);
+    };
+    const restart = () => { clearTimeout(timer); started = performance.now(); tick(); };
+    const move = (event: PointerEvent) => {
+      if (event.pointerType === "touch" || paused || reduzido || document.hidden) return;
+      pointer = { x: event.clientX, y: event.clientY };
+      if (!raf) raf = requestAnimationFrame(() => { raf = 0; paint(); });
+    };
+    const leave = () => { pointer = null; paint(); };
+    tick();
+    document.addEventListener("visibilitychange", restart);
+    if (trackPointer && !paused && !reduzido) {
+      window.addEventListener("pointermove", move, { passive: true });
+      document.documentElement.addEventListener("pointerleave", leave);
+    }
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", restart);
+      window.removeEventListener("pointermove", move);
+      document.documentElement.removeEventListener("pointerleave", leave);
+    };
+  }, [activity, paused, reduzido, trackPointer, reactionKey, failed]);
+
+  return <span ref={root} className="vuvu-sprite" data-vuvu-state={activity} data-vuvu-paused={paused || reduzido || undefined} aria-hidden="true">
+    {failed ? <span className="vuvu-fallback">V</span> : <img ref={image} src={spritesheet} alt="" draggable={false}
+      width={1536} height={2288} onError={() => setFailed(true)} />}
+  </span>;
 }

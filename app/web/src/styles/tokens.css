@@ -306,6 +306,10 @@
   --duration-base: 200ms; /* entrada de overlay, transição de conteúdo */
   --duration-slow: 320ms; /* entrada de painel grande, drawer */
   --duration-chart: 700ms; /* ÚNICA duração acima de 400ms: desenho de gráfico */
+  /* Cadências ambientais da Vuvu; não são durações de transição da interface. */
+  --duration-companion-float: 4800ms;
+  --duration-companion-think: 1200ms;
+  --duration-companion-stagger: 160ms;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* padrão: sai rápido, assenta */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* passa do ponto e volta */

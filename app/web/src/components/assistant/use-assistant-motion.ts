@@ -6,8 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { animate, useMotionValue } from "motion/react";
 import { useMotion } from "../../motion/use-motion";
 
-const WIDTH = 116;
-const HEIGHT = 88;
+// Compartilhado com o CSS pelo componente: arte, rótulo e pausa cabem no mesmo limite.
+export const ASSISTANT_FOOTPRINT = { width: 144, height: 128 } as const;
+const WIDTH = ASSISTANT_FOOTPRINT.width;
+const HEIGHT = ASSISTANT_FOOTPRINT.height;
 const MARGIN = 16;
 
 function visibleViewport() {

@@ -171,7 +171,7 @@ describe("Assistente autenticado", () => {
     expect(screen.queryByText(responseText)).not.toBeInTheDocument();
     if (change !== "logout") {
       await open();
-      expect(screen.getByText("Olá! Posso explicar as telas e os processos do Vulnera.")).toBeInTheDocument();
+      expect(screen.getByText("Oi! Eu sou a Vuvu.")).toBeInTheDocument();
     } else expect(screen.queryByTestId("assistant-root")).not.toBeInTheDocument();
   });
 
@@ -298,8 +298,8 @@ describe("Movimento e overlays", () => {
     window.innerHeight = 568;
     fireEvent(window, new Event("resize"));
     expect(mascot.getAttribute("data-pause-reasons")).toContain("compact");
-    expect(assistantBounds(320, 568)).toEqual({ right: 188, bottom: 464, top: 128, middle: 60 });
-    expect(assistantBounds(320, 140).bottom).toBe(36);
+    expect(assistantBounds(320, 568)).toEqual({ right: 160, bottom: 424, top: 128, middle: 32 });
+    expect(assistantBounds(320, 140).bottom).toBe(0);
     expect(assistantApi.chat).not.toHaveBeenCalled();
   });
 

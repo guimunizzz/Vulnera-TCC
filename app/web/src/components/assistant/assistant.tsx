@@ -2,18 +2,19 @@
  * Instância autenticada do assistente: portal persistente, movimento e painel de conversa.
  * Consumida por AuthenticatedLayout; respeita os modais existentes e isola cada nova sessão.
  */
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { motion } from "motion/react";
-import { Pause, Play } from "lucide-react";
+import { MessageCircle, Pause, Play } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Portal } from "../ui/_internal/portal";
 import { useAuthStore } from "../../store/auth.store";
+import { usePreferenciasAcessibilidade } from "../../design/accessibility";
 import { assistantDestination, assistantScreen } from "../../lib/assistant-context";
 import type { UserRole } from "../../types/auth.types";
 import { AssistantMascot } from "./assistant-mascot";
 import { AssistantPanel } from "./assistant-panel";
 import { useAssistantConversation } from "./use-assistant-conversation";
-import { useAssistantMotion } from "./use-assistant-motion";
+import { ASSISTANT_FOOTPRINT, useAssistantMotion } from "./use-assistant-motion";
 import "./assistant.css";
 
 export function Assistant() {
@@ -36,8 +37,13 @@ function AssistantSession({ role }: { role: UserRole }) {
   const root = useRef<HTMLDivElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
-  const reasons = [...(manualPause ? ["manual"] : []), ...(hover ? ["hover"] : []), ...(focus ? ["focus"] : []), ...(open ? ["chat"] : []), ...(blocked ? ["modal"] : [])];
+  const { altoContraste, escalaFonte } = usePreferenciasAcessibilidade();
+  const reasons = [...(manualPause ? ["manual"] : []), ...(hover ? ["hover"] : []), ...(focus ? ["focus"] : []), ...(open ? ["chat"] : []), ...(blocked ? ["modal"] : []), ...(altoContraste ? ["contrast"] : [])];
   const movement = useAssistantMotion(reasons);
+  const animationsPaused = manualPause || blocked || altoContraste || movement.reasons.includes("hidden") || movement.reasons.includes("reduced");
+  const lastMessage = conversation.messages[conversation.messages.length - 1];
+  const activity = conversation.pending ? "thinking" : conversation.error ? "error" : hover ? "playful" : focus ? "greeting"
+    : lastMessage?.role === "assistant" ? "answered" : movement.state === "moving" ? "moving" : "idle";
 
   useLayoutEffect(() => {
     const update = () => {
@@ -78,6 +84,9 @@ function AssistantSession({ role }: { role: UserRole }) {
 
   return <Portal>
     <div ref={root} className="assistant-root" data-testid="assistant-root" hidden={blocked} aria-hidden={blocked || undefined}
+      data-animations-paused={animationsPaused || undefined}
+      data-large-text={escalaFonte >= 1.5 || undefined}
+      style={{ "--assistant-width": `${ASSISTANT_FOOTPRINT.width}px`, "--assistant-height": `${ASSISTANT_FOOTPRINT.height}px` } as CSSProperties}
       onKeyDown={(event) => {
         if (!blocked && open && event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); close(); }
       }}>
@@ -88,14 +97,16 @@ function AssistantSession({ role }: { role: UserRole }) {
         <button ref={launcher} type="button" className="assistant-launcher" data-testid="assistant-launcher"
           aria-label="Ajuda — abrir Assistente Vulnera" aria-expanded={open} aria-controls="assistant-panel"
           onClick={() => { if (!blocked) setOpen((previous) => !previous); }}>
-          <AssistantMascot /><span aria-hidden="true">Ajuda</span>
+          <AssistantMascot activity={activity} paused={animationsPaused || open} trackPointer={!open}
+            reactionKey={lastMessage?.id} movingLeft={() => movement.x.getVelocity() < 0} />
+          <span className="assistant-launcher-label" aria-hidden="true"><MessageCircle size={13} />Ajuda</span>
         </button>
         <button type="button" className="assistant-pause assistant-icon-button" aria-label={manualPause ? "Retomar movimento" : "Pausar movimento"}
           aria-pressed={manualPause} onClick={() => setManualPause((previous) => !previous)}>
           {manualPause ? <Play size={17} aria-hidden="true" /> : <Pause size={17} aria-hidden="true" />}
         </button>
       </motion.div>
-      {open && <AssistantPanel screen={screen} role={role} conversation={conversation} inputRef={input} onClose={close}
+      {open && <AssistantPanel screen={screen} role={role} conversation={conversation} inputRef={input} onClose={close} animationsPaused={animationsPaused}
         onNavigate={(id) => { const destination = assistantDestination(id, role); if (!blocked && destination) navigate(destination.path); }} />}
     </div>
   </Portal>;
