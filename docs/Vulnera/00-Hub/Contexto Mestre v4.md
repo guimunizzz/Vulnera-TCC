@@ -8,6 +8,8 @@ data: 2026-07-26
 
 # Contexto Mestre v4
 
+> **Integração em 2026-11-15:** o Assistente Vulnera foi combinado com a dev, preservando os módulos existentes e reconhecendo SAST/SCA, importação, Threat Intel e Exposure Graph sem ampliar permissões. A decisão atual é [[ADR-054 - Assistente contextual com Gemini e ajuda local]]; referências históricas à ADR-048 do assistente usam sua identificação original. A ADR-048 do grafo DAST permanece intacta. Validação: API 905/905, Web 659/659 e navegador com API real; detalhes em `docs/INTEGRACAO_AGENT_AI_DEV_2026-11-15.md`. A feature é preparada para PR, sem merge na dev/deploy nesta tarefa.
+
 > [!important] Esta é a nota de maior autoridade do vault
 > Em caso de conflito entre esta nota e qualquer outra, **esta vence** — a outra é que está desatualizada.
 > Substitui as decisões conflitantes de [[Fonte Original - MVP Vulnera]] e [[vulnera]], que passam a ser **registro histórico**.
@@ -79,7 +81,14 @@ React + Vite + Tailwind + TanStack Query + Zustand + Axios + Recharts + **pdf-li
 Expo + React Native + Expo Router + expo-secure-store.
 
 ### IA
+
+**Registro histórico do corte e do checkpoint inicial:**
+
 ~~Gemini 1.5 Flash~~ — **cortada do escopo do MVP em 2026-08-03** ([[Adr 017 ia cortada do escopo do mvp]], `CLAUDE.md` §15). Não há integração de IA no código; `Vulnerability.aiAssisted` permanece no schema sempre `false`. A flag 🚩 de [[ADR-011 - Provedor de IA em revisao]] deixou de ser uma decisão pendente — virou item de trabalho futuro.
+
+> **Evolução — 2026-10-23:** pedido explícito reintroduz IA exclusivamente como **Assistente Vulnera de orientação contextual** na web autenticada, com Gemini opcional e ajuda local. Fase 0 investigada; implementação pendente, portanto a ausência de integração no código acima ainda descreve o checkout. Geração de findings, severidade por IA e IA mobile continuam excluídas; `aiAssisted` não muda. Ver [[ADR-054 - Assistente contextual com Gemini e ajuda local]] e `docs/ASSISTENTE_VULNERA_PLANO.md`. O corte de 03/08 permanece como histórico; os guias protegidos não foram editados.
+
+> **Estado após a continuação de 2026-10-23:** Assistente Vulnera implementado e validado localmente, Fases 0–6 entregues; gateway Gemini real opcional e ajuda local padrão. Base de 14 tópicos, ações por perfil, contexto limitado, contadores em memória e conversa por sessão, sem consulta de registros para prompts ou alterações de dados. Aplicado na stack local em modo local; API focal 47/47, web 400/400, navegador servido 12/12 e fluxo real CLIENT aprovados. Gemini ao vivo pendente por ausência de chave/modelo no runtime consultado. Detalhes e ressalvas API em `docs/ASSISTENTE_VULNERA.md` e `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`. A proibição total de orientação com IA foi parcialmente superada pelo ADR-048; geração de findings, cálculo de severidade por IA e mobile continuam fora do escopo.
 
 ---
 

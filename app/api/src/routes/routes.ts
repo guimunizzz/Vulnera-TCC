@@ -15,6 +15,7 @@ import { dastScanRoutes } from "./dast-scan.routes";
 import { riskAcceptanceRoutes } from "./risk-acceptance.routes";
 import { remediationPlaybookRoutes } from "./remediation-playbook.routes";
 import { savedQueryRoutes } from "./saved-query.routes";
+import { assistantRoutes } from "./assistant.routes";
 import { codeScanRoutes } from "./code-scan.routes";
 import { threatIntelRoutes } from "./threat-intel.routes";
 
@@ -42,6 +43,7 @@ router.use("/playbooks", remediationPlaybookRoutes);
 
 // CP-6 — buscas salvas e watchlists (a pergunta, nunca a resposta).
 router.use("/saved-queries", savedQueryRoutes);
+router.use("/assistant", assistantRoutes);
 
 // ADR-052 — importação de relatórios SAST (SARIF) e SCA (CycloneDX) por projeto.
 router.use("/code-imports", codeScanRoutes);

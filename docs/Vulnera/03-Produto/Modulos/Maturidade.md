@@ -6,6 +6,14 @@ status: ativo
 
 # Maturidade
 
+## Produto vigente ? conferido em 2026-11-16
+
+A avalia??o ? um checklist da empresa, com respostas inteiras de 1 a 5 e m?dia simples das respostas preenchidas, arredondada a duas casas. Nota 4 ou 5 indica conformidade no controle. N?vel: B?sico abaixo de 2,5; Intermedi?rio de 2,5 at? menos de 4; Avan?ado a partir de 4. ADMIN cria/preenche; CLIENT da empresa e PENTESTER autorizado consultam. N?o h? m?dia ponderada, penaliza??o autom?tica por findings ou compara??o hist?rica implementadas.
+
+## Planejamento original ? hist?rico, n?o especifica??o vigente
+
+As f?rmulas, n?veis e comparativos descritos abaixo foram substitu?dos pelo checklist resumido acima.
+
 ## Objetivo
 Avaliar o nível de maturidade de segurança de uma empresa ou projeto em domínios de controle padronizados, produzindo um score consolidado e nível final.
 

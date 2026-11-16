@@ -1,10 +1,70 @@
 # BACKLOG.md — Vulnera
 
+**✅ 2026-11-16 — PR #77 e propagação visual concluídos (100%; 4/4 entregas).** Oito comentários conferidos; API/Web na feature 922/659 e na Vuvu 923/671, contraste 132/132 e builds aprovados. Merge visual `f31b678` mantém atlas, código visual e personalidade, com as novas regras de produto/privacidade. Duas branches publicadas como iannxz; dev e ambiente principal preservados. Nova aprovação humana permanece pendente. Histórico intermediário abaixo preservado; matriz em `docs/REVISAO_PR77_2026-11-16.md`.
+
+- [ ] PR77-FUT-01 — Acompanhar a espera intermitente no teste de Security Graph do detalhe SAST/SCA sob execução concorrente: uma falha inicial; focal 7/7 e repetição completa com dois processos 671/671, sem alterar fonte ou teste.
+
+**✅ 2026-11-16 — Pedidos do PR #77 implementados, validados e publicados na feature (100% das correções; propagação visual em fechamento).** Oito comentários conferidos em `docs/REVISAO_PR77_2026-11-16.md`: 29 tópicos de produto, 74 artefatos fora do índice com cópias locais preservadas, configuração concreta privada. API check 922/922 (58 suítes), Web check 659/659 e contraste 132/132; builds e smoke por três perfis aprovados. Uma chamada Gemini real HTTP 200 confirmou governança de aceite/SLA. Dev e6a445c incorporada sem conflitos; sem seed/reset, schema, dependências, guias protegidos ou deploy no ambiente principal. EACCES inicial do QA resolvido exclusivamente na imagem local de testes. Histórico anterior de execução abaixo preservado.
+
+
 > **v4 · 2026-08-03.** Substitui a versão por sprints com divisão por pessoa (Rafael/Guilherme/Iann). Agora é **fase e checkpoint**, execução solo-delegada.
 > Estimativas em horas-equivalentes — servem para dimensionar risco e revisão, não para prever o tempo do agente.
 > **Entrega: 25/10/2026.**
 
 ## Status
+
+**🚧 2026-11-16 — Atendimento do PR #77.** Limpeza de 74 artefatos do índice concluída, preservando hashes/cópias locais e fontes de testes. Resumo histórico manual realocado para docs e links atualizados; padrões de output/cobertura/temporários adicionados ao `.gitignore`. Restam contexto de produto, configuração privada do modelo, checks e publicação nas branches correspondentes. Nenhum deploy ou alteração de dados de negócio nesta revisão.
+
+- [x] PR77-01 — Limpeza do versionamento sem apagar as evidências locais nem os testes de código.
+- [x] PR77-02 — Curadoria de 29 tópicos (12 novos), com rastreabilidade e diferenças de documentos antigos registradas. Até três tópicos/6.000 caracteres, permissões mantidas; focal API 75/75.
+- [x] PR77-03 — Modelo real omitido da versão pública atual; campos vazios nos exemplos, fixture sintética e fallback se a resposta reproduzir a configuração privada. Histórico anterior preservado; focal API 60/60.
+- [x] PR77-04 — Oito pedidos conferidos, checks/builds aprovados e publicação nas duas branches com merge preservando a Vuvu; aprovação do revisor é etapa externa.
+
+**✅ 2026-11-15 — INT-AI-04E, instruções nos `.env.example` (100%).** Modelo da raiz inclui o fluxo de clone/pull até validação Gemini, preservação de `.env`, distribuição privada da credencial e restart somente sem scans ativos. Modelo da API explica o uso no host e remete ao modelo Docker. Alteração apenas de comentários/docs; padrões local/chave vazia/modelo preservados e Compose validado sem reiniciar serviços. Publicação restrita à `feature/agent-ai`, como `iannxz`.
+
+- [x] INT-AI-04E — Passo a passo nos modelos de ambiente, revisão e publicação na branch atual.
+
+**✅ 2026-11-15 — INT-AI-04D, onboarding de configuração no clone (100%).** `.env.example` da raiz contém apenas valores públicos e chave vazia; README/guia explicam onde copiar, como preservar `.env` existente e a diferença entre Docker e host. Compose validado com o template e ajuda local padrão. Clones/pulls recebem o modelo, enquanto a credencial deve ser fornecida privadamente por instalação. Runtime e `.env` real preservados.
+
+- [x] INT-AI-04D — Template Docker da raiz e instruções reproduzíveis sem versionar a chave.
+
+**✅ 2026-11-15 — INT-AI-04B1, ativação técnica Gemini local concluída (100%).** Chave somente no `.env` ignorado; modelo `modelo configurado privadamente`. Zero scans ativos antes da recriação exclusiva da API, mantendo imagem/volumes e IDs de banco/Web/Mailhog. Provedor HTTP 200/STOP; rota autenticada por token interno efêmero HTTP 200 com `source: gemini`; health/Web HTTP 200. Chave não aparece nos logs da API ou nos arquivos versionados. Nenhuma configuração de cobrança foi alterada. Evidências sanitizadas em `output/agent-ai-dev-merge/` (local e ignorado). Registro anterior INT-AI-04B desdobrado abaixo; a confirmação de gratuidade não é inferida de uma resposta bem-sucedida.
+
+- [x] INT-AI-04B1 — Configuração privada e chamada real Gemini na stack local.
+- [ ] INT-AI-04B2 — Responsável confirmar Free Tier e substituir a credencial compartilhada em chat.
+
+**✅ 2026-11-15 — INT-AI-04C, geração dinâmica conferida (100%).** Duas perguntas inéditas à rota real: 2/2 HTTP 200 com `source: gemini` e mensagens distintas do fallback local computado em memória. Analogia de biblioteca recebeu limitação ao domínio; pergunta sobre estados/retrabalho de Projetos recebeu duas frases com os prefixos exclusivos solicitados “Sequência:” e “Retorno:” (777 ms), ausentes do catálogo estático. Smoke autenticado por tokens efêmeros, sem escrita no banco, alteração de runtime ou exposição de credenciais.
+
+- [x] INT-AI-04C — Verificar origem Gemini e adaptação a uma pergunta/formato inéditos contra a ajuda predefinida.
+
+**✅ 2026-11-15 — INT-AI-04A, guia da configuração Gemini gratuita preparado.** Fontes oficiais reconferidas; projeto Free sem faturamento, chave privada, verificação eventual por celular, `.env` na raiz do Compose e recriação da API apenas sem scans ativos. Texto no `modelo configurado privadamente` elegível ao Free Tier; selo Gemini e Usage necessários para comprovar a integração. Nenhum segredo/arquivo privado/cobrança/serviço alterado. Guia em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
+
+- [x] INT-AI-04A — Requisitos, condições de custo/cartão e passo a passo revisados.
+- [ ] INT-AI-04B — Responsável configurar projeto/chave/modelo privadamente e validar Gemini ao vivo; sem ativação automática de faturamento.
+
+**✅ 2026-11-15 — INT-AI-03, QA Docker e correções de acessibilidade (100%).** Builds reais API/Web aprovados, API Linux **905/905** e Web Linux **659/659**, lint/contraste aprovados. Dois defeitos `label-content-name-mismatch` encontrados (assistente e marca de login/cadastro) e corrigidos após autorização, sem mudar o visual ou as ações; teste de roteamento passa a aguardar o portal sem mudar a implementação. Check Web final **659/659**, focal Linux **36/36**, e2e final **7/7** com axe sem regras desativadas. Smoke real por três perfis e seis etapas de importação/triagem/grafo/PDF aprovados em cópia isolada; containers e dados existentes preservados. Relatório [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).
+
+- [x] INT-AI-03 — QA Docker complementar, investigação e correção autorizada dos nomes acessíveis.
+- [ ] INT-AI-FUT-03 — Avaliar separadamente a lentidão de `chown -R /app` no build Web (106–143 s observados; branch `chore/docker-build-leve` não incorporada nesta rodada).
+
+**✅ 2026-11-15 — Integração preparatória da feature/agent-ai com a dev concluída (100% do escopo de resolução/validação).** Os sete conflitos foram compostos na feature, com ambas as origens no histórico, 30 rotas preservadas e comparação dos arquivos exclusivos. API check no Node 22: **905/905**, lint sem erros; Web check: **659/659**, contraste **132/132**; builds aprovados. Navegador: **12/12** originais + **11 verificações** com login/API reais em bancos descartáveis, sem erros de página/CSP. Contexto novo e imports corrigidos mediante autorização; JavaScript de vulnerabilidades idêntico após remover os imports. ADR-054 distingue o assistente da ADR-048 do grafo. Commits de código `2e2ead6`, `da21fc7`, `05735a7`, todos `iannxz`. Publicação somente da feature; merge na dev/deploy não executados, backups somente locais. Relatório [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md). Marcos parciais abaixo são históricos e foram concluídos por esta entrada.
+
+- [x] INT-AI-02 — Contextos, ADRs, checks/builds/navegador e preparação revisada para publicação da feature.
+- [ ] INT-AI-FUT-01 — Revisar e integrar o PR na dev; deploy do ambiente em etapa separada.
+- [ ] INT-AI-FUT-02 — Investigar overflow anterior de página a 320 px (340 px com chat fechado/aberto), sem ampliar o escopo desta integração.
+
+**✅ 2026-11-15 — INT-AI-02B: lint API desbloqueado (100% da correção pontual).** Autorizada a remoção exclusiva dos imports não usados `UserEntity`/`UserResponseDTO`; nenhum método alterado. Lint aprovado; suíte integrada 905/905 no Node 22 e Web 659/659. `npm run check` API completo em execução após a correção; fechamento/publicação da integração pendentes.
+
+- [x] INT-AI-02B — Corrigir exclusivamente os dois imports não usados da API após autorização.
+
+**🚧 2026-11-15 — INT-AI-02A implementada e validada no Web.** Assistente reconhece quatro telas novas e oferece três atalhos adicionais, sem remover os antigos ou ampliar permissões. API focal 58/58; Web focal 57/57 e check completo 659/659. Builds aprovados; Chrome com CSP: 12/12 cenários originais e 11 verificações com login/API reais em banco descartável, sem erros. Suíte completa API em repetição no Node 22; decisão sobre dois imports não usados e fechamento documental/publicação pendentes.
+
+- [x] INT-AI-02A — Adaptar contextos SAST/SCA, importação, Threat Intel e Exposure Graph; preservar guards e sessão.
+
+**🚧 2026-11-15 — feature/agent-ai sobre a dev (7/7 conflitos resolvidos; validação final pendente).** Backups somente locais de `69af46c`/`ac96859`; sem rebase/force push ou alteração da dev. Baseline: API 847/847 e Web 614/614; focais após composição: API 47/47 e Web 45/45. Todas as 30 rotas e os arquivos exclusivos de cada lado preservados. Dois imports não usados da API são bloqueio anterior do lint. Contexto de SAST/SCA, Threat Intel e Exposure Graph autorizado pelo usuário; próxima etapa antes de publicar os commits da feature com identidade `iannxz`.
+
+- [x] INT-AI-01 — Preservar referências locais, medir baseline e resolver os sete conflitos combinando funcionalidades.
+- [x] INT-AI-02 — Contexto das telas novas, referências ADR sem colisão, checks/builds/navegador e preparação da publicação da feature (concluído no marco final de 15/11).
 
 **✅ 2026-11-15 — Threat Intel: CVEs publicadas contra o inventário de tecnologias, com notificação.** Branch `feat/threat-intel` (sobre a `feat/unified-origin-view`). Inventário por empresa (pacote via OSV, produto via CPE/NVD) que se alimenta do uso como **sugestão** (SBOM importado e fingerprint do DAST); sincronização agendada dentro da API com **NVD, OSV, CISA KEV e FIRST EPSS** (ADR-053 supersede parcialmente o ADR-030); aba "Afeta você" com KEV, EPSS, versão corrigida, triagem e promoção para `Vulnerability` (`THREAT_INTEL`, A06); feed de CVEs publicadas; aba Fontes; **sino de notificações** no topo (CVE nova com CVSS ≥ 7 ou KEV, CVE antiga que entra no KEV; o que já existia ao mapear não notifica). Tenancy nos dois sentidos, 404 para recurso de outra empresa. Validado com fontes **reais** (KEV 1.781, feed do NVD 811 CVEs, SBOM do NodeGoat → 90 CVEs, scan DAST real → sugestão do nginx, NVD fora do ar → PARTIAL com o motivo); a notificação foi mostrada por **simulação controlada e rotulada**. API **847/847**, web **614/614**, lint 0 erros, contraste OK. Ver ADR-053, D19, `docs/THREAT_INTEL.md` e `docs/evidencias/threat-intel/`.
 
@@ -65,6 +125,31 @@
 - [ ] SG-FUT-03 — CyberGraph: persistir o layout arrastado por scan, se a equipe quiser (o E2E existe em `cybergraph.spec.ts`; a troca 2D/3D virou troca de layout em 2026-11-09).
 - [x] ~~SG-FUT-02 — Medir o grafo 3D em GPU integrada e celular real~~ — obsoleto: o modo 3D do CyberGraph saiu em 2026-11-09 (ADR-051). O mapa 3D do Exposure Graph herda a pendência de medição em GPU fraca.
 - [x] ~~SG-FUT-04 — Paleta da cena 3D (`features/security-graph/scene/palette.ts`) em hex aproximado: migrar para a leitura de tokens em runtime de `src/three/palette.ts` (como a atmosfera, desde o refactor web-motion-3d) e avaliar montar a cena sobre o kit `src/three/` (hospedeiro, loop, descarte). No merge na `refactor/web-motion-3d` os valores vindos do `dashboard-scene-palette.ts` removido foram copiados sem mudança.~~ — obsoleto: a cena do CyberGraph saiu em 2026-11-09 (ADR-051).
+
+**✅ 2026-10-23 — Assistente Vulnera concluído localmente (7/7 fases, 100% do plano de implementação/validação local).** Disponível em `http://localhost:8086`, modo local. API focal 47/47, web 400/400, contraste 66/66, builds host/Docker e navegador produção 12/12 aprovados; 100% de linhas nos serviços novos, HTTP sintético 13/13, três perfis reais na API e fluxo CLIENT pela UI. Resultado API geral combinado 772/773 (rodada Linux + CVSS corrigido no ambiente): somente assertion anterior do header Excel; `check` API mantém dois imports antigos de lint. Gemini ao vivo pendente de chave/modelo privados, sem chamada Google. Guia [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md), [evidências](VALIDACAO_ASSISTENTE_2026-10-23.md), ADR-048; histórico e trabalho anterior preservados, sem commit/push/PR.
+
+- [ ] Assistente — responsável preparar projeto Free Tier e chave/modelo privados e executar poucas perguntas manuais para comprovar Gemini ao vivo; não confundir ajuda local com prova do provedor.
+- [ ] Fora do assistente — revisar assertion `findings-export.test.ts:176` que exige aspas no filename, incompatível com Express 5.3.0 resolvido pelas faixas atuais; reprodução independente em `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`.
+- [ ] Fora do assistente — cabeçalho Conta em 320px continua gerando largura 335px; painel do assistente cabe e não amplia o overflow, conforme QA antes/depois.
+
+**✅ 2026-10-23 — Assistente Vulnera: Fase 0 concluída (1/7 fases, 14% do plano).** Investigação do checkout e plano registrados em [ASSISTENTE_VULNERA_PLANO.md](ASSISTENTE_VULNERA_PLANO.md), com mapa de rotas/perfis, ações, arquivos/dependências, critérios de aceite, configuração proposta e divergências. ADR-048 registra o retorno da IA apenas como orientação; as funcionalidades antigas de geração de findings e IA mobile continuam excluídas. Implementação ainda não iniciada. Branch `feature/agent-ai`; alterações anteriores preservadas, sem commit/push/PR.
+
+- [x] Assistente — Fase 0: investigar e delimitar a integração, incluindo onboarding, relatório DAST, overlays, sessão e Free Tier atual.
+- [x] Assistente — Fase 1: 14 tópicos versionados, recuperação PT-BR com continuação limitada, DTOs e nove ações rastreadas até as rotas.
+- [x] Assistente — Fase 2: endpoint autenticado, gateway Gemini injetável, ajuda local, limites compartilhados por usuário/globais e configuração backend/Docker; 47/47 focais.
+- [x] Assistente — Fase 3: layout autenticado compartilhado, mascote SVG/CSS com movimento/pausas e painel acessível; QA desktop/320px e modais.
+- [x] Assistente — Fase 4: contexto normalizado, envio explícito, navegação por ação permitida e isolamento de sessão/resposta tardia; 45/45 focais web.
+- [x] Assistente — Fase 5: checks/builds, navegador nos três perfis/temas/larguras, HTTP e UI reais locais; ressalvas da API e ausência de Gemini ao vivo explicitadas.
+- [x] Assistente — Fase 6: guia `ASSISTENTE_VULNERA.md`, configuração segura/Free Tier, limites, roteiro de três minutos e documentos vivos sincronizados.
+- [x] Preparação do assistente: dependências instaladas por `npm install --package-lock=false`, pois não há lockfile raiz; nenhum manifesto/lockfile alterado. Prisma Client gerado, builds executados.
+- [x] Preparação da validação API: criado MySQL de teste isolado em porta 3308 e database `vulnera_test`, com configuração explícita do processo. Endurecimento geral do setup/reconciliação das regras protegidas permanece fora desta feature; banco demo não foi usado na limpeza.
+
+**? 2026-10-21 ? Refer?ncia da dura??o de transi??o das abas corrigida (100% desta corre??o).** Branch `fix/mobile-erro-layout`: adicionado o import de `TAB_TRANSITION_DURATION` em `app/mobile/app/(tabs)/_layout.tsx`, reutilizando a constante de 320 ms j? exportada pela barra. Anima??es e prefer?ncia de movimento reduzido preservadas. Compara??o TypeScript com o layout original em mem?ria confirmou a remo??o exclusiva deste erro (200 ? 199 diagn?sticos, nenhum novo; zero no layout). `npm run typecheck` e `npm run lint` continuam reprovados por pend?ncias preexistentes: 14 diagn?sticos em projeto/conta, 185 em c?pias de arquivos web dentro de `output/`, e vari?veis `width`/`stage` sem uso. `git diff --check` aprovado. Mobile n?o possui script `check` nem su?te de testes; valida??o em aparelho n?o executada nesta tarefa.
+
+- [x] Corrigir o import ausente que causava `ReferenceError: TAB_TRANSITION_DURATION` nas abas mobile.
+
+- [ ] Mobile ? corrigir refer?ncias preexistentes a `STAGES`, `DetailField`, `displayDate`, `SectionHeading` e `Ionicons`, al?m de propriedades inconsistentes em Configura??es (`notificationIcon`, `footer`, `wordmark`, `icon`/`title` do estado de push). Podem causar novas falhas ao abrir essas telas.
+- [ ] Mobile ? revisar a inclus?o de c?pias web em `output/` no typecheck e as vari?veis sem uso `width` no layout e `stage` no detalhe do projeto; fora do escopo desta corre??o.
 
 **✅ 2026-10-16 — Frontend Docker atualizado para exibir a barra lateral (100%).** Corrigida a divergência entre a validação via Vite e a versão servida em `http://localhost:8086`: reconstruído e recriado somente `web` com `docker compose up -d --build --no-deps web`. HTML/JS/CSS retornam HTTP 200 e contêm a nova marca, grupos e estilos. API/MySQL seguem saudáveis sem reinicialização. Evidência: `output/sidebar-applied/served-check.md`; procedimento registrado em `docs/FRONTEND_WEB.md`.
 
@@ -520,6 +605,10 @@ prompts.
 ---
 
 ## Removido do escopo
+
+> O corte histórico abaixo permanece aplicável ao editor/sugestão de findings.
+> ADR-048 reintroduziu em 23/10/2026 somente o assistente de orientação web,
+> com Gemini opcional e ajuda local, sem IA no mobile ou operações sobre dados.
 
 | Removido                                                       | Quando     | Motivo                                      |
 | -------------------------------------------------------------- | ---------- | ------------------------------------------- |

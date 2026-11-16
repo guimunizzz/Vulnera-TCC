@@ -13,6 +13,8 @@ interface BucketState {
   tokens: number;
   lastRefillMs: number;
   lastTouchedMs: number;
+  protectedBudget?: boolean;
+  retentionMs?: number;
 }
 
 export interface TokenBucketResult {
@@ -32,6 +34,8 @@ export interface TokenBucketStoreOptions {
 export interface TokenBucketConsumeOptions {
   /** Preserva lockouts existentes quando o teto é alcançado, sem crescer memória. */
   rejectNewAtCapacity?: boolean;
+  /** Orçamentos lentos só expiram quando poderiam estar completamente repostos. */
+  preserveBudget?: boolean;
 }
 
 /**
@@ -63,6 +67,11 @@ export class TokenBucketStore {
       }
       bucket = { tokens: policy.burst, lastRefillMs: now, lastTouchedMs: now };
       this.buckets.set(key, bucket);
+    }
+
+    if (options.preserveBudget) {
+      bucket.protectedBudget = true;
+      bucket.retentionMs = Math.max(this.options.ttlMs, Math.ceil(policy.burst / policy.ratePerSecond * 1_000));
     }
 
     const elapsed = Math.max(0, now - bucket.lastRefillMs);
@@ -102,7 +111,7 @@ export class TokenBucketStore {
   cleanup(): void {
     const now = this.nowMs();
     for (const [key, bucket] of this.buckets) {
-      if (now - bucket.lastTouchedMs >= this.options.ttlMs) this.buckets.delete(key);
+      if (now - bucket.lastTouchedMs >= (bucket.retentionMs ?? this.options.ttlMs)) this.buckets.delete(key);
     }
   }
 
@@ -130,7 +139,7 @@ export class TokenBucketStore {
     for (const [key, bucket] of this.buckets) {
       // Tentativas em escopos comuns não podem apagar um lockout de autenticação
       // antes do TTL. Se só restarem buckets protegidos, a nova chave é recusada.
-      if (key.startsWith("auth-")) continue;
+      if (key.startsWith("auth-") || bucket.protectedBudget) continue;
       if (bucket.lastTouchedMs <= oldestTouched) {
         oldestKey = key;
         oldestTouched = bucket.lastTouchedMs;

@@ -9,6 +9,143 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Revisão PR #77 fechada nas duas branches
+
+**✅ 100%; 4/4 entregas.** Feature com oito comentários conferidos e propagação
+separada à Vuvu por `f31b678`, preservando visual/atlas/personalidade e histórico.
+API/Web: feature 922/659, Vuvu 923/671; contraste 132/132 e builds aprovados.
+Espera Web intermitente registrada no backlog: focal 7/7 e repetição integral
+671/671 sem editar produto/teste. Exemplos/Compose locais e vazios, valores
+privados ausentes das árvores atuais, `.env` inalterado, artefatos locais 74/74.
+Publicação nas duas branches como iannxz, sem merge na dev/deploy/restart da
+stack principal. Backups somente locais e nova aprovação humana pendente.
+Matriz, permissões de QA, resultados e limites: `docs/REVISAO_PR77_2026-11-16.md`.
+
+## 2026-11-16 — Atendimento da revisão do PR #77 na feature
+
+Oito comentários conferidos: catálogo de 17 para 29 tópicos de domínio/produto,
+sem documentação técnica no contexto; 74 artefatos retirados do índice com cópias
+locais e hashes preservados; ignore de cobertura/temporários; modelo concreto
+retirado dos arquivos públicos atuais sem reescrever histórico. Fontes de testes,
+fixtures e permissões preservadas. Notas antigas de produto marcadas como históricas
+quando divergiam do código atual.
+
+Dev `e6a445c` incorporada sem conflitos, preservando Docker/seed da equipe.
+API Node 22: lint e 922/922; Web: lint, 659/659, contraste 132/132 e build.
+Imagens reais e smoke de três perfis aprovados em QA isolado. Chamada Gemini
+real HTTP 200 com pergunta fictícia. Primeira suíte API encontrou EACCES no
+diretório temporário; repetição aprovada com permissão somente na imagem local
+de testes, sem alterar Dockerfiles do produto. Sem deploy/restart no ambiente
+principal; Vuvu permanece em localhost:8086. Propagação à branch visual em
+checkpoint separado. Matriz: `docs/REVISAO_PR77_2026-11-16.md`.
+
+## 2026-11-15 — QA Docker complementar e nomes acessíveis
+
+**✅ 100% da rodada.** Docker disponibilizado após a integração inicial;
+builds dos Dockerfiles reais aprovados, API Linux 905/905 e Web Linux 659/659.
+Stack de QA separada com banco/volumes próprios; containers existentes intactos.
+
+Axe encontrou nomes acessíveis incompletos em Ajuda e na marca do login/cadastro.
+Após esclarecimento e autorização do usuário, ajustados apenas os `aria-label`
+e o separador textual da marca, com geometria visual preservada. Testes atualizados;
+uma asserção síncrona do portal passou a aguardar sua montagem sem mudar o produto.
+Check Web final 659/659, focal Linux 36/36, e2e final 7/7 com todas as regras do axe.
+Smoke real por três perfis e fluxo SARIF/triagem/nota/Security Graph/PDF aprovados.
+
+Sem alterações de API, schema, dependências, mobile ou guias protegidos; publicação
+restrita à feature/agent-ai com identidade iannxz. Sem merge na dev ou deploy da stack
+existente. Relatório: `docs/QA_DOCKER_AGENT_AI_2026-11-15.md`.
+
+## 2026-11-15 — feature/agent-ai compatível com a dev
+
+**✅ Resolução e validação concluídas (100% do escopo).** Na própria feature,
+merge de `ac96859` preservando `69af46c`, com sete conflitos compostos e todas
+as 30 rotas mantidas. Backups somente locais; autor/committer `iannxz`.
+Commits de código: `2e2ead6` (merge), `da21fc7` (contexto dos módulos novos)
+e `05735a7` (somente dois imports não usados, mediante autorização).
+
+- Contexto SAST/SCA, importação, Threat Intel e Exposure Graph autorizado;
+  17 tópicos e 12 atalhos, preservando os anteriores e as permissões.
+- ADR-054 do assistente renumerada da ADR-048 criada na feature; decisão
+  ADR-048 do grafo DAST e demais históricos preservados, links atualizados.
+- API check Node 22: 905/905 em 58 suítes, lint sem erros; Web check 659/659,
+  contraste 132/132; builds aprovados. Serviços do assistente: 100% de linhas.
+- Chrome no build com CSP: 12/12 cenários originais e 11 verificações com
+  login/API reais em banco descartável, sem erros de página/CSP.
+- Sem schema/migration/dependências declaradas/mobile/guias protegidos novos,
+  reset de dados existentes, merge na dev ou deploy; backups não publicados.
+- Limites: Docker backend indisponível e execução completa Node 24 sem
+  relatório; integração validada no Node 22. Overflow de página anterior em
+  320 px registrado, sem alteração incidental. Gemini ao vivo não executado.
+
+Relatório: `docs/INTEGRACAO_AGENT_AI_DEV_2026-11-15.md`; artefatos brutos locais
+em `output/agent-ai-dev-merge/`. Os marcos antigos abaixo são históricos.
+
+## 2026-10-23 — Assistente Vulnera, Fases 1–6 entregues
+
+**✅ 7/7 fases, 100% da implementação e validação local previstas.**
+Branch `feature/agent-ai`, base `44f9c58`; sem commit, push ou PR. O usuário
+autorizou continuar sem pausa nos checkpoints, relatados durante a execução.
+
+- Base de 14 tópicos, contratos tipados e nove ações conferidas com rotas;
+  recuperação PT-BR, contexto limitado e restrições dos três perfis.
+- `POST /api/assistant/chat` autenticado por factory, Gemini por `fetch`
+  injetável, host fixo, timeout/saída limitados, chamada única, configuração
+  opcional e ajuda local identificada. Limites por usuário/instância
+  compartilhados, com retenção/evicção adequadas e 429 preservado.
+- Layout autenticado único inclui onboarding e relatório DAST; sentinela
+  SVG/Motion percorre bordas com pausas, painel estável e acessível, foco,
+  inert/modais, texto seguro e impressão oculta. Conversa em memória com
+  contexto capturado e isolamento em logout/troca/novo login.
+- API focal 47/47, serviços novos 100% linhas/85,5% branches; web focal
+  45/45 e check 400/400, contraste 66/66, lint 0 erros/9 avisos anteriores.
+  Builds host/Docker e navegador servido em 8086: 12/12, zero erros/CSP.
+- HTTP sintético 13/13; logins reais dos três perfis com seis perguntas
+  locais; CLIENT real na UI com duas respostas, atalho e logout sem fixtures
+  nem envio de formulário de negócio. Nenhuma chamada Google: runtime sem
+  chave/modelo. Gemini ao vivo permanece pendente de configuração privada.
+- API geral combinada Node 22 + repetição CVSS com dependência montada:
+  772/773 testes, 47/48 suítes. Assertion anterior de aspas no header Excel
+  continua falhando; check API mantém dois imports não usados anteriores.
+  Ajustes ambientais de uploads/CVSS e encerramento nativo Windows estão
+  separados dos defeitos da feature em `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`.
+- QA corrigiu Escape durante espera, largura do painel 320px, recuperação
+  indevida de histórico e distinção entre relatórios DAST e de projeto.
+  Overflow anterior do cabeçalho Conta em 320px foi registrado, sem correção
+  fora do escopo.
+- Aplicado localmente em `http://localhost:8086`, modo local. Confirmado zero
+  scans ativos antes da recriação da aplicação; dados/volumes preservados.
+  Banco de testes separado, sem schema/migration nova, pacote declarado,
+  lockfile, `.env` real ou guia protegido alterado.
+- Guia `docs/ASSISTENTE_VULNERA.md` contém Free Tier, chave privada, Docker,
+  limites e roteiro de três minutos. PRD/BACKLOG/ROADMAP, README, operação,
+  frontend e demo sincronizados; ADR-048 vigente e ADR-006/011/017 com
+  evolução histórica, sem reativar geração de findings ou IA no mobile.
+
+## 2026-10-23 — Assistente Vulnera, Fase 0
+
+**✅ Investigação concluída — 100% desta fase; 1/7 fases, 14% do plano.**
+Branch `feature/agent-ai`, base `44f9c58`; sem commit, push ou PR.
+Implementação das Fases 1–6 ainda pendente.
+
+- Confirmados API/web, schema, sessão, guards, rate limiter, tokens, Motion,
+  portais/inert e nove destinos permitidos. Onboarding e relatório DAST
+  exigem layout autenticado acima de AppLayout para uma instância única.
+- Plano de arquivos, telas/perfis, contratos propostos, aceite e divergências
+  em `docs/ASSISTENTE_VULNERA_PLANO.md`. ADR-048 aceita IA somente como
+  orientação contextual, com Gemini opcional e ajuda local identificada;
+  sugestão de findings e IA mobile continuam excluídas.
+- Documentação oficial consultada em 23/10: recomendação inicial
+  `modelo configurado privadamente`, modelo configurável. Elegibilidade da conta e
+  chamada real não verificadas; gratuidade depende da configuração da conta.
+- Web e health API responderam HTTP 200. Lint API, builds API/web e check web
+  não chegaram a executar por ausência de `node_modules`/`eslint`/`tsc` no
+  host; testes não executados. Riscos de TTL/evicção dos limites lentos e
+  isolamento do banco de teste registrados para a implementação/validação.
+- PRD/BACKLOG/ROADMAP e Contexto Mestre atualizados. Trabalho anterior
+  preservado; nenhum código, schema, lockfile, `.env`, dado ou container
+  alterado; nenhuma integração Gemini anunciada como pronta.
+
 ## 2026-10-09 — Spider tradicional, perfil por execução e README
 
 **✅ Concluída — 100% (4/4).** Mesma branch

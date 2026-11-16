@@ -25,6 +25,12 @@ import { ThemeProvider } from "./design/theme-provider";
 vi.mock("./pages/landing-page", () => ({
   LandingPage: () => <div data-testid="landing-stub">landing</div>,
 }));
+vi.mock("./pages/onboarding-page", () => ({ OnboardingPage: () => <div>Onboarding de teste</div> }));
+vi.mock("./pages/dast-scan-report-page", () => ({ DastScanReportPage: () => <div>Relatório de teste</div> }));
+vi.mock("./pages/sast-sca-page", () => ({ SastScaPage: () => <h1>SAST/SCA de teste</h1> }));
+vi.mock("./pages/code-import-detail-page", () => ({ CodeImportDetailPage: () => <h1>Importação de teste</h1> }));
+vi.mock("./pages/threat-intel-page", () => ({ ThreatIntelPage: () => <h1>Threat Intel de teste</h1> }));
+vi.mock("./pages/exposure-graph-page", () => ({ ExposureGraphPage: () => <h1>Exposure Graph de teste</h1> }));
 
 function limparAuth(): void {
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
@@ -76,17 +82,36 @@ beforeAll(async () => {
 afterEach(limparAuth);
 
 describe("Roteamento de App", () => {
+  it.each([
+    ["/sast-sca", "SAST/SCA de teste", ["ADMIN", "PENTESTER"]],
+    ["/sast-sca/imports/ficticio", "Importação de teste", ["ADMIN", "PENTESTER"]],
+    ["/threat-intel", "Threat Intel de teste", ["ADMIN", "CLIENT", "PENTESTER"]],
+    ["/exposure-graph", "Exposure Graph de teste", ["ADMIN", "CLIENT"]],
+  ] as const)("preserva os guards da dev e uma instancia do assistente em %s", async (route, heading, roles) => {
+    for (const role of ["ADMIN", "CLIENT", "PENTESTER"] as const) {
+      logar(role);
+      const view = renderApp(route);
+      const allowed = (roles as readonly string[]).includes(role);
+      expect(await screen.findByRole("heading", { name: allowed ? heading : "Olá, Rafael" })).toBeInTheDocument();
+      expect(await screen.findAllByTestId("assistant-root")).toHaveLength(1);
+      if (!allowed) expect(screen.queryByRole("heading", { name: heading })).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
   it("permite alternar entre login e cadastro mantendo o cenário de acesso", async () => {
     limparAuth();
     renderApp("/login");
     // Cenário e páginas de acesso são lazy (um lote só): espera o primeiro paint.
-    const logo = await screen.findByRole("link", { name: "Vulnera — página inicial" });
+    const logo = await screen.findByRole("link", { name: "Vulnera Security — página inicial" });
+    expect(logo).toHaveTextContent("VULNERA SECURITY");
 
     fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
     expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("assistant-root")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Nome" })).toBeRequired();
-    expect(screen.getByRole("link", { name: "Vulnera — página inicial" })).toBe(logo);
+    expect(screen.getByRole("link", { name: "Vulnera Security — página inicial" })).toBe(logo);
 
     fireEvent.click(screen.getByRole("link", { name: "Entrar" }));
     expect(await screen.findByRole("heading", { name: "Entrar" })).toBeInTheDocument();
@@ -114,6 +139,7 @@ describe("Roteamento de App", () => {
     renderApp("/dashboard");
 
     expect(await screen.findByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
+    expect(await screen.findAllByTestId("assistant-root")).toHaveLength(1);
   });
 
   it("ROTA-04 — '/' com sessão continua mostrando a landing, não expulsa quem já está logado", () => {
@@ -124,5 +150,15 @@ describe("Roteamento de App", () => {
     // pro dashboard.
     expect(screen.getByTestId("landing-stub")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Olá, Rafael" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("assistant-root")).not.toBeInTheDocument();
+  });
+
+  it.each(["/onboarding", "/dast/scans/ficticio/report"])("monta uma instância do assistente também fora de AppLayout em %s", async (route) => {
+    logar("ADMIN");
+    renderApp(route);
+    expect(await screen.findByText(route === "/onboarding" ? "Onboarding de teste" : "Relatório de teste")).toBeInTheDocument();
+    // O portal monta pelo efeito seguinte, independentemente da pagina lazy.
+    expect(await screen.findAllByTestId("assistant-root")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Ajuda — abrir Assistente Vulnera" })).toBeInTheDocument();
   });
 });
