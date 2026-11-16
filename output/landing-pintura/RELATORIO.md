@@ -2,10 +2,6 @@
 
 # Relatório — landing "Do ASCII para a pintura"
 
-> [!WARNING]
-> A sessão foi encerrada pelo limite de uso antes do fim. O que falta está em
-> "Próximo". Nada abaixo é afirmado sem ter rodado.
-
 ```
 === RELATÓRIO ===
 Feito:
@@ -38,7 +34,9 @@ Desempenho medido (RTX 3060 Ti, Chrome com janela, 1440×900, build de produçã
   - GPU por quadro: ASCII ~1,1–1,5 ms; pintura ~2,5 ms (DPR 1) / 3,4–4,1 ms (DPR 2)
   - bundle: index 492,77 → 492,80 kB; cena lazy 15,61 → 30,36 kB
 Docs atualizados: LANDING_NARRATIVA.md (§10 + histórico), FRONTEND_WEB.md,
-  ADR-054, COMO_FUNCIONA_O_FUNDO.md, evidências em docs/evidencias/landing-pintura/.
+  ADR-054, COMO_FUNCIONA_O_FUNDO.md, BACKLOG.md, PRD_VIVO.md, evidências em
+  docs/evidencias/landing-pintura/ (90 capturas: 1440/768/375, dois temas,
+  movimento reduzido e alto contraste).
 Commits e push: ver `git log origin/dev..feat/landing-pintura`.
 ⚠️ Atenção do Rafael:
   - NÃO medido em Iris Xe: a máquina da sessão tem RTX 3060 Ti. O orçamento de
@@ -65,12 +63,15 @@ Commits e push: ver `git log origin/dev..feat/landing-pintura`.
   - .eslintrc.json: pintura.ts entrou na lista de módulos de cena que podem
     importar three (mesmo caso de shaders.ts).
   - Docker Desktop foi iniciado e a stack reconstruída (`up -d --build`);
-    nenhum volume foi apagado. O Vite dev da sessão ficou em :5179.
-Próximo:
-  - docs/BACKLOG.md e PRD_VIVO.md: entradas ✅ NÃO foram escritas.
-  - Ciclo de autocrítica: 3 voltas feitas em 1440; 768/375, movimento reduzido
-    e alto contraste foram capturados mas só parte foi revisada a olho.
+    nenhum volume foi apagado. O Vite dev da sessão (:5179) foi encerrado: os
+    scripts medir.cjs e capturar.cjs aceitam a base como 1º argumento
+    (http://localhost:8086).
+  - Ciclo de autocrítica: 3 voltas em 1440 px; 768 px, 375 px, movimento
+    reduzido e alto contraste revisados por amostragem nas capturas finais.
+Próximo (registrado em docs/BACKLOG.md como LP-FUT-01..04):
+  - Medir em Iris Xe e ajustar os degraus de qualidade se preciso.
+  - Investigar o engasgo de conteúdo depois de "Recursos".
   - Demo com capturas reais do produto: não feito.
-  - Medir em Iris Xe e investigar o engasgo de conteúdo acima.
+  - Ligar os planos da landing na API (TODO que já existia).
 =================
 ```
