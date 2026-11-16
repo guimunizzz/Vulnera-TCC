@@ -1136,6 +1136,13 @@ partindo de `dev`, com espera visual fluida quando necessária.
 
 # Assistente Vulnera — orientação contextual (pedido de 2026-10-23)
 
+### Histórico da revisão PR #77 — ✅ Concluída em 2026-11-16
+
+- **Branches/PR:** `feature/agent-ai` → [#77](https://github.com/guimunizzz/Vulnera-TCC/pull/77), base dev `e6a445c`; propagação separada para `refactor/assistant-ui` por `f31b678`, sem visual novo no PR #77.
+- **Resultado:** oito comentários conferidos; 29 tópicos de domínio/produto, artefatos fora do índice e configuração concreta privada. Histórico e fontes de testes preservados.
+- **Validação:** feature API 922/922 e Web 659/659; Vuvu API 923/923 e Web 671/671; contraste 132/132, builds e smoke aprovados; chamada Gemini real HTTP 200.
+- **Desvios/limites:** permissão de diretório temporário ajustada apenas na imagem local de QA; uma espera Web intermitente passou isolada e na repetição completa com dois processos. Sem schema, dependências, guias protegidos, seed/reset ou deploy. Aprovação do revisor permanece pendente. [Relatório](REVISAO_PR77_2026-11-16.md).
+
 > **Revisão PR #77 — ✅ Concluída em 2026-11-16 na feature.** Catálogo ampliado para 29 tópicos exclusivamente de domínio/produto; artefatos retirados do índice e configuração concreta mantida privada. API 922/922, Web 659/659, contraste 132/132, builds e smoke de três perfis aprovados; chamada Gemini real HTTP 200. [Matriz dos oito pedidos e limites](REVISAO_PR77_2026-11-16.md). A propagação à branch visual é registrada separadamente no fechamento.
 
 > **Identificação atual da decisão:** ADR-054; criada como ADR-048 na feature em 23/10/2026. A ADR-048 da dev pertence ao grafo DAST. Os marcos numéricos abaixo preservam o histórico original; links atuais e integração em [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
