@@ -53,3 +53,9 @@ A configuração runtime consultada sem expor valores não continha chave/modelo
 ## Identificação na integração — 2026-11-15
 
 Esta decisão foi criada como ADR-048 na feature/agent-ai em 23/10/2026. A dev passou a usar ADR-048 para o grafo DAST. Na integração, a decisão do assistente recebeu ADR-054, com conteúdo e histórico preservados e links atualizados; a ADR-048 do grafo permanece intacta. Menções históricas ao ADR-048 do assistente correspondem agora a esta decisão.
+
+## Evolução Vuvu — 2026-11-15
+
+O responsável forneceu o atlas animado da Vuvu e sua personalidade, autorizando explicitamente aplicá-la também às respostas Gemini. A personagem é renderizada a partir do PNG local original, sem WebGL, nova dependência ou serviço de animação. Quadros e 16 direções de olhar respondem a eventos da interface; coordenadas de cursor não entram na conversa nem saem do navegador. O player pausa por preferências, modal, aba oculta e controle manual, sem render React a cada quadro.
+
+O tom acolhedor e curioso não amplia o escopo desta ADR: perfis, ajuda documentada, operações proibidas e limites permanecem. A apresentação da Vuvu também funciona localmente. O painel mantém o modelo não modal e a conversa em memória; a altura/rolagem se adapta ao texto ampliado. Evidências em [QA_VUVU_UI_2026-11-15.md](../../QA_VUVU_UI_2026-11-15.md).

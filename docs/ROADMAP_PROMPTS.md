@@ -1182,3 +1182,23 @@ Resolução e validação na própria feature, sem alterar os marcos das fases o
 - **Achados e autorização:** dois nomes acessíveis divergentes do texto visível; descrições e separador textual corrigidos após explicação e aprovação, preservando visual/ações. Asserção do portal estabilizada somente no teste.
 - **Validação final:** Web 659/659, focal Linux 36/36, e2e acessibilidade/Exposure Graph 7/7; smoke real de três perfis e seis etapas de importação/triagem/grafo/PDF.
 - **Histórico e limites:** relato anterior de Docker indisponível preservado como primeira rodada; não é mais bloqueio. Sem Gemini ao vivo ou scans externos. [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).
+
+## Vuvu — refatoração visual e personalidade — ✅ Concluída em 2026-11-15
+
+Pedido executado: analisar o visual do site, usar a personagem fornecida em `output/visual-agent-ai`, animá-la em tempo real no hover e durante a conversa e adaptar seu painel. Aplicação da personalidade ao Gemini e atualização local em 8086 autorizadas explicitamente pelo usuário.
+
+- [x] CP-0 — Branch própria, investigação e plano.
+- [x] CP-1 — Direção pela Vuvu fornecida e prévias desktop/celular.
+- [x] CP-2 — Atlas original, nove animações/16 olhares, painel e personalidade.
+- [x] CP-3 — Responsividade, teclado, modais, pausas e texto ampliado.
+- [x] CP-4 — Checks/builds, navegador com CSP e Gemini real.
+- [x] CP-5 — Docs, evidências, commits e aplicação local autorizada.
+
+### Histórico
+
+- **Branch/base:** `refactor/assistant-ui`, originada de `feature/agent-ai` em `63c4696`; plano `ccab3a8`, personalidade `4661baf`, visual `201c05f`. Identidade Git `iannxz`.
+- **PR:** não aberto nesta tarefa; revisar inicialmente contra a feature de origem se o PR anterior ainda estiver pendente. Não houve merge na dev/agent-ai.
+- **Desvio autorizado:** prompts estavam fora do plano visual inicial; usuário aprovou incorporar `personalidade.md`. Dois termos exatos de identidade permitem a apresentação da Vuvu no tópico já existente, sem ampliar permissões/cotas.
+- **Validação:** API 906/906, focal final 59/59; Web 671/671, contraste 132/132, focal pós-ajuste 48/48; build de produção e navegador/CSP 10/10. Docker API/Web aprovado; smoke real em 8086 com Gemini/Vuvu e atlas carregado.
+- **Aplicação local:** API/Web recriados depois de confirmar zero scans ativos; banco/Mailhog, volumes e contagens de negócio preservados. Imagens anteriores somente locais. Sem schema/dependências novas, seed/reset ou scans reais.
+- **Documentação:** [plano](ASSISTENTE_VISUAL_PLANO.md), [guia](ASSISTENTE_VULNERA.md) e [relatório com prévias](QA_VUVU_UI_2026-11-15.md). Ressalvas de aparelho/leitor de tela físico, atlas de 1,9 MB e limitações anteriores mantidas no backlog.

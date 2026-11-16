@@ -327,3 +327,23 @@ ZAP, PDF ou Excel; impressão oculta o portal.
 
 Guia: [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md). Evidências de testes,
 navegador, integração local e limites: [VALIDACAO.md](../output/assistant/VALIDACAO.md).
+
+### Vuvu — evolução em 2026-11-15
+
+O mascote agora reproduz o atlas original local de `src/assets/vuvu/`, com nove
+animações e 16 direções de olhar. `assistant-mascot.tsx` atualiza quadros no
+elemento gráfico sem renders React por quadro; `vuvu-sprite.ts` descreve os
+estados. Cursor, hover, rascunho, envio, resposta e erro controlam expressões,
+sem chamadas implícitas nem transmissão do cursor ao servidor.
+
+O painel recebeu hierarquia Vuvu/contexto/origem, mensagens, sugestões e
+compositor usando os tokens do produto. O histórico pode receber foco pelo
+teclado; texto ampliado a partir de 150% usa mais altura e rolagem completa.
+Tamanho do conjunto é compartilhado entre movimento e CSS. Pausa manual,
+movimento reduzido, alto contraste, modais e aba oculta interrompem animações;
+em celular o passeio fica estável, com expressões quando permitidas.
+
+Personalidade autorizada aplicada também ao Gemini, preservando as fronteiras
+do backend. Visual e nova voz foram aplicados ao Docker local após autorização,
+com banco/volumes preservados. Prévias com dados fictícios e testes:
+[QA_VUVU_UI_2026-11-15.md](QA_VUVU_UI_2026-11-15.md).

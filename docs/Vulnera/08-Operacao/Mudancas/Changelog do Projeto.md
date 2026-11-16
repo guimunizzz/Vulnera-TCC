@@ -9,6 +9,14 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-15 — Vuvu: visual, animações e personalidade
+
+**✅ Concluída; 6/6 checkpoints.** Branch `refactor/assistant-ui`, originada de `feature/agent-ai` em `63c4696`. Usuário forneceu a Vuvu e autorizou aplicar sua personalidade ao Gemini. Atlas transparente original preservado, nove animações/16 olhares, estados reais de interação e painel alinhado aos tokens da plataforma. Pausas, sessão, modais, permissões, origem Gemini/local e envio explícito mantidos. Texto ampliado recebe altura/rolagem adequadas e histórico focável.
+
+API Linux 906/906, focal final 59/59; Web 671/671, contraste 132/132, focal pós-ajuste 48/48; builds e navegador/CSP 10/10. Nova personalidade comprovada em chamada Google real. Após prévias e autorização de aplicação em 8086, API/Web Docker reconstruídos e recriados com zero scans ativos. Smoke autenticado pelo navegador: HTTP 200, atlas carregado, Gemini com identidade Vuvu, nenhum POST por hover e zero erros de página/CSP. Banco/Mailhog, mounts e contagens de negócio preservados; imagens anteriores guardadas apenas localmente.
+
+Commits de produto `4661baf` e `201c05f`, identidade `iannxz`. Guia, plano, ADR-054 e docs vivos atualizados; relatório `docs/QA_VUVU_UI_2026-11-15.md` e capturas fictícias versionadas. Sem schema/dependências, segredos publicados, merge na dev/agent-ai ou execução de scans reais. Pendências anteriores de tier/chave e overflow preexistente não foram declaradas corrigidas.
+
 ## 2026-11-15 — QA Docker complementar e nomes acessíveis
 
 **✅ 100% da rodada.** Docker disponibilizado após a integração inicial;

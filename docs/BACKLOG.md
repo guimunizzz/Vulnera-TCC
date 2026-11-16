@@ -6,14 +6,26 @@
 
 ## Status
 
+**✅ 2026-11-15 — Vuvu entregue (100%; 6/6 checkpoints).** `refactor/assistant-ui`, base `63c4696`: atlas original/estados, painel responsivo, voz autorizada e apresentação local. API **906/906**, focal final **59/59**, Web **671/671**, contraste **132/132**, focal pós-ajustes **48/48**, builds e navegador/CSP **10/10**. Aplicação em 8086 autorizada e concluída após conferir zero scans ativos; smoke real pelo navegador comprovou Gemini/Vuvu, atlas e zero erros. Banco/Mailhog, volumes e contagens de negócio preservados. Backups de imagens apenas locais; nenhum merge na dev/agent-ai. Relatório [QA_VUVU_UI_2026-11-15.md](QA_VUVU_UI_2026-11-15.md), com capturas fictícias. Registros intermediários abaixo são históricos e estão concluídos.
+
+- [x] AI-UI-01..05 — Direção, implementação, acessibilidade, validação/documentação e aplicação local autorizada.
+- [ ] AI-UI-FUT-01 — Avaliar entrega otimizada do atlas (atual original PNG de 1,9 MB), preservando a arte e somente se medição justificar.
+- [ ] AI-UI-FUT-02 — Complementar com aparelho móvel/leitor de tela físicos e uso prolongado.
+
+**🚧 2026-11-15 — Vuvu implementada, em fechamento.** Personagem e personalidade fornecidas pelo usuário; aplicação da voz ao Gemini autorizada explicitamente. Nova apresentação contextual, nove animações e 16 olhares; identidade também no fallback local. API completa Linux **906/906**, Web **671/671**, contraste **132/132**, builds e 10 cenários de navegador aprovados. Refinamento final de altura/rolagem para texto ampliado em repetição focal/visual. Prévia isolada e containers principais preservados. Registro histórico AI-UI-00 abaixo corresponde ao início; a direção está definida.
+
+- [x] AI-UI-01 — Referência Vuvu e direção validadas por prévias; usuário pediu continuar.
+- [x] AI-UI-02 — Visual, reações e personalidade autorizada implementados.
+- [x] AI-UI-03..05 — Fechar conferência ampliada, documentação e entrega (fechamento acima).
+
 **✅ 2026-11-15 — AI-UI-00, plano do novo visual preparado (100% do planejamento; implementação pendente).** Branch local `refactor/assistant-ui`, originada da `feature/agent-ai` em `63c4696`. Plano em [ASSISTENTE_VISUAL_PLANO.md](ASSISTENTE_VISUAL_PLANO.md) com direção/prévia, implementação, responsividade/acessibilidade, regressões e entrega. Preferência do usuário pendente; sem alteração de produto ou runtime.
 
 - [x] AI-UI-00 — Branch e planejamento da refatoração visual.
-- [ ] AI-UI-01 — Definir direção visual e revisar comparativo desktop/celular.
-- [ ] AI-UI-02 — Implementar mascote, botão, painel e estados conforme a direção escolhida.
-- [ ] AI-UI-03 — Validar responsividade e acessibilidade.
-- [ ] AI-UI-04 — Executar checks/build e smoke dos fluxos preservados.
-- [ ] AI-UI-05 — Documentar resultados, revisar diff e preparar PR para a base adequada.
+- [x] AI-UI-01 — Definir direção visual e revisar comparativo desktop/celular.
+- [x] AI-UI-02 — Implementar mascote, botão, painel e estados conforme a direção escolhida.
+- [x] AI-UI-03 — Validar responsividade e acessibilidade.
+- [x] AI-UI-04 — Executar checks/build e smoke dos fluxos preservados.
+- [x] AI-UI-05 — Documentar resultados, revisar diff e preparar PR para a base adequada.
 
 **✅ 2026-11-15 — INT-AI-04E, instruções nos `.env.example` (100%).** Modelo da raiz inclui o fluxo de clone/pull até validação Gemini, preservação de `.env`, distribuição privada da credencial e restart somente sem scans ativos. Modelo da API explica o uso no host e remete ao modelo Docker. Alteração apenas de comentários/docs; padrões local/chave vazia/modelo preservados e Compose validado sem reiniciar serviços. Publicação restrita à `feature/agent-ai`, como `iannxz`.
 

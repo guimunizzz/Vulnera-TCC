@@ -2,11 +2,21 @@
 
 # Assistente Vulnera
 
-O assistente explica como usar o Vulnera em português brasileiro. A sentinela percorre lentamente as bordas da tela; clicar em **Ajuda** abre um painel estável. As sugestões apenas preenchem a pergunta: é preciso escolher **Enviar** para receber orientação. Somente esse envio pode chamar o Gemini.
+O assistente explica como usar o Vulnera em português brasileiro. Sua personagem é a **Vuvu**, companheira grafite com expressões violetas. Ela percorre lentamente as bordas da tela; clicar em **Ajuda** abre um painel estável. As sugestões apenas preenchem a pergunta: é preciso escolher **Enviar** para receber orientação. Somente esse envio pode chamar o Gemini.
 
 O painel mostra **Gemini** ou **Ajuda local** em cada resposta. Os botões de navegação são definidos pela aplicação e exigem clique; o texto da resposta nunca executa operações. A conversa fica em memória na sessão da aba, sobrevive à navegação protegida e é limpa ao sair, entrar novamente ou trocar de usuário. Fechar o painel preserva a conversa; **Limpar conversa** a apaga e cancela o envio atual.
 
 ## Cobertura e permissões
+
+### Vuvu — visual e personalidade
+
+A arte original fornecida pelo responsável é reproduzida por um atlas PNG transparente local, com nove animações e 16 olhares. O player acompanha hover, cursor, deslocamento, digitação, envio, resposta e erro; os movimentos não fazem chamadas à API nem enviam coordenadas ao provedor. Quadros são atualizados no elemento gráfico sem renders React a cada quadro. ZIP, prompts de geração e demais arquivos de trabalho não entram no produto.
+
+O painel usa a identidade visual da plataforma nos temas claro/escuro, com contexto da tela, mensagens, sugestões e origem Gemini/Ajuda local. O histórico pode receber foco para rolagem pelo teclado. Com texto ampliado a partir de 150%, o painel aproveita a altura da viewport e permite rolagem completa, preservando acesso ao envio e à limpeza.
+
+A personalidade de `personalidade.md` foi aplicada ao Gemini por autorização explícita: fala próxima em PT-BR, curiosidade, gentileza, clareza e humor discreto, sem infantilização ou falsa afirmação de ações realizadas. “Quem é você?” e “Quem é a Vuvu?” também são reconhecidas pela ajuda local. A personalidade não amplia acesso a registros, permissões ou operações.
+
+Plano e evidências: [ASSISTENTE_VISUAL_PLANO.md](ASSISTENTE_VISUAL_PLANO.md) e [QA_VUVU_UI_2026-11-15.md](QA_VUVU_UI_2026-11-15.md).
 
 Disponível apenas na web autenticada, incluindo onboarding e visualizador de relatório DAST. Não aparece na landing, login, cadastro, planos, styleguide público ou aplicativo mobile. O assistente não é inserido no HTML original do ZAP e não participa dos PDFs/Excel exportados ou da impressão da página.
 
@@ -153,7 +163,7 @@ Quando a própria aplicação limita uma requisição, preserva HTTP 429, `code:
 
 Os contadores reiniciam com o processo e não são coordenados entre várias instâncias. Fechar a aba ou recarregar termina a conversa; outra aba possui memória própria. Sem internet externa, a demonstração pressupõe que a **API local continue funcionando**. Ajuda local não equivale a Gemini ao vivo.
 
-O mascote pausa com hover, foco, conversa aberta, modal, aba oculta ou controle manual. Em tela estreita e `prefers-reduced-motion`, fica estático em posição previsível. O painel tem Escape, retorno de foco, rolagem interna e controles de 44px; a plataforma continua utilizável durante uma falha externa.
+O passeio pausa com hover, foco, conversa aberta, modal, aba oculta, alto contraste ou controle manual. Em tela estreita, a posição fica estável; as expressões ainda podem reagir à conversa. Movimento reduzido, alto contraste e pausa manual interrompem também os quadros animados. Sob modal ou em aba oculta, não há loop ativo. O painel tem Escape, retorno de foco, rolagem acessível e controles de 44px; a plataforma continua utilizável durante uma falha externa.
 
 ## Preparar a apresentação
 
