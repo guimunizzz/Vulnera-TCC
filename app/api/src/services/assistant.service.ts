@@ -3,9 +3,9 @@
  * Mantém permissões e origem sob controle da aplicação; consumido pelo controller.
  */
 import type { AssistantConfig } from "../config/assistant.config";
-import type { AssistantChatDTO, AssistantGateway, AssistantResponseDTO } from "../models/assistant.model";
+import type { AssistantBudgetResult, AssistantChatDTO, AssistantGateway, AssistantResponseDTO } from "../models/assistant.model";
 import type { JwtPayload } from "../utils/jwt.util";
-import { AssistantHelpService, normalizeAssistantText } from "./assistant-help.service";
+import { AssistantHelpService } from "./assistant-help.service";
 
 /** Barreiras reconhecíveis, sem alegar detectar todo dado sensível em texto livre. */
 function containsSensitiveContent(text: string): boolean {
@@ -19,7 +19,7 @@ export class AssistantService {
     private readonly config: AssistantConfig,
   ) {}
 
-  async chat(actor: JwtPayload, dto: AssistantChatDTO): Promise<AssistantResponseDTO> {
+  async chat(actor: JwtPayload, dto: AssistantChatDTO, reserveBudget: () => AssistantBudgetResult): Promise<AssistantResponseDTO> {
     if (!["ADMIN", "CLIENT", "PENTESTER"].includes(actor.role)) throw new Error("FORBIDDEN");
     const topics = this.help.select(dto, actor.role);
     const related = topics.length ? topics : this.help.related(dto.screen, actor.role);
@@ -28,10 +28,15 @@ export class AssistantService {
     if (containsSensitiveContent(conversation)) {
       return { source: "local", actions, message: "Para proteger os dados, esta pergunta ficou na ajuda local. Envie apenas dúvidas sobre o uso da plataforma, sem nomes, e-mails, URLs, identificadores, credenciais ou conteúdo real de findings. Posso orientar sobre projetos, análise, SLA e relatórios." };
     }
+    const basic = this.help.conversation(dto.question, actor.role);
+    if (basic) return basic;
     if (!topics.length) {
-      return { source: "local", actions, message: `Minha ajuda cobre o uso do Vulnera, sem consultar registros reais ou executar operações. Não encontrei essa informação na documentação de ajuda. Posso explicar: ${related.map((topic) => topic.title).join("; ")}.` };
+      return { source: "local", actions: [], message: `Ainda não consegui relacionar sua pergunta ao uso do Vulnera. Você quer entender um conceito ou aprender a fazer algo na plataforma? Posso explicar: ${related.map((topic) => topic.title).join("; ")}.` };
     }
+    const local = (): AssistantResponseDTO => ({ source: "local", actions, message: this.help.guidance(topics[0], actor.role) });
     if (this.config.mode === "gemini" && this.config.apiKey && this.config.model) {
+      const budget = reserveBudget();
+      if (!budget.allowed) return { ...local(), providerRetryAfterSeconds: budget.retryAfterSeconds };
       let message: string | null = null;
       try {
         message = await this.gateway.generate({ question: dto.question, history: dto.history, screen: dto.screen, role: actor.role, help: this.help.context(topics, actor.role) });
@@ -43,9 +48,6 @@ export class AssistantService {
       const privateValue = [this.config.model, this.config.apiKey].some((value) => value && candidate.toLowerCase().includes(value.toLowerCase()));
       if (candidate.trim() && candidate.length <= 4_000 && !privateValue) return { message: candidate, source: "gemini", actions };
     }
-    const first = topics[0];
-    // A pergunta por conceito não deve ganhar uma instrução operacional alheia.
-    const prefix = /\bquem e (?:voce|a vuvu)\b/.test(normalizeAssistantText(dto.question)) ? "Sou a Vuvu, sua assistente no Vulnera.\n\n" : "";
-    return { source: "local", actions, message: `${prefix}${this.help.guidance(first, actor.role)}` };
+    return local();
   }
 }

@@ -115,6 +115,15 @@ export class RateLimitService {
     if (this.config.enabled) this.store.refund(`${scope}:${key}`, this.config.policies[scope]);
   }
 
+  /** Reserva somente a tentativa de geração externa; a ajuda local usa os limites gerais da API. */
+  reserveAssistant(userId: string): TokenBucketResult {
+    const personal = this.consume("assistant-user", userId);
+    if (!personal.allowed) return personal;
+    const shared = this.consume("assistant-global", "all");
+    if (!shared.allowed) this.refund("assistant-user", userId);
+    return shared;
+  }
+
   async resolveTenant(actor: JwtPayload): Promise<string | null> {
     return this.tenantResolver.resolve(actor);
   }

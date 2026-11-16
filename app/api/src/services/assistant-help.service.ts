@@ -4,14 +4,26 @@
  * assistente e por testes de permissões/continuação.
  */
 import { ASSISTANT_ACTIONS, ASSISTANT_TOPICS } from "../config/assistant-help.config";
-import type { AssistantActionDTO, AssistantChatDTO, AssistantScreen, AssistantTopic } from "../models/assistant.model";
+import { ASSISTANT_CONVERSATION } from "../config/assistant-conversation.config";
+import type { AssistantActionDTO, AssistantChatDTO, AssistantResponseDTO, AssistantScreen, AssistantTopic } from "../models/assistant.model";
 import type { UserRole } from "../models/user.model";
 
 export function normalizeAssistantText(value: string): string {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const aliases: Record<string, string> = { oq: "o que", q: "que", vc: "voce", vcs: "voces", pq: "por que", pfv: "por favor", tb: "tambem" };
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\b(?:oq|q|vc|vcs|pq|pfv|tb)\b/g, (word) => aliases[word]).replace(/\s+/g, " ").trim();
 }
 
 export class AssistantHelpService {
+  conversation(question: string, role: UserRole): AssistantResponseDTO | null {
+    const text = normalizeAssistantText(question).replace(/^(?:oi+|ola|opa|bom dia|boa tarde|boa noite)\s+(?=quem|o que|que|para|pra|qual)/, "").replace(/ por favor$/, "");
+    const intent = /^(?:oi+|ola|opa|e ai|bom dia|boa tarde|boa noite)(?: vuvu)?(?: tudo bem| tudo bom| como vai)?$/.test(text) || /^(?:tudo bem|tudo bom|como vai)(?: vuvu)?$/.test(text) ? "greeting"
+      : /^(?:(?:quem|o que) (?:e|eh) (?:voce|a vuvu)|qual (?:e )?(?:o )?seu nome|se apresente)(?: mesmo)?$/.test(text) ? "identity"
+      : /^(?:(?:o que|que) (?:e|eh) (?:o )?vulnera|(?:para|pra) que serve (?:o )?vulnera)(?: mesmo)?$/.test(text) ? "product" : null;
+    if (!intent) return null;
+    const response = ASSISTANT_CONVERSATION[intent];
+    return { source: "local", message: response.message, actions: response.actions.filter((id) => ASSISTANT_ACTIONS[id].roles.includes(role)).map((id) => ({ id, label: ASSISTANT_ACTIONS[id].label })) };
+  }
+
   select(dto: AssistantChatDTO, role: UserRole): AssistantTopic[] {
     const question = normalizeAssistantText(dto.question);
     const history = normalizeAssistantText(dto.history.map((item) => item.content).join(" "));

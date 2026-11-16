@@ -12,6 +12,8 @@ data: 2026-10-23
 
 ## Contexto
 
+> Atualização 2026-11-16: a [ADR-056](ADR-056%20-%20Conversa%20basica%20e%20cota%20de%20geracao%20da%20Vuvu.md) substitui somente a aplicação dos buckets próprios a toda mensagem: eles passam a reservar tentativas de geração, com ajuda local e prazo em seu esgotamento. Limites HTTP gerais preservam 429. Decisões originais abaixo mantidas como histórico.
+
 O ADR-017 retirou a IA do MVP em 03/08/2026, incluindo sugestões de findings. ADR-006 e ADR-011 preservam decisões anteriores sobre Gemini. Em 23/10/2026 foi solicitada explicitamente uma nova entrega: um mascote com chat de orientação para a apresentação do TCC, exclusivo da web autenticada.
 
 Esta decisão registra a autorização de escopo do pedido atual, sem editar regras protegidas de `AGENTS.md`, `CLAUDE.md` ou `GOTCHA.md`. O histórico do corte continua válido para as funcionalidades antigas. Na criação desta ADR, a Fase 0 está concluída e a implementação ainda não começou.

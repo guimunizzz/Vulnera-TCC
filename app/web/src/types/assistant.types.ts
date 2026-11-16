@@ -15,7 +15,7 @@ export type AssistantActionId = "dashboard" | "projects" | "applications" | "new
 export interface AssistantHistoryMessage { role: "user" | "assistant"; content: string }
 export interface AssistantChatInput { question: string; screen: AssistantScreen; history: AssistantHistoryMessage[] }
 export interface AssistantAction { id: AssistantActionId; label: string }
-export interface AssistantChatResponse { message: string; source: "gemini" | "local"; actions: AssistantAction[] }
+export interface AssistantChatResponse { message: string; source: "gemini" | "local"; actions: AssistantAction[]; providerRetryAfterSeconds?: number }
 export interface AssistantDestination { id: AssistantActionId; label: string; path: string; roles: readonly UserRole[] }
 export interface AssistantMessage extends AssistantHistoryMessage {
   id: number;

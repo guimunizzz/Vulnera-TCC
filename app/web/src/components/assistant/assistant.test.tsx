@@ -4,6 +4,7 @@
  */
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AuthenticatedLayout } from "../layout/authenticated-layout";
 import { useAuthStore } from "../../store/auth.store";
@@ -247,8 +248,64 @@ describe("Assistente autenticado", () => {
     mount();
     await open();
     submit();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Aguarde 12 segundos");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Seu texto foi mantido");
+    expect(screen.getByText(/Aguarde 12 segundos para enviar/)).toBeInTheDocument();
     expect(assistantApi.chat).toHaveBeenCalledTimes(1);
+  });
+
+  it("envia por Enter uma única vez, mantém foco e ignora repetição durante a espera", async () => {
+    let resolve!: (response: AssistantChatResponse) => void;
+    vi.mocked(assistantApi.chat).mockReturnValue(new Promise((done) => { resolve = done; }));
+    mount(); await open();
+    const input = screen.getByRole("textbox", { name: "Sua pergunta" });
+    expect(input).toHaveFocus();
+    expect(input).toHaveAccessibleDescription(/Enter envia.*Shift\+Enter quebra linha/);
+    fireEvent.change(input, { target: { value: "quem e vc" } });
+    fireEvent.keyDown(input, { key: "Enter", repeat: true });
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(assistantApi.chat).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(assistantApi.chat).mock.calls[0][0].question).toBe("quem e vc");
+    expect(input).toHaveFocus();
+    await act(async () => resolve(localResponse));
+    expect(input).toHaveValue(""); expect(input).toHaveFocus();
+  });
+
+  it("permite Shift+Enter para linha nova e Tab/Enter para o botão de envio", async () => {
+    const user = userEvent.setup();
+    mount(); await open();
+    const input = screen.getByRole("textbox", { name: "Sua pergunta" });
+    await user.type(input, "Oi"); await user.keyboard("{Shift>}{Enter}{/Shift}Vuvu");
+    expect(input).toHaveValue("Oi\nVuvu"); expect(assistantApi.chat).not.toHaveBeenCalled();
+    await user.tab(); expect(screen.getByRole("button", { name: "Enviar pergunta" })).toHaveFocus();
+    await user.keyboard("{Enter}"); await screen.findByText(responseText);
+    expect(assistantApi.chat).toHaveBeenCalledTimes(1); expect(input).toHaveFocus();
+  });
+
+  it("não envia texto vazio nem Enter usado para composição de caracteres", async () => {
+    mount(); await open();
+    const input = screen.getByRole("textbox", { name: "Sua pergunta" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.change(input, { target: { value: "Olá" } });
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    await screen.findByText(responseText); expect(assistantApi.chat).toHaveBeenCalledTimes(1);
+  });
+
+  it("mantém ajuda local utilizável durante a espera do Gemini sem repetir perguntas", async () => {
+    mount(); await open();
+    vi.mocked(assistantApi.chat).mockResolvedValueOnce({ ...localResponse, providerRetryAfterSeconds: 60 });
+    await act(async () => submit());
+    expect(screen.getByText(/Nova tentativa com Gemini em 60 segundos/)).toBeInTheDocument();
+    const input = screen.getByRole("textbox", { name: "Sua pergunta" });
+    fireEvent.change(input, { target: { value: "quem e vc" } });
+    expect(screen.getByRole("button", { name: "Enviar pergunta" })).toBeEnabled();
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    expect(assistantApi.chat).toHaveBeenCalledTimes(2);
+    expect(assistantApi.chat).toHaveBeenCalledTimes(2);
   });
 
   it("recusa resposta inválida como erro recuperável", async () => {

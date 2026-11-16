@@ -31,7 +31,7 @@ export function AssistantPanel({ screen, role, conversation, onClose, onMinimize
   const section = useRef<HTMLElement>(null);
   const { reduzido } = useMotion();
   const quiet = reduzido || animationsPaused;
-  const { messages, pending, error, send, clear } = conversation;
+  const { messages, pending, error, send, clear, retryAfterSeconds, providerRetryAfterSeconds, availability } = conversation;
   const end = useRef<HTMLDivElement>(null);
   const lastMessage = messages[messages.length - 1];
   const activity = pending ? "thinking" : error ? "error" : draft.trim() ? "waiting" : lastMessage?.role === "assistant" ? "answered" : "greeting";
@@ -91,17 +91,29 @@ export function AssistantPanel({ screen, role, conversation, onClose, onMinimize
         {messages.length === 0 ? suggestions : <details className="assistant-suggestions-disclosure"><summary>Sugestões</summary>{suggestions}</details>}
         <form onSubmit={(event) => {
           event.preventDefault();
+          if (!present || pending || retryAfterSeconds > 0 || !draft.trim()) return;
+          inputRef.current?.focus({ preventScroll: true });
           void send(draft, screen).then((sent) => { if (sent) setDraft(""); });
         }}>
           <label htmlFor="assistant-question" className="sr-only">Sua pergunta</label>
           <textarea id="assistant-question" ref={inputRef} value={draft} onChange={(event) => setDraft(event.target.value)}
-            maxLength={1_000} rows={2} readOnly={pending} placeholder="Pergunte à Vuvu…" aria-describedby="assistant-privacy assistant-count" />
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.nativeEvent.isComposing || event.keyCode === 229) return;
+              event.preventDefault();
+              if (!event.repeat) event.currentTarget.form?.requestSubmit();
+            }}
+            maxLength={1_000} rows={2} readOnly={pending} placeholder="Pergunte à Vuvu…" enterKeyHint="send" aria-keyshortcuts="Enter Shift+Enter"
+            aria-describedby={`assistant-keyboard assistant-privacy assistant-count${retryAfterSeconds > 0 ? " assistant-retry" : ""}${providerRetryAfterSeconds > 0 ? " assistant-provider-retry" : ""}`} />
           <div className="assistant-composer-controls">
-            <button type="submit" className="assistant-send" aria-label="Enviar pergunta" disabled={pending || !draft.trim()}>
+            <button type="submit" className="assistant-send" aria-label="Enviar pergunta" disabled={pending || retryAfterSeconds > 0 || !draft.trim()}>
               <ArrowUp size={18} aria-hidden="true" />
             </button>
           </div>
         </form>
+        <p id="assistant-keyboard" className="assistant-keyboard">Enter envia · Shift+Enter quebra linha</p>
+        {retryAfterSeconds > 0 && <p id="assistant-retry" className="assistant-notice" aria-live="off">Aguarde {retryAfterSeconds} segundos para enviar. Seu texto foi mantido.</p>}
+        {providerRetryAfterSeconds > 0 && <p id="assistant-provider-retry" className="assistant-notice" aria-live="off">Nova tentativa com Gemini em {providerRetryAfterSeconds} segundos. A ajuda local continua disponível.</p>}
+        <span className="sr-only" role="status">{availability}</span>
         <span id="assistant-count" className={draft.length >= 800 ? "assistant-count" : "sr-only"}>{draft.length}/1.000</span>
         <p id="assistant-privacy" className="assistant-privacy">Não compartilhe dados confidenciais.</p>
       </div>

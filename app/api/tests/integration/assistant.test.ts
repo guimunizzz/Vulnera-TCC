@@ -9,7 +9,7 @@ import { createAssistantRoutes } from "../../src/routes/assistant.routes";
 import { makeAssistantController } from "../../src/factories/assistant.factory";
 import type { AssistantConfig } from "../../src/config/assistant.config";
 import { loadAssistantConfig } from "../../src/config/assistant.config";
-import { createRateLimitConfig, type TokenBucketPolicy } from "../../src/config/rate-limit.config";
+import { createRateLimitConfig, type RateLimitScope, type TokenBucketPolicy } from "../../src/config/rate-limit.config";
 import { ASSISTANT_ACTIONS, ASSISTANT_TOPICS } from "../../src/config/assistant-help.config";
 import { AssistantHelpService } from "../../src/services/assistant-help.service";
 import { GeminiService } from "../../src/services/gemini.service";
@@ -29,7 +29,7 @@ const disposers: (() => void)[] = [];
 function makeApp(options: {
   config?: AssistantConfig;
   generate?: jest.Mock;
-  policies?: Partial<Record<"assistant-user" | "assistant-global", TokenBucketPolicy>>;
+  policies?: Partial<Record<RateLimitScope, TokenBucketPolicy>>;
   clock?: { now: number };
 } = {}) {
   const generate = options.generate ?? jest.fn().mockResolvedValue("Abra Solicitar análise e selecione uma aplicação ativa.");
@@ -240,7 +240,8 @@ describe("Assistente HTTP", () => {
     expect(first.body.message).not.toContain("private");
     const second = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send({ ...QUESTION, question: "Qual a previsão do tempo amanhã?" });
     expect(second.body.source).toBe("local");
-    expect(second.body.message).toContain("Não encontrei");
+    expect(second.body.message).toContain("Você quer entender um conceito");
+    expect(second.body.actions).toEqual([]);
     expect(generate).toHaveBeenCalledTimes(1);
   });
 
@@ -268,15 +269,14 @@ describe("Assistente HTTP", () => {
     expect(generate).not.toHaveBeenCalled();
   });
 
-  it("compartilha limite global entre usuários e preserva contrato 429", async () => {
+  it("compartilha limite do provedor e mantém ajuda local quando a cota global acaba", async () => {
     jest.spyOn(console, "warn").mockImplementation(() => {});
     const { app, generate } = makeApp({ policies: { "assistant-global": { ratePerSecond: 1 / 3600, burst: 1 } } });
     expect((await request(app).post("/api/assistant/chat").set("Authorization", bearer("ADMIN", "first")).send(QUESTION)).status).toBe(200);
     const blocked = await request(app).post("/api/assistant/chat").set("Authorization", bearer("CLIENT", "second")).send(QUESTION);
-    expect(blocked.status).toBe(429);
-    expect(blocked.body).toEqual({ code: "RATE_LIMITED", message: "Muitas requisições. Tente novamente em alguns segundos.", retryAfterSeconds: 3600 });
-    expect(blocked.headers["retry-after"]).toBe("3600");
-    expect(blocked.headers["ratelimit-remaining"]).toBe("0");
+    expect(blocked.status).toBe(200);
+    expect(blocked.body).toMatchObject({ source: "local", providerRetryAfterSeconds: 3600 });
+    expect(blocked.body.message).toContain("Solicitar análise");
     expect(generate).toHaveBeenCalledTimes(1);
   });
 
@@ -284,9 +284,92 @@ describe("Assistente HTTP", () => {
     jest.spyOn(console, "warn").mockImplementation(() => {});
     const { app, generate } = makeApp({ policies: { "assistant-user": { ratePerSecond: 1 / 3600, burst: 1 }, "assistant-global": { ratePerSecond: 1 / 3600, burst: 2 } } });
     expect((await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(QUESTION)).status).toBe(200);
-    expect((await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(QUESTION)).status).toBe(429);
+    const denied = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(QUESTION);
+    expect(denied.status).toBe(200);
+    expect(denied.body).toMatchObject({ source: "local", providerRetryAfterSeconds: 3600 });
     expect((await request(app).post("/api/assistant/chat").set("Authorization", bearer("CLIENT", "other")).send(QUESTION)).status).toBe(200);
     expect(generate).toHaveBeenCalledTimes(2);
+  });
+
+  it("preserva HTTP 429 e Retry-After nos limites gerais contra abuso", async () => {
+    const { app, generate } = makeApp({ policies: { user: { ratePerSecond: 1 / 60, burst: 1 } } });
+    const greeting = { ...QUESTION, question: "OI" };
+    expect((await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(greeting)).status).toBe(200);
+    const blocked = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(greeting);
+    expect(blocked.status).toBe(429);
+    expect(blocked.body).toMatchObject({ code: "RATE_LIMITED", retryAfterSeconds: 60 });
+    expect(blocked.headers["retry-after"]).toBe("60");
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it("responde a sequência relatada e não gasta cota de geração nas mensagens básicas", async () => {
+    const { app, generate } = makeApp({ policies: { "assistant-user": { ratePerSecond: 1 / 3600, burst: 1 } } });
+    for (const [question, text, source] of [
+      ["OI", "Oi! Sou a Vuvu", "local"], ["OQ E O VULNERA", "O Vulnera é uma plataforma", "local"],
+      ["como faço uma analise", "Solicitar análise", "gemini"], ["quem e vc", "Sou a Vuvu", "local"],
+    ]) {
+      const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send({ ...QUESTION, screen: "applications", question });
+      expect(response.status).toBe(200); expect(response.body.source).toBe(source);
+      expect(response.body.message).toContain(text); expect(response.body).not.toHaveProperty("providerRetryAfterSeconds");
+      if (question === "OI" || question === "quem e vc") expect(response.body.actions).toEqual([]);
+    }
+    expect(generate).toHaveBeenCalledTimes(1);
+    const limited = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(QUESTION);
+    expect(limited.body).toMatchObject({ source: "local", providerRetryAfterSeconds: 3600 });
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["Oii, Vuvu!", "Olá!", "bom dia", "tudo bem?", "Oi, quem é vc?", "qual seu nome?", "oq é o Vulnera?", "pra que serve o Vulnera?"])("entende conversa básica sem gerar: %s", async (question) => {
+    const { app, generate } = makeApp();
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send({ ...QUESTION, question });
+    expect(response.status).toBe(200); expect(response.body.source).toBe("local");
+    expect(response.body.message).not.toContain("não consegui"); expect(generate).not.toHaveBeenCalled();
+  });
+
+  it("não confunde saudação seguida de pedido com uma saudação isolada", async () => {
+    const { app, generate } = makeApp();
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send({ ...QUESTION, question: "Oi, como faço uma análise?" });
+    expect(response.body.source).toBe("gemini"); expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it("não consome orçamento externo no modo local, em dados sensíveis ou assunto não reconhecido", async () => {
+    const { app, limiter, generate } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const reserve = jest.spyOn(limiter, "reserveAssistant");
+    for (const question of [QUESTION.question, "senha=confidencial", "assunto sem correspondencia"]) {
+      expect((await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send({ ...QUESTION, question })).body.source).toBe("local");
+    }
+    expect(reserve).not.toHaveBeenCalled(); expect(generate).not.toHaveBeenCalled();
+  });
+
+  it("devolve a reserva pessoal quando a instância nega e limita chamadas concorrentes", async () => {
+    const { app, limiter, generate } = makeApp({ policies: { "assistant-user": { ratePerSecond: 1 / 3600, burst: 1 }, "assistant-global": { ratePerSecond: 1 / 3600, burst: 1 } } });
+    const responses = await Promise.all(["a", "b", "c"].map((id) => request(app).post("/api/assistant/chat").set("Authorization", bearer("ADMIN", id)).send(QUESTION)));
+    expect(responses.filter((r) => r.body.source === "gemini")).toHaveLength(1);
+    expect(responses.filter((r) => r.body.providerRetryAfterSeconds === 3600)).toHaveLength(2);
+    expect(generate).toHaveBeenCalledTimes(1);
+    for (const [i, id] of ["a", "b", "c"].entries()) {
+      if (responses[i].body.source === "local") expect(limiter.consume("assistant-user", id).allowed).toBe(true);
+    }
+  });
+
+  it("não devolve cota de tentativa externa falha e retoma somente após reposição", async () => {
+    const clock = { now: 0 };
+    const { app, generate } = makeApp({ clock, generate: jest.fn().mockResolvedValue(null), policies: { "assistant-user": { ratePerSecond: 1 / 60, burst: 1 } } });
+    const send = () => request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(QUESTION);
+    expect((await send()).body.source).toBe("local");
+    expect((await send()).body.providerRetryAfterSeconds).toBe(60); expect(generate).toHaveBeenCalledTimes(1);
+    clock.now = 60_000;
+    expect((await send()).body).not.toHaveProperty("providerRetryAfterSeconds"); expect(generate).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejeita entradas inválidas e mantém dados sensíveis fora da reserva e da geração", async () => {
+    const { app, limiter, generate } = makeApp();
+    const reserve = jest.spyOn(limiter, "reserveAssistant");
+    expect((await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send({ ...QUESTION, role: "ADMIN" })).status).toBe(400);
+    for (const question of ["senha=confidencial", "assunto sem correspondencia"]) {
+      expect((await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send({ ...QUESTION, question })).body.source).toBe("local");
+    }
+    expect(reserve).not.toHaveBeenCalled(); expect(generate).not.toHaveBeenCalled();
   });
 });
 

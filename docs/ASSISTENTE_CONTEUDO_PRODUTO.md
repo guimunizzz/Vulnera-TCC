@@ -2,6 +2,17 @@
 
 # Conteúdo de domínio e produto do assistente
 
+## Conversa básica — complemento de 2026-11-16
+
+Além dos 44 tópicos abaixo, `assistant-conversation.config.ts` mantém três
+respostas básicas separadas: saudação, identidade da Vuvu e apresentação do
+Vulnera. Fontes: identidade autorizada e descrição de produto vigente. Intenções
+completas são tratadas localmente; abreviações são normalizadas por palavra.
+Um pedido que começa com saudação continua passando pela seleção de ajuda.
+Perguntas não reconhecidas pedem esclarecimento, sem botões operacionais alheios.
+Regras de privacidade/perfis continuam anteriores à geração. ADR-056 registra a
+separação entre proteção HTTP e orçamento de geração, sem aumentar cotas.
+
 ## Ampliação da Vuvu — 2026-11-16
 
 O catálogo atual tem **44 tópicos**: preservados os 29 anteriores e acrescentados 15 aprofundamentos em `app/api/src/config/assistant-workflow-help.config.ts`. A API principal ainda executava 17 tópicos na inspeção inicial desta rodada, porque as últimas aplicações haviam atualizado somente a Web. O fechamento da aplicação da API é registrado no relatório desta ampliação.

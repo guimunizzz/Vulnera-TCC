@@ -1,5 +1,12 @@
 # BACKLOG.md — Vulnera
 
+**✅ 2026-11-16 — AI-CHAT-01..03 validadas (100% do código; aplicação em fechamento).** Conversa informal/apresentações locais, orçamento externo separado, ajuda local sem bloqueio por cota de geração, Enter/Shift+Enter/Tab e espera acessível implementados. ADR-056; API 957/957, Web final 697/697, contraste 132/132, focal Web 40/40, builds e navegador final 11/11 aprovados, incluindo cabeçalho a 200%. Aplicação e publicação em fechamento. Relatório `QA_VUVU_CONVERSA_2026-11-16.md`.
+
+- [x] AI-CHAT-01 — Tratar sequência relatada, abreviações e esclarecimento apropriado.
+- [x] AI-CHAT-02 — Preservar cotas numéricas e proteção HTTP, reservando somente geração.
+- [x] AI-CHAT-03 — Corrigir teclado e acessibilidade de espera/foco/texto ampliado.
+- [ ] AI-CHAT-04 — Validação final, aplicação autorizada e publicação na branch visual.
+
 **✅ 2026-11-16 — AI-CONTEXT-01/02 concluídas (100%).** Código `7d195d1`, API 942/942, build e aplicação exclusiva da API principal aprovados. Catálogo em execução de 17 para 44 tópicos; fonte anterior de 29 preservada e ampliada. Uma pergunta fictícia real HTTP 200/Gemini em 1.925 ms confirmou fluxo/aprovação pelo ADMIN, zero erros de página/CSP. Demais containers principais, volumes/portas, contagens e `.env` preservados; backup/QA bruto só locais. Relatório `QA_VUVU_CONTEXTO_2026-11-16.md`; histórico parcial abaixo concluído.
 
 **✅ 2026-11-16 — AI-CONTEXT-01 concluída (100% do código).** Vuvu com 44 tópicos, 15 aprofundamentos de conceitos/regras/fluxos completos. API check 942/942 em 58 suítes e build aprovados; permissões, ações, orçamento e personalidade preservados. Notas antigas de onboarding/contratação contextualizadas sem apagar histórico. Aplicação exclusiva da API principal pendente de fechamento; inicialmente executava 17 tópicos. Ver `QA_VUVU_CONTEXTO_2026-11-16.md`.

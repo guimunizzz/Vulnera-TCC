@@ -17,16 +17,21 @@ export function assistantSessionKey(): string {
 
 function responseIsValid(response: AssistantChatResponse): boolean {
   return !!response && typeof response.message === "string" && response.message.trim().length > 0
-    && response.message.length <= 8_000 && ["gemini", "local"].includes(response.source) && Array.isArray(response.actions);
+    && response.message.length <= 8_000 && ["gemini", "local"].includes(response.source) && Array.isArray(response.actions)
+    && (response.providerRetryAfterSeconds === undefined || (typeof response.providerRetryAfterSeconds === "number" && Number.isFinite(response.providerRetryAfterSeconds) && response.providerRetryAfterSeconds > 0));
+}
+
+function retryDelay(error: unknown): number {
+  if (!isAxiosError(error) || error.response?.status !== 429) return 0;
+  const raw: unknown = error.response.data?.retryAfterSeconds ?? error.response.headers["retry-after"];
+  const numeric = Number(raw);
+  const seconds = Number.isFinite(numeric) ? numeric : typeof raw === "string" ? (Date.parse(raw) - Date.now()) / 1_000 : 0;
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(86_400, Math.ceil(seconds)) : 0;
 }
 
 function recoverableError(error: unknown): string {
   if (isAxiosError(error) && error.response?.status === 429) {
-    const raw: unknown = error.response.data?.retryAfterSeconds ?? error.response.headers["retry-after"];
-    const seconds = Number(raw);
-    return Number.isFinite(seconds) && seconds > 0
-      ? `Muitas requisições. Aguarde ${Math.ceil(seconds)} segundos e envie novamente quando quiser.`
-      : "Muitas requisições. Aguarde um pouco e envie novamente quando quiser.";
+    return "Muitas requisições. Seu texto foi mantido; aguarde para enviar novamente.";
   }
   return "Não foi possível obter a orientação. Você pode continuar na plataforma e enviar novamente quando quiser.";
 }
@@ -35,6 +40,11 @@ export function useAssistantConversation(role: UserRole) {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blockedUntil, setBlockedUntil] = useState(0);
+  const blockedUntilRef = useRef(0);
+  const [providerUntil, setProviderUntil] = useState(0);
+  const [clock, setClock] = useState(() => Date.now());
+  const [availability, setAvailability] = useState("");
   const messagesRef = useRef(messages);
   const request = useRef<AbortController | null>(null);
   const nextId = useRef(0);
@@ -47,6 +57,23 @@ export function useAssistantConversation(role: UserRole) {
     return () => { alive.current = false; request.current?.abort(); };
   }, []);
 
+  useEffect(() => {
+    if (!blockedUntil && !providerUntil) return;
+    const timer = setInterval(() => setClock(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, [blockedUntil, providerUntil]);
+
+  useEffect(() => {
+    if (blockedUntil && clock >= blockedUntil) {
+      blockedUntilRef.current = 0; setBlockedUntil(0); setError(null);
+      setAvailability("Você já pode enviar sua pergunta. O envio é manual.");
+    }
+    if (providerUntil && clock >= providerUntil) {
+      setProviderUntil(0);
+      setAvailability("Você já pode tentar o Gemini novamente enviando uma pergunta. A ajuda local continua disponível.");
+    }
+  }, [clock, blockedUntil, providerUntil]);
+
   function clear(): void {
     generation.current += 1;
     request.current?.abort();
@@ -54,12 +81,12 @@ export function useAssistantConversation(role: UserRole) {
     messagesRef.current = [];
     setMessages([]);
     setPending(false);
-    setError(null);
+    setError(blockedUntilRef.current > Date.now() ? "Muitas requisições. Seu texto foi mantido; aguarde para enviar novamente." : null);
   }
 
   async function send(question: string, screen: AssistantScreen): Promise<boolean> {
     const clean = question.trim();
-    if (!clean || clean.length > 1_000 || request.current) return false;
+    if (!clean || clean.length > 1_000 || request.current || blockedUntilRef.current > Date.now()) return false;
     const controller = new AbortController();
     request.current = controller; // A trava existe antes de qualquer próximo render.
     const session = assistantSessionKey();
@@ -69,12 +96,18 @@ export function useAssistantConversation(role: UserRole) {
     setMessages((current) => [...current, outgoing]);
     setPending(true);
     setError(null);
+    setAvailability("");
     const current = () => alive.current && !controller.signal.aborted && generation.current === currentGeneration
       && assistantSessionKey() === session;
     try {
       const response = await assistantApi.chat({ question: clean, screen, history }, controller.signal);
       if (!current()) return false;
       if (!responseIsValid(response)) throw new Error("INVALID_ASSISTANT_RESPONSE");
+      if (response.providerRetryAfterSeconds) {
+        setClock(Date.now());
+        setProviderUntil(Date.now() + Math.min(86_400, response.providerRetryAfterSeconds) * 1_000);
+        setAvailability("O limite temporário do Gemini foi atingido. A ajuda local continua disponível; você pode enviar outras perguntas.");
+      } else if (response.source === "gemini") setProviderUntil(0);
       const actions = response.actions.flatMap((action) => {
         const destination = assistantDestination(action?.id, role);
         return destination ? [{ id: destination.id, label: destination.label }] : [];
@@ -87,6 +120,11 @@ export function useAssistantConversation(role: UserRole) {
       if (current()) {
         setMessages((previous) => previous.filter((message) => message.id !== outgoing.id));
         setError(recoverableError(failure));
+        const delay = retryDelay(failure);
+        if (delay) {
+          blockedUntilRef.current = Date.now() + delay * 1_000;
+          setClock(Date.now()); setBlockedUntil(blockedUntilRef.current);
+        }
       }
       return false;
     } finally {
@@ -95,5 +133,7 @@ export function useAssistantConversation(role: UserRole) {
     }
   }
 
-  return { messages, pending, error, send, clear };
+  return { messages, pending, error, send, clear, availability,
+    retryAfterSeconds: Math.max(0, Math.ceil((blockedUntil - clock) / 1_000)),
+    providerRetryAfterSeconds: Math.max(0, Math.ceil((providerUntil - clock) / 1_000)) };
 }

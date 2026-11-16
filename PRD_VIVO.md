@@ -16,6 +16,13 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-16 — Conversa, cota e teclado da Vuvu validados (100% do código; aplicação em fechamento).** Sequência relatada corrigida com três respostas básicas locais, mantendo 44 tópicos. Abreviações e esclarecimento sem atalhos alheios; cota de geração separada da proteção HTTP, com ajuda local no esgotamento e limites numéricos preservados (ADR-056). Enter/Shift+Enter/Tab, composição, foco, espera sem reenvio e cabeçalho a 200% implementados. API check final 957/957 em 58 suítes; Web final 697/697, contraste 132/132, focal 40/40, builds e navegador final 11/11 aprovados. Aplicação principal e publicação em fechamento. Relatório `docs/QA_VUVU_CONVERSA_2026-11-16.md`.
+
+- [x] AI-CHAT-01 — Reconhecimento, respostas básicas e seleção com esclarecimento.
+- [x] AI-CHAT-02 — Separar orçamento de geração e proteção HTTP sem aumentar cotas.
+- [x] AI-CHAT-03 — Envio por teclado, composição, foco, contagens e texto ampliado.
+- [ ] AI-CHAT-04 — Fechar validação final, aplicação principal e publicação como iannxz.
+
 **✅ 2026-11-16 — Contexto ampliado da Vuvu aplicado e conferido no principal (100%; AI-CONTEXT-01/02).** Código `7d195d1`, como iannxz: 44 tópicos de produto, com API principal antes em 17 e fonte antes em 29. Check final 942/942 em 58 suítes e build aprovados. Somente API recriada após zero scans/migrations/variáveis divergentes; navegador real confirmou uma pergunta fictícia HTTP 200/`source: gemini` em 1.925 ms, aprovação pelo ADMIN, zero erros de página/CSP. Web/DB/Mailhog, mounts/portas, contagens e `.env` preservados; imagem anterior/QA bruto apenas locais. Sem alteração frontend/schema/dependências ou novas chamadas automáticas. Relatório `docs/QA_VUVU_CONTEXTO_2026-11-16.md`; marco parcial abaixo concluído por este fechamento.
 
 **✅ 2026-11-16 — Conhecimento de produto da Vuvu ampliado (100% do código; aplicação principal em fechamento).** Catálogo de 29 para 44 tópicos, com 15 aprofundamentos de jornada, regras e fluxos; objetivo/pré-condições/responsável/próximo passo na instrução, desempate de seleção por especificidade e formatos/limites de evidências na ajuda genérica. API `npm run check` **942/942**, 58 suítes, build Docker aprovado. Perfis, contrato, ações, orçamento e personalidade preservados; sem frontend/schema/dependências novas ou leitura de dados. API principal encontrada com 17 tópicos; atualização exclusiva desse serviço em fechamento, com zero scans, schema igual e nenhuma migration/variável nova. Rastreabilidade e notas do vault atualizadas; relatório `docs/QA_VUVU_CONTEXTO_2026-11-16.md`.
