@@ -4,7 +4,7 @@
  * O QUE FAZ
  * Prova, num navegador de verdade, o que o jsdom não consegue provar sobre a
  * landing pública: quando a cena WebGL monta e quando o pôster ASCII assume
- * (ADR-054), e que a página não tem violação WCAG A/AA.
+ * (ADR-055), e que a página não tem violação WCAG A/AA.
  *
  *   LP-01  tela larga, sem preferência: cena WebGL (ou pôster, se o navegador
  *          do teste não tiver WebGL) — nunca os dois, nunca erro de console
@@ -98,30 +98,13 @@ test.describe("Landing — cena e pôster", () => {
     await abrir(page);
     for (const ato of [1, 2, 3, 4, 5]) {
       await page.locator(`section[data-ato="${ato}"]`).scrollIntoViewIfNeeded();
-      // A virada do ato 3 e a correção do ato 4 acontecem durante este intervalo.
+      // A virada do ato 3 (a grade vira terreno) e a correção do ato 4
+      // (os montes afundam) acontecem durante este intervalo.
       await page.waitForTimeout(700);
     }
     await expect(page.getByRole("heading", { name: "Planos que cabem na sua empresa." })).toBeVisible();
     expect(erros).toEqual([]);
   });
-
-  // Os atos 3–5 têm três materiais, escolhidos pela URL (config.ts).
-  for (const material of ["terreno", "grafo", "pintura"]) {
-    test(`LP-08 — material "${material}": a virada e a correção rolam sem erro de shader`, async ({ page }) => {
-      const erros = ouvirErros(page);
-      await page.setViewportSize({ width: 1440, height: 900 });
-      await page.addInitScript(() => sessionStorage.setItem("vulnera:boot-visto", "1"));
-      await page.goto(`/?cena=${material}`);
-      await expect(page.locator('section[data-ato="5"]')).toBeAttached({ timeout: 30_000 });
-      for (const ato of [3, 4, 5]) {
-        await page.locator(`section[data-ato="${ato}"]`).scrollIntoViewIfNeeded();
-        await page.waitForTimeout(900);
-      }
-      // Cena de pé (ou pôster, sem GPU no navegador do teste) e nenhum erro.
-      await expect(canvas(page).or(poster(page)).first()).toBeAttached();
-      expect(erros).toEqual([]);
-    });
-  }
 });
 
 test.describe("Landing — conteúdo e acessibilidade", () => {

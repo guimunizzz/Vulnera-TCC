@@ -1,7 +1,8 @@
 ---
 type: decisao
 tags: [decision, landing, webgl, three, pintura, ascii, movimento, acessibilidade, desempenho]
-status: vigente
+status: substituido
+substituido-por: ADR-055
 codigo: ADR-054
 data: 2026-11-15
 supersedes-parcialmente: ADR-050
@@ -26,14 +27,12 @@ supersedes-parcialmente: ADR-050
 > **continua** ASCII nos atos 0–2, mas os atos 3–5 passam a ser pintura. E a
 > camada de tinta pode usar DPR até 2, acima do teto de 1,5 do kit — só ela.
 
-> [!warning] Em revisão desde 2026-11-16
-> Depois de ver a pintura na página, o Rafael disse não ter certeza se gostou
-> e pediu para explorar mais o three.js. A landing passou a ter três materiais
-> para os atos 3–5 — **terreno** (padrão), **grafo** e **pintura** — escolhidos
-> por `?cena=` na URL, para comparar. Este ADR continua descrevendo a pintura
-> e a troca de material no ato 3, que valem; o que está em aberto é **qual**
-> material fica. A decisão final vira um ADR novo. Ver
-> `docs/LANDING_NARRATIVA.md` §11.
+> [!warning] Substituído pelo [[ADR-055 - Terreno topografico nos atos 3 a 5 da cena da landing]] em 2026-11-16
+> Depois de ver a pintura na página, o Rafael pediu para explorar mais o
+> three.js, comparou três materiais na própria landing e escolheu o terreno.
+> **Continua valendo deste ADR:** a troca de material no ato 3 e a virada em
+> onda. **Deixou de valer:** o material ser pintura — o código dela e a camada
+> de acumulação do kit foram removidos. O texto abaixo fica como histórico.
 
 ## Contexto
 

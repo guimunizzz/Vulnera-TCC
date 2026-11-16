@@ -1,6 +1,6 @@
 <!--
   O que faz: roteiro da cena narrativa da landing pública (ASCII nos atos 0–2,
-  pintura nos atos 3–5) — o que cada ato mostra, em que seção, em que faixa do
+  terreno 3D nos atos 3–5) — o que cada ato mostra, em que seção, em que faixa do
   scroll e como degrada — e da atmosfera ASCII discreta da área autenticada.
   Por que existe: a cena conta uma história que precisa ser entendida por
   quem nunca usou uma ferramenta de segurança; o roteiro vem antes do código.
@@ -24,6 +24,13 @@
 > §3, §4 e §5 abaixo descrevem a cena atual; a técnica, o orçamento medido e a
 > degradação da pintura estão na **§10**. O pôster (fallback) continua
 > contando os seis atos em ASCII.
+
+> [!NOTE]
+> **Estado (2026-11-16):** a pintura foi **substituída por um terreno
+> topográfico em 3D** (decisão do Rafael depois de comparar três materiais na
+> página; ADR-055, que supersede o ADR-054). As §2, §3, §4 e §5.1 abaixo já
+> descrevem a cena atual; a técnica e as medições do terreno estão na **§12**.
+> As §10 e §11 ficam como histórico.
 
 ## 1. A ideia em uma frase
 
@@ -59,8 +66,15 @@ Sistemas. Por isso:
 - cada ato tem **uma ideia só**, que se entende sem saber o que é CVSS;
 - a mudança entre atos acompanha o scroll — quem para de rolar vê a cena
   parar junto;
-- nada pisca rápido nem voa na direção da tela (sem câmera em movimento). O
+- nada pisca rápido nem voa na direção da tela (a câmera do terreno só inclina, e só com o scroll — ver a nota abaixo). O
   "cintilar" dos caracteres troca poucos glifos, 8 vezes por segundo.
+
+> [!NOTE]
+> **Regra revista em 2026-11-16 (ADR-055).** Até aqui valia "sem câmera em
+> movimento". Com o terreno 3D, a câmera inclina 46° ao longo da virada. O que
+> se mantém da intenção: o movimento é do scroll (parou de rolar, a câmera
+> para), nada vem na direção de quem lê, e com "reduzir animações" a cena nem
+> monta.
 
 ## 3. Os seis atos
 
@@ -76,9 +90,9 @@ meio da tela; entre duas seções, ele cresce em linha reta.
 | **0 · Funciona** | "O sistema está rodando." | Hero | Campo calmo: rampa `. · : - + =` e binário `0 1`, esparso no centro (atrás do título) e mais cheio nas laterais (vinheta). | O mesmo campo, parado. |
 | **1 · Mas tem falhas** | "Nem tudo está bem — e não dá pra ver de longe." | O problema | ≈ 4,5% das células viram `!` e pulsam de leve, ainda sem cor de severidade. | `!` nas mesmas células. |
 | **2 · Encontrar** | "O Vulnera varre e acha." | Como funciona | Uma varredura vertical em blocos `░▒▓█` ciano, com franja magenta, atravessa a tela; ao passar, cada `!` revela o glifo e a cor da severidade (`%` baixa, `#` média, `×` alta, `@` crítica). | Varredura parada no meio, severidades já reveladas. |
-| **3 · Organizar** | "Cada falha vai para o seu lugar." | Recursos, Comparativo, Demo | **A virada:** cada célula se desfaz em pincelada, em onda da esquerda para a direita. As falhas viram pinceladas na cor da severidade, migram para quatro grupos nas laterais (menos graves à esquerda, mais graves à direita) e giram em volta deles. | Os quatro grupos, em ASCII. |
-| **4 · Corrigir** | "Corrigido, sai da lista." | Maturidade | Pintura. Começa pelo mais grave: crítica e alta sempre, média pela metade, baixa nunca. A pincelada corrigida fica verde, sobe e se dissolve. | `✓` nas células corrigidas; baixa e metade da média seguem nos grupos. |
-| **5 · Estável** | "Sob controle." | Planos, FAQ, Time, Chamada final | Pintura. O fluxo desacelera 45%, as cores puxam para uma luz quente vinda de cima e o grupo de baixa continua, discreto (risco residual aceito). | Campo calmo, `✓` assentados e a baixa em acompanhamento. |
+| **3 · Organizar** | "Cada falha vai para o seu lugar." | Recursos, Comparativo, Demo | **A virada:** em onda da esquerda para a direita, a grade de caracteres inclina, ondula e vira um terreno 3D. Cada glifo de falha se ergue numa haste e salta para o monte da sua severidade; quatro montes crescem nas laterais (menos graves à esquerda, mais graves à direita), com curvas de nível. Crítica é o mais alto. | Os quatro grupos, em ASCII. |
+| **4 · Corrigir** | "Corrigido, sai da lista." | Maturidade | Terreno. Do mais alto para o mais baixo: uma faixa verde desce a encosta e só então o monte afunda; os glifos viram `✓`, sobem e somem. Crítica e alta sempre, média pela metade, baixa nunca. | `✓` nas células corrigidas; baixa e metade da média seguem nos grupos. |
+| **5 · Estável** | "Sob controle." | Planos, FAQ, Time, Chamada final | Terreno. Planície calma, ondulação 45% mais lenta, luz quente; ficam o morro de baixa e meio morro de média (risco residual aceito). | Campo calmo, `✓` assentados e a baixa em acompanhamento. |
 
 > [!TIP]
 > O "baixa nunca é corrigida" é deliberado: mostra **priorização** e risco
@@ -88,8 +102,8 @@ meio da tela; entre duas seções, ele cresce em linha reta.
 
 | Situação | O que a pessoa vê |
 |---|---|
-| WebGL2, sem movimento reduzido, tela ≥ 768 px | A cena WebGL completa: ASCII nos atos 0–2, pintura nos atos 3–5. |
-| Máquina que não segura a cadência na pintura | A pintura desce de degrau sozinha: tinta a DPR 1,5 com 75% das pinceladas, depois DPR 1 com 50% (§10). |
+| WebGL2, sem movimento reduzido, tela ≥ 768 px | A cena WebGL completa: ASCII nos atos 0–2, terreno 3D nos atos 3–5. |
+| Máquina que não segura a cadência no terreno | O terreno desce de degrau sozinho: DPR 1,5 com malha de 30 px, depois DPR 1 com malha de 40 px (§12.4). |
 | Movimento reduzido (do sistema ou do menu de acessibilidade) | O pôster ASCII do ato atual. A troca de ato é um **crossfade** (só opacidade, `--duration-slow`); nenhum glifo anda, não há pulso nem varredura. |
 | Sem WebGL2, sem canvas 2D para o atlas, ou falha ao baixar a cena | O pôster, com a mesma troca por ato. |
 | Contexto WebGL perdido no meio da sessão | A cena some e o pôster, que sempre esteve embaixo, assume. |
@@ -147,7 +161,8 @@ e na área autenticada (`src/three/gotas.ts`).
 |---|---|
 | Quem conta como "fundo" | O canvas segue `pointer-events: none`; o clique é ouvido na janela e ignorado quando o alvo é interativo (link, botão, campo, item de menu, aba, diálogo), quando é o botão direito ou quando vem do teclado (`detail = 0`). |
 | Física | Até 6 gotas simultâneas; frente a 320 px/s, pacote gaussiano de 70 px, cristas a cada 34 px, some em 2,4 s, perde força com tempo e distância. |
-| Visual | A onda **refrata** a grade (a leitura das células é deslocada, como texto visto pela água) e a crista desenha um anel de glifos da rampa — puxado para o ciano na landing, na cor de tinta na plataforma. |
+| Visual | Nos atos ASCII, a onda **refrata** a grade (a leitura das células é deslocada, como texto visto pela água) e a crista desenha um anel de glifos da rampa, puxado para o ciano. |
+| No terreno (atos 3–5) | O ponto clicado é projetado no plano e vira uma **onda sísmica** na função de altura: anéis que levantam a malha de verdade (13 px de amplitude), com os glifos balançando em cima. Mesma velocidade e duração da gota; sem onda viva o laço nem roda no vértice. |
 | Contraste | O anel nunca passa do alfa de destaque (landing) nem do teto do campo (plataforma): a garantia de AA não muda com a gota. |
 | Custo | A cena já desenha todo quadro; sem gota viva o laço das ondas nem roda (desvio por uniform). Medido: 60 fps com a gota, na landing e na plataforma. |
 | Movimento reduzido | A cena nem monta; não há gota. |
@@ -279,6 +294,7 @@ Regras que continuam valendo:
 | 2026-11-15 | **Do ASCII para a pintura** (pedido do Rafael, ADR-054): atos 0–2 mais densos (célula 12 × 18 px, fonte a 13 px) e atos 3–5 em pinceladas que seguem um campo de fluxo, com camada de tinta em ping-pong, halos e granulado (§10). Pôster com a mesma célula. Conteúdo das seções revisado contra o código. |
 | 2026-11-16 | Tinta com mais corpo (pedido do Rafael): massas largas por baixo, cerdas e pincel seco, mistura molhada e relevo iluminado (§10.6). |
 | 2026-11-16 | **Três materiais para os atos 3–5** (pedido do Rafael: explorar mais o three.js): terreno topográfico (padrão) e grafo de nós, em 3D com câmera em perspectiva, ao lado da pintura; escolha por `?cena=` enquanto ele compara (§11). |
+| 2026-11-16 | **Terreno escolhido como material final** (ADR-055): pintura, grafo e `?cena=` removidos. Terreno com erosão, sombra projetada, luz de contorno, neblina com cor, correção em varredura e onda sísmica no clique; regra de câmera do §2 revista (§12). |
 
 ### Boas práticas consultadas (2026-10-27)
 
@@ -298,6 +314,11 @@ Fontes: [Utsubo — 100 Three.js tips (2026)](https://www.utsubo.com/blog/threej
 desempenho vêm dos nossos testes e medições).
 
 ## 10. Pintura — atos 3 a 5 (2026-11-15, ADR-054)
+
+> [!WARNING]
+> **Histórico.** A pintura foi substituída pelo terreno em 2026-11-16
+> (ADR-055, §12) e o código dela foi removido. O que desta seção continua
+> valendo: as faixas de progresso de cada momento (§10.1) e a onda da virada.
 
 > [!TIP]
 > Quer a versão sem jargão? Leia `docs/COMO_FUNCIONA_O_FUNDO.md`.
@@ -425,6 +446,10 @@ tabela da §10.3 são da primeira versão):
 
 ## 11. Três materiais para os atos 3–5 (2026-11-16)
 
+> [!WARNING]
+> **Histórico.** A comparação terminou no mesmo dia: o Rafael escolheu o
+> terreno (ADR-055, §12). O `?cena=`, o grafo e a pintura foram removidos.
+
 > [!IMPORTANT]
 > **Em avaliação.** Depois de ver a pintura na página, o Rafael disse não ter
 > certeza se gostou e pediu para explorar mais o three.js. Os atos 3–5 passaram
@@ -517,3 +542,103 @@ nem relevo por pixel, então a expectativa é custarem menos que a pintura, mas
 o tempo de GPU medido aqui oscila demais (0,9 a 3,1 ms) para afirmar isso.
 
 Capturas em `docs/evidencias/landing-pintura/terreno/` e `.../grafo/`.
+
+## 12. Terreno — o material final dos atos 3–5 (2026-11-16, ADR-055)
+
+> [!TIP]
+> Quer a versão sem jargão? Leia `docs/COMO_FUNCIONA_O_FUNDO.md`.
+
+### 12.1 O que se vê
+
+| Momento | Progresso | O que acontece |
+|---|---|---|
+| **Virada** | 2,55 → 3,45 | Uma onda cruza a tela da esquerda para a direita: o glifo esmaece e a grade do terreno aparece no lugar. A câmera inclina de 0° a 46° e o relevo começa a ondular. |
+| **Chegada aos montes** | 3,0 → 3,75 | Cada glifo de falha se ergue numa haste e salta em arco da célula de origem até um ponto do monte da sua severidade. Os montes crescem junto: baixa 74 px, média 108, alta 150, crítica 196. |
+| **Corrigir** | 3,75 → 4,6 | Crítica primeiro, depois alta, depois a média. Em cada monte, a faixa verde desce do cume à base (ou à meia encosta, na média) nos primeiros 55% da correção dele; o monte só começa a afundar aos 45%. Os glifos viram `✓`, sobem e somem. |
+| **Estável** | 4,5 → 5 | Ondulação 45% mais lenta, luz quente, baixa 40% mais discreta. O verde some do que sobrou da média. |
+
+### 12.2 Como é desenhado
+
+```mermaid
+flowchart LR
+  P["Progresso 0–5"] --> L["terreno-logica.ts<br/>virada · altura e correção<br/>de cada monte · ritmo"]
+  L -->|uniforms| A["Função de altura (vértice)<br/>ondulação + 4 montes<br/>+ selas + onda do clique"]
+  Clique["Clique no fundo"] -->|"ponto projetado no plano"| A
+  A --> M["Malha: normal, sombra,<br/>luz de contorno"]
+  A --> G["Hastes e glifos<br/>(1 instância por célula ASCII)"]
+  Atlas["Atlas de glifos<br/>da cena ASCII"] --> G
+  M --> RT["Alvo fora da tela<br/>(sem profundidade, sem MSAA)"]
+  G --> RT
+  RT --> T["Passada de tela<br/>ASCII + terreno + halos"]
+```
+
+| Parte | Como funciona |
+|---|---|
+| **Mundo** | px CSS, origem no centro da tela. Câmera em perspectiva (35°) à distância em que o plano z = 0 preenche a tela: sem inclinação, a célula ASCII cai em cima do seu glifo. |
+| **Malha** | Plano de 1,8 × a largura por 2,8 × a altura da tela (inclinado, o fundo encolhe e a frente cresce), um vértice a cada 24 px. Desenhada do fundo para a frente: o preenchimento translúcido da encosta da frente vela a de trás sem buffer de profundidade. |
+| **Altura** | `altura(p)` no vértice: ondulação em duas escalas + quatro montes + as selas que ligam os dois de cada lado + a onda do clique. Cada monte tem contorno deslocado por ruído, um pico secundário e cristas em três escalas. |
+| **Luz** | Por vértice. Normal por diferença finita (3 avaliações da altura), sombra projetada por uma marcha de 8 passos em direção à luz (até 240 px, só contra os montes) e luz de contorno pelo ângulo entre a normal e a câmera. |
+| **Linhas** | No fragmento, com a largura em px de tela (`fwidth`): grade de 24 × 36 px (duas células ASCII) e uma curva de nível a cada 15 px de altitude. Apagam-se quando ficam mais juntas que ~2 px (sem moiré). |
+| **Correção** | O vértice passa a altitude relativa dentro do monte; o fragmento compara com a frente da varredura. Acima da frente, verde; na frente, uma faixa de luz. |
+| **Neblina** | Ao longe a cor puxa para o índigo misturado ao fundo da página e depois some; o terreno não termina numa aresta. |
+| **Falhas** | Um cartaz por célula ASCII (só as que têm falha desenham), com o mesmo hash do shader de células e o mesmo atlas: o glifo sai exatamente de onde estava. Uma haste fina prende cada um ao chão. |
+| **Cores** | `--vx-accent` (chão), `--vx-cyan` (acento), `--vx-indigo` (sombra e neblina), `--vx-bg` (de onde parte o preenchimento, nos dois temas), severidades, `--vx-success` e `--vx-yellow` (luz do ato 5). Lidas dos tokens em runtime. |
+| **Composição** | A passada de tela lê o alvo, aplica o teto de alfa (0,9), soma os halos atrás dos montes (projetados na tela a cada quadro) e põe o ASCII por cima durante a virada. |
+
+Três draw calls no alvo (malha, hastes, glifos), mais a passada de células
+(pulada depois da virada) e a passada de tela.
+
+### 12.3 Orçamento medido
+
+> [!WARNING]
+> Medido numa **NVIDIA RTX 3060 Ti**, Chrome com janela, 1440 × 900, build de
+> produção no container. O alvo do orçamento é uma GPU integrada **classe Iris
+> Xe**, que **não estava disponível**. Os números provam que não há long task
+> nem engasgo de CPU; **não** provam os 55 fps na Iris Xe. Para medir nela:
+> `node output/landing-pintura/medir.cjs http://localhost:8086`.
+
+| Trecho | DPR 1 | DPR 2 (tela a 1,5×, terreno a 2×) |
+|---|---|---|
+| Parado, ato 0 (ASCII) | 60,1 fps · 0 quadros > 25 ms | 59,8 fps · 0 |
+| Parado, ato 3 (terreno) | 60,3 fps · 0 | 60,1 fps · 0 |
+| Parado, ato 5 (terreno) | 60,2 fps · 0 | 60,1 fps · 0 |
+| Rolando a virada (2,4 → 3,6) | 57,6 fps · 2 quadros > 25 ms · maior intervalo 33 ms | 58,6 fps · 1 · 50 ms |
+| Rolando a página inteira | 59,4 fps · 5 · 33 ms | 59,5 fps · 4 · 33 ms |
+
+Long tasks (> 50 ms): **0** em todos os trechos. O tempo de GPU por quadro
+medido aqui oscila entre 1,4 e 4,3 ms sem padrão claro; não serve para
+comparar com o ASCII.
+
+| Item | `dev` (antes da branch) | Com o terreno |
+|---|---|---|
+| Chunk lazy da cena (`landing-scene-canvas`) | 15,61 kB (gzip 6,52) | 36,77 kB (gzip 14,09) |
+| Chunk da landing (`landing-root`) | 185,29 kB (gzip 66,95) | 189,82 kB (gzip 68,64) |
+| Bundle inicial (`index`) | 492,77 kB (gzip 160,20) | 492,80 kB (gzip 160,20) |
+
+### 12.4 Degraus de qualidade
+
+| Degrau | DPR do terreno | Malha |
+|---|---|---|
+| 0 (padrão) | até 2 | um vértice a cada 24 px |
+| 1 | até 1,5 | 30 px |
+| 2 | 1 | 40 px |
+
+Desce um degrau quando 90 quadros seguidos passam de 1/48 s (um quadro rápido
+desconta dois lentos). Não sobe de volta na mesma visita. A tela continua em
+DPR ≤ 1,5 (ADR-050); só o alvo do terreno vai além.
+
+### 12.5 Legibilidade
+
+`scene-contrast.test.ts` (CTR-04) calcula o pior caso do terreno atrás da
+superfície do texto: cada cor que ele usa, pura e no tom claro das linhas
+iluminadas (30% em direção ao branco), com a camada no teto de alfa (0,9) por
+cima de um halo no máximo (0,16), atenuada pela superfície de 94%. Exige
+≥ 4,5:1 para todo texto, nos dois temas.
+
+### 12.6 O que foi descartado
+
+| Alternativa | Estado |
+|---|---|
+| Pintura (§10) | Removida. Uma amostra das capturas em `docs/evidencias/landing-terreno/alternativas/`. |
+| Grafo (§11) | Removido. Idem. |
+| `src/three/acumulacao.ts` (camada em ping-pong) | Removido do kit: só a pintura usava. |

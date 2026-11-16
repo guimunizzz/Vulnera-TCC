@@ -6,10 +6,10 @@
  *   1. FRAGMENT_CELULAS roda uma vez por célula de caractere (textura do
  *      tamanho da grade, `src/three/grade-celulas.ts`) e decide, pelo
  *      progresso (0 a 5, um por ato), glifo, cor e alfa. A partir da virada
- *      (ato 3, ADR-054) cada célula esmaece e a pincelada nasce no lugar.
+ *      (ato 3, ADR-055) cada célula esmaece e o terreno nasce no lugar.
  *   2. FRAGMENT_TELA roda por pixel: lê a célula, aplica a onda da gota,
  *      carimba o glifo do atlas (`src/three/ascii.ts`) com scanlines e compõe
- *      a camada de tinta (`pintura.ts`), os halos dos grupos e o granulado.
+ *      a camada 3D do terreno (`terreno.ts`) e os halos dos montes.
  * Estética de terminal hacker (ASCII, scanlines, glitch raro, acentos neon),
  * sem logos nem assets de terceiros.
  *
@@ -24,7 +24,7 @@
  *
  * Os atos seguem `docs/LANDING_NARRATIVA.md` §3. O espelho sem animação está
  * em `estadoDaCelula` (layout.ts), usado pelo pôster — que continua contando
- * os atos 3–5 em ASCII (grupos e "✓"); aqui eles são da pintura.
+ * os atos 3–5 em ASCII (grupos e "✓"); aqui eles são do terreno.
  * Não use crase dentro destes templates: fecha a string JS (ADR-026).
  *
  * QUEM USA
@@ -36,7 +36,7 @@ import { GLSL_GOTAS, GOTA } from "../../../three/gotas";
 import { GLSL_LER_CELULAS } from "../../../three/grade-celulas";
 import { PROPORCAO_FALHAS } from "./layout";
 import { GLIFO, TRANSICAO_CENA, VINHETA } from "./config";
-import { GLSL_VIRADA } from "./pintura";
+import { GLSL_VIRADA } from "./terreno-shaders";
 
 /** Ids de cor gravados na textura de células (canal g). */
 export const COR = { base: 0, neon: 1, glitch: 2, baixa: 3, media: 4, alta: 5, critica: 6, resolvido: 7 } as const;
@@ -117,7 +117,7 @@ void main() {
   float revelado = falha * smoothstep(clip.x, clip.x + 0.1, feixeX);
 
   // A falha revelada fica no lugar até a virada alcançar a célula (ato 3):
-  // ali o glifo esmaece e a pincelada da mesma severidade nasce (pintura.ts).
+  // ali o glifo esmaece e o mesmo glifo se ergue do terreno (terreno.ts).
   if (falha > 0.5) {
     if (revelado > 0.01) {
       indice = glifoDaSeveridade(sev);
@@ -163,7 +163,7 @@ void main() {
   }
 
   // --- Virada (ato 3): onda da esquerda para a direita; o glifo esmaece onde
-  // a pincelada nasce. A conta é a mesma do vértice das pinceladas.
+  // o terreno nasce. A conta é a mesma do fragmento do terreno.
   float xTela = (celula.x + 0.5) * uCelula.x / uResolucao.x;
   alfa *= 1.0 - viradaLocal(uVirada, xTela, hashCelula(celula + 113.0));
 
@@ -171,7 +171,7 @@ void main() {
 }
 `;
 
-/** Passada 2: por pixel — gota, glifo do atlas, scanlines e a camada de tinta. */
+/** Passada 2: por pixel — gota, glifo do atlas, scanlines e a camada do terreno. */
 export const FRAGMENT_TELA = /* glsl */ `
 ${GLSL_ASCII}
 ${GLSL_GOTAS}
@@ -187,17 +187,15 @@ uniform vec3 uCorMedia;
 uniform vec3 uCorAlta;
 uniform vec3 uCorCritica;
 uniform vec3 uCorResolvido;
-// Pintura (atos 3–5): tinta acumulada em sRGB com alfa pré-multiplicado.
-uniform sampler2D uTinta;
-uniform float uTintaAtiva;
+// Terreno (atos 3–5): camada 3D em sRGB com alfa pré-multiplicado.
+uniform sampler2D uCamada;
+uniform float uCamadaAtiva;
 uniform float uVirada;
-uniform float uTetoDaTinta;
+uniform float uTetoDaCamada;
 uniform vec3 uHalos[4];
 uniform vec3 uCorDoHalo[4];
 uniform float uRaioDoHalo;
 uniform float uAlfaDoHalo;
-uniform vec2 uTexelDaTinta;
-uniform float uLuzDoRelevo;
 
 vec3 corPorId(float id) {
   if (id < ${COR.neon}.5) return id < ${COR.base}.5 ? uCorBase : uCorNeon;
@@ -210,25 +208,25 @@ vec3 corPorId(float id) {
 }
 
 void main() {
-  // Água: a onda das gotas desloca a leitura (refração) — da grade nos atos
-  // ASCII, da tinta nos atos de pintura. Sem gota viva, o laço nem roda.
-  vec4 onda = uGotasAtivas > 0.5 ? ondaDasGotas(gl_FragCoord.xy) : vec4(0.0);
-  vec2 pos = gl_FragCoord.xy - onda.xy * uCelula.x * ${GOTA.deslocamentoCelulas.toFixed(2)};
   // Saída em sRGB com alfa pré-multiplicado.
   vec4 saida = vec4(0.0);
 
   // Depois da virada completa não há glifo: pula a leitura do atlas.
   if (uVirada < 0.999) {
+    // Água: nos atos ASCII a onda da gota desloca a leitura da grade
+    // (refração). No terreno a onda é do relevo (terreno.ts), não daqui.
+    // Sem gota viva, o laço das gotas nem roda.
+    vec4 onda = uGotasAtivas > 0.5 ? ondaDasGotas(gl_FragCoord.xy) * (1.0 - uVirada) : vec4(0.0);
+    vec2 pos = gl_FragCoord.xy - onda.xy * uCelula.x * ${GOTA.deslocamentoCelulas.toFixed(2)};
     vec4 dado = lerCelula(celulaEm(pos));
     float indice = byte(dado.r);
     vec3 cor = corPorId(byte(dado.g));
     float alfa = dado.b;
 
     // Crista da onda: um anel de glifos da rampa, puxado para o neon. Nunca passa
-    // do alfa de destaque — o limite que o teste de contraste garante. Some com
-    // a virada: sobre a pintura a gota só refrata a tinta.
+    // do alfa de destaque — o limite que o teste de contraste garante.
     float crista = smoothstep(0.04, 0.45, onda.z);
-    float alfaOnda = uAlfaDestaque * crista * (1.0 - uVirada);
+    float alfaOnda = uAlfaDestaque * crista;
     if (alfaOnda > alfa) {
       indice = ${GLIFO.rampaInicio}.0 + floor(crista * ${(GLIFO.rampaTotal - 0.01).toFixed(2)});
       cor = mix(uCorBase, uCorNeon, crista);
@@ -242,33 +240,19 @@ void main() {
     saida = vec4(linearToOutputTexel(vec4(cor, 1.0)).rgb * cobertura, cobertura);
   }
 
-  if (uTintaAtiva > 0.5) {
-    vec2 uvTinta = pos / uResolucao;
-    vec4 tinta = texture2D(uTinta, uvTinta);
-    // Relevo: o alfa acumulado é a espessura da tinta. A luz vem de cima e da
-    // esquerda: a borda voltada para ela clareia, a oposta escurece — a tinta
-    // ganha volume sem nenhuma geometria a mais.
-    vec2 passo = uTexelDaTinta * 1.5;
-    float inclinacao = (texture2D(uTinta, uvTinta + vec2(-passo.x, passo.y)).a
-      - texture2D(uTinta, uvTinta + vec2(passo.x, -passo.y)).a);
-    float luz = clamp(inclinacao * 2.2, -1.0, 1.0) * uLuzDoRelevo;
-    tinta.rgb = luz > 0.0 ? mix(tinta.rgb, vec3(tinta.a), luz) : tinta.rgb * (1.0 + luz);
-    // Granulado de tela: a trama pega mais tinta nos fios altos, e um ruído
-    // fino por pixel quebra o degradê liso.
-    float trama = sin(gl_FragCoord.x * 2.2) * sin(gl_FragCoord.y * 2.2);
+  if (uCamadaAtiva > 0.5) {
+    // Um grão fino por pixel quebra o degradê liso do preenchimento (8 bits).
     float grao = hashCelula(floor(gl_FragCoord.xy)) - 0.5;
-    tinta *= uTetoDaTinta * (0.93 + 0.05 * trama + 0.06 * grao);
-    // A crista da gota clareia a tinta molhada.
-    tinta.rgb *= 1.0 + 0.35 * max(onda.z, 0.0);
+    vec4 camada = texture2D(uCamada, gl_FragCoord.xy / uResolucao) * uTetoDaCamada * (1.0 + 0.05 * grao);
 
-    // Halos: luz suave atrás de cada grupo, proporcional ao risco que resta.
+    // Halos: luz suave atrás de cada monte, proporcional ao risco que resta.
     vec4 halo = vec4(0.0);
     for (int i = 0; i < 4; i++) {
       vec2 d = (gl_FragCoord.xy - uHalos[i].xy) / uRaioDoHalo;
       float brilho = exp(-dot(d, d)) * uHalos[i].z * uAlfaDoHalo;
       halo += vec4(uCorDoHalo[i] * brilho, brilho);
     }
-    vec4 fundo = tinta + halo * (1.0 - tinta.a);
+    vec4 fundo = camada + halo * (1.0 - camada.a);
     saida += fundo * (1.0 - saida.a);
   }
 

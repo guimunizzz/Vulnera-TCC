@@ -131,3 +131,60 @@ Docs atualizados: LANDING_NARRATIVA.md §11, ADR-054 (aviso de revisão),
 Próximo: LP-FUT-05 (escolher o material) e LP-FUT-06 (pôster), além de 01–04.
 =================
 ```
+
+## Adendo — 2026-11-16: terreno como material final (ADR-055)
+
+> [!NOTE]
+> Este adendo é o estado final. Os blocos acima ficam como histórico da
+> branch (pintura, tinta com mais corpo, comparação de três materiais).
+
+```
+=== RELATÓRIO ===
+Feito:
+  - Terreno caprichado: montes com erosão (cristas em três escalas, pico
+    secundário, selas ligando os dois de cada lado), sombra projetada, luz de
+    contorno, neblina com cor, correção em varredura (a faixa verde desce a
+    encosta e só então o monte afunda) e clique que vira onda sísmica no relevo.
+  - Terreno como material final: grafo, pintura, o ?cena= e a camada de
+    acumulação do kit foram removidos. ADR-055 registra a decisão e revê a
+    regra "sem câmera em movimento".
+Arquivos:
+  novos     scene/terreno.ts, terreno-shaders.ts, terreno-logica.ts,
+            terreno.test.ts, e2e/landing.spec.ts, ADR-055
+  alterados scene/config.ts, shaders.ts, use-landing-scene.ts,
+            scene-contrast.test.ts, three/gotas.ts, three/ascii.ts,
+            .eslintrc.json, seções da landing, docs
+  removidos scene/pintura*.ts, grafo.ts, materiais*.ts, cena-3d.ts,
+            three/acumulacao.ts (+ teste)
+Testes (rodados de verdade):
+  - lint 0 erros · contraste OK · vitest 639/641 (as 2 falhas seguem em
+    findings-table.test.tsx, arquivo não rastreado fora da branch)
+  - e2e no container :8086: landing.spec.ts 7/7 + acessibilidade.spec.ts 4/4
+  - vite build OK; `npm run build` continua falhando no tsc por causa de
+    e2e/exposure-remediation-lifecycle.spec.ts (não rastreado, pré-existente)
+Desempenho medido (RTX 3060 Ti, 1440×900, build de produção, DPR 1 / DPR 2):
+  parado no terreno 60,3 / 60,1 fps · rolando a virada 57,6 / 58,6 ·
+  rolando a página 59,4 / 59,5 · 0 long tasks ·
+  maior intervalo na virada 33 / 50 ms
+  bundle: index 492,77 → 492,80 kB; cena lazy 15,61 → 36,77 kB
+Docs atualizados: ADR-055 (novo), ADR-054 (substituído), LANDING_NARRATIVA.md
+  (§2, §3, §4, §5.1 e §12), FRONTEND_WEB.md, COMO_FUNCIONA_O_FUNDO.md
+  (reescrito para o terreno), BACKLOG.md, PRD_VIVO.md; evidências em
+  docs/evidencias/landing-terreno/ (62 arquivos, 6,3 MB).
+⚠️ Atenção do Rafael:
+  - NÃO medido em Iris Xe. O vértice do terreno é pesado (11 avaliações da
+    função de altura por vértice, por causa da normal e da sombra). Há degraus
+    de qualidade automáticos, mas só a medição na máquina-alvo confirma.
+  - A câmera inclina com o scroll: a regra "sem câmera em movimento" foi
+    revista no roteiro e no ADR-055. Não roda com "reduzir animações".
+  - O pôster (celular, movimento reduzido) continua ASCII: LP-FUT-06.
+  - Sombra e luz são por vértice (um a cada 24 px): suaves, sem detalhe fino.
+  - A pasta output/landing-pintura e a branch feat/landing-pintura mantêm o
+    nome antigo; não renomeei para não mexer no que já foi enviado.
+  - Itens do pacote sugerido que NÃO entraram (não estavam na recomendação):
+    horizonte, órbita da câmera, sonar do ato 2, rastro do salto, rótulos
+    nos montes.
+Próximo: LP-FUT-01 (Iris Xe), 02 (engasgo de conteúdo), 03 (Demo real),
+  04 (planos pela API), 06 (pôster do terreno).
+=================
+```

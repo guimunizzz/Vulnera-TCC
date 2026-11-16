@@ -1,6 +1,6 @@
 <!--
   O que faz: explica, em linguagem simples, como o fundo animado da landing é
-  desenhado — caracteres ASCII nos primeiros atos e pintura nos últimos.
+  desenhado — caracteres ASCII nos primeiros atos e um terreno 3D nos últimos.
   Por que existe: a banca e os alunos iniciantes vão perguntar "como isso
   funciona?"; a resposta não pode exigir saber o que é um shader.
   Quem consome: Rafael (apresentação), banca, e quem for mexer em
@@ -12,7 +12,7 @@
 > [!NOTE]
 > Este texto é para quem **nunca** programou gráficos. O roteiro do que
 > aparece em cada ato está em `docs/LANDING_NARRATIVA.md`; a decisão técnica,
-> no ADR-054.
+> no ADR-055.
 
 ## A ideia em uma frase
 
@@ -21,8 +21,9 @@ você rola a página, um número de 0 a 5 diz em que parte da história estamos,
 o desenho muda de acordo com ele.
 
 No começo o fundo é feito de **letras e símbolos** (ASCII). Do meio em diante,
-de **pinceladas**. A troca de um para o outro é a parte mais importante: é ali
-que a página mostra a bagunça virando ordem.
+a mesma grade de letras **ganha altura** e vira um terreno em 3D, com montes.
+A troca de um para o outro é a parte mais importante: é ali que a página
+mostra a bagunça virando ordem.
 
 ## Quem faz o desenho
 
@@ -31,21 +32,21 @@ GPU é ruim em fazer coisas complicadas uma de cada vez, mas ótima em fazer a
 **mesma conta simples milhões de vezes ao mesmo tempo**. Um programa pequeno
 que roda na GPU se chama **shader**.
 
-Usamos a biblioteca **three.js** só para conversar com a GPU. Não há modelos
-3D: tudo é desenhado em retângulos planos que cobrem a tela.
+Usamos a biblioteca **three.js** para conversar com a GPU.
 
 ## Palavras que você vai ouvir
 
 | Palavra | O que é, sem enrolar |
 |---|---|
-| **Shader** | Um programa pequeno que roda na placa de vídeo. Recebe um ponto da tela e responde "que cor vai aqui?". |
+| **Shader** | Um programa pequeno que roda na placa de vídeo. |
 | **Célula** | Um quadradinho da grade de caracteres (12 × 18 pixels). Cada célula mostra um símbolo. |
 | **Atlas** | Uma imagem com todos os símbolos lado a lado, como uma cartela de adesivos. A GPU recorta o símbolo que precisa. |
-| **Partícula** | Um ponto que se move. Aqui, cada pincelada é uma partícula com um rabo. |
-| **Campo de fluxo** | Um "mapa de vento": para cada lugar da tela, uma direção. A pincelada anda para onde o vento manda. |
-| **Render target** | Uma folha de rascunho que fica na memória da placa de vídeo. Dá para desenhar nela sem mostrar na tela. |
-| **Ping-pong** | Usar **duas** folhas de rascunho e alternar: lê de uma, escreve na outra, depois troca. |
-| **Draw call** | Um pedido de desenho para a GPU. Poucos pedidos grandes são mais rápidos que muitos pedidos pequenos. |
+| **Malha** | Uma rede de pontinhos ligados por triângulos. Mexendo nos pontinhos, a rede vira um relevo. |
+| **Vértice** | Cada pontinho da malha. |
+| **Câmera** | O "olho" da cena 3D. O que está perto dela aparece maior, como na vida real. |
+| **Função de altura** | Uma fórmula: você dá um lugar do chão e ela responde "aqui a altura é tanto". |
+| **Render target** | Uma folha de rascunho na memória da placa de vídeo. Dá para desenhar nela sem mostrar na tela. |
+| **Draw call** | Um pedido de desenho para a GPU. Poucos pedidos grandes são mais rápidos que muitos pequenos. |
 
 ## Parte 1 — o fundo de caracteres (atos 0, 1 e 2)
 
@@ -66,74 +67,64 @@ Por isso o desenho é feito em **duas passadas**:
 > É como montar um mosaico: primeiro você decide a cor de cada pastilha
 > (poucas decisões), depois só cola as pastilhas (trabalho repetitivo e fácil).
 
-## Parte 2 — a pintura (atos 3, 4 e 5)
+## Parte 2 — o terreno (atos 3, 4 e 5)
 
-A pintura são milhares de **pinceladas**. Cada uma é uma fitinha fina nas
-pontas e mais larga no meio, que anda devagar e some depois de alguns segundos.
+### O truque do encaixe
 
-**Para onde ela anda?** Para onde o **campo de fluxo** mandar. O campo é uma
-fórmula com senos e cossenos que desenha curvas largas e suaves. Perto de cada
-grupo de falhas, o vento vira um redemoinho.
+O terreno é um "chão" 3D: uma malha plana, deitada. No começo a câmera olha
+esse chão **de frente**, na distância exata em que ele tem o tamanho da tela.
+Resultado: cada quadradinho do chão fica em cima de um símbolo da página, e
+ninguém percebe que já existe uma cena 3D ali.
 
-**Como a GPU sabe onde cada pincelada está?** Ela não guarda. Ela **calcula**:
-"esta pincelada nasceu neste ponto há 1,2 segundo; seguindo o vento durante
-1,2 segundo, ela está aqui". Como é uma conta, e não uma lista guardada, não
-há nada para perder quando a janela muda de tamanho.
-
-**Por que parece tinta, e não risquinhos?** Por causa da **camada de tinta**:
-
-1. Existe uma folha de rascunho do tamanho da tela.
-2. A cada quadro, o que estava nela é copiado para **outra** folha, um pouco
-   mais apagado (some 8,5%).
-3. As pinceladas do quadro atual são desenhadas por cima.
-4. As duas folhas trocam de papel. Isso é o **ping-pong**.
-
-O resultado é um rastro curto atrás de cada pincelada, como tinta fresca.
-
-Três detalhes fazem a tinta parecer tinta de verdade:
-
-- **Massas.** Algumas pinceladas são bem largas e quase transparentes. Elas
-  ficam por baixo e pintam o fundo, como a primeira demão de um quadro.
-- **Cerdas.** Um pincel é feito de fios, e cada fio leva uma quantidade
-  diferente de tinta. Por isso a pincelada tem risquinhos, e a ponta final
-  falha, como um pincel que está secando.
-- **Relevo.** Onde há mais tinta acumulada, o desenho trata como se fosse mais
-  alto. A beirada virada para a luz fica mais clara e a outra, mais escura.
-  Além disso, ao copiar de uma folha para a outra, a tinta "escorre" um
-  pouquinho para os lados: duas pinceladas que se cruzam se misturam.
+Aí, conforme você rola, a câmera **inclina**. O chão que era a página vira uma
+paisagem vista de cima e de lado.
 
 > [!IMPORTANT]
-> **Por que duas folhas, e não uma só?** Por dois motivos. A GPU não consegue
-> ler e escrever a mesma folha ao mesmo tempo. E, apagando "um pouquinho por
-> vez" numa folha só, os valores muito pequenos nunca chegam a zero: sobra uma
-> mancha fantasma para sempre. Com duas folhas dá para apagar de verdade.
+> A câmera só se mexe porque **você** está rolando. Parou de rolar, ela para.
+> E ela só gira: nada vem na sua direção.
 
-> [!NOTE]
-> **A pintura é um de três materiais.** Enquanto se decide qual fica, os atos
-> 3, 4 e 5 podem ser desenhados de três jeitos, escolhidos pelo endereço da
-> página: `/?cena=pintura` (o que está explicado acima), `/?cena=terreno` e
-> `/?cena=grafo`. Sem nada no endereço, abre o terreno.
+### De onde vem o relevo
 
-## Parte 2b — o terreno e o grafo (3D de verdade)
+Não existe um "desenho" do relevo guardado em lugar nenhum. Existe uma
+**função de altura**: uma fórmula que recebe um ponto do chão e devolve a
+altura dele. A cada quadro, a GPU pergunta essa fórmula para cada vértice da
+malha e levanta o vértice até lá.
 
-A pintura é plana. O terreno e o grafo usam **profundidade**: existe uma
-câmera, como num jogo, e as coisas mais perto dela aparecem maiores.
+A fórmula soma quatro coisas:
 
-- **O truque do encaixe.** No começo a câmera olha a tela de frente, na
-  distância exata em que o "chão" 3D tem o tamanho da tela. Cada célula do
-  chão fica em cima do seu símbolo. Aí a câmera vai inclinando conforme você
-  rola, e o chão que era a página vira uma paisagem.
-- **Terreno.** O chão é uma malha de pontinhos ligados. Cada pontinho sobe ou
-  desce conforme uma fórmula de altura. As falhas viram quatro montes: quanto
-  mais grave, mais alto. Corrigir uma falha é **achatar o monte**. As linhas
-  em volta dos montes são curvas de nível, como num mapa de relevo.
-- **Grafo.** Cada falha vira uma bolinha (um **nó**) ligada por uma linha (uma
-  **aresta**) a um nó maior, que por sua vez se liga ao centro do grupo. É o
-  desenho de "o que está ligado a quê". Corrigir uma falha é **soltar a linha**
-  e deixar a bolinha ir embora.
+1. uma **ondulação calma**, que respira devagar;
+2. **quatro montes**, um para cada gravidade de falha. Quanto mais grave, mais
+   alto. Eles têm cristas e ravinas para não parecerem um sino liso;
+3. as **selas**, uma faixa de terra que liga os dois montes de cada lado;
+4. a **onda do clique** (mais abaixo).
 
-Nos dois, a placa de vídeo não guarda onde cada coisa está: ela calcula tudo
-de novo a cada quadro a partir do número da célula, como na pintura.
+Como é uma fórmula, mudar o relevo é só mudar um número: "o monte da crítica
+agora tem 30% da altura".
+
+### Luz e sombra
+
+- **Luz.** Para cada vértice, a GPU descobre para que lado a encosta está
+  virada e compara com o lado de onde vem a luz. Virada para a luz, clara.
+  De costas, escura.
+- **Sombra.** A partir de cada ponto, a GPU "anda" alguns passos em direção à
+  luz. Se no caminho houver um monte mais alto, o ponto está na sombra.
+- **Contorno.** A crista que está de lado para a câmera ganha um brilho fino.
+  É o que separa o monte do fundo.
+- **Neblina.** O que está longe vai ficando da cor do fundo, até sumir.
+
+### As linhas
+
+As linhas do terreno não são fios de verdade. São pintadas na superfície:
+
+- a **grade** é a herança das células (cada quadro vale duas células);
+- as **curvas de nível** são as linhas que dão a volta nos montes, como num
+  mapa de relevo: cada uma marca uma altitude.
+
+### As falhas
+
+Cada falha é um **cartaz**: um retângulo pequeno, sempre virado para a câmera,
+que mostra o símbolo da falha recortado do **mesmo atlas** da Parte 1. Ele
+fica preso ao chão por uma haste fina.
 
 ## Parte 3 — a virada (ato 3)
 
@@ -141,14 +132,36 @@ A virada usa as duas partes ao mesmo tempo. Uma onda atravessa a tela da
 esquerda para a direita. Onde ela passa:
 
 - o símbolo da célula vai ficando **transparente**;
-- uma pincelada **nasce no mesmo lugar**.
+- o terreno **aparece no mesmo lugar**.
 
-As falhas (`%`, `#`, `×`, `@`) viram pinceladas **da mesma cor** e viajam até o
-grupo da sua gravidade, nas laterais da tela, onde ficam girando.
+As falhas (`%`, `#`, `×`, `@`) se erguem da página e **saltam** para o monte
+da sua gravidade, nas laterais da tela.
 
-O truque para "nascer no mesmo lugar" é simples: as duas partes usam a
-**mesma conta de sorteio** para escolher quais células têm falha. Elas nunca
-combinam nada entre si; chegam à mesma resposta sozinhas.
+O truque para "sair do mesmo lugar" é simples: as duas partes usam a **mesma
+conta de sorteio** para escolher quais células têm falha. Elas nunca combinam
+nada entre si; chegam à mesma resposta sozinhas.
+
+## Parte 4 — corrigir (ato 4)
+
+Do monte mais alto para o mais baixo:
+
+1. uma **faixa verde desce a encosta**, do cume até a base. O que ela já
+   passou fica verde;
+2. **só depois** o monte afunda;
+3. os símbolos das falhas viram `✓`, sobem e somem.
+
+O monte de gravidade baixa não é corrigido, e o de média só pela metade. É de
+propósito: num programa de segurança real, você prioriza o que é mais grave e
+aceita conviver com um pouco de risco.
+
+## Parte 5 — o clique
+
+Clicar no fundo solta uma onda:
+
+- nos atos de caracteres, ela **entorta a leitura** da grade, como texto visto
+  através da água;
+- no terreno, ela entra na **função de altura**: anéis que se afastam do ponto
+  clicado e levantam a malha de verdade. Os símbolos balançam em cima.
 
 ## O caminho de um quadro
 
@@ -157,11 +170,12 @@ flowchart TD
   Scroll["Você rola a página"] --> P["Progresso: um número de 0 a 5"]
   P --> Dec{"Passou de 2,55?"}
   Dec -- "não: só caracteres" --> C1
-  Dec -- "sim: tem pintura" --> T1
+  Dec -- "sim: tem terreno" --> T0
 
-  subgraph Tinta["Camada de tinta (ping-pong)"]
-    T1["1. Copia a folha A para a folha B,<br/>um pouco mais apagada"] --> T2["2. Desenha as pinceladas<br/>por cima da folha B"]
-    T2 --> T3["3. Troca: B vira A"]
+  subgraph Terreno["Terreno (numa folha de rascunho)"]
+    T0["Inclina a câmera<br/>conforme o progresso"] --> T1["1. Malha: levanta cada vértice<br/>pela função de altura"]
+    T1 --> T2["2. Hastes das falhas"]
+    T2 --> T3["3. Símbolos das falhas"]
   end
 
   subgraph Letras["Caracteres (duas passadas)"]
@@ -169,7 +183,7 @@ flowchart TD
   end
 
   T3 --> C1
-  C1 --> F["Passada 2, na tela:<br/>símbolo + tinta + halos + granulado"]
+  C1 --> F["Passada 2, na tela:<br/>símbolos + terreno + halos"]
   F --> Tela["O que você vê"]
 ```
 
@@ -180,9 +194,9 @@ apagadas, e a passada 1 nem roda.
 
 | Situação | O que acontece |
 |---|---|
-| Computador lento | A pintura percebe que os quadros estão atrasando e **baixa a própria qualidade**: menos resolução e menos pinceladas. |
+| Computador lento | O terreno percebe que os quadros estão atrasando e **baixa a própria qualidade**: menos resolução e malha com menos vértices. |
 | Celular (tela com menos de 768 px) | Não há cena animada. Fica um **pôster** de caracteres, parado, que muda de ato com um esmaecer. |
-| "Reduzir animações" ligado (no sistema ou no menu de acessibilidade) | O mesmo pôster. Nada se move. |
+| "Reduzir animações" ligado (no sistema ou no menu de acessibilidade) | O mesmo pôster. Nada se move, e a câmera não existe. |
 | "Alto contraste" ligado | Fundo liso, sem nada. Quem pediu contraste máximo recebe contraste máximo. |
 | Navegador sem WebGL2, ou erro ao baixar a cena | O pôster. A página funciona igual. |
 | Aba escondida ou fundo fora da tela | O desenho **para**, para não gastar bateria. |
@@ -199,14 +213,15 @@ apagadas, e a passada 1 nem roda.
 
 | Arquivo (`app/web/src/`) | Papel |
 |---|---|
-| `components/landing/scene/config.ts` | Todos os números: tamanhos, velocidades, faixas de cada ato. |
+| `components/landing/scene/config.ts` | Todos os números: tamanhos, alturas dos montes, faixas de cada ato. |
 | `components/landing/scene/shaders.ts` | As duas passadas dos caracteres e a composição final. |
-| `components/landing/scene/pintura.ts` | As pinceladas (o shader e a montagem). |
-| `components/landing/scene/pintura-logica.ts` | As regras da pintura em TypeScript puro, com testes. |
+| `components/landing/scene/terreno-shaders.ts` | Os shaders do terreno: função de altura, luz, sombra, linhas, falhas. |
+| `components/landing/scene/terreno.ts` | Monta o terreno: câmera, malha, folha de rascunho, qualidade. |
+| `components/landing/scene/terreno-logica.ts` | As regras do terreno em TypeScript puro, com testes. |
 | `components/landing/scene/use-landing-scene.ts` | Liga tudo: scroll, loop, tema, descarte. |
 | `components/landing/scene/landing-poster.tsx` | O pôster de caracteres (plano B). |
-| `three/acumulacao.ts` | A camada de tinta (ping-pong). |
 | `three/grade-celulas.ts` · `three/ascii.ts` | A folha das células e o atlas de símbolos. |
+| `three/gotas.ts` | O clique no fundo. |
 | `three/gate.ts` | Decide se a cena pode montar, antes de baixar o three.js. |
 
 </details>

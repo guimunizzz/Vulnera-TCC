@@ -2,310 +2,144 @@
  * components/landing/scene/terreno.ts
  *
  * O QUE FAZ
- * Material "terreno" dos atos 3–5: a grade de caracteres ganha a terceira
- * dimensão e vira um mapa topográfico do risco. As falhas são glifos que se
- * erguem da página numa haste e vão pousar no monte da sua severidade.
+ * Monta o terreno dos atos 3–5 da cena narrativa (ADR-055): a grade de
+ * caracteres ganha a terceira dimensão e vira um mapa topográfico do risco.
  *
  *   Ato 3 · Organizar  a grade inclina e ondula; os glifos de falha saltam
  *                      para quatro montes nas laterais, que crescem com eles
- *   Ato 4 · Corrigir   do mais alto para o mais baixo, o monte fica verde e
- *                      afunda; os glifos viram "✓", sobem e somem
+ *   Ato 4 · Corrigir   do mais alto para o mais baixo, uma faixa verde desce
+ *                      a encosta e o monte afunda; os glifos viram "✓" e somem
  *   Ato 5 · Estável    planície calma, luz quente, um morro baixo que fica
  *                      (risco residual aceito)
  *
  * COMO
- * - Uma malha plana deslocada no vértice por `altura()` (ondulação + quatro
- *   montes analíticos). Nenhuma textura de altura, nada guardado.
- * - A grade e as curvas de nível são desenhadas no fragmento, com a largura
- *   medida em pixels de tela (`fwidth`): nítidas de perto, e somem antes de
- *   virar moiré ao longe.
- * - A malha é desenhada do fundo para a frente e o preenchimento é
- *   translúcido: a encosta da frente vela a de trás sem buffer de
- *   profundidade.
- * - Os glifos são cartazes que amostram o MESMO atlas da cena ASCII: o "@"
- *   que estava na página é o "@" que sobe para o monte.
- *
- * Não use crase dentro dos templates GLSL: fecha a string JS (ADR-026).
+ * - Mundo em px CSS, origem no centro da tela. Sem inclinação, o plano z = 0
+ *   é a própria tela: a célula ASCII fica em cima do seu glifo, e é por isso
+ *   que a virada lê como transformação, não como troca de cena.
+ * - A câmera gira em volta do eixo horizontal da tela conforme a virada
+ *   avança. O movimento é do scroll: parou de rolar, a câmera para.
+ * - Três draw calls (malha, hastes, glifos) num alvo fora da tela, sem buffer
+ *   de profundidade e sem MSAA. A passada de tela (`shaders.ts`) compõe esse
+ *   alvo com o ASCII, os halos e o teto de alfa que o teste de contraste cobre.
+ * - Nada é guardado por vértice ou por glifo: tudo sai da função de altura e
+ *   do número da instância. O shader está em `terreno-shaders.ts`.
  *
  * QUEM USA
- * `materiais.ts` (chunk lazy da cena).
+ * `use-landing-scene.ts` (chunk lazy da cena).
  */
 
 import * as THREE from "three";
+import { GOTA, MAX_GOTAS } from "../../../three/gotas";
+import { lerCorDoToken } from "../../../three/palette";
+import { TERRENO } from "./config";
 import {
-  criarCena3d, criarQuadInstanciado, FRAGMENT_LINHA_3D, GLSL_COMUM_3D, GLSL_VERTICE_3D,
-} from "./cena-3d";
-import { CENA_3D, GLIFO, PINTURA } from "./config";
-import type { Pintura } from "./pintura";
+  alturaDoMonte, avaliarQualidade, correcaoDoMonte, estabilidade, riscoDoGrupo, ritmoDaCena, suavizar,
+  viradaGlobal, type Qualidade,
+} from "./terreno-logica";
+import {
+  FRAGMENT_GLIFO, FRAGMENT_HASTE, FRAGMENT_TERRENO, VERTEX_GLIFO, VERTEX_HASTE, VERTEX_TERRENO,
+} from "./terreno-shaders";
 
-const f = (n: number) => n.toFixed(4);
-const T = CENA_3D.terreno;
+/** Tokens lidos em runtime; trocam junto com o tema. Tudo em sRGB no shader. */
+const TOKENS = {
+  uCorDoChao: "--vx-accent",
+  uCorDoAcento: "--vx-cyan",
+  uCorProfunda: "--vx-indigo",
+  uFundo: "--vx-bg",
+  uSucesso: "--vx-success",
+  /** A "luz quente" do ato 5. */
+  uQuente: "--vx-yellow",
+} as const;
+const TOKENS_SEVERIDADE = [
+  "--color-severity-low", "--color-severity-medium", "--color-severity-high", "--color-severity-critical",
+] as const;
+const SEVERIDADES = [1, 2, 3, 4] as const;
 
-/** Altura do terreno num ponto do plano: ondulação calma + os quatro montes. */
-const GLSL_ALTURA = /* glsl */ `
-const float ALTURA_DO_MONTE[4] = float[4](${T.alturaDosMontesPx.map(f).join(", ")});
-const vec2 RAIO_DO_MONTE = vec2(${f(T.raioDoMontePx[0])}, ${f(T.raioDoMontePx[1])});
-
-// Peso (0 a 1) do monte "i" no ponto p, sem o risco: a forma da cordilheira.
-float formaDoMonte(vec2 p, int i) {
-  vec2 d = (p - uGrupos[i].xy) / RAIO_DO_MONTE;
-  // Crista serrilhada: o monte não é um sino liso.
-  float crista = 1.0 - abs(2.0 * ruido(p * 0.017 + float(i) * 7.3) - 1.0);
-  return exp(-dot(d, d)) * (0.6 + 0.4 * crista);
+export interface Terreno {
+  /** Uniforms que a passada de tela precisa para compor a camada 3D. */
+  uniformesDaTela: {
+    /** O terreno desenhado: sRGB com alfa pré-multiplicado. */
+    uCamada: { value: THREE.Texture };
+    uCamadaAtiva: { value: number };
+    uVirada: { value: number };
+    uTetoDaCamada: { value: number };
+    /** xy = centro do monte NA TELA (px do buffer), z = risco que resta (0 a 1). */
+    uHalos: { value: THREE.Vector3[] };
+    uRaioDoHalo: { value: number };
+    uAlfaDoHalo: { value: number };
+    uCorDoHalo: { value: THREE.Color[] };
+  };
+  /** Lê as cores dos tokens (troca de tema). */
+  aplicarPaleta(elemento: Element): void;
+  /**
+   * Ajusta à tela. `gradeAscii` e `celulaPx` são os da grade de células (px do
+   * buffer): as falhas saem das mesmas células do ASCII.
+   */
+  redimensionar(larguraCss: number, alturaCss: number, dprDaTela: number, gradeAscii: THREE.Vector2, celulaPx: THREE.Vector2): void;
+  /**
+   * Desenha o terreno uma vez, fora da vista: os shaders são compilados no
+   * carregamento. Sem isso a compilação caía no primeiro quadro da virada
+   * (167 ms de engasgo medido no build de produção, 2026-11-15).
+   */
+  aquecer(renderer: THREE.WebGLRenderer): void;
+  /** Um quadro. Antes da virada não desenha nada. */
+  desenhar(renderer: THREE.WebGLRenderer, tempo: number, delta: number, progresso: number): void;
+  /** Clique no fundo (px do buffer da tela, y para cima): vira onda sísmica no relevo. */
+  gota(xBuffer: number, yBuffer: number, tempo: number): void;
+  descartar(): void;
 }
 
-float altura(vec2 p) {
-  float onda = (ruido(p * 0.0042 + uRitmo * 0.035) - 0.5) * ${f(T.ondulacaoPx)}
-    + (ruido(p * 0.011 - uRitmo * 0.027) - 0.5) * ${f(T.ondulacaoPx * 0.4)};
-  float h = onda * uVirada;
-  for (int i = 0; i < 4; i++) {
-    if (uGrupos[i].w < 0.004) continue;
-    h += ALTURA_DO_MONTE[i] * uGrupos[i].w * formaDoMonte(p, i);
-  }
-  return h;
-}
-`;
+/** `atlas` são os uniforms do atlas de glifos da cena ASCII: o terreno desenha os mesmos glifos. */
+export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THREE.IUniform }): Terreno {
+  const cores = (total: number) => Array.from({ length: total }, () => new THREE.Color());
+  const uniformes = {
+    uTela: { value: new THREE.Vector2(1, 1) },
+    /** Tamanho do alvo em px do buffer (a tela × o DPR do degrau de qualidade). */
+    uAlvo: { value: new THREE.Vector2(1, 1) },
+    uTempo: { value: 0 },
+    /** Relógio da ondulação: desacelera no ato 5. */
+    uRitmo: { value: 0 },
+    uProgresso: { value: 0 },
+    uVirada: { value: 0 },
+    uEstavel: { value: 0 },
+    uDistancia: { value: 1 },
+    uGradeAscii: { value: new THREE.Vector2(1, 1) },
+    uCelulaCss: { value: new THREE.Vector2(1, 1) },
+    uCorDoChao: { value: new THREE.Color() },
+    uCorDoAcento: { value: new THREE.Color() },
+    uCorProfunda: { value: new THREE.Color() },
+    uFundo: { value: new THREE.Color() },
+    uSucesso: { value: new THREE.Color() },
+    uQuente: { value: new THREE.Color() },
+    uSeveridade: { value: cores(4) },
+    uMontes: { value: Array.from({ length: 4 }, () => new THREE.Vector3()) },
+    uCorrecao: { value: Array.from({ length: 4 }, () => new THREE.Vector3(2, 0, 0)) },
+    uOndas: { value: Array.from({ length: MAX_GOTAS }, () => new THREE.Vector3(0, 0, -1e4)) },
+    uOndasAtivas: { value: 0 },
+  };
 
-const VERTEX_TERRENO = /* glsl */ `
-${GLSL_COMUM_3D}
-${GLSL_ALTURA}
-
-varying vec2 vPlano;
-varying float vAltura;
-varying vec3 vNormal;
-varying float vDistancia;
-// rgb = cor do monte que domina aqui (severidade → verde ao corrigir), a = peso.
-varying vec4 vMonte;
-
-void main() {
-  vec2 p = position.xy;
-  float h = altura(p);
-  // Normal por diferença finita: a luz precisa da inclinação da encosta.
-  float e = 7.0;
-  vNormal = normalize(vec3(h - altura(p + vec2(e, 0.0)), h - altura(p + vec2(0.0, e)), e));
-
-  vec3 cor = vec3(0.0);
-  float peso = 0.0;
-  for (int i = 0; i < 4; i++) {
-    float g = formaDoMonte(p, i) * uGrupos[i].w;
-    cor += mix(uSeveridade[i], uSucesso, uCura[i]) * g;
-    peso += g;
-  }
-  vMonte = vec4(peso > 0.001 ? cor / peso : vec3(0.0), min(peso * 1.6, 1.0));
-  vPlano = p;
-  vAltura = h;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, h, 1.0);
-  vDistancia = gl_Position.w;
-}
-`;
-
-const FRAGMENT_TERRENO = /* glsl */ `
-${GLSL_COMUM_3D}
-
-varying vec2 vPlano;
-varying float vAltura;
-varying vec3 vNormal;
-varying float vDistancia;
-varying vec4 vMonte;
-
-// Linha de 1 px de tela na coordenada "c" (uma linha a cada unidade inteira),
-// que se apaga quando as linhas ficam mais juntas que ~2 px (evita moiré).
-float linhaEm(float c, float largura) {
-  float d = fwidth(c);
-  float cobertura = 1.0 - clamp(abs(fract(c - 0.5) - 0.5) / max(d, 1e-5) - (largura - 1.0), 0.0, 1.0);
-  return cobertura * (1.0 - smoothstep(0.3, 0.6, d));
-}
-
-void main() {
-  vec2 celula = vPlano / vec2(${f(T.gradePx[0])}, ${f(T.gradePx[1])});
-  // A virada chega aqui em onda, da esquerda para a direita, como no ASCII.
-  float nasceu = nasceuEm(vPlano, hashCelula(floor(celula)));
-  if (nasceu < 0.004) discard;
-
-  float alto = smoothstep(4.0, 56.0, vAltura);
-  // Luz de cima e da esquerda; no ato 5 ela esquenta.
-  float luz = clamp(dot(normalize(vNormal), normalize(vec3(-0.5, 0.42, 0.76))), 0.0, 1.0);
-
-  vec3 corDoChao = mix(uMatiz[1], uMatiz[3], 0.25 * ruido(vPlano * 0.004 + 3.0));
-  vec3 corBase = mix(corDoChao, vMonte.rgb, vMonte.a);
-  corBase = mix(corBase, uQuente, uEstavel * 0.3 * luz);
-
-  // Preenchimento: quase nada na planície (a página aparece), mais corpo no
-  // monte — é ele que vela as encostas de trás. Parte da cor da página e é
-  // tingido pelo monte e pela luz: funciona no tema escuro e no claro.
-  vec3 corDoFundo = mix(uFundo, corBase, (0.07 + 0.3 * vMonte.a) * (0.35 + 0.95 * luz));
-  float alfaDoFundo = mix(0.05, 0.62, alto);
-
-  // Grade (a herança das células) e curvas de nível (o mapa do risco).
-  float grade = max(linhaEm(celula.x, 1.0), linhaEm(celula.y, 1.0));
-  float curva = linhaEm(vAltura / ${f(T.curvaDeNivelPx)}, 1.3) * smoothstep(5.0, 16.0, vAltura);
-  float alfaDaLinha = clamp(grade * mix(0.3, 0.5, alto) + curva * 0.9, 0.0, 1.0);
-  vec3 corDaLinha = mix(corBase, vec3(1.0), ${f(PINTURA.tomClaro)} * luz * curva);
-
-  vec4 saida = vec4(corDoFundo * alfaDoFundo, alfaDoFundo);
-  saida = vec4(corDaLinha * alfaDaLinha, alfaDaLinha) + saida * (1.0 - alfaDaLinha);
-
-  // Neblina: o fundo do terreno se dissolve em vez de terminar numa aresta.
-  float neblina = 1.0 - smoothstep(uDistancia * 1.2, uDistancia * 1.95, vDistancia);
-  // Vinheta: mais discreto atrás da coluna de texto.
-  float lateral = smoothstep(0.1, 0.8, abs(gl_FragCoord.x / uAlvo.x * 2.0 - 1.0));
-  gl_FragColor = saida * nasceu * neblina * mix(0.6, 1.0, max(lateral, alto));
-}
-`;
-
-/** Onde está o marcador (glifo) de uma falha: do glifo na página ao monte. */
-const GLSL_MARCADOR = /* glsl */ `
-${GLSL_ALTURA}
-
-struct Marcador {
-  vec3 pe;      // ponto do terreno embaixo dele
-  vec3 cabeca;  // onde o glifo está
-  vec3 cor;
-  float alfa;
-  float glifo;
-  float escala;
-};
-
-// Devolve false quando a célula não tem falha (a instância não desenha).
-bool marcadorDaCelula(vec2 cel, out Marcador m) {
-  float severidade = severidadeDaCelula(cel);
-  if (severidade < 0.5) return false;
-  int g = int(severidade) - 1;
-  float h1 = hashCelula(cel + 17.0);
-  float h2 = hashCelula(cel + 23.0);
-  float h3 = hashCelula(cel + 31.0);
-
-  vec2 casa = planoDaCelula(cel);
-  float nasceu = nasceuEm(casa, hashCelula(cel + 113.0));
-  float chegada = chegadaDaCelula(cel);
-  float corrigida = correcaoDaCelula(cel, severidade);
-
-  // Pouso: um ponto sorteado dentro do monte da severidade.
-  vec2 pouso = uGrupos[g].xy + RAIO_DO_MONTE * 0.78 * sqrt(h1) * vec2(cos(h2 * 6.2832), sin(h2 * 6.2832));
-  vec2 xy = mix(casa, pouso, chegada);
-  float chao = altura(xy);
-  float haste = mix(9.0, 24.0, h3) * nasceu;
-  // Da página ao monte em salto; corrigida, sobe e some.
-  float z = chao + haste + sin(PI * chegada) * 78.0 + corrigida * corrigida * 130.0;
-
-  m.pe = vec3(xy, chao);
-  m.cabeca = vec3(xy, z);
-  m.cor = mix(uSeveridade[g], uSucesso, smoothstep(0.0, 0.35, corrigida));
-  m.cor = mix(m.cor, uQuente, uEstavel * 0.22);
-  m.alfa = nasceu * (1.0 - smoothstep(0.55, 1.0, corrigida));
-  // Ato 5: a baixa continua, discreta (risco residual aceito).
-  if (severidade < 1.5) m.alfa *= 1.0 - ${f(PINTURA.discricaoDaBaixa)} * uEstavel;
-  // O glifo da severidade vira "✓" quando a correção passa da metade.
-  m.glifo = corrigida > 0.4 ? ${GLIFO.ok}.0 : ${GLIFO.baixa - 1}.0 + severidade;
-  m.escala = mix(1.0, 1.3, h3);
-  return m.alfa > 0.004;
-}
-`;
-
-const VERTEX_GLIFO = /* glsl */ `
-${GLSL_COMUM_3D}
-${GLSL_VERTICE_3D}
-${GLSL_MARCADOR}
-
-varying vec2 vUv;
-varying float vGlifo;
-varying vec4 vCor;
-
-void main() {
-  Marcador m;
-  if (!marcadorDaCelula(celulaDaInstancia(float(gl_InstanceID)), m)) {
-    gl_Position = FORA;
-    return;
-  }
-  // O cartaz tem o tamanho da célula ASCII, mais uma folga para o brilho.
-  gl_Position = cartaz(m.cabeca, position.xy, 0.5 * uCelulaCss * m.escala * 1.5);
-  vUv = position.xy * 0.75 + 0.5;
-  vGlifo = m.glifo;
-  vCor = vec4(m.cor, m.alfa);
-}
-`;
-
-const FRAGMENT_GLIFO = /* glsl */ `
-uniform sampler2D uAtlas;
-uniform float uTotalGlifos;
-varying vec2 vUv;
-varying float vGlifo;
-varying vec4 vCor;
-
-void main() {
-  // Fora de 0..1 é a folga do cartaz: só o brilho, sem vazar o glifo vizinho.
-  vec2 dentro = step(vec2(0.0), vUv) * step(vUv, vec2(1.0));
-  float cobertura = texture2D(uAtlas, vec2((floor(vGlifo + 0.5) + clamp(vUv.x, 0.0, 1.0)) / uTotalGlifos, clamp(vUv.y, 0.0, 1.0))).a
-    * dentro.x * dentro.y;
-  vec2 d = (vUv - 0.5) * 2.0;
-  float brilho = exp(-dot(d, d) * 2.2) * 0.3;
-  float alfa = clamp(cobertura + brilho, 0.0, 1.0) * vCor.a;
-  gl_FragColor = vec4(vCor.rgb * alfa, alfa);
-}
-`;
-
-const VERTEX_HASTE = /* glsl */ `
-${GLSL_COMUM_3D}
-${GLSL_VERTICE_3D}
-${GLSL_MARCADOR}
-
-varying vec2 vLinha;
-varying vec4 vCor;
-
-void main() {
-  Marcador m;
-  if (!marcadorDaCelula(celulaDaInstancia(float(gl_InstanceID)), m)) {
-    gl_Position = FORA;
-    return;
-  }
-  float desloc;
-  // A haste para um pouco antes do glifo.
-  vec3 topo = mix(m.pe, m.cabeca, 0.72);
-  gl_Position = segmento(m.pe, topo, position.x, position.y, 0.35, desloc);
-  vLinha = vec2(desloc, 0.35);
-  vCor = vec4(m.cor, m.alfa * 0.55);
-}
-`;
-
-export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THREE.IUniform }): Pintura {
-  const malha = new THREE.Mesh(new THREE.BufferGeometry(), undefined);
-  const hastes = new THREE.Mesh(criarQuadInstanciado("segmento"), undefined);
-  const glifos = new THREE.Mesh(criarQuadInstanciado("cartaz"), undefined);
-
-  const { uniformes, cena, material } = criarCena3d({
-    inclinacaoGraus: T.inclinacaoGraus,
-    centros: (largura, altura) => T.centros.map(([x, y]) => [x * largura / 2, y * altura / 2, 0] as const),
-    // O halo fica a meia encosta: é onde o monte tem mais corpo na tela.
-    alturaDoHalo: (indice, risco) => T.alturaDosMontesPx[indice] * risco * 0.45,
-    aoAjustar({ largura, altura, celulas }) {
-      // Plano bem maior que a tela: inclinado, o fundo encolhe e a frente cresce.
-      const colunas = Math.ceil((largura * 1.8) / T.malhaPx);
-      const linhas = Math.ceil((altura * 2.8) / T.malhaPx);
-      const x0 = -largura * 0.9;
-      const yTopo = altura * 1.85;
-      const vertices = new Float32Array((colunas + 1) * (linhas + 1) * 3);
-      const indices: number[] = [];
-      // Linha 0 é o fundo (y maior): desenhar nesta ordem é a ordem do pintor.
-      for (let l = 0; l <= linhas; l += 1) {
-        for (let c = 0; c <= colunas; c += 1) {
-          const i = (l * (colunas + 1) + c) * 3;
-          vertices[i] = x0 + c * T.malhaPx;
-          vertices[i + 1] = yTopo - l * T.malhaPx;
-          if (l < linhas && c < colunas) {
-            const a = l * (colunas + 1) + c;
-            const b = a + colunas + 1;
-            indices.push(a, b, a + 1, a + 1, b, b + 1);
-          }
-        }
-      }
-      malha.geometry.dispose();
-      malha.geometry = new THREE.BufferGeometry();
-      malha.geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-      malha.geometry.setIndex(indices);
-      (hastes.geometry as THREE.InstancedBufferGeometry).instanceCount = celulas;
-      (glifos.geometry as THREE.InstancedBufferGeometry).instanceCount = celulas;
-    },
+  const camera = new THREE.PerspectiveCamera(TERRENO.campoDeVisaoGraus, 1, 1, 10);
+  // Sem profundidade (ordem do pintor) e sem MSAA (borda suavizada na conta).
+  const alvo = new THREE.WebGLRenderTarget(1, 1, {
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    generateMipmaps: false,
+    depthBuffer: false,
+    format: THREE.RGBAFormat,
+    type: THREE.UnsignedByteType,
   });
+  const halos = Array.from({ length: 4 }, () => new THREE.Vector3());
+  const uniformesDaTela: Terreno["uniformesDaTela"] = {
+    uCamada: { value: alvo.texture },
+    uCamadaAtiva: { value: 0 },
+    uVirada: uniformes.uVirada,
+    uTetoDaCamada: { value: TERRENO.tetoDeAlfa },
+    uHalos: { value: halos },
+    uRaioDoHalo: { value: 1 },
+    uAlfaDoHalo: { value: TERRENO.alfaDoHalo },
+    // Os mesmos objetos de cor dos montes (sRGB).
+    uCorDoHalo: { value: uniformes.uSeveridade.value },
+  };
 
   const comum = {
     transparent: true,
@@ -314,20 +148,184 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
     depthWrite: false,
     side: THREE.DoubleSide,
   } as const;
-  malha.material = new THREE.ShaderMaterial({
+  const malha = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.ShaderMaterial({
     ...comum, uniforms: uniformes, vertexShader: VERTEX_TERRENO, fragmentShader: FRAGMENT_TERRENO,
-  });
-  hastes.material = new THREE.ShaderMaterial({
-    ...comum, uniforms: uniformes, vertexShader: VERTEX_HASTE, fragmentShader: FRAGMENT_LINHA_3D,
-  });
-  glifos.material = new THREE.ShaderMaterial({
+  }));
+  // Quads de 4 vértices, um por célula ASCII: segmento (x = 0 ou 1, y = lado) e cartaz (cantos ±1).
+  const quad = (x0: number) => {
+    const geometria = new THREE.InstancedBufferGeometry();
+    geometria.setAttribute("position", new THREE.Float32BufferAttribute([x0, -1, 0, 1, -1, 0, x0, 1, 0, 1, 1, 0], 3));
+    geometria.setIndex([0, 1, 2, 1, 3, 2]);
+    geometria.instanceCount = 0;
+    return geometria;
+  };
+  const hastes = new THREE.Mesh(quad(0), new THREE.ShaderMaterial({
+    ...comum, uniforms: uniformes, vertexShader: VERTEX_HASTE, fragmentShader: FRAGMENT_HASTE,
+  }));
+  const glifos = new THREE.Mesh(quad(-1), new THREE.ShaderMaterial({
     ...comum, uniforms: { ...uniformes, ...atlas }, vertexShader: VERTEX_GLIFO, fragmentShader: FRAGMENT_GLIFO,
-  });
+  }));
+  const cena = new THREE.Scene();
   // Posições saem do shader; a ordem de inclusão é a ordem de desenho.
   [malha, hastes, glifos].forEach((objeto, ordem) => {
     objeto.frustumCulled = false;
     objeto.renderOrder = ordem;
     cena.add(objeto);
   });
-  return material;
+
+  let qualidade: Qualidade = { nivel: 0, lentos: 0 };
+  let ritmo = 0;
+  let proximaOnda = 0;
+  let ultimaOnda = -1e4;
+  const tela = { largura: 1, altura: 1, dpr: 1, celula: new THREE.Vector2(1, 1) };
+  const ponto = new THREE.Vector3();
+  const raio = new THREE.Raycaster();
+  const plano = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+
+  function montarMalha(passo: number): void {
+    // Plano bem maior que a tela: inclinado, o fundo encolhe e a frente cresce.
+    const colunas = Math.ceil((tela.largura * 1.8) / passo);
+    const linhas = Math.ceil((tela.altura * 2.8) / passo);
+    const x0 = -tela.largura * 0.9;
+    const yDoFundo = tela.altura * 1.85;
+    const vertices = new Float32Array((colunas + 1) * (linhas + 1) * 3);
+    const indices: number[] = [];
+    // Linha 0 é o fundo (y maior): desenhar nesta ordem é a ordem do pintor.
+    for (let l = 0; l <= linhas; l += 1) {
+      for (let c = 0; c <= colunas; c += 1) {
+        const i = (l * (colunas + 1) + c) * 3;
+        vertices[i] = x0 + c * passo;
+        vertices[i + 1] = yDoFundo - l * passo;
+        if (l < linhas && c < colunas) {
+          const a = l * (colunas + 1) + c;
+          const b = a + colunas + 1;
+          indices.push(a, b, a + 1, a + 1, b, b + 1);
+        }
+      }
+    }
+    malha.geometry.dispose();
+    malha.geometry = new THREE.BufferGeometry();
+    malha.geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+    malha.geometry.setIndex(indices);
+  }
+
+  function ajustar(): void {
+    const degrau = TERRENO.qualidade[qualidade.nivel];
+    const dpr = Math.min(window.devicePixelRatio || 1, degrau.maxDpr);
+    alvo.setSize(Math.max(1, Math.round(tela.largura * dpr)), Math.max(1, Math.round(tela.altura * dpr)));
+    uniformes.uAlvo.value.set(alvo.width, alvo.height);
+    uniformes.uTela.value.set(tela.largura, tela.altura);
+    uniformes.uCelulaCss.value.copy(tela.celula).divideScalar(tela.dpr);
+    // Distância em que o plano z = 0 preenche a tela exatamente.
+    const distancia = tela.altura / 2 / Math.tan(THREE.MathUtils.degToRad(TERRENO.campoDeVisaoGraus / 2));
+    uniformes.uDistancia.value = distancia;
+    camera.aspect = tela.largura / tela.altura;
+    camera.near = distancia * 0.05;
+    camera.far = distancia * 8;
+    camera.updateProjectionMatrix();
+    TERRENO.centros.forEach(([x, y], i) => {
+      const monte = uniformes.uMontes.value[i];
+      monte.set(x * tela.largura / 2, y * tela.altura / 2, monte.z);
+    });
+    uniformesDaTela.uRaioDoHalo.value = TERRENO.raioDoHaloPx * tela.dpr;
+    montarMalha(degrau.malhaPx);
+    const grade = uniformes.uGradeAscii.value;
+    hastes.geometry.instanceCount = grade.x * grade.y;
+    glifos.geometry.instanceCount = grade.x * grade.y;
+  }
+
+  function apontarCamera(virada: number): void {
+    const angulo = THREE.MathUtils.degToRad(TERRENO.inclinacaoGraus) * suavizar(0, 1, virada);
+    const distancia = uniformes.uDistancia.value;
+    camera.position.set(0, -distancia * Math.sin(angulo), distancia * Math.cos(angulo));
+    camera.up.set(0, 1, 0);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+  }
+
+  function renderizar(renderer: THREE.WebGLRenderer): void {
+    const anterior = renderer.getRenderTarget();
+    renderer.setRenderTarget(alvo);
+    renderer.render(cena, camera);
+    renderer.setRenderTarget(anterior);
+  }
+
+  function lerSrgb(elemento: Element, token: string, destino: THREE.Color): void {
+    lerCorDoToken(elemento, token, destino);
+    destino.convertLinearToSRGB();
+  }
+
+  return {
+    uniformesDaTela,
+    aplicarPaleta(elemento) {
+      for (const [uniforme, token] of Object.entries(TOKENS)) {
+        lerSrgb(elemento, token, uniformes[uniforme as keyof typeof TOKENS].value);
+      }
+      TOKENS_SEVERIDADE.forEach((token, i) => lerSrgb(elemento, token, uniformes.uSeveridade.value[i]));
+    },
+    redimensionar(larguraCss, alturaCss, dprDaTela, gradeAscii, celulaPx) {
+      Object.assign(tela, { largura: larguraCss, altura: alturaCss, dpr: dprDaTela });
+      tela.celula.copy(celulaPx);
+      uniformes.uGradeAscii.value.copy(gradeAscii);
+      ajustar();
+    },
+    aquecer(renderer) {
+      // Um quadro com a virada completa compila os três programas no carregamento.
+      uniformes.uVirada.value = 1;
+      apontarCamera(1);
+      renderizar(renderer);
+      uniformes.uVirada.value = 0;
+    },
+    desenhar(renderer, tempo, delta, progresso) {
+      const virada = viradaGlobal(progresso);
+      uniformes.uVirada.value = virada;
+      if (virada <= 0) {
+        uniformesDaTela.uCamadaAtiva.value = 0;
+        return;
+      }
+      ritmo += delta * ritmoDaCena(progresso);
+      uniformes.uTempo.value = tempo;
+      uniformes.uRitmo.value = ritmo;
+      uniformes.uProgresso.value = progresso;
+      uniformes.uEstavel.value = estabilidade(progresso);
+      // Sem onda viva o laço das ondas nem roda no vértice.
+      uniformes.uOndasAtivas.value = tempo - ultimaOnda < GOTA.duracao ? 1 : 0;
+      apontarCamera(virada);
+      SEVERIDADES.forEach((severidade, i) => {
+        const monte = uniformes.uMontes.value[i];
+        monte.z = alturaDoMonte(severidade, progresso);
+        const { frente, verde, faixa } = correcaoDoMonte(severidade, progresso);
+        uniformes.uCorrecao.value[i].set(frente, verde, faixa);
+        // O halo fica atrás do monte NA TELA, a meia encosta: projeta o ponto do mundo.
+        ponto.set(monte.x, monte.y, TERRENO.alturaDosMontesPx[i] * monte.z * 0.45).project(camera);
+        halos[i].set(
+          (ponto.x * 0.5 + 0.5) * tela.largura * tela.dpr,
+          (ponto.y * 0.5 + 0.5) * tela.altura * tela.dpr,
+          riscoDoGrupo(severidade, progresso),
+        );
+      });
+      renderizar(renderer);
+      uniformesDaTela.uCamadaAtiva.value = 1;
+      // Máquina sem fôlego: desce um degrau de qualidade (ver TERRENO.qualidade).
+      const anterior = qualidade.nivel;
+      qualidade = avaliarQualidade(qualidade, delta);
+      if (qualidade.nivel !== anterior) ajustar();
+    },
+    gota(xBuffer, yBuffer, tempo) {
+      // Do pixel clicado ao ponto do plano z = 0 embaixo dele, com a câmera como está.
+      ponto.set(xBuffer / (tela.largura * tela.dpr) * 2 - 1, yBuffer / (tela.altura * tela.dpr) * 2 - 1, 0);
+      raio.setFromCamera(new THREE.Vector2(ponto.x, ponto.y), camera);
+      if (!raio.ray.intersectPlane(plano, ponto)) return;
+      uniformes.uOndas.value[proximaOnda].set(ponto.x, ponto.y, tempo);
+      proximaOnda = (proximaOnda + 1) % MAX_GOTAS;
+      ultimaOnda = tempo;
+    },
+    descartar() {
+      alvo.dispose();
+      [malha, hastes, glifos].forEach((objeto) => {
+        objeto.geometry.dispose();
+        objeto.material.dispose();
+      });
+    },
+  };
 }

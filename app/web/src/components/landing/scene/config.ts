@@ -138,74 +138,22 @@ export function mapearProgresso(scroll: number, marcos: number[]): number {
 }
 
 /**
- * Pintura dos atos 3–5 (ADR-054): a partir da "virada", cada célula ASCII se
- * desfaz em pincelada. Medidas em px CSS e segundos; faixas são [mín, máx].
- * A lógica pura que usa estes números está em `pintura-logica.ts`; o GLSL, em
- * `pintura.ts`, é gerado a partir deles.
+ * Terreno: o material dos atos 3–5 (ADR-055). A partir da "virada", a grade
+ * de caracteres ganha a terceira dimensão e vira um mapa topográfico do
+ * risco. Medidas em px CSS; faixas são [mín, máx]. O mundo 3D tem a origem no
+ * centro da tela: sem inclinação, o plano z = 0 coincide com a tela e cada
+ * célula ASCII cai exatamente sobre o seu glifo.
+ *
+ * A lógica pura que usa estes números está em `terreno-logica.ts`; o GLSL,
+ * em `terreno-shaders.ts`, é gerado a partir deles.
  */
-export const PINTURA = {
-  /** Pinceladas do fundo numa tela de 1440 × 900; escala com a área. */
-  pinceladas: 6500,
-  limitesDePinceladas: [3500, 9000],
-  /** Trechos da fita ao longo da linha de fluxo (contorno curvo, sem quinas). */
-  segmentos: 7,
-  /** Pinceladas que nascem de cada célula com falha (os grupos ficam cheios). */
-  porFalha: 3,
-  /**
-   * Degraus de qualidade. O primeiro é o padrão: a camada de tinta pode passar
-   * do teto do kit (DPR 1,5), decisão do Rafael em 2026-11-15. Se a máquina
-   * não segura a cadência (`quadroLentoS` por `quadrosParaRebaixar` quadros
-   * seguidos), a pintura desce um degrau — menos resolução e menos pinceladas
-   * antes de cortar a ideia. Não sobe de volta na mesma visita.
-   */
-  qualidade: [
-    { maxDpr: 2, pinceladas: 1 },
-    { maxDpr: 1.5, pinceladas: 0.75 },
-    { maxDpr: 1, pinceladas: 0.5 },
-  ],
-  quadroLentoS: 1 / 48,
-  quadrosParaRebaixar: 90,
-  larguraPx: [1.4, 4.4],
-  comprimentoPx: [12, 38],
-  velocidadePxS: 26,
-  vidaS: [1.8, 4.4],
-  /** Quanto a tinta acumulada desbota por quadro (a 60 fps): rastro curto = nitidez. */
-  desbotePorQuadro: 0.085,
-  alfaDaPincelada: 0.4,
-  /** Teto do alfa da tinta na composição — entra no teste de contraste. */
-  tetoDeAlfa: 0.9,
-  /** Alfa máximo do halo atrás de um grupo com todo o risco em aberto. */
-  alfaDoHalo: 0.16,
-  /** Fração das pinceladas com o filete claro (crista da tinta) e a largura dele. */
-  relevo: 0.45,
-  fileteDoRelevoPx: 0.7,
-  /**
-   * Massas: uma fração das pinceladas é larga, longa e translúcida. Ficam por
-   * baixo das outras e dão um fundo pintado (sem elas a pintura lia como
-   * traços soltos sobre o preto — retorno do Rafael em 2026-11-16).
-   */
-  fracaoDeMassas: 0.16,
-  larguraDaMassaPx: [7, 15],
-  comprimentoDaMassaPx: [46, 110],
-  alfaDaMassa: 0.24,
-  /** Cerdas: quanto as estrias ao longo da pincelada tiram de tinta (0 = lisa). */
-  cerdas: 0.34,
-  /** Pincel seco: a partir desta fração do comprimento a cauda falha entre as cerdas. */
-  inicioDoPincelSeco: 0.5,
-  /** Mistura molhada: fração do quadro anterior que se espalha para os vizinhos. */
-  difusaoDaTinta: 0.22,
-  /** Relevo iluminado na composição: força da luz sobre a borda da tinta espessa. */
-  luzDoRelevo: 0.3,
-  /** Tons de cada matiz: escuro multiplica a cor; claro mistura com branco. */
-  tomEscuro: 0.58,
-  tomClaro: 0.3,
-  raioDoGrupoPx: 96,
-  /** Faixas do progresso narrativo (0 a 5). */
+export const TERRENO = {
+  // --- Narrativa: faixas do progresso (0 a 5).
   virada: [2.55, 3.45],
   /**
-   * Peso da posição horizontal e do ruído por célula na onda da virada. O
-   * protótipo usava 0,4 e 0,4; com mais peso em x a frente lê de longe como
-   * uma onda da esquerda para a direita, e não como um esmaecer geral.
+   * Peso da posição horizontal e do ruído por célula na onda da virada: com
+   * peso em x a frente lê de longe como uma onda da esquerda para a direita,
+   * e não como um esmaecer geral.
    */
   ondaDaVirada: { x: 1.1, ruido: 0.35 },
   organizar: [3.0, 3.5],
@@ -215,70 +163,70 @@ export const PINTURA = {
   corrigirDuracao: 0.35,
   atrasoPorSeveridade: 0.15,
   espalhamentoDaCorrecao: 0.25,
+  /**
+   * A correção de um monte tem dois tempos (frações da correção dele): a
+   * varredura verde desce do cume à base, e só então o monte afunda.
+   */
+  fimDaVarredura: 0.55,
+  inicioDoAfundamento: 0.45,
   estavel: [4.5, 5],
-  /** No ato 5 o fluxo perde 45% da velocidade e a baixa fica mais discreta. */
+  /** No ato 5 o relevo ondula 45% mais devagar e a baixa fica mais discreta. */
   freioEstavel: 0.45,
   discricaoDaBaixa: 0.4,
-} as const;
 
-/**
- * Materiais dos atos 3–5. Os três contam o mesmo roteiro (organizar →
- * corrigir → estável) e nascem da mesma virada; muda o que a célula vira:
- *   - "terreno": a grade ganha relevo e vira um mapa topográfico do risco;
- *   - "grafo":   as células viram nós no espaço, ligados por arestas;
- *   - "pintura": pinceladas num campo de fluxo (ADR-054).
- * Escolha pela URL (`/?cena=grafo`) enquanto o Rafael compara os três
- * (2026-11-16); sem parâmetro vale o padrão.
- */
-export const MATERIAIS_DA_CENA = ["terreno", "grafo", "pintura"] as const;
-export type MaterialDaCena = (typeof MATERIAIS_DA_CENA)[number];
-export const MATERIAL_PADRAO: MaterialDaCena = "terreno";
+  // --- Composição: entram no teste de contraste (scene-contrast.test.ts).
+  /** Teto do alfa da camada 3D na composição. */
+  tetoDeAlfa: 0.9,
+  /** Alfa máximo do halo atrás de um monte com todo o risco em aberto, e o raio dele. */
+  alfaDoHalo: 0.16,
+  raioDoHaloPx: 144,
+  /** Quanto as linhas iluminadas (curvas de nível, contorno) clareiam em direção ao branco. */
+  tomClaro: 0.3,
+  luzDeContorno: 0.5,
 
-/** Material pedido na query string (`?cena=`); valor ausente ou desconhecido cai no padrão. */
-export function lerMaterialDaCena(busca: string): MaterialDaCena {
-  const pedido = new URLSearchParams(busca).get("cena");
-  return (MATERIAIS_DA_CENA as readonly string[]).includes(pedido ?? "") ? (pedido as MaterialDaCena) : MATERIAL_PADRAO;
-}
-
-/**
- * Cenas 3D (terreno e grafo). O mundo é medido em px CSS, com a origem no
- * centro da tela: sem inclinação, o plano z = 0 coincide com a tela e cada
- * célula ASCII cai exatamente sobre o seu glifo. A câmera inclina conforme a
- * virada avança — presa ao scroll, nunca sozinha.
- */
-export const CENA_3D = {
+  // --- Câmera.
   campoDeVisaoGraus: 35,
-  terreno: {
-    inclinacaoGraus: 46,
-    /** Espaçamento dos vértices da malha e da grade desenhada sobre ela (2 × a célula ASCII). */
-    malhaPx: 24,
-    gradePx: [24, 36],
-    /** Uma curva de nível a cada tantos px de altitude. */
-    curvaDeNivelPx: 15,
-    /** Ondulação calma do terreno sem falhas. */
-    ondulacaoPx: 30,
-    /** Altura do monte de cada severidade (baixa → crítica) com todo o risco em aberto. */
-    alturaDosMontesPx: [74, 108, 150, 196],
-    /** Meio-eixos do monte no plano: comprido no sentido da margem (cordilheira). */
-    raioDoMontePx: [96, 190],
-    /**
-     * Centro dos montes no plano, em frações da meia largura e da meia altura.
-     * Mais afastados em y que os grupos 2D porque a inclinação encurta o eixo;
-     * os da frente (y negativo) ficam mais para dentro em x porque a
-     * perspectiva os empurra para fora da tela.
-     */
-    centros: [[-0.93, 0.7], [-0.77, -0.34], [0.93, 0.7], [0.77, -0.34]],
-  },
-  grafo: {
-    inclinacaoGraus: 14,
-    /** Fração das células que vira "poeira": os nós calmos do sistema. */
-    densidadeDaPoeira: 0.2,
-    profundidadeDaPoeiraPx: 440,
-    /** Cada grupo tem um nó central e tantos nós intermediários em volta. */
-    subnosPorGrupo: 5,
-    raioDosSubnosPx: 70,
-    raioDasFalhasPx: [16, 46],
-    /** Giro dos aglomerados, em rad/s (desacelera no ato 5). */
-    giroRadS: 0.22,
-  },
+  /** Inclinação no fim da virada. A câmera só se move com o scroll (ADR-055). */
+  inclinacaoGraus: 46,
+
+  // --- Relevo.
+  /** Grade desenhada sobre a malha: duas células ASCII (12 × 18 px) por quadro. */
+  gradePx: [24, 36],
+  /** Uma curva de nível a cada tantos px de altitude. */
+  curvaDeNivelPx: 15,
+  /** Ondulação calma do terreno sem falhas. */
+  ondulacaoPx: 30,
+  /** Altura do monte de cada severidade (baixa → crítica) com todo o risco em aberto. */
+  alturaDosMontesPx: [74, 108, 150, 196],
+  /** Meio-eixos do monte no plano: comprido no sentido da margem (cordilheira). */
+  raioDoMontePx: [96, 190],
+  /**
+   * Centro dos montes no plano, em frações da meia largura e da meia altura.
+   * Mais afastados em y que os grupos do pôster porque a inclinação encurta o
+   * eixo; os da frente (y negativo) ficam mais para dentro em x porque a
+   * perspectiva os empurra para fora da tela.
+   */
+  centros: [[-0.93, 0.7], [-0.77, -0.34], [0.93, 0.7], [0.77, -0.34]],
+  /** De onde vem a luz, no mundo (x direita, y fundo, z para cima): do alto, à esquerda. */
+  luz: [-0.62, 0.38, 0.52],
+  /** Sombra projetada: passos da marcha em direção à luz e até onde ela vai. */
+  passosDaSombra: 8,
+  alcanceDaSombraPx: 240,
+  /** Onda sísmica do clique: quanto ela levanta a malha. */
+  amplitudeDaOndaPx: 13,
+
+  /**
+   * Degraus de qualidade. O primeiro é o padrão: a camada pode passar do teto
+   * do kit (DPR 1,5), decisão do Rafael em 2026-11-15. Se a máquina não segura
+   * a cadência (`quadroLentoS` por `quadrosParaRebaixar` quadros seguidos), o
+   * terreno desce um degrau — menos resolução e malha mais aberta. Não sobe de
+   * volta na mesma visita.
+   */
+  qualidade: [
+    { maxDpr: 2, malhaPx: 24 },
+    { maxDpr: 1.5, malhaPx: 30 },
+    { maxDpr: 1, malhaPx: 40 },
+  ],
+  quadroLentoS: 1 / 48,
+  quadrosParaRebaixar: 90,
 } as const;

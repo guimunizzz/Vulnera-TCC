@@ -12,17 +12,18 @@
  *           texto × cada cor da cena (paleta, neon, severidades, resolvido),
  *           nos dois temas
  *   CTR-03  a opacidade da superfície em `landing.css` é a de `config.ts`
- *   CTR-04  pior caso da CAMADA DE TINTA (atos 3–5, ADR-054) atrás da superfície:
- *           cada matiz e severidade da pintura, em quatro tons (escuro, médio,
- *           claro e filete), sobre um halo no máximo com a tinta no teto de
- *           alfa — continua ≥ 4,5:1 para cada texto, nos dois temas
+ *   CTR-04  pior caso do TERRENO (atos 3–5, ADR-055) atrás da superfície: cada
+ *           cor que ele usa (chão, acento, cor profunda, severidades, verde da
+ *           correção, luz quente), pura e no tom claro das linhas iluminadas,
+ *           com a camada no teto de alfa por cima de um halo no máximo —
+ *           continua ≥ 4,5:1 para cada texto, nos dois temas
  */
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { gammaDecodifica, oklchParaSrgbNormalizado } from "../../../design/oklch.mjs";
-import { OPACIDADE_CENA, OPACIDADE_SUPERFICIE, PINTURA } from "./config";
+import { OPACIDADE_CENA, OPACIDADE_SUPERFICIE, TERRENO } from "./config";
 
 const RAIZ = resolve(__dirname, "../../../");
 const landingCss = readFileSync(resolve(RAIZ, "components/landing/landing.css"), "utf8");
@@ -92,37 +93,32 @@ for (const tema of ["dark", "light"] as const) {
       }
     });
 
-    it("CTR-04 — pior caso da camada de tinta atrás da superfície continua AA", () => {
-      // Tinta no teto de alfa por cima de um halo no máximo; a superfície deixa passar só (1 - opacidade).
-      const pilha = 1 - (1 - PINTURA.tetoDeAlfa) * (1 - PINTURA.alfaDoHalo);
+    it("CTR-04 — pior caso do terreno atrás da superfície continua AA", () => {
+      // Camada no teto de alfa por cima de um halo no máximo; a superfície deixa passar só (1 - opacidade).
+      const pilha = 1 - (1 - TERRENO.tetoDeAlfa) * (1 - TERRENO.alfaDoHalo);
       const efetivo = pilha * (1 - OPACIDADE_SUPERFICIE);
-      const tintas: Record<string, Rgb> = {
-        indigo: hexDaLanding(tema, "--vx-indigo"),
-        accent: hexDaLanding(tema, "--vx-accent"),
-        accentSoft: hexDaLanding(tema, "--vx-accent-soft"),
-        cyan: hexDaLanding(tema, "--vx-cyan"),
-        magenta: hexDaLanding(tema, "--vx-magenta"),
+      // As cores que terreno.ts lê dos tokens.
+      const cores: Record<string, Rgb> = {
+        chao: hexDaLanding(tema, "--vx-accent"),
+        acento: hexDaLanding(tema, "--vx-cyan"),
+        profunda: hexDaLanding(tema, "--vx-indigo"),
         sucesso: hexDaLanding(tema, "--vx-success"),
-        amarelo: hexDaLanding(tema, "--vx-yellow"),
+        quente: hexDaLanding(tema, "--vx-yellow"),
         baixa: tokenDoProduto(tema, "--color-severity-low"),
         media: tokenDoProduto(tema, "--color-severity-medium"),
         alta: tokenDoProduto(tema, "--color-severity-high"),
         critica: tokenDoProduto(tema, "--color-severity-critical"),
       };
       const BRANCO: Rgb = [1, 1, 1];
-      const tons = (cor: Rgb): Record<string, Rgb> => ({
-        escuro: cor.map((v) => v * PINTURA.tomEscuro) as Rgb,
-        medio: cor,
-        claro: misturar(cor, BRANCO, PINTURA.tomClaro),
-        filete: misturar(cor, BRANCO, 0.6),
-      });
       for (const texto of TEXTOS) {
         const corDoTexto = hexDaLanding(tema, texto);
-        for (const [nomeDaTinta, cor] of Object.entries(tintas)) {
-          for (const [tom, rgb] of Object.entries(tons(cor))) {
+        for (const [nome, cor] of Object.entries(cores)) {
+          // Curva de nível iluminada, faixa da correção e luz de contorno clareiam até este tom.
+          const tons = { puro: cor, claro: misturar(cor, BRANCO, TERRENO.tomClaro) };
+          for (const [tom, rgb] of Object.entries(tons)) {
             expect(
               contraste(corDoTexto, misturar(fundo, rgb, efetivo)),
-              `${texto} sobre ${nomeDaTinta} (tom ${tom})`,
+              `${texto} sobre ${nome} (tom ${tom})`,
             ).toBeGreaterThanOrEqual(4.5);
           }
         }

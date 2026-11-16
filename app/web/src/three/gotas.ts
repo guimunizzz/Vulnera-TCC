@@ -71,8 +71,12 @@ export interface OpcoesGotas {
   tempoAtual: () => number;
   /** Pixel ratio do renderer, para converter o clique em px do buffer. */
   dpr: () => number;
-  /** Avisado a cada gota: a cena marca que precisa redesenhar. */
-  aoCair?: () => void;
+  /**
+   * Avisado a cada gota, com o ponto em px do buffer (y para cima) e o
+   * instante: a cena pode reagir à gota por conta própria (ex.: o terreno da
+   * landing vira o clique em onda no relevo).
+   */
+  aoCair?: (xBuffer: number, yBuffer: number, tempo: number) => void;
 }
 
 export function criarGotas({ canvas, tempoAtual, dpr, aoCair }: OpcoesGotas): Gotas {
@@ -102,7 +106,7 @@ export function criarGotas({ canvas, tempoAtual, dpr, aoCair }: OpcoesGotas): Go
     proxima = (proxima + 1) % MAX_GOTAS;
     ultimaQueda = agora;
     uniformes.uDpr.value = razao;
-    aoCair?.();
+    aoCair?.(dados[((proxima + MAX_GOTAS - 1) % MAX_GOTAS) * 3], dados[((proxima + MAX_GOTAS - 1) % MAX_GOTAS) * 3 + 1], agora);
   }
 
   window.addEventListener("click", aoClicar, { passive: true });
