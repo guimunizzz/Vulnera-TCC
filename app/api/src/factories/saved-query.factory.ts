@@ -12,8 +12,10 @@ import { UserRepository } from "../repositories/user.repository";
 import { SavedQueryService } from "../services/saved-query.service";
 import { SavedQueryController } from "../controllers/saved-query.controller";
 
+export function makeSavedQueryService(): SavedQueryService {
+  return new SavedQueryService(new SavedQueryRepository(prisma), new UserRepository(prisma));
+}
+
 export function makeSavedQueryController(): SavedQueryController {
-  return new SavedQueryController(
-    new SavedQueryService(new SavedQueryRepository(prisma), new UserRepository(prisma)),
-  );
+  return new SavedQueryController(makeSavedQueryService());
 }

@@ -21,7 +21,9 @@
     "sla:backfill": "tsx prisma/backfill-sla.ts",
     "vrs:backfill": "tsx prisma/backfill-vrs.ts",
     "sync:owasp-playbooks": "tsx scripts/sync-owasp-playbooks.ts",
-    "db:seed:playbooks": "tsx prisma/seed-playbooks.ts"
+    "db:seed:playbooks": "tsx prisma/seed-playbooks.ts",
+    "db:seed:cenarios": "tsx prisma/seed-cenarios.ts",
+    "db:seed:all": "npm run db:seed && npm run db:seed:playbooks && npm run db:seed:cenarios && npm run sla:backfill && npm run vrs:backfill"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
