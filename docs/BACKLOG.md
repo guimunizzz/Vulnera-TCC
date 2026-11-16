@@ -6,6 +6,13 @@
 
 ## Status
 
+**🚧 2026-11-16 — Atendimento do PR #77.** Limpeza de 74 artefatos do índice concluída, preservando hashes/cópias locais e fontes de testes. Resumo histórico manual realocado para docs e links atualizados; padrões de output/cobertura/temporários adicionados ao `.gitignore`. Restam contexto de produto, configuração privada do modelo, checks e publicação nas branches correspondentes. Nenhum deploy ou alteração de dados de negócio nesta revisão.
+
+- [x] PR77-01 — Limpeza do versionamento sem apagar as evidências locais nem os testes de código.
+- [ ] PR77-02 — Curadoria de domínio/produto com rastreabilidade para docs e comportamento implementado.
+- [ ] PR77-03 — Modelo real somente no ambiente privado, exemplos/documentação sem identificador concreto.
+- [ ] PR77-04 — Conferir pedidos, validar, publicar e propagar preservando a Vuvu.
+
 **✅ 2026-11-15 — INT-AI-04E, instruções nos `.env.example` (100%).** Modelo da raiz inclui o fluxo de clone/pull até validação Gemini, preservação de `.env`, distribuição privada da credencial e restart somente sem scans ativos. Modelo da API explica o uso no host e remete ao modelo Docker. Alteração apenas de comentários/docs; padrões local/chave vazia/modelo preservados e Compose validado sem reiniciar serviços. Publicação restrita à `feature/agent-ai`, como `iannxz`.
 
 - [x] INT-AI-04E — Passo a passo nos modelos de ambiente, revisão e publicação na branch atual.
@@ -112,10 +119,10 @@
 - [x] ~~SG-FUT-02 — Medir o grafo 3D em GPU integrada e celular real~~ — obsoleto: o modo 3D do CyberGraph saiu em 2026-11-09 (ADR-051). O mapa 3D do Exposure Graph herda a pendência de medição em GPU fraca.
 - [x] ~~SG-FUT-04 — Paleta da cena 3D (`features/security-graph/scene/palette.ts`) em hex aproximado: migrar para a leitura de tokens em runtime de `src/three/palette.ts` (como a atmosfera, desde o refactor web-motion-3d) e avaliar montar a cena sobre o kit `src/three/` (hospedeiro, loop, descarte). No merge na `refactor/web-motion-3d` os valores vindos do `dashboard-scene-palette.ts` removido foram copiados sem mudança.~~ — obsoleto: a cena do CyberGraph saiu em 2026-11-09 (ADR-051).
 
-**✅ 2026-10-23 — Assistente Vulnera concluído localmente (7/7 fases, 100% do plano de implementação/validação local).** Disponível em `http://localhost:8086`, modo local. API focal 47/47, web 400/400, contraste 66/66, builds host/Docker e navegador produção 12/12 aprovados; 100% de linhas nos serviços novos, HTTP sintético 13/13, três perfis reais na API e fluxo CLIENT pela UI. Resultado API geral combinado 772/773 (rodada Linux + CVSS corrigido no ambiente): somente assertion anterior do header Excel; `check` API mantém dois imports antigos de lint. Gemini ao vivo pendente de chave/modelo privados, sem chamada Google. Guia [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md), [evidências](../output/assistant/VALIDACAO.md), ADR-048; histórico e trabalho anterior preservados, sem commit/push/PR.
+**✅ 2026-10-23 — Assistente Vulnera concluído localmente (7/7 fases, 100% do plano de implementação/validação local).** Disponível em `http://localhost:8086`, modo local. API focal 47/47, web 400/400, contraste 66/66, builds host/Docker e navegador produção 12/12 aprovados; 100% de linhas nos serviços novos, HTTP sintético 13/13, três perfis reais na API e fluxo CLIENT pela UI. Resultado API geral combinado 772/773 (rodada Linux + CVSS corrigido no ambiente): somente assertion anterior do header Excel; `check` API mantém dois imports antigos de lint. Gemini ao vivo pendente de chave/modelo privados, sem chamada Google. Guia [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md), [evidências](VALIDACAO_ASSISTENTE_2026-10-23.md), ADR-048; histórico e trabalho anterior preservados, sem commit/push/PR.
 
 - [ ] Assistente — responsável preparar projeto Free Tier e chave/modelo privados e executar poucas perguntas manuais para comprovar Gemini ao vivo; não confundir ajuda local com prova do provedor.
-- [ ] Fora do assistente — revisar assertion `findings-export.test.ts:176` que exige aspas no filename, incompatível com Express 5.3.0 resolvido pelas faixas atuais; reprodução independente em `output/assistant/VALIDACAO.md`.
+- [ ] Fora do assistente — revisar assertion `findings-export.test.ts:176` que exige aspas no filename, incompatível com Express 5.3.0 resolvido pelas faixas atuais; reprodução independente em `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`.
 - [ ] Fora do assistente — cabeçalho Conta em 320px continua gerando largura 335px; painel do assistente cabe e não amplia o overflow, conforme QA antes/depois.
 
 **✅ 2026-10-23 — Assistente Vulnera: Fase 0 concluída (1/7 fases, 14% do plano).** Investigação do checkout e plano registrados em [ASSISTENTE_VULNERA_PLANO.md](ASSISTENTE_VULNERA_PLANO.md), com mapa de rotas/perfis, ações, arquivos/dependências, critérios de aceite, configuração proposta e divergências. ADR-048 registra o retorno da IA apenas como orientação; as funcionalidades antigas de geração de findings e IA mobile continuam excluídas. Implementação ainda não iniciada. Branch `feature/agent-ai`; alterações anteriores preservadas, sem commit/push/PR.

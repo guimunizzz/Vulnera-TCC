@@ -7,7 +7,7 @@
 **Data:** 2026-10-23 · **Branch:** `feature/agent-ai` · **Base:** `44f9c58`.
 **Estado deste registro histórico:** Fase 0 concluída; Fases 1–6 ainda pendentes naquele checkpoint. O restante deste documento preserva a investigação e a solução planejada.
 
-**Continuação em 23/10/2026:** o usuário autorizou executar todas as fases sem pausa. Fases 1–6 entregues, completando 7/7 fases; implementação e orientação local verificadas e aplicadas em `http://localhost:8086`. Gemini ao vivo permanece pendente de chave/modelo. O estado atual e o guia estão em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md) e [VALIDACAO.md](../output/assistant/VALIDACAO.md); os resultados abaixo referem-se ao checkpoint inicial.
+**Continuação em 23/10/2026:** o usuário autorizou executar todas as fases sem pausa. Fases 1–6 entregues, completando 7/7 fases; implementação e orientação local verificadas e aplicadas em `http://localhost:8086`. Gemini ao vivo permanece pendente de chave/modelo. O estado atual e o guia estão em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md) e [VALIDACAO.md](VALIDACAO_ASSISTENTE_2026-10-23.md); os resultados abaixo referem-se ao checkpoint inicial.
 
 ## Escopo confirmado
 

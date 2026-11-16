@@ -1,2 +1,0 @@
-Requisição:	GET /api/users?id=1' OR '1'='1
-Resposta: 200 OK

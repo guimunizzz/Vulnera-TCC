@@ -24,7 +24,7 @@ Branch `feature/agent-ai`, base `44f9c58`. Alterações locais anteriores de PRD
 | API Node 22, conjunto completo e correção de ambiente | Resultado combinado 772/773 testes e 47/48 suítes, conforme detalhamento abaixo; falha anterior de assertion Excel |
 | Gemini ao vivo | Pendente: configuração runtime consultada sem revelar valores indicou ausência de chave e modelo; nenhuma chamada ao Google |
 
-Relatórios: [navegador](browser-report.md), [dados do navegador](browser-results.json), [HTTP local](live-local-results.json), [cobertura](api-coverage/coverage-summary.json). Capturas desktop e narrow na mesma pasta foram inspecionadas visualmente, não apenas geradas.
+Relatórios: `browser-report.md` (navegador, artefato local), `browser-results.json` (dados do navegador, artefato local), `live-local-results.json` (HTTP local, artefato local), `api-coverage/coverage-summary.json` (cobertura, artefato local). Capturas desktop e narrow na mesma pasta foram inspecionadas visualmente, não apenas geradas.
 
 ## Provas relevantes
 
@@ -79,17 +79,17 @@ node output/assistant/browser-smoke.cjs
 node output/assistant/live-local-smoke.cjs
 ```
 
-Build/aplicação Docker e rodada final API/produção serão acrescentados neste relatório depois da conclusão. O guia de uso e roteiro da banca está em [ASSISTENTE_VULNERA.md](../../docs/ASSISTENTE_VULNERA.md).
+Build/aplicação Docker e rodada final API/produção serão acrescentados neste relatório depois da conclusão. O guia de uso e roteiro da banca está em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
 
 ## Fechamento — Node 22 e aplicação local
 
 Os itens pendentes do registro intermediário acima foram executados. Build API/web em Docker aprovado; aplicação recriada em modo local e disponível em `http://localhost:8086`, health API 200. Antes da recriação, consulta somente de contagem confirmou zero scans QUEUED/RUNNING. Volumes/dados anteriores foram preservados; não houve seed/reset do banco da demonstração, migration nova ou `.env` real editado.
 
-O conjunto completo de testes API foi executado na imagem Node 22 com banco de testes separado. Resultado bruto: 715/716 testes, 46/48 suítes aprovadas, 263,952s. Duas suítes ficaram vermelhas: a assertion anterior do Excel e a suíte CVSS, que importa o helper do workspace web ausente na imagem API isolada. Montado esse helper somente leitura no ambiente de teste, a repetição **apenas de CVSS** aprovou **57/57** em 3,041s. **Resultado combinado**, não apresentado como uma única execução verde: 772/773 testes, 47/48 suítes; permanece a assertion Excel. Ambos os testes de evidência passaram com `UPLOADS_DIR=uploads-test`. Artefatos: [rodada completa](api-linux-results.json) e [CVSS corrigido no ambiente](api-cvss-results.json).
+O conjunto completo de testes API foi executado na imagem Node 22 com banco de testes separado. Resultado bruto: 715/716 testes, 46/48 suítes aprovadas, 263,952s. Duas suítes ficaram vermelhas: a assertion anterior do Excel e a suíte CVSS, que importa o helper do workspace web ausente na imagem API isolada. Montado esse helper somente leitura no ambiente de teste, a repetição **apenas de CVSS** aprovou **57/57** em 3,041s. **Resultado combinado**, não apresentado como uma única execução verde: 772/773 testes, 47/48 suítes; permanece a assertion Excel. Ambos os testes de evidência passaram com `UPLOADS_DIR=uploads-test`. Artefatos: `api-linux-results.json` (rodada completa, artefato local) e `api-cvss-results.json` (CVSS corrigido no ambiente, artefato local).
 
-QA foi repetido no build servido, porque a CSP de produção difere do Vite. Matriz **12/12**, zero erros/violações CSP, asset `/assets/index-BM7VkbDc.js`. Usou fixtures somente no navegador, preservadas em [production/browser-results.json](production/browser-results.json). Capturas desktop/320px claro/escuro/sistema foram inspecionadas visualmente.
+QA foi repetido no build servido, porque a CSP de produção difere do Vite. Matriz **12/12**, zero erros/violações CSP, asset `/assets/index-BM7VkbDc.js`. Usou fixtures somente no navegador, preservadas em `production/browser-results.json` (production/browser-results.json, artefato local). Capturas desktop/320px claro/escuro/sistema foram inspecionadas visualmente.
 
-Separadamente, a API real da stack recebeu login de ADMIN/CLIENT/PENTESTER com as contas fictícias já existentes de `docs/DEMO.md`: seis perguntas HTTP 200, todas `source: local`, ações por perfil e logout; [resultado](production-local-results.json). O helper precisou tratar logout 204 sem JSON, ajuste exclusivo do roteiro de QA, sem patch no produto. Um fluxo **UI real sem fixtures** validou CLIENT login → pergunta → atalho Solicitar análise → pergunta na nova tela → logout, com duas respostas locais e zero submissões de formulário de negócio: [resultado](production/real-ui-results.json) e [captura](production/real-client-local.png).
+Separadamente, a API real da stack recebeu login de ADMIN/CLIENT/PENTESTER com as contas fictícias já existentes de `docs/DEMO.md`: seis perguntas HTTP 200, todas `source: local`, ações por perfil e logout; `production-local-results.json` (resultado, artefato local). O helper precisou tratar logout 204 sem JSON, ajuste exclusivo do roteiro de QA, sem patch no produto. Um fluxo **UI real sem fixtures** validou CLIENT login → pergunta → atalho Solicitar análise → pergunta na nova tela → logout, com duas respostas locais e zero submissões de formulário de negócio: `production/real-ui-results.json` (resultado, artefato local) e `production/real-client-local.png` (captura, artefato local).
 
 **Limite externo:** runtime consultado por `loadAssistantConfig` indicou chave/modelo ausentes sem expor valores. Nenhuma requisição ao Google, nenhuma ativação de billing/trial e nenhuma validação Gemini ao vivo. O guia explica a configuração privada e o ensaio Free Tier.
 

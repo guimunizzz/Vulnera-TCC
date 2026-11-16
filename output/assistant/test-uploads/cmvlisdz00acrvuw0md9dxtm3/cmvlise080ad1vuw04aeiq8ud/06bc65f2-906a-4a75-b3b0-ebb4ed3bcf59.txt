@@ -1,2 +1,0 @@
-Request completo:
-GET /api/users?id=1' OR '1'='1

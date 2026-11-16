@@ -78,7 +78,7 @@ autorizou continuar sem pausa nos checkpoints, relatados durante a execução.
   772/773 testes, 47/48 suítes. Assertion anterior de aspas no header Excel
   continua falhando; check API mantém dois imports não usados anteriores.
   Ajustes ambientais de uploads/CVSS e encerramento nativo Windows estão
-  separados dos defeitos da feature em `output/assistant/VALIDACAO.md`.
+  separados dos defeitos da feature em `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`.
 - QA corrigiu Escape durante espera, largura do painel 320px, recuperação
   indevida de histórico e distinção entre relatórios DAST e de projeto.
   Overflow anterior do cabeçalho Conta em 320px foi registrado, sem correção

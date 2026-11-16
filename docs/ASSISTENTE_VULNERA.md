@@ -180,7 +180,7 @@ API focal 47/47 e QA do build servido 12/12 aprovados. O check geral API
 mantém dois imports antigos de lint e uma assertion anterior de header
 Excel; essas ressalvas estão separadas das provas do assistente no relatório.
 
-Os resultados da rodada final são registrados em `output/assistant/VALIDACAO.md` e nos documentos vivos. Testes automatizados usam gateway simulado e nunca a API real do Google. Fixtures de navegador servem para isolar a interface e não são apresentadas como dados reais da plataforma ou validação Gemini ao vivo.
+Os resultados da rodada final são registrados em `docs/VALIDACAO_ASSISTENTE_2026-10-23.md` e nos documentos vivos. Testes automatizados usam gateway simulado e nunca a API real do Google. Fixtures de navegador servem para isolar a interface e não são apresentadas como dados reais da plataforma ou validação Gemini ao vivo.
 
 **Gemini ao vivo permanece pendente:** na validação de 23/10/2026, a configuração runtime da API indicou ausência de chave e modelo, sem revelar valores. A integração REST está implementada e testável por gateway; isso não comprova o acesso de uma conta específica. Não foi solicitada ou exposta chave em conversa.
 

@@ -46,7 +46,7 @@ Esta decisão registra a autorização de escopo do pedido atual, sem editar reg
 
 ## Implementação e evidências — 2026-10-23
 
-Fases 1–6 entregues: endpoint autenticado, base de 14 tópicos, gateway opcional, limites compartilhados e interface contextual com sessão em memória. Foram aprovados 47 testes focais API, 45 focais web, check web com 400 testes, 13 verificações HTTP locais e 12 cenários no build servido em 8086, além dos três perfis com login real e fluxo CLIENT pela UI. Serviços novos atingiram 100% de cobertura de linhas; builds host/Docker aprovados. Guia em [ASSISTENTE_VULNERA.md](../../ASSISTENTE_VULNERA.md); resultados completos e limitações em [VALIDACAO.md](../../../output/assistant/VALIDACAO.md).
+Fases 1–6 entregues: endpoint autenticado, base de 14 tópicos, gateway opcional, limites compartilhados e interface contextual com sessão em memória. Foram aprovados 47 testes focais API, 45 focais web, check web com 400 testes, 13 verificações HTTP locais e 12 cenários no build servido em 8086, além dos três perfis com login real e fluxo CLIENT pela UI. Serviços novos atingiram 100% de cobertura de linhas; builds host/Docker aprovados. Guia em [ASSISTENTE_VULNERA.md](../../ASSISTENTE_VULNERA.md); resultados completos e limitações em [VALIDACAO.md](../../VALIDACAO_ASSISTENTE_2026-10-23.md).
 
 A configuração runtime consultada sem expor valores não continha chave/modelo Gemini; validação ao vivo permanece pendente. O check global API continua sujeito a dois imports antigos não usados e a incompatibilidade anterior da assertion de header Excel com o Express instalado, documentadas separadamente. A nota de criação com implementação pendente acima é preservada como histórico da Fase 0.
 

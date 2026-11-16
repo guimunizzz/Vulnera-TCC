@@ -326,4 +326,4 @@ atualização de perfil preservam a conversa. Nenhum código é inserido no HTML
 ZAP, PDF ou Excel; impressão oculta o portal.
 
 Guia: [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md). Evidências de testes,
-navegador, integração local e limites: [VALIDACAO.md](../output/assistant/VALIDACAO.md).
+navegador, integração local e limites: [VALIDACAO.md](VALIDACAO_ASSISTENTE_2026-10-23.md).
