@@ -6,6 +6,7 @@
 import type { UserRole } from "../models/user.model";
 import type { AssistantActionId, AssistantTopic } from "../models/assistant.model";
 import { ASSISTANT_PRODUCT_TOPICS } from "./assistant-product-help.config";
+import { ASSISTANT_WORKFLOW_TOPICS } from "./assistant-workflow-help.config";
 
 const ALL: readonly UserRole[] = ["ADMIN", "CLIENT", "PENTESTER"];
 export const ASSISTANT_ACTIONS: Record<AssistantActionId, { label: string; path: string; roles: readonly UserRole[] }> = {
@@ -57,7 +58,7 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
   {
     id: "evidence-comments", title: "Evidências e comentários", keywords: ["evidencia", "evidencias", "anexo", "anexos", "comentario", "comentarios", "comentar", "upload"],
     screens: ["finding-detail", "finding-editor"], roles: ALL, actions: ["projects", "findings"],
-    guidance: "As evidências ficam no finding e documentam a prova do achado. Upload é permitido a ADMIN ou PENTESTER autorizado. Quem pode consultar o finding pode comentar. O próprio autor ou ADMIN pode excluir um comentário. No detalhe do finding, evidências são consultadas; o envio pertence ao fluxo de edição.",
+    guidance: "As evidências ficam no finding e documentam a prova do achado. São aceitos PNG, JPEG, PDF e TXT, até 10 MB por arquivo, com conteúdo compatível com o formato. Upload é permitido a ADMIN ou PENTESTER autorizado. Quem pode consultar o finding pode comentar. O próprio autor ou ADMIN pode excluir um comentário. No detalhe do finding, evidências são consultadas; o envio pertence ao fluxo de edição.",
     byRole: { CLIENT: "CLIENT pode consultar evidências e comentar nos findings autorizados da empresa, mas não envia evidências nem edita o finding." },
   },
   {
@@ -124,4 +125,5 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
     byRole: { PENTESTER: "Exposure Graph é restrito a ADMIN e CLIENT com empresa vinculada. Como PENTESTER, acompanhe o contexto dos projetos atribuídos; o assistente não oferece atalho para esse grafo." },
   },
   ...ASSISTANT_PRODUCT_TOPICS,
+  ...ASSISTANT_WORKFLOW_TOPICS,
 ];

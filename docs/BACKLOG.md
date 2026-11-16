@@ -1,5 +1,10 @@
 # BACKLOG.md — Vulnera
 
+**✅ 2026-11-16 — AI-CONTEXT-01 concluída (100% do código).** Vuvu com 44 tópicos, 15 aprofundamentos de conceitos/regras/fluxos completos. API check 942/942 em 58 suítes e build aprovados; permissões, ações, orçamento e personalidade preservados. Notas antigas de onboarding/contratação contextualizadas sem apagar histórico. Aplicação exclusiva da API principal pendente de fechamento; inicialmente executava 17 tópicos. Ver `QA_VUVU_CONTEXTO_2026-11-16.md`.
+
+- [x] AI-CONTEXT-01 — Ampliar conhecimento curado e validar perguntas de produto, limites e perfis.
+- [ ] AI-CONTEXT-02 — Atualizar API principal, conferir resposta real e preservar demais serviços/dados.
+
 **✅ 2026-11-16 — AI-UI-09 concluída (100% da aplicação das quatro melhorias).** Somente Web de `330d5ff` construída/recriada em 8086. Smoke real de gestos/atlas/chat/modo discreto/rascunho aprovado, zero POST do assistente/erros de página/CSP. API/DB/Mailhog/volumes, contagens e `.env` preservados, zero scans; sem escrita de negócio ou Gemini adicional. Backup e artefatos brutos locais. Histórico da implementação abaixo preservado; relatório `QA_VUVU_FLUIDEZ_2026-11-16.md`.
 
 **✅ 2026-11-16 — AI-UI-08: quatro melhorias implementadas (100% do código; aplicação principal em fechamento).** Entrada/saída do chat, olhar suave, reações confirmadas e modo discreto. Web 690/690, contraste 132/132, build e navegador/axe 16/16. Sem backend, novas chamadas Gemini ou artefatos de QA publicados. ADR-055 e `QA_VUVU_FLUIDEZ_2026-11-16.md` registram os limites e a cadência medida.

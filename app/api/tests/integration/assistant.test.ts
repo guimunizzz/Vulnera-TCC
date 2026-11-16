@@ -291,6 +291,60 @@ describe("Assistente HTTP", () => {
 });
 
 describe("Ajuda e orçamento determinísticos", () => {
+  it.each([
+    ["Explique o fluxo completo do cadastro ao relatório", "pessoas e etapas"],
+    ["O que significa assinatura pendente no onboarding?", "Pendente de aprovação"],
+    ["O que fazer com o limite do plano?", "não transforma CLIENT"],
+    ["Quais os formatos de evidencia e o tamanho da evidencia?", "até 10 MB"],
+    ["Quanto pode pesar uma evidência?", "até 10 MB"],
+    ["Qual a diferença entre PDF executivo e PDF técnico?", "dados no momento"],
+    ["A exportacao Excel inclui todas as paginas?", "não apenas a página"],
+    ["Como baixar Excel dos findings?", "todo o recorte"],
+    ["Por que meu scan na fila ainda não iniciou?", "quando há vaga"],
+    ["Como promover alerta de um scan simulado?", "não permitem promoção"],
+    ["Quais formatos de importacao posso usar para importar SARIF?", "5.000 achados"],
+    ["Como funciona reimportacao e triagem herdada?", "não fecha automaticamente"],
+    ["O que significa versao nao confirmada em uma sugestao de tecnologia?", "não prova"],
+    ["Como promover CVE e revisar correspondencia?", "não acontece automaticamente"],
+    ["Como justificar um override de severidade?", "pelo menos 20 caracteres"],
+    ["Como recolher Vuvu no modo discreto?", "ícone na borda"],
+    ["Como aumentar texto e ativar alto contraste?", "200%"],
+  ])("orienta um fluxo aprofundado: %s", async (question, expected) => {
+    const { app, generate } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("ADMIN"))
+      .send({ question, screen: "dashboard", history: [] });
+    expect(response.status).toBe(200);
+    expect(response.body.source).toBe("local");
+    expect(response.body.message).toContain(expected);
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it("mantém os 44 tópicos únicos e os limites, sem alterar o contrato ou liberar módulos ao CLIENT", () => {
+    const help = new AssistantHelpService();
+    expect(ASSISTANT_TOPICS).toHaveLength(44);
+    expect(new Set(ASSISTANT_TOPICS.map((topic) => topic.id)).size).toBe(44);
+    for (const role of ["ADMIN", "CLIENT", "PENTESTER"] as const) {
+      for (const topic of ASSISTANT_TOPICS.filter((item) => item.roles.includes(role))) {
+        expect(help.context([topic], role).length).toBeLessThanOrEqual(6000);
+        expect(help.actions([topic], role).length).toBeLessThanOrEqual(3);
+      }
+    }
+    const selected = help.select({ question: "Quais formatos de importacao posso usar para importar SARIF?", screen: "code-import-detail", history: [] }, "CLIENT");
+    expect(selected.map((topic) => topic.id)).not.toContain("code-import-formats");
+    expect(help.actions(selected, "CLIENT").map((action) => action.id)).not.toContain("sast-sca");
+  });
+
+  it("leva os fluxos novos ao gateway com o mesmo orçamento de contexto e sem dados da conta", async () => {
+    const { app, generate } = makeApp();
+    await request(app).post("/api/assistant/chat").set("Authorization", bearer("ADMIN"))
+      .send({ question: "Explique fluxo completo, formatos de evidencia e PDF executivo", screen: "dashboard", history: [] });
+    const input = generate.mock.calls[0][0];
+    expect(input.help.length).toBeLessThanOrEqual(6000);
+    expect(input.help).toContain("pessoas e etapas");
+    expect(input).not.toHaveProperty("userId");
+    expect(input).not.toHaveProperty("companyId");
+  });
+
   it("normaliza português, usa continuação e não oferece ações vedadas", () => {
     const help = new AssistantHelpService();
     const topics = help.select({ question: "E depois?", screen: "dashboard", history: [{ role: "user", content: "Como solicito uma ANÁLISE?" }] }, "PENTESTER");

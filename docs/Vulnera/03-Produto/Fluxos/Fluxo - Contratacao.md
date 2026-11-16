@@ -6,6 +6,8 @@ status: ativo
 
 # Fluxo - Contratacao
 
+> **Comportamento vigente conferido em 2026-11-16:** CLIENT solicita a assinatura da própria empresa; ADMIN aprova/rejeita uma solicitação pendente. Há no máximo uma assinatura ativa por empresa. Não há pagamento real nem garantia de e-mail de aprovação/rejeição nesse fluxo. Remediação inclusa habilita o escopo contratado, sem conceder a CLIENT transições de findings. As descrições abaixo sobre campos comerciais, e-mails e mudança de permissão pertencem ao planejamento anterior e ficam superadas nesses pontos.
+
 ## Objetivo
 Descrever o processo de aprovação (ou rejeição) de uma assinatura pelo Admin após o cadastro do cliente.
 

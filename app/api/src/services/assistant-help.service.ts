@@ -22,16 +22,21 @@ export class AssistantHelpService {
     const hasCurrentMatch = eligible.some((topic) => topic.keywords.some((keyword) => ` ${question} `.includes(` ${normalizeAssistantText(keyword)} `)));
     return eligible.map((topic) => {
       let score = 0;
+      let specificity = 0;
       for (const keyword of topic.keywords) {
         const term = normalizeAssistantText(keyword);
         // Expressões específicas de produto prevalecem sobre um termo genérico isolado.
-        if (` ${question} `.includes(` ${term} `)) score += 8 + Math.min(12, (term.split(" ").length - 1) * 4);
+        if (` ${question} `.includes(` ${term} `)) {
+          const words = term.split(" ").length;
+          score += 8 + Math.min(12, (words - 1) * 4);
+          specificity = Math.max(specificity, words);
+        }
         else if (continuation && history && ` ${history} `.includes(` ${term} `)) score += 1;
       }
       if (topic.screens.includes(dto.screen) && contextual && !hasCurrentMatch) score += 15;
       else if (score > 0 && topic.screens.includes(dto.screen)) score += 2;
-      return { topic, score };
-    }).filter((match) => match.score > 0).sort((a, b) => b.score - a.score).slice(0, 3).map(({ topic }) => topic);
+      return { topic, score, specificity };
+    }).filter((match) => match.score > 0).sort((a, b) => b.score - a.score || b.specificity - a.specificity).slice(0, 3).map(({ topic }) => topic);
   }
 
   guidance(topic: AssistantTopic, role: UserRole): string {

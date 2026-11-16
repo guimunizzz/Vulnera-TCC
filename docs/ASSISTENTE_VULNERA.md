@@ -46,7 +46,9 @@ O contexto externo contém a pergunta, até seis mensagens anteriores, uma tela 
 
 ### Conteúdo ampliado na revisão do PR #77
 
-O catálogo atual tem **29 tópicos**, com os 17 anteriores preservados e 12 aprofundamentos de domínio/produto: tipos/origens de achados, escopo e elegibilidade, ciclo de findings, OWASP, métricas CVSS, contexto/VRS, política/ciclo SLA, governança do aceite, buscas/watchlists, checklist de maturidade, papéis na empresa e notificações. As fontes e divergências históricas estão em [ASSISTENTE_CONTEUDO_PRODUTO.md](ASSISTENTE_CONTEUDO_PRODUTO.md).
+Na revisão do PR #77, o catálogo passou a **29 tópicos**, com os 17 anteriores preservados e 12 aprofundamentos de domínio/produto: tipos/origens de achados, escopo e elegibilidade, ciclo de findings, OWASP, métricas CVSS, contexto/VRS, política/ciclo SLA, governança do aceite, buscas/watchlists, checklist de maturidade, papéis na empresa e notificações. As fontes e divergências históricas estão em [ASSISTENTE_CONTEUDO_PRODUTO.md](ASSISTENTE_CONTEUDO_PRODUTO.md).
+
+**Ampliação de 16/11/2026:** a Vuvu passa a **44 tópicos**, com mais 15 aprofundamentos: jornada completa, onboarding/assinatura, capacidade do plano, formatos/limites de evidência, conteúdo dos PDFs, exportações, fila/cancelamento de scans, promoção DAST, formatos/comparação SAST/SCA, inventário/triagem Threat Intel, override, uso da Vuvu e acessibilidade. A seleção privilegia expressões específicas em empates. Fluxos completos conectam pré-condições, etapas, responsáveis e próximo passo. Somente domínio/produto vigente, sem consultar os registros da conta. A aplicação da API principal, que ainda tinha 17 tópicos na conferência, é registrada em `docs/QA_VUVU_CONTEXTO_2026-11-16.md`.
 
 A curadoria é versionada em linguagem de usuário e conferida no código; a documentação técnica, arquitetura e desenvolvimento não são carregados no prompt. O assistente recupera até três tópicos e 6.000 caracteres. Regras e atalhos continuam determinados pela aplicação, sem ler registros reais nem executar operações.
 
