@@ -47,3 +47,16 @@ O navegador usou login/HTTP simulados com dados fictícios; foram verificados en
 Prévia de produção separada em `http://127.0.0.1:4190`. As capturas/relatórios brutos e scripts desta rodada ficam somente no `output/vuvu-clean/` ignorado. As prévias usam dados fictícios; suas respostas não demonstram chamada real ao Gemini.
 
 Atualizados guia do assistente, documentação frontend, plano visual, origem dos assets, ADR-054 e documentos vivos. Commit/publicação restritos à branch visual, com identidade `iannxz`; sem merge na dev, alteração do PR #77 ou aplicação/restart do ambiente principal em `localhost:8086`.
+
+## Aplicação posterior autorizada em localhost:8086 — 2026-11-16
+
+O usuário informou que o Docker estava disponível e pediu explicitamente aplicar estas mudanças ao projeto principal. O parágrafo anterior registra o estado da entrega inicial; esta etapa passa a disponibilizar a nova Web no ambiente principal.
+
+- Build real do serviço Web aprovado, código de `6e7e467`. Imagem anterior preservada exclusivamente no Docker local como `vulnera-before-vuvu-drag-web:2026-11-16`.
+- Conferência somente leitura encontrou zero scans. Recriado exclusivamente `vulnera-web` por `docker compose up -d --no-deps --no-build web`; não foram reconstruídos/reiniciados API, banco, Mailhog ou serviços de QA.
+- Navegador no endereço real, com autenticação efêmera em memória, confirmou Web HTTP 200 e CSP presente, os dois atlas carregados, ausência de passeio e pausa, six seven único sem abrir painel, reação durante arraste, nenhuma abertura ao soltar, chat compacto e foco/fechamento por teclado.
+- Nenhum POST para `/assistant/chat`, nenhuma geração Gemini nesta etapa e nenhum erro de página/CSP. A API existente foi preservada, sem aplicação de código novo ao backend.
+- Health API HTTP 200. Comparação antes/depois confirmou mesmos IDs, imagens, início e mounts de API/DB/Mailhog; mesmos volumes e contagens: 5 usuários, 1 empresa, 5 aplicações, 5 projetos, 10 vulnerabilidades, 2 evidências e zero scans. `.env` com hash inalterado. Nenhum seed/reset ou operação de escrita de negócio executado.
+- Fonte/testes Web já validados na rodada acima; esta etapa repetiu build Docker e smoke real, sem repetir toda a suíte por uma operação de aplicação/documentação.
+
+Scripts, snapshots, logs e resultados brutos desta aplicação continuam somente em `output/vuvu-clean/`, ignorado. Nenhuma nova captura, ambiente de teste ou imagem Docker foi enviado ao GitHub; somente o registro humano desta aplicação acompanha a branch visual.

@@ -1138,6 +1138,8 @@ partindo de `dev`, com espera visual fluida quando necessária.
 
 ### Histórico da evolução de interação — ✅ Concluída em 2026-11-16
 
+- **Aplicação posterior autorizada (AI-UI-07):** Web de `6e7e467` construída e aplicada exclusivamente em `localhost:8086`. Smoke real de gestos/atlas/painel e Web/API HTTP 200; sem POST do assistente ou erros de página/CSP. API/DB/Mailhog/volumes, contagens e `.env` preservados; nenhum seed/reset. Backup de imagem e artefatos de QA apenas locais. Este registro supera o estado de prévia sem aplicação indicado no checkpoint inicial abaixo.
+
 - **Branch/base:** `refactor/assistant-ui`, `2abbd9b`; sem PR novo ou alteração do PR #77.
 - **Pedido/escolha:** retirar passeio/pausa, arrastar com reação e limpar o chat; usuário escolheu duplo clique para o six seven. Alternativa por Shift+Enter, sem execução automática.
 - **Validação:** 43/43 focais, Web 677/677, contraste 132/132, build e navegador de produção/axe 11/11; mouse, toque por CDP, teclado e texto 200%.

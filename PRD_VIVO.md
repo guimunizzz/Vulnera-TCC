@@ -16,6 +16,10 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-16 — Vuvu atualizada no ambiente principal após autorização (100%).** Imagem Web construída a partir de `6e7e467`; recriado exclusivamente `vulnera-web` com `--no-deps --no-build`. Zero scans na conferência; imagem anterior guardada somente localmente. Navegador autenticado em `localhost:8086` confirmou atlas original/novo, personagem parada, ausência da pausa, six seven único sem abrir chat, arraste com reação sem abertura ao soltar e painel compacto/foco. Nenhum POST do assistente, erro de página ou CSP. Web/API HTTP 200; IDs/imagens/início/mounts de API/DB/Mailhog, contagens de negócio e `.env` preservados. Sem aplicar código novo à API, seed/reset ou publicação de artefatos. O marco anterior de prévia sem deploy permanece como histórico e fica superado por esta aplicação autorizada.
+
+- [x] AI-UI-07 — Aplicar somente a Web principal e conferir gestos/visual e preservação dos demais serviços/dados.
+
 **✅ 2026-11-16 — Vuvu com arraste, surpresa e chat compacto (100%).** Na `refactor/assistant-ui`, substituídos passeio/flutuação e pausa manual por posição controlada por ponteiro/setas, captura/limites e reação de arraste. Usuário escolheu duplo clique para o novo atlas six seven; Shift+Enter alternativo, uma execução de 2,88 s, sem abrir chat nem enviar requisição. Cabeçalho simplificado, sugestões recolhidas durante a conversa, origem/atalhos e privacidade preservados. Focais 43/43; check Web **677/677**, contraste **132/132**, build e navegador de produção **11/11**, zero erros de página/CSP/axe nas verificações finais. Prévia separada em 4190; sem mudança de API, chave, dev, PR #77 ou stack principal. Relatório `docs/QA_VUVU_INTERACOES_2026-11-16.md`; pendências/limites registrados, posição não persiste após reload.
 
 - [x] AI-UI-06 — Remover passeio/pausa, permitir arraste com reação, aplicar six seven no momento escolhido e limpar a conversa, com validação e documentação.

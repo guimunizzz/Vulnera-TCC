@@ -1,5 +1,9 @@
 # BACKLOG.md — Vulnera
 
+**✅ 2026-11-16 — AI-UI-07 concluída (100%).** Após autorização do usuário, somente Web atualizada em `localhost:8086` com a Vuvu de `6e7e467`. Gestos, atlas e painel conferidos com navegador/sessão efêmera; zero POST ao assistente e zero erros de página/CSP. Web/API HTTP 200. API/DB/Mailhog/volumes, contagens e `.env` preservados; imagem anterior somente local. Sem seed/reset ou artefato de QA publicado. Detalhes em `QA_VUVU_INTERACOES_2026-11-16.md`.
+
+- [x] AI-UI-07 — Aplicação autorizada exclusivamente do frontend principal e verificação de preservação.
+
 **✅ 2026-11-16 — AI-UI-06 concluída (100%).** Vuvu com posição por arraste/teclado, sem passeio/pausa, six seven por duplo clique/Shift+Enter e chat compacto. Origem, sugestões, atalhos, sessão e privacidade preservados. Web 677/677, contraste 132/132, build e navegador/axe 11/11. Atlas original sem edição, somente branch visual; sem backend ou deploy principal. Ver `docs/QA_VUVU_INTERACOES_2026-11-16.md`.
 
 - [x] AI-UI-06 — Interações solicitadas e limpeza visual, com testes de mouse/toque/teclado, preferências e responsividade.

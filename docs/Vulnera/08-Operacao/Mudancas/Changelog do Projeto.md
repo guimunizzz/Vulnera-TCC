@@ -9,6 +9,18 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Vuvu com novas interações aplicada à Web principal
+
+**✅ 100%; AI-UI-07.** Usuário autorizou aplicar a versão de `6e7e467` em
+localhost:8086. Build Web aprovado; imagem anterior guardada apenas localmente.
+Zero scans na conferência. Recriado somente `vulnera-web`, sem dependências.
+Navegador autenticado confirmou atlas, repouso sem pausa, six seven único,
+arraste com reação e chat compacto. Zero POST do assistente/erros de página/CSP;
+Web/API HTTP 200. API/DB/Mailhog e seus volumes/contagens/configuração privada
+preservados; sem seed/reset ou backend atualizado. Serviços de QA não alterados.
+Registros brutos locais, somente documentação humana versionada nesta etapa.
+Ver `docs/QA_VUVU_INTERACOES_2026-11-16.md`.
+
 ## 2026-11-16 — Vuvu controlada por arraste, six seven e chat compacto
 
 **✅ 100%.** Usuário pediu retirar passeio/pausa e limpar o chat; escolheu
