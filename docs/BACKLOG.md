@@ -10,7 +10,7 @@
 
 - [x] PR77-01 — Limpeza do versionamento sem apagar as evidências locais nem os testes de código.
 - [ ] PR77-02 — Curadoria de domínio/produto com rastreabilidade para docs e comportamento implementado.
-- [ ] PR77-03 — Modelo real somente no ambiente privado, exemplos/documentação sem identificador concreto.
+- [x] PR77-03 — Modelo real omitido da versão pública atual; campos vazios nos exemplos, fixture sintética e fallback se a resposta reproduzir a configuração privada. Histórico anterior preservado; focal API 60/60.
 - [ ] PR77-04 — Conferir pedidos, validar, publicar e propagar preservando a Vuvu.
 
 **✅ 2026-11-15 — INT-AI-04E, instruções nos `.env.example` (100%).** Modelo da raiz inclui o fluxo de clone/pull até validação Gemini, preservação de `.env`, distribuição privada da credencial e restart somente sem scans ativos. Modelo da API explica o uso no host e remete ao modelo Docker. Alteração apenas de comentários/docs; padrões local/chave vazia/modelo preservados e Compose validado sem reiniciar serviços. Publicação restrita à `feature/agent-ai`, como `iannxz`.
@@ -21,7 +21,7 @@
 
 - [x] INT-AI-04D — Template Docker da raiz e instruções reproduzíveis sem versionar a chave.
 
-**✅ 2026-11-15 — INT-AI-04B1, ativação técnica Gemini local concluída (100%).** Chave somente no `.env` ignorado; modelo `gemini-3.5-flash-lite`. Zero scans ativos antes da recriação exclusiva da API, mantendo imagem/volumes e IDs de banco/Web/Mailhog. Provedor HTTP 200/STOP; rota autenticada por token interno efêmero HTTP 200 com `source: gemini`; health/Web HTTP 200. Chave não aparece nos logs da API ou nos arquivos versionados. Nenhuma configuração de cobrança foi alterada. Evidências sanitizadas em `output/agent-ai-dev-merge/` (local e ignorado). Registro anterior INT-AI-04B desdobrado abaixo; a confirmação de gratuidade não é inferida de uma resposta bem-sucedida.
+**✅ 2026-11-15 — INT-AI-04B1, ativação técnica Gemini local concluída (100%).** Chave somente no `.env` ignorado; modelo `modelo configurado privadamente`. Zero scans ativos antes da recriação exclusiva da API, mantendo imagem/volumes e IDs de banco/Web/Mailhog. Provedor HTTP 200/STOP; rota autenticada por token interno efêmero HTTP 200 com `source: gemini`; health/Web HTTP 200. Chave não aparece nos logs da API ou nos arquivos versionados. Nenhuma configuração de cobrança foi alterada. Evidências sanitizadas em `output/agent-ai-dev-merge/` (local e ignorado). Registro anterior INT-AI-04B desdobrado abaixo; a confirmação de gratuidade não é inferida de uma resposta bem-sucedida.
 
 - [x] INT-AI-04B1 — Configuração privada e chamada real Gemini na stack local.
 - [ ] INT-AI-04B2 — Responsável confirmar Free Tier e substituir a credencial compartilhada em chat.
@@ -30,7 +30,7 @@
 
 - [x] INT-AI-04C — Verificar origem Gemini e adaptação a uma pergunta/formato inéditos contra a ajuda predefinida.
 
-**✅ 2026-11-15 — INT-AI-04A, guia da configuração Gemini gratuita preparado.** Fontes oficiais reconferidas; projeto Free sem faturamento, chave privada, verificação eventual por celular, `.env` na raiz do Compose e recriação da API apenas sem scans ativos. Texto no `gemini-3.5-flash-lite` elegível ao Free Tier; selo Gemini e Usage necessários para comprovar a integração. Nenhum segredo/arquivo privado/cobrança/serviço alterado. Guia em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
+**✅ 2026-11-15 — INT-AI-04A, guia da configuração Gemini gratuita preparado.** Fontes oficiais reconferidas; projeto Free sem faturamento, chave privada, verificação eventual por celular, `.env` na raiz do Compose e recriação da API apenas sem scans ativos. Texto no `modelo configurado privadamente` elegível ao Free Tier; selo Gemini e Usage necessários para comprovar a integração. Nenhum segredo/arquivo privado/cobrança/serviço alterado. Guia em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
 
 - [x] INT-AI-04A — Requisitos, condições de custo/cartão e passo a passo revisados.
 - [ ] INT-AI-04B — Responsável configurar projeto/chave/modelo privadamente e validar Gemini ao vivo; sem ativação automática de faturamento.

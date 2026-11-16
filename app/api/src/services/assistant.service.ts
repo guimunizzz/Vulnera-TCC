@@ -38,7 +38,10 @@ export class AssistantService {
       } catch {
         // Gateways injetados também devem falhar sem derrubar a orientação local.
       }
-      if (message?.trim() && message.length <= 4_000) return { message, source: "gemini", actions };
+      // A configuração do provedor não faz parte da orientação pública do produto.
+      const candidate = message ?? "";
+      const privateValue = [this.config.model, this.config.apiKey].some((value) => value && candidate.toLowerCase().includes(value.toLowerCase()));
+      if (candidate.trim() && candidate.length <= 4_000 && !privateValue) return { message: candidate, source: "gemini", actions };
     }
     const first = topics[0];
     // A pergunta por conceito não deve ganhar uma instrução operacional alheia.

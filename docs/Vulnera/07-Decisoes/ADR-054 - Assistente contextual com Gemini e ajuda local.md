@@ -22,7 +22,7 @@ Esta decisão registra a autorização de escopo do pedido atual, sem editar reg
 - Usar base curta de ajuda versionada e recuperação simples por tela/termos/histórico limitado. Não adicionar embeddings, banco vetorial, conversas persistidas, migration, repository vazio ou infraestrutura nova.
 - Integrar Gemini Developer API por `fetch` em gateway injetável, com endpoint oficial fixo e uma chamada por pergunta explícita. Chave somente no backend, via `EnvVar`/`EnvKeys`; chave/modelo ausentes não impedem inicialização.
 - Manter `ASSISTANT_MODE=local|gemini`, padrão local. Modo Gemini depende de `GEMINI_API_KEY` e `GEMINI_MODEL`. A ajuda local é alternativa funcional e sempre identificada pela origem da resposta, sem se apresentar como IA ao vivo.
-- Recomendar inicialmente `gemini-3.5-flash-lite`, estável, com texto no Free Tier e sem desligamento anunciado nas fontes oficiais consultadas em 23/10/2026. Modelo configurável; reconferir disponibilidade/contrato na integração. Não recuperar exemplos históricos de Gemini 1.5.
+- Configurar o identificador do modelo somente no ambiente privado, conferindo disponibilidade, contrato, cotas e elegibilidade no projeto do responsável. Exemplos públicos deixam o valor vazio; testes usam identificador sintético. A escolha concreta da rodada de 23/10/2026 foi omitida da versão pública atual no atendimento ao PR #77, sem reescrever o histórico.
 - Derivar perfil/identidade da autenticação. Enviar somente pergunta/histórico limitados, tela normalizada, role e ajuda selecionada. Não coletar dados de negócio, DOM ou identificadores de recursos para o provedor; usar documentação e dados fictícios nos ensaios.
 - Determinar ações por catálogo fechado da aplicação, filtrado no servidor e na interface. O texto do modelo não concede permissões e não define URLs ou operações executáveis.
 - Aplicar limites próprios por usuário e globais à instância, compartilhados entre requisições, preservando o contrato HTTP 429 atual. Limitar tamanho de entrada/histórico/saída e timeout; nenhuma repetição automática ou troca de provedor/modelo. Falhas externas caem para ajuda local; limite da aplicação continua 429.
@@ -42,7 +42,7 @@ Esta decisão registra a autorização de escopo do pedido atual, sem editar reg
 
 - [Plano e evidências da Fase 0](../../ASSISTENTE_VULNERA_PLANO.md)
 - [[Adr 017 ia cortada do escopo do mvp]] · [[ADR-006 - Gemini com rate limit agressivo]] · [[ADR-011 - Provedor de IA em revisao]] · [[ADR-040 - Rate limiting multi-tenant em memoria]]
-- [Modelo](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite), [preços](https://ai.google.dev/gemini-api/docs/pricing), [ciclo de vida](https://ai.google.dev/gemini-api/docs/deprecations), [faturamento](https://ai.google.dev/gemini-api/docs/billing), [limites](https://ai.google.dev/gemini-api/docs/rate-limits), [contrato REST](https://ai.google.dev/api/generate-content), [termos](https://ai.google.dev/gemini-api/terms).
+- [Modelo](https://ai.google.dev/gemini-api/docs/models), [preços](https://ai.google.dev/gemini-api/docs/pricing), [ciclo de vida](https://ai.google.dev/gemini-api/docs/deprecations), [faturamento](https://ai.google.dev/gemini-api/docs/billing), [limites](https://ai.google.dev/gemini-api/docs/rate-limits), [contrato REST](https://ai.google.dev/api/generate-content), [termos](https://ai.google.dev/gemini-api/terms).
 
 ## Implementação e evidências — 2026-10-23
 

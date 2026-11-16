@@ -106,7 +106,7 @@ Implementação das Fases 1–6 ainda pendente.
   orientação contextual, com Gemini opcional e ajuda local identificada;
   sugestão de findings e IA mobile continuam excluídas.
 - Documentação oficial consultada em 23/10: recomendação inicial
-  `gemini-3.5-flash-lite`, modelo configurável. Elegibilidade da conta e
+  `modelo configurado privadamente`, modelo configurável. Elegibilidade da conta e
   chamada real não verificadas; gratuidade depende da configuração da conta.
 - Web e health API responderam HTTP 200. Lint API, builds API/web e check web
   não chegaram a executar por ausência de `node_modules`/`eslint`/`tsc` no

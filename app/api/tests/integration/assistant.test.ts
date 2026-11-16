@@ -20,7 +20,7 @@ import type { UserRepository } from "../../src/repositories/user.repository";
 import type { AssistantChatDTO, AssistantGatewayInput, AssistantResponseDTO } from "../../src/models/assistant.model";
 import type { UserRole } from "../../src/models/user.model";
 
-const GEMINI: AssistantConfig = { mode: "gemini", apiKey: "synthetic-test-key", model: "gemini-3.5-flash-lite", timeoutMs: 15000, maxOutputTokens: 500 };
+const GEMINI: AssistantConfig = { mode: "gemini", apiKey: "synthetic-test-key", model: "gemini-3-test-fixture", timeoutMs: 15000, maxOutputTokens: 500 };
 const QUESTION: AssistantChatDTO = { question: "Como solicito uma análise?", screen: "dashboard", history: [] };
 const INPUT: AssistantGatewayInput = { ...QUESTION, role: "CLIENT", help: "A análise cria um projeto." };
 const HIGH: TokenBucketPolicy = { ratePerSecond: 1000, burst: 1000 };
@@ -151,6 +151,16 @@ describe("Assistente HTTP", () => {
     const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("CLIENT")).send({ ...QUESTION, screen: "dast", question: "Como funciona o DAST?" });
     expect(response.status).toBe(200);
     expect(response.body.actions).toEqual([{ id: "projects", label: "Abrir projetos" }]);
+  });
+
+  it.each(["model", "apiKey"] as const)("não devolve a configuração privada %s se o provedor a reproduzir", async (field) => {
+    const generate = jest.fn().mockResolvedValue(`Configuração interna: ${GEMINI[field]}`);
+    const { app } = makeApp({ generate });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(QUESTION);
+    expect(response.status).toBe(200);
+    expect(response.body.source).toBe("local");
+    expect(response.body.message).not.toContain(GEMINI[field]);
+    expect(generate).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -285,7 +295,7 @@ describe("Gateway Gemini real com transporte simulado", () => {
     expect(await gateway.generate(INPUT)).toBe("Orientação validada.");
     expect(fetcher).toHaveBeenCalledTimes(1);
     const [url, options] = fetcher.mock.calls[0];
-    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent");
+    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3-test-fixture:generateContent");
     expect(options.redirect).toBe("manual");
     expect(options.headers["x-goog-api-key"]).toBe("synthetic-test-key");
     const body = JSON.parse(options.body);

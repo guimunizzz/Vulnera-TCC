@@ -36,7 +36,7 @@ O contexto externo contém a pergunta, até seis mensagens anteriores, uma tela 
 
 ## Preparar o Free Tier
 
-Escolha conferida em **23/10/2026**: `gemini-3.5-flash-lite`, [estável](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite), com texto disponível no [Free Tier](https://ai.google.dev/gemini-api/docs/pricing) e sem desligamento anunciado no [ciclo de vida](https://ai.google.dev/gemini-api/docs/deprecations). Confira novamente antes da apresentação; disponibilidade e cotas podem mudar.
+O responsável escolhe o modelo permitido no seu projeto e preenche seu identificador somente no ambiente privado. Consulte o [catálogo](https://ai.google.dev/gemini-api/docs/models), a [tabela de preços](https://ai.google.dev/gemini-api/docs/pricing) e o [ciclo de vida](https://ai.google.dev/gemini-api/docs/deprecations) antes de configurar; disponibilidade e cotas podem mudar. O identificador concreto foi omitido dos arquivos públicos atuais no atendimento ao PR #77, sem reescrever os commits históricos.
 
 1. Entre no Google AI Studio com sua conta e selecione/crie um projeto elegível ao Free Tier.
 2. Confira o tier do projeto e as cotas disponíveis no AI Studio. Mantenha-o em **Free**, sem vincular faturamento, habilitar trial pago, fazer pré-pagamento ou ativar serviços adicionais. Veja [faturamento](https://ai.google.dev/gemini-api/docs/billing) e [limites oficiais](https://ai.google.dev/gemini-api/docs/rate-limits).
@@ -49,7 +49,7 @@ O Free Tier pode usar entradas e respostas para melhoria dos produtos Google, in
 
 ### Primeira configuração gratuita no Docker — conferida em 2026-11-15
 
-Para usar somente texto no `gemini-3.5-flash-lite`, a [tabela oficial](https://aistudio.google.com/docs/pricing#gemini-3.5-flash-lite) mantém entrada e saída gratuitas no Free Tier. O [faturamento pago](https://aistudio.google.com/docs/billing) é uma etapa separada: exige vincular uma conta de cobrança e pode exigir pré-pagamento. Para o ensaio gratuito, escolha um projeto Free sem faturamento vinculado; não avance por Set up billing/Upgrade/compra de créditos. Criar uma chave não comprova que o projeto é gratuito: confira o tier do projeto.
+Para o ensaio gratuito, confira na [tabela oficial](https://aistudio.google.com/docs/pricing) se o modelo escolhido tem texto disponível no Free Tier e use um projeto Free sem faturamento vinculado. O [faturamento pago](https://aistudio.google.com/docs/billing) é uma etapa separada. Não avance por Set up billing/Upgrade/compra de créditos para esse ensaio. Criar uma chave ou preencher o modelo não comprova gratuidade: confira o tier e as cotas do projeto.
 
 Requisitos: conta Google com acesso ao AI Studio (18 anos ou mais), projeto Free, chave privada desse projeto, modelo disponível e internet na API. Docker/API/web já estão preparados no Vulnera. Alguns projetos/contas exigem [verificação por QR no celular](https://aistudio.google.com/docs/verification); ela é distinta de ativar o plano pago.
 
@@ -61,10 +61,10 @@ Requisitos: conta Google com acesso ao AI Studio (18 anos ou mais), projeto Free
    ```dotenv
    ASSISTANT_MODE=gemini
    GEMINI_API_KEY=COLE_A_CHAVE_SOMENTE_NO_ARQUIVO_LOCAL
-   GEMINI_MODEL=gemini-3.5-flash-lite
+   GEMINI_MODEL=
    ```
 
-   Esse `.env` é ignorado pelo Git. O Compose lê essas variáveis e as encaminha à API. O arquivo `app/api/.env` sozinho não configura a interpolação do Compose. Não use prefixo `VITE_` para a chave. A alternativa de entrada oculta no PowerShell está abaixo.
+   Preencha `GEMINI_MODEL` com o identificador autorizado somente no `.env` privado, junto da chave. O exemplo versionado deixa ambos vazios. Esse `.env` é ignorado pelo Git. O Compose lê essas variáveis e as encaminha à API. O arquivo `app/api/.env` sozinho não configura a interpolação do Compose. Não use prefixo `VITE_` para chave ou modelo. A alternativa de entrada oculta no PowerShell está abaixo.
 5. Quando não houver scans em execução, aplique somente a configuração da API na raiz do repositório:
 
    ```powershell
@@ -78,14 +78,14 @@ As [cotas](https://aistudio.google.com/docs/rate-limits) variam por modelo/proje
 
 **Estado histórico da orientação inicial:** nenhum `.env` real, cartão, projeto Google ou serviço havia sido configurado naquela etapa. A configuração e a chamada real com a chave do responsável estavam pendentes.
 
-**Atualização operacional em 2026-11-15:** mediante solicitação explícita, chave cadastrada apenas no `.env` ignorado da raiz e API configurada em modo `gemini` com `gemini-3.5-flash-lite`. Confirmados zero scans ativos; recriada somente a API, sem rebuild, mantendo imagem e volumes. Google respondeu HTTP 200/STOP; rota `/api/assistant/chat`, autenticada com token interno efêmero de 60 s, respondeu HTTP 200 com `source: gemini`. Health/Web HTTP 200 e banco/Web/Mailhog sem recriação. Nenhuma chave/token foi incluída em log ou commit. Esta prova técnica não verifica o tier de faturamento: o responsável ainda deve confirmá-lo no AI Studio. A credencial compartilhada em chat deve ser substituída por uma nova, inserida diretamente no arquivo privado; depois reaplique a API sem scans ativos.
+**Atualização operacional em 2026-11-15:** mediante solicitação explícita, chave cadastrada apenas no `.env` ignorado da raiz e API configurada em modo `gemini` com `modelo configurado privadamente`. Confirmados zero scans ativos; recriada somente a API, sem rebuild, mantendo imagem e volumes. Google respondeu HTTP 200/STOP; rota `/api/assistant/chat`, autenticada com token interno efêmero de 60 s, respondeu HTTP 200 com `source: gemini`. Health/Web HTTP 200 e banco/Web/Mailhog sem recriação. Nenhuma chave/token foi incluída em log ou commit. Esta prova técnica não verifica o tier de faturamento: o responsável ainda deve confirmá-lo no AI Studio. A credencial compartilhada em chat deve ser substituída por uma nova, inserida diretamente no arquivo privado; depois reaplique a API sem scans ativos.
 
 Os placeholders estão em `app/api/.env.example`; arquivos `.env` reais são privados. A implementação inicial não os alterou; a ativação local posterior está registrada acima. Mantenha a configuração já necessária à API (banco, JWT, `PORT`, etc.). Variáveis do assistente são opcionais no boot e lidas por `EnvVar`/`EnvKeys`, exclusivamente no backend.
 
 ```dotenv
 ASSISTANT_MODE=local
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_MODEL=
 ASSISTANT_TIMEOUT_MS=15000
 ASSISTANT_MAX_OUTPUT_TOKENS=500
 RATE_LIMIT_ASSISTANT_USER_PER_HOUR=10
@@ -112,7 +112,7 @@ Para fornecer a chave sem digitá-la como literal no histórico do PowerShell, u
 ```powershell
 $assistantSecret = Read-Host 'GEMINI_API_KEY (entrada oculta)' -AsSecureString
 $env:GEMINI_API_KEY = [System.Net.NetworkCredential]::new('', $assistantSecret).Password
-$env:GEMINI_MODEL = 'gemini-3.5-flash-lite'
+$env:GEMINI_MODEL = Read-Host 'Identificador do modelo autorizado (somente local)'
 $env:ASSISTANT_MODE = 'gemini'
 docker compose up -d --build --no-deps api web
 Remove-Item Env:\GEMINI_API_KEY
