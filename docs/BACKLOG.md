@@ -1,11 +1,13 @@
 # BACKLOG.md — Vulnera
 
+**✅ 2026-11-16 — AI-CHAT-01..04 concluídas (100%).** Código `7388ba0`: conversa informal, cota de geração separada sem aumento numérico, Enter/Shift+Enter/Tab e acessibilidade de foco/espera/texto 200%. API 957/957, Web final 697/697, contraste 132/132, focal Web 40/40, builds e navegador final 11/11 aprovados. Somente API/Web principais atualizados; sequência real por Enter com três respostas locais e uma Gemini HTTP 200, zero erros de página/CSP. Banco/QA/volumes/contagens/ambiente privado preservados; sem seed/reset. Docs/ADR-056 e `QA_VUVU_CONVERSA_2026-11-16.md`; backups e QA bruto só locais. Marco parcial abaixo concluído.
+
 **✅ 2026-11-16 — AI-CHAT-01..03 validadas (100% do código; aplicação em fechamento).** Conversa informal/apresentações locais, orçamento externo separado, ajuda local sem bloqueio por cota de geração, Enter/Shift+Enter/Tab e espera acessível implementados. ADR-056; API 957/957, Web final 697/697, contraste 132/132, focal Web 40/40, builds e navegador final 11/11 aprovados, incluindo cabeçalho a 200%. Aplicação e publicação em fechamento. Relatório `QA_VUVU_CONVERSA_2026-11-16.md`.
 
 - [x] AI-CHAT-01 — Tratar sequência relatada, abreviações e esclarecimento apropriado.
 - [x] AI-CHAT-02 — Preservar cotas numéricas e proteção HTTP, reservando somente geração.
 - [x] AI-CHAT-03 — Corrigir teclado e acessibilidade de espera/foco/texto ampliado.
-- [ ] AI-CHAT-04 — Validação final, aplicação autorizada e publicação na branch visual.
+- [x] AI-CHAT-04 — Validação, aplicação real e publicação na branch visual concluídas.
 
 **✅ 2026-11-16 — AI-CONTEXT-01/02 concluídas (100%).** Código `7d195d1`, API 942/942, build e aplicação exclusiva da API principal aprovados. Catálogo em execução de 17 para 44 tópicos; fonte anterior de 29 preservada e ampliada. Uma pergunta fictícia real HTTP 200/Gemini em 1.925 ms confirmou fluxo/aprovação pelo ADMIN, zero erros de página/CSP. Demais containers principais, volumes/portas, contagens e `.env` preservados; backup/QA bruto só locais. Relatório `QA_VUVU_CONTEXTO_2026-11-16.md`; histórico parcial abaixo concluído.
 

@@ -16,12 +16,14 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-16 — Conversa, cota e acessibilidade aplicadas no principal (100%; AI-CHAT-01..04).** Código `7388ba0`, como iannxz. API 957/957 em 58 suítes, Web final 697/697 em 78 arquivos, contraste 132/132, focal Web 40/40, builds e navegador final 11/11 aprovados. Imagens validadas aplicadas somente em API/Web após zero scans/migrations/variáveis divergentes. Sequência real em Aplicações por Enter: OI local, OQ E O VULNERA local, análise Gemini (1.297 ms), quem e vc local; quatro POST, foco/Escape corretos, zero erros de página/CSP. Banco/Mailhog e QA pré-existente, todos os volumes/portas, contagens e `.env` preservados. ADR-056, guias e relatório `docs/QA_VUVU_CONVERSA_2026-11-16.md` atualizados; sem nova cota/dependência/schema. Imagens anteriores e QA bruto somente locais; marcos parciais abaixo concluídos por esta entrada.
+
 **✅ 2026-11-16 — Conversa, cota e teclado da Vuvu validados (100% do código; aplicação em fechamento).** Sequência relatada corrigida com três respostas básicas locais, mantendo 44 tópicos. Abreviações e esclarecimento sem atalhos alheios; cota de geração separada da proteção HTTP, com ajuda local no esgotamento e limites numéricos preservados (ADR-056). Enter/Shift+Enter/Tab, composição, foco, espera sem reenvio e cabeçalho a 200% implementados. API check final 957/957 em 58 suítes; Web final 697/697, contraste 132/132, focal 40/40, builds e navegador final 11/11 aprovados. Aplicação principal e publicação em fechamento. Relatório `docs/QA_VUVU_CONVERSA_2026-11-16.md`.
 
 - [x] AI-CHAT-01 — Reconhecimento, respostas básicas e seleção com esclarecimento.
 - [x] AI-CHAT-02 — Separar orçamento de geração e proteção HTTP sem aumentar cotas.
 - [x] AI-CHAT-03 — Envio por teclado, composição, foco, contagens e texto ampliado.
-- [ ] AI-CHAT-04 — Fechar validação final, aplicação principal e publicação como iannxz.
+- [x] AI-CHAT-04 — Validação/aplicação real concluídas e publicação na branch visual como iannxz.
 
 **✅ 2026-11-16 — Contexto ampliado da Vuvu aplicado e conferido no principal (100%; AI-CONTEXT-01/02).** Código `7d195d1`, como iannxz: 44 tópicos de produto, com API principal antes em 17 e fonte antes em 29. Check final 942/942 em 58 suítes e build aprovados. Somente API recriada após zero scans/migrations/variáveis divergentes; navegador real confirmou uma pergunta fictícia HTTP 200/`source: gemini` em 1.925 ms, aprovação pelo ADMIN, zero erros de página/CSP. Web/DB/Mailhog, mounts/portas, contagens e `.env` preservados; imagem anterior/QA bruto apenas locais. Sem alteração frontend/schema/dependências ou novas chamadas automáticas. Relatório `docs/QA_VUVU_CONTEXTO_2026-11-16.md`; marco parcial abaixo concluído por este fechamento.
 

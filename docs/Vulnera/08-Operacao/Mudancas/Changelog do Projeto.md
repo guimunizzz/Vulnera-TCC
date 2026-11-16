@@ -9,6 +9,23 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Conversa informal, cota de geração e teclado da Vuvu
+
+**✅ AI-CHAT-01..04, 100%.** Três respostas básicas locais para saudação,
+identidade e produto; 44 tópicos mantidos. Abreviações normalizadas, pedidos
+com saudação preservados e esclarecimento sem atalhos alheios. Buckets próprios
+reservam geração; esgotamento mantém ajuda local e prazo, sem aumentar valores.
+Proteção HTTP/429 geral mantida, com rascunho/contagem e retomada manual. Enter,
+Shift+Enter, Tab, IME, foco/avisos e layout a 200% validados. ADR-056 complementa
+e substitui parcialmente a ADR-054. Código `7388ba0`, como iannxz.
+API 957/957, Web final 697/697, contraste 132/132, focal Web 40/40, builds e
+navegador final 11/11. Aplicados somente API/Web principais após conferências;
+sequência real por Enter: três locais, uma Gemini HTTP 200 (1.297 ms), zero
+erros de página/CSP. Banco/Mailhog/QA/volumes/contagens e `.env` preservados;
+sem schema, dependência, seed/reset, novos arquivos de teste gerados publicados
+ou nova PR. Backups e QA bruto somente locais. Relatório
+`docs/QA_VUVU_CONVERSA_2026-11-16.md`.
+
 ## 2026-11-16 — Contexto de produto ampliado e aplicado à Vuvu
 
 **✅ AI-CONTEXT-01/02, 100%.** Catálogo de fonte de 29 para 44 tópicos; quinze

@@ -4,6 +4,7 @@
 
 Data: 2026-11-16. Branch: `refactor/assistant-ui`. Autorização: implementar as
 melhorias discutidas e corrigir Enter, que antes apenas inseria linha no campo.
+Código: `7388ba0`, autor e committer `iannxz`.
 
 ## Comportamento entregue
 
@@ -70,11 +71,33 @@ Avisos anteriores de bundles grandes permanecem fora do escopo.
 
 ## Aplicação e publicação
 
-Em fechamento: aplicar somente imagens API/Web validadas após confirmar zero
-scans, nenhuma migration ou variável inesperada; preservar MySQL/Mailhog,
-containers de QA pré-existentes, volumes, contagens e `.env`. Guardar imagens
-anteriores apenas localmente e repetir a sequência real pelo teclado em 8086,
-com dados de conversa fictícios e no máximo uma tentativa de geração externa.
+**Concluída em 2026-11-16.** Zero scans, nenhuma migration pendente e nenhuma
+variável de aplicação divergente antes do restart. Imagens de produção validadas
+aplicadas com `docker compose up -d --no-deps --no-build api web`. Imagens
+anteriores somente locais: `vulnera-before-vuvu-conversation-api:2026-11-16` e
+`vulnera-before-vuvu-conversation-web:2026-11-16`. Sem seed/reset ou deploy na dev.
+
+Na interface real em `localhost:8086/applications`, abertura por teclado,
+**Enter para todos os quatro envios**, campo focado após cada resposta e Escape
+devolvendo foco à Vuvu. Sem mocks nessa verificação:
+
+| Pergunta | HTTP/origem | Tempo observado | Resultado |
+| --- | --- | --- | --- |
+| OI | 200/local | 88 ms | Saudação, sem atalhos operacionais. |
+| OQ E O VULNERA | 200/local | 17 ms | Conceito de plataforma/aplicações/projetos/findings. |
+| como faço uma analise | 200/Gemini | 1.297 ms | Passos de solicitação e distinção entre projeto e scan. |
+| quem e vc | 200/local | 18 ms | Identidade, escopo e limites da Vuvu, sem atalhos alheios. |
+
+Quatro POST explícitos, uma resposta Gemini, nenhum reenvio ou erro de página/CSP.
+Container confirmou 44 tópicos e três respostas básicas. API saudável e Web
+HTTP 200. Esperas/esgotamento foram simulados nos testes, sem consumir chamadas
+reais para forçar a cota Google.
+
+Comparação antes/depois aprovada: somente API/Web recriados; MySQL/Mailhog e
+três containers de QA pré-existentes com IDs/imagens/início inalterados. Todos
+os mounts e portas preservados; hash privado do `.env` inalterado. Contagens:
+5 usuários, 1 empresa, 5 aplicações, 5 projetos, 10 vulnerabilidades,
+2 evidências e 0 scans. Nenhuma mudança de dados de negócio.
 
 Somente código, testes e documentação humana são versionados. Prévias, scripts,
 Compose, capturas e resultados brutos desta rodada ficam em `output/` ignorado.

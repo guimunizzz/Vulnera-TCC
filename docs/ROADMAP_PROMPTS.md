@@ -1257,3 +1257,35 @@ conforme escolha explícita do usuário; manter personalidade, permissões e vis
   contratação contextualizadas, sem apagar histórico. Web não alterada nem
   revalidada integralmente nesta rodada. Sem promessa de custo zero/novas ações.
 - **Relatório:** [QA_VUVU_CONTEXTO_2026-11-16.md](QA_VUVU_CONTEXTO_2026-11-16.md).
+
+## Vuvu — conversa, cota e teclado — ✅ Concluída em 2026-11-16
+
+Pedido executado: corrigir a sequência informal relatada, reconhecer perguntas
+básicas, pedir esclarecimento apropriado, separar proteção HTTP de geração e
+melhorar espera/acessibilidade, incluindo envio por Enter.
+
+- [x] AI-CHAT-01 — Três respostas básicas locais, abreviações e esclarecimento.
+- [x] AI-CHAT-02 — Reserva somente de tentativa externa, mantendo cotas e
+  proteção HTTP; ajuda local disponível ao esgotar o orçamento de geração.
+- [x] AI-CHAT-03 — Enter/Shift+Enter/Tab, composição IME, foco, contagens manuais
+  e cabeçalho legível com texto a 200%.
+- [x] AI-CHAT-04 — Checks/builds, navegador, aplicação principal e publicação.
+
+### Histórico
+
+- **Branch/base:** `refactor/assistant-ui`, base `9cc38bf`; código `7388ba0`,
+  autor/committer `iannxz`, data 2026-11-16. Nenhuma nova PR ou mudança em
+  feature/dev/PR #77.
+- **Validação:** API 957/957 em 58 suítes; Web final 697/697 em 78 arquivos,
+  contraste 132/132, focal Web 40/40, builds e navegador final 11/11.
+- **Aplicação:** somente API/Web após zero scans/migrations/variáveis
+  divergentes. Quatro perguntas reais pela tecla Enter, três locais e uma
+  Gemini (HTTP 200, 1.297 ms); foco/Escape e origem corretos, zero erros de
+  página/CSP. Banco/Mailhog/QA pré-existente, volumes/portas, contagens e `.env`
+  preservados. Imagens anteriores e QA bruto somente locais.
+- **Decisão/desvios:** ADR-056 substitui parte da ADR-054 relativa à cota por
+  mensagem. Valores existentes preservados; sem seed/reset, schema, dependências
+  novas, reenvio automático ou garantia de gratuidade. Conferência visual motivou
+  layout do cabeçalho para texto ampliado. Falhas iniciais do harness por relógio
+  compartilhado/prontidão da prévia corrigidas sem enfraquecer testes de produto.
+- **Relatório:** [QA_VUVU_CONVERSA_2026-11-16.md](QA_VUVU_CONVERSA_2026-11-16.md).
