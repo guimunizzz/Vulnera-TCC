@@ -16,10 +16,12 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-16 — Contexto ampliado da Vuvu aplicado e conferido no principal (100%; AI-CONTEXT-01/02).** Código `7d195d1`, como iannxz: 44 tópicos de produto, com API principal antes em 17 e fonte antes em 29. Check final 942/942 em 58 suítes e build aprovados. Somente API recriada após zero scans/migrations/variáveis divergentes; navegador real confirmou uma pergunta fictícia HTTP 200/`source: gemini` em 1.925 ms, aprovação pelo ADMIN, zero erros de página/CSP. Web/DB/Mailhog, mounts/portas, contagens e `.env` preservados; imagem anterior/QA bruto apenas locais. Sem alteração frontend/schema/dependências ou novas chamadas automáticas. Relatório `docs/QA_VUVU_CONTEXTO_2026-11-16.md`; marco parcial abaixo concluído por este fechamento.
+
 **✅ 2026-11-16 — Conhecimento de produto da Vuvu ampliado (100% do código; aplicação principal em fechamento).** Catálogo de 29 para 44 tópicos, com 15 aprofundamentos de jornada, regras e fluxos; objetivo/pré-condições/responsável/próximo passo na instrução, desempate de seleção por especificidade e formatos/limites de evidências na ajuda genérica. API `npm run check` **942/942**, 58 suítes, build Docker aprovado. Perfis, contrato, ações, orçamento e personalidade preservados; sem frontend/schema/dependências novas ou leitura de dados. API principal encontrada com 17 tópicos; atualização exclusiva desse serviço em fechamento, com zero scans, schema igual e nenhuma migration/variável nova. Rastreabilidade e notas do vault atualizadas; relatório `docs/QA_VUVU_CONTEXTO_2026-11-16.md`.
 
 - [x] AI-CONTEXT-01 — Curar 15 aprofundamentos de produto, preservar a ajuda anterior, validar e documentar.
-- [ ] AI-CONTEXT-02 — Aplicar somente API principal e comprovar catálogo/resposta e preservação do ambiente.
+- [x] AI-CONTEXT-02 — API principal atualizada; 44 tópicos/Gemini real e preservação conferidos.
 
 **✅ 2026-11-16 — Quatro melhorias aplicadas à Web principal (100%; AI-UI-08/09).** Código `330d5ff`, como iannxz: fluidez de entrada/saída, olhar suave, reações confirmadas e modo discreto. Web 690/690, contraste 132/132, build e navegador 16/16 aprovados. Imagem principal construída e somente Web recriada em 8086; smoke autenticado real confirmou atlas/gestos/painel/modo discreto/rascunho, zero POST do assistente e zero erros de página/CSP. API/DB/Mailhog e mounts/contagens, `.env` e atlas preservados; zero scans. Imagem anterior e artefatos de QA apenas locais. Nenhuma chamada Gemini ou escrita de negócio nesta aplicação. Marco anterior de aplicação em fechamento é histórico e fica concluído por esta entrada; relatório `docs/QA_VUVU_FLUIDEZ_2026-11-16.md`.
 

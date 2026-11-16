@@ -9,6 +9,21 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Contexto de produto ampliado e aplicado à Vuvu
+
+**✅ AI-CONTEXT-01/02, 100%.** Catálogo de fonte de 29 para 44 tópicos; quinze
+aprofundamentos de jornadas/regras/fluxos completos, com responsável, condições e
+próximo passo. Ajuda/perfis/ações/orçamentos e personalidade mantidos; notas do
+vault contextualizadas e ADR-054 atualizada. Código `7d195d1`, como iannxz.
+API check 942/942 em 58 suítes, build Docker aprovado. Principal encontrado com
+17 tópicos, atualizado para 44 mediante recriação exclusiva da API após zero
+scans/migrations/variáveis divergentes. Uma pergunta fictícia real HTTP 200/Gemini
+em 1.925 ms confirmou jornada e aprovação pelo ADMIN, zero erros de página/CSP.
+Web/DB/Mailhog, volumes/portas, contagens e `.env` preservados; sem seed/reset,
+schema/dependências/novo frontend ou artefatos de QA públicos. Backup da imagem
+somente local. Branch `refactor/assistant-ui`; sem alterar PR #77/feature/dev.
+Relatório `docs/QA_VUVU_CONTEXTO_2026-11-16.md`.
+
 ## 2026-11-16 — Quatro melhorias da Vuvu aplicadas em 8086
 
 **✅ AI-UI-09, 100%.** Web de `330d5ff` construída e exclusivamente recriada.

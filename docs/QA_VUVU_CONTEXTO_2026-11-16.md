@@ -10,8 +10,9 @@ regras e fluxos do Vulnera, conforme escolha explícita do usuário.
 O catálogo de código passa de 29 para **44 tópicos**, preservando os identificadores
 anteriores e acrescentando 15 aprofundamentos. Na inspeção inicial, a API do
 ambiente principal ainda tinha **17**: as aplicações mais recentes tinham
-recriado somente a Web. A aplicação desta rodada deve atualizar exclusivamente
-a API e conferir os 44 tópicos na imagem em execução.
+recriado somente a Web. Nesta rodada foi atualizada exclusivamente a API; os
+44 tópicos foram confirmados na imagem em execução. Código: `7d195d1`, autor
+e committer `iannxz`.
 
 O conteúdo cobre jornada completa, onboarding/aprovação, capacidade do plano,
 evidências, relatórios, exportação, estados e promoção DAST, formatos e comparação
@@ -55,8 +56,7 @@ feita alteração adicional nesse recurso.
 - Primeira execução completa: `npm run check`, **940/940**, 58 suítes. Após ela,
   acrescentados dois casos de linguagem natural e seus termos de seleção.
 - Execução completa final: **942/942**, 58 suítes, `npm run check` aprovado
-  em 303,066 s, incluindo os 95 casos da suíte do assistente. Aplicação principal
-  em fechamento.
+  em 303,066 s, incluindo os 95 casos da suíte do assistente.
 - Build Docker de produção aprovado; imagem de QA derivada apenas para permitir
   escrita no diretório do runner, sem alterar o Dockerfile de produção.
 - Sem alteração frontend nesta rodada; a validação anterior de Web 690/690,
@@ -65,12 +65,25 @@ feita alteração adicional nesse recurso.
 
 ## Aplicação principal
 
-Pendente da conclusão do check final. Antes de recriar exclusivamente a API:
-conferir ausência de scans ativos, migrations pendentes e mudanças inesperadas de
-variáveis; guardar imagem anterior apenas localmente. Depois, conferir saúde,
-44 tópicos e uma pergunta fictícia pela interface real, registrando a origem
-efetiva da resposta. Comparar containers, mounts, contagens e hash privado do
-ambiente, preservando Web, banco, Mailhog e containers de QA já existentes.
+**Concluída em 2026-11-16.** Antes do restart: zero scans, nenhuma migration
+pendente e nenhuma variável de aplicação divergente. Imagem anterior guardada
+somente localmente como `vulnera-before-vuvu-context-api:2026-11-16`. A imagem
+de produção validada foi aplicada com `docker compose up -d --no-deps --no-build
+api`, sem reconstruir outro serviço ou executar seed/reset.
+
+API saudável; Web HTTP 200. Pelo navegador autenticado em `localhost:8086`, uma
+única pergunta fictícia sobre cadastro até relatório retornou HTTP 200,
+**`source: gemini`**, em **1.925 ms**. A resposta explicou quatro etapas e
+identificou ADMIN como responsável por aprovar a assinatura. Zero erros de
+página/CSP e exatamente um POST do assistente. A verificação consultou o catálogo
+compilado do container e confirmou **44 tópicos**. Não foram enviados registros
+de cliente nem publicados tokens/chave/modelo reais.
+
+Comparação antes/depois: somente API recriada; IDs/imagens/início/mounts de
+Web, MySQL e Mailhog inalterados. Mounts/portas da API e hash do `.env` também
+inalterados. Contagens preservadas: 5 usuários, 1 empresa, 5 aplicações,
+5 projetos, 10 vulnerabilidades, 2 evidências e 0 scans. Os containers de QA
+pré-existentes não foram alvo de comandos de aplicação.
 
 Scripts, logs, Compose de teste e resultados brutos ficam somente no `output/`
 ignorado. Este relatório humano e os testes de código são versionados. Não há

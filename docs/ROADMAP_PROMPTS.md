@@ -1229,3 +1229,31 @@ Pedido executado: analisar o visual do site, usar a personagem fornecida em `out
 - **Validação:** API 906/906, focal final 59/59; Web 671/671, contraste 132/132, focal pós-ajuste 48/48; build de produção e navegador/CSP 10/10. Docker API/Web aprovado; smoke real em 8086 com Gemini/Vuvu e atlas carregado.
 - **Aplicação local:** API/Web recriados depois de confirmar zero scans ativos; banco/Mailhog, volumes e contagens de negócio preservados. Imagens anteriores somente locais. Sem schema/dependências novas, seed/reset ou scans reais.
 - **Documentação:** [plano](ASSISTENTE_VISUAL_PLANO.md), [guia](ASSISTENTE_VULNERA.md) e [relatório com prévias](QA_VUVU_UI_2026-11-15.md). Ressalvas de aparelho/leitor de tela físico, atlas de 1,9 MB e limitações anteriores mantidas no backlog.
+
+## Vuvu — conhecimento de produto e fluxos — ✅ Concluída em 2026-11-16
+
+Pedido executado: aprofundar conceitos, regras e fluxos completos do Vulnera,
+conforme escolha explícita do usuário; manter personalidade, permissões e visual.
+
+- [x] AI-CONTEXT-01 — Curar 15 aprofundamentos, conferir regras vigentes,
+  seleção por perfil/expressão, limites e regressões; fonte de 29 para 44 tópicos.
+- [x] AI-CONTEXT-02 — Aplicar somente API principal e verificar catálogo,
+  uma resposta real e preservação do ambiente.
+
+### Histórico
+
+- **Branch/base:** `refactor/assistant-ui`, iniciada esta rodada em `813d07a`;
+  código `7d195d1`, autor/committer `iannxz`; data 2026-11-16.
+- **PR:** nenhuma nova nesta tarefa; PR #77/feature/dev não modificados.
+- **Validação:** API `npm run check` 942/942, 58 suítes; build Docker aprovado.
+  Navegador real em 8086: uma pergunta fictícia HTTP 200/Gemini em 1.925 ms,
+  explicando jornada/aprovação pelo ADMIN; zero erros de página/CSP.
+- **Aplicação:** principal antes com 17 tópicos, agora com 44. Zero scans,
+  migrations pendentes ou variáveis divergentes antes do restart exclusivo da
+  API; Web/DB/Mailhog, volumes/portas, contagens e `.env` preservados. Backup
+  de imagem e artefatos brutos só locais, sem seed/reset ou nova dependência.
+- **Decisões/desvios:** arquitetura existente mantida (ADR-054); empates na
+  seleção preferem expressões específicas. Notas antigas de onboarding e
+  contratação contextualizadas, sem apagar histórico. Web não alterada nem
+  revalidada integralmente nesta rodada. Sem promessa de custo zero/novas ações.
+- **Relatório:** [QA_VUVU_CONTEXTO_2026-11-16.md](QA_VUVU_CONTEXTO_2026-11-16.md).
