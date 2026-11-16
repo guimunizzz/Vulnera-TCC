@@ -41,3 +41,11 @@ As medições e cenários usam respostas/contas fictícias em prévia de produç
 Implementação e relatório humano versionados somente na branch visual, como `iannxz`. Preview de trabalho em 4192; scripts, logs, capturas, perfil e resultados brutos ficam em `output/vuvu-smooth/` ignorado, sem envio ao GitHub. Os três screenshots históricos já existentes na branch não foram alterados nem acrescidos.
 
 A aplicação em `localhost:8086`, após as validações, atualiza exclusivamente a Web. O registro da comparação de containers/volumes/dados e do smoke real é acrescentado ao fim desta nota quando concluído; o PR #77 e a branch dev permanecem intactos.
+
+## Aplicação principal concluída — AI-UI-09
+
+Web construída com o Dockerfile real a partir de `330d5ff`; imagem anterior guardada somente localmente como `vulnera-before-vuvu-smooth-web:2026-11-16`. Conferência somente leitura: zero scans. Recriado apenas `vulnera-web` com `docker compose up -d --no-deps --no-build web`; serviços de QA e demais containers não alterados.
+
+Navegador em `localhost:8086` com sessão efêmera em memória: HTTP 200/CSP presente, atlas original/six seven carregados, ausência de passeio/pausa, dança única sem abrir chat, arraste com reação sem abertura ao soltar, painel compacto e foco, modo discreto e rascunho preservado ao restaurar. Nenhum POST do assistente, erro de página ou CSP. Não foi gerado relatório no banco real para o smoke: as reações e confirmações de operação foram exercitadas nos cenários controlados acima.
+
+Comparação antes/depois: API/DB/Mailhog com os mesmos IDs/imagens/início/mounts, volumes preservados, `.env` com hash inalterado e mesmas contagens: 5 usuários, 1 empresa, 5 aplicações, 5 projetos, 10 vulnerabilidades, 2 evidências e zero scans. Sem seed/reset, alteração de backend, geração Gemini ou escrita de negócio nesta aplicação. Documentação de fechamento publicada na branch visual como iannxz; scripts/snapshots/resultados permanecem ignorados no computador.

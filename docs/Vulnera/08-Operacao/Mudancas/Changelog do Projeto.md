@@ -9,6 +9,15 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Quatro melhorias da Vuvu aplicadas em 8086
+
+**✅ AI-UI-09, 100%.** Web de `330d5ff` construída e exclusivamente recriada.
+Smoke autenticado real aprovou atlas/gestos/chat, modo discreto e rascunho;
+zero POST do assistente/erros de página/CSP. API/DB/Mailhog e volumes/contagens,
+`.env` e atlas preservados; zero scans, sem seed/reset, backend novo ou Gemini
+adicional. Imagem anterior e QA bruto apenas locais; registro humano publicado
+na branch visual como iannxz. Ver `docs/QA_VUVU_FLUIDEZ_2026-11-16.md`.
+
 ## 2026-11-16 — Fluidez, resultados confirmados e modo discreto da Vuvu
 
 **✅ AI-UI-08, 100% do código.** Quatro melhorias escolhidas: chat com

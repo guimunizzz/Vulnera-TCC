@@ -1138,6 +1138,8 @@ partindo de `dev`, com espera visual fluida quando necessária.
 
 ### Histórico de fluidez e modo discreto — ✅ Concluída em 2026-11-16 (código)
 
+- **Fechamento de aplicação AI-UI-09 — ✅ Concluído em 2026-11-16:** Web de `330d5ff` aplicada exclusivamente em 8086; smoke real de gestos/painel/modo discreto/rascunho, zero POST do assistente/erros de página/CSP. API/DB/Mailhog/volumes, contagens, atlas e `.env` preservados; zero scans. Backup e artefatos brutos locais; sem seed/reset ou Gemini adicional.
+
 - **Branch/base:** `refactor/assistant-ui`, `9504cd9`; PR #77/dev intactos. Usuário escolheu somente quatro melhorias, excluindo as demais sugestões.
 - **Resultado:** entrada/saída do chat, olhar amortecido/misturado, reações locais de resultado e modo discreto, com conversa/rascunho/posição na sessão. ADR-055 registra a decisão.
 - **Validação:** Web 690/690, contraste 132/132, build; 11 regressões e cinco novos cenários de navegador, zero erros de página/CSP/axe. Ensaio de cadência estável, sem alegar FPS universal.
