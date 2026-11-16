@@ -45,14 +45,28 @@ const FRAGMENT_ESMAECER = /* glsl */ `
 uniform sampler2D uAnterior;
 uniform vec2 uTamanho;
 uniform float uManter;
+uniform float uDifusao;
 void main() {
-  vec4 anterior = texture2D(uAnterior, gl_FragCoord.xy / uTamanho);
+  vec2 uv = gl_FragCoord.xy / uTamanho;
+  vec4 anterior = texture2D(uAnterior, uv);
+  // Mistura molhada: um pouco do quadro anterior escorre para os vizinhos,
+  // e pinceladas que se cruzam se fundem em vez de só se empilhar.
+  if (uDifusao > 0.0) {
+    vec2 px = 1.5 / uTamanho;
+    vec4 vizinhos = texture2D(uAnterior, uv + vec2(px.x, 0.0)) + texture2D(uAnterior, uv - vec2(px.x, 0.0))
+      + texture2D(uAnterior, uv + vec2(0.0, px.y)) + texture2D(uAnterior, uv - vec2(0.0, px.y));
+    anterior = mix(anterior, vizinhos * 0.25, uDifusao);
+  }
   // O piso de meio nível garante que o rastro chega a zero em 8 bits.
   gl_FragColor = max(anterior * uManter - 0.002, 0.0);
 }
 `;
 
-export function criarAcumulacao(): Acumulacao {
+/**
+ * `difusao` (0 a 1) liga a mistura molhada: 0 mantém a cópia exata do quadro
+ * anterior e não custa nenhuma leitura a mais.
+ */
+export function criarAcumulacao({ difusao = 0 }: { difusao?: number } = {}): Acumulacao {
   const criarAlvo = () => new THREE.WebGLRenderTarget(1, 1, {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
@@ -71,6 +85,7 @@ export function criarAcumulacao(): Acumulacao {
       uAnterior: { value: leitura.texture },
       uTamanho: { value: tamanho },
       uManter: { value: 1 },
+      uDifusao: { value: difusao },
     },
     vertexShader: VERTEX_TELA_CHEIA,
     fragmentShader: FRAGMENT_ESMAECER,

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * components/landing/scene/config.ts
  *
  * O QUE FAZ
@@ -179,6 +179,23 @@ export const PINTURA = {
   /** Fração das pinceladas com o filete claro (crista da tinta) e a largura dele. */
   relevo: 0.45,
   fileteDoRelevoPx: 0.7,
+  /**
+   * Massas: uma fração das pinceladas é larga, longa e translúcida. Ficam por
+   * baixo das outras e dão um fundo pintado (sem elas a pintura lia como
+   * traços soltos sobre o preto — retorno do Rafael em 2026-11-16).
+   */
+  fracaoDeMassas: 0.16,
+  larguraDaMassaPx: [7, 15],
+  comprimentoDaMassaPx: [46, 110],
+  alfaDaMassa: 0.24,
+  /** Cerdas: quanto as estrias ao longo da pincelada tiram de tinta (0 = lisa). */
+  cerdas: 0.34,
+  /** Pincel seco: a partir desta fração do comprimento a cauda falha entre as cerdas. */
+  inicioDoPincelSeco: 0.5,
+  /** Mistura molhada: fração do quadro anterior que se espalha para os vizinhos. */
+  difusaoDaTinta: 0.22,
+  /** Relevo iluminado na composição: força da luz sobre a borda da tinta espessa. */
+  luzDoRelevo: 0.3,
   /** Tons de cada matiz: escuro multiplica a cor; claro mistura com branco. */
   tomEscuro: 0.58,
   tomClaro: 0.3,

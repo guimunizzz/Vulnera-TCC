@@ -196,6 +196,8 @@ uniform vec3 uHalos[4];
 uniform vec3 uCorDoHalo[4];
 uniform float uRaioDoHalo;
 uniform float uAlfaDoHalo;
+uniform vec2 uTexelDaTinta;
+uniform float uLuzDoRelevo;
 
 vec3 corPorId(float id) {
   if (id < ${COR.neon}.5) return id < ${COR.base}.5 ? uCorBase : uCorNeon;
@@ -241,7 +243,16 @@ void main() {
   }
 
   if (uTintaAtiva > 0.5) {
-    vec4 tinta = texture2D(uTinta, pos / uResolucao);
+    vec2 uvTinta = pos / uResolucao;
+    vec4 tinta = texture2D(uTinta, uvTinta);
+    // Relevo: o alfa acumulado é a espessura da tinta. A luz vem de cima e da
+    // esquerda: a borda voltada para ela clareia, a oposta escurece — a tinta
+    // ganha volume sem nenhuma geometria a mais.
+    vec2 passo = uTexelDaTinta * 1.5;
+    float inclinacao = (texture2D(uTinta, uvTinta + vec2(-passo.x, passo.y)).a
+      - texture2D(uTinta, uvTinta + vec2(passo.x, -passo.y)).a);
+    float luz = clamp(inclinacao * 2.2, -1.0, 1.0) * uLuzDoRelevo;
+    tinta.rgb = luz > 0.0 ? mix(tinta.rgb, vec3(tinta.a), luz) : tinta.rgb * (1.0 + luz);
     // Granulado de tela: a trama pega mais tinta nos fios altos, e um ruído
     // fino por pixel quebra o degradê liso.
     float trama = sin(gl_FragCoord.x * 2.2) * sin(gl_FragCoord.y * 2.2);

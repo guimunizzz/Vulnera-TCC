@@ -84,6 +84,8 @@ uniform vec3 uGrupos[4];
 // x = distância à linha central (px, com sinal), y = meia largura (px), z = relevo.
 varying vec3 vFita;
 varying vec4 vCor;
+// x = posição ao longo (0 cabeça, 1 cauda), y = semente das cerdas, z = 1 se é massa.
+varying vec3 vTraco;
 
 ${GLSL_VIRADA}
 
@@ -131,6 +133,7 @@ void main() {
   float largura;
   float alfa;
   float relevo;
+  float massa = 0.0;
   vec3 cor;
 
   if (n < uTotalFluxo) {
@@ -151,8 +154,13 @@ void main() {
     float x = mix(sx, sign(sx) * pow(abs(sx), 0.6), 0.8);
     vec2 origem = vec2(x * 0.54 + 0.5, q.y * 1.1 - 0.05) * uTela;
 
-    float comprimento = mix(${f(PINTURA.comprimentoPx[0])}, ${f(PINTURA.comprimentoPx[1])}, sorteio(n, 3.0));
-    float avanco = idade * vida * ${f(PINTURA.velocidadePxS)} * mix(0.6, 1.4, sorteio(n, 5.0)) * uVelocidade;
+    // Massa: pincelada larga, longa e translúcida, que faz o fundo pintado.
+    massa = step(sorteio(n, 14.0), ${f(PINTURA.fracaoDeMassas)});
+    float comprimento = massa > 0.5
+      ? mix(${f(PINTURA.comprimentoDaMassaPx[0])}, ${f(PINTURA.comprimentoDaMassaPx[1])}, sorteio(n, 3.0))
+      : mix(${f(PINTURA.comprimentoPx[0])}, ${f(PINTURA.comprimentoPx[1])}, sorteio(n, 3.0));
+    float avanco = idade * vida * ${f(PINTURA.velocidadePxS)} * mix(0.6, 1.4, sorteio(n, 5.0)) * uVelocidade
+      * mix(1.0, 1.7, massa);
     // Recém-nascida, a cauda ainda está na origem: a fita cresce a partir dali.
     float passo = max(0.0, avanco - u * comprimento) / ${PASSOS_DO_FLUXO}.0;
     vec2 p = origem;
@@ -163,11 +171,13 @@ void main() {
     float nasceu = viradaLocal(uVirada, origem.x / uTela.x, sorteio(n, 6.0));
     // Na frente da virada a pincelada nasce mais larga e mais clara.
     float frente = nasceu * (1.0 - nasceu) * 4.0;
-    largura = mix(${f(PINTURA.larguraPx[0])}, ${f(PINTURA.larguraPx[1])}, pow(sorteio(n, 4.0), 1.5))
-      * sin(PI * idade) * (1.0 + 0.9 * frente);
+    float larguraBase = massa > 0.5
+      ? mix(${f(PINTURA.larguraDaMassaPx[0])}, ${f(PINTURA.larguraDaMassaPx[1])}, sorteio(n, 4.0))
+      : mix(${f(PINTURA.larguraPx[0])}, ${f(PINTURA.larguraPx[1])}, pow(sorteio(n, 4.0), 1.5));
+    largura = larguraBase * sin(PI * idade) * (1.0 + 0.9 * frente * (1.0 - massa));
     float lateral = smoothstep(0.2, 0.85, abs(origem.x / uTela.x * 2.0 - 1.0));
-    alfa = ${f(PINTURA.alfaDaPincelada)} * nasceu * mix(0.5, 1.0, lateral);
-    relevo = step(sorteio(n, 10.0), ${f(PINTURA.relevo)});
+    alfa = mix(${f(PINTURA.alfaDaPincelada)}, ${f(PINTURA.alfaDaMassa)}, massa) * nasceu * mix(0.5, 1.0, lateral);
+    relevo = step(sorteio(n, 10.0), ${f(PINTURA.relevo)}) * (1.0 - massa);
 
     // Cor partida: o matiz vem de manchas grandes que derivam devagar; o
     // sorteio por pincelada quebra a fronteira entre duas manchas.
@@ -179,6 +189,8 @@ void main() {
     if (tom < 0.38) cor *= ${f(PINTURA.tomEscuro)};
     else if (tom > 0.66) cor = mix(cor, vec3(1.0), ${f(PINTURA.tomClaro)});
     cor = mix(cor, uMatiz[3], 0.45 * frente);
+    // A massa fica por baixo: sempre um tom abaixo, para a pincelada fina ler por cima.
+    cor *= mix(1.0, 0.72, massa);
   } else {
     // --- Pincelada de falha: nasce na célula do glifo e vai para o grupo.
     float j = n - uTotalFluxo;
@@ -187,7 +199,7 @@ void main() {
     if (hashCelula(cel + 41.0) > ${f(PROPORCAO_FALHAS)}) {
       gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
       vFita = vec3(0.0);
-      vCor = vec4(0.0);
+      vCor = vec4(0.0); vTraco = vec3(0.0);
       return;
     }
     float severidade = 1.0 + floor(hashCelula(cel + 53.0) * 4.0);
@@ -249,7 +261,7 @@ void main() {
   if (alfa < 0.004) {
     gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vFita = vec3(0.0);
-    vCor = vec4(0.0);
+    vCor = vec4(0.0); vTraco = vec3(0.0);
     return;
   }
   // Ato 5: luz quente vinda de cima.
@@ -263,17 +275,26 @@ void main() {
   gl_Position = vec4(pos / uTela * 2.0 - 1.0, 0.0, 1.0);
   vFita = vec3(deslocamento, meia, relevo);
   vCor = vec4(cor, alfa);
+  vTraco = vec3(u, sorteio(n, 15.0) * 40.0, massa);
 }
 `;
 
 const FRAGMENT_PINCELADA = /* glsl */ `
 varying vec3 vFita;
 varying vec4 vCor;
+varying vec3 vTraco;
 
 void main() {
   // Borda suavizada na conta (sem MSAA): cobertura cai em 1 px no contorno.
   float cobertura = clamp(vFita.y + 0.5 - abs(vFita.x), 0.0, 1.0) * min(1.0, vFita.y * 2.0);
-  float alfa = cobertura * vCor.a;
+  // Cerdas: estrias ao longo da pincelada, em duas frequências. Cada fio do
+  // pincel carrega uma quantidade diferente de tinta.
+  float fios = 0.5 + 0.25 * sin(vFita.x * 2.6 + vTraco.y) + 0.25 * sin(vFita.x * 6.1 + vTraco.y * 1.7);
+  float cerdas = 1.0 - ${f(PINTURA.cerdas)} * (1.0 - fios) * smoothstep(1.2, 3.0, vFita.y);
+  // Pincel seco: na cauda a tinta acaba e só os fios mais carregados marcam.
+  float seco = smoothstep(${f(PINTURA.inicioDoPincelSeco)}, 1.0, vTraco.x) * smoothstep(1.2, 3.0, vFita.y);
+  cerdas *= 1.0 - seco * smoothstep(0.75, 0.35, fios);
+  float alfa = cobertura * vCor.a * cerdas;
   // Relevo: filete claro fora do centro, como a crista da tinta espessa...
   float filete = 1.0 - smoothstep(${f(PINTURA.fileteDoRelevoPx / 2)}, ${f(PINTURA.fileteDoRelevoPx / 2 + 0.6)}, abs(vFita.x - vFita.y * 0.4));
   float crista = vFita.z * filete * step(1.0, vFita.y);
@@ -297,6 +318,9 @@ export interface Pintura {
     uRaioDoHalo: { value: number };
     uAlfaDoHalo: { value: number };
     uCorDoHalo: { value: THREE.Color[] };
+    /** Tamanho de um texel da camada de tinta, em UV: o relevo lê os vizinhos. */
+    uTexelDaTinta: { value: THREE.Vector2 };
+    uLuzDoRelevo: { value: number };
   };
   /** Lê as cores dos tokens (troca de tema). */
   aplicarPaleta(elemento: Element): void;
@@ -317,7 +341,7 @@ export interface Pintura {
 }
 
 export function criarPintura(): Pintura {
-  const acumulacao = criarAcumulacao();
+  const acumulacao = criarAcumulacao({ difusao: PINTURA.difusaoDaTinta });
   const cores = (total: number) => Array.from({ length: total }, () => new THREE.Color());
   const grupos = Array.from({ length: 4 }, () => new THREE.Vector3());
   const halos = Array.from({ length: 4 }, () => new THREE.Vector3());
@@ -350,6 +374,8 @@ export function criarPintura(): Pintura {
     uAlfaDoHalo: { value: PINTURA.alfaDoHalo },
     // Mesmos objetos de cor das pinceladas de falha (sRGB).
     uCorDoHalo: { value: uniformes.uSeveridade.value },
+    uTexelDaTinta: { value: new THREE.Vector2(1, 1) },
+    uLuzDoRelevo: { value: PINTURA.luzDoRelevo },
   };
 
   // Fita-base: x = posição ao longo (0 = cabeça, 1 = cauda), y = lado (-1 ou 1).
@@ -390,6 +416,7 @@ export function criarPintura(): Pintura {
     const degrau = PINTURA.qualidade[qualidade.nivel];
     const dprDaTinta = Math.min(window.devicePixelRatio || 1, degrau.maxDpr);
     acumulacao.redimensionar(tela.largura * dprDaTinta, tela.altura * dprDaTinta);
+    uniformesDaTela.uTexelDaTinta.value.set(1 / (tela.largura * dprDaTinta), 1 / (tela.altura * dprDaTinta));
     const { colunas, linhas } = totalDePinceladas(tela.largura, tela.altura, degrau.pinceladas);
     const gradeAscii = uniformes.uGradeAscii.value;
     uniformes.uTela.value.set(tela.largura, tela.altura);

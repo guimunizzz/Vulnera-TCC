@@ -75,3 +75,25 @@ Próximo (registrado em docs/BACKLOG.md como LP-FUT-01..04):
   - Ligar os planos da landing na API (TODO que já existia).
 =================
 ```
+
+## Adendo — 2026-11-16: "melhore a tinta"
+
+```
+=== RELATÓRIO ===
+Feito: tinta com mais corpo — massas largas por baixo (16% das pinceladas),
+  cerdas e pincel seco, mistura molhada na camada de acumulação e relevo
+  iluminado na composição. Evidências refeitas.
+Arquivos: scene/config.ts, scene/pintura.ts, scene/shaders.ts,
+  three/acumulacao.ts (opção `difusao`, padrão 0), docs.
+Testes: lint 0 erros · contraste OK · vitest 641/643 (as mesmas 2 falhas do
+  arquivo não rastreado) · e2e landing.spec.ts 7/7 no container.
+Desempenho medido (RTX 3060 Ti, build de produção): parado 60 fps; rolando a
+  virada 57,7 (DPR 1) / 56,4 (DPR 2); página 59,4 / 59,7; 0 long tasks.
+Docs atualizados: LANDING_NARRATIVA.md §10.6, COMO_FUNCIONA_O_FUNDO.md.
+⚠️ Atenção do Rafael: "melhore a tinta" foi interpretado como dar corpo e
+  textura (decisão minha; se era outra coisa — cor, densidade, velocidade —
+  os números estão todos em PINTURA). A tinta nova lê 6 texturas a mais por
+  pixel: reforça a necessidade de medir em Iris Xe. Chunks não remedidos.
+Próximo: igual (LP-FUT-01..04).
+=================
+```

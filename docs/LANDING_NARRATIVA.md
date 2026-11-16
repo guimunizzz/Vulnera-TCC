@@ -277,6 +277,7 @@ Regras que continuam valendo:
 | 2026-11-04 | Boot de terminal de ~1 s no hero, uma vez por sessão, pulável e ausente com movimento reduzido (§7.1). |
 | 2026-11-04 | Moldura ASCII animada no plano recomendado e varredura de glifos na troca de seção, no sentido da rolagem (§7.1). |
 | 2026-11-15 | **Do ASCII para a pintura** (pedido do Rafael, ADR-054): atos 0–2 mais densos (célula 12 × 18 px, fonte a 13 px) e atos 3–5 em pinceladas que seguem um campo de fluxo, com camada de tinta em ping-pong, halos e granulado (§10). Pôster com a mesma célula. Conteúdo das seções revisado contra o código. |
+| 2026-11-16 | Tinta com mais corpo (pedido do Rafael): massas largas por baixo, cerdas e pincel seco, mistura molhada e relevo iluminado (§10.6). |
 
 ### Boas práticas consultadas (2026-10-27)
 
@@ -387,3 +388,36 @@ superfície do texto: cada cor da pintura (5 matizes, severidades, verde da
 correção, luz quente) × cada tom (escuro, médio, claro e o filete do relevo),
 com a tinta no teto de alfa (0,9) por cima de um halo no máximo (0,16),
 atenuada pela superfície de 94%. Exige ≥ 4,5:1 para todo texto, nos dois temas.
+
+### 10.6 Tinta com mais corpo (2026-11-16)
+
+Retorno do Rafael depois da primeira entrega: "melhore a tinta". A pintura lia
+como traços finos soltos sobre o preto. Quatro mudanças, todas com número em
+`PINTURA` (`scene/config.ts`):
+
+| Mudança | O que faz | Onde |
+|---|---|---|
+| **Massas** | 16% das pinceladas do fundo são largas (7–15 px), longas (46–110 px) e translúcidas (alfa 0,24), um tom abaixo. Ficam por baixo e dão um fundo pintado. | vértice de `pintura.ts` |
+| **Cerdas e pincel seco** | Estrias ao longo da pincelada em duas frequências (cada fio carrega uma quantidade de tinta); na metade final a cauda falha entre os fios. | fragmento de `pintura.ts` |
+| **Mistura molhada** | Ao esmaecer, 22% do quadro anterior se espalha para os quatro vizinhos: pinceladas que se cruzam se fundem. Opção `difusao` do kit; o padrão é 0 (cópia exata). | `three/acumulacao.ts` |
+| **Relevo iluminado** | Na composição, o alfa acumulado vale como espessura: a borda voltada para a luz (cima, esquerda) clareia e a oposta escurece. Duas leituras a mais por pixel. | `scene/shaders.ts` |
+
+O teto de alfa da tinta e o teste de contraste (CTR-04) não mudaram: o relevo
+clareia no máximo 30% em direção ao branco, dentro do tom "filete" (60%) que o
+teste já cobre.
+
+Medição com a tinta nova (mesma máquina e protocolo da §10.3; os números da
+tabela da §10.3 são da primeira versão):
+
+| Trecho | DPR 1 | DPR 2 |
+|---|---|---|
+| Parado, ato 3 (pintura) | 60 fps · 0 quadros > 25 ms · 0 long tasks | 59,8 fps · 0 · 0 |
+| Parado, ato 5 (pintura) | 60 fps · 0 · 0 | 60 fps · 0 · 0 |
+| Rolando a virada | 57,7 fps · 2 quadros > 25 ms · 0 long tasks | 56,4 fps · 3 · 0 |
+| Rolando a página inteira | 59,4 fps · 4 · 0 | 59,7 fps · 2 · 0 |
+
+> [!WARNING]
+> Continua valendo o aviso da §10.3: medido numa RTX 3060 Ti, não numa Iris
+> Xe. A mistura molhada e o relevo somam seis leituras de textura por pixel;
+> numa GPU integrada isso pesa mais do que aqui. O tamanho dos chunks não foi
+> medido de novo depois desta mudança.

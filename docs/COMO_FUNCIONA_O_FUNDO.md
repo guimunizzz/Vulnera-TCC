@@ -90,6 +90,18 @@ há nada para perder quando a janela muda de tamanho.
 
 O resultado é um rastro curto atrás de cada pincelada, como tinta fresca.
 
+Três detalhes fazem a tinta parecer tinta de verdade:
+
+- **Massas.** Algumas pinceladas são bem largas e quase transparentes. Elas
+  ficam por baixo e pintam o fundo, como a primeira demão de um quadro.
+- **Cerdas.** Um pincel é feito de fios, e cada fio leva uma quantidade
+  diferente de tinta. Por isso a pincelada tem risquinhos, e a ponta final
+  falha, como um pincel que está secando.
+- **Relevo.** Onde há mais tinta acumulada, o desenho trata como se fosse mais
+  alto. A beirada virada para a luz fica mais clara e a outra, mais escura.
+  Além disso, ao copiar de uma folha para a outra, a tinta "escorre" um
+  pouquinho para os lados: duas pinceladas que se cruzam se misturam.
+
 > [!IMPORTANT]
 > **Por que duas folhas, e não uma só?** Por dois motivos. A GPU não consegue
 > ler e escrever a mesma folha ao mesmo tempo. E, apagando "um pouquinho por
