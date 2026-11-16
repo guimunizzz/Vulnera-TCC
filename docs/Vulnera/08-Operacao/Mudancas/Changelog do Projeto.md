@@ -9,6 +9,24 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Atendimento da revisão do PR #77 na feature
+
+Oito comentários conferidos: catálogo de 17 para 29 tópicos de domínio/produto,
+sem documentação técnica no contexto; 74 artefatos retirados do índice com cópias
+locais e hashes preservados; ignore de cobertura/temporários; modelo concreto
+retirado dos arquivos públicos atuais sem reescrever histórico. Fontes de testes,
+fixtures e permissões preservadas. Notas antigas de produto marcadas como históricas
+quando divergiam do código atual.
+
+Dev `e6a445c` incorporada sem conflitos, preservando Docker/seed da equipe.
+API Node 22: lint e 922/922; Web: lint, 659/659, contraste 132/132 e build.
+Imagens reais e smoke de três perfis aprovados em QA isolado. Chamada Gemini
+real HTTP 200 com pergunta fictícia. Primeira suíte API encontrou EACCES no
+diretório temporário; repetição aprovada com permissão somente na imagem local
+de testes, sem alterar Dockerfiles do produto. Sem deploy/restart no ambiente
+principal; Vuvu permanece em localhost:8086. Propagação à branch visual em
+checkpoint separado. Matriz: `docs/REVISAO_PR77_2026-11-16.md`.
+
 ## 2026-11-15 — Vuvu: visual, animações e personalidade
 
 **✅ Concluída; 6/6 checkpoints.** Branch `refactor/assistant-ui`, originada de `feature/agent-ai` em `63c4696`. Usuário forneceu a Vuvu e autorizou aplicar sua personalidade ao Gemini. Atlas transparente original preservado, nove animações/16 olhares, estados reais de interação e painel alinhado aos tokens da plataforma. Pausas, sessão, modais, permissões, origem Gemini/local e envio explícito mantidos. Texto ampliado recebe altura/rolagem adequadas e histórico focável.
@@ -86,7 +104,7 @@ autorizou continuar sem pausa nos checkpoints, relatados durante a execução.
   772/773 testes, 47/48 suítes. Assertion anterior de aspas no header Excel
   continua falhando; check API mantém dois imports não usados anteriores.
   Ajustes ambientais de uploads/CVSS e encerramento nativo Windows estão
-  separados dos defeitos da feature em `output/assistant/VALIDACAO.md`.
+  separados dos defeitos da feature em `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`.
 - QA corrigiu Escape durante espera, largura do painel 320px, recuperação
   indevida de histórico e distinção entre relatórios DAST e de projeto.
   Overflow anterior do cabeçalho Conta em 320px foi registrado, sem correção
@@ -114,7 +132,7 @@ Implementação das Fases 1–6 ainda pendente.
   orientação contextual, com Gemini opcional e ajuda local identificada;
   sugestão de findings e IA mobile continuam excluídas.
 - Documentação oficial consultada em 23/10: recomendação inicial
-  `gemini-3.5-flash-lite`, modelo configurável. Elegibilidade da conta e
+  `modelo configurado privadamente`, modelo configurável. Elegibilidade da conta e
   chamada real não verificadas; gratuidade depende da configuração da conta.
 - Web e health API responderam HTTP 200. Lint API, builds API/web e check web
   não chegaram a executar por ausência de `node_modules`/`eslint`/`tsc` no

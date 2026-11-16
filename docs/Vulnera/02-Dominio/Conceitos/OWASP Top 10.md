@@ -6,6 +6,8 @@ status: ativo
 
 # OWASP Top 10
 
+> Atualiza??o de produto ? 2026-11-16: a classifica??o A01?A10 ? mantida. A men??o hist?rica abaixo a IA pr?-preenchendo findings foi superada: o assistente atual apenas orienta, sem gerar, preencher ou classificar registros por conta pr?pria.
+
 ## Definição
 O OWASP Top 10 é uma lista dos 10 riscos de segurança mais críticos em aplicações web, publicada e mantida pelo OWASP (Open Web Application Security Project). É atualizada periodicamente com base em dados reais de incidentes.
 

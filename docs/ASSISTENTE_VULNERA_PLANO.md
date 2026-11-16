@@ -7,7 +7,7 @@
 **Data:** 2026-10-23 · **Branch:** `feature/agent-ai` · **Base:** `44f9c58`.
 **Estado deste registro histórico:** Fase 0 concluída; Fases 1–6 ainda pendentes naquele checkpoint. O restante deste documento preserva a investigação e a solução planejada.
 
-**Continuação em 23/10/2026:** o usuário autorizou executar todas as fases sem pausa. Fases 1–6 entregues, completando 7/7 fases; implementação e orientação local verificadas e aplicadas em `http://localhost:8086`. Gemini ao vivo permanece pendente de chave/modelo. O estado atual e o guia estão em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md) e [VALIDACAO.md](../output/assistant/VALIDACAO.md); os resultados abaixo referem-se ao checkpoint inicial.
+**Continuação em 23/10/2026:** o usuário autorizou executar todas as fases sem pausa. Fases 1–6 entregues, completando 7/7 fases; implementação e orientação local verificadas e aplicadas em `http://localhost:8086`. Gemini ao vivo permanece pendente de chave/modelo. O estado atual e o guia estão em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md) e [VALIDACAO.md](VALIDACAO_ASSISTENTE_2026-10-23.md); os resultados abaixo referem-se ao checkpoint inicial.
 
 ## Escopo confirmado
 
@@ -109,7 +109,7 @@ Não se consultarão dados de negócio para compor prompts nem se copiarão DOM,
 
 ## Modelo e documentação oficial consultada
 
-Em 23/10/2026, a escolha recomendada é `GEMINI_MODEL=gemini-3.5-flash-lite`: o [catálogo](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite) o identifica como estável; a [tabela de preços](https://ai.google.dev/gemini-api/docs/pricing) oferece entrada/saída de texto no Free Tier, e o [ciclo de vida](https://ai.google.dev/gemini-api/docs/deprecations) não anuncia desligamento. Modelos 2.5 têm acesso limitado a usuários anteriores; o exemplo histórico de 1.5 não orienta esta implementação.
+Em 23/10/2026, a escolha recomendada é `GEMINI_MODEL=`: o [catálogo](https://ai.google.dev/gemini-api/docs/models) o identifica como estável; a [tabela de preços](https://ai.google.dev/gemini-api/docs/pricing) oferece entrada/saída de texto no Free Tier, e o [ciclo de vida](https://ai.google.dev/gemini-api/docs/deprecations) não anuncia desligamento. Modelos 2.5 têm acesso limitado a usuários anteriores; o exemplo histórico de 1.5 não orienta esta implementação.
 
 O gateway usará `fetch` para `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`, chave no header `x-goog-api-key`, instrução confiável em `systemInstruction`, dados de conversa em `contents` e `generationConfig.maxOutputTokens`. Para 3.5 Flash-Lite, conferir `thinkingLevel: MINIMAL` e omitir parâmetros de amostragem incompatíveis, conforme [REST](https://ai.google.dev/api/generate-content) e [mudanças da geração](https://ai.google.dev/gemini-api/docs/whats-new-gemini-3.6). Sem tools, grounding, arquivos, cache ou serviços adicionais; não seguir redirects para outro host. O modelo permanecerá configurável e o contrato será reconferido na Fase 2.
 

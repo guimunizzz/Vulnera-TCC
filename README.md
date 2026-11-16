@@ -117,9 +117,11 @@ O assistente inicia com ajuda local. Para habilitar Gemini no Docker, copie
 ```dotenv
 ASSISTANT_MODE=gemini
 GEMINI_API_KEY=COLE_SUA_CHAVE_SOMENTE_NO_ENV_LOCAL
-GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_MODEL=
 ```
 
+Preencha `GEMINI_MODEL` com o identificador permitido no seu projeto somente no
+`.env` privado; o exemplo público deixa esse valor vazio.
 Se já existir `.env`, acrescente ou ajuste apenas essas variáveis, preservando
 as demais. O `.env` é ignorado pelo Git; o exemplo versionado mantém a chave
 vazia. Cada instalação precisa receber sua credencial privadamente; clonar ou

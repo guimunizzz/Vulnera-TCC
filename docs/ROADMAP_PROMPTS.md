@@ -1136,6 +1136,8 @@ partindo de `dev`, com espera visual fluida quando necessária.
 
 # Assistente Vulnera — orientação contextual (pedido de 2026-10-23)
 
+> **Revisão PR #77 — ✅ Concluída em 2026-11-16 na feature.** Catálogo ampliado para 29 tópicos exclusivamente de domínio/produto; artefatos retirados do índice e configuração concreta mantida privada. API 922/922, Web 659/659, contraste 132/132, builds e smoke de três perfis aprovados; chamada Gemini real HTTP 200. [Matriz dos oito pedidos e limites](REVISAO_PR77_2026-11-16.md). A propagação à branch visual é registrada separadamente no fechamento.
+
 > **Identificação atual da decisão:** ADR-054; criada como ADR-048 na feature em 23/10/2026. A ADR-048 da dev pertence ao grafo DAST. Os marcos numéricos abaixo preservam o histórico original; links atuais e integração em [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
 
 Este plano tem numeração própria de 0 a 6; não renumera as fases originais do MVP. A Fase 0 seguiu a pausa de AGENTS §0.2 S1; na continuação de 23/10/2026 o usuário autorizou executar todas as fases sem pausas, mantendo relatórios de checkpoint em atualizações. Os guias protegidos não foram editados. Preservar o escopo detalhado e as fronteiras registradas no [plano](ASSISTENTE_VULNERA_PLANO.md) e no ADR-048.
@@ -1155,7 +1157,7 @@ Este plano tem numeração própria de 0 a 6; não renumera as fases originais d
 - **Branch/base:** `feature/agent-ai`, `44f9c58`.
 - **PR:** não aberta; sem commit/push neste checkpoint.
 - **Continuação/fechamento:** 2026-10-23, fases 1–6 entregues; 7/7 fases, 100% da implementação e validação local previstas. Autorização do usuário substituiu as pausas nesta execução; checkpoints relatados durante o trabalho.
-- **Validação final:** API focal 47/47 e 100% de linhas nos serviços novos; web 400/400, contraste 66/66, builds host/Docker; navegador produção 12/12 sem erros/CSP; 13/13 HTTP sintético, três perfis autenticados reais e CLIENT UI sem fixtures. API combinado Node 22/CVSS 772/773, assertion anterior Excel falha; check API mantém dois imports anteriores de lint. Detalhes, ajustes de ambiente e limites em `output/assistant/VALIDACAO.md`.
+- **Validação final:** API focal 47/47 e 100% de linhas nos serviços novos; web 400/400, contraste 66/66, builds host/Docker; navegador produção 12/12 sem erros/CSP; 13/13 HTTP sintético, três perfis autenticados reais e CLIENT UI sem fixtures. API combinado Node 22/CVSS 772/773, assertion anterior Excel falha; check API mantém dois imports anteriores de lint. Detalhes, ajustes de ambiente e limites em `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`.
 - **Aplicação/guia:** `http://localhost:8086`, modo local, dados/volumes anteriores preservados. `docs/ASSISTENTE_VULNERA.md`, ADR-048 vigente e ADR-006/011/017 com evolução histórica. Sem chave/modelo no runtime consultado, sem chamada Google; prova Gemini ao vivo explicitamente pendente.
 - **Data/checkpoint:** 2026-10-23, Fase 0 concluída; 1/7 fases, 14% do plano. Fases 1–6 pendentes, sem código de produto novo.
 - **Entrega:** `docs/ASSISTENTE_VULNERA_PLANO.md`, ADR-048, PRD/BACKLOG/ROADMAP/Changelog e nota de evolução no Contexto Mestre. Nove ações confirmadas; onboarding e relatório DAST ficam fora de AppLayout, exigindo contêiner autenticado compartilhado.

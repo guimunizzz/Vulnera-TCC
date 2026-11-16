@@ -10,7 +10,7 @@ import { makeAssistantController } from "../../src/factories/assistant.factory";
 import type { AssistantConfig } from "../../src/config/assistant.config";
 import { loadAssistantConfig } from "../../src/config/assistant.config";
 import { createRateLimitConfig, type TokenBucketPolicy } from "../../src/config/rate-limit.config";
-import { ASSISTANT_ACTIONS } from "../../src/config/assistant-help.config";
+import { ASSISTANT_ACTIONS, ASSISTANT_TOPICS } from "../../src/config/assistant-help.config";
 import { AssistantHelpService } from "../../src/services/assistant-help.service";
 import { GeminiService } from "../../src/services/gemini.service";
 import { RateLimitService, TenantRateLimitResolver } from "../../src/services/rate-limit.service";
@@ -20,7 +20,7 @@ import type { UserRepository } from "../../src/repositories/user.repository";
 import type { AssistantChatDTO, AssistantGatewayInput, AssistantResponseDTO } from "../../src/models/assistant.model";
 import type { UserRole } from "../../src/models/user.model";
 
-const GEMINI: AssistantConfig = { mode: "gemini", apiKey: "synthetic-test-key", model: "gemini-3.5-flash-lite", timeoutMs: 15000, maxOutputTokens: 500 };
+const GEMINI: AssistantConfig = { mode: "gemini", apiKey: "synthetic-test-key", model: "gemini-3-test-fixture", timeoutMs: 15000, maxOutputTokens: 500 };
 const QUESTION: AssistantChatDTO = { question: "Como solicito uma análise?", screen: "dashboard", history: [] };
 const INPUT: AssistantGatewayInput = { ...QUESTION, role: "CLIENT", help: "A análise cria um projeto." };
 const HIGH: TokenBucketPolicy = { ratePerSecond: 1000, burst: 1000 };
@@ -108,6 +108,65 @@ describe("Compatibilidade com os modulos atuais da dev", () => {
   });
 });
 
+describe("Conhecimento de domínio e produto", () => {
+  it.each([
+    ["Qual a diferença entre DAST e SAST?", "Resultados brutos de ferramentas"],
+    ["Qual o escopo da análise e o nível da análise?", "inclusive concluído"],
+    ["Posso reabrir um finding corrigido?", "Fechado é terminal"],
+    ["O que é OWASP A03?", "A03 injeção"],
+    ["Quais as métricas do CVSS?", "oito métricas"],
+    ["Como a criticidade e a exposição à internet afetam a prioridade contextual?", "Prazo de SLA e origem"],
+    ["Salvar política e reaplicar mudam prazos antigos?", "não altera prazos já atribuídos"],
+    ["Posso aprovar meu próprio pedido de risco aceito?", "não pode aprovar o próprio pedido"],
+    ["Como compartilhar busca salva em uma watchlist?", "guarda filtros, não uma cópia"],
+    ["Como funciona o checklist e a conformidade da maturidade?", "média simples"],
+    ["Qual a diferença entre OWNER e MEMBER?", "continuam sendo CLIENT"],
+    ["Como marcar todas como lidas no sino de notificações?", "não aprova uma assinatura"],
+  ])("orienta a pergunta de produto: %s", async (question, expected) => {
+    const { app, generate } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("ADMIN"))
+      .send({ question, screen: "dashboard", history: [] });
+    expect(response.status).toBe(200);
+    expect(response.body.source).toBe("local");
+    expect(response.body.message).toContain(expected);
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it("explica ao CLIENT o ciclo do finding sem conceder transições ou atalho global", async () => {
+    const { app } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("CLIENT"))
+      .send({ question: "Posso reabrir um finding corrigido?", screen: "finding-detail", history: [] });
+    expect(response.body.message).toContain("CLIENT acompanha em leitura");
+    expect(response.body.actions.map((action: { id: string }) => action.id)).not.toContain("findings");
+  });
+
+  it("orienta PENTESTER sobre escopo sem conceder solicitação de análise", async () => {
+    const { app } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("PENTESTER"))
+      .send({ question: "Como definir o escopo da análise?", screen: "project-detail", history: [] });
+    expect(response.body.message).toContain("CLIENT ou ADMIN");
+    expect(response.body.actions.map((action: { id: string }) => action.id)).not.toContain("new-analysis");
+  });
+
+  it("envia contexto curado e limitado, sem documentos de arquitetura ou desenvolvimento", async () => {
+    const forbidden = /\b(?:Prisma|Express|React|JWT|Dockerfile|middleware|controllers?|repositories?|migrations?|schema)\b|\/api\/|GEMINI_(?:MODEL|API_KEY)|systemInstruction|Factory Method/i;
+    const help = new AssistantHelpService();
+    for (const role of ["ADMIN", "CLIENT", "PENTESTER"] as const) {
+      for (const topic of ASSISTANT_TOPICS.filter((item) => item.roles.includes(role))) {
+        expect(help.context([topic], role)).not.toMatch(forbidden);
+      }
+    }
+    const { app, generate } = makeApp();
+    await request(app).post("/api/assistant/chat").set("Authorization", bearer())
+      .send({ question: "Quais as métricas do CVSS?", screen: "finding-detail", history: [] });
+    const input = generate.mock.calls[0][0];
+    expect(input.help).toContain("oito métricas");
+    expect(input.help.length).toBeLessThanOrEqual(6000);
+    expect(input.help).not.toMatch(forbidden);
+    expect(input).not.toHaveProperty("sources");
+  });
+});
+
 describe("Assistente HTTP", () => {
   it("exige autenticação e não gera texto por GET", async () => {
     const { app, generate } = makeApp();
@@ -151,6 +210,16 @@ describe("Assistente HTTP", () => {
     const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("CLIENT")).send({ ...QUESTION, screen: "dast", question: "Como funciona o DAST?" });
     expect(response.status).toBe(200);
     expect(response.body.actions).toEqual([{ id: "projects", label: "Abrir projetos" }]);
+  });
+
+  it.each(["model", "apiKey"] as const)("não devolve a configuração privada %s se o provedor a reproduzir", async (field) => {
+    const generate = jest.fn().mockResolvedValue(`Configuração interna: ${GEMINI[field]}`);
+    const { app } = makeApp({ generate });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(QUESTION);
+    expect(response.status).toBe(200);
+    expect(response.body.source).toBe("local");
+    expect(response.body.message).not.toContain(GEMINI[field]);
+    expect(generate).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -297,7 +366,7 @@ describe("Gateway Gemini real com transporte simulado", () => {
     expect(await gateway.generate(INPUT)).toBe("Orientação validada.");
     expect(fetcher).toHaveBeenCalledTimes(1);
     const [url, options] = fetcher.mock.calls[0];
-    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent");
+    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3-test-fixture:generateContent");
     expect(options.redirect).toBe("manual");
     expect(options.headers["x-goog-api-key"]).toBe("synthetic-test-key");
     const body = JSON.parse(options.body);
@@ -306,6 +375,8 @@ describe("Gateway Gemini real com transporte simulado", () => {
     expect(body.systemInstruction.parts[0].text).toContain("Você é a Vuvu");
     expect(body.systemInstruction.parts[0].text).toContain("não diga que verificou, corrigiu ou concluiu uma operação");
     expect(body.systemInstruction.parts[0].text).toContain("Use exclusivamente os trechos de ajuda fornecidos");
+    expect(body.systemInstruction.parts[0].text).toContain("exclusivamente domínio e produto");
+    expect(body.systemInstruction.parts[0].text).toContain("Não explique arquitetura de software");
     expect(body).not.toHaveProperty("tools");
     expect(body).not.toHaveProperty("userId");
     expect(body.store).toBe(false);
