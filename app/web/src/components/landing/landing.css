@@ -33,6 +33,8 @@
   --vx-accent-soft: #c4b5fd;
   --vx-accent-soft-rgb: 196, 181, 253;
   --vx-magenta: #ff2ec4;
+  /* Índigo profundo: o matiz mais escuro da pintura dos atos 3–5 (ADR-054). */
+  --vx-indigo: #341c82;
   /* Neon ciano: acento de terminal da cena ASCII (varredura, binário). */
   --vx-cyan: #2de2e6;
   --vx-danger: #ff2e63;
@@ -64,6 +66,7 @@
   --vx-accent-soft: #7c3aed;
   --vx-accent-soft-rgb: 124, 58, 237;
   --vx-magenta: #c026d3;
+  --vx-indigo: #3b1d8f;
   --vx-cyan: #0e7490;
   --vx-danger: #dc2626;
   --vx-danger-rgb: 220, 38, 38;

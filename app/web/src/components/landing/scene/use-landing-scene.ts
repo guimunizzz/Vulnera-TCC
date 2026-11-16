@@ -2,9 +2,10 @@
  * components/landing/scene/use-landing-scene.ts
  *
  * O QUE FAZ
- * Monta a cena narrativa ASCII da landing: um quad em tela cheia, fixo atrás
- * do conteúdo, em que cada célula de caractere conta o ato atual do scroll
- * (0 a 5 — `docs/LANDING_NARRATIVA.md`).
+ * Monta a cena narrativa da landing: um quad em tela cheia, fixo atrás do
+ * conteúdo, que conta o ato atual do scroll (0 a 5 —
+ * `docs/LANDING_NARRATIVA.md`). Atos 0–2 em células de caractere ASCII; a
+ * partir do ato 3 as células viram pinceladas (`pintura.ts`, ADR-054).
  *
  * POR QUE EXISTE / COMO
  * - Renderer, loop, pausa com aba oculta, perda de contexto, descarte e cores
@@ -32,15 +33,18 @@ import { lerCorDoToken, observarTema } from "../../../three/palette";
 import { criarGotas } from "../../../three/gotas";
 import { criarGradeDeCelulas } from "../../../three/grade-celulas";
 import { criarAtlasAscii, type AtlasAscii } from "../../../three/ascii";
+import { criarPintura } from "./pintura";
 import { gsap, ScrollTrigger } from "../motion/gsap";
 import { EASE_LANDING, SCRUB_LANDING } from "../motion/tokens";
 import {
+  ALTURA_CELULA_LANDING_PX,
   CELULA_LANDING_PX,
+  FONTE_LANDING_PX,
   FPS_CENA,
   GLIFOS,
   MAX_DPR_CENA,
   OPACIDADE_CENA,
-  RAIO_DO_GRUPO_PX,
+  PESO_FONTE_LANDING,
   TIQUES_POR_SEGUNDO,
   calcularMarcos,
   mapearProgresso,
@@ -109,7 +113,6 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       ...gotas.uniformes,
       uGotasAtivas: { value: 0 },
       uTique: { value: 0 },
-      uRaioDoGrupo: { value: RAIO_DO_GRUPO_PX },
       uAlfaSaudavel: { value: OPACIDADE_CENA.saudavel },
       uAlfaDestaque: { value: OPACIDADE_CENA.destaque },
       uAlfaFeixe: { value: OPACIDADE_CENA.feixe },
@@ -126,6 +129,9 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
     };
     // Passada 1 (uma vez por célula) → textura; a passada 2 lê dela. As duas
     // compartilham os mesmos objetos de uniform.
+    // Camada de tinta dos atos 3–5; `uVirada` é dela e as duas passadas leem.
+    const pintura = criarPintura();
+    Object.assign(uniformes, pintura.uniformesDaTela);
     const grade = criarGradeDeCelulas(FRAGMENT_CELULAS, uniformes);
     // O shader ignora a câmera; o renderer só exige uma.
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -134,6 +140,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       for (const [uniforme, token] of Object.entries(TOKENS)) {
         lerCorDoToken(canvas, token, uniformes[uniforme as keyof typeof TOKENS].value);
       }
+      pintura.aplicarPaleta(canvas);
     }
 
     function medirMarcos(): void {
@@ -152,10 +159,13 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
         uniformes.uResolucao.value.set(largura * dpr, altura * dpr);
         // Célula em px CSS × DPR: a grade não adensa em tela de alta densidade.
         uniformes.uCelula.value.set(CELULA_LANDING_PX * dpr, (CELULA_LANDING_PX * dpr) / atlas.proporcao);
-        uniformes.uRaioDoGrupo.value = RAIO_DO_GRUPO_PX * dpr;
         grade.redimensionar(uniformes.uResolucao.value, uniformes.uCelula.value);
+        pintura.redimensionar(largura, altura, dpr, grade.uniformes.uGradeTextura.value, uniformes.uCelula.value);
         redimensionar = false;
       }
+      // Primeiro quadro: compila os shaders da pintura enquanto o canvas ainda
+      // está entrando, e não no meio da virada.
+      if (!pronto) pintura.aquecer(renderer);
       tempo += delta;
       const tique = Math.floor(tempo * TIQUES_POR_SEGUNDO);
       const p = progresso.valor;
@@ -175,7 +185,9 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       uniformes.uTempo.value = tempo;
       uniformes.uTique.value = tique;
       uniformes.uGotasAtivas.value = gotas.ativa(tempo) ? 1 : 0;
-      grade.desenhar(renderer);
+      pintura.desenhar(renderer, tempo, delta, p);
+      // Com a virada completa todas as células estão apagadas: a passada 1 é pulada.
+      if (pintura.uniformesDaTela.uVirada.value < 0.999) grade.desenhar(renderer);
       renderer.render(cenaThree, camera);
       if (!pronto) {
         pronto = true;
@@ -188,6 +200,7 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
       if (parado) return;
       parado = true;
       grade.descartar();
+      pintura.descartar();
       gatilho?.kill();
       gotas.parar();
       gsap.killTweensOf(progresso);
@@ -209,7 +222,13 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
 
     async function montar(): Promise<void> {
       try {
-        atlas = await criarAtlasAscii(GLIFOS);
+        // Atlas a 2× o tamanho final do glifo: nítido sem serrilhar na redução.
+        const dprDoAtlas = Math.min(window.devicePixelRatio || 1, MAX_DPR_CENA);
+        atlas = await criarAtlasAscii(GLIFOS, Math.round(FONTE_LANDING_PX * dprDoAtlas * 2), {
+          largura: CELULA_LANDING_PX / FONTE_LANDING_PX,
+          altura: ALTURA_CELULA_LANDING_PX / FONTE_LANDING_PX,
+          peso: PESO_FONTE_LANDING,
+        });
       } catch {
         falhar();
         return;
@@ -225,11 +244,14 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
           uniforms: { ...uniformes, ...grade.uniformes },
           vertexShader: VERTEX_ASCII,
           fragmentShader: FRAGMENT_TELA,
+          // A passada já sai com alfa pré-multiplicado (a tinta chega assim).
           transparent: true,
+          premultipliedAlpha: true,
           depthTest: false,
           depthWrite: false,
-          // Coordenadas de célula e cores: mediump sobra, e é mais barato em GPU móvel.
-          precision: "mediump",
+          // A leitura da tinta por pixel precisa de highp: em mediump a
+          // coordenada de uma tela de 1500 px perde resolução.
+          precision: "highp",
         }),
       );
       // Posições em coordenadas de recorte; não há o que recortar.

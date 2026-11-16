@@ -110,7 +110,7 @@ describe("LandingPage", () => {
   it("LAND-03 — as seções renderizam", async () => {
     renderLanding();
     expect(await screen.findByRole("heading", { name: "Como funciona" }, ESPERA)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Killer features" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "O que o Vulnera faz hoje" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Planos que cabem na sua empresa." }),
     ).toBeInTheDocument();

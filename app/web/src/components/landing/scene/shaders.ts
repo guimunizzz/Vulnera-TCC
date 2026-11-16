@@ -2,12 +2,14 @@
  * components/landing/scene/shaders.ts
  *
  * O QUE FAZ
- * GLSL da cena narrativa ASCII, em duas passadas:
+ * GLSL da cena narrativa, em duas passadas:
  *   1. FRAGMENT_CELULAS roda uma vez por célula de caractere (textura do
  *      tamanho da grade, `src/three/grade-celulas.ts`) e decide, pelo
- *      progresso (0 a 5, um por ato), glifo, cor e alfa.
- *   2. FRAGMENT_TELA roda por pixel: lê a célula, aplica a onda da gota e
- *      carimba o glifo do atlas (`src/three/ascii.ts`), com scanlines.
+ *      progresso (0 a 5, um por ato), glifo, cor e alfa. A partir da virada
+ *      (ato 3, ADR-054) cada célula esmaece e a pincelada nasce no lugar.
+ *   2. FRAGMENT_TELA roda por pixel: lê a célula, aplica a onda da gota,
+ *      carimba o glifo do atlas (`src/three/ascii.ts`) com scanlines e compõe
+ *      a camada de tinta (`pintura.ts`), os halos dos grupos e o granulado.
  * Estética de terminal hacker (ASCII, scanlines, glitch raro, acentos neon),
  * sem logos nem assets de terceiros.
  *
@@ -20,8 +22,9 @@
  * de glifo e o glitch seguem em "tiques" — trocar caractere é discreto por
  * natureza.
  *
- * Os atos seguem `docs/LANDING_NARRATIVA.md` §3; o espelho sem animação está
- * em `estadoDaCelula` (layout.ts), usado pelo pôster.
+ * Os atos seguem `docs/LANDING_NARRATIVA.md` §3. O espelho sem animação está
+ * em `estadoDaCelula` (layout.ts), usado pelo pôster — que continua contando
+ * os atos 3–5 em ASCII (grupos e "✓"); aqui eles são da pintura.
  * Não use crase dentro destes templates: fecha a string JS (ADR-026).
  *
  * QUEM USA
@@ -31,10 +34,9 @@
 import { GLSL_ASCII } from "../../../three/ascii";
 import { GLSL_GOTAS, GOTA } from "../../../three/gotas";
 import { GLSL_LER_CELULAS } from "../../../three/grade-celulas";
-import { CENTRO_DOS_GRUPOS } from "./layout";
+import { PROPORCAO_FALHAS } from "./layout";
 import { GLIFO, TRANSICAO_CENA, VINHETA } from "./config";
-
-const vec2 = ([x, y]: readonly [number, number]) => `vec2(${x.toFixed(3)}, ${y.toFixed(3)})`;
+import { GLSL_VIRADA } from "./pintura";
 
 /** Ids de cor gravados na textura de células (canal g). */
 export const COR = { base: 0, neon: 1, glitch: 2, baixa: 3, media: 4, alta: 5, critica: 6, resolvido: 7 } as const;
@@ -48,17 +50,14 @@ ${GLSL_ASCII}
 uniform float uProgresso;
 uniform float uTique;
 uniform float uTempo;
-uniform float uRaioDoGrupo;
+uniform float uVirada;
 uniform float uAlfaSaudavel;
 uniform float uAlfaDestaque;
 uniform float uAlfaFeixe;
 uniform float uTransicaoInicio;
 uniform float uTransicaoSentido;
 
-const vec2 GRUPO_BAIXA = ${vec2(CENTRO_DOS_GRUPOS[1])};
-const vec2 GRUPO_MEDIA = ${vec2(CENTRO_DOS_GRUPOS[2])};
-const vec2 GRUPO_ALTA = ${vec2(CENTRO_DOS_GRUPOS[3])};
-const vec2 GRUPO_CRITICA = ${vec2(CENTRO_DOS_GRUPOS[4])};
+${GLSL_VIRADA}
 
 float glifoDaSeveridade(float s) {
   if (s < 1.5) return ${GLIFO.baixa}.0;
@@ -69,11 +68,6 @@ float glifoDaSeveridade(float s) {
 
 // Severidade 1..4 -> id de cor (baixa..crítica).
 float corDaSeveridade(float s) { return ${COR.baixa - 1}.0 + s; }
-
-// Distância em px do centro da célula ao centro de um grupo (recorte -> px).
-float distanciaPx(vec2 clip, vec2 centro) {
-  return length((clip - centro) * 0.5 * uResolucao);
-}
 
 void main() {
   // Cada texel desta passada é uma célula.
@@ -110,15 +104,9 @@ void main() {
   float respira = 0.78 + 0.22 * sin(uTempo * 0.8 + r * 6.2832);
   float alfa = presente * uAlfaSaudavel * mix(0.55, 1.0, r) * mix(0.6, 1.0, lateral) * respira;
 
-  // Saudáveis apagam enquanto o foco está nos grupos.
-  float apagado = smoothstep(2.15, 2.85, p) * (1.0 - smoothstep(3.6, 4.4, p));
-  alfa *= 1.0 - 0.5 * apagado;
-
   // --- Falhas espalhadas na grade (≈ 4,5% das células).
-  float falha = step(rFalha, 0.045);
+  float falha = step(rFalha, ${PROPORCAO_FALHAS.toFixed(3)});
   float sev = 1.0 + floor(rSev * 4.0);
-  float corrigivel = step(2.5, sev) + step(1.5, sev) * step(sev, 2.5) * step(0.5, hashCelula(celula + 83.0));
-  corrigivel = min(corrigivel, 1.0);
 
   // Ato 1 (Mas tem falhas): "!" pulsando devagar, ainda sem cor de severidade.
   float pisca = 0.5 + 0.5 * sin((uTempo * 0.9 + r) * 6.2832);
@@ -127,50 +115,18 @@ void main() {
   float trecho = clamp(p - 1.0, 0.0, 1.0);
   float feixeX = mix(-1.15, 1.15, trecho);
   float revelado = falha * smoothstep(clip.x, clip.x + 0.1, feixeX);
-  // Ato 3 (Organizar): a falha sai da grade...
-  float saiu = falha * smoothstep(2.15, 2.85, p);
-  // Ato 4 (Corrigir): ...e a corrigida volta como "✓" no mesmo lugar.
-  float atraso = (4.0 - sev) * 0.12;
-  float voltou = falha * corrigivel * smoothstep(3.25 + atraso, 3.85 + atraso, p);
 
+  // A falha revelada fica no lugar até a virada alcançar a célula (ato 3):
+  // ali o glifo esmaece e a pincelada da mesma severidade nasce (pintura.ts).
   if (falha > 0.5) {
-    if (voltou > 0.01) {
-      indice = ${GLIFO.ok}.0;
-      cor = ${COR.resolvido}.0;
-      alfa = mix(uAlfaSaudavel, uAlfaDestaque, voltou) * voltou;
-    } else if (revelado > 0.01) {
+    if (revelado > 0.01) {
       indice = glifoDaSeveridade(sev);
       cor = corDaSeveridade(sev);
-      alfa = uAlfaDestaque * revelado * (1.0 - saiu);
+      alfa = uAlfaDestaque * revelado;
     } else if (alerta > 0.01) {
       indice = ${GLIFO.alerta}.0;
       alfa = mix(uAlfaSaudavel, uAlfaDestaque, alerta * pisca);
     }
-  }
-
-  // --- Grupos nas laterais (fora da coluna de texto).
-  float dBaixa = distanciaPx(clip, GRUPO_BAIXA);
-  float dMedia = distanciaPx(clip, GRUPO_MEDIA);
-  float dAlta = distanciaPx(clip, GRUPO_ALTA);
-  float dCritica = distanciaPx(clip, GRUPO_CRITICA);
-  float sevGrupo = 1.0;
-  float dGrupo = dBaixa;
-  if (dMedia < dGrupo) { dGrupo = dMedia; sevGrupo = 2.0; }
-  if (dAlta < dGrupo) { dGrupo = dAlta; sevGrupo = 3.0; }
-  if (dCritica < dGrupo) { dGrupo = dCritica; sevGrupo = 4.0; }
-  float noGrupo = step(dGrupo, uRaioDoGrupo) * step(0.4, hashCelula(celula + 97.0));
-  // Cada célula do grupo chega num momento: o grupo "se forma".
-  float chegada = smoothstep(2.15 + r * 0.45, 2.45 + r * 0.45, p);
-  float grupoCorrigido = step(2.5, sevGrupo) + step(1.5, sevGrupo) * step(sevGrupo, 2.5) * step(0.5, hashCelula(celula + 83.0));
-  float atrasoGrupo = (4.0 - sevGrupo) * 0.12;
-  float dissolve = min(grupoCorrigido, 1.0) * smoothstep(3.15 + atrasoGrupo + r * 0.3, 3.55 + atrasoGrupo + r * 0.3, p);
-  float grupo = noGrupo * chegada * (1.0 - dissolve);
-  if (grupo > 0.01) {
-    // Pouco antes de dissolver, a célula corrigida mostra "✓".
-    float virando = min(grupoCorrigido, 1.0) * smoothstep(3.0 + atrasoGrupo, 3.2 + atrasoGrupo, p);
-    indice = virando > 0.5 ? ${GLIFO.ok}.0 : glifoDaSeveridade(sevGrupo);
-    cor = virando > 0.5 ? ${COR.resolvido}.0 : corDaSeveridade(sevGrupo);
-    alfa = uAlfaDestaque * grupo;
   }
 
   // --- Varredura (ato 2): blocos neon com franja magenta logo atrás.
@@ -206,11 +162,16 @@ void main() {
     }
   }
 
+  // --- Virada (ato 3): onda da esquerda para a direita; o glifo esmaece onde
+  // a pincelada nasce. A conta é a mesma do vértice das pinceladas.
+  float xTela = (celula.x + 0.5) * uCelula.x / uResolucao.x;
+  alfa *= 1.0 - viradaLocal(uVirada, xTela, hashCelula(celula + 113.0));
+
   gl_FragColor = vec4(indice / 255.0, cor / 255.0, clamp(alfa, 0.0, 1.0), 1.0);
 }
 `;
 
-/** Passada 2: por pixel — onda da gota, glifo do atlas, cor e scanlines. */
+/** Passada 2: por pixel — gota, glifo do atlas, scanlines e a camada de tinta. */
 export const FRAGMENT_TELA = /* glsl */ `
 ${GLSL_ASCII}
 ${GLSL_GOTAS}
@@ -226,6 +187,15 @@ uniform vec3 uCorMedia;
 uniform vec3 uCorAlta;
 uniform vec3 uCorCritica;
 uniform vec3 uCorResolvido;
+// Pintura (atos 3–5): tinta acumulada em sRGB com alfa pré-multiplicado.
+uniform sampler2D uTinta;
+uniform float uTintaAtiva;
+uniform float uVirada;
+uniform float uTetoDaTinta;
+uniform vec3 uHalos[4];
+uniform vec3 uCorDoHalo[4];
+uniform float uRaioDoHalo;
+uniform float uAlfaDoHalo;
 
 vec3 corPorId(float id) {
   if (id < ${COR.neon}.5) return id < ${COR.base}.5 ? uCorBase : uCorNeon;
@@ -238,31 +208,59 @@ vec3 corPorId(float id) {
 }
 
 void main() {
-  // Água: a onda das gotas desloca a leitura da grade (refração). Sem gota
-  // viva, o laço das gotas nem roda (uniform: o desvio é coerente na GPU).
+  // Água: a onda das gotas desloca a leitura (refração) — da grade nos atos
+  // ASCII, da tinta nos atos de pintura. Sem gota viva, o laço nem roda.
   vec4 onda = uGotasAtivas > 0.5 ? ondaDasGotas(gl_FragCoord.xy) : vec4(0.0);
   vec2 pos = gl_FragCoord.xy - onda.xy * uCelula.x * ${GOTA.deslocamentoCelulas.toFixed(2)};
-  vec4 dado = lerCelula(celulaEm(pos));
-  float indice = byte(dado.r);
-  vec3 cor = corPorId(byte(dado.g));
-  float alfa = dado.b;
+  // Saída em sRGB com alfa pré-multiplicado.
+  vec4 saida = vec4(0.0);
 
-  // Crista da onda: um anel de glifos da rampa, puxado para o neon. Nunca passa
-  // do alfa de destaque — o limite que o teste de contraste garante.
-  // A altura raramente passa de 0,5 longe do centro: normaliza para o anel aparecer.
-  float crista = smoothstep(0.04, 0.45, onda.z);
-  float alfaOnda = uAlfaDestaque * crista;
-  if (alfaOnda > alfa) {
-    indice = ${GLIFO.rampaInicio}.0 + floor(crista * ${(GLIFO.rampaTotal - 0.01).toFixed(2)});
-    cor = mix(uCorBase, uCorNeon, crista);
-    alfa = alfaOnda;
+  // Depois da virada completa não há glifo: pula a leitura do atlas.
+  if (uVirada < 0.999) {
+    vec4 dado = lerCelula(celulaEm(pos));
+    float indice = byte(dado.r);
+    vec3 cor = corPorId(byte(dado.g));
+    float alfa = dado.b;
+
+    // Crista da onda: um anel de glifos da rampa, puxado para o neon. Nunca passa
+    // do alfa de destaque — o limite que o teste de contraste garante. Some com
+    // a virada: sobre a pintura a gota só refrata a tinta.
+    float crista = smoothstep(0.04, 0.45, onda.z);
+    float alfaOnda = uAlfaDestaque * crista * (1.0 - uVirada);
+    if (alfaOnda > alfa) {
+      indice = ${GLIFO.rampaInicio}.0 + floor(crista * ${(GLIFO.rampaTotal - 0.01).toFixed(2)});
+      cor = mix(uCorBase, uCorNeon, crista);
+      alfa = alfaOnda;
+    }
+    alfa = max(alfa, min(alfa * (1.0 + 0.6 * onda.w), uAlfaDestaque));
+
+    // Scanlines: uma linha de pixel a cada três, mais escura.
+    float scanline = 1.0 - 0.18 * step(2.0, mod(floor(gl_FragCoord.y), 3.0));
+    float cobertura = coberturaDoGlifoEm(indice, pos) * alfa * scanline;
+    saida = vec4(linearToOutputTexel(vec4(cor, 1.0)).rgb * cobertura, cobertura);
   }
-  alfa = max(alfa, min(alfa * (1.0 + 0.6 * onda.w), uAlfaDestaque));
 
-  // Scanlines: uma linha de pixel a cada três, mais escura.
-  float scanline = 1.0 - 0.18 * step(2.0, mod(floor(gl_FragCoord.y), 3.0));
+  if (uTintaAtiva > 0.5) {
+    vec4 tinta = texture2D(uTinta, pos / uResolucao);
+    // Granulado de tela: a trama pega mais tinta nos fios altos, e um ruído
+    // fino por pixel quebra o degradê liso.
+    float trama = sin(gl_FragCoord.x * 2.2) * sin(gl_FragCoord.y * 2.2);
+    float grao = hashCelula(floor(gl_FragCoord.xy)) - 0.5;
+    tinta *= uTetoDaTinta * (0.93 + 0.05 * trama + 0.06 * grao);
+    // A crista da gota clareia a tinta molhada.
+    tinta.rgb *= 1.0 + 0.35 * max(onda.z, 0.0);
 
-  gl_FragColor = vec4(cor, coberturaDoGlifoEm(indice, pos) * alfa * scanline);
-  #include <colorspace_fragment>
+    // Halos: luz suave atrás de cada grupo, proporcional ao risco que resta.
+    vec4 halo = vec4(0.0);
+    for (int i = 0; i < 4; i++) {
+      vec2 d = (gl_FragCoord.xy - uHalos[i].xy) / uRaioDoHalo;
+      float brilho = exp(-dot(d, d)) * uHalos[i].z * uAlfaDoHalo;
+      halo += vec4(uCorDoHalo[i] * brilho, brilho);
+    }
+    vec4 fundo = tinta + halo * (1.0 - tinta.a);
+    saida += fundo * (1.0 - saida.a);
+  }
+
+  gl_FragColor = saida;
 }
 `;

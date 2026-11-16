@@ -73,6 +73,11 @@ export default function Hero() {
           O invasor só precisa de uma brecha. Você precisa achar todas.
         </motion.p>
 
+        <motion.p variants={item} className="mx-auto mt-4 max-w-xl text-sm text-[var(--vx-text-2)] md:text-base">
+          Gestão de vulnerabilidades do começo ao fim: pentest, scanner DAST e análise de código (SAST/SCA) num
+          lugar só, do achado à correção.
+        </motion.p>
+
         <motion.div
           variants={item}
           className="mx-auto mt-6 h-px w-[200px] bg-[var(--vx-accent)]"

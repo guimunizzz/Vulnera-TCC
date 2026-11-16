@@ -6,13 +6,16 @@
  * o hook faz com eles.
  *   CENA-L01  cria um canvas decorativo; depois do atlas, monta com o orçamento
  *             da cena, lê as cores (paleta da landing + neon + severidades +
- *             resolvido) e inicia
+ *             resolvido, mais os matizes da pintura: índigo, accent-soft,
+ *             sucesso e amarelo) e inicia
  *   CENA-L02  um único ScrollTrigger alimenta o progresso
  *   CENA-L03  unmount mata o gatilho, descarta cena e hospedeiro e remove o canvas
  *   CENA-L04  sem WebGL avisa onLost e não deixa canvas nem gatilho
  *   CENA-L05  StrictMode: a montagem cancelada antes do atlas não monta nada;
  *             sobra exatamente um canvas e um hospedeiro
  *   CENA-L06  atlas que falha (sem canvas 2D) cai no pôster via onLost
+ *   CENA-L07  com a camada de pintura montada, desmontar não lança, descarta a
+ *             cena e deixa o canvas fora do DOM
  */
 
 import { StrictMode, useRef } from "react";
@@ -85,6 +88,7 @@ describe("useLandingScene", () => {
       "--vx-accent", "--vx-cyan", "--vx-magenta",
       "--color-severity-low", "--color-severity-medium", "--color-severity-high", "--color-severity-critical",
       "--color-success",
+      "--vx-indigo", "--vx-accent-soft", "--vx-success", "--vx-yellow",
     ]));
   });
 
@@ -137,5 +141,14 @@ describe("useLandingScene", () => {
     await waitFor(() => expect(onLost).toHaveBeenCalledTimes(1));
     expect(falso.montar).not.toHaveBeenCalled();
     expect(getByTestId("host").querySelector("canvas")).toBeNull();
+  });
+
+  it("CENA-L07 — com a pintura montada, desmontar não lança e deixa o canvas fora do DOM", async () => {
+    const { getByTestId, unmount } = render(<Cena />);
+    const host = getByTestId("host");
+    await waitFor(() => expect(falso.iniciar).toHaveBeenCalledTimes(1));
+    expect(() => unmount()).not.toThrow();
+    expect(falso.descartarCena).toHaveBeenCalledTimes(1);
+    expect(host.querySelector("canvas")).toBeNull();
   });
 });

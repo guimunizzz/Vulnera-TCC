@@ -1,4 +1,4 @@
-/**
+﻿/**
  * components/landing/scene/config.ts
  *
  * O QUE FAZ
@@ -92,6 +92,15 @@ export const MAX_DPR_CENA = 1.5;
 /** Largura da célula de caractere em px CSS (a altura sai da proporção da fonte). */
 export const CELULA_LANDING_PX = 12;
 /**
+ * Fonte do glifo e altura da célula, em px CSS: JetBrains Mono a 13 px numa
+ * célula de 12 × 18 (protótipo aprovado em 2026-11-15). Antes a célula tinha
+ * 12 × 26 com o glifo a ~20 px: menos linhas e letras maiores.
+ */
+export const FONTE_LANDING_PX = 13;
+export const ALTURA_CELULA_LANDING_PX = 18;
+/** Peso da fonte no atlas: a 13 px o traço regular fica ralo demais sobre o fundo escuro. */
+export const PESO_FONTE_LANDING = 600;
+/**
  * Tiques por segundo da troca de glifo e do glitch — as únicas mudanças
  * discretas; o resto da cena anima em tempo contínuo.
  */
@@ -127,3 +136,70 @@ export function mapearProgresso(scroll: number, marcos: number[]): number {
   }
   return marcos.length - 1;
 }
+
+/**
+ * Pintura dos atos 3–5 (ADR-054): a partir da "virada", cada célula ASCII se
+ * desfaz em pincelada. Medidas em px CSS e segundos; faixas são [mín, máx].
+ * A lógica pura que usa estes números está em `pintura-logica.ts`; o GLSL, em
+ * `pintura.ts`, é gerado a partir deles.
+ */
+export const PINTURA = {
+  /** Pinceladas do fundo numa tela de 1440 × 900; escala com a área. */
+  pinceladas: 6500,
+  limitesDePinceladas: [3500, 9000],
+  /** Trechos da fita ao longo da linha de fluxo (contorno curvo, sem quinas). */
+  segmentos: 7,
+  /** Pinceladas que nascem de cada célula com falha (os grupos ficam cheios). */
+  porFalha: 3,
+  /**
+   * Degraus de qualidade. O primeiro é o padrão: a camada de tinta pode passar
+   * do teto do kit (DPR 1,5), decisão do Rafael em 2026-11-15. Se a máquina
+   * não segura a cadência (`quadroLentoS` por `quadrosParaRebaixar` quadros
+   * seguidos), a pintura desce um degrau — menos resolução e menos pinceladas
+   * antes de cortar a ideia. Não sobe de volta na mesma visita.
+   */
+  qualidade: [
+    { maxDpr: 2, pinceladas: 1 },
+    { maxDpr: 1.5, pinceladas: 0.75 },
+    { maxDpr: 1, pinceladas: 0.5 },
+  ],
+  quadroLentoS: 1 / 48,
+  quadrosParaRebaixar: 90,
+  larguraPx: [1.4, 4.4],
+  comprimentoPx: [12, 38],
+  velocidadePxS: 26,
+  vidaS: [1.8, 4.4],
+  /** Quanto a tinta acumulada desbota por quadro (a 60 fps): rastro curto = nitidez. */
+  desbotePorQuadro: 0.085,
+  alfaDaPincelada: 0.4,
+  /** Teto do alfa da tinta na composição — entra no teste de contraste. */
+  tetoDeAlfa: 0.9,
+  /** Alfa máximo do halo atrás de um grupo com todo o risco em aberto. */
+  alfaDoHalo: 0.16,
+  /** Fração das pinceladas com o filete claro (crista da tinta) e a largura dele. */
+  relevo: 0.45,
+  fileteDoRelevoPx: 0.7,
+  /** Tons de cada matiz: escuro multiplica a cor; claro mistura com branco. */
+  tomEscuro: 0.58,
+  tomClaro: 0.3,
+  raioDoGrupoPx: 96,
+  /** Faixas do progresso narrativo (0 a 5). */
+  virada: [2.55, 3.45],
+  /**
+   * Peso da posição horizontal e do ruído por célula na onda da virada. O
+   * protótipo usava 0,4 e 0,4; com mais peso em x a frente lê de longe como
+   * uma onda da esquerda para a direita, e não como um esmaecer geral.
+   */
+  ondaDaVirada: { x: 1.1, ruido: 0.35 },
+  organizar: [3.0, 3.5],
+  espalhamentoDaChegada: 0.25,
+  /** Corrigir: começa pelo mais grave; cada severidade abaixo atrasa um pouco. */
+  corrigirInicio: 3.75,
+  corrigirDuracao: 0.35,
+  atrasoPorSeveridade: 0.15,
+  espalhamentoDaCorrecao: 0.25,
+  estavel: [4.5, 5],
+  /** No ato 5 o fluxo perde 45% da velocidade e a baixa fica mais discreta. */
+  freioEstavel: 0.45,
+  discricaoDaBaixa: 0.4,
+} as const;
