@@ -9,6 +9,18 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-16 — Revisão PR #77 fechada nas duas branches
+
+**✅ 100%; 4/4 entregas.** Feature com oito comentários conferidos e propagação
+separada à Vuvu por `f31b678`, preservando visual/atlas/personalidade e histórico.
+API/Web: feature 922/659, Vuvu 923/671; contraste 132/132 e builds aprovados.
+Espera Web intermitente registrada no backlog: focal 7/7 e repetição integral
+671/671 sem editar produto/teste. Exemplos/Compose locais e vazios, valores
+privados ausentes das árvores atuais, `.env` inalterado, artefatos locais 74/74.
+Publicação nas duas branches como iannxz, sem merge na dev/deploy/restart da
+stack principal. Backups somente locais e nova aprovação humana pendente.
+Matriz, permissões de QA, resultados e limites: `docs/REVISAO_PR77_2026-11-16.md`.
+
 ## 2026-11-16 — Atendimento da revisão do PR #77 na feature
 
 Oito comentários conferidos: catálogo de 17 para 29 tópicos de domínio/produto,

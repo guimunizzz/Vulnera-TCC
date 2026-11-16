@@ -1,5 +1,9 @@
 # BACKLOG.md — Vulnera
 
+**✅ 2026-11-16 — PR #77 e propagação visual concluídos (100%; 4/4 entregas).** Oito comentários conferidos; API/Web na feature 922/659 e na Vuvu 923/671, contraste 132/132 e builds aprovados. Merge visual `f31b678` mantém atlas, código visual e personalidade, com as novas regras de produto/privacidade. Duas branches publicadas como iannxz; dev e ambiente principal preservados. Nova aprovação humana permanece pendente. Histórico intermediário abaixo preservado; matriz em `docs/REVISAO_PR77_2026-11-16.md`.
+
+- [ ] PR77-FUT-01 — Acompanhar a espera intermitente no teste de Security Graph do detalhe SAST/SCA sob execução concorrente: uma falha inicial; focal 7/7 e repetição completa com dois processos 671/671, sem alterar fonte ou teste.
+
 **✅ 2026-11-16 — Pedidos do PR #77 implementados, validados e publicados na feature (100% das correções; propagação visual em fechamento).** Oito comentários conferidos em `docs/REVISAO_PR77_2026-11-16.md`: 29 tópicos de produto, 74 artefatos fora do índice com cópias locais preservadas, configuração concreta privada. API check 922/922 (58 suítes), Web check 659/659 e contraste 132/132; builds e smoke por três perfis aprovados. Uma chamada Gemini real HTTP 200 confirmou governança de aceite/SLA. Dev e6a445c incorporada sem conflitos; sem seed/reset, schema, dependências, guias protegidos ou deploy no ambiente principal. EACCES inicial do QA resolvido exclusivamente na imagem local de testes. Histórico anterior de execução abaixo preservado.
 
 
@@ -14,7 +18,7 @@
 - [x] PR77-01 — Limpeza do versionamento sem apagar as evidências locais nem os testes de código.
 - [x] PR77-02 — Curadoria de 29 tópicos (12 novos), com rastreabilidade e diferenças de documentos antigos registradas. Até três tópicos/6.000 caracteres, permissões mantidas; focal API 75/75.
 - [x] PR77-03 — Modelo real omitido da versão pública atual; campos vazios nos exemplos, fixture sintética e fallback se a resposta reproduzir a configuração privada. Histórico anterior preservado; focal API 60/60.
-- [ ] PR77-04 — Conferir pedidos, validar, publicar e propagar preservando a Vuvu.
+- [x] PR77-04 — Oito pedidos conferidos, checks/builds aprovados e publicação nas duas branches com merge preservando a Vuvu; aprovação do revisor é etapa externa.
 
 **✅ 2026-11-15 — Vuvu entregue (100%; 6/6 checkpoints).** `refactor/assistant-ui`, base `63c4696`: atlas original/estados, painel responsivo, voz autorizada e apresentação local. API **906/906**, focal final **59/59**, Web **671/671**, contraste **132/132**, focal pós-ajustes **48/48**, builds e navegador/CSP **10/10**. Aplicação em 8086 autorizada e concluída após conferir zero scans ativos; smoke real pelo navegador comprovou Gemini/Vuvu, atlas e zero erros. Banco/Mailhog, volumes e contagens de negócio preservados. Backups de imagens apenas locais; nenhum merge na dev/agent-ai. Relatório [QA_VUVU_UI_2026-11-15.md](QA_VUVU_UI_2026-11-15.md), com capturas fictícias. Registros intermediários abaixo são históricos e estão concluídos.
 
