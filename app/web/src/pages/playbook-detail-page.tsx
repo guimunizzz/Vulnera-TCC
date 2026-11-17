@@ -118,8 +118,8 @@ export function PlaybookDetailPage() {
   if (consulta.isLoading) {
     return (
       <div className="space-y-4" aria-busy="true">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-8 w-[16rem]" />
+        <Skeleton className="h-[16rem] w-full" />
       </div>
     );
   }

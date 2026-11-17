@@ -73,7 +73,7 @@ export function OverrideSeverityDialog({
         >
           {mutation.isError && <Alert>{getErrorMessage(mutation.error)}</Alert>}
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label className="text-sm text-fg" htmlFor="override-severity">
               Nova severidade
             </label>
@@ -91,7 +91,7 @@ export function OverrideSeverityDialog({
             </select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label className="text-sm text-fg" htmlFor="override-justification">
               Justificativa
             </label>

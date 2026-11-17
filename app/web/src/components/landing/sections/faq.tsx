@@ -7,30 +7,43 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Plus } from "lucide-react";
-import { Reveal, GlitchHeading } from "../ui";
+import { Reveal, TituloDecodificado } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
+import { DURACAO } from "../../../motion/tokens";
+import { DURACAO_MOTION_LANDING, EASE_MOTION_LANDING } from "../motion/tokens";
 
 interface QA {
   q: string;
   a: string;
 }
 
+// Respostas conferidas no código em 2026-11-15. Saíram as perguntas sobre
+// troca de plano e fidelidade: não existe fluxo de upgrade/downgrade nem
+// cobrança no produto (pagamento real está fora do MVP).
 const QUESTIONS: QA[] = [
   {
-    q: "Posso trocar de plano depois?",
-    a: "Sim. O upgrade é imediato e libera os novos limites na hora; o downgrade entra a partir do próximo ciclo.",
+    q: "O scanner ataca a minha aplicação?",
+    a: "Não. No modo real, o OWASP ZAP só navega pelas páginas (Spider) e analisa as respostas (análise passiva). Não faz ataque ativo, não envia formulários e não faz login. Existe também um modo simulado, que demonstra o fluxo sem acessar o alvo.",
   },
   {
-    q: "O que acontece se eu passar do limite de aplicações ou projetos?",
-    a: "Você recebe um aviso e pode fazer upgrade a qualquer momento. Nada é bloqueado no meio de uma análise em andamento.",
+    q: "Todo alerta do scanner vira vulnerabilidade?",
+    a: "Não. O alerta entra numa fila de triagem. Uma pessoa analisa e decide se promove para vulnerabilidade — nada é promovido sozinho.",
+  },
+  {
+    q: "O que acontece se eu atingir o limite do plano?",
+    a: "A plataforma não deixa cadastrar uma nova aplicação ou abrir um novo projeto além do limite. O que já existe continua acessível.",
   },
   {
     q: "O serviço de remediação está incluso em todos os planos?",
-    a: "Só no Pro e no Enterprise. No Basic, a remediação das vulnerabilidades encontradas fica por conta do seu time.",
+    a: "Só no Pro e no Enterprise. No Basic, corrigir as vulnerabilidades encontradas fica por conta do seu time.",
   },
   {
-    q: "Preciso de contrato de fidelidade?",
-    a: "Não. Basic e Pro são mensais, sem fidelidade. O Enterprise tem SLA dedicado combinado direto com o time comercial.",
+    q: "Como eu contrato?",
+    a: "Você cria a conta, escolhe um plano e envia a solicitação. Um administrador do Vulnera aprova. Não há pagamento online nesta versão.",
+  },
+  {
+    q: "O Vulnera usa IA?",
+    a: "Não nesta versão. A IA foi retirada do escopo do MVP por decisão de projeto: classificação, triagem e correção são feitas por pessoas.",
   },
 ];
 
@@ -52,7 +65,7 @@ function FAQItem({ item, open, onToggle }: FAQItemProps) {
         <span className="font-mono text-sm text-[var(--vx-text)] md:text-base"><InteractiveLabel effect="glitch">{item.q}</InteractiveLabel></span>
         <motion.span
           animate={{ rotate: open ? 45 : 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: DURACAO.base }}
           className="shrink-0 text-[var(--vx-accent)]"
           aria-hidden="true"
         >
@@ -65,7 +78,7 @@ function FAQItem({ item, open, onToggle }: FAQItemProps) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
+            transition={{ duration: DURACAO_MOTION_LANDING.alternancia, ease: EASE_MOTION_LANDING.alternancia }}
             className="overflow-hidden"
           >
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--vx-text-2)]">{item.a}</p>
@@ -80,18 +93,18 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
-    <section className="vx-grid-bg bg-[var(--vx-bg)] px-6 py-24">
-      <div className="mx-auto w-full max-w-2xl">
-        <Reveal className="text-center">
+    <section className="vx-grid-bg px-6 py-24">
+      <div className="vx-superficie mx-auto w-full max-w-2xl">
+        <Reveal className="text-center" variante="fade">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">
             {"// PERGUNTAS FREQUENTES"}
           </p>
-          <GlitchHeading className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
-            Antes de assinar.
-          </GlitchHeading>
+          <TituloDecodificado className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
+            Antes de começar.
+          </TituloDecodificado>
         </Reveal>
 
-        <Reveal delay={150} className="mt-12">
+        <Reveal ordem={1} className="mt-12">
           {QUESTIONS.map((item, i) => (
             <FAQItem
               key={item.q}

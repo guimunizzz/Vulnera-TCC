@@ -23,10 +23,11 @@
  * em `components/landing/sections/pricing.tsx`).
  *
  * PESO
- * `three` + `@react-three/*` + `gsap` + `framer` + as 11 seções entrariam no
- * chunk PRINCIPAL do app se importados direto — toda rota pagaria o download.
- * `lazy()` põe a landing inteira num chunk à parte, buscado só quando "/" é
- * visitada. O CSS da paleta é carregado aqui (eager, ~4 kB) para o fallback
+ * `gsap` + `motion` + as 11 seções entrariam no chunk PRINCIPAL do app se
+ * importados direto — toda rota pagaria o download. `lazy()` põe a landing
+ * inteira num chunk à parte, buscado só quando "/" é visitada; `three` fica
+ * num chunk mais adiante ainda, o da cena narrativa, e só é baixado quando o
+ * gate do kit permite (`scene/landing-scene.tsx`). O CSS da paleta é carregado aqui (eager, ~4 kB) para o fallback
  * já aparecer no tom certo.
  */
 

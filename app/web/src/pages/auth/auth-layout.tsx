@@ -1,6 +1,7 @@
 import { memo, useEffect, useId, useRef, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import { Link, useLocation, useOutlet } from "react-router-dom";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { movimentoReduzido, observarAcessibilidade, useMovimentoReduzido } from "../../design/accessibility";
 import "@fontsource-variable/inter";
 import "./login-page.css";
 
@@ -82,13 +83,12 @@ export function AuthLayout() {
   const patternId = useId();
   const { pathname } = useLocation();
   const outlet = useOutlet();
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useMovimentoReduzido();
   const isRegister = pathname.replace(/\/+$/, "").toLowerCase() === "/register";
   const direction = isRegister ? 1 : -1;
 
   useEffect(() => {
     const hover = window.matchMedia("(hover: none)");
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     function cancelPointerFrame(): void {
       if (pointerFrameRef.current !== undefined) {
@@ -115,7 +115,7 @@ export function AuthLayout() {
         backgroundTimerRef.current = undefined;
       }
       const visible = !document.hidden;
-      const allowed = visible && !reduced.matches;
+      const allowed = visible && !movimentoReduzido();
       backgroundMotionRef.current = allowed;
       page.dataset.pageVisible = String(visible);
       if (!allowed) {
@@ -137,14 +137,14 @@ export function AuthLayout() {
     refreshBackgroundRef.current = syncPlayback;
     syncPlayback();
     hover.addEventListener("change", mediaChanged);
-    reduced.addEventListener("change", mediaChanged);
+    const pararDeObservar = observarAcessibilidade(mediaChanged);
     document.addEventListener("visibilitychange", visibilityChanged);
     return () => {
       cancelPointerFrame();
       if (backgroundTimerRef.current !== undefined) window.clearTimeout(backgroundTimerRef.current);
       refreshBackgroundRef.current = null;
       hover.removeEventListener("change", mediaChanged);
-      reduced.removeEventListener("change", mediaChanged);
+      pararDeObservar();
       document.removeEventListener("visibilitychange", visibilityChanged);
     };
   }, []);

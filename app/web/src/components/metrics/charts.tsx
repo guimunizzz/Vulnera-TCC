@@ -124,7 +124,7 @@ export function DonutDeSeveridade({
         />
       ) : (
         <div className="flex flex-wrap items-center gap-6">
-          <div className="h-52 w-52 shrink-0">
+          <div className="h-[13rem] w-[13rem] shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie

@@ -140,6 +140,19 @@ export interface MetricsSummaryDTO {
   mttrPorSeveridade: Record<string, MttrDTO>;
   aging: AgingDTO;
   porCategoriaOwasp: ContagemPorChave;
+  /**
+   * Abertos (OPEN + IN_PROGRESS) por origem — MANUAL, DAST_IMPORT, SAST_IMPORT,
+   * SCA_IMPORT. Visão unificada da aplicação: segue período e filtros, como os demais.
+   */
+  abertosPorOrigem: ContagemPorChave;
+  /**
+   * Achados de código AINDA NÃO TRIADOS (triagem NEW) na importação mais recente
+   * de cada ferramenta, por categoria (SAST | SCA). É o estado de AGORA, não segue
+   * período nem filtros: ainda não viraram finding. `null` para CLIENT, que não
+   * enxerga o módulo SAST/SCA (ADR-052). DAST fica de fora: o scan ainda não sabe
+   * a que aplicação pertence (SG-FUT-04b).
+   */
+  filaDeTriagem: ContagemPorChave | null;
   /** Presente só quando `compare=previous`. */
   comparacao?: {
     periodoAnterior: { de: string; ate: string };

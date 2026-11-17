@@ -129,7 +129,13 @@ Estados       --color-success/warning/danger  (+ -ink, -surface, -fg)
 Severidade    --color-severity-{critical,high,medium,low,info}
                                 (+ -ink, -surface)
 Gráficos      --color-chart-1..6 · -grid · -axis
+Fundo         --color-ambient-ink · -muted · -cyan · -magenta
 ```
+
+O grupo **Fundo** é só para a decoração three.js (atmosfera da plataforma),
+lido em runtime por `src/three/palette.ts`. Nenhum componente o usa como cor de
+texto, borda ou estado. Ciano e magenta são os acentos neon da landing em
+OKLCH; no tema claro, eles escurecem para não brilhar sobre o branco.
 
 **A convenção `-ink` / `-surface` — leia isto antes de usar severidade:**
 
@@ -227,6 +233,13 @@ sombra.
 🎯 **Nenhum componente inventa duração.** O espelho em TypeScript
 (`src/motion/tokens.ts`) é conferido contra o CSS por teste.
 
+A landing pública tem uma escala própria e maior, também nomeada por intenção,
+em `components/landing/motion/tokens.ts` (entrada, crescimento, traço,
+contagem, escalonamento, scrub). Quando o movimento está reduzido, ela usa o
+mesmo `fast` do app. As cenas three.js têm os números em módulos de
+configuração (`landing/scene/config.ts`, `dashboard/hero/atmosfera-config.ts`),
+nunca no shader nem no hook.
+
 ---
 
 ## 3. Catálogo de componentes
@@ -277,6 +290,31 @@ Todos em `app/web/src/components/ui/`, exportados por `index.ts`.
 | `Alert` | `tom` · `titulo` · `aoFechar`. **Fica** na página (toast some) |
 | `Separator` | `orientacao` · `decorativo` |
 
+**Tabelas — um padrão só (2026-11-04).** Toda tabela da plataforma, a do
+componente `Table` e as escritas à mão nas páginas, usa as classes de
+`components/ui/table-estilos.ts` (`TABELA.cabecalho`, `.th`, `.linha`,
+`.celula`): cabeçalho `bg-inset` em caixa alta, células `px-4 py-3`, linha com
+divisória sutil e realce no hover. O padrão é o de Aplicações e Projetos,
+aprovado no redesenho. Coluna de texto livre ganha largura mínima
+(`larguraClassName`): a tabela rola na horizontal antes de espremer o título.
+`Badge` é sempre uma linha só (`whitespace-nowrap`): chip quebrado em duas
+linhas deixa o texto colado na borda arredondada.
+
+⚠️ Classe de espaçamento fora da escala (§2.6: 0–6, 8, 10, 12, 16, 20, 24)
+não gera CSS e não avisa. O rodapé da landing (`py-14`) e os chips de contexto
+de risco (`gap-1.5`) ficavam sem espaço nenhum por isso.
+
+**Guarda automática (2026-11-13).** `src/test/escala-espacamento.test.ts` lê a
+escala da própria `tailwind.config` e falha, com arquivo e linha, se alguma
+classe de espaçamento/tamanho usar um número fora dela. Regra de correção:
+espaçamento e ícone vão para o passo mais próximo (`gap-1.5` → `gap-2`,
+`h-3.5` → `h-4`); dimensão de componente — altura de gráfico, largura de
+painel, skeleton — não é espaçamento e usa valor explícito em rem
+(`h-80` → `h-[20rem]`). A caça que originou o teste achou 102 ocorrências em 29
+arquivos: radar de maturidade e donut de severidade sem altura, seletor de
+layout colado, minimapa do CyberGraph sobre a legenda. Evidências em
+`docs/evidencias/espacamento/`.
+
 ---
 
 ## 4. Contrato de acessibilidade
@@ -318,9 +356,13 @@ atravessar a barra com a seta.
 **exibida** e falha abaixo do mínimo.
 
 ```
-66 pares medidos · 0 falha(s) · 77 primitivos auditados · 0 fora do gamut sRGB
-✓ Todos os pares atendem WCAG 2.1 AA nos dois temas.
+132 pares medidos · 0 falha(s) · 77 primitivos auditados · 0 fora do gamut sRGB
+✓ Todos os pares atendem WCAG 2.1 AA nos dois temas e AAA no alto contraste.
 ```
+
+São os mesmos 33 pares em quatro cenários: escuro e claro (régua AA) e escuro e
+claro com **alto contraste** (régua AAA: texto 7:1, ver "Menu de
+acessibilidade" abaixo). Até 2026-10-31 eram 66 pares, só os dois temas.
 
 | Par | dark | light | mínimo |
 |---|---|---|---|
@@ -344,6 +386,53 @@ sem virar rosa.
 
 ⚠️ **Limitação:** a paridade foi provada em jsdom + `axe-core`, **não em leitor
 de tela real**. NVDA e VoiceOver não foram testados.
+
+### Menu de acessibilidade (2026-10-31)
+
+Botão com ícone próprio no canto superior direito de **todas as telas**: no
+cabeçalho do `AppLayout`, na barra da landing e fixo nas rotas sem cabeçalho
+(login, cadastro, planos, onboarding). Exceção: o relatório do ZAP, que é um
+iframe isolado de terceiros onde as preferências não chegam. Decisão em
+**[[ADR-049 - Menu de acessibilidade com preferencias no navegador]]**.
+
+| Opção | Ícone (lucide) | O que faz | Critério WCAG |
+|---|---|---|---|
+| Tamanho do texto | `AArrowDown` / `AArrowUp` | 100 · 110 · 125 · 150 · 175 · 200% pela raiz (`--a11y-escala-fonte`) | 1.4.4 (AA) |
+| Alto contraste | `Contrast` | reforço sobre o tema atual, texto ≥ 7:1 (tokens.css §11) | 1.4.6 (AAA) |
+| Reduzir animações | `CirclePause` | mesmo efeito de `prefers-reduced-motion`, sem depender do sistema | 2.2.2 (A), 2.3.3 |
+| Sublinhar links | `Underline` | todo `a[href]` sublinhado | 1.4.1 (A) |
+| Espaçamento de texto | `Space` | os valores exatos do critério: entrelinha 1.5, letras 0.12em, palavras 0.16em, parágrafo 2em | 1.4.12 (AA) |
+| Foco reforçado | `Focus` | anel de 4px com halo | 2.4.7 (AA), 2.4.13 |
+| Restaurar padrão | `RotateCcw` | volta tudo ao padrão | — |
+
+Como funciona: `design/accessibility.ts` guarda as escolhas em `localStorage`
+(`vulnera:a11y`) e estampa atributos no `<html>` (`data-alto-contraste`,
+`data-reduzir-movimento`, `data-sublinhar-links`, `data-espacamento-texto`,
+`data-foco-reforcado`). O script inline do `index.html` faz o mesmo antes do
+primeiro paint, como o tema. `useMotion()` e todo código fora do React (GSAP,
+rAF, intro 3D da landing) consultam `movimentoReduzido()`, que vale para o menu
+**ou** para o sistema.
+
+| Par (alto contraste) | dark | light | mínimo |
+|---|---|---|---|
+| Texto atenuado / superfície | 14,07:1 | 14,33:1 | 7,0 |
+| Texto do botão primário | 9,80:1 | 11,30:1 | 7,0 |
+| Link / superfície | 11,84:1 | 11,30:1 | 7,0 |
+| Chip CRITICAL | 11,90:1 | 9,34:1 | 7,0 |
+| Borda de controle / superfície | 11,70:1 | 14,33:1 | 3,0 |
+
+No escuro o botão primário **inverte** (preenchimento claro, texto escuro):
+iris-600 com texto branco para em 5,78:1. Funciona porque todo `bg-accent` e
+`bg-danger` do produto escreve com o `-fg` correspondente.
+
+Provas: `sistema.test.tsx` (MOV-03, A11Y-PREF-01..05) e
+`e2e/acessibilidade.spec.ts` (AC-01..04, com varredura `axe-core` WCAG 2.x A/AA
+em 9 telas, também com alto contraste e texto a 200%).
+
+⚠️ **Limites:** a landing (`--vx-*`) e o login (`--login-*`) têm paletas
+próprias e ganham só reforço de texto e borda, não a régua AAA medida; gráficos
+SVG com `fontSize` numérico (Recharts, radar de maturidade, CyberGraph 2D) não
+crescem com o texto — o zoom do navegador continua cobrindo esses casos.
 
 ---
 
@@ -378,6 +467,21 @@ movimento reduzido pede menos movimento, não menos informação.
 | **Rota** | crossfade ~150ms, **sem deslocamento** | Deslocar a página enjoa na vigésima navegação |
 | **Press** | `scale: 0.97`, em CSS puro | É a animação mais frequente da app; não vale JS por clique |
 | **Toast** | spring + `layout` para empilhar | Sem `layout`, os toasts existentes pulam ao abrir espaço |
+
+### Camadas — quem anima o quê
+
+| Camada | Biblioteca | Onde |
+|---|---|---|
+| Interface do produto | Motion | `src/motion/` (`useMotion`, `components.tsx`) |
+| Narrativa por rolagem da landing | GSAP + ScrollTrigger | `components/landing/motion/` |
+| Loops decorativos e `press` | CSS | folha do módulo, com `@media (prefers-reduced-motion)` e `:root[data-reduzir-movimento]` |
+| Fundo decorativo | three.js imperativo | kit `src/three/` |
+
+GSAP não entra no produto, e Motion não faz scroll-scrub. Numa mesma seção da
+landing, uma biblioteca só: o hover de botão que acompanha uma seção GSAP é
+CSS. Glitch fica reservado ao hero e à chamada final; os títulos das outras
+seções se decodificam uma vez (`LANDING_NARRATIVA.md` §7.1). Decisão e números
+em **[[ADR-050 - Camadas de movimento e kit three.js imperativo no web]]**.
 
 ### Física
 
@@ -443,7 +547,38 @@ npm run dev             # /styleguide fica em http://localhost:3000/styleguide
 **A regra que mais importa levar:** componente usa só token semântico. É o que
 faz o mobile herdar o tema em vez de reinventá-lo.
 
-## Atmosfera do dashboard (2026-09-22)
+## Fundo decorativo ASCII (2026-11)
+
+Landing e plataforma usam a mesma técnica: glifos ASCII desenhados por shader
+num canvas atrás do conteúdo, pelo kit `src/three/`. Roteiro e números em
+`docs/LANDING_NARRATIVA.md`, e decisão no ADR-050.
+
+- **Decoração, nunca dado.** Canvas `aria-hidden`, sem foco e com
+  `pointer-events: none`. Nenhuma forma representa métrica. Na plataforma, sem
+  dígitos: um `0` ao lado de um KPI seria lido como número.
+- **Teto medido.** A opacidade máxima dos glifos (plataforma: 0,30 no tema
+  escuro e 0,24 no claro) é o ponto em que o texto primário e o secundário
+  seguem AA com um glifo cruzando a letra, em qualquer cor da aurora (testes
+  ATM-01 e CTR). Para mudar o teto, refaça a conta.
+- **Superfície onde há texto.** Cabeçalho solto sobre o fundo usa
+  `.atmosfera-veu`. KPIs do Dashboard e cards de severidade de Findings são
+  opacos onde há texto e translúcidos só na borda direita, que fica vazia.
+- **Gate antes do download.** `useCenaPermitida` bloqueia com movimento
+  reduzido (sistema ou menu), alto contraste do menu, tela < 768 px ou sem
+  WebGL2. A landing mostra o pôster (ou fundo liso no alto contraste), e a
+  plataforma, o fundo CSS.
+- **Cor só de token**, lida em runtime (§2.4, grupo Fundo). Mudar o tema
+  atualiza os uniforms sem recriar o contexto.
+- **Interação mínima.** Na plataforma, hover discreto (só mouse e caneta),
+  ouvido na `window`. Na landing, a "gota" no clique, que ignora alvos
+  interativos. Nenhum dos dois cria estado React por quadro.
+
+## Atmosfera do dashboard (2026-09-22) — histórico
+
+> Substituída pelo fundo ASCII acima (refactor `web-motion-3d`, ADR-050): as
+> curvas e órbitas saíram, e o `dashboard-scene-palette.ts`, com suas cores
+> aproximadas, foi removido em favor dos tokens lidos em runtime. O registro
+> abaixo fica como histórico.
 
 `DashboardAtmosphere` monta um único canvas lazy para os três perfis. O Three.js
 desenha 18 curvas lentas no fundo e três órbitas com núcleo geométrico no canto

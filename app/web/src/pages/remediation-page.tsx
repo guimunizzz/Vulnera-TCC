@@ -239,7 +239,7 @@ export function RemediationPage() {
       {busca.isLoading && (
         <div className="grid gap-4 lg:grid-cols-3" aria-busy="true" aria-label="Carregando quadro de remediação">
           <span className="sr-only">Carregando quadro de remediação</span>
-          {COLUNAS.map((coluna) => <div key={coluna.status} className="remediation-column rounded-container border border-subtle p-4"><Skeleton className="h-6 w-32" /><Skeleton className="mt-3 h-4 w-44" /><Skeleton className="mt-6 h-40 w-full" /><Skeleton className="mt-3 h-40 w-full" /></div>)}
+          {COLUNAS.map((coluna) => <div key={coluna.status} className="remediation-column rounded-container border border-subtle p-4"><Skeleton className="h-6 w-[8rem]" /><Skeleton className="mt-3 h-4 w-[11rem]" /><Skeleton className="mt-6 h-[10rem] w-full" /><Skeleton className="mt-3 h-[10rem] w-full" /></div>)}
         </div>
       )}
 

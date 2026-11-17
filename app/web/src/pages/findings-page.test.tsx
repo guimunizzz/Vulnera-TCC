@@ -38,7 +38,7 @@ describe("FindingsPage — resumo do recorte", () => {
       ...consulta.resultado, carregando: false,
       dados: {
         data: [], pagination: { total: 9, page: 1, pageSize: 25, totalPages: 1 },
-        facets: { severity: { CRITICAL: 4, HIGH: 5, MEDIUM: 7 }, status: {}, owasp: {}, company: {} },
+        facets: { severity: { CRITICAL: 4, HIGH: 5, MEDIUM: 7 }, status: {}, owasp: {}, company: {}, source: {} },
       },
     };
     renderPage("/findings?severity=HIGH,CRITICAL");

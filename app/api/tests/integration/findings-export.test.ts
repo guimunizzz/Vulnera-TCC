@@ -173,7 +173,9 @@ describe("Exportação Excel de findings", () => {
 
     expect(r.status).toBe(200);
     expect(r.headers["content-type"]).toContain(XLSX_MIME);
-    expect(r.headers["content-disposition"]).toMatch(/^attachment; filename="findings_todos_\d{4}-\d{2}-\d{2}_\d{4}\.xlsx"/);
+    // Aspas opcionais: content-disposition 1.x sempre as põe; a 2.x (instalação limpa, sem lockfile
+    // versionado) omite em nomes só com token. As duas formas são válidas pela RFC 6266.
+    expect(r.headers["content-disposition"]).toMatch(/^attachment; filename=("?)findings_todos_\d{4}-\d{2}-\d{2}_\d{4}\.xlsx\1(;|$)/);
     expect(r.headers["cache-control"]).toBe("no-store");
     expect(r.headers["x-content-type-options"]).toBe("nosniff");
 

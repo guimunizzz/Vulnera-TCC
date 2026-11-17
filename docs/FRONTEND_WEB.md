@@ -7,26 +7,87 @@
 
 # Frontend web do Vulnera
 
-**Estado em 2026-10-16.** O frontend está em `app/web/` e é uma SPA React +
-TypeScript construída com Vite. Tailwind usa os tokens próprios em
-`src/styles/tokens.css`; os componentes de interface ficam em
-`src/components/ui/`. Motion anima transições de interface. Three.js só desenha
-a atmosfera decorativa compartilhada e é carregado sob demanda. Os gráficos
-analíticos usam os componentes de `src/components/metrics/`.
+**Estado em 2026-11-04** (fim do refactor `web-motion-3d`, ADR-050). O
+frontend está em `app/web/` e é uma SPA React + TypeScript construída com Vite.
+Tailwind usa os tokens próprios em `src/styles/tokens.css`; os componentes de
+interface ficam em `src/components/ui/`. Motion anima a interface; GSAP com
+ScrollTrigger anima só a narrativa da landing; three.js desenha o fundo
+decorativo (a cena ASCII da landing e a atmosfera da plataforma, pelo kit
+`src/three/`) e, desde 2026-11-09, o mapa 3D da superfície de ataque do
+Exposure Graph da empresa (`/exposure-graph`, também pelo kit; ADR-051). O
+CyberGraph do scan e o grafo da empresa são SVG, com cinco layouts
+(`src/features/security-graph/`); o modo 3D do CyberGraph saiu (ADR-051).
+Tudo que usa three é carregado sob demanda. Os gráficos analíticos usam os componentes de
+`src/components/metrics/`.
 
 Este documento descreve o código implementado. As especificações de tokens e
 das telas anteriores continuam em [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) e
-[DASHBOARD_VISUAL.md](DASHBOARD_VISUAL.md). A decisão do fundo único está em
-[ADR-041](Vulnera/07-Decisoes/ADR-041%20-%20Atmosfera%20unica%20no%20layout%20autenticado.md).
+[DASHBOARD_VISUAL.md](DASHBOARD_VISUAL.md) (este último é histórico). A decisão
+do fundo único está em
+[ADR-041](Vulnera/07-Decisoes/ADR-041%20-%20Atmosfera%20unica%20no%20layout%20autenticado.md),
+e as camadas de animação e o kit three.js em
+[ADR-050](Vulnera/07-Decisoes/ADR-050%20-%20Camadas%20de%20movimento%20e%20kit%20three.js%20imperativo%20no%20web.md).
+O roteiro da cena e da atmosfera ASCII está em
+[LANDING_NARRATIVA.md](LANDING_NARRATIVA.md).
 
 ## Entrada, rotas e dados
 
 `src/main.tsx` monta, nessa ordem, `ThemeProvider`, TanStack Query,
-`BrowserRouter` e `ToastProvider`. `src/App.tsx` registra as rotas. As telas
-autenticadas passam por `ProtectedRoute`; quase todas usam `AppLayout`, que
-fornece navegação, cabeçalho, alternância de tema, área principal e transição
-entre rotas. `/onboarding` usa um fluxo protegido de tela inteira.
-`/dast/scans/:id/report` também é uma tela cheia separada do layout.
+`BrowserRouter`, `ToastProvider` e `ConfiguracaoDeMovimento` (o `MotionConfig`
+que leva o movimento reduzido a todo componente `motion`). `src/App.tsx`
+registra as rotas. As telas autenticadas passam por `ProtectedRoute`; quase
+todas usam `AppLayout`, que fornece navegação, cabeçalho, alternância de tema,
+área principal e transição entre rotas. `/onboarding` usa um fluxo protegido de
+tela inteira. `/dast/scans/:id/report` também é uma tela cheia separada do
+layout.
+
+`/sast-sca` e `/sast-sca/imports/:id` (ADR-052) têm os papéis do DAST (ADMIN e
+PENTESTER). O item do menu tem o selo **new** (`novo: true` em `sidebar.tsx`),
+que é fixo e só sai quando alguém o remove do código (D17.3). A página do
+projeto ganha a aba **SAST/SCA**, oculta para CLIENT. O PDF da importação e o
+`downloadBlob` são importados sob demanda, para que o `pdf-lib` não entre no
+chunk da página (o mesmo problema do WEB-FUT-01).
+
+O detalhe da importação tem a aba **Security Graph** (`?aba=grafo`), que
+reaproveita o motor 2D do CyberGraph com um modelo próprio
+(`features/security-graph/code-graph-model.ts`) e é carregada sob demanda. O
+**tour guiado** (`components/tour/`: `TourGuiado`, `useTourAutomatico` e
+`BotaoVerTour`) marca seus alvos com `data-tour="..."`; o item do menu é
+achado por `data-nav="/rota"`. O "visto" fica em `localStorage`
+(`vulnera:tour:<tour>:<usuário>`, `lib/tour.ts`). Para um tour novo, defina os
+passos (seletor, título, texto) e chame `useTourAutomatico(id, telaPronta)`.
+O botão **?** ao lado de "Importar relatório" (`code-import-help.tsx`, na página
+SAST/SCA e na aba do projeto) abre o guia de como gerar e importar, com
+comandos copiáveis.
+
+`/threat-intel` (ADR-053) é dos três papéis, também com selo **new**; o que cada
+um pode fazer (inventário, triagem, promoção, sincronizar) vem do `permissoes`
+do resumo da API, não da tela. Aba, empresa e CVE em foco ficam na URL
+(`?empresa=&aba=afeta&match=`), que é para onde o **sino de notificações**
+(`components/notifications/notification-bell.tsx`, no topo do `AppLayout`) leva.
+O sino consulta só a contagem a cada 60 s e busca a lista ao abrir; navega
+apenas para rota interna. O cabeçalho da página é um **boletim**
+(`components/threat-intel/boletim.tsx`): o título é o estado real ("N CVEs
+críticas ou altas afetam M tecnologias da empresa"), a exploração ativa (KEV)
+abre o texto na cor de perigo, e abaixo vêm a distribuição por severidade (a
+mesma `SeverityStrip` do SAST/SCA) e a saúde de cada fonte na última
+sincronização completa. O motivo do módulo é `data-ops-hero="threat"`: uma
+pilha de avisos chegando, com a linha KEV na cor de perigo. Para caber o sino a 375 px, a marca "Vulnera" do topo
+sai abaixo de `sm` (o menu hambúrguer continua).
+
+`.alvo-estendido` (área de toque de 44 px em controles densos) só aplica
+`position: relative` a hosts sem `absolute`/`fixed`. Por ser CSS fora de
+camada, a regra antiga vencia o utilitário e tirava o "×" do `DialogClose` do
+canto em todos os diálogos.
+
+Cada página é um chunk próprio, carregado por `paginaLazy`
+(`src/lib/lazy-page.ts`) sob o `LimiteDeRota`
+(`src/components/layout/route-boundary.tsx`): skeleton enquanto baixa e uma
+tela de recuperação só para a falha de download (rede caída, deploy novo).
+Erro de render continua subindo. Ficam no chunk principal apenas `AppLayout`,
+`ProtectedRoute` e a landing, que faz o próprio `lazy()`. Login e cadastro vêm
+num só lote para que a troca animada entre eles nunca espere download. O
+styleguide só existe no servidor de desenvolvimento.
 
 A barra lateral segue a prévia aprovada em 2026-10-16: marca VULNERA SECURITY,
 ícones de traço fino e grupos Visão geral, Operação e Administração. Os grupos
@@ -77,25 +138,125 @@ ao trocar somente a aba. Gravações invalidam listas/detalhes/quadro/métricas
 afetados, e sair ou trocar de usuário limpa o cache da sessão. O botão “Tentar
 novamente” do detalhe de finding refaz a consulta. Decisão e limites em ADR-044.
 
+## Camadas de animação
+
+Cada biblioteca tem um papel, e a pergunta "o movimento está reduzido?" tem uma
+fonte só (`src/design/accessibility.ts`: sistema **ou** menu de acessibilidade).
+
+```mermaid
+flowchart TB
+  pref["design/accessibility.ts<br/>movimentoReduzido · altoContraste"]
+
+  subgraph produto["Interface do produto"]
+    motion["Motion<br/>src/motion · useMotion · tokens"]
+    css["CSS<br/>loops decorativos · press"]
+  end
+
+  subgraph landing["Landing pública"]
+    gsap["GSAP + ScrollTrigger<br/>components/landing/motion"]
+    cena["Cena narrativa: ASCII (atos 0–2)<br/>e terreno 3D (atos 3–5)<br/>components/landing/scene"]
+    poster["Pôster ASCII estático"]
+  end
+
+  subgraph plataforma["Área autenticada"]
+    atmos["Atmosfera ASCII<br/>components/dashboard/hero"]
+    fundo["Fundo CSS"]
+  end
+
+  subgraph kit["Kit src/three"]
+    gate["gate.ts<br/>decide antes do download"]
+    host["scene-host · loop · dispose"]
+    pal["palette.ts<br/>cor lida dos tokens"]
+    ascii["ascii · grade-celulas · gotas"]
+  end
+
+  pref --> motion
+  pref --> css
+  pref --> gsap
+  pref --> gate
+  gate -->|permitida| cena
+  gate -->|permitida| atmos
+  gate -->|bloqueada| poster
+  gate -->|bloqueada| fundo
+  cena --> host
+  atmos --> host
+  host --> pal
+  host --> ascii
+```
+
+| Situação | Landing | Plataforma |
+|---|---|---|
+| WebGL2, tela ≥ 768 px, sem preferência | cena a 60 fps: ASCII nos atos 0–2, terreno 3D nos atos 3–5 | atmosfera ASCII a 60 fps |
+| Movimento reduzido (sistema ou menu) | pôster do ato atual, troca por fade | fundo CSS parado |
+| Alto contraste do menu | fundo liso, sem pôster | fundo CSS |
+| Tela < 768 px, sem WebGL2 ou falha do chunk | pôster | fundo CSS |
+
+### Landing: do ASCII para o terreno 3D (2026-11-16, ADR-055)
+
+A cena da landing troca de material no ato 3: a grade de caracteres ganha
+relevo e vira um terreno topográfico. O roteiro, o canvas fixo, o
+ScrollTrigger único e os `data-ato` das seções não mudaram.
+
+| O que mudou | Onde |
+|---|---|
+| Atos 0–2 mais densos: célula 12 × 18 px, fonte a 13 px, peso 600 (antes 12 × 26 px, glifo a ~20 px) | `scene/config.ts`, `three/ascii.ts` (o atlas aceita tamanho de célula e peso) |
+| Atos 3–5 em terreno 3D: malha deslocada por uma função de altura, quatro montes por severidade, sombra, curvas de nível e os glifos de falha como cartazes | `scene/terreno.ts`, `scene/terreno-shaders.ts`, `scene/terreno-logica.ts` |
+| Composição: a passada de tela lê o alvo do terreno (alfa pré-multiplicado, `highp`) e soma os halos | `scene/shaders.ts`, `scene/use-landing-scene.ts` |
+| Epílogo: o progresso segue de 5 a 6 até o fim da rolagem (rede de monitoramento, órbita da câmera, horizonte que amanhece); grafo como camada do terreno; pulsos, sonar e varredura de luz contínuos | `scene/use-landing-scene.ts` (marco do fim da página), `scene/terreno*.ts` |
+| Clique no fundo: **ping de scanner** no lugar da gota d'água — anel de glifos que revela as falhas escondidas nos atos ASCII, anel de luz que corre pelo relevo a partir da virada | `three/pings.ts` (substitui `three/gotas.ts`), `scene/shaders.ts`, `scene/terreno*.ts` |
+| Token novo da paleta da landing: `--vx-indigo` (sombra e neblina do terreno) | `landing.css` |
+| Pôster com a mesma célula da cena (12 × 18 px, fonte a 13 px); continua ASCII nos seis atos | `scene/landing-poster.tsx` |
+| Contraste: o teste cobre o terreno (cores × tom claro × teto de alfa × halo) | `scene/scene-contrast.test.ts` (CTR-04) |
+
+> [!NOTE]
+> A atmosfera da área autenticada (`components/dashboard/hero/`) não foi
+> tocada. No kit `src/three/` só entraram dois parâmetros opcionais
+> do `criarAtlasAscii` (célula e peso), e `gotas.ts` deu lugar a `pings.ts`,
+> que só a landing usa.
+
+> [!WARNING]
+> **A câmera do terreno se move**, presa ao scroll (inclina 46° durante a
+> virada). É a única cena do web com câmera em movimento; com "reduzir
+> animações" ela nem monta. Ver ADR-055 §3.
+
+O alvo do terreno é a única parte que pode passar do teto de DPR 1,5 do kit
+(vai até 2). Se a máquina não segura a cadência, o terreno desce de degrau
+sozinho (`TERRENO.qualidade`). Explicação para iniciantes em
+[COMO_FUNCIONA_O_FUNDO.md](COMO_FUNCIONA_O_FUNDO.md); roteiro e medições em
+[LANDING_NARRATIVA.md](LANDING_NARRATIVA.md) §12. Antes do terreno a branch
+passou por uma versão em pintura (ADR-054) e por uma comparação de três
+materiais; o histórico está nas §10 e §11 do roteiro.
+
+**Conteúdo da landing (mesma entrega).** As seções passaram a afirmar só o que
+o código faz: saiu o card "IA para Findings" (ADR-017), entraram DAST com
+OWASP ZAP (com o limite dito na página), importação SAST/SCA, Threat Intel,
+visão unificada e Exposure Graph. A lista do que foi removido e por quê está
+em `output/landing-pintura/RELATORIO.md`.
+
 ## Fundo único da área autenticada
 
 `AppLayout` monta `operations-backdrop.css` e `DashboardAtmosphere` uma vez,
 como camadas sem interação sob `operations-content`. A base CSS desenha uma
-grade técnica sutil, luzes radiais e um sinal circular lento. O mesmo fundo
-funciona nos temas dark e light porque usa os tokens OKLCH existentes. Em
-mobile, o sinal circular sai e a grade perde opacidade. A folha também para o
-loop quando o sistema pede movimento reduzido.
+grade técnica sutil e luzes radiais nos tokens OKLCH dos dois temas. O
+`AmbientHostContext` garante no máximo um canvas por navegação autenticada.
 
-`DashboardAtmosphere` conserva a cena Three.js que já era usada no Dashboard e
-em Findings. O novo `AmbientHostContext` informa a essas páginas que o layout
-já montou a cena: assim, a navegação autenticada possui no máximo um canvas.
-O canvas tem `aria-hidden`, não recebe ponteiro e só carrega em viewport com
-pelo menos 768 px, sem `prefers-reduced-motion`. A cena limita o DPR a 1,5,
-desenha em até 30 fps, pausa com a aba oculta e descarta renderer, geometria,
-material, RAF e observers no cleanup. O buffer acompanha o tamanho visível do
-canvas, limitado a `min(100dvh, 60rem)`; páginas longas continuam com o fundo
-CSS abaixo dessa área. A cena não bloqueia conteúdo quando WebGL ou o download
-falha.
+Por cima, quando o gate do kit permite, a atmosfera ASCII
+(`components/dashboard/hero/use-dashboard-scene.ts`, números em
+`atmosfera-config.ts`): as curvas das ondas antigas desenhadas em glifos,
+aurora violeta → ciano → magenta, brilho na cabeça da chuva, hover discreto
+(só mouse e caneta) e uma varredura na troca de página e a cada 36 s. Não há
+dígitos, porque no produto número é dado. O teto de opacidade (0,30 no tema
+escuro, 0,24 no claro) mantém o texto primário e o secundário em AA com um
+glifo cruzando a letra (teste ATM-01). Cabeçalhos soltos sobre o fundo usam o
+véu `.atmosfera-veu`. Os KPIs do Dashboard e os cards de severidade de Findings
+são opacos onde há texto e translúcidos só na borda direita.
+
+O canvas tem `aria-hidden` e `pointer-events: none` e escuta o ponteiro na
+`window`. A renderização usa duas passadas (lógica por célula, glifo por
+pixel), roda a 60 fps com DPR ≤ 1,5, pausa com a aba oculta e descarta
+renderer, texturas, render targets, RAF, listeners e observers no cleanup.
+O buffer acompanha o tamanho visível do canvas, limitado a `min(100dvh, 60rem)`.
+Falha de WebGL ou do download mantém o fundo CSS e o conteúdo.
 
 O botão **Pausar animações** de Findings envia o evento local
 `vulnera:ambient-pause` ao `AppLayout`. Ao sair da página, o efeito limpa a
@@ -108,7 +269,8 @@ cabeçalho, `data-ops-surface` para superfícies de dados e `data-ops-lift` para
 cards interativos. Variantes de hero usam **os mesmos tokens**, alterando
 composição, luz e borda conforme o contexto. Aplicação destaca superfície de
 ataque; Projeto mostra pipeline; Finding sinaliza ameaça; DAST acrescenta um
-radar CSS discreto; Playbooks lembra uma base de conhecimento; Maturidade e
+radar CSS discreto; SAST/SCA desenha linhas de código estilizadas (uma delas
+na cor de severidade alta); Playbooks lembra uma base de conhecimento; Maturidade e
 Governança mantêm a hierarquia própria. O scan ativo recebe um pequeno pulso
 CSS ao lado de seu progresso real. Não há paleta nem cena 3D por módulo.
 
@@ -131,13 +293,32 @@ funcional durante a saída e entrada do conteúdo. Os demais módulos reutilizam
 os componentes Motion existentes para listas, filtros, cards e feedback das
 mutations. Não há durações arbitrárias por página.
 
-Quando `prefers-reduced-motion` está ativo, a cena WebGL não monta, os loops
-CSS param e as variantes de Motion removem deslocamento e escala. Valores e
+Quando `prefers-reduced-motion` está ativo **ou** a pessoa liga "Reduzir
+animações" no menu de acessibilidade, nenhuma cena WebGL monta (a landing mostra
+o pôster), os loops CSS param, o GSAP da landing refaz as animações em versão
+de fade curto e as variantes de Motion removem deslocamento e escala. O alto
+contraste do menu também impede a montagem das cenas, porque o teto de
+opacidade dos glifos foi calculado para AA e o alto contraste promete 7:1. A pergunta "o movimento está reduzido?" tem uma resposta
+só: `movimentoReduzido()` / `useMovimentoReduzido()` em
+`src/design/accessibility.ts` — não consulte a media query direto. Valores e
 conteúdo permanecem legíveis. A decoração usa `aria-hidden` e
 `pointer-events: none`; a navegação mantém link de pulo, landmarks, foco e
 controles semânticos. Em tabelas estreitas, o conteúdo rola horizontalmente
 quando necessário em vez de cortar colunas; listas que já possuíam cards
 mobile continuam usando o mesmo DOM.
+
+## Menu de acessibilidade
+
+Botão no canto superior direito de todas as telas (cabeçalho do `AppLayout`,
+barra da landing, e fixo via `ComMenuAcessibilidade` nas rotas sem cabeçalho).
+O painel (`src/design/accessibility-menu.tsx`) ajusta tamanho do texto (100 a
+200%), alto contraste, reduzir animações, sublinhar links, espaçamento de texto
+(WCAG 1.4.12) e foco reforçado. As escolhas ficam no `localStorage`
+(`vulnera:a11y`) e viram atributos no `<html>`; o script inline do `index.html`
+as aplica antes do primeiro paint. Tabela de opções e contraste em
+`docs/DESIGN_SYSTEM.md` §4; decisão no ADR-049. Ao criar uma tela, verifique-a
+também com texto a 200% e alto contraste — `e2e/acessibilidade.spec.ts` varre as
+principais com `axe-core`.
 
 ## Tema e política de scripts
 
@@ -152,7 +333,10 @@ paint correto em checkout Windows. `src/test/csp.test.ts` cobre a regra.
 
 Ao criar uma tela autenticada, registre a rota sob `AppLayout` em `App.tsx`,
 use componentes de `src/components/ui/`, tokens semânticos, dados da API e as
-variantes de `useMotion()`. A página não deve montar outra atmosfera. Escolha
+variantes de `useMotion()`. A página não deve montar outra atmosfera. Uma cena
+three.js nova entra pelo kit: `useCenaPermitida` antes do `lazy()`, cor lida
+por `three/palette.ts`, `aria-hidden` e `pointer-events: none`, e teste de
+contraste do texto sobre ela. Escolha
 `data-ops-hero` apenas quando um cabeçalho destacado ajudar o fluxo, sem
 repetir um conjunto fixo de KPIs. Teste também estados de loading, vazio, erro,
 tema claro/escuro, 375/768/1440 px e movimento reduzido.

@@ -81,12 +81,12 @@ describe("ProjectsPage", () => {
     const table = await screen.findByRole("table");
     expect(screen.getByRole("heading", { name: "Projetos" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Novo projeto" })).toHaveAttribute("href", "/new-analysis");
-    expect(screen.getByText("3", { selector: ".projects-hero-stat [data-numeric]" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Projetos" }).parentElement).toHaveTextContent("Projetos3 projetos");
     const flow = screen.getByRole("region", { name: "Fluxo dos projetos" });
-    expect(within(flow).getByText("Pendentes").parentElement).toHaveTextContent("Pendentes1");
-    expect(within(flow).getByText("Em andamento").parentElement).toHaveTextContent("Em andamento1");
-    expect(within(flow).getByText("Em revisão").parentElement).toHaveTextContent("Em revisão0");
-    expect(within(flow).getByText("Concluídos").parentElement).toHaveTextContent("Concluídos1");
+    expect(within(flow).getByRole("button", { name: /Pendentes/ })).toHaveTextContent("Pendentes1");
+    expect(within(flow).getByRole("button", { name: /Em andamento/ })).toHaveTextContent("Em andamento1");
+    expect(within(flow).getByRole("button", { name: /Em revisão/ })).toHaveTextContent("Em revisão0");
+    expect(within(flow).getByRole("button", { name: /Concluídos/ })).toHaveTextContent("Concluídos1");
     expect(within(table).getByRole("link", { name: "Projeto A" })).toHaveAttribute("href", "/projects/A");
     expect(within(table).getAllByText("Portal TechNova")).toHaveLength(3);
   });
@@ -164,5 +164,39 @@ describe("ProjectsPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar os projetos");
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
     await waitFor(() => expect(screen.getByRole("table")).toBeInTheDocument());
+  });
+
+  it("PROJ-VIS-07 — card de estado filtra a tabela localmente e alterna de volta", async () => {
+    enterAs("CLIENT");
+    renderPage();
+    await screen.findByRole("table");
+    const flow = screen.getByRole("region", { name: "Fluxo dos projetos" });
+    const concluidos = within(flow).getByRole("button", { name: /Concluídos/ });
+
+    fireEvent.click(concluidos);
+    expect(concluidos).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("combobox", { name: "Filtrar por status" })).toHaveValue("COMPLETED");
+    const linhas = within(screen.getByRole("table")).getAllByRole("link");
+    expect(linhas.map((link) => link.textContent)).toEqual(["Projeto C"]);
+    expect(screen.getByText(/Mostrando/)).toHaveTextContent("Mostrando 1 de 3 projetos");
+
+    fireEvent.click(concluidos);
+    expect(within(screen.getByRole("table")).getAllByRole("link")).toHaveLength(3);
+    expect(api.projects).toHaveBeenCalledTimes(1);
+  });
+
+  it("PROJ-VIS-08 — busca por aplicação, etapa derivada do status e data por extenso", async () => {
+    enterAs("CLIENT");
+    renderPage();
+    const table = await screen.findByRole("table");
+
+    expect(within(table).getAllByRole("img", { name: /Etapa \d de 4/ }).map((el) => el.getAttribute("aria-label")))
+      .toEqual(["Etapa 1 de 4", "Etapa 2 de 4", "Etapa 4 de 4"]);
+    expect(within(table).getAllByText(/01 de set\. de 2026/)).toHaveLength(3);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar projeto ou aplicação" }), { target: { value: "nada disso" } });
+    expect(screen.getByText("Nenhum projeto com esses filtros")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar projeto ou aplicação" }), { target: { value: "technova" } });
+    expect(within(screen.getByRole("table")).getAllByRole("link")).toHaveLength(3);
   });
 });

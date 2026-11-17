@@ -1,0 +1,57 @@
+{
+  "inicio": "2026-10-27T14:15:03.679Z",
+  "erros": [],
+  "temas": {
+    "dark": {
+      "dataTheme": "dark",
+      "inkEnviado": true,
+      "mutedEnviado": true,
+      "corDoOutroTema": false,
+      "fpsDashboard": 4
+    },
+    "mesmoCanvasAposTroca": true,
+    "light": {
+      "dataTheme": "light",
+      "inkEnviado": true,
+      "mutedEnviado": true,
+      "corDoOutroTema": false,
+      "fpsDashboard": 4
+    }
+  },
+  "ciclos": [
+    {
+      "ciclo": 1,
+      "noDashboard": 1,
+      "noFindings": 1
+    },
+    {
+      "ciclo": 2,
+      "noDashboard": 1,
+      "noFindings": 1
+    },
+    {
+      "ciclo": 3,
+      "noDashboard": 1,
+      "noFindings": 1
+    },
+    {
+      "final": "dashboard",
+      "canvas": 1,
+      "totalCanvasNaPagina": 1
+    }
+  ],
+  "antigoNeutro": {
+    "neutralDark": "8290a8",
+    "neutralLight": "526078"
+  },
+  "findingsDarkInk": true,
+  "pausa": {
+    "canvasPausado": 0,
+    "canvasRetomado": 1
+  },
+  "reduzido": {
+    "canvas": 0,
+    "fallback": 1,
+    "chunkDeThree": false
+  }
+}

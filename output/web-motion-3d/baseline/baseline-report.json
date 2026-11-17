@@ -1,0 +1,697 @@
+{
+  "startedAt": "2026-10-23T11:40:13.266Z",
+  "landing": [
+    {
+      "file": "landing-00-hero-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-01-problema-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-02-como-funciona-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-03-recursos-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-04-secao-4-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-05-demo-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-06-maturidade-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-07-planos-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-08-secao-8-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-09-equipe-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-10-secao-10-1440-dark.png",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-00-hero-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-01-problema-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-02-como-funciona-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-03-recursos-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-04-secao-4-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-05-demo-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-06-maturidade-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-07-planos-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-08-secao-8-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-09-equipe-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-10-secao-10-768-dark.png",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-00-hero-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-01-problema-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-02-como-funciona-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-03-recursos-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-04-secao-4-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-05-demo-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-06-maturidade-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-07-planos-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-08-secao-8-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-09-equipe-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-10-secao-10-375-dark.png",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 1
+    },
+    {
+      "file": "landing-00-hero-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-01-problema-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-02-como-funciona-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-03-recursos-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-04-secao-4-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-05-demo-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-06-maturidade-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-07-planos-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-08-secao-8-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-09-equipe-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-10-secao-10-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-00-hero-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-01-problema-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-02-como-funciona-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-03-recursos-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-04-secao-4-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-05-demo-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-06-maturidade-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-07-planos-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-08-secao-8-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-09-equipe-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-10-secao-10-768-light.png",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-00-hero-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-01-problema-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-02-como-funciona-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-03-recursos-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-04-secao-4-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-05-demo-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-06-maturidade-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-07-planos-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-08-secao-8-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-09-equipe-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    },
+    {
+      "file": "landing-10-secao-10-375-light.png",
+      "width": 375,
+      "theme": "light",
+      "canvases": 1
+    }
+  ],
+  "app": [
+    {
+      "file": "app-admin-dashboard-1440-dark.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard"
+    },
+    {
+      "file": "app-admin-applications-1440-dark.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications"
+    },
+    {
+      "file": "app-admin-projects-1440-dark.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects"
+    },
+    {
+      "file": "app-admin-dashboard-768-dark.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard"
+    },
+    {
+      "file": "app-admin-applications-768-dark.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications"
+    },
+    {
+      "file": "app-admin-projects-768-dark.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 768,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects"
+    },
+    {
+      "file": "app-admin-dashboard-375-dark.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 0,
+      "url": "http://localhost:8086/dashboard"
+    },
+    {
+      "file": "app-admin-applications-375-dark.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 0,
+      "url": "http://localhost:8086/applications"
+    },
+    {
+      "file": "app-admin-projects-375-dark.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 375,
+      "theme": "dark",
+      "canvases": 0,
+      "url": "http://localhost:8086/projects"
+    },
+    {
+      "file": "app-client-dashboard-1440-dark.png",
+      "role": "client",
+      "route": "dashboard",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard"
+    },
+    {
+      "file": "app-client-applications-1440-dark.png",
+      "role": "client",
+      "route": "applications",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications"
+    },
+    {
+      "file": "app-client-projects-1440-dark.png",
+      "role": "client",
+      "route": "projects",
+      "width": 1440,
+      "theme": "dark",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects"
+    },
+    {
+      "file": "app-admin-dashboard-1440-light.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard"
+    },
+    {
+      "file": "app-admin-applications-1440-light.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications"
+    },
+    {
+      "file": "app-admin-projects-1440-light.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects"
+    },
+    {
+      "file": "app-admin-dashboard-768-light.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard"
+    },
+    {
+      "file": "app-admin-applications-768-light.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications"
+    },
+    {
+      "file": "app-admin-projects-768-light.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 768,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects"
+    },
+    {
+      "file": "app-admin-dashboard-375-light.png",
+      "role": "admin",
+      "route": "dashboard",
+      "width": 375,
+      "theme": "light",
+      "canvases": 0,
+      "url": "http://localhost:8086/dashboard"
+    },
+    {
+      "file": "app-admin-applications-375-light.png",
+      "role": "admin",
+      "route": "applications",
+      "width": 375,
+      "theme": "light",
+      "canvases": 0,
+      "url": "http://localhost:8086/applications"
+    },
+    {
+      "file": "app-admin-projects-375-light.png",
+      "role": "admin",
+      "route": "projects",
+      "width": 375,
+      "theme": "light",
+      "canvases": 0,
+      "url": "http://localhost:8086/projects"
+    },
+    {
+      "file": "app-client-dashboard-1440-light.png",
+      "role": "client",
+      "route": "dashboard",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/dashboard"
+    },
+    {
+      "file": "app-client-applications-1440-light.png",
+      "role": "client",
+      "route": "applications",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/applications"
+    },
+    {
+      "file": "app-client-projects-1440-light.png",
+      "role": "client",
+      "route": "projects",
+      "width": 1440,
+      "theme": "light",
+      "canvases": 1,
+      "url": "http://localhost:8086/projects"
+    }
+  ],
+  "errors": [
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-dark",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-light",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-light",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-light",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "label": "app-admin-light",
+      "type": "console",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    }
+  ],
+  "finishedAt": "2026-10-23T11:44:05.846Z"
+}

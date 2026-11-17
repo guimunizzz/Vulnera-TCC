@@ -1,69 +1,62 @@
 /**
  * projects-page.css
  *
- * O QUE FAZ: organiza o cabeçalho, o fluxo de estados e a tabela de projetos.
+ * O QUE FAZ: cor por estado nos cards de fluxo e na barra de etapas, linha
+ * clicável da tabela e o card por projeto abaixo de 640 px.
  * POR QUE EXISTE: diferencia as etapas sem criar métricas artificiais ou ruído.
+ * Desde a Fase 5 do refactor web-motion-3d o cabeçalho é compacto (sem a
+ * trilha decorativa) e os cards de estado filtram a tabela.
  * QUEM CONSOME: `pages/projects-page.tsx`.
  */
 
-.projects-hero {
-  background:
-    radial-gradient(circle at 88% 110%, oklch(var(--color-accent-surface) / 0.7), transparent 46%),
-    oklch(var(--color-bg-surface));
-  box-shadow:
-    var(--elevation-raised),
-    inset 0 1px 0 oklch(var(--color-text-primary) / 0.035);
-}
+.projects-flow-step--pending { --step-color: var(--color-severity-info); }
+.projects-flow-step--in_progress { --step-color: var(--color-warning); }
+.projects-flow-step--in_review { --step-color: var(--color-accent); }
+.projects-flow-step--completed { --step-color: var(--color-success); }
 
-.projects-hero-signal {
-  background:
-    linear-gradient(90deg, transparent 0 60%, oklch(var(--color-border-subtle) / 0.7) 60.1%, transparent 60.3%),
-    repeating-linear-gradient(0deg, transparent 0 28px, oklch(var(--color-accent) / 0.05) 29px 30px);
-  mask-image: linear-gradient(90deg, transparent 35%, black 76%, transparent);
-}
-
-.projects-hero-stat {
-  border-left: 1px solid oklch(var(--color-accent-ink) / 0.28);
-}
-
-.projects-hero-actions {
-  flex: none;
-}
-
-.projects-flow-grid {
-  border-top: 1px solid oklch(var(--color-border-subtle));
-}
-
+/* Card de estado: filete superior na cor da etapa. */
 .projects-flow-step {
   position: relative;
-}
-
-.projects-flow-step + .projects-flow-step {
-  border-left: 1px solid oklch(var(--color-border-subtle));
+  overflow: hidden;
 }
 
 .projects-flow-step::before {
   content: "";
   position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
+  inset: 0 0 auto 0;
   height: 2px;
   background: oklch(var(--step-color));
   opacity: 0.62;
+}
+
+.projects-flow-step[aria-pressed="true"]::before {
+  opacity: 1;
 }
 
 .projects-flow-dot {
   width: 0.4rem;
   height: 0.4rem;
   flex: none;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: oklch(var(--step-color));
 }
 
-.projects-flow-step--pending { --step-color: var(--color-severity-info); }
-.projects-flow-step--in_progress { --step-color: var(--color-warning); }
-.projects-flow-step--in_review { --step-color: var(--color-accent); }
-.projects-flow-step--completed { --step-color: var(--color-success); }
+/* Barra de etapas: quatro passos, preenchidos até a etapa atual. */
+.projects-etapas {
+  display: inline-grid;
+  grid-template-columns: repeat(4, var(--space-4));
+  gap: var(--space-1);
+}
+
+.projects-etapas > span {
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: oklch(var(--color-border-default));
+}
+
+.projects-etapas > span[data-feito] {
+  background: oklch(var(--step-color));
+}
 
 .projects-table tbody tr {
   transition: background-color var(--duration-fast) var(--ease-out);
@@ -75,49 +68,27 @@
 }
 
 .projects-row-link {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.5rem;
   transition: color var(--duration-fast) var(--ease-out);
 }
 
-.projects-row-arrow {
-  color: oklch(var(--color-accent-ink));
-  opacity: 0;
-  transform: translate(-2px, 2px);
-  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+/* O link do nome cobre a linha inteira: clicar em qualquer ponto abre o projeto. */
+.projects-row-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
 }
 
-.projects-row-link:hover .projects-row-arrow,
-.projects-row-link:focus-visible .projects-row-arrow {
-  opacity: 1;
-  transform: translate(0);
+.projects-row-arrow {
+  transition: color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+.projects-row:hover .projects-row-arrow,
+.projects-row:focus-within .projects-row-arrow {
+  color: oklch(var(--color-accent-ink));
+  transform: translateX(2px);
 }
 
 @media (max-width: 639px) {
-  .projects-hero-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .projects-hero-stat {
-    border-top: 1px solid oklch(var(--color-accent-ink) / 0.2);
-    border-left: 0;
-  }
-
-  .projects-flow-step:nth-child(3) {
-    border-left: 0;
-  }
-
-  .projects-flow-step:nth-child(n + 3) {
-    border-top: 1px solid oklch(var(--color-border-subtle));
-  }
-
-  .projects-row-arrow {
-    opacity: 1;
-    transform: none;
-  }
-
   .projects-table table,
   .projects-table tbody {
     display: block;
@@ -135,15 +106,15 @@
   }
 
   .projects-table tbody {
-    padding: 0.75rem;
+    padding: var(--space-3);
   }
 
   .projects-table tbody tr {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-    padding: 1rem;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    padding: var(--space-4);
     border: 1px solid oklch(var(--color-border-subtle));
     border-radius: var(--radius-container);
     background: oklch(var(--color-bg-raised));
@@ -159,26 +130,29 @@
   }
 
   .projects-table td:first-child {
-    grid-column: 1 / -1;
-    font-size: 0.95rem;
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .projects-table td:nth-child(5) {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .projects-table td:nth-child(2) {
-    grid-column: 1;
-    grid-row: 2;
+    grid-column: 1 / -1;
     overflow-wrap: anywhere;
   }
 
   .projects-table td:nth-child(3) {
-    grid-column: 2;
-    grid-row: 2;
+    grid-column: 1 / -1;
   }
 
   .projects-table td:nth-child(4) {
     grid-column: 1 / -1;
     border-top: 1px solid oklch(var(--color-border-subtle));
-    padding-top: 0.75rem;
-    font-size: 0.75rem;
+    padding-top: var(--space-3);
+    font-size: var(--text-xs);
   }
 
   .projects-table td:nth-child(4)::before {
@@ -191,5 +165,10 @@
   .projects-row-link,
   .projects-row-arrow {
     transition: none;
+  }
+
+  .projects-row:hover .projects-row-arrow,
+  .projects-row:focus-within .projects-row-arrow {
+    transform: none;
   }
 }

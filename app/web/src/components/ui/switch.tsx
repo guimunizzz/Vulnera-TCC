@@ -18,7 +18,8 @@
  *   porque o leitor de tela anunciaria "caixa de seleção, marcada" — e a
  *   promessa de um switch é outra. Com `role="switch"` o anúncio é "ativado" /
  *   "desativado", que é o que a pessoa precisa ouvir.
- *   `aria-labelledby` aponta para o rótulo visível.
+ *   `aria-labelledby` aponta para o rótulo visível; `aria-describedby`, para a
+ *   descrição, quando há uma.
  *
  * TECLADO
  *   Tab foca · Enter e Espaço alternam (nativo de `<button>`).
@@ -52,6 +53,7 @@ export interface SwitchProps {
 
 export function Switch({ checked, onCheckedChange, rotulo, descricao, disabled, className }: SwitchProps) {
   const idRotulo = useId();
+  const idDescricao = useId();
 
   return (
     <div className={cn("flex min-h-touch items-center justify-between gap-4", className)}>
@@ -59,7 +61,7 @@ export function Switch({ checked, onCheckedChange, rotulo, descricao, disabled, 
         <span id={idRotulo} className="text-sm text-fg">
           {rotulo}
         </span>
-        {descricao && <span className="text-xs text-fg-muted">{descricao}</span>}
+        {descricao && <span id={idDescricao} className="text-xs text-fg-muted">{descricao}</span>}
       </span>
 
       <button
@@ -67,6 +69,7 @@ export function Switch({ checked, onCheckedChange, rotulo, descricao, disabled, 
         role="switch"
         aria-checked={checked}
         aria-labelledby={idRotulo}
+        aria-describedby={descricao ? idDescricao : undefined}
         disabled={disabled}
         onClick={() => onCheckedChange(!checked)}
         className={cn(

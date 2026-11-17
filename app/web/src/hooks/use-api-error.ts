@@ -65,6 +65,23 @@ const MESSAGES: Record<string, string> = {
   // SLA (CP-2)
   INVALID_SLA_DAYS: "Cada prazo precisa ser um número inteiro entre 1 e 365 dias.",
   INVALID_SLA_STATE: "Estado de SLA inválido.",
+  INVALID_SOURCE_TYPE: "Origem inválida: use DAST, SAST, SCA ou manual.",
+  // Threat Intel (ADR-053)
+  TECH_ASSET_ALREADY_EXISTS: "Esta tecnologia já está no inventário.",
+  TECH_ASSET_ALREADY_CONFIRMED: "Esta tecnologia já foi confirmada.",
+  TECH_ASSET_NOT_SUGGESTED: "Só uma sugestão pode ser descartada.",
+  TECH_ASSET_NOT_FOUND: "Tecnologia não encontrada.",
+  THREAT_MATCH_NOT_FOUND: "CVE não encontrada para esta empresa.",
+  INVALID_ECOSYSTEM: "Escolha um ecossistema da lista.",
+  MISSING_PACKAGE_NAME: "Informe o nome do pacote.",
+  INVALID_PACKAGE_NAME: "Nome de pacote inválido.",
+  MISSING_CPE_PRODUCT: "Informe o fabricante e o produto.",
+  INVALID_CPE_PRODUCT: "Fabricante ou produto inválido: use o nome do dicionário CPE (minúsculas, sem espaços).",
+  INVALID_CPE_PART: "Tipo de produto inválido.",
+  INVALID_TECH_KIND: "Escolha pacote ou produto.",
+  INVALID_VERSION: "Versão inválida.",
+  INVALID_DAYS: "Período inválido (1 a 30 dias).",
+  CPE_SEARCH_UNAVAILABLE: "A busca no dicionário do NVD não respondeu agora. Digite o fabricante e o produto à mão.",
   // VRS (CP-3)
   INVALID_VRS_RANGE: "Faixa de prioridade inválida — use inteiros entre 0 e 100, com o mínimo abaixo do máximo.",
 
@@ -128,13 +145,24 @@ const MESSAGES: Record<string, string> = {
 
   // DAST (scans via OWASP ZAP)
   SIMULATED_SCAN_OPERATION_NOT_ALLOWED: "Demonstrações não podem ser promovidas nem comparadas como resultados reais.",
-  INVALID_SCAN_MODE: "Escolha Simulado ou Real antes de continuar.",
-  REAL_SCAN_CONFIRMATION_REQUIRED: "Confirme a autorização para executar o scan real.",
+  INVALID_SCAN_MODE: "Não foi possível iniciar a análise. Recarregue a página e tente de novo.",
+  REAL_SCAN_CONFIRMATION_REQUIRED: "Marque que você tem autorização para testar este alvo.",
   MISSING_TARGET_URL: "Informe a URL do alvo.",
-  INVALID_TARGET_URL: "URL inválida. Use o formato http(s)://exemplo.com.",
-  SCAN_ALREADY_RUNNING_FOR_TARGET: "Já existe um scan em andamento para esse alvo.",
-  SCAN_NOT_FOUND: "Scan não encontrado.",
+  INVALID_TARGET_URL: "URL inválida. Use http:// ou https://, sem usuário e senha (ex.: https://exemplo.com).",
+  SCAN_ALREADY_RUNNING_FOR_TARGET: "Já existe uma análise em andamento para esse alvo. Acompanhe a que está rodando ou espere ela terminar.",
+  SCAN_NOT_FOUND: "Análise não encontrada. Ela pode ter sido removida ou pertencer a outra pessoa.",
   REPORT_NOT_FOUND: "Relatório ainda não disponível para este scan.",
+  FINDING_ALREADY_PROMOTED: "Este achado já virou uma vulnerabilidade e não pode ser promovido de novo.",
+
+  // importação SAST/SCA (ADR-052)
+  INVALID_FILE_FORMAT: "O arquivo não é um JSON válido. Envie o relatório SARIF ou CycloneDX gerado pela ferramenta.",
+  UNSUPPORTED_REPORT_FORMAT: "Formato não reconhecido. São aceitos SARIF 2.1.0 (Semgrep, CodeQL, Trivy...) e CycloneDX (SBOM).",
+  UNSUPPORTED_SARIF_VERSION: "Só SARIF 2.1.0 é aceito. Gere o relatório nessa versão.",
+  IMPORT_TOO_LARGE: "O relatório tem mais de 5.000 achados. Divida a análise (por pasta ou por severidade) e importe em partes.",
+  IMPORT_NOT_FOUND: "Importação não encontrada.",
+
+  // rate limiting (a mensagem com o tempo de espera é montada em useApiError)
+  RATE_LIMITED: "Muitas requisições em sequência. Aguarde alguns segundos e tente novamente.",
 
   // genérico
   INTERNAL_ERROR: "Algo deu errado no servidor. Tente novamente.",
@@ -160,9 +188,16 @@ export function getApiErrorCode(error: unknown): string | undefined {
 export function useApiError(): (error: unknown) => string {
   return useCallback((error: unknown): string => {
     const code = getApiErrorCode(error);
+    if (code === "RATE_LIMITED" && axios.isAxiosError(error)) {
+      const segundos = Number(error.response?.data?.retryAfterSeconds);
+      if (Number.isFinite(segundos) && segundos > 0) return `Muitas requisições em sequência. Tente novamente em ${Math.ceil(segundos)} s.`;
+    }
     if (code) return messageForCode(code);
-    if (axios.isAxiosError(error) && error.code === "ERR_NETWORK") {
-      return "Não foi possível conectar ao servidor.";
+    if (axios.isAxiosError(error)) {
+      if (error.code === "ERR_NETWORK") return "Não foi possível conectar ao servidor. Verifique sua conexão ou se a API está no ar.";
+      if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") return "O servidor demorou demais para responder. Tente novamente.";
+      const status = error.response?.status ?? 0;
+      if (status >= 500) return "O servidor encontrou um erro. Tente novamente em instantes.";
     }
     return "Não foi possível concluir a ação. Tente novamente.";
   }, []);

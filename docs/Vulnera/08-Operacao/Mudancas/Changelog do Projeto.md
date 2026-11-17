@@ -9,6 +9,15 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-17 — Integração Issue #51 com `dev` (em andamento)
+
+**🚧 Documentação reconciliada; validação técnica global pendente.** Merge local
+aberto na branch `integration/issue51-dev-20261117`; sem commit, push ou PR.
+Históricos de autenticação Etapas 0–4 e funcionalidades novas de `dev` foram
+preservados. Colisão entre ADR-047 Excel e ADR-047 de acesso resolvida pela
+renumeração somente do ADR de acesso para ADR-056. `/auth/register` continua
+ativo; ativação, cutover e outbox não foram implementados. Relatório preliminar:
+`docs/SECURITY-AUTH-INTEGRACAO-DEV-2026-11-17.md`.
 ## 2026-10-23 — Issue #51: Etapa 4 concluída
 
 **✅ 100% do recorte, aprovada com ressalvas e pronta para revisão.**
@@ -74,8 +83,8 @@ concluído posteriormente na Etapa 4 em `9f7e23a`. Limites:
 cadastro legado ainda ativo, corrida possível entre tabelas até cutover,
 latência não constante e envio SMTP síncrono sem outbox. Ownership, evidências e
 ressalvas em [relatório da Etapa 3](../../../SECURITY-AUTH-ETAPA-3.md); decisão
-em ADR-047, cuja colisão numérica com o ADR Excel de `dev` foi mantida sem
-renumeração.
+em ADR-056. Naquele marco a colisão ADR-047 ainda estava registrada; a integração
+de 2026-11-17 resolveu-a renumerando somente a decisão de acesso.
 
 ## 2026-10-22 — Issue #51: Etapa 2 concluída
 
@@ -107,7 +116,7 @@ superado pela conclusão documentada acima.
 
 **🚧 Validação pendente; não concluída.** Contratos de emissão, reenvio e
 confirmação de e-mail registrados em [relatório da Etapa 2](../../../SECURITY-AUTH-ETAPA-2.md)
-e ADR-047. Ownership exclusivo A/B/C/D/E/H. Nodemailer 10.2.0 e types 8.0.2
+e ADR-056. Ownership exclusivo A/B/C/D/E/H. Nodemailer 10.2.0 e types 8.0.2
 instalaram; build TypeScript passou duas vezes, regressões/domínio 144/144,
 testes novos 83/83 após revisão SQL, lint focal e Prisma validate/generate
 passaram. As 17 migrations aplicaram só no container descartável. Check global
@@ -149,20 +158,20 @@ Seis arquivos não rastreados anteriores preservados e fora da entrega.
 - Domínio final 112/112; regressões Auth/User/Company/Subscription 32/32.
   Prisma validate/generate, build, lint focal e diff aprovados. Check global
   permanece bloqueado pelos dois imports antigos; suíte global não reexecutada.
-- ADR-047, relatório, PRD, BACKLOG e ROADMAP sincronizados. Sem alterações de
+- ADR-056, relatório, PRD, BACKLOG e ROADMAP sincronizados. Sem alterações de
   Auth/register, Company/Subscription, permissões, tenants, seeds ou frontend.
   Sem novos endpoints, EmailSender, SMTP ou User via convite. Próximo: revisão
   desta entrega; orquestração de e-mail somente em execução posterior.
 
 O marco inicial abaixo conserva as decisões e resultados da entrega 0–1;
-o lifecycle vigente foi substituído pela Etapa 1.1, conforme ADR-047.
+o lifecycle vigente foi substituído pela Etapa 1.1, conforme ADR-056.
 
 ## 2026-10-22 — Issue #51: preflight e fundação de acesso controlado
 
 **✅ Etapas 0 e 1 concluídas — 100% deste recorte (2/2); épica em andamento.**
 Branch `refactor/security-auth-gated-access` sincronizada com `origin/dev` em
 `28c48ef` por fast-forward, sem novo commit/push/PR; seis arquivos não rastreados
-anteriores preservados. Decisão ADR-047.
+anteriores preservados. Decisão ADR-056.
 
 - Novas tabelas AccessRequest, EmailVerificationToken, AccessInvitation e
   AccessRequestEvent; User recebe só relações virtuais, sem coluna/default novo.
@@ -1733,3 +1742,11 @@ executados scans. Commit local; sem push/PR. ADR-044, FRONTEND_WEB e relatório
 **✅ 2026-10-06 — Refatoração autenticada do mobile e integração real (100%).** Branch `mobile/api`: Home, ProjectDetail, FindingDetail, Minha conta e navegação redesenhados com violeta/liquid glass, conforme autorização visual do usuário; login e seus tokens/componentes preservados. Projetos, perfil, vulnerabilidades, evidências e comentários usam a API real; paginação de findings/comentários, facetas do servidor, estados de erro separados de vazio e limpeza de cache por sessão. Refresh concorrente/conta trocada e Retry-After tratados. Typecheck/lint aprovados, exports Android/web aprovados, **30/30 checks** (10 API real, 6 cliente HTTP, 14 UI). Sem mudanças na API/schema/migrations ou manifestos/lockfiles. Validação visual em preview 390/320 px; aparência nativa e push no aparelho continuam pendentes. Relatório: `app/mobile/output/mobile-refactor-report.md`; ADR-045.
 
 A refatoração tem estilo próprio, sem alterar a aparência do login. Home usa projetos reais, ProjectDetail preserva a paginação/facetas do backend, FindingDetail carrega abas de evidências/comentários sob demanda e Minha conta consulta `/users/me`. O cache é limpo em logout/nova autenticação e refresh de conta anterior não reabre nem encerra uma nova sessão. Os testes controlados não introduzem fixtures no produto. O backend e seus dados de domínio não foram modificados nesta refatoração; as leituras autenticadas usam as contas de demonstração já existentes. A instalação temporária para preview não alterou manifestos/lockfiles. Conferência nativa e chegada de push no aparelho continuam pendentes.
+
+### Atualização de escopo — 2026-11-17
+
+`git ls-files -u` vazio: conflitos de PRD, schema, EnvKeys, routes e BACKLOG
+resolvidos e staged. Merge não commitado; worktree original preservado. A suíte
+API foi interrompida a pedido do usuário, e não há resultado final das 67 suítes
+descobertas. Não declarar aprovação integral nem iniciar Etapa 5 nesta execução.
+Detalhes, validações parciais e riscos em `docs/SECURITY-AUTH-INTEGRACAO-DEV-2026-11-17.md`.

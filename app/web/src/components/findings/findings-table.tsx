@@ -66,7 +66,8 @@ import { useFindingsExport } from "../../hooks/use-findings-export";
 import { BotaoExportarExcel } from "./botao-exportar-excel";
 import { useEntidadesSugeriveis } from "../../hooks/use-entidades-sugeriveis";
 import { Alert } from "../ui/alert";
-import { OWASP_CATEGORIES, OWASP_LABELS, type OwaspCategory } from "../../types/vulnerability.types";
+import { OWASP_CATEGORIES, OWASP_LABELS, SOURCE_TYPES, SOURCE_TYPE_LABELS, type OwaspCategory } from "../../types/vulnerability.types";
+import { OrigemBadge } from "./origem-badge";
 import type { FacetCounts, FindingListItem } from "../../types/vulnerability.types";
 
 export type ColumnKey =
@@ -76,6 +77,7 @@ export type ColumnKey =
   | "status"
   | "sla"
   | "owasp"
+  | "origin"
   | "project"
   | "application"
   | "company"
@@ -172,6 +174,9 @@ export function FindingsTable({
         id: "title",
         cabecalho: "Finding",
         ordenavel: true,
+        // Mínimos: com os chips numa linha só, o título era espremido até
+        // quebrar palavra a palavra. A tabela rola na horizontal antes disso.
+        larguraClassName: "min-w-[16rem]",
         celula: (f) => <span className="font-medium text-fg">{f.title}</span>,
       },
       {
@@ -224,10 +229,18 @@ export function FindingsTable({
         ),
       },
       {
+        // Visão unificada: DAST, SAST, SCA ou manual, lado a lado na mesma lista.
+        chave: "origin",
+        id: "origin",
+        cabecalho: "Origem",
+        celula: (f) => <OrigemBadge sourceType={f.sourceType} />,
+      },
+      {
         chave: "project",
         id: "project",
         cabecalho: "Projeto",
         ocultarEmTelaEstreita: true,
+        larguraClassName: "min-w-[10rem]",
         celula: (f) => <span className="text-fg-muted">{f.projectName}</span>,
       },
       {
@@ -235,6 +248,7 @@ export function FindingsTable({
         id: "application",
         cabecalho: "Aplicação",
         ocultarEmTelaEstreita: true,
+        larguraClassName: "min-w-[10rem]",
         celula: (f) => <span className="text-fg-muted">{f.applicationName}</span>,
       },
       {
@@ -242,6 +256,7 @@ export function FindingsTable({
         id: "company",
         cabecalho: "Empresa",
         ocultarEmTelaEstreita: true,
+        larguraClassName: "min-w-[10rem]",
         celula: (f) => <span className="text-fg-muted">{f.companyName}</span>,
       },
       {
@@ -398,7 +413,7 @@ function BarraDeFiltros({
   carregando,
 }: {
   filtros: ReturnType<typeof useFindingsFilters>;
-  facetas: { severity: FacetCounts; status: FacetCounts; owasp: FacetCounts } | undefined;
+  facetas: { severity: FacetCounts; status: FacetCounts; owasp: FacetCounts; source?: FacetCounts } | undefined;
   campoVisivel: (field: FilterField) => boolean;
   camposOcultos: FilterField[];
   entidades: EntidadesSugeriveis;
@@ -514,6 +529,16 @@ function BarraDeFiltros({
             }))}
             estaAtivo={(v) => filtros.estaAtivo("owasp", v)}
             aoAlternar={(v) => filtros.alternarValor("owasp", v)}
+            carregando={carregando}
+          />
+        )}
+
+        {campoVisivel("origem") && (
+          <MultiSelecao
+            rotulo="Origem"
+            opcoes={SOURCE_TYPES.map((o) => ({ valor: o, rotulo: SOURCE_TYPE_LABELS[o], contagem: facetas?.source?.[o] }))}
+            estaAtivo={(v) => filtros.estaAtivo("origem", v)}
+            aoAlternar={(v) => filtros.alternarValor("origem", v)}
             carregando={carregando}
           />
         )}

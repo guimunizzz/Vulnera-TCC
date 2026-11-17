@@ -1,0 +1,29 @@
+{
+  "scan": {
+    "id": "cmv0w39160001qm012bshqfva",
+    "targetUrl": "http://10.87.169.107:5173/",
+    "status": "COMPLETED",
+    "requestedById": "cmue2b9em0003pxogpar7imm9",
+    "containerName": "vulnera-zap-cmv0w39160001qm012bshqfva",
+    "startedAt": "2026-10-09T11:36:01.991Z",
+    "finishedAt": "2026-10-09T11:36:23.961Z",
+    "durationMs": 21331,
+    "errorMessage": null,
+    "progress": 100,
+    "phase": "DONE",
+    "simulated": false,
+    "warningMessage": null,
+    "alertsHigh": 0,
+    "alertsMedium": 3,
+    "alertsLow": 1,
+    "alertsInfo": 1,
+    "createdAt": "2026-10-09T11:36:01.914Z",
+    "updatedAt": "2026-10-09T11:36:23.962Z"
+  },
+  "findingsCount": 5,
+  "inspectedAt": "2026-10-09T11:36:59.482Z",
+  "reportHtml": {
+    "status": 200,
+    "csp": "sandbox"
+  }
+}

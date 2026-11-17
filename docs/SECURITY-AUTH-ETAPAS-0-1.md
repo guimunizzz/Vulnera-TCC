@@ -16,7 +16,7 @@ Branch `refactor/security-auth-gated-access`, base `28c48ef`, sem commit/push.
 Os seis arquivos não rastreados anteriores continuam fora da entrega.
 Preflight desta execução: a árvore já continha a entrega 0–1 sem commit;
 essas alterações relacionadas foram preservadas e endurecidas, sem incorporar
-os seis arquivos alheios. Issue #51, AGENTS, PRD, ADR-047, documentação da
+os seis arquivos alheios. Issue #51, AGENTS, PRD, ADR-056, documentação da
 fundação, schema/migrations, models/repositories e testes foram consultados.
 
 ### Política definitiva desta etapa
@@ -39,7 +39,7 @@ fundação, schema/migrations, models/repositories e testes foram consultados.
 - `createIfEmailAvailable` retorna NULL para conta já existente. ACTIVATED libera
   a reserva do pedido, mas não autoriza criar uma conta duplicada. Conta antiga
   excluída e histórico terminal permitem nova solicitação. Os casos A–G e suas
-  operações estão detalhados no ADR-047, seção vigente da Etapa 1.1.
+  operações estão detalhados no ADR-056, seção vigente da Etapa 1.1.
 
 ### Contratos e garantias
 
@@ -90,7 +90,7 @@ Três novos: migration incremental, `src/models/access-token.model.ts` e
 `src/repositories/access-transaction.repository.ts`, todos em `app/api`.
 
 Atualizados: schema; models AccessRequest/EmailVerificationToken/AccessInvitation;
-os três repositories desses recursos; teste `access-request.test.ts`; ADR-047;
+os três repositories desses recursos; teste `access-request.test.ts`; ADR-056;
 este relatório; PRD, BACKLOG, ROADMAP_PROMPTS e Changelog do Projeto.
 São 17 arquivos nesta etapa. A árvore conjunta da Issue #51 tem 20 arquivos,
 incluindo os três da fundação inicial que não mudaram nesta execução (migration
@@ -171,7 +171,7 @@ indicado pelo estado vigente acima; seus resultados históricos foram preservado
 
 ## Decisões e invariantes
 
-A decisão completa está no [ADR-047](Vulnera/07-Decisoes/ADR-047%20-%20Fundacao%20do%20acesso%20controlado.md).
+A decisão completa está no [ADR-056](Vulnera/07-Decisoes/ADR-056%20-%20Fundacao%20do%20acesso%20controlado.md).
 
 1. Quatro estados: verificação pendente → revisão pendente → aprovado/rejeitado.
    Sem estado de User ou Company dentro do pedido.
@@ -205,7 +205,7 @@ A decisão completa está no [ADR-047](Vulnera/07-Decisoes/ADR-047%20-%20Fundaca
 | Repositories novos | `app/api/src/repositories/access-request.repository.ts`, `email-verification-token.repository.ts`, `access-invitation.repository.ts` |
 | Utilitária nova | `app/api/src/utils/access-token.util.ts` |
 | Testes | Novo `app/api/tests/integration/access-request.test.ts`; alterado `app/api/tests/setup.ts` para cleanup em ordem de FK e guarda do banco |
-| Decisão e relatório novos | ADR-047 e este documento |
+| Decisão e relatório novos | ADR-056 e este documento |
 | Documentação viva alterada | `PRD_VIVO.md`, `docs/BACKLOG.md`, `docs/ROADMAP_PROMPTS.md`, `docs/Vulnera/08-Operacao/Mudancas/Changelog do Projeto.md` |
 
 Sem service de fluxo, controller, factory ou rota nova. A migration cria somente

@@ -570,7 +570,7 @@ export function NewAnalysisPage() {
 
             {step === 3 && (
               <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium text-fg" htmlFor="project-name">
                     Nome do projeto
                   </label>
@@ -625,7 +625,7 @@ export function NewAnalysisPage() {
                   </div>
                 </fieldset>
 
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium text-fg" htmlFor="scope-in">
                     Escopo (dentro)
                   </label>
@@ -639,7 +639,7 @@ export function NewAnalysisPage() {
                   />
                 </div>
 
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium text-fg" htmlFor="scope-out">
                     Fora de escopo
                   </label>

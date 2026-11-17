@@ -42,6 +42,15 @@
   font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Alto contraste do menu de acessibilidade. A paleta do login é fixa (sempre
+   escura) e os tokens de tokens.css §11 não a alcançam: o reforço vem aqui. */
+:root[data-alto-contraste] .vx-login {
+  --login-text: #ffffff;
+  --login-muted: #e5e2ec;
+  --login-placeholder: #c4bfcf;
+  --login-border: #8a84a0;
+}
+
 .vx-login-glow {
   position: absolute;
   z-index: -1;

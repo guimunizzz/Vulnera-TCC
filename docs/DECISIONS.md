@@ -817,6 +817,11 @@ valendo como decisão registrada; não há código, rota, tabela nem tela. O nom
 oficial permanece **Exposure Graph / Cadeias de Exposição** — nunca "Attack
 Path", porque o produto não tem dado de alcançabilidade.
 
+> **Atualização 2026-11-09:** a v1 do Exposure Graph foi entregue
+> (`GET /companies/me/exposure-graph` e a tela `/exposure-graph`), seguindo D8 e
+> D9. Ver a seção "CyberGraph em layouts 2D e Exposure Graph" no fim deste
+> arquivo e o ADR-051.
+
 ### Nova — importação da OWASP é CLI, com snapshot versionado
 
 `npm run sync:owasp-playbooks` (rede), `-- --snapshot` (grava
@@ -861,3 +866,193 @@ controller mais usado do produto não era trabalho deste CP. A duplicação é
 vigiada pelo teste **`SQ-U-08`**, que lê o controller e falha se ele ganhar um
 parâmetro que o utilitário não conhece — e o canário já cobrou a dívida uma vez,
 quando `assignedTo` entrou na listagem.
+
+## Menu de acessibilidade — 2026-10-31
+
+### Nova — preferências de acessibilidade no navegador, não na conta
+
+Menu no canto superior direito de todas as telas (exceto o relatório do ZAP,
+iframe de terceiros): tamanho do texto até 200%, alto contraste, reduzir
+animações, sublinhar links, espaçamento de texto e foco reforçado. Guardado em
+`localStorage` como o tema, aplicado antes do primeiro paint. O alto contraste é
+um **reforço** sobre o escuro e o claro (texto ≥ 7:1, medido), não um terceiro
+tema. Ver **[[ADR-049 - Menu de acessibilidade com preferencias no navegador]]**.
+
+## Refactor web-motion-3d — 2026-11-04
+
+### Nova — uma biblioteca de animação por papel
+
+Motion anima a interface do produto (`useMotion`, só tokens). GSAP com
+ScrollTrigger fica só na narrativa por rolagem da landing
+(`components/landing/motion/`). CSS cuida de loops decorativos e do `press`.
+three.js é usado só para decoração, de forma imperativa, pelo kit `src/three/`.
+R3F e drei saíram, junto com a intro 3D, as partículas e o cursor customizado.
+Ver **[[ADR-050 - Camadas de movimento e kit three.js imperativo no web]]**.
+
+### Nova — cena e atmosfera em ASCII, cor só de token
+
+A landing tem uma cena ASCII narrativa em seis atos (`LANDING_NARRATIVA.md`),
+com pôster estático quando não pode rodar. A plataforma tem uma atmosfera ASCII
+discreta, sem dígitos e com teto de opacidade calculado para AA. As cores são
+lidas do CSS em runtime. Os novos tokens `--color-ambient-*` (ink, muted,
+cyan, magenta) substituem o hex aproximado das cenas.
+
+### Substituída — partes do ADR-026 e detalhes do ADR-041
+
+A landing passou a seguir o tema do app, em vez de ser sempre escura. O
+`landing-palette.ts` e o `useHeroScene` nunca existiram e saíram do registro
+vigente. A atmosfera única do ADR-041 segue, agora a 60 fps em duas passadas.
+Os textos originais foram mantidos, cada um com uma nota no topo.
+
+### Integração com o menu de acessibilidade (ADR-049)
+
+O merge de `dev` (2026-11-04) trouxe a fonte única de movimento reduzido
+(`design/accessibility.ts`), e as cenas, o GSAP da landing e o `useMotion`
+passaram a obedecer a ela. O hook próprio do refactor saiu. O alto contraste
+(texto ≥ 7:1) também impede a montagem das cenas e esconde o pôster da landing,
+porque o teto de opacidade dos glifos foi calculado para AA.
+
+## CyberGraph em layouts 2D e Exposure Graph — 2026-11-09
+
+### Nova — o modo 3D do CyberGraph sai; entram layouts 2D
+
+O 3D do grafo do scan repetia o 2D com menos legibilidade. No lugar: Radial,
+Estrela, Orgânico e Clusters, além do Hierárquico de antes, todos sobre a mesma
+visão agrupada e sem dependência nova (cálculo puro e determinístico em
+`graph-layouts.ts`). Botão "Caminho mais crítico" acende o caminho de exposição
+até o finding de maior risco.
+
+### Nova — Exposure Graph v1 (CP-8), com mapa 3D da superfície de ataque
+
+Projeção do MySQL da empresa do token (mesmo escopo do comparativo), categoria
+OWASP como nó compartilhado entre aplicações, e o 3D reaproveitado como mapa
+onde cada eixo visual é um campo real (abertas, criticidade, severidade,
+exposição). Ver **[[ADR-051 - Layouts 2D no lugar do grafo 3D e Exposure Graph da empresa]]**.
+
+---
+
+## D17 — Importação SAST/SCA: decisões de produto (2026-11-13)
+
+Tomadas pelo Rafael antes da implementação da branch `feat/sast-sca-ingestion`.
+Arquitetura em [ADR-052](Vulnera/07-Decisoes/ADR-052%20-%20Importacao%20SAST%20e%20SCA%20por%20SARIF%20e%20CycloneDX.md);
+uso e validação em [`SAST_SCA.md`](SAST_SCA.md).
+
+**D17.1 — Nome no menu: "SAST/SCA".** Fica no grupo Operação, logo depois de
+DAST, para ADMIN e PENTESTER. É o paralelo direto com "DAST" e o termo que a
+banca reconhece. *Alternativas:* "Análise de código" (mais longo) e "Código"
+(vago).
+
+**D17.2 — Telas: página global + detalhe + aba no projeto.** A página do menu
+lista as importações de todos os projetos visíveis, como o DAST; o projeto
+ganha a aba com as dele. *Alternativa:* só a página global, que deixaria o
+projeto sem mostrar as próprias importações.
+
+**D17.3 — Selo "new" fixo.** Some quando alguém o remover do código
+(`novo: true` em `sidebar.tsx`), não por visita. É previsível na demonstração
+do TCC. *Alternativa:* sumir após a 1ª visita (localStorage), que poderia ter
+sumido antes da apresentação.
+
+**D17.4 — PDF sem falsos-positivos na lista, mas contados.** O relatório é o
+que um cliente lê: o ruído já descartado por um humano não entra na lista nem
+no gráfico, mas a contagem aparece na seção de triagem. *Alternativa:* listar
+tudo com o status, o que deixaria o PDF mais longo e ruidoso.
+
+**D17.5 — Security Graph por importação: "onde está".** Aplicação → Código
+(pasta → arquivo) e Dependências (pacote) → achados. *Alternativas:* por
+categoria OWASP ("que tipo"), ou as duas visões com seletor (mais densa).
+
+**D17.6 — Tour só no módulo SAST/SCA.** Na primeira visita à lista e na
+primeira importação aberta, sempre com "Pular tour" e "Ver tour".
+*Alternativa:* um tour da plataforma inteira no primeiro login (maior e fora do
+escopo deste PR).
+
+**D17.7 — "Tour visto" no navegador, por usuário.** `localStorage`, como o tema
+e o menu de acessibilidade; sem migration. *Alternativa:* coluna no usuário,
+que lembraria em qualquer dispositivo, mas com mais trabalho e mudança no
+schema.
+
+**D17.8 — Falsos-positivos ocultos no grafo, com interruptor.** É coerente com
+o PDF. *Alternativa:* sempre visíveis, escondidos só pela severidade.
+
+---
+
+## D18 — Visão unificada DAST + SAST + SCA por aplicação (2026-11-15)
+
+Pedido do Rafael na sessão de 2026-11-14/15 (resposta 10b), entregue na branch
+`feat/unified-origin-view` junto com CODE-FUT-03, API-FUT-01, API-FUT-02 e
+SG-FUT-09. Sem schema novo: a dimensão é o `Vulnerability.sourceType` que já
+existia (ADR-032/ADR-052).
+
+**D18.1 — Onde aparece: Achados, painel da aplicação e Exposure Graph.**
+Filtro e coluna **Origem** em Achados (`?sourceType=`, faceta `source`, campo
+`origem` na barra de busca, buscas salvas e Excel), cartão "Por origem" no
+painel da aplicação e quebra por origem no painel do Exposure Graph.
+*Alternativa:* uma tela nova só de origem, que repetiria o que as três já fazem.
+
+**D18.2 — Conta o promovido e mostra a fila do código.** Os números são de
+`Vulnerability` (o que alguém já revisou); ao lado, a **fila de triagem**:
+achados SAST/SCA com triagem `NEW` na importação mais recente de cada
+ferramenta. *Alternativa:* só os promovidos, que esconderia o trabalho pendente.
+O DAST cru fica fora porque o scan ainda não sabe a que aplicação pertence
+(SG-FUT-04b).
+
+**D18.3 — CLIENT vê a origem, não a fila.** O CLIENT não enxerga o módulo
+SAST/SCA (ADR-052): a API devolve `filaDeTriagem: null` para ele e o cartão não
+oferece links (ele também não tem as rotas de Achados e SAST/SCA).
+*Alternativa:* mostrar a contagem a todos, o que vazaria trabalho de triagem
+ainda não validado.
+
+**D18.4 — "Abertos" segue a regra existente.** A quebra por origem usa a mesma
+definição de `abertosPorSeveridade` (OPEN + IN_PROGRESS, ignorando o filtro de
+status do painel). Uma regra diferente só para a origem faria os dois números do
+mesmo painel discordarem.
+
+**D18.5 — Reabrir é sugestão (CODE-FUT-03).** A reimportação aponta a
+vulnerabilidade `FIXED` cujo achado continua no relatório importado **depois** do
+último `→ FIXED`, só na importação mais recente da ferramenta; o botão usa o
+`FIXED → IN_PROGRESS` do ADR-033 com confirmação. Nada reabre sozinho.
+
+---
+
+## D19 — Threat Intel: decisões de produto (2026-11-14)
+
+Respostas do Rafael às 9 perguntas feitas antes da implementação (branch
+`feat/threat-intel`). Arquitetura em
+[ADR-053](Vulnera/07-Decisoes/ADR-053%20-%20Threat%20Intel%20com%20inventario%20de%20tecnologias%20e%20sincronizacao%20agendada.md);
+uso e validação em [`THREAT_INTEL.md`](THREAT_INTEL.md).
+
+**D19.1 — Fontes: NVD + CISA KEV + FIRST EPSS + OSV.** *Alternativa:* GitHub
+Advisory, que pede token e cujos avisos o OSV já agrega.
+
+**D19.2 — Sincronização agendada dentro da API** (`setInterval`, como o
+watchdog do DAST) + "Sincronizar agora" para o ADMIN. Supersede parcialmente o
+ADR-030. *Alternativas:* só sob demanda (não cumpre "avisar quando sai") ou um
+worker separado (mais um serviço no compose).
+
+**D19.3 — Inventário por EMPRESA.** *Alternativa:* por aplicação (casa com o
+contexto de risco, mas repete a mesma biblioteca em cada aplicação). Registrado
+porque o schema dizia "sem tags, primeiro passo rumo a CMDB" — este é esse
+passo, autorizado.
+
+**D19.4 — Item estruturado:** pacote (ecossistema + nome + versão, OSV) ou
+produto (fabricante + produto do dicionário CPE + versão, NVD). Sem versão,
+"versão não confirmada". *Alternativa:* texto livre (casamento impreciso).
+
+**D19.5 — Alimentação automática como SUGESTÃO**, a partir do SBOM importado e
+do fingerprint do DAST. Ninguém entra na vigilância sem confirmação.
+
+**D19.6 — Notificação in-app (sino), para todos os papéis da empresa, quando
+CVSS ≥ 7 ou KEV.** *Alternativas:* e-mail (MailHog no compose) e push mobile,
+que ficaram fora desta versão.
+
+**D19.7 — O que já existia ao mapear aparece, mas não notifica.** Só o que é
+publicado depois (ou entra no KEV depois) gera aviso.
+
+**D19.8 — Triagem + promoção para Vulnerability** (`THREAT_INTEL`, A06, CVSS
+revisado). *Alternativa:* só visualizar.
+
+**D19.9 — Papéis:** ADMIN e CLIENT OWNER editam o inventário; todos os papéis
+da empresa veem; o PENTESTER vê as empresas dos projetos de que é membro.
+Decorrência registrada no ADR-053 §7: CLIENT OWNER e PENTESTER membro triam;
+promover é de ADMIN e PENTESTER membro do projeto de destino (a regra de
+escrita de Vulnerability); "Sincronizar agora" é só do ADMIN.

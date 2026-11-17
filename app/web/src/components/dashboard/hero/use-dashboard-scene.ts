@@ -1,254 +1,418 @@
 /**
- * Atmosfera Three.js do dashboard: ondas lentas no fundo e pequenas órbitas
- * nos KPIs. Um renderer e um RAF servem todos os recortes (viewport/scissor).
- * Consumido somente pelo canvas lazy; não atualiza estado React por frame.
- * Observers acompanham KPIs que chegam após as queries e mudanças de layout.
+ * Atmosfera ASCII da área autenticada: as ondas do fundo antigo desenhadas
+ * com glifos, um campo esparso de caracteres e alguns fluxos de dados, sob
+ * uma aurora lenta violeta → ciano → magenta, atrás das superfícies do
+ * produto. Mesma regra da ADR-041: um canvas, decoração, nada sobre dado.
+ *
+ * Duas passadas de tela cheia: a lógica roda uma vez por célula numa textura
+ * do tamanho da grade (`src/three/grade-celulas.ts`) e a passada de tela só
+ * carimba o glifo do atlas de `src/three/ascii.ts`, com o brilho da chuva.
+ * Movimento contínuo a 60 fps. Só a troca de glifo segue em tiques.
+ *
+ * Interação (pedido do Rafael, 2026-11-03): hover discreto — os glifos perto
+ * do ponteiro acendem — e uma varredura que desce pela tela na troca de
+ * página e, sozinha, a cada `VARREDURA.intervaloS`. A gota do clique ficou só
+ * na landing. Números em `atmosfera-config.ts`.
+ *
+ * Renderer, loop, pausas, contexto perdido, descarte e cores vêm do kit
+ * `src/three/`. Consumido somente pelo canvas lazy; não atualiza estado React
+ * por quadro.
  */
 import { useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
-import type { ThemeResolvido } from "../../../design/theme";
-import { DASHBOARD_SCENE_PALETTE } from "./dashboard-scene-palette";
+import { montarCena, type CenaMontada } from "../../../three/scene-host";
+import { descartarCena } from "../../../three/dispose";
+import { lerCorDoToken, observarTema, temaAtual } from "../../../three/palette";
+import { criarAtlasAscii, GLSL_ASCII, type AtlasAscii } from "../../../three/ascii";
+import { criarGradeDeCelulas, GLSL_LER_CELULAS, VERTEX_TELA_CHEIA } from "../../../three/grade-celulas";
+import {
+  CELULA_ATMOSFERA_PX,
+  FPS_ATMOSFERA,
+  GLIFO_ATMOSFERA as G,
+  GLIFOS_ATMOSFERA,
+  HOVER,
+  LAVAGEM_AURORA,
+  MAX_DPR_ATMOSFERA,
+  ONDAS,
+  OPACIDADE_ATMOSFERA,
+  TIQUES_ATMOSFERA,
+  VARREDURA,
+} from "./atmosfera-config";
+
+export { GLIFOS_ATMOSFERA } from "./atmosfera-config";
 
 interface Options {
-  theme: ThemeResolvido;
   onReady?: () => void;
   onLost?: () => void;
+  /** Muda a cada troca de página: dispara a varredura de transição. */
+  chaveDeRota?: string;
 }
 
-const CURVAS = 18;
-const AMOSTRAS = 72;
-const FRAME_MS = 1000 / 30;
-const MAX_DPR = 1.5;
-// O mesmo canvas atende aos KPIs do dashboard e aos resumos de findings.
-const CARD_SELECTOR = "[data-dashboard-kpi], [data-ambient-card]";
+const f = (n: number) => n.toFixed(4);
+
+/**
+ * Passada 1: uma execução por célula. Grava
+ *   r = (glifo + 128 se a célula brilha) / 255 · g = tinta (apagada → cor)
+ *   b = matiz da aurora (0 violeta · 0,5 ciano · 1 magenta) · a = alfa (0–1,
+ *   relativo ao teto do tema, aplicado na passada de tela).
+ */
+const FRAGMENT_CELULAS = /* glsl */ `
+${GLSL_ASCII}
+
+uniform float uTique;
+uniform float uTempo;
+uniform vec3 uPonteiro;
+uniform float uRaioHover;
+uniform float uVarreduraInicio;
+
+// Curva i das ondas antigas, em coordenadas de recorte (x de -1,2 a 1,2).
+float curvaY(float x, float i, float t) {
+  return ${f(ONDAS.topo)} - i * ${f(ONDAS.passo)}
+    + sin(x * 2.3 + t * 0.22 + i * 0.08) * 0.22
+    + cos(x * 4.1 - t * 0.13) * 0.09;
+}
+float curvaDy(float x, float i, float t) {
+  return 2.3 * cos(x * 2.3 + t * 0.22 + i * 0.08) * 0.22 - 4.1 * sin(x * 4.1 - t * 0.13) * 0.09;
+}
+
+void main() {
+  vec2 celula = floor(gl_FragCoord.xy);
+  vec2 grade = gradeDaTela();
+  vec2 clip = (celula + 0.5) / grade * 2.0 - 1.0;
+  float r = hashCelula(celula);
+  float t = uTempo;
+
+  // --- Campo esparso (≈ 20% das células), respirando devagar; troca rara de
+  // glifo por tique. Rampa puxada para os glifos leves (. · :).
+  float presente = step(0.8, r);
+  float cintila = step(0.96, hashCelula(celula + vec2(uTique, 0.0)));
+  float sorteio = mix(hashCelula(celula + 29.0), hashCelula(celula + vec2(uTique, 5.0)), cintila);
+  float indice = ${G.rampaInicio}.0 + floor(sorteio * sorteio * ${G.rampaTotal}.0);
+  float respira = 0.75 + 0.25 * sin(t * 0.9 + r * 6.2832);
+  float alfa = presente * 0.6 * respira * mix(0.6, 1.0, (celula.y + 0.5) / grade.y);
+  float tinta = step(0.94, r);
+  float brilha = 0.0;
+
+  // --- Chuva: poucas colunas (≈ 6%); a cabeça anda em tempo contínuo e
+  // acende a próxima célula aos poucos. A célula da cabeça brilha.
+  float coluna = hashCelula(vec2(celula.x, 1.0));
+  float ativa = step(0.94, coluna);
+  float ciclo = grade.y + 14.0;
+  float cabeca = mod(t * ${TIQUES_ATMOSFERA.toFixed(1)} * (0.6 + coluna) + coluna * ciclo * 7.0, ciclo);
+  float distancia = cabeca - (grade.y - 1.0 - celula.y);
+  float rastro = ativa * smoothstep(-1.0, 0.0, distancia) * (1.0 - smoothstep(0.0, 9.0, distancia));
+  if (rastro > 0.01) {
+    indice = mix(${G.dois_pontos}.0, ${G.barra}.0, step(0.5, hashCelula(celula + vec2(uTique, 9.0))));
+    alfa = max(alfa, rastro);
+    tinta = max(tinta, rastro);
+    brilha = ativa * step(-0.5, distancia) * step(distancia, 0.9);
+  }
+
+  // --- Ondas: a curva mais próxima, em células; o glifo segue a inclinação
+  // (- / \\) e a linha esmaece entre células, sem andar em degraus.
+  float x = clip.x * 1.2;
+  float alturaCelula = 2.0 / grade.y;
+  float dMin = 1e4;
+  float inclinacao = 0.0;
+  float curva = 0.0;
+  float yTopo = -1e4;
+  float yBase = 1e4;
+  for (int i = 0; i < ${ONDAS.quantidade}; i++) {
+    float fi = float(i);
+    float y = curvaY(x, fi, t);
+    yTopo = max(yTopo, y);
+    yBase = min(yBase, y);
+    float d = abs(clip.y - y) / alturaCelula;
+    if (d < dMin) { dMin = d; inclinacao = curvaDy(x, fi, t); curva = fi; }
+  }
+  // Inclinação em px da tela (o glifo "/" é a diagonal da célula).
+  float inclinacaoPx = inclinacao * 1.2 * uResolucao.y / uResolucao.x;
+  float linha = 1.0 - smoothstep(0.35, 0.85, dMin);
+  // Um brilho percorre cada curva devagar: a onda "corre".
+  float corre = 0.65 + 0.35 * sin(x * 3.0 - t * 0.8 + curva * 1.7);
+  if (linha > 0.02) {
+    indice = abs(inclinacaoPx) < 0.22
+      ? (step(0.5, hashCelula(celula + 13.0)) > 0.5 ? ${G.traco}.0 : ${G.til}.0)
+      : (inclinacaoPx > 0.0 ? ${G.subida}.0 : ${G.descida}.0);
+    alfa = max(alfa, linha * corre);
+    tinta = max(tinta, linha);
+  } else if (clip.y < yTopo && clip.y > yBase && step(0.82, hashCelula(celula + 31.0)) > 0.5) {
+    // Entre as curvas, poeira fina: a faixa das ondas tem corpo.
+    indice = ${G.rampaInicio}.0;
+    alfa = max(alfa, 0.35 * respira);
+  }
+
+  // --- Aurora: matiz lento no espaço e no tempo, que tinge o que estiver ali.
+  float aurora = 0.5 + 0.5 * sin(clip.x * 1.4 + t * 0.05 + sin(clip.y * 1.9 - t * 0.04) * 1.2);
+
+  // --- Hover discreto: perto do ponteiro, mais glifos aparecem e acendem.
+  vec2 centroPx = (celula + 0.5) * uCelula;
+  float hover = uPonteiro.z * (1.0 - smoothstep(0.0, uRaioHover, distance(centroPx, uPonteiro.xy)));
+  if (hover > 0.01) {
+    float revela = step(0.55, r) * hover;
+    if (alfa < revela * 0.8) indice = ${G.rampaInicio}.0 + floor(r * r * ${G.rampaTotal}.0);
+    alfa = max(alfa, revela * 0.8);
+    alfa = min(1.0, alfa * (1.0 + 0.5 * hover));
+    tinta = max(tinta, hover);
+    aurora = mix(aurora, 0.5, hover * 0.6);
+  }
+
+  // --- Varredura: uma faixa desce pela tela (troca de página e periódica).
+  float tv = t - uVarreduraInicio;
+  if (tv > 0.0 && tv < ${f(VARREDURA.duracao)}) {
+    float frente = 1.15 - 2.3 * (tv / ${f(VARREDURA.duracao)});
+    float dv = (clip.y - frente) / alturaCelula;
+    // Frente nítida, rastro longo para cima.
+    float banda = dv < 0.0 ? exp(-dv * dv / 2.0) : exp(-dv / 6.0);
+    banda *= 1.0 - 0.4 * (tv / ${f(VARREDURA.duracao)});
+    if (banda > 0.04) {
+      if (alfa < banda) indice = banda > 0.7 ? ${G.igual}.0 : ${G.traco}.0;
+      alfa = max(alfa, banda);
+      tinta = max(tinta, banda);
+      aurora = mix(aurora, 0.5, banda);
+      brilha = max(brilha, step(0.85, banda));
+    }
+  }
+
+  gl_FragColor = vec4((indice + 128.0 * brilha) / 255.0, tinta, aurora, clamp(alfa, 0.0, 1.0));
+}
+`;
+
+/** Passada 2: por pixel — lavagem da aurora, cor, glifo do atlas e brilho. */
+const FRAGMENT_TELA = /* glsl */ `
+${GLSL_ASCII}
+${GLSL_LER_CELULAS}
+
+uniform float uAlfa;
+uniform vec3 uCorTinta;
+uniform vec3 uCorApagada;
+uniform vec3 uCorCiano;
+uniform vec3 uCorMagenta;
+uniform float uTempo;
+
+vec3 corDaAurora(float a) {
+  return a < 0.5 ? mix(uCorTinta, uCorCiano, a * 2.0) : mix(uCorCiano, uCorMagenta, a * 2.0 - 1.0);
+}
+
+void main() {
+  vec4 dado = lerCelula(celulaDaTela());
+  float codigo = byte(dado.r);
+  float brilha = step(127.5, codigo);
+  float indice = codigo - 128.0 * brilha;
+  vec3 corAurora = corDaAurora(dado.b);
+  vec3 cor = mix(uCorApagada, corAurora, dado.g);
+  float glifo = coberturaDoGlifo(indice) * dado.a * uAlfa;
+
+  // Brilho: a célula acesa ganha um halo suave em volta do glifo.
+  vec2 local = fract(gl_FragCoord.xy / uCelula) - 0.5;
+  float halo = brilha * (1.0 - smoothstep(0.05, 0.75, length(local * vec2(1.0, 0.6)))) * 0.45 * uAlfa;
+  if (brilha > 0.5) cor = mix(cor, uCorCiano, 0.5);
+
+  // Lavagem da aurora: manchas grandes e lentas por trás dos glifos.
+  vec2 uv = gl_FragCoord.xy / uResolucao;
+  float mancha = smoothstep(0.35, 1.0, 0.5 + 0.5 * sin(uv.x * 3.1 + uTempo * 0.06) * cos(uv.y * 2.3 - uTempo * 0.05));
+  float lavagem = mancha * ${f(LAVAGEM_AURORA)} * uAlfa;
+
+  float alfa = max(glifo, halo);
+  vec3 corFinal = alfa > 0.0001 ? cor : corAurora;
+  float alfaFinal = 1.0 - (1.0 - alfa) * (1.0 - lavagem);
+  // Pré-mistura simples: a lavagem tinge com a cor da aurora por baixo.
+  vec3 mistura = (cor * alfa + corAurora * lavagem * (1.0 - alfa)) / max(alfaFinal, 0.0001);
+  gl_FragColor = vec4(alfa > 0.0001 ? mistura : corFinal, alfaFinal);
+  #include <colorspace_fragment>
+}
+`;
 
 export function useDashboardScene(canvasRef: RefObject<HTMLCanvasElement | null>, options: Options): void {
   const callbacks = useRef(options);
   callbacks.current = options;
-  const aplicarTema = useRef<((theme: ThemeResolvido) => void) | null>(null);
+  // A varredura de transição é pedida pela troca de rota e consumida pelo loop.
+  const varreduraPedida = useRef(false);
+  const primeiraRota = useRef(true);
+
+  useEffect(() => {
+    if (primeiraRota.current) {
+      primeiraRota.current = false;
+      return;
+    }
+    varreduraPedida.current = true;
+  }, [options.chaveDeRota]);
 
   useEffect(() => {
     const element = canvasRef.current;
-    if (!element || !("WebGL2RenderingContext" in window)) return;
+    if (!element) return;
     const canvas: HTMLCanvasElement = element;
-    const root = canvas.parentElement;
-    if (!root) return;
-    const host: HTMLElement = root;
-    let renderer: THREE.WebGLRenderer | undefined;
-    let raf = 0;
-    let stopped = false;
-    let lost = false;
-    let visible = true;
-    let width = 1;
-    let height = 1;
-    let previous = 0;
-    let time = 0;
-    let layoutDirty = true;
-    let cards: { x: number; y: number; w: number; h: number }[] = [];
-    let resize: ResizeObserver | undefined;
-    let mutations: MutationObserver | undefined;
-    let intersection: IntersectionObserver | undefined;
-    const geometries: THREE.BufferGeometry[] = [];
-    const materials: THREE.Material[] = [];
-    const pointer = new THREE.Vector2();
-    const smoothPointer = new THREE.Vector2();
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 20);
-    camera.position.z = 5;
-    const orbitalScene = new THREE.Scene();
-    const orbitalCamera = new THREE.PerspectiveCamera(35, 1.8, 0.1, 20);
-    orbitalCamera.position.z = 5.2;
-    const orbital = new THREE.Group();
-    orbitalScene.add(orbital);
+    let cena: CenaMontada | null = null;
+    let cenaThree: THREE.Scene | null = null;
+    let atlas: AtlasAscii | null = null;
+    let parado = false;
+    let pronto = false;
+    let tempo = 0;
+    let redimensionar = true;
+    let ultimaVarredura = Number.NEGATIVE_INFINITY;
+    let tamanho: ResizeObserver | undefined;
+    let pararDeObservarTema: (() => void) | undefined;
+    // Ponteiro em px do buffer (y de baixo para cima) e força-alvo do hover.
+    const alvoDoPonteiro = { x: 0, y: 0, forca: 0 };
 
-    const geometry = <T extends THREE.BufferGeometry>(value: T): T => {
-      geometries.push(value);
-      return value;
+    const uniformes = {
+      uAtlas: { value: null as THREE.Texture | null },
+      uTotalGlifos: { value: Array.from(GLIFOS_ATMOSFERA).length },
+      uCelula: { value: new THREE.Vector2(CELULA_ATMOSFERA_PX, CELULA_ATMOSFERA_PX * 2) },
+      uResolucao: { value: new THREE.Vector2(1, 1) },
+      uTique: { value: 0 },
+      uTempo: { value: 0 },
+      uPonteiro: { value: new THREE.Vector3(0, 0, 0) },
+      uRaioHover: { value: HOVER.raioPx as number },
+      uVarreduraInicio: { value: -1e4 },
+      uAlfa: { value: OPACIDADE_ATMOSFERA.dark as number },
+      uCorTinta: { value: new THREE.Color() },
+      uCorApagada: { value: new THREE.Color() },
+      uCorCiano: { value: new THREE.Color() },
+      uCorMagenta: { value: new THREE.Color() },
     };
-    const material = <T extends THREE.Material>(value: T): T => {
-      materials.push(value);
-      return value;
-    };
+    // Passada 1 (uma vez por célula) → textura; a passada 2 lê dela.
+    const grade = criarGradeDeCelulas(FRAGMENT_CELULAS, uniformes);
+    // O shader ignora a câmera; o renderer só exige uma.
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-    function cleanup(): void {
-      if (stopped) return;
-      stopped = true;
-      cancelAnimationFrame(raf);
-      resize?.disconnect();
-      mutations?.disconnect();
-      intersection?.disconnect();
-      document.removeEventListener("visibilitychange", visibility);
-      host.removeEventListener("pointermove", move);
-      host.removeEventListener("pointerleave", leave);
-      canvas.removeEventListener("webglcontextlost", contextLost);
-      aplicarTema.current = null;
-      delete host.dataset.sceneReady;
-      geometries.forEach((value) => value.dispose());
-      materials.forEach((value) => value.dispose());
-      renderer?.dispose();
-      renderer?.forceContextLoss();
+    function aplicarPaleta(): void {
+      lerCorDoToken(canvas, "--color-ambient-ink", uniformes.uCorTinta.value);
+      lerCorDoToken(canvas, "--color-ambient-muted", uniformes.uCorApagada.value);
+      lerCorDoToken(canvas, "--color-ambient-cyan", uniformes.uCorCiano.value);
+      lerCorDoToken(canvas, "--color-ambient-magenta", uniformes.uCorMagenta.value);
+      uniformes.uAlfa.value = OPACIDADE_ATMOSFERA[temaAtual()];
     }
 
-    function move(event: PointerEvent): void {
-      if (event.pointerType !== "mouse") return;
-      // Coordenadas da janela evitam leitura de layout em cada pointermove.
-      pointer.set(event.clientX / window.innerWidth - 0.5, event.clientY / window.innerHeight - 0.5);
+    // Hover: só mouse/caneta (toque não tem "passar por cima"). Lê a caixa no
+    // evento, não por quadro.
+    function aoMoverPonteiro(evento: PointerEvent): void {
+      if (evento.pointerType === "touch") return;
+      const caixa = canvas.getBoundingClientRect();
+      const dpr = cena?.renderer.getPixelRatio() ?? 1;
+      alvoDoPonteiro.x = (evento.clientX - caixa.left) * dpr;
+      alvoDoPonteiro.y = (caixa.bottom - evento.clientY) * dpr;
+      alvoDoPonteiro.forca = 1;
     }
-    function leave(): void { pointer.set(0, 0); }
-    function contextLost(event: Event): void {
-      event.preventDefault();
-      lost = true;
-      callbacks.current.onLost?.();
-      cleanup();
+    function aoSairDaJanela(): void {
+      alvoDoPonteiro.forca = 0;
     }
-    function visibility(): void {
-      cancelAnimationFrame(raf);
-      raf = 0;
-      previous = 0;
-      if (!stopped && !lost && visible && !document.hidden) raf = requestAnimationFrame(draw);
-    }
+    window.addEventListener("pointermove", aoMoverPonteiro, { passive: true });
+    document.documentElement.addEventListener("pointerleave", aoSairDaJanela);
 
-    function measure(): void {
-      if (!renderer) return;
-      // No layout global o conteúdo pode ter milhares de pixels de altura.
-      // O buffer WebGL segue o tamanho visível do canvas, nunca a página toda.
-      width = Math.max(1, canvas.clientWidth);
-      height = Math.max(1, canvas.clientHeight);
-      renderer.setSize(width, height, false);
-      cards = Array.from(host.querySelectorAll<HTMLElement>(CARD_SELECTOR)).map((card) => {
-        // offset ignora o translateY temporário do stagger de entrada.
-        let left = 0;
-        let top = 0;
-        let node: HTMLElement | null = card;
-        while (node && node !== host) {
-          left += node.offsetLeft;
-          top += node.offsetTop;
-          node = node.offsetParent as HTMLElement | null;
-        }
-        const w = Math.min(140, card.offsetWidth * 0.42);
-        const h = Math.min(90, card.offsetHeight * 0.6);
-        return { x: left + card.offsetWidth - w - 6, y: height - top - card.offsetHeight + 2, w, h };
-      }).filter((card) => card.x + card.w > 0 && card.x < width && card.y + card.h > 0 && card.y < height);
-      layoutDirty = false;
-    }
-
-    // Posições persistentes: apenas Y muda; nenhum objeto é criado por vértice.
-    const positions = new Float32Array(CURVAS * AMOSTRAS * 3);
-    let wave: THREE.BufferGeometry;
-    const waveGroup = new THREE.Group();
-    scene.add(waveGroup);
-
-    function draw(now: number): void {
-      if (stopped || lost || !renderer || document.hidden || !visible) return;
-      raf = requestAnimationFrame(draw);
-      if (previous && now - previous < FRAME_MS) return;
-      const delta = previous ? Math.min((now - previous) / 1000, 0.06) : 0;
-      previous = now;
-      time += delta;
-      if (layoutDirty) measure();
-      smoothPointer.lerp(pointer, 0.035);
-      for (let row = 0; row < CURVAS; row += 1) {
-        for (let column = 0; column < AMOSTRAS; column += 1) {
-          const index = (row * AMOSTRAS + column) * 3;
-          const x = positions[index];
-          positions[index + 1] = 0.42 - row * 0.037
-            + Math.sin(x * 2.3 + time * 0.22 + row * 0.08) * 0.22
-            + Math.cos(x * 4.1 - time * 0.13) * 0.09;
-        }
+    // Desenha todo quadro do loop (até 60 fps): o movimento é contínuo.
+    function draw(renderer: THREE.WebGLRenderer, delta: number): void {
+      if (!cenaThree || !atlas) return;
+      if (redimensionar) {
+        // No layout global o conteúdo pode ter milhares de pixels de altura.
+        // O buffer WebGL segue o tamanho visível do canvas, nunca a página toda.
+        const largura = Math.max(1, canvas.clientWidth);
+        const altura = Math.max(1, canvas.clientHeight);
+        renderer.setSize(largura, altura, false);
+        const dpr = renderer.getPixelRatio();
+        uniformes.uResolucao.value.set(largura * dpr, altura * dpr);
+        uniformes.uCelula.value.set(CELULA_ATMOSFERA_PX * dpr, (CELULA_ATMOSFERA_PX * dpr) / atlas.proporcao);
+        uniformes.uRaioHover.value = HOVER.raioPx * dpr;
+        grade.redimensionar(uniformes.uResolucao.value, uniformes.uCelula.value);
+        redimensionar = false;
       }
-      wave.getAttribute("position").needsUpdate = true;
-      waveGroup.position.set(smoothPointer.x * 0.025, smoothPointer.y * 0.018, 0);
-      renderer.setScissorTest(false);
-      renderer.setViewport(0, 0, width, height);
-      renderer.clear();
-      renderer.render(scene, camera);
-      renderer.setScissorTest(true);
-      cards.forEach((card, index) => {
-        renderer!.setViewport(card.x, card.y, card.w, card.h);
-        renderer!.setScissor(card.x, card.y, card.w, card.h);
-        renderer!.clearDepth();
-        orbitalCamera.aspect = card.w / card.h;
-        orbitalCamera.updateProjectionMatrix();
-        orbital.rotation.set(0.45 + Math.sin(time * 0.16 + index) * 0.12, time * 0.12 + index * 0.7, -0.3);
-        renderer!.render(orbitalScene, orbitalCamera);
-      });
-      renderer.setScissorTest(false);
-      if (host.dataset.sceneReady !== "true") {
-        host.dataset.sceneReady = "true";
+      tempo += delta;
+
+      // Varredura: na troca de página e, sem troca, a cada intervalo.
+      if (varreduraPedida.current || tempo - ultimaVarredura > VARREDURA.intervaloS) {
+        varreduraPedida.current = false;
+        ultimaVarredura = tempo;
+        uniformes.uVarreduraInicio.value = tempo;
+      }
+
+      // Ponteiro suavizado: o brilho acompanha sem tremer nem dar saltos.
+      const ponteiro = uniformes.uPonteiro.value;
+      const k = HOVER.suavizacao;
+      if (ponteiro.z < 0.001 && alvoDoPonteiro.forca > 0) ponteiro.set(alvoDoPonteiro.x, alvoDoPonteiro.y, 0);
+      ponteiro.x += (alvoDoPonteiro.x - ponteiro.x) * k;
+      ponteiro.y += (alvoDoPonteiro.y - ponteiro.y) * k;
+      ponteiro.z += (alvoDoPonteiro.forca - ponteiro.z) * k * 0.5;
+
+      uniformes.uTique.value = Math.floor(tempo * TIQUES_ATMOSFERA);
+      uniformes.uTempo.value = tempo;
+      grade.desenhar(renderer);
+      renderer.render(cenaThree, camera);
+      if (!pronto) {
+        pronto = true;
         callbacks.current.onReady?.();
       }
     }
 
-    try {
-      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "low-power" });
-      if (renderer.getContext().isContextLost()) throw new Error("Contexto WebGL indisponível");
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
-      renderer.setClearAlpha(0);
-      renderer.autoClear = false;
+    function cleanup(): void {
+      if (parado) return;
+      parado = true;
+      window.removeEventListener("pointermove", aoMoverPonteiro);
+      document.documentElement.removeEventListener("pointerleave", aoSairDaJanela);
+      grade.descartar();
+      tamanho?.disconnect();
+      pararDeObservarTema?.();
+      if (cenaThree) descartarCena(cenaThree);
+      // Atlas criado mas cena nunca montada: a textura não está na cena.
+      else atlas?.textura.dispose();
+      cena?.descartar();
+    }
 
-      const indices: number[] = [];
-      for (let row = 0; row < CURVAS; row += 1) {
-        for (let column = 0; column < AMOSTRAS; column += 1) {
-          positions[(row * AMOSTRAS + column) * 3] = column / (AMOSTRAS - 1) * 2.4 - 1.2;
-          if (column < AMOSTRAS - 1) indices.push(row * AMOSTRAS + column, row * AMOSTRAS + column + 1);
-        }
-      }
-      wave = geometry(new THREE.BufferGeometry());
-      wave.setAttribute("position", new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
-      wave.setIndex(indices);
-      const waveInk = material(new THREE.LineBasicMaterial({ transparent: true, opacity: 0.38, depthWrite: false }));
-      const waves = new THREE.LineSegments(wave, waveInk);
-      waves.frustumCulled = false;
-      waveGroup.add(waves);
-
-      const orbitInk = material(new THREE.LineBasicMaterial({ transparent: true, opacity: 0.75, depthWrite: false }));
-      for (let ring = 0; ring < 3; ring += 1) {
-        const points = Array.from({ length: 80 }, (_, index) => {
-          const angle = index / 80 * Math.PI * 2;
-          return new THREE.Vector3(Math.cos(angle) * (0.85 + ring * 0.09), Math.sin(angle) * (0.85 + ring * 0.09), 0);
-        });
-        const line = new THREE.LineLoop(geometry(new THREE.BufferGeometry().setFromPoints(points)), orbitInk);
-        line.rotation.set(ring * 0.95, ring * 0.6, 0);
-        orbital.add(line);
-      }
-      const core = geometry(new THREE.IcosahedronGeometry(0.3, 0));
-      const coreInk = material(new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 }));
-      orbital.add(new THREE.LineSegments(geometry(new THREE.EdgesGeometry(core)), coreInk));
-
-      aplicarTema.current = (theme) => {
-        const palette = DASHBOARD_SCENE_PALETTE[theme];
-        waveInk.color.set(palette.accent);
-        waveInk.opacity = theme === "dark" ? 0.3 : 0.2;
-        orbitInk.color.set(palette.accent);
-        coreInk.color.set(palette.neutral);
-      };
-      aplicarTema.current(callbacks.current.theme);
-      resize = new ResizeObserver(() => { layoutDirty = true; });
-      resize.observe(host);
-      resize.observe(canvas);
-      const observeCards = () => {
-        host.querySelectorAll(CARD_SELECTOR).forEach((card) => resize?.observe(card));
-        layoutDirty = true;
-      };
-      mutations = new MutationObserver(observeCards);
-      mutations.observe(host, { childList: true, subtree: true });
-      observeCards();
-      if (typeof IntersectionObserver !== "undefined") {
-        intersection = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; visibility(); });
-        intersection.observe(host);
-      }
-      host.addEventListener("pointermove", move, { passive: true });
-      host.addEventListener("pointerleave", leave);
-      canvas.addEventListener("webglcontextlost", contextLost);
-      document.addEventListener("visibilitychange", visibility);
-      visibility();
-    } catch {
+    function falhar(): void {
       // O fallback já está pintado: falha da GPU nunca afeta queries ou rotas.
       callbacks.current.onLost?.();
       cleanup();
     }
+
+    async function montar(): Promise<void> {
+      try {
+        atlas = await criarAtlasAscii(GLIFOS_ATMOSFERA);
+      } catch {
+        falhar();
+        return;
+      }
+      if (parado) {
+        atlas.textura.dispose();
+        return;
+      }
+      uniformes.uAtlas.value = atlas.textura;
+      const quadro = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 2),
+        new THREE.ShaderMaterial({
+          uniforms: { ...uniformes, ...grade.uniformes },
+          vertexShader: VERTEX_TELA_CHEIA,
+          fragmentShader: FRAGMENT_TELA,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          precision: "mediump",
+        }),
+      );
+      quadro.frustumCulled = false;
+      cenaThree = new THREE.Scene();
+      cenaThree.add(quadro);
+
+      try {
+        cena = montarCena({
+          canvas,
+          alvo: canvas.parentElement ?? canvas,
+          fps: FPS_ATMOSFERA,
+          maxDpr: MAX_DPR_ATMOSFERA,
+          antialias: false,
+          aoQuadro: draw,
+          aoPerderContexto: falhar,
+        });
+        if (!cena) throw new Error("WebGL indisponível");
+        aplicarPaleta();
+        pararDeObservarTema = observarTema(aplicarPaleta);
+        tamanho = new ResizeObserver(() => { redimensionar = true; });
+        tamanho.observe(canvas);
+        cena.iniciar();
+      } catch {
+        falhar();
+      }
+    }
+
+    void montar();
     return cleanup;
   }, [canvasRef]);
-
-  useEffect(() => { aplicarTema.current?.(options.theme); }, [options.theme]);
 }

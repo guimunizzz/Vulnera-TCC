@@ -33,7 +33,8 @@ services:
     volumes:
       - vulnera-db-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      # 127.0.0.1 (TCP), não localhost (socket): na 1ª subida o servidor temporário do init responde no socket e a API morria com P1001.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -87,6 +88,7 @@ services:
       DAST_ZAP_SPIDER_MAX_DURATION_MIN: "${DAST_ZAP_SPIDER_MAX_DURATION_MIN:-1}"
       DAST_ZAP_STARTUP_TIMEOUT_MS: "${DAST_ZAP_STARTUP_TIMEOUT_MS:-180000}"
       DAST_FORCE_SIMULATE: "false"
+      NVD_API_KEY: "${NVD_API_KEY:-}"
       # Alvos HTTP/HTTPS internos e públicos são aceitos. O endereço precisa
       # ser alcançável pela rede do container do ZAP (ver docs/DAST.md).
     ports:

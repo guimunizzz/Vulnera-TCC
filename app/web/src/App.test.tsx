@@ -10,7 +10,7 @@
  *            está logado (decisão do Checkpoint 1, item 4)
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -18,7 +18,7 @@ import { App } from "./App";
 import { useAuthStore } from "./store/auth.store";
 import { ThemeProvider } from "./design/theme-provider";
 
-// A landing pública carrega `three`, `@react-three/*` e `gsap` (nada roda em
+// A landing pública carrega `gsap` e, por lazy, a cena `three` (nada roda em
 // jsdom) atrás de um `lazy()`. Estes testes cobrem a ÁRVORE DE ROTAS, não o
 // conteúdo da landing — o stub abaixo mantém o foco nisso. O conteúdo real da
 // landing é testado em `pages/landing-page.test.tsx`.
@@ -60,13 +60,27 @@ function renderApp(rotaInicial: string) {
   );
 }
 
+// As páginas são lazy. Com o cache do vitest frio, o primeiro `import()` de
+// uma página transforma a árvore inteira dela e já levou mais que o timeout do
+// teste. Pré-carregar os módulos tira o tempo de transformação da asserção: o
+// `lazy()` continua chamando `import()` e suspendendo, só que resolve do cache.
+beforeAll(async () => {
+  await Promise.all([
+    import("./pages/auth/auth-layout"),
+    import("./pages/auth/login-page"),
+    import("./pages/auth/register-page"),
+    import("./pages/dashboard-page"),
+  ]);
+}, 60_000);
+
 afterEach(limparAuth);
 
 describe("Roteamento de App", () => {
   it("permite alternar entre login e cadastro mantendo o cenário de acesso", async () => {
     limparAuth();
     renderApp("/login");
-    const logo = screen.getByRole("link", { name: "Vulnera — página inicial" });
+    // Cenário e páginas de acesso são lazy (um lote só): espera o primeiro paint.
+    const logo = await screen.findByRole("link", { name: "Vulnera — página inicial" });
 
     fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
     expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
@@ -88,18 +102,18 @@ describe("Roteamento de App", () => {
     expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
   });
 
-  it("ROTA-02 — rota privada sem sessão ainda redireciona pra /login", () => {
+  it("ROTA-02 — rota privada sem sessão ainda redireciona pra /login", async () => {
     limparAuth();
     renderApp("/dashboard");
 
-    expect(screen.getByRole("heading", { name: "Entrar" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entrar" })).toBeInTheDocument();
   });
 
-  it("ROTA-03 — rota privada com sessão renderiza normalmente", () => {
+  it("ROTA-03 — rota privada com sessão renderiza normalmente", async () => {
     logar("CLIENT");
     renderApp("/dashboard");
 
-    expect(screen.getByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Olá, Rafael" })).toBeInTheDocument();
   });
 
   it("ROTA-04 — '/' com sessão continua mostrando a landing, não expulsa quem já está logado", () => {

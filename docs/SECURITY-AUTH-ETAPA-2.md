@@ -52,7 +52,7 @@ rastreado pelo Git.
 | H | documentação | HIGH | `docs/BACKLOG.md` |
 | H | documentação | HIGH | `docs/ROADMAP_PROMPTS.md` |
 | H | documentação | HIGH | `docs/Vulnera/08-Operacao/Mudancas/Changelog do Projeto.md` |
-| H | documentação | HIGH | `docs/Vulnera/07-Decisoes/ADR-047 - Fundacao do acesso controlado.md` |
+| H | documentação | HIGH | `docs/Vulnera/07-Decisoes/ADR-056 - Fundacao do acesso controlado.md` |
 | H | documentação | HIGH | `docs/SECURITY-AUTH-ETAPAS-0-1.md` |
 | H | documentação | HIGH | `docs/SECURITY-AUTH-ETAPA-2.md` |
 | H | documentação | HIGH | `docs/Vulnera/04-Arquitetura/Email SMTP.md` |
@@ -196,6 +196,6 @@ O recorte foi concluído e está pronto para revisão/consolidação. O gate
 
 ## Relacionado
 
-- [ADR-047 — Fundação do acesso controlado](Vulnera/07-Decisoes/ADR-047%20-%20Fundacao%20do%20acesso%20controlado.md)
+- [ADR-056 — Fundação do acesso controlado](Vulnera/07-Decisoes/ADR-056%20-%20Fundacao%20do%20acesso%20controlado.md)
 - [Relatório das Etapas 0–1.1](SECURITY-AUTH-ETAPAS-0-1.md)
 - [Issue #51](https://github.com/guimunizzz/Vulnera-TCC/issues/51)

@@ -47,6 +47,10 @@ export interface MetricsSummary {
   mttrPorSeveridade: Record<string, Mttr>;
   aging: Aging;
   porCategoriaOwasp: ContagemPorChave;
+  /** Visão unificada: abertos por origem (MANUAL | DAST_IMPORT | SAST_IMPORT | SCA_IMPORT). */
+  abertosPorOrigem: ContagemPorChave;
+  /** Achados de código não triados na importação mais recente (SAST | SCA). `null` para CLIENT. */
+  filaDeTriagem: ContagemPorChave | null;
   comparacao?: {
     periodoAnterior: { de: string; ate: string };
     totalFindings: Delta;

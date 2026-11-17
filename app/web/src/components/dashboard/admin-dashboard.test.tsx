@@ -2,8 +2,9 @@
  * admin-dashboard.test.tsx
  *
  * O QUE FAZ
- * Confirma que o redesign administrativo continua mostrando métricas e ranking
- * derivados exclusivamente dos contratos reais já existentes.
+ * Confirma que o redesign administrativo continua mostrando métricas, ranking
+ * e fila de aprovações derivados exclusivamente dos contratos reais já
+ * existentes.
  *
  * POR QUE EXISTE
  * Barras e contadores visuais não podem introduzir números inventados durante
@@ -93,5 +94,24 @@ describe("AdminDashboard", () => {
     expect(links[0]).toHaveAttribute("href", "/companies/company-1/maturity");
     expect(links[1]).toHaveAttribute("href", "/companies/company-2/maturity");
     await waitFor(() => expect(api.companies).toHaveBeenCalledTimes(1));
+  });
+
+  it("DASH-VIS-13 — card Aprovações mostra a fila real e leva à revisão", async () => {
+    renderAdminDashboard();
+
+    const card = await screen.findByRole("region", { name: "Aprovações" });
+    expect(within(card).getByText("1 assinatura aguardando aprovação")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Revisar assinaturas" })).toHaveAttribute("href", "/admin/subscriptions");
+    expect(within(screen.getByRole("article", { name: "Assinaturas pendentes" })).getByText("Aguardando a sua aprovação")).toBeInTheDocument();
+  });
+
+  it("DASH-VIS-14 — sem pendência: 'Tudo em dia', sem alerta solto", async () => {
+    api.pending.mockResolvedValue([]);
+    renderAdminDashboard();
+
+    const card = await screen.findByRole("region", { name: "Aprovações" });
+    expect(within(card).getByText("Tudo em dia")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Ver assinaturas" })).toHaveAttribute("href", "/admin/subscriptions");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

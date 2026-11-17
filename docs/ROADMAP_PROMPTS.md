@@ -57,7 +57,7 @@ Antes de código, registrar o Ownership Registry em
 validar SMTP por harness local autorizado, nunca inferir inbox real. Encerrar
 com testes HTTP/service/proteção, build/lint e banco descartável identificado;
 documentar os resultados observados, falhas ambientais e limites. Manter a
-colisão de numeração ADR-047 registrada e sem renumeração nesta etapa.
+colisão de numeração ADR-047 registrada e sem renumeração naquele marco histórico. Na integração de 2026-11-17, a decisão de acesso foi renumerada para ADR-056; o ADR-047 de exportação foi preservado.
 
 ### Histórico — Issue #51, Etapa 3 (2026-10-23)
 
@@ -72,8 +72,9 @@ colisão de numeração ADR-047 registrada e sem renumeração nesta etapa.
 - Desvios/limites: `npm run check` para no lint por dois imports antigos em
   `vulnerability.service.ts:46` e não executa Jest; a suíte passou separada.
   Não houve chamada real à Cloudflare. Cadastro legado e corrida entre tabelas,
-  tempo constante e outbox permanecem fora do recorte. Colisão ADR-047 mantida
-  sem renumeração. Etapa 4 não iniciada.
+  tempo constante e outbox permanecem fora do recorte. Naquele marco a colisão
+  ADR-047 permanecia sem renumeração; a integração posterior a resolveu movendo
+  a decisão de acesso para ADR-056. Etapa 4 não iniciada.
 
 ## Issue #51 — Etapa 2 · ✅ Concluída em 2026-10-22
 
@@ -121,7 +122,7 @@ dos tokens e concorrência transacional. Sem envio, endpoints ou ativação com 
 - Pendências: check global bloqueado pelos dois imports preexistentes de
   vulnerability.service.ts:45; suíte global não reexecutada nesta etapa.
   Expiração automática, envio e transação de ativação continuam futuros.
-- Decisões, contratos e falhas transitórias: ADR-047 e relatório da fundação.
+- Decisões, contratos e falhas transitórias: ADR-056 e relatório da fundação.
   Sem avanço para Etapa 2. O lifecycle inicial abaixo é histórico, substituído
   pela decisão vigente da Etapa 1.1; seus resultados não representam esta rodada.
 
@@ -139,7 +140,7 @@ serviços de fluxo ou mudança de register. Próximas etapas aguardam revisão.
 - Data: 2026-10-22. PR/commit/push: não realizados, por instrução explícita.
 - Migration: `20261022120000_add_access_request_foundation`, somente em MySQL
   descartável identificado; sem ALTER em tabelas anteriores ou backfill de User.
-- Decisões, validações e limites: ADR-047 e `docs/SECURITY-AUTH-ETAPAS-0-1.md`.
+- Decisões, validações e limites: ADR-056 e `docs/SECURITY-AUTH-ETAPAS-0-1.md`.
 - Validação: domínio 49/49; baseline 32/32; suíte completa 692/697, com cinco
   falhas DAST ambientais/configuração local aprovadas na repetição 104/104.
   Prisma validate/generate, migration isolada, build e lint focal aprovados.
@@ -1265,3 +1266,27 @@ partindo de `dev`, com espera visual fluida quando necessária.
 - Detalhes da API, autorização e fluxo read-only seguem a documentação funcional vigente.
 - As menções antigas a testar push no Expo Go Android são históricas: o código atual trata esse ambiente como indisponível. O teste de push exige um build compatível e aparelho.
 - Evidências e limites: `app/mobile/output/mobile-refactor-report.md`.
+
+## 2026-11-17 — Integração Issue #51 com `dev` (em andamento)
+
+Merge local aberto em `integration/issue51-dev-20261117`. A conciliação documental
+preserva o histórico das Etapas 0–4 e as funcionalidades novas de `dev`; não
+representa o fechamento de uma fase de produto. Validações API e frontend e
+revisão final ainda pendem. `/auth/register` permanece ativo; ativação, cutover e
+outbox seguem ausentes. A renumeração do ADR de acesso de 047 para 056 resolve a
+colisão com o ADR-047 de exportação Excel já existente em `dev`.
+
+### Histórico — integração (2026-11-17, preliminar)
+
+- Branch: `integration/issue51-dev-20261117`; sem commit, push ou PR.
+- HEAD `27d7b5912be026403d6c78a23fc27641fbf99d89`, `origin/dev`
+  `aafbc2ba769efa67be366d209e5f4286407bac9f`, base
+  `44f9c58f969125927d6bd379335f2cfa0b84d5e6`.
+- Ver [relatório técnico preliminar](SECURITY-AUTH-INTEGRACAO-DEV-2026-11-17.md).
+### Atualização de escopo — 2026-11-17
+
+O objetivo desta execução foi reduzido pelo usuário ao diagnóstico do merge. Os
+cinco conflitos (`PRD_VIVO.md`, schema, `EnvKeys`, routes e `docs/BACKLOG.md`)
+foram resolvidos e staged; `git ls-files -u` está vazio. O merge segue aberto,
+sem commit. A validação ampliada foi cancelada a pedido do usuário; resultados
+parciais e limites estão no relatório, sem declaração de aprovação integral.

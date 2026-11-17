@@ -1,0 +1,246 @@
+{
+  "telas": [
+    {
+      "papel": "admin",
+      "rota": "dashboard",
+      "largura": 1440,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "applications",
+      "largura": 1440,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "projects",
+      "largura": 1440,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "dashboard",
+      "largura": 1440,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "applications",
+      "largura": 1440,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "projects",
+      "largura": 1440,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "dashboard",
+      "largura": 375,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "applications",
+      "largura": 375,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "projects",
+      "largura": 375,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "dashboard",
+      "largura": 375,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "applications",
+      "largura": 375,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "admin",
+      "rota": "projects",
+      "largura": 375,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "dashboard",
+      "largura": 1440,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "applications",
+      "largura": 1440,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "projects",
+      "largura": 1440,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "dashboard",
+      "largura": 1440,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "applications",
+      "largura": 1440,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "projects",
+      "largura": 1440,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "dashboard",
+      "largura": 375,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "applications",
+      "largura": 375,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "projects",
+      "largura": 375,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "dashboard",
+      "largura": 375,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "applications",
+      "largura": 375,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "client",
+      "rota": "projects",
+      "largura": 375,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "pentester",
+      "rota": "dashboard",
+      "largura": 1440,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "pentester",
+      "rota": "projects",
+      "largura": 1440,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "pentester",
+      "rota": "dashboard",
+      "largura": 1440,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "pentester",
+      "rota": "projects",
+      "largura": 1440,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "pentester",
+      "rota": "dashboard",
+      "largura": 375,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "pentester",
+      "rota": "projects",
+      "largura": 375,
+      "tema": "dark",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "pentester",
+      "rota": "dashboard",
+      "largura": 375,
+      "tema": "light",
+      "rolagemHorizontal": false
+    },
+    {
+      "papel": "pentester",
+      "rota": "projects",
+      "largura": 375,
+      "tema": "light",
+      "rolagemHorizontal": false
+    }
+  ],
+  "erros": [],
+  "menuAplicacao": [
+    "Abrir painel",
+    "Editar contexto de risco",
+    "Remover aplicação"
+  ],
+  "filtroProjetos": "Mostrando 1 de 9 projetos · limpar filtros",
+  "plataformaParada": 4,
+  "alvoDoClique": {
+    "tag": "DIV",
+    "interativo": false
+  },
+  "plataformaOnda": 23,
+  "plataformaDepois": 4,
+  "cliqueNoBotaoRedesenhos": 5,
+  "landingParada": 8,
+  "landingOnda": 25,
+  "landingDepois": 3
+}

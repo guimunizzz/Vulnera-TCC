@@ -32,14 +32,14 @@ WORKDIR /app
 # automática de peer dependencies, e foi assim que `@testing-library/dom`
 # sumiu do container em 2026-09-14. Subir o npm corrige a causa; a flag
 # contornava o sintoma criando outro.
-RUN npm install -g npm@11
+RUN --mount=type=cache,target=/root/.npm npm install -g npm@11
 
 # Manifesto primeiro pra aproveitar cache de layer (mesma ordem do
 # app/api/Dockerfile): só reinstala deps quando package.json muda, não a cada
 # alteração de código-fonte. Copiar `package*.json` não adiantaria — não há
 # lock no contexto, ver acima.
 COPY package.json ./
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm npm install
 
 ARG VITE_API_URL=http://localhost:3001/api
 ENV VITE_API_URL=$VITE_API_URL
@@ -52,9 +52,11 @@ COPY index.html tsconfig.json vite.config.ts tailwind.config.ts postcss.config.j
 COPY config ./config
 COPY src ./src
 
-RUN npm run build
+# Sem o `tsc --noEmit` do `npm run build`: pesa em RAM e não muda o bundle. Typecheck: `npm run build` fora do Docker.
+RUN npx vite build
 
-RUN addgroup -S vulnera && adduser -S vulnera -G vulnera && chown -R vulnera:vulnera /app
+# chown só da pasta (não -R): o preview grava ali o vite.config compilado; `-R` duplicava o node_modules (~450 MB).
+RUN addgroup -S vulnera && adduser -S vulnera -G vulnera && chown vulnera:vulnera /app
 USER vulnera
 
 EXPOSE 3000

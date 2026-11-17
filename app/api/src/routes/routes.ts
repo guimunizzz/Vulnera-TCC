@@ -19,6 +19,8 @@ import { makeAccessRequestRoutes } from "./access-request.routes";
 import type { AccessRequestRouteDependencies } from "../factories/access-request.factory";
 import { makeAdminAccessRequestRoutes } from "./admin-access-request.routes";
 import type { AdminAccessRequestRouteDependencies } from "../factories/admin-access-request.factory";
+import { codeScanRoutes } from "./code-scan.routes";
+import { threatIntelRoutes } from "./threat-intel.routes";
 
 export function makeApiRoutes(options: {
   accessRequestDependencies?: AccessRequestRouteDependencies;
@@ -41,15 +43,20 @@ export function makeApiRoutes(options: {
   router.use("/notifications", notificationRoutes);
   router.use("/maturity", maturityRoutes);
   router.use("/dast/scans", dastScanRoutes);
-// CP-4 — decisões sobre um aceite já existente (aprovar/rejeitar/revogar).
-// Solicitar e listar ficam aninhados em /vulnerabilities/:id/risk-acceptances.
+  // CP-4 — decisões sobre um aceite já existente (aprovar/rejeitar/revogar).
+  // Solicitar e listar ficam aninhados em /vulnerabilities/:id/risk-acceptances.
   router.use("/risk-acceptances", riskAcceptanceRoutes);
 
-// CP-5 — catálogo de remediação: System OWASP (global) + custom do tenant.
+  // CP-5 — catálogo de remediação: System OWASP (global) + custom do tenant.
   router.use("/playbooks", remediationPlaybookRoutes);
 
-// CP-6 — buscas salvas e watchlists (a pergunta, nunca a resposta).
+  // CP-6 — buscas salvas e watchlists (a pergunta, nunca a resposta).
   router.use("/saved-queries", savedQueryRoutes);
+
+  // ADR-052 — importação de relatórios SAST (SARIF) e SCA (CycloneDX) por projeto.
+  router.use("/code-imports", codeScanRoutes);
+  // Threat Intel (ADR-053) — inventário, CVEs que afetam a empresa, feed e sincronização.
+  router.use("/threat-intel", threatIntelRoutes);
 
   return router;
 }

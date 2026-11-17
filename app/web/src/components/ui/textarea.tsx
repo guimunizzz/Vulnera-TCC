@@ -71,7 +71,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
           onChange?.(e);
           ajustarAltura();
         }}
-        className={cn(CLASSES_CONTROLE, "resize-y py-2 leading-sm", className)}
+        className={cn(CLASSES_CONTROLE, "resize-y py-2 leading-[var(--leading-sm)]", className)}
         {...props}
       />
       {mostrarContador && maxLength && (

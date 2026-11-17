@@ -1,5 +1,13 @@
 # Dashboard atmosférico — entrega de 2026-09-22
 
+> [!NOTE]
+> **Histórico.** O refactor `web-motion-3d` (2026-10-23 a 2026-11-04)
+> substituiu esta entrega: o hero deu lugar ao cabeçalho compacto da Fase 5,
+> as ondas e órbitas deram lugar à atmosfera ASCII e o
+> `dashboard-scene-palette.ts` saiu (as cores vêm dos tokens em runtime).
+> Estado atual em `docs/FRONTEND_WEB.md`, `docs/LANDING_NARRATIVA.md` §8 e
+> no ADR-050. O relatório abaixo fica como registro.
+
 Relatório do redesign de `/dashboard`, consumido pela manutenção do frontend e pela revisão da entrega. Branch: `feat/improve-front-dash`.
 
 ## 1. Resumo

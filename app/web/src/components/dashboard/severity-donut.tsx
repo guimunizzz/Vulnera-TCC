@@ -25,7 +25,7 @@ export function SeverityDonut({ bySeverity }: SeverityDonutProps) {
 
   return (
     <div className="flex items-center gap-6">
-      <div className="h-48 w-48 shrink-0">
+      <div className="h-[12rem] w-[12rem] shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={data} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
@@ -43,7 +43,7 @@ export function SeverityDonut({ bySeverity }: SeverityDonutProps) {
       <ul className="flex flex-col gap-2 text-sm">
         {data.map((d) => (
           <li key={d.key} className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SEVERITY_HEX[d.key] }} />
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SEVERITY_HEX[d.key] }} />
             <span className="text-fg">{d.name}</span>
             <span className="text-fg-muted">({d.value})</span>
           </li>

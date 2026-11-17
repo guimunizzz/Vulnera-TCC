@@ -19,7 +19,8 @@
  * commit explícito (salva no blur ou no botão), senão salvaria a cada tecla.
  *
  * QUEM CONSOME
- * `dast-scan-detail-page.tsx`, na linha expandida de cada finding.
+ * `dast-scan-detail-page.tsx`, na linha expandida de cada finding, e
+ * `code-import-detail-page.tsx` (importações SAST/SCA, ADR-052).
  */
 
 import { useEffect, useState } from "react";
@@ -36,7 +37,22 @@ function formatarData(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
-export function DastTriageControls({ finding, aoErro }: { finding: DastFinding; aoErro: (mensagem: string | null) => void }) {
+/** O mínimo que a triagem precisa de um achado — serve ao DAST e às importações SAST/SCA (ADR-052). */
+export type AlvoTriagem = Pick<DastFinding, "id" | "triageStatus" | "triageNote" | "triagedByName" | "triagedAt"> & { scanId?: string };
+
+export function DastTriageControls({
+  finding,
+  aoErro,
+  salvar,
+  queryKey,
+}: {
+  finding: AlvoTriagem;
+  aoErro: (mensagem: string | null) => void;
+  /** Padrão: triagem do DAST. As importações SAST/SCA passam a própria chamada. */
+  salvar?: (status: DastTriageStatus, note: string | null) => Promise<unknown>;
+  /** Lista a revalidar depois de salvar. Padrão: os findings do scan DAST. */
+  queryKey?: readonly unknown[];
+}) {
   const queryClient = useQueryClient();
   const [nota, setNota] = useState(finding.triageNote ?? "");
 
@@ -48,12 +64,22 @@ export function DastTriageControls({ finding, aoErro }: { finding: DastFinding; 
     setNota(finding.triageNote ?? "");
   }, [finding.triageNote]);
 
+  // Último status CONFIRMADO pela API. Sem isto, "Salvar nota" logo depois
+  // de clicar num status reenviava o status antigo da lista ainda não
+  // recarregada e desfazia a triagem (visto no fluxo real em 2026-11-13:
+  // ACCEPTED_RISK → NEW em 73 ms no AuditLog).
+  const [statusSalvo, setStatusSalvo] = useState(finding.triageStatus);
+  useEffect(() => {
+    setStatusSalvo(finding.triageStatus);
+  }, [finding.triageStatus]);
+
   const mutation = useMutation({
     mutationFn: (input: { status: DastTriageStatus; note: string | null }) =>
-      dastApi.triage(finding.id, input.status, input.note),
-    onSuccess: () => {
+      salvar ? salvar(input.status, input.note) : dastApi.triage(finding.id, input.status, input.note),
+    onSuccess: (_resposta, input) => {
+      setStatusSalvo(input.status);
       aoErro(null);
-      queryClient.invalidateQueries({ queryKey: ["dast", "scans", finding.scanId, "findings"] });
+      queryClient.invalidateQueries({ queryKey: queryKey ?? ["dast", "scans", finding.scanId, "findings"] });
     },
     onError: () => aoErro("Não foi possível salvar a triagem. Tente de novo."),
   });
@@ -65,7 +91,7 @@ export function DastTriageControls({ finding, aoErro }: { finding: DastFinding; 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-medium uppercase text-fg-muted">Triagem</span>
         {ORDEM_STATUS.map((status) => {
-          const ativo = finding.triageStatus === status;
+          const ativo = statusSalvo === status;
           return (
             <Button
               key={status}
@@ -107,7 +133,7 @@ export function DastTriageControls({ finding, aoErro }: { finding: DastFinding; 
             type="button"
             size="sm"
             disabled={mutation.isPending}
-            onClick={() => mutation.mutate({ status: finding.triageStatus, note: nota.trim() || null })}
+            onClick={() => mutation.mutate({ status: statusSalvo, note: nota.trim() || null })}
           >
             {mutation.isPending ? "Salvando..." : "Salvar nota"}
           </Button>

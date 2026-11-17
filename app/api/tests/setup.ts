@@ -8,10 +8,15 @@ import * as path from "path";
 // testes (e ela vira screenshot de evidência do TCC).
 dotenv.config({ path: path.resolve(__dirname, "../.env.test"), quiet: true });
 
-// A suíte apaga registros: recusar explicitamente qualquer alvo não identificado.
+// A suíte apaga registros: aceitar só o banco canônico de testes ou seu nome isolado.
 const testDatabase = new URL(process.env.DATABASE_URL ?? "invalid:");
-if (process.env.NODE_ENV !== "test" || testDatabase.pathname !== "/vulnera_test") {
-  throw new Error("UNSAFE_TEST_DATABASE: exige NODE_ENV=test e banco vulnera_test");
+if (
+  process.env.NODE_ENV !== "test" ||
+  !/^\/vulnera_test(?:_[a-z0-9_]+)?$/.test(testDatabase.pathname)
+) {
+  throw new Error(
+    "UNSAFE_TEST_DATABASE: exige NODE_ENV=test e banco vulnera_test com sufixo descartável opcional",
+  );
 }
 
 import { prisma } from "../src/database/prisma.database";
@@ -30,10 +35,16 @@ export async function cleanDatabase(): Promise<void> {
   // mais seguro); DastScan antes de User — requestedById é RESTRICT, não
   // CASCADE (deletar user com scan pendurado quebraria a constraint).
   await prisma.dastFinding.deleteMany();
+  await prisma.dastSensorRun.deleteMany();
+  await prisma.dastObservedAsset.deleteMany();
   await prisma.dastScan.deleteMany();
   // RiskAcceptance (CP-4) antes de Vulnerability — FK Cascade cuidaria, mas
   // explícito é mais seguro e mantém a ordem legível de cima para baixo.
   await prisma.riskAcceptance.deleteMany();
+  // CodeFinding/CodeScanImport (ADR-052) antes de Vulnerability/Project/User:
+  // uploadedById é RESTRICT, como o requestedById do DastScan.
+  await prisma.codeFinding.deleteMany();
+  await prisma.codeScanImport.deleteMany();
   await prisma.evidence.deleteMany();
   await prisma.vulnerabilityComment.deleteMany();
   await prisma.vulnerability.deleteMany();
@@ -51,6 +62,11 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.maturityControl.deleteMany();
   await prisma.maturityDomain.deleteMany();
   await prisma.notification.deleteMany();
+  // Threat Intel (ADR-053): os casamentos antes do inventário e do catálogo; o catálogo é global.
+  await prisma.threatMatch.deleteMany();
+  await prisma.techAsset.deleteMany();
+  await prisma.threatAdvisory.deleteMany();
+  await prisma.threatSyncRun.deleteMany();
   await prisma.report.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.passwordResetToken.deleteMany();

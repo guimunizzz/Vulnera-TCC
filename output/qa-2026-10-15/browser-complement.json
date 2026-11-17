@@ -1,0 +1,220 @@
+{
+  "checks": [
+    {
+      "name": "PDF Técnico funciona após recompor limite",
+      "ok": true
+    },
+    {
+      "name": "upload bytes binários inválidos recusado",
+      "ok": true,
+      "detail": {
+        "status": 400,
+        "body": {
+          "error": "INVALID_FILE_TYPE"
+        }
+      }
+    },
+    {
+      "name": "checkbox pin funciona por teclado",
+      "ok": true
+    },
+    {
+      "name": "busca salva UI",
+      "ok": false
+    },
+    {
+      "name": "pin aparece na navegação",
+      "ok": false
+    },
+    {
+      "name": "CSV filtrado por UI",
+      "ok": true
+    },
+    {
+      "name": "breadcrumb PENTESTER não leva a rota bloqueada",
+      "ok": false,
+      "detail": {
+        "actual": "/dashboard"
+      }
+    },
+    {
+      "name": "landing não promete IA fora de escopo",
+      "ok": false
+    }
+  ],
+  "observations": [
+    {
+      "name": "pentester-playbook-copy",
+      "text": "ta de Segurança\nOWASP\n\nSaindo da 6 posição na edição anterior, 90% das aplicações foram testados para alguma forma de configuração incorreta, com uma taxa de incidência média de 4% e mais de 208 mil oco…\n\nConteúdo oficial\nDuplicar e adaptar\nA06 · COMPONENTES VULNERÁVEIS\nA06:2021 – Componentes Vulneráveis e Desatualizados\nOWASP\n\nFoi o segundo colocado na pesquisa da comunidade do Top 10, mas também tinha dados suficientes para chegar ao Top 10 por meio da análise de dados. Componentes vulneráveis são um p…\n\nConteúdo oficial\nDuplicar e adaptar\nA07 · FALHAS DE IDENTIFICAÇÃO E AUTENTICAÇÃO\nA07:2021 – Falhas de identificação e autenticação\nOWASP\n\nAnteriormente conhecida como Quebra de Autenticação , esta categoria caiu da segunda posição e agora inclui Fraquezas e Enumerações Comuns (CWEs) relacionadas à identificação de f…\n\nConteúdo oficial\nDuplicar e adaptar\nA08 · FALHAS DE INTEGRIDADE\nA08:2021 – Falhas de Software e Integridade de Dados\nOWASP\n\nUma nova categoria para 2021 se concentra em fazer suposições relacionadas a atualizações de software, dados críticos e pipelines de CI/CD sem verificar a integridade. Um dos impa…\n\nConteúdo oficial\nDuplicar e adaptar\nA09 · FALHAS DE REGISTRO E MONITORAMENTO\nA09:2021 – Falhas de registro e monitoramento de segurança\nOWASP\n\nO monitoramento e registro de segurança subiram da décima posição na lista OWASP Top 10 de 2017 para a terceira posição na pesquisa da comunidade Top 10. É desafiador testar o mon…\n\nConteúdo oficial\nDuplicar e adaptar\nA10 · SSRF\nA10:2021 – Falsificação de Solicitação do Lado do Servidor (SSRF)\nOWASP\n\nEsta categoria foi adicionada a partir de uma pesquisa com a comunidade levando o primeiro lugar no Top 10. Os dados mostram uma taxa de incidência relativamente baixa com cobertu…\n\nConteúdo oficial\nDuplicar e adaptar"
+    },
+    {
+      "name": "landing-1440",
+      "viewport": 1440,
+      "scrollWidth": 1430,
+      "violations": []
+    },
+    {
+      "name": "landing-768",
+      "viewport": 768,
+      "scrollWidth": 758,
+      "violations": []
+    },
+    {
+      "name": "landing-375",
+      "viewport": 375,
+      "scrollWidth": 365,
+      "violations": []
+    },
+    {
+      "name": "landing-320",
+      "viewport": 320,
+      "scrollWidth": 310,
+      "violations": []
+    },
+    {
+      "name": "api-plans",
+      "plans": [
+        {
+          "id": "cmue2b97t0002pxogt92g8h8p",
+          "name": "Enterprise",
+          "maxApplications": 999,
+          "maxProjects": 999,
+          "includesRemediation": true,
+          "price": 0,
+          "isActive": true,
+          "createdAt": "2026-09-23T12:11:31.049Z"
+        },
+        {
+          "id": "cmue2b97i0001pxognd2mxpg2",
+          "name": "PRO",
+          "maxApplications": 5,
+          "maxProjects": 3,
+          "includesRemediation": true,
+          "price": 1499,
+          "isActive": true,
+          "createdAt": "2026-09-23T12:11:31.038Z"
+        },
+        {
+          "id": "cmue2b9730000pxogi8d09y41",
+          "name": "BASIC",
+          "maxApplications": 2,
+          "maxProjects": 1,
+          "includesRemediation": false,
+          "price": 499,
+          "isActive": true,
+          "createdAt": "2026-09-23T12:11:31.023Z"
+        }
+      ],
+      "landing": "Planos que cabem na sua empresa.\nPlanos que cabem na sua empresa.\nPlanos que cabem na sua empresa.\n\nComece pelo Basic, escale quando precisar.\n\nBASIC\n\nR$ 499/mês\n\n▸\n2 aplicações\n▸\n1 projeto simultâneo\n▸\nSuporte por e-mail\n▸\nRelatórios PDF\nComeçar com Basic\nC\nC\no\no\nm\nm\ne\ne\nç\nç\na\na\nr\nr\n \n \nc\nc\no\no\nm\nm\n \n \nB\nB\na\na\ns\ns\ni\ni\nc\nc\nMAIS POPULAR\nPRO\n\nR$ 1.499/mês\n\n▸\n5 aplicações\n▸\n3 projetos simultâneos\n▸\nServiço de remediação incluso\n▸\nSugestões por IA\n▸\nRelatórios PDF\n▸\nSuporte prioritário\nComeçar com Pro\nC\nC\no\no\nm\nm\ne\ne\nç\nç\na\na\nr\nr\n \n \nc\nc\no\no\nm\nm\n \n \nP\nP\nr\nr\no\no\nENTERPRISE\n\nSob consulta\n\n▸\nAplicações ilimitadas\n▸\nProjetos ilimitados\n▸\nSLA dedicado\n▸\nTudo do Pro\nFalar com vendas\nF\nF\na\na\nl\nl\na\na\nr\nr\n \n \nc\nc\no\no\nm\nm\n \n \nv\nv\ne\ne\nn\nn\nd\nd\na\na\ns\ns"
+    },
+    {
+      "name": "public/login",
+      "viewport": 1440,
+      "scrollWidth": 1430,
+      "violations": []
+    },
+    {
+      "name": "public/register",
+      "viewport": 1440,
+      "scrollWidth": 1430,
+      "violations": []
+    },
+    {
+      "name": "public/plans",
+      "viewport": 1440,
+      "scrollWidth": 1430,
+      "violations": []
+    }
+  ],
+  "errors": [
+    {
+      "flow": "binary-and-watchlist",
+      "error": "locator.click: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Claro', exact: true })\u001b[22m\n"
+    },
+    {
+      "flow": "client-remediation-link",
+      "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('a[href^=\"/findings/\"]').first()\u001b[22m\n"
+    }
+  ],
+  "http": [
+    {
+      "url": "http://localhost:3001/api/reports?projectId=cmv9hdb8i000pph01zb0tb5c4",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":20}"
+    },
+    {
+      "url": "http://localhost:3001/api/vulnerabilities/cmv9hljab004aph01ppagkm3y/evidences",
+      "status": 400,
+      "method": "POST",
+      "text": "{\"error\":\"INVALID_FILE_TYPE\"}"
+    },
+    {
+      "url": "http://localhost:3001/api/vulnerabilities?severity=CRITICAL&page=1&pageSize=25&sortBy=createdAt&sortOrder=desc",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/projects",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/users",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/applications",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/vulnerabilities?q=QA-20261015&severity=CRITICAL&page=1&pageSize=25&sortBy=createdAt&sortOrder=desc",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/saved-queries",
+      "status": 429,
+      "method": "POST",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/applications",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/vulnerabilities?q=QA-20261015&severity=CRITICAL&page=1&pageSize=25&sortBy=createdAt&sortOrder=desc",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/users",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/vulnerabilities?q=QA-20261015&severity=CRITICAL&page=1&pageSize=25&sortBy=createdAt&sortOrder=desc",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    },
+    {
+      "url": "http://localhost:3001/api/users",
+      "status": 429,
+      "method": "GET",
+      "text": "{\"code\":\"RATE_LIMITED\",\"message\":\"Muitas requisições. Tente novamente em alguns segundos.\",\"retryAfterSeconds\":1}"
+    }
+  ],
+  "finishedAt": "2026-10-15T12:09:12.055Z"
+}

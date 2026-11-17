@@ -1,0 +1,534 @@
+{
+  "marker": "QA-20261015-mv9hcuic",
+  "mode": "nonadmin",
+  "resources": {
+    "marker": "QA-20261015-mv9hcuic",
+    "accounts": [
+      {
+        "id": "cmv9hd71o000bph01ggsu0pru",
+        "email": "qa-20261015-mv9hcuic-tenanta@qa.invalid",
+        "role": "CLIENT"
+      },
+      {
+        "id": "cmv9hdc38000rph01s0ffh4ao",
+        "email": "qa-20261015-mv9hcuic-tenantb@qa.invalid",
+        "role": "CLIENT"
+      }
+    ],
+    "plan": {
+      "id": "cmue2b97t0002pxogt92g8h8p",
+      "name": "Enterprise",
+      "maxApplications": 999,
+      "maxProjects": 999,
+      "includesRemediation": true,
+      "price": 0,
+      "isActive": true,
+      "createdAt": "2026-09-23T12:11:31.049Z"
+    },
+    "admin": {
+      "id": "cmue2b9em0003pxogpar7imm9",
+      "role": "ADMIN",
+      "companyId": null
+    },
+    "pentester": {
+      "id": "cmue2bah00021pxogddrlvrbq",
+      "role": "PENTESTER",
+      "companyId": null,
+      "savedQueryId": "cmv9hjbui003eph01ivs4j7mg"
+    },
+    "pentester2": {
+      "id": "cmue2bahl0022pxogx2omuva0",
+      "role": "PENTESTER",
+      "companyId": null
+    },
+    "demoOwner": {
+      "id": "cmue2b9pj0009pxog1a70dp6u",
+      "role": "CLIENT",
+      "companyId": "cmue2b9ey0005pxogfcfrjmw2"
+    },
+    "demoMember": {
+      "id": "cmue2bapv0024pxogwfkf9vqp",
+      "role": "CLIENT",
+      "companyId": "cmue2b9ey0005pxogfcfrjmw2"
+    },
+    "tenantA": {
+      "userId": "cmv9hd71o000bph01ggsu0pru",
+      "companyId": "cmv9hd79c000fph012iomwajn",
+      "subscriptionId": "cmv9hd8r8000hph01t2ajx882",
+      "applicationId": "cmv9hda2r000nph012g2hu7q9",
+      "projectId": "cmv9hdb8i000pph01zb0tb5c4",
+      "vulnerabilityId": "cmv9hdgf60019ph01d1q43fuf",
+      "savedQueryId": "cmv9hg2cw001pph01oo421xi8",
+      "riskFindingId": "cmv9hitce002lph01k1qor9ib",
+      "acceptanceId": "cmv9hixbi0038ph014geg3ol2"
+    },
+    "tenantB": {
+      "userId": "cmv9hdc38000rph01s0ffh4ao",
+      "companyId": "cmv9hdc8j000vph01tez6ofrk",
+      "subscriptionId": "cmv9hdddh000xph010mzntt2f",
+      "applicationId": "cmv9hdejx0013ph01xv8n6x1l",
+      "projectId": "cmv9hdfne0015ph01lswcu2pf"
+    },
+    "systemPlaybookId": "cmue2bnng0001pxxcutdv6ap6"
+  },
+  "results": [
+    {
+      "id": "login-pentester",
+      "method": "POST",
+      "url": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "login-demoOwner",
+      "method": "POST",
+      "url": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "login-demoMember",
+      "method": "POST",
+      "url": "/auth/login",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "refresh-rotation",
+      "method": "POST",
+      "url": "/auth/refresh",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "refresh-token-changed",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Refresh returns a different token"
+    },
+    {
+      "id": "refresh-old-rejected",
+      "method": "POST",
+      "url": "/auth/refresh",
+      "actor": "anonymous",
+      "status": 401,
+      "expected": 401,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "code": "INVALID_TOKEN",
+        "message": "Refresh token inválido ou revogado"
+      }
+    },
+    {
+      "id": "logout-own-new-session",
+      "method": "POST",
+      "url": "/auth/logout",
+      "actor": "anonymous",
+      "status": 204,
+      "expected": 204,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "refresh-logout-rejected",
+      "method": "POST",
+      "url": "/auth/refresh",
+      "actor": "anonymous",
+      "status": 401,
+      "expected": 401,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "code": "INVALID_TOKEN",
+        "message": "Refresh token inválido ou revogado"
+      }
+    },
+    {
+      "id": "logout-idempotent",
+      "method": "POST",
+      "url": "/auth/logout",
+      "actor": "anonymous",
+      "status": 204,
+      "expected": 204,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "client-users-scoped-list",
+      "method": "GET",
+      "url": "/users",
+      "actor": "demoOwner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "client-users-scope",
+      "type": "assertion",
+      "pass": true,
+      "detail": "CLIENT /users returns own tenant only; 200 is intended"
+    },
+    {
+      "id": "client-findings-scope",
+      "method": "GET",
+      "url": "/vulnerabilities?pageSize=100",
+      "actor": "demoOwner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "client-findings-exclude-qa",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Demo tenant list excludes QA tenants; response uses data[]"
+    },
+    {
+      "id": "pentester-findings-scope",
+      "method": "GET",
+      "url": "/vulnerabilities?pageSize=100",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "pentester-list-has-qa",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Assigned QA finding appears in pentester list"
+    },
+    {
+      "id": "create-risk-finding",
+      "method": "POST",
+      "url": "/vulnerabilities",
+      "actor": "pentester",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "sla-present",
+      "type": "assertion",
+      "pass": true,
+      "detail": "SLA DTO state ON_TRACK; deadline 2026-11-14T11:58:09.405Z"
+    },
+    {
+      "id": "assignee-invalid-tenant",
+      "method": "POST",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib/assign",
+      "actor": "pentester",
+      "status": 422,
+      "expected": 422,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "ASSIGNEE_NOT_ALLOWED"
+      }
+    },
+    {
+      "id": "assignee-qa-owner",
+      "method": "POST",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib/assign",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "assignee-persisted",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Assignment stays in QA tenant"
+    },
+    {
+      "id": "risk-request",
+      "method": "POST",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib/risk-acceptances",
+      "actor": "pentester",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "risk-duplicate-denied",
+      "method": "POST",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib/risk-acceptances",
+      "actor": "pentester",
+      "status": 409,
+      "expected": 409,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "RISK_ACCEPTANCE_ALREADY_ACTIVE"
+      }
+    },
+    {
+      "id": "risk-pentester-decision-denied",
+      "method": "POST",
+      "url": "/risk-acceptances/cmv9hixbi0038ph014geg3ol2/approve",
+      "actor": "pentester",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      }
+    },
+    {
+      "id": "risk-foreign-client-denied",
+      "method": "GET",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib/risk-acceptances",
+      "actor": "demoOwner",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      }
+    },
+    {
+      "id": "finding-client-evidence-read-denied",
+      "method": "GET",
+      "url": "/vulnerabilities/cmv9hitce002lph01k1qor9ib/evidences",
+      "actor": "demoOwner",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      }
+    },
+    {
+      "id": "playbook-pentester-create-no-company",
+      "method": "POST",
+      "url": "/playbooks",
+      "actor": "pentester",
+      "status": 422,
+      "expected": 422,
+      "pass": true,
+      "retries": 1,
+      "response": {
+        "error": "USER_HAS_NO_COMPANY"
+      }
+    },
+    {
+      "id": "playbook-catalog",
+      "method": "GET",
+      "url": "/playbooks",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "playbook-pentester-clone-no-company",
+      "method": "POST",
+      "url": "/playbooks/cmue2bnng0001pxxcutdv6ap6/clone",
+      "actor": "pentester",
+      "status": 422,
+      "expected": 422,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "USER_HAS_NO_COMPANY"
+      }
+    },
+    {
+      "id": "playbook-system-edit-denied",
+      "method": "PUT",
+      "url": "/playbooks/cmue2bnng0001pxxcutdv6ap6",
+      "actor": "pentester",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "CANNOT_EDIT_SYSTEM_PLAYBOOK"
+      }
+    },
+    {
+      "id": "playbook-category-with-company",
+      "method": "GET",
+      "url": "/playbooks/for-category/A05?companyId=cmv9hd79c000fph012iomwajn",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "playbook-category-invalid",
+      "method": "GET",
+      "url": "/playbooks/for-category/INVALID?companyId=cmv9hd79c000fph012iomwajn",
+      "actor": "pentester",
+      "status": 400,
+      "expected": 400,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "INVALID_OWASP_CATEGORY"
+      }
+    },
+    {
+      "id": "saved-pentester-company-denied",
+      "method": "POST",
+      "url": "/saved-queries",
+      "actor": "pentester",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "PENTESTER_CANNOT_SHARE_QUERY"
+      }
+    },
+    {
+      "id": "saved-pentester-private",
+      "method": "POST",
+      "url": "/saved-queries",
+      "actor": "pentester",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "saved-duplicate-canonical-denied",
+      "method": "POST",
+      "url": "/saved-queries",
+      "actor": "pentester",
+      "status": 409,
+      "expected": 409,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "SAVED_QUERY_ALREADY_EXISTS"
+      }
+    },
+    {
+      "id": "saved-rename",
+      "method": "PUT",
+      "url": "/saved-queries/cmv9hjbui003eph01ivs4j7mg",
+      "actor": "pentester",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "saved-foreign-read-hidden",
+      "method": "GET",
+      "url": "/saved-queries/cmv9hjbui003eph01ivs4j7mg",
+      "actor": "demoOwner",
+      "status": 404,
+      "expected": 404,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "SAVED_QUERY_NOT_FOUND"
+      }
+    },
+    {
+      "id": "demo-applications",
+      "method": "GET",
+      "url": "/applications",
+      "actor": "demoOwner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "metrics-summary",
+      "method": "GET",
+      "url": "/applications/cmue2barv002gpxogcmsrxdu3/metrics/summary",
+      "actor": "demoOwner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "retries": 0
+    },
+    {
+      "id": "maturity-pentester-qa-empty",
+      "method": "GET",
+      "url": "/maturity/assessments/cmv9hd79c000fph012iomwajn/latest",
+      "actor": "pentester",
+      "status": 404,
+      "expected": 404,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "ASSESSMENT_NOT_FOUND"
+      }
+    },
+    {
+      "id": "sla-pentester-denied",
+      "method": "GET",
+      "url": "/companies/cmv9hd79c000fph012iomwajn/sla-policy",
+      "actor": "pentester",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      }
+    },
+    {
+      "id": "member-sla-update-denied",
+      "method": "PUT",
+      "url": "/companies/cmue2b9ey0005pxogfcfrjmw2/sla-policy",
+      "actor": "demoMember",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      }
+    },
+    {
+      "id": "maturity-client-create-denied",
+      "method": "POST",
+      "url": "/maturity/assessments",
+      "actor": "demoOwner",
+      "status": 403,
+      "expected": 403,
+      "pass": true,
+      "retries": 0,
+      "response": {
+        "error": "FORBIDDEN"
+      }
+    },
+    {
+      "id": "demo-auth-session-projection",
+      "type": "assertion",
+      "pass": true,
+      "detail": "Owner identity available after login"
+    }
+  ]
+}

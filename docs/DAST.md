@@ -660,6 +660,90 @@ animação: ele exige que o percentual **suba** e que as fases nomeadas do ZAP
 apareçam na tela. Uma barra estimada por tempo passaria na primeira asserção e
 falharia na segunda.
 
+### 11.5 CyberGraph (layouts 2D)
+
+A aba **CyberGraph** do detalhe do scan desenha o caminho de exposição
+Internet → alvo → endpoint → finding com os findings do próprio scan, em SVG
+(sem WebGL, cada nó é um botão focável). **O modo 3D saiu em 2026-11-09**
+([[ADR-051 - Layouts 2D no lugar do grafo 3D e Exposure Graph da empresa]]);
+no lugar dele há cinco layouts sobre o mesmo grafo. O histórico do 3D está em
+[[ADR-048 - Grafo 3D do scan DAST na area autenticada]].
+
+- **Barra:** Recentralizar · Caminho mais crítico · Restaurar layout · Exportar
+  PNG · seletor de layout, e o selo "Fontes: …" com os sensores que rodaram no
+  scan.
+- **Layouts:** **Hierárquico** (padrão; colunas Internet → alvo → endpoint →
+  findings), **Radial** (alvo no centro, um anel por nível, setor proporcional ao
+  tamanho do ramo), **Estrela** (cada ramo é um hub com os filhos em leque),
+  **Orgânico** (forças: o que está ligado fica perto, como no Lens da Wiz) e
+  **Clusters** (ilhas por severidade com nome e contagem; Internet e alvo no
+  meio). Trocar de layout desliza os nós para o lugar novo (sem animação com
+  movimento reduzido) e reenquadra. Grupos, filtro, busca e seleção valem para
+  todos. A escolha fica no `localStorage`; posições arrastadas valem só para o
+  layout em que foram feitas.
+- **Caminho mais crítico:** seleciona o finding de maior risco (abrindo o grupo
+  dele), centraliza e acende o caminho de exposição até a Internet. Desabilitado
+  quando o filtro de severidade esconde todos os findings.
+- **Ativos de descoberta (2026-10-31):** além dos endpoints, o alvo ganha ramos
+  de **IP** (com as portas abertas, as tecnologias dos CPEs e o grupo "CVEs"),
+  **tecnologia** (fingerprint) e **Subdomínios** (recolhido quando há mais de 6).
+  A CVE se liga ao IP, não a um endpoint. O painel/modal da CVE mostra o cartão
+  CVSS (nota, faixa oficial, versão, vetor e link para o NVD) e o selo
+  "potencial · não validado"; a lista de Achados mostra "CVSS x,x · faixa".
+- **Busca e filtro:** a busca (com sugestões) seleciona o nó, abre o grupo dele
+  e centraliza a vista; os chips de severidade tiram do grafo os findings
+  desmarcados e a legenda diz quantos estão aparecendo.
+- **Zoom:** botões + / − / ajustar no canto do palco (a roda continua valendo
+  com o grafo em foco); no 2D, `+` e `-` no teclado.
+- **Exportar PNG:** o grafo inteiro em 2×, no layout atual (com as ilhas, em
+  Clusters), com as cores do tema atual. O nome do arquivo leva o layout.
+- **Hierárquico:** colunas Internet → alvo → endpoint → "Findings (N)". Clicar no grupo
+  expande os findings dele (eles saem do grupo deslizando e voltam para ele ao
+  fechar); arestas em degradê; o caminho selecionado ganha fluxo animado e o resto
+  esmaece.
+- **Painel e modal:** clicar num nó mostra o painel (tipo, severidade, triagem,
+  caminho de exposição clicável); "Expandir detalhes", duplo clique ou
+  Shift+Enter abrem o modal. O modal é só leitura; "Triar em
+  Achados" leva à linha do finding na aba Achados, com os filtros limpos.
+- **Arrastar:** nós podem ser arrastados livremente; arestas seguem. **Restaurar layout** volta ao
+  padrão. As posições não são salvas no servidor.
+- **Interação:** arrastar o fundo move a vista; com o grafo em foco, a roda
+  aproxima; **Recentralizar** volta ao enquadramento inicial.
+- **Teclado:** um único ponto de Tab no grafo; as setas andam entre os nós
+  (no Hierárquico ← → entre colunas e ↑ ↓ na coluna; nos outros layouts, o nó
+  mais próximo num cone de 120° na direção da seta), Enter seleciona,
+  Shift+Enter abre o modal, Esc limpa.
+- **Legenda e minimapa:** legenda de tipos e severidades; minimapa opcional pelo botão no grupo
+  de zoom (clicar/arrastar move a vista). Fica desligado por padrão: fixo sobre o
+  grafo, ele sempre pode cobrir algum nó.
+- **Sensores:** a faixa "Sensores deste scan" (acima das abas) mostra o status
+  do ZAP, dos headers, do certificado SSL/TLS, das tecnologias, do IP/portas/CVEs
+  (InternetDB + NVD) e dos subdomínios (crt.sh) (OK, Sem dados,
+  Não se aplica, Indisponível, Erro), quantos achados cada um gerou, a duração e a
+  mensagem — o resumo do certificado ou o motivo legível de uma falha. O finding
+  mostra "Sensor de origem" no painel e no modal, a lista de Achados marca os que
+  não vieram do ZAP e o nó do alvo mostra o certificado. Detalhes em `DISCOVERY.md`.
+- **Nova análise:** a pessoa só informa o alvo e marca a autorização; ZAP e os
+  cinco sensores passivos rodam em sequência e o resultado chega no fim. Trocar o
+  alvo desmarca a autorização. A demonstração (sem tocar a rede) é um link
+  secundário. Um scan real que conclui com sensor indisponível mostra
+  "Análise concluída com avisos" com o motivo.
+- **Limites:** até 300 nós (corta INFO antes de HIGH e avisa). A aba
+  **Achados** continua sendo a visão de trabalho.
+- **Escopo honesto:** usa só o que o ZAP já grava. Sensores, `ObservedAsset`,
+  subdomínio/IP/tecnologia/CVE e a ligação com a Aplicação da spec do Security
+  Graph ainda não existem; por isso não há faixa de sensores nem alerta de
+  divergência de exposição.
+
+Código: `app/web/src/features/security-graph/` (`graph-model.ts` monta o grafo,
+`graph-2d-layout.ts` agrupa e posiciona o Hierárquico, `graph-layouts.ts` os
+outros layouts, `cyber-graph-2d.tsx` desenha, `cyber-graph.tsx` é a aba).
+Evidências: `docs/evidencias/security-graph/` e `docs/evidencias/cybergraph-layouts/`.
+
+O mesmo desenho e os mesmos layouts servem ao **Exposure Graph** da empresa
+(`/exposure-graph`), que tem também o mapa 3D da superfície de ataque; ver
+`docs/EXPOSURE_REMEDIATION.md` §9.
+
 ---
 
 ## Docs relacionados
@@ -669,6 +753,7 @@ falharia na segunda.
 - [[ADR-030 - Execucao assincrona sem fila]]
 - [[ADR-031 - ZAP em modo daemon por scan e DooD na stack Docker]]
 - [[ADR-032 - Triagem, promocao para Vulnerability e comparacao de scans DAST]]
+- [[ADR-048 - Grafo 3D do scan DAST na area autenticada]]
 - Vault: `docs/Vulnera/03-Produto/Modulos/DAST.md`, `Fluxo - Scan DAST`,
   `02-Dominio/Entidades/DastScan.md` e `DastFinding.md`, `06-Dados/Enum - DAST.md`
 - `PRD_VIVO.md`, `docs/BACKLOG.md`, `docs/ROADMAP_PROMPTS.md`, `docs/DECISIONS.md`
