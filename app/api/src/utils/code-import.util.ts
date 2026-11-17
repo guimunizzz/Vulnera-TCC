@@ -180,7 +180,10 @@ function cleanPath(uri: unknown): string | null {
   } catch {
     // URI malformada: fica como veio
   }
-  return p.replace(/^\.\//, "");
+  // `\` → `/`: o Semgrep no Windows grava `app\src\x.ts`; na CI (Linux) o mesmo
+  // arquivo é `app/src/x.ts`. O caminho entra no fingerprint — sem normalizar,
+  // trocar de máquina fazia tudo parecer novo e a triagem herdada se perdia.
+  return p.replace(/\\/g, "/").replace(/^\.\//, "");
 }
 
 // ============================================================================

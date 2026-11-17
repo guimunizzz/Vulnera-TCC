@@ -138,6 +138,57 @@ NodeGoat sumiam.
   não ter o achado) e a data comparada é a do **último** `→ FIXED` da trilha.
   Nada é reaberto sozinho.
 
+### Pré-triagem (2026-11-17)
+
+Num relatório real do próprio Vulnera (Semgrep, 207 achados), **175 estavam
+fora do código de produção**: 119 em relatórios HTML de evidência, 34 em
+artefatos gerados, 13 em testes, 6 em seeds e 3 em fixtures. Os 4 "Altos" eram
+todos de fixture ou de saída gerada. A pré-triagem separa isso e cruza o achado
+com as outras fontes do Vulnera. **Sugere; não decide** (ADR-032/052, RN10).
+
+- **Contexto pelo caminho** (`utils/code-pretriage.util.ts`, função pura):
+  `GERADO` (output, dist, build, coverage, vendor, node_modules, `*.min.js`),
+  `FIXTURE` (fixtures, testdata, mocks), `TESTE` (tests, `__tests__`, e2e,
+  `*.test.*`, `*.spec.*`, `test_*.py`, `*_test.go`), `DOCUMENTACAO` (docs,
+  examples), `SCRIPT` (scripts, seeds, `seed*`/`backfill*`). O primeiro que casa
+  vence; o resto é `PRODUCAO`. SCA não tem caminho e conta como produção.
+- **Sinais de outras fontes:**
+  - **KEV** (forte): a CVE do SCA está no catálogo CISA KEV do Threat Intel.
+  - **EPSS ≥ 10%** (forte): alta probabilidade de exploração em 30 dias.
+  - **DAST confirmado** (forte): existe `Vulnerability` de origem
+    `DAST_IMPORT` **na mesma aplicação** cujo achado DAST tem o mesmo CWE.
+    Só vulnerabilidades promovidas (já confirmadas por humano) e só da
+    aplicação do projeto: nada de outra empresa entra no sinal.
+  - **Threat Intel** (fraco): a mesma CVE foi casada no inventário da empresa.
+  - O id do SCA casa pelo id da advisory ou pelos `aliases` (GHSA ↔ CVE).
+- **Sugestão** (só para achado ainda *por triar*): fora de produção →
+  *falso-positivo* com o motivo; produção com sinal forte → *provável
+  vulnerabilidade*. Triagem já feita não recebe sugestão.
+- **Calculada na leitura**, não gravada: o contexto é função do caminho e os
+  sinais mudam depois da importação (CVE entra no KEV, alguém promove uma
+  vulnerabilidade DAST). Uma importação antiga ganha o sinal novo sem
+  migration nem reprocessamento.
+- **Tela:** painel no topo da aba Achados ("N prováveis vulnerabilidades" com
+  *Ver só esses*; "N achados fora do código de produção" com o detalhamento por
+  contexto, **Aceitar sugestões** e *Revisar antes*), filtro *Pré-triagem*,
+  selos na linha (*provável vulnerabilidade*, contexto) e os sinais no detalhe,
+  com link para a vulnerabilidade DAST relacionada.
+- **Aceitar sugestões** (`POST /:id/accept-suggestions`): marca como
+  falso-positivo, numa transação, só os achados **ainda NEW** com essa
+  sugestão. Se alguém triou um deles entre a tela e o clique, a decisão humana
+  vence. Quem clicou é o autor; a nota diz "Pré-triagem aceita: fora do código
+  de produção (…)"; uma entrada de AuditLog por lote, com os ids. Na
+  reimportação, a triagem aceita é herdada como qualquer outra.
+- **Promoção:** o rascunho traz os sinais (também na descrição) e, quando o
+  relatório não tem vetor, usa o **vetor do NVD** da advisory
+  (`cvssVectorSource: "NVD"`), marcado como sugestão. Continua 1 a 1, com o
+  humano revisando o vetor.
+- **Caminho normalizado:** `\` vira `/` antes do fingerprint. O Semgrep no
+  Windows grava `app\src\x.ts`; sem isso, o mesmo arquivo escaneado na CI
+  (Linux) virava um achado "novo" e a triagem herdada se perdia. Importações
+  feitas no Windows antes desta mudança mostram tudo como novo **uma vez** na
+  próxima reimportação (decisão aceita em 2026-11-17).
+
 ### Promoção para vulnerabilidade
 
 - O destino é o **projeto da importação**. A API ignora qualquer `projectId`
@@ -217,14 +268,15 @@ verificada no service.
 | `POST /api/code-imports` | multipart: `projectId` + `file` (≤ 10 MB). Importa e compara. Limite de taxa *expensive* |
 | `GET /api/code-imports[?projectId=]` | importações do projeto, ou de todos os projetos visíveis ao usuário |
 | `GET /api/code-imports/:id` | cabeçalho com `severityCounts` |
-| `GET /api/code-imports/:id/findings` | achados, do mais grave ao menos grave, com triagem e promoção |
+| `GET /api/code-imports/:id/findings` | achados, do mais grave ao menos grave, com triagem, promoção e `preTriagem` (contexto, sinais, sugestão) |
+| `POST /api/code-imports/:id/accept-suggestions` | `{ contexts? }`: aceita as sugestões de falso-positivo por contexto dos achados ainda NEW. Devolve `{ accepted, byContext }` |
 | `GET /api/code-imports/:id/compare` | novos, continuam e resolvidos em relação à anterior |
 | `GET /api/code-imports/:id/report/data` | dados do PDF. Limite de taxa *report* |
 | `PATCH /api/code-imports/findings/:findingId/triage` | `{ triageStatus, note }` |
-| `GET /api/code-imports/findings/:findingId/promotion-draft` | rascunho (vetor sugerido e origem) |
+| `GET /api/code-imports/findings/:findingId/promotion-draft` | rascunho (vetor sugerido e origem: `TOOL`, `NVD` ou `SEVERITY`) e `sinais` |
 | `POST /api/code-imports/findings/:findingId/promote` | `{ title, description, owaspCategory, cvssVector, impact?, recommendation? }` |
 
-Erros: `MISSING_FILE`/`MISSING_PROJECT_ID`/`INVALID_FILE_FORMAT` (400),
+Erros: `MISSING_FILE`/`MISSING_PROJECT_ID`/`INVALID_FILE_FORMAT`/`INVALID_CONTEXTS` (400),
 `UNSUPPORTED_REPORT_FORMAT`/`UNSUPPORTED_SARIF_VERSION`/`IMPORT_TOO_LARGE`
 (422), `FORBIDDEN` (403), `PROJECT_NOT_FOUND`/`IMPORT_NOT_FOUND`/`FINDING_NOT_FOUND`
 (404), `FINDING_ALREADY_PROMOTED` (409).

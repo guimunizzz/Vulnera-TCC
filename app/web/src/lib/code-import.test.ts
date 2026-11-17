@@ -4,7 +4,7 @@
  * "última importação por fonte" que alimenta os números da página.
  */
 import { describe, expect, it } from "vitest";
-import { descreverSeveridades, FILTROS_INICIAIS, filtrarAchados, ultimasPorFonte, urlSegura, validarArquivo } from "./code-import";
+import { descreverSeveridades, FILTROS_INICIAIS, filtrarAchados, resumoPreTriagem, ultimasPorFonte, urlSegura, validarArquivo } from "./code-import";
 import type { CodeFinding, CodeScanImport } from "../types/code-import.types";
 
 function achado(over: Partial<CodeFinding>): CodeFinding {
@@ -13,7 +13,7 @@ function achado(over: Partial<CodeFinding>): CodeFinding {
     severity: "MEDIUM", cweId: null, filePath: null, startLine: null, endLine: null, snippet: null, packageName: null,
     packageVersion: null, purl: null, fixedVersion: null, advisoryId: null, cvssScore: null, cvssVector: null,
     description: null, recommendation: null, helpUri: null, triageStatus: "NEW", triageNote: null, triagedByName: null,
-    triagedAt: null, triageInherited: false, promotedVulnerability: null, ...over,
+    triagedAt: null, triageInherited: false, promotedVulnerability: null, preTriagem: { contexto: "PRODUCAO", sinais: [], sugestao: null }, ...over,
   };
 }
 
@@ -50,6 +50,22 @@ describe("lib/code-import", () => {
     expect(ids({ busca: "cve-2021" })).toEqual(["2"]);
     expect(ids({ busca: "CWE-89" })).toEqual(["1"]);
     expect(ids({ busca: "db.js" })).toEqual(["1"]);
+  });
+
+  it("pré-triagem: recorte por prováveis/produção/fora de produção e resumo por contexto", () => {
+    const pt = (contexto: CodeFinding["preTriagem"]["contexto"], sugestao: CodeFinding["preTriagem"]["sugestao"]) => ({ contexto, sinais: [], sugestao });
+    const lista = [
+      achado({ id: "prov", preTriagem: pt("PRODUCAO", { tipo: "PROVAVEL_VULNERABILIDADE", motivo: "KEV" }) }),
+      achado({ id: "prod" }),
+      achado({ id: "teste", preTriagem: pt("TESTE", { tipo: "FALSO_POSITIVO", motivo: "teste" }) }),
+      achado({ id: "docs-triado", triageStatus: "FALSE_POSITIVE", preTriagem: pt("DOCUMENTACAO", null) }),
+    ];
+    const ids = (preTriagem: typeof FILTROS_INICIAIS.preTriagem) => filtrarAchados(lista, { ...FILTROS_INICIAIS, preTriagem }, new Set()).map((x) => x.id);
+    expect(ids("PROVAVEL")).toEqual(["prov"]);
+    expect(ids("PRODUCAO")).toEqual(["prov", "prod"]);
+    expect(ids("FORA_PRODUCAO")).toEqual(["teste", "docs-triado"]);
+    // Só conta sugestão pendente: o de docs já triado não entra no "aceitar".
+    expect(resumoPreTriagem(lista)).toEqual({ provaveis: 1, foraDeProducao: 1, porContexto: { TESTE: 1 } });
   });
 
   it("última importação por projeto+formato+ferramenta, sem contar reimportações duas vezes", () => {

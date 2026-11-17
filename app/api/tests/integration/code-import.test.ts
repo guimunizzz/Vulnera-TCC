@@ -472,3 +472,132 @@ describe("Importação SAST/SCA — lista global e dados do relatório", () => {
     expect((await request(app).get(`/api/code-imports/${atual.body.id}/report/data`).set(auth(tokenB))).status).toBe(403);
   });
 });
+
+// ============================================================================
+// Pré-triagem (sugestões de falso-positivo por contexto + sinais de outras fontes)
+// ============================================================================
+
+async function seedDastConfirmado(opts: { projectId: string; applicationId: string; companyId: string; userId: string; cweId: string; title: string }) {
+  const scan = await prisma.dastScan.create({ data: { targetUrl: "https://app.exemplo.test", requestedById: opts.userId, status: "COMPLETED" } });
+  const df = await prisma.dastFinding.create({
+    data: { scanId: scan.id, fingerprint: `fp-${opts.cweId}-${opts.projectId}`, pluginId: "40018", title: opts.title, risk: "HIGH", confidence: "Medium", cweId: opts.cweId, url: "https://app.exemplo.test/login", normalizedUrl: "https://app.exemplo.test/login" },
+  });
+  return prisma.vulnerability.create({
+    data: {
+      projectId: opts.projectId, applicationId: opts.applicationId, companyId: opts.companyId, createdBy: opts.userId,
+      title: opts.title, description: "Confirmada pelo DAST.", owaspCategory: "A03", cvssVector: VETOR, cvssScore: 9.8,
+      severityCalculated: "CRITICAL", severityFinal: "CRITICAL", sourceType: "DAST_IMPORT", sourceDastFindingId: df.id,
+    },
+  });
+}
+
+type FindingPT = { id: string; filePath: string | null; triageStatus: string; triageNote: string | null; preTriagem: { contexto: string; sinais: Array<{ tipo: string; forte: boolean }>; sugestao: { tipo: string } | null } };
+
+describe("Importação SAST/SCA — pré-triagem", () => {
+  const misto = () =>
+    sarif([
+      { ruleId: "sqli", file: "src\\db.js", line: 10, fp: "p1" },
+      { ruleId: "sqli", file: "src/__tests__/db.test.js", line: 4, fp: "t1" },
+      { ruleId: "http-link", file: "docs/evidencias/relatorio.html", line: 1, fp: "d1" },
+      { ruleId: "http-link", file: "output/qa/browser.cjs", line: 1, fp: "g1" },
+    ]);
+
+  it("CODE-PT-01 cada achado vem com contexto e sugestão; caminho do Windows é normalizado", async () => {
+    const { tokenA, projectA } = await seedCenario();
+    const imp = await importar(tokenA, projectA.id, misto());
+    const res = await request(app).get(`/api/code-imports/${imp.body.id}/findings`).set(auth(tokenA));
+    expect(res.status).toBe(200);
+    const porCaminho = Object.fromEntries((res.body as FindingPT[]).map((f) => [f.filePath, f.preTriagem]));
+    expect(porCaminho["src/db.js"]).toEqual({ contexto: "PRODUCAO", sinais: [], sugestao: null });
+    expect(porCaminho["src/__tests__/db.test.js"]).toMatchObject({ contexto: "TESTE", sugestao: { tipo: "FALSO_POSITIVO" } });
+    expect(porCaminho["docs/evidencias/relatorio.html"]).toMatchObject({ contexto: "DOCUMENTACAO", sugestao: { tipo: "FALSO_POSITIVO" } });
+    expect(porCaminho["output/qa/browser.cjs"]).toMatchObject({ contexto: "GERADO", sugestao: { tipo: "FALSO_POSITIVO" } });
+  });
+
+  it("CODE-PT-02 aceitar sugestões tria só o NEW fora de produção, com autor, nota e uma entrada de auditoria", async () => {
+    const { tokenA, projectA, pentesterA } = await seedCenario();
+    const imp = await importar(tokenA, projectA.id, misto());
+    const antes = (await request(app).get(`/api/code-imports/${imp.body.id}/findings`).set(auth(tokenA))).body as FindingPT[];
+    // Decisão humana anterior num achado de teste: não pode ser sobrescrita pelo lote.
+    const teste = antes.find((f) => f.filePath === "src/__tests__/db.test.js")!;
+    await request(app).patch(`/api/code-imports/findings/${teste.id}/triage`).set(auth(tokenA)).send({ triageStatus: "CONFIRMED", note: "teste expõe credencial real" });
+
+    expect((await request(app).post(`/api/code-imports/${imp.body.id}/accept-suggestions`).set(auth(tokenA)).send({ contexts: ["NADA"] })).status).toBe(400);
+
+    const soDocs = await request(app).post(`/api/code-imports/${imp.body.id}/accept-suggestions`).set(auth(tokenA)).send({ contexts: ["DOCUMENTACAO"] });
+    expect(soDocs.status).toBe(200);
+    expect(soDocs.body).toEqual({ accepted: 1, byContext: { DOCUMENTACAO: 1 } });
+
+    const resto = await request(app).post(`/api/code-imports/${imp.body.id}/accept-suggestions`).set(auth(tokenA)).send({});
+    expect(resto.body).toEqual({ accepted: 1, byContext: { GERADO: 1 } });
+    expect((await request(app).post(`/api/code-imports/${imp.body.id}/accept-suggestions`).set(auth(tokenA))).body.accepted).toBe(0);
+
+    const rows = await prisma.codeFinding.findMany({ where: { importId: imp.body.id } });
+    const por = Object.fromEntries(rows.map((r) => [r.filePath, r]));
+    expect(por["src/db.js"].triageStatus).toBe("NEW");
+    expect(por["src/__tests__/db.test.js"]).toMatchObject({ triageStatus: "CONFIRMED", triageNote: "teste expõe credencial real" });
+    expect(por["docs/evidencias/relatorio.html"]).toMatchObject({ triageStatus: "FALSE_POSITIVE", triagedById: pentesterA.id, triageNote: expect.stringContaining("documentação") });
+    expect(por["output/qa/browser.cjs"]).toMatchObject({ triageStatus: "FALSE_POSITIVE", triagedById: pentesterA.id });
+
+    const audit = await prisma.auditLog.findMany({ where: { entityType: "CodeScanImport", entityId: imp.body.id, action: "STATUS_CHANGE" } });
+    expect(audit).toHaveLength(2);
+    expect(JSON.parse(audit.find((a) => a.diffJson?.includes("GERADO"))!.diffJson!)).toMatchObject({ acceptedSuggestions: 1, to: "FALSE_POSITIVE" });
+
+    // Reimportação: a triagem aceita é herdada como qualquer outra.
+    const re = await importar(tokenA, projectA.id, misto());
+    const herdados = await prisma.codeFinding.findMany({ where: { importId: re.body.id, triageStatus: "FALSE_POSITIVE" } });
+    expect(herdados.map((h) => h.filePath).sort()).toEqual(["docs/evidencias/relatorio.html", "output/qa/browser.cjs"]);
+  });
+
+  it("CODE-PT-03 fora do projeto ou CLIENT: 403 e nada é triado", async () => {
+    const { tokenA, tokenB, clientToken, projectA } = await seedCenario();
+    const imp = await importar(tokenA, projectA.id, misto());
+    expect((await request(app).post(`/api/code-imports/${imp.body.id}/accept-suggestions`).set(auth(tokenB))).status).toBe(403);
+    expect((await request(app).post(`/api/code-imports/${imp.body.id}/accept-suggestions`).set(auth(clientToken))).status).toBe(403);
+    expect((await request(app).post(`/api/code-imports/nao-existe/accept-suggestions`).set(auth(tokenA))).status).toBe(404);
+    expect(await prisma.codeFinding.count({ where: { importId: imp.body.id, triageStatus: { not: "NEW" } } })).toBe(0);
+  });
+
+  it("CODE-PT-04 DAST confirmado no mesmo CWE e na mesma aplicação vira 'provável vulnerabilidade'; de outra empresa, não", async () => {
+    const { tokenA, projectA, projectB, companyA, companyB, pentesterA } = await seedCenario();
+    // CWE-89 confirmado pelo DAST só na Empresa B: não pode contaminar a Empresa A (SEC4).
+    await seedDastConfirmado({ projectId: projectB.id, applicationId: projectB.applicationId, companyId: companyB.id, userId: pentesterA.id, cweId: "89", title: "SQLi na B" });
+    const impA = await importar(tokenA, projectA.id, sarif([{ ruleId: "sqli", file: "src/db.js", line: 10, fp: "p1" }]));
+    let [f] = (await request(app).get(`/api/code-imports/${impA.body.id}/findings`).set(auth(tokenA))).body as FindingPT[];
+    expect(f.preTriagem).toEqual({ contexto: "PRODUCAO", sinais: [], sugestao: null });
+
+    const v = await seedDastConfirmado({ projectId: projectA.id, applicationId: projectA.applicationId, companyId: companyA.id, userId: pentesterA.id, cweId: "89", title: "SQL Injection em /login" });
+    [f] = (await request(app).get(`/api/code-imports/${impA.body.id}/findings`).set(auth(tokenA))).body as FindingPT[];
+    expect(f.preTriagem.sugestao).toEqual({ tipo: "PROVAVEL_VULNERABILIDADE", motivo: "confirmado pelo DAST" });
+    expect(f.preTriagem.sinais).toEqual([expect.objectContaining({ tipo: "DAST_CONFIRMADO", forte: true, vulnerabilityId: v.id })]);
+
+    const draft = await request(app).get(`/api/code-imports/findings/${f.id}/promotion-draft`).set(auth(tokenA));
+    expect(draft.body.sinais).toHaveLength(1);
+    expect(draft.body.description).toContain("O DAST já confirmou CWE-89");
+  });
+
+  it("CODE-PT-05 SCA em CVE do KEV: provável vulnerabilidade, e o rascunho usa o vetor do NVD quando o relatório não traz", async () => {
+    const { tokenA, projectA } = await seedCenario();
+    await prisma.threatAdvisory.create({
+      data: { id: "CVE-2021-23337", source: "NVD", kev: true, epssScore: 0.02, cvssVector: "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H", aliases: ["GHSA-35JH-R3H4-6JHM"] },
+    });
+    const semVetor = Buffer.from(
+      JSON.stringify({
+        bomFormat: "CycloneDX",
+        specVersion: "1.5",
+        metadata: { tools: { components: [{ name: "trivy", version: "0.57.0" }] } },
+        components: [{ "bom-ref": "pkg:npm/lodash@4.17.15", name: "lodash", version: "4.17.15", purl: "pkg:npm/lodash@4.17.15" }],
+        vulnerabilities: [{ id: "GHSA-35jh-r3h4-6jhm", ratings: [{ severity: "high" }], affects: [{ ref: "pkg:npm/lodash@4.17.15" }] }],
+      }),
+    );
+    const imp = await importar(tokenA, projectA.id, semVetor, "sbom.cdx.json");
+    expect(imp.status).toBe(201);
+    const [f] = (await request(app).get(`/api/code-imports/${imp.body.id}/findings`).set(auth(tokenA))).body as FindingPT[];
+    expect(f.preTriagem).toMatchObject({ contexto: "PRODUCAO", sugestao: { tipo: "PROVAVEL_VULNERABILIDADE", motivo: "explorada ativamente (KEV)" } });
+
+    const draft = await request(app).get(`/api/code-imports/findings/${f.id}/promotion-draft`).set(auth(tokenA));
+    expect(draft.status).toBe(200);
+    expect(draft.body).toMatchObject({ cvssVector: "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H", cvssVectorSource: "NVD", owaspCategory: "A06" });
+    expect(draft.body.description).toContain("catálogo CISA KEV");
+  });
+});

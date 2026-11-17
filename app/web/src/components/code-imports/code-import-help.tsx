@@ -110,7 +110,7 @@ function Escolha<T extends string>({
             aria-checked={ativo}
             onClick={() => aoMudar(o.id)}
             className={cn(
-              "flex flex-col items-start gap-0.5 rounded-control border px-3 py-2 text-left transition-colors duration-fast",
+              "flex flex-col items-start gap-1 rounded-control border px-3 py-2 text-left transition-colors duration-fast",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
               ativo ? "border-accent bg-accent-surface" : "border-subtle bg-inset hover:border-strong",
             )}

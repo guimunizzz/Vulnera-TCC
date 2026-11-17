@@ -21,6 +21,7 @@ const api = vi.hoisted(() => ({
   promote: vi.fn(),
   list: vi.fn(),
   importReport: vi.fn(),
+  acceptSuggestions: vi.fn(),
 }));
 const dast = vi.hoisted(() => ({ triage: vi.fn() }));
 const vulns = vi.hoisted(() => ({ transition: vi.fn() }));
@@ -43,7 +44,7 @@ function achado(over: Partial<CodeFinding>): CodeFinding {
     severity: "MEDIUM", cweId: null, filePath: "src/a.js", startLine: 1, endLine: 1, snippet: null, packageName: null,
     packageVersion: null, purl: null, fixedVersion: null, advisoryId: null, cvssScore: null, cvssVector: null,
     description: null, recommendation: null, helpUri: null, triageStatus: "NEW", triageNote: null, triagedByName: null,
-    triagedAt: null, triageInherited: false, promotedVulnerability: null, ...over,
+    triagedAt: null, triageInherited: false, promotedVulnerability: null, preTriagem: { contexto: "PRODUCAO", sinais: [], sugestao: null }, ...over,
   };
 }
 
@@ -161,6 +162,45 @@ describe("Detalhe da importação SAST/SCA", () => {
     expect(vulns.transition).not.toHaveBeenCalled();
     fireEvent.click(within(dialogo).getByRole("button", { name: "Reabrir" }));
     await waitFor(() => expect(vulns.transition).toHaveBeenCalledWith("v1", "IN_PROGRESS"));
+  });
+
+  it("pré-triagem: resume prováveis e fora de produção, filtra, mostra sinais e aceita as sugestões em lote", async () => {
+    const provavel = achado({
+      id: "p1", fingerprint: "p", severity: "HIGH", title: "Path traversal no upload", filePath: "src/upload.js", cweId: "22",
+      preTriagem: { contexto: "PRODUCAO", sinais: [{ tipo: "DAST_CONFIRMADO", forte: true, detalhe: "O DAST já confirmou CWE-22 nesta aplicação.", vulnerabilityId: "v9" }], sugestao: { tipo: "PROVAVEL_VULNERABILIDADE", motivo: "confirmado pelo DAST" } },
+    });
+    const deTeste = achado({
+      id: "t1", fingerprint: "t", title: "Hash bcrypt", filePath: "tests/fixtures/x.sarif",
+      preTriagem: { contexto: "FIXTURE", sinais: [], sugestao: { tipo: "FALSO_POSITIVO", motivo: "Fora do código de produção: fixture/dado de teste." } },
+    });
+    const deDocs = achado({
+      id: "d1", fingerprint: "d", title: "Link http", filePath: "docs/rel.html",
+      preTriagem: { contexto: "DOCUMENTACAO", sinais: [], sugestao: { tipo: "FALSO_POSITIVO", motivo: "Fora do código de produção: documentação." } },
+    });
+    api.listFindings.mockResolvedValue([provavel, deTeste, deDocs, FINDINGS[1]]);
+    api.acceptSuggestions.mockResolvedValue({ accepted: 2, byContext: { FIXTURE: 1, DOCUMENTACAO: 1 } });
+    renderPage();
+
+    const painel = await screen.findByRole("region", { name: "Pré-triagem" });
+    expect(within(painel).getByText("1 provável vulnerabilidade")).toBeInTheDocument();
+    expect(within(painel).getByText(/2 achados fora do código de produção/)).toBeInTheDocument();
+    expect(within(painel).getByText(/1 fixture · 1 documentação/)).toBeInTheDocument();
+
+    const linha = screen.getByText("Path traversal no upload").closest("tr")!;
+    expect(within(linha).getByText("provável vulnerabilidade")).toBeInTheDocument();
+    expect(within(screen.getByText("Hash bcrypt").closest("tr")!).getByText("fixture")).toBeInTheDocument();
+
+    fireEvent.click(within(painel).getByRole("button", { name: "Ver só esses" }));
+    expect(screen.queryByText("Hash bcrypt")).not.toBeInTheDocument();
+    expect(screen.getByText("1 de 4 achados")).toBeInTheDocument();
+
+    fireEvent.click(within(linha).getByRole("button", { name: "Detalhes" }));
+    expect(screen.getByText("O DAST já confirmou CWE-22 nesta aplicação.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ver vulnerabilidade" })).toHaveAttribute("href", "/findings/v9");
+
+    fireEvent.click(within(painel).getByRole("button", { name: "Aceitar sugestões (2)" }));
+    await waitFor(() => expect(api.acceptSuggestions).toHaveBeenCalledWith("imp-2"));
+    expect(await screen.findByText("2 achados marcados como falso-positivo.")).toBeInTheDocument();
   });
 
   it("salvar a nota logo depois de mudar o status não desfaz a triagem (lista ainda desatualizada)", async () => {

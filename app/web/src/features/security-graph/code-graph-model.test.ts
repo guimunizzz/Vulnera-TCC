@@ -28,7 +28,7 @@ function achado(over: Partial<CodeFinding>): CodeFinding {
     id: `f${seq}`, importId: "i", projectId: "p", fingerprint: `fp${seq}`, category: "SAST", ruleId: "regra", title: `Achado ${seq}`,
     severity: "MEDIUM", cweId: null, filePath: null, startLine: null, endLine: null, snippet: null, packageName: null, packageVersion: null,
     purl: null, fixedVersion: null, advisoryId: null, cvssScore: null, cvssVector: null, description: null, recommendation: null, helpUri: null,
-    triageStatus: "NEW", triageNote: null, triagedByName: null, triagedAt: null, triageInherited: false, promotedVulnerability: null, ...over,
+    triageStatus: "NEW", triageNote: null, triagedByName: null, triagedAt: null, triageInherited: false, promotedVulnerability: null, preTriagem: { contexto: "PRODUCAO", sinais: [], sugestao: null }, ...over,
   };
 }
 
