@@ -28,7 +28,8 @@ export function tamanhoLegivel(bytes: number): string {
 export function validarArquivo(file: Pick<File, "name" | "size">): string | null {
   const nome = file.name.toLowerCase();
   if (!EXTENSOES.some((ext) => nome.endsWith(ext))) return "Envie o arquivo .sarif ou .json gerado pela ferramenta.";
-  if (file.size === 0) return "O arquivo está vazio.";
+  if (file.size === 0)
+    return "O arquivo está vazio: a ferramenta falhou antes de gravar. Veja o erro no terminal e rode de novo — no Windows, o Semgrep precisa de $env:PYTHONUTF8=1 antes do comando.";
   if (file.size > LIMITE_IMPORTACAO_BYTES) return `O arquivo tem ${tamanhoLegivel(file.size)}; o limite é 10 MB.`;
   return null;
 }

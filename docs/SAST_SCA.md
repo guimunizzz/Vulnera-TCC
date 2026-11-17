@@ -19,10 +19,40 @@ por humano, SLA, VRS, remediação e relatório.
 
    | Ferramenta | Comando | Formato |
    |---|---|---|
-   | Semgrep | `semgrep scan --config p/default --sarif --output semgrep.sarif` | SARIF |
-   | CodeQL | `codeql database analyze db --format=sarif-latest --output=codeql.sarif` | SARIF |
-   | Trivy (dependências) | `trivy fs --scanners vuln --format cyclonedx --output sbom.cdx.json .` | CycloneDX |
-   | Trivy (dependências) | `trivy fs --scanners vuln --format sarif --output trivy.sarif .` | SARIF |
+   | Semgrep | `semgrep scan --config p/default --exclude "node_modules" … --exclude ".env*" --sarif --output semgrep.sarif` | SARIF |
+   | CodeQL | `codeql database create db --language=javascript --source-root . --codescanning-config=codeql-config.yml` e depois `codeql database analyze db --format=sarif-latest --output=codeql.sarif` | SARIF |
+   | Trivy (dependências) | `trivy fs --scanners vuln --skip-dirs "**/node_modules" … --skip-files "**/.env*" --format cyclonedx --output sbom.cdx.json .` | CycloneDX |
+   | Trivy (dependências) | idem, com `--format sarif --output trivy.sarif` | SARIF |
+
+   **Somente o necessário para a análise.** Os comandos do guia (botão **?**)
+   ignoram `node_modules`, `vendor`, `.venv`, `venv`, `dist`, `build`,
+   `coverage`, `.next`, `.env*` e `*.min.js`: por `--exclude` no Semgrep,
+   `--skip-dirs`/`--skip-files` no Trivy e `paths-ignore` num
+   `codeql-config.yml` no CodeQL. A lista fica em `PASTAS_IGNORADAS` e
+   `ARQUIVOS_IGNORADOS` (`app/web/src/lib/code-import-receitas.ts`) e alimenta
+   todos os comandos. Os **lockfiles continuam** no scan, porque o SCA depende
+   deles. Validado em 2026-11-17 contra este repositório: Semgrep sem nenhum
+   achado em `node_modules` ou `.env`, e Trivy lendo os 3 lockfiles.
+
+   **Guia passo a passo (botão ?).** Como a análise depende de ferramentas de
+   terceiros rodando na máquina do usuário, o guia não mostra uma lista de
+   comandos soltos: a pessoa escolhe **o que analisar** (código → Semgrep,
+   dependências → Trivy), o **sistema** (detectado pelo navegador) e **como
+   rodar** (Semgrep: instalando, sem instalar via `pipx`, ou Docker; Trivy:
+   Docker ou instalando, já que não há pipx/npx para ele). O guia monta **um**
+   bloco pronto para colar, com a instalação e as correções daquele sistema
+   (`$env:PYTHONUTF8=1` no Windows, aviso de lentidão do Docker no Windows),
+   explica como abrir o terminal na pasta, diz qual arquivo deve aparecer e o
+   que fazer se ele vier vazio. CodeQL e GitHub Actions ficam em "Outras
+   ferramentas". A montagem é a função pura `montarReceita`, testada para as
+   15 combinações. O diálogo de importação aponta para o guia, e o erro de
+   arquivo vazio explica a causa provável.
+
+   **Windows:** o Semgrep nativo grava o SARIF em `cp1252` e quebra com
+   `UnicodeEncodeError` (arquivo vazio) quando algum achado tem caractere fora
+   dessa tabela. Rode antes `$env:PYTHONUTF8=1`. Medido neste repositório
+   (1.398 arquivos versionados): nativo com `PYTHONUTF8=1` levou de 1min36s a 3min46s; por Docker, com a
+   pasta do Windows montada, cerca de 9 min, com ou sem exclusões extras.
 
    Qualquer ferramenta que emita **SARIF 2.1.0** ou **CycloneDX ≥ 1.4 com a
    seção `vulnerabilities`** funciona (SonarQube, Bandit, ESLint, Grype...).
@@ -30,9 +60,8 @@ por humano, SLA, VRS, remediação e relatório.
 2. No menu, abra **SAST/SCA** (selo *new*), clique em **Importar relatório**,
    escolha o projeto e solte o arquivo. Também dá para importar pela aba
    **SAST/SCA** do projeto. Na dúvida, o botão **?** ao lado de "Importar
-   relatório" abre o guia: o fluxo em 5 passos, os comandos prontos para copiar
-   (Semgrep, Trivy, CodeQL e GitHub Actions; instalado ou por Docker) e o que é
-   bom saber antes de importar.
+   relatório" abre o guia passo a passo descrito acima, que termina em
+   "Já tenho o arquivo — importar".
 3. A tela de detalhe mostra os números, a distribuição por severidade e a lista
    de achados com filtros (severidade, origem, triagem, busca e "só novos").
 4. Em cada achado: **triar** (confirmado / falso-positivo / risco aceito, com
