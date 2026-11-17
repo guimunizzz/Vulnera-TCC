@@ -1,0 +1,89 @@
+[
+  {
+    "trecho": "maquina",
+    "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Ti (0x00002489) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "timerQuery": true,
+    "dpr": 2,
+    "canvas": [
+      2145,
+      1350
+    ]
+  },
+  {
+    "trecho": "parado-ato0-ascii",
+    "segundos": 3.02,
+    "fpsDoMonitor": 240,
+    "fpsDaCena": 60,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 4,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 0.828
+  },
+  {
+    "trecho": "parado-ato2-ascii",
+    "segundos": 3.02,
+    "fpsDoMonitor": 240.1,
+    "fpsDaCena": 60,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 4,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 0.622
+  },
+  {
+    "trecho": "parado-ato3-terreno",
+    "segundos": 3.01,
+    "fpsDoMonitor": 240.3,
+    "fpsDaCena": 60.1,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 5,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 2.026
+  },
+  {
+    "trecho": "parado-ato5-terreno",
+    "segundos": 3.01,
+    "fpsDoMonitor": 240.3,
+    "fpsDaCena": 60.1,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 5,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 1.951
+  },
+  {
+    "trecho": "parado-epilogo-rede",
+    "segundos": 3,
+    "fpsDoMonitor": 240,
+    "fpsDaCena": 59.9,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 4,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 2.3
+  },
+  {
+    "trecho": "rolando-virada-2.4-a-3.6",
+    "segundos": 2.97,
+    "fpsDoMonitor": 227.9,
+    "fpsDaCena": 59.3,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 13,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 1.389
+  },
+  {
+    "trecho": "rolando-pagina-inteira",
+    "segundos": 6.07,
+    "fpsDoMonitor": 187.6,
+    "fpsDaCena": 58.5,
+    "acima25ms": 0,
+    "maiorIntervaloMs": 21,
+    "longTasks": 0,
+    "maiorLongTaskMs": 0,
+    "gpuMsPorQuadroDaCena": 1.172
+  }
+]

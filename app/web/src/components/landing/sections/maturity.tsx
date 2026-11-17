@@ -18,9 +18,9 @@ const DOMAINS = [
   { label: "Gestão de Vulnerabilidades", score: 4 },
   { label: "Segurança de Rede", score: 3 },
   { label: "Conscientização", score: 3 },
-  { label: "Backup & Continuidade", score: 2 },
-  { label: "Monitoramento e Resposta", score: 2 },
-  { label: "Código & Dependências", score: 4 },
+  { label: "Backup e Recuperação", score: 2 },
+  { label: "Monitoramento e Logs", score: 2 },
+  { label: "Segurança no Código", score: 4 },
 ];
 
 const MAX_SCORE = 5;

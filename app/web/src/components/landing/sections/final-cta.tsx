@@ -64,7 +64,7 @@ export default function FinalCTA() {
             Pronto pra dormir tranquilo?
           </GlitchHeading>
           <p className="mt-6 text-lg text-[var(--vx-text-2)]">
-            Comece sua primeira análise em menos de 3 minutos.
+            Crie sua conta, cadastre a primeira aplicação e solicite um plano.
           </p>
           <Link
             to="/register"

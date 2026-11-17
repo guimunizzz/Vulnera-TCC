@@ -18,11 +18,11 @@
 
 import { memo, useEffect, useMemo, useState } from "react";
 import { DURACAO } from "../../../motion/tokens";
-import { CELULA_LANDING_PX, OPACIDADE_CENA, RAIO_DO_GRUPO_PX } from "./config";
+import { ALTURA_CELULA_LANDING_PX, CELULA_LANDING_PX, FONTE_LANDING_PX, OPACIDADE_CENA, PESO_FONTE_LANDING, RAIO_DO_GRUPO_PX } from "./config";
 import { estadoDaCelula, type Medidas, type Tom } from "./layout";
 
-/** Proporção de uma célula da JetBrains Mono com a entrelinha do pôster. */
-const ALTURA_POR_LARGURA = 1.75;
+/** Avanço de um caractere da JetBrains Mono, em múltiplos do tamanho da fonte. */
+const AVANCO_DA_FONTE = 0.6;
 /** Duração do crossfade — a mesma `--duration-slow` do CSS (`.vx-poster-*`). */
 const DURACAO_TROCA_MS = DURACAO.slow * 1000;
 
@@ -41,7 +41,9 @@ const comAlfa = (cor: string, alfa: number) => `color-mix(in srgb, ${cor} ${Math
 function medir(): Medidas {
   const largura = typeof window === "undefined" ? 1440 : window.innerWidth;
   const altura = typeof window === "undefined" ? 900 : window.innerHeight;
-  const alturaCelula = CELULA_LANDING_PX * ALTURA_POR_LARGURA;
+  // A mesma célula da cena WebGL (12 × 18 px, fonte a 13 px): a troca
+  // pôster → cena não muda a densidade.
+  const alturaCelula = ALTURA_CELULA_LANDING_PX;
   return {
     colunas: Math.ceil(largura / CELULA_LANDING_PX),
     linhas: Math.ceil(altura / alturaCelula),
@@ -61,7 +63,10 @@ const Ato = memo(function Ato({ ato, medidas, saindo }: { ato: number; medidas: 
       className={`vx-poster-ato absolute inset-0 m-0 overflow-hidden ${saindo ? "vx-poster-saindo" : "vx-poster-entrando"}`}
       data-poster-ato={ato}
       style={{
-        fontSize: medidas.larguraCelula / 0.6,
+        fontSize: FONTE_LANDING_PX,
+        fontWeight: PESO_FONTE_LANDING,
+        // A célula é mais larga que o avanço do glifo: o espaçamento completa.
+        letterSpacing: medidas.larguraCelula - FONTE_LANDING_PX * AVANCO_DA_FONTE,
         lineHeight: `${medidas.alturaCelula}px`,
         color: comAlfa(COR.base, OPACIDADE_CENA.saudavel),
       }}

@@ -7,7 +7,7 @@
  */
 
 import { useRef } from "react";
-import { CreditCard, Globe, Activity, FileText, type LucideIcon } from "lucide-react";
+import { CreditCard, Globe, Radar, FileText, type LucideIcon } from "lucide-react";
 import { Reveal, TituloDecodificado } from "../ui";
 import { gsap } from "../motion/gsap";
 import { useMovimentoLanding } from "../motion/use-landing-motion";
@@ -25,25 +25,25 @@ const STEPS: Step[] = [
     num: "01",
     title: "CONTRATE",
     icon: CreditCard,
-    desc: "Cliente solicita um plano, sem burocracia de contrato.",
+    desc: "Você solicita um plano na plataforma e um administrador aprova.",
   },
   {
     num: "02",
     title: "CADASTRE",
     icon: Globe,
-    desc: "Suas aplicações entram em um catálogo central.",
+    desc: "Suas aplicações e as tecnologias que elas usam entram num catálogo central.",
   },
   {
     num: "03",
-    title: "ACOMPANHE",
-    icon: Activity,
-    desc: "Findings chegam classificados por severidade (CVSS) assim que são registrados.",
+    title: "ENCONTRE",
+    icon: Radar,
+    desc: "Pentest manual, scanner DAST e relatórios SAST/SCA alimentam a mesma lista, com severidade CVSS.",
   },
   {
     num: "04",
-    title: "RECEBA",
+    title: "CORRIJA",
     icon: FileText,
-    desc: "Relatório PDF executivo pronto em segundos, direto no seu navegador — sem dado sensível saindo pra fora.",
+    desc: "Cada achado ganha um prazo conforme a severidade. No fim, o relatório PDF sai direto do seu navegador.",
   },
 ];
 
