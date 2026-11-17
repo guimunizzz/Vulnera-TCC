@@ -15,6 +15,7 @@ const STATUS_BY_ERROR: Record<string, number> = {
   MISSING_TRIAGE_STATUS: 400,
   INVALID_TRIAGE_STATUS: 400,
   INVALID_TRIAGE_NOTE: 400,
+  INVALID_CONTEXTS: 400,
   MISSING_TITLE: 400,
   MISSING_DESCRIPTION: 400,
   MISSING_OWASP_CATEGORY: 400,
@@ -105,6 +106,14 @@ export class CodeScanController {
       return res.status(200).json(updated);
     } catch (error) {
       return this.fail(res, "triage", error);
+    }
+  }
+
+  async acceptSuggestions(req: Request, res: Response): Promise<Response> {
+    try {
+      return res.status(200).json(await this.service.acceptSuggestions(req.user!, req.params.id as string, req.body?.contexts));
+    } catch (error) {
+      return this.fail(res, "acceptSuggestions", error);
     }
   }
 

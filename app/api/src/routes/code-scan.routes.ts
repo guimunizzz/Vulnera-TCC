@@ -28,6 +28,8 @@ router.post("/findings/:findingId/promote", (req, res) => controller.promote(req
 router.get("/:id", (req, res) => controller.getImport(req, res));
 router.get("/:id/findings", (req, res) => controller.listFindings(req, res));
 router.get("/:id/compare", (req, res) => controller.compare(req, res));
+// Aceita em lote as sugestões de falso-positivo por contexto (teste, docs, gerado...) da pré-triagem.
+router.post("/:id/accept-suggestions", (req, res) => controller.acceptSuggestions(req, res));
 router.get("/:id/report/data", endpointRateLimitMiddleware("report"), (req, res) => controller.getReportData(req, res));
 
 export { router as codeScanRoutes };

@@ -41,11 +41,13 @@ import { SeverityStrip } from "../components/code-imports/severity-strip";
 import { CodePromoteDialog } from "../components/code-imports/code-promote-dialog";
 import { CodeImportDialog } from "../components/code-imports/code-import-dialog";
 import { CodeReopenSuggestion } from "../components/code-imports/code-reopen-suggestion";
+import { PainelPreTriagem } from "../components/code-imports/code-pretriage-panel";
 import { BotaoVerTour, TourGuiado, type PassoTour } from "../components/tour/tour-guiado";
 import { useTourAutomatico } from "../components/tour/use-tour-automatico";
 import { cn } from "../lib/cn";
 import { FILTROS_INICIAIS, filtrarAchados, urlSegura, type FiltrosAchados } from "../lib/code-import";
 import {
+  CODE_CONTEXT_LABELS,
   CODE_FORMAT_LABELS,
   CODE_SEVERITY_LABELS,
   CODE_SEVERITY_ORDER,
@@ -199,6 +201,9 @@ export function CodeImportDetailPage() {
 
   const abaAchados = (
     <div className="flex flex-col gap-4">
+      {findingsQuery.isSuccess && (
+        <PainelPreTriagem importId={imp.id} findings={findings} recorte={filtros.preTriagem} aoFiltrar={(r) => setFiltros((f) => ({ ...f, preTriagem: r }))} />
+      )}
       <div data-tour="detalhe-filtros" className="flex flex-col gap-3 rounded-container border border-subtle bg-surface p-4">
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex min-w-campo flex-1 flex-col gap-1 text-xs text-fg-muted">
@@ -226,6 +231,19 @@ export function CodeImportDetailPage() {
                   {DAST_TRIAGE_LABELS[s]}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-fg-muted">
+            Pré-triagem
+            <select
+              className={CLASSE_SELECT}
+              value={filtros.preTriagem}
+              onChange={(e) => setFiltros((f) => ({ ...f, preTriagem: e.target.value as FiltrosAchados["preTriagem"] }))}
+            >
+              <option value="">Todos</option>
+              <option value="PROVAVEL">Prováveis vulnerabilidades</option>
+              <option value="PRODUCAO">Só código de produção</option>
+              <option value="FORA_PRODUCAO">Fora de produção</option>
             </select>
           </label>
           {imp.previousImportId && (
@@ -486,6 +504,16 @@ function LinhaAchado({
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <Badge tom={f.category === "SAST" ? "acento" : "neutro"}>{f.category}</Badge>
             {novo && <Badge tom="perigo">novo</Badge>}
+            {f.preTriagem.sugestao?.tipo === "PROVAVEL_VULNERABILIDADE" && (
+              <Badge tom="perigo" title={f.preTriagem.sugestao.motivo}>
+                provável vulnerabilidade
+              </Badge>
+            )}
+            {f.preTriagem.contexto !== "PRODUCAO" && (
+              <Badge tom="neutro" title={f.preTriagem.sugestao?.motivo ?? "Fora do código de produção"}>
+                {CODE_CONTEXT_LABELS[f.preTriagem.contexto]}
+              </Badge>
+            )}
             {f.advisoryId && <span className="font-mono text-xs text-fg-muted">{f.advisoryId}</span>}
             {f.cweId && <span className="font-mono text-xs text-fg-muted">CWE-{f.cweId}</span>}
           </div>
@@ -524,6 +552,31 @@ function LinhaAchado({
         <tr id={detalheId} className="border-t border-subtle bg-inset">
           <td colSpan={5} className="px-4 py-4">
             <div className="mb-4 flex flex-col gap-3">
+              {(f.preTriagem.sugestao || f.preTriagem.sinais.length > 0) && (
+                <div className="rounded-control border border-subtle bg-surface p-3 text-sm">
+                  <p className="text-xs font-medium uppercase text-fg-muted">Pré-triagem</p>
+                  {f.preTriagem.sugestao && (
+                    <p className="mt-1 text-fg">
+                      Sugestão: <strong>{f.preTriagem.sugestao.tipo === "FALSO_POSITIVO" ? "falso-positivo" : "provável vulnerabilidade"}</strong> —{" "}
+                      {f.preTriagem.sugestao.motivo}
+                    </p>
+                  )}
+                  {f.preTriagem.sinais.length > 0 && (
+                    <ul className="mt-1 flex list-disc flex-col gap-1 pl-5 text-fg-muted">
+                      {f.preTriagem.sinais.map((s) => (
+                        <li key={s.tipo}>
+                          {s.detalhe}{" "}
+                          {s.vulnerabilityId && (
+                            <Link className="text-accent-ink underline" to={`/findings/${s.vulnerabilityId}`}>
+                              ver vulnerabilidade
+                            </Link>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
               <DastTriageControls
                 finding={f}
                 aoErro={aoErro}

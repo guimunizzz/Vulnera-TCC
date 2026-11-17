@@ -50,6 +50,10 @@ escrito à mão:
 | 30 | `30-ajuda-github-actions.jpg` | aba GitHub Actions com o workflow pronto |
 | 31 | `31-ajuda-na-aba-do-projeto.jpg` | o mesmo **?** na aba SAST/SCA do projeto |
 | 32 | `32-ajuda-375px.jpg` | o guia a 375 px (331 px de largura, sem rolagem horizontal) |
+| 33 | `33-guia-passo-a-passo-windows.jpg` | **2026-11-17:** o guia vira passo a passo; Windows detectado, comando único com `pip install`, `$env:PYTHONUTF8=1` e os ignores |
+| 34 | `34-pre-triagem-painel-e-selos-de-contexto.jpg` | **pré-triagem:** painel "4 achados fora do código de produção" com o detalhamento por contexto, filtro *Pré-triagem* e selos (documentação, artefato gerado, script/seed, teste) |
+| 35 | `35-pre-triagem-sugestao-no-detalhe.jpg` | detalhe do achado em teste: "Sugestão: falso-positivo — Fora do código de produção: arquivo de teste" |
+| 36 | `36-pre-triagem-sugestoes-aceitas.jpg` | depois de **Aceitar sugestões (4)**: 4 viram falso-positivo, *Por triar* cai de 5 para 1, o achado de produção continua por triar |
 | 17 | `17-pos-merge-admin-menu-exposure-graph-e-sast-sca.jpg` | depois do merge da `dev` com o PR #71: o ADMIN vê **Exposure Graph** e **SAST/SCA** no menu e as importações de todos os projetos. O PENTESTER vê SAST/SCA e não vê o Exposure Graph (que é de ADMIN e CLIENT) |
 
 ## Relatórios reais passados pelo parser

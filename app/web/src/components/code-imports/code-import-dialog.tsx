@@ -28,7 +28,6 @@ import { Alert } from "../ui/alert";
 import { Progress } from "../ui/progress";
 import { cn } from "../../lib/cn";
 import { tamanhoLegivel, validarArquivo } from "../../lib/code-import";
-
 const CLASSE_SELECT = "h-touch w-full rounded-control border border-default bg-surface px-3 text-sm text-fg";
 
 export function CodeImportDialog({
@@ -187,15 +186,10 @@ export function CodeImportDialog({
           />
         </div>
 
-        <details className="rounded-control border border-subtle bg-surface p-3 text-sm text-fg-muted">
-          <summary className="cursor-pointer text-fg">Como gerar o relatório</summary>
-          <ul className="mt-2 flex flex-col gap-2 font-mono text-xs">
-            <li>semgrep scan --config p/default --sarif --output semgrep.sarif</li>
-            <li>codeql database analyze db --format=sarif-latest --output=codeql.sarif</li>
-            <li>trivy fs --scanners vuln --format cyclonedx --output sbom.cdx.json .</li>
-            <li>trivy fs --scanners vuln --format sarif --output trivy.sarif .</li>
-          </ul>
-        </details>
+        <p className="text-xs text-fg-muted">
+          Ainda não tem o arquivo? Feche e clique no <strong className="text-fg">?</strong> ao lado de “Importar relatório”: ele monta o comando
+          certo para o seu sistema.
+        </p>
 
         {mutation.isPending && (
           <Progress valor={progresso} rotulo="Envio do relatório" textoDoValor={progresso < 100 ? `${progresso}% enviado` : "Processando achados..."} mostrarValor />
