@@ -9,10 +9,21 @@ status: ativo
 
 # Changelog do Projeto
 
-## 2026-11-17 — Integração Issue #51 com `dev` (em andamento)
+## 2026-11-17 — Issue #51, Etapa 6 iniciada (integração web)
 
-**🚧 Documentação reconciliada; validação técnica global pendente.** Merge local
-aberto na branch `integration/issue51-dev-20261117`; sem commit, push ou PR.
+Recebidos resultados focais A/B/C/D: 101/101 testes distintos em 19 suítes;
+lint A16, B/C10, D16 e E2 PASS; contraste 132 pares sem falhas; 21 hashes de
+backend comparados sem diferenças. D passou 48/48 em 8 suítes (59,29 s).
+`npm run build` falhou com TS2688 por tipos herdados incompletos; TSC focal com
+typeRoots local e `vite build` passaram (2.892 módulos, 1m32s). Playwright
+iniciou 11 casos no Chrome contra Vite isolado e APIs mockadas; duas tentativas
+anteriores foram interrompidas por defeitos de fixtures, corrigidos por E. Não
+há backend real no roteiro; trusted RPC do Chrome não conectou. Resultado E2E
+final aguarda; etapa segue sem aceite. [Acompanhamento](../../../SECURITY-AUTH-ETAPA-6.md).
+
+## 2026-11-17 — Integração Issue #51 com `dev` (merge local concluído)
+
+**✅ Merge local concluído em `44feabe9021ebf970b4388801687a15527b01230`**, pais `27d7b59` e `aafbc2b`; sem push. A validação documentada da Etapa 5 concluiu 100% do recorte com ressalvas. A validação global ampliada do merge foi cancelada a pedido e não equivale a aprovação integral do merge.
 Históricos de autenticação Etapas 0–4 e funcionalidades novas de `dev` foram
 preservados. Colisão entre ADR-047 Excel e ADR-047 de acesso resolvida pela
 renumeração somente do ADR de acesso para ADR-056. `/auth/register` continua
@@ -1750,3 +1761,12 @@ resolvidos e staged. Merge não commitado; worktree original preservado. A suít
 API foi interrompida a pedido do usuário, e não há resultado final das 67 suítes
 descobertas. Não declarar aprovação integral nem iniciar Etapa 5 nesta execução.
 Detalhes, validações parciais e riscos em `docs/SECURITY-AUTH-INTEGRACAO-DEV-2026-11-17.md`.
+## Histórico de sessão — Issue #51, Etapa 5 (marco inicial; substituído em 2026-11-17)
+
+Este registro descreve somente o início da implementação dos endpoints. O
+estado de 0% e as evidências pendentes foram substituídos pelo fechamento final:
+Etapa 5 concluída em 2026-11-17, 100% do recorte, aprovada com ressalvas; focais
+36/36, domínio 23/23 e suíte completa 70/70 suítes, 1152/1152 (executada antes
+dos dois casos adicionais). `/auth/register` continua ativo; sem cutover,
+frontend, migration ou alteração de schema/AuthService nesta etapa. Merge local
+`44feabe` (pais `27d7b59` e `aafbc2b`), sem push.

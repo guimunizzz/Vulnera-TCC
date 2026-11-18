@@ -386,8 +386,88 @@ Sem outbox, uma falha de processo entre commit e entrega SMTP pode deixar um
 convite preparado sem mensagem; o ADMIN pode recuperá-lo por reenvio. O cadastro
 legado continua ativo, e a corrida de unicidade entre `User` e `AccessRequest`
 segue até o cutover futuro. Ativação, consumo do convite e criação de User/JWT
-não fazem parte desta etapa. A Etapa 4 está concluída; a Etapa 5+ permanece
-futura.
+não fazem parte desta etapa. A Etapa 4 foi concluída naquele marco; a Etapa 5
+foi iniciada em 2026-11-17 e está em andamento, conforme a seção seguinte.
+
+## Etapa 5 — validação e ativação do convite (concluída em 2026-11-17; aprovada com ressalvas)
+
+### Decisão vigente do recorte
+
+A rota pública `POST /api/account-activation/validate` aceita `{ token }` e
+responde `200 { valid: boolean }`, sem identidade ou outros dados. Token mal
+formado recebe `400 INVALID_ACTIVATION_TOKEN`; convite desconhecido, expirado,
+revogado, usado, não aprovado ou conflitante com `User` recebe apenas
+`valid: false`. Essa verificação é consultiva. A rota
+`POST /api/account-activation/activate` recebe `{ token, password }` e, ao
+concluir, responde `204` sem corpo; qualquer inelegibilidade semântica retorna
+`400 INVALID_ACTIVATION_TOKEN` de forma neutra.
+
+O controller aceita somente as chaves previstas. Senha exige string, mínimo de
+8 caracteres e máximo de 72 bytes UTF-8 (limite do bcrypt); tipo inválido ou
+excesso de bytes é `INVALID_PASSWORD`, comprimento menor é `WEAK_PASSWORD`, e
+campos extras recebem `INVALID_BODY`. Respostas não cacheáveis levam
+`Cache-Control: no-store`. O parser JSON de 8 KiB e o tratamento sanitizado de
+erros atuam somente no prefixo `/api/account-activation`: JSON malformado é
+`400 INVALID_BODY`, corpo acima do limite é `413 PAYLOAD_TOO_LARGE`, charset ou
+encoding não aceito é `415 UNSUPPORTED_BODY_ENCODING`. Esses códigos refletem
+o middleware atual.
+
+Quatro token buckets independentes limitam validate e activate por IP e por
+fingerprint SHA-256 do token. Defaults documentados: 30/minuto para cada bucket
+de validate, 5/minuto para cada bucket de activate e capacidade de 5.000 chaves;
+`Retry-After` é informado, TTL não fica abaixo do refill máximo, e saturação
+falha fechada. Variáveis estão em `app/api/.env.example`.
+
+Na ativação, hash bcrypt é preparado fora da transação após pré-checagens. A
+decisão final ocorre numa única transação: lock de `AccessRequest`, lock de
+`AccessInvitation`, leitura do relógio após locks, nova checagem de elegibilidade
+e conflito de e-mail conforme collation real de `User`, consumo condicional do
+convite, criação de `User` CLIENT com `companyId` e `companyRole` nulos,
+transição para `ACTIVATED` liberando a reserva, e eventos `ACCOUNT_ACTIVATED` e
+`ACCESS_INVITATION_USED` no `AuditLog` com o novo User como ator. Deadlocks são
+repetidos até três vezes; colisão unique de User é normalizada como token
+inválido. Qualquer falha reverte o conjunto transacional. A ativação não cria
+Company, Subscription, JWT ou sessão; login existente continua sendo o passo
+posterior. Não há alteração de schema/migration, `AuthService` ou `/auth/register`.
+
+### Validação
+
+Build da API e ESLint focal da produção alterada (14 arquivos) passaram. As
+suítes focais iniciais da etapa passaram **36/36 em 53,806 s**. A regressão
+focal de 14 suítes encontrou inicialmente 300/301: um canário antigo de
+`access-request.test.ts` esperava 404 para a rota de ativação, então ajustado
+somente nesse teste para `400 INVALID_BODY` e contadores sem consumo. A repetição
+focal passou **112/112 em 24,258 s**.
+
+A suíte completa API foi executada uma única vez após estabilização: **70/70
+suítes, 1152/1152 testes, 558,037 s**. Usou apenas override process-local
+`DAST_SCAN_TIMEOUT_MS=1800000`; `.env`, testes e fontes DAST não foram alterados.
+Cobertura dos dois services novos: 84,68% statements, 76,62% branches, 93,33%
+functions e 94,25% lines (domain 84,26/76,66/87,50/96,96; limiter
+86,36/76,47/100/85,71). Branches agregados abaixo de 80%. O lint global retorna
+exit 1 somente por `UserEntity` e `UserResponseDTO` não usados em
+`vulnerability.service.ts:46` (0 warnings); mantidos fora de escopo.
+
+**Resultado final:** a rodada focal final passou 23/23 casos de domínio em 11,242 s, incluindo `REJECTED` e `EXPIRED`, sem alteração de produção. A suíte completa já havia passado em 70/70 suítes e 1152/1152 testes (558,037 s) antes dos dois casos adicionais; não se afirma 1154 na full API. Cobertura dos dois services: 84,68% statements, 76,62% branches, 93,33% functions e 94,25% lines. Lint global mantém dois erros preexistentes em `vulnerability.service.ts:46` (0 warnings). A Etapa 5 está concluída no recorte e aprovada com ressalvas; `/auth/register` segue ativo e o cutover fica para etapa futura. Ver [`SECURITY-AUTH-ETAPA-5.md`](../../SECURITY-AUTH-ETAPA-5.md) para ownership, histórico, escopo, resultados e ressalvas detalhados.
+
+## Etapa 6 — integração web (em andamento, 2026-11-17)
+
+A Etapa 6 integra os fluxos web de solicitação/verificação, ativação e revisão
+ADMIN, incluindo rotas, CTAs, sidebar, login e onboarding. Recebidas evidências
+focais de 101/101 testes distintos em 19 suítes, sem suíte global/API: A 32/32;
+clientes HTTP ADMIN+ativação 6/6; ativação UI 9/9; ADMIN UI 6/6; testes centrais
+D 48/48 em 59,29 s. Lint A16, B/C10 e B adicional2 passaram; contraste 132
+pares/0 falhas e comparação de 21 hashes de backend sem diferença.
+
+Lint D16 e E2 também passaram. O build padrão falhou em TS2688 por tipos
+incompletos herdados de workspaces ancestrais; TSC focal com typeRoots local e
+`vite build` passaram (2.892 módulos, 1m32s). Playwright iniciou 11 casos no
+Chrome instalado contra Vite isolado com APIs mockadas, sem backend real; duas
+tentativas anteriores foram interrompidas por defeitos de fixtures, corrigidos
+pelo owner E. Resultado final ainda pendente. A extensão Chrome trusted RPC não
+conectou. Playwright só será evidência de UI, sem alegação full-stack. Etapa em
+andamento, sem aceite final. Registro e pendências em
+[`SECURITY-AUTH-ETAPA-6.md`](../../SECURITY-AUTH-ETAPA-6.md).
 
 ## Relacionado
 

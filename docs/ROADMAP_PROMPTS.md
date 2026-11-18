@@ -8,6 +8,65 @@
 
 ---
 
+## Issue #51 — Etapa 6 · ✅ Concluída em 2026-11-18 (aprovada com ressalvas)
+
+Integrar à interface web os fluxos de ativação e revisão ADMIN. Abrange
+componentes e páginas, rotas, CTAs, sidebar e onboarding, seguindo as APIs
+existentes. O cadastro `/auth/register` e o cutover legado não fazem parte deste
+recorte. As evidências de Playwright com mocks validam a UI isoladamente e não
+devem ser apresentadas como teste full-stack.
+
+Validação focal recebida: 101/101 testes distintos em 19 suítes — A 32/32 em 7
+suítes (primeira rodada 30/32; repetição somente das três afetadas 14/14 em
+25 s), clientes HTTP ADMIN+ativação 6/6 em 2, ativação UI 9/9, ADMIN UI 6/6 e
+integração central D 48/48 em 8 suítes (59,29 s). Não houve suíte global/API.
+Lint A16, B/C10, D16 e E2 PASS; contraste 132 pares, zero falhas, 77 primitivos;
+21 hashes do backend comparados sem diferenças. `npm run build` falhou com
+TS2688 ambiental por tipos herdados incompletos. TSC focal com
+`--typeRoots ./node_modules/@types` passou após correção do fixture E e `vite
+build` passou (2.892 módulos, 1m32s). Playwright iniciou 11 casos no Chrome
+instalado contra Vite isolado, com APIs mockadas e sem backend real; as duas
+tentativas anteriores foram interrompidas por defeitos das fixtures, já
+corrigidos. Resultado E2E final pendente. Trusted RPC do Chrome não conectou.
+Playwright só comprova UI, não full-stack. Não concluir antes do resultado E2E.
+
+### Histórico — Issue #51, Etapa 6 (concluída em 2026-11-18; iniciada em 17/11)
+
+- Owners A/B/C: validações focais acima recebidas; correções de teste A reportadas completas.
+- Owner D integrou rotas, CTAs, sidebar, login/onboarding; testes centrais 48/48.
+- Owner E executou E2E mockado de UI: 8/11 PASS, três casos sem PASS final após rerun interrompida.
+- [Acompanhamento e limites](SECURITY-AUTH-ETAPA-6.md).
+
+---
+
+## Issue #51 — Etapa 5 · ✅ Concluída em 2026-11-17
+
+Validar publicamente convites aprovados e ativar a conta consumindo o convite
+uma única vez, criando o `User` e encerrando `AccessRequest` na mesma transação.
+Endpoints públicos `POST /api/account-activation/validate` e
+`POST /api/account-activation/activate`; sem PII na validação, com `no-store`,
+limites independentes por operação/IP/hash de token, e respostas neutras para
+convites sem elegibilidade. A validação é consultiva; somente a ativação decide
+sob locks e hora atual. Sem migration/schema, alteração de `AuthService`,
+`Company`, `Subscription`, JWT ou sessão nesta etapa. `/auth/register` segue
+ativo; cutover e UI ficam fora do escopo. Login, refresh e logout existentes
+após ativação passaram na suíte HTTP. Contratos e evidências em
+[`SECURITY-AUTH-ETAPA-5.md`](SECURITY-AUTH-ETAPA-5.md).
+
+Build, lint focal, 36/36 testes focais da etapa, matriz final de domínio 23/23 e execução completa API (70/70 suítes, 1152/1152 testes) passaram. A suíte completa foi executada antes dos dois casos finais; 1152 é o total da execução completa, sem somar os casos focais adicionais. Cobertura dos dois services: 84,68% statements, 76,62% branches, 93,33% functions e 94,25% lines. A etapa está concluída no recorte, aprovada com ressalvas.
+
+### Histórico — Issue #51, Etapa 5 (concluída, 2026-11-17)
+
+- Branch/worktree de integração: commit local `44feabe` com pais `27d7b59` e
+  `aafbc2b`; sem push. Ownership de documentação: PRD, backlog, ADR-056,
+  changelog e relatório da Etapa 5.
+- Build/lint focal, 36/36 testes da etapa, domínio final 23/23 e 70/70 suítes/1152 testes completos passaram; a suíte completa antecedeu os dois casos adicionais. Branch/worktree de integração `integration/issue51-dev-20261117`; PR não aberta; data 2026-11-17.
+- Desvios/limites: uma asserção canário antiga da própria Issue #51 foi ajustada
+  em teste; full API usou override process-local de timeout DAST; lint global
+  conserva dois imports antigos; sem UI/cutover. [Relatório](SECURITY-AUTH-ETAPA-5.md).
+
+---
+
 ## Issue #51 — Etapa 4 · ✅ Concluída em 2026-10-23
 
 Implementar fila administrativa de `AccessRequest`, decisões de aprovação/rejeição

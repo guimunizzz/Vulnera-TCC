@@ -60,3 +60,4 @@ Consumidores: Rafael e agentes que revisam a integração.
 ## Histórico
 
 - 2026-11-17 — Escopo inicial de validação ampliada reduzido pelo usuário a diagnóstico/resolução de conflitos. Atualizado para refletir resultados obtidos até a interrupção e registrar explicitamente o cancelamento da suíte API e os limites do frontend.
+- 2026-11-17 — Merge local consolidado em `44feabe9021ebf970b4388801687a15527b01230` (pais `27d7b59` e `aafbc2b`), sem push. O estado “merge ainda aberto” acima descreve o diagnóstico antes da consolidação; o worktree original permaneceu preservado. A Etapa 5 passou a ser executada em seguida, com relatório próprio.
