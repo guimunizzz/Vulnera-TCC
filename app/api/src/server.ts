@@ -4,6 +4,8 @@ import { EnvKeys } from "./config/enum/EnvKeys";
 import { makeDastScanService } from "./factories/dast-scan.factory";
 import { makeThreatIntelSyncService } from "./factories/threat-intel.factory";
 import { iniciarAgendador } from "./services/threat-intel/agendador";
+import { makeJobQueue, workerNoProcessoDaApi } from "./factories/job-queue.factory";
+import { iniciarWorkers, encerrarAoReceberSinal } from "./worker";
 
 const port = EnvVar.getNumber(EnvKeys.PORT);
 
@@ -23,6 +25,17 @@ makeDastScanService()
 // Só aqui, nunca no app.ts: os testes importam o app e não podem ligar o relógio.
 if (EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_ENABLED, "true") !== "false") {
   iniciarAgendador(makeThreatIntelSyncService(), Number(EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_INTERVAL_MIN, "360")) || 360);
+}
+
+// Fila de jobs (ADR-056). Com `memory` (padrão), nada muda: watchdog e
+// setInterval acima. Com `bullmq`, os workers sobem aqui, a menos que
+// WORKER_IN_PROCESS=false (aí rodam em `npm run worker`). Falha de conexão
+// com o Redis é logada sem derrubar a API: o ioredis segue reconectando.
+const jobQueue = makeJobQueue();
+if (jobQueue.driver === "bullmq" && workerNoProcessoDaApi()) {
+  iniciarWorkers(jobQueue)
+    .then((workers) => encerrarAoReceberSinal(() => workers.encerrar()))
+    .catch((err: Error) => console.error(`🧵 Fila bullmq: os workers não iniciaram — ${err.message}`));
 }
 
 app.listen(port, () => {
