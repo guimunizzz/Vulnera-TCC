@@ -9,7 +9,7 @@
  * seria pior do que recusar com uma mensagem clara.
  */
 
-import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { Stack, useRouter } from "expo-router";
 import {
   KeyboardAvoidingView,
@@ -21,6 +21,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useMutation } from "@tanstack/react-query";
@@ -117,13 +118,46 @@ function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const setAuth = useAuthStore((s) => s.setAuth);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const getErrorMessage = useApiError();
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const activeField = useRef<"email" | "password" | null>(null);
   const submitting = useRef(false);
   const reduced = useWorkspaceReducedMotion();
+
+  const revealPasswordField = useCallback(() => {
+    if (Platform.OS === "web") return;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated: !reduced });
+    });
+  }, [reduced]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setKeyboardOpen(true);
+      if (activeField.current === "password") {
+        // Espera o KeyboardAvoidingView aplicar o novo recuo antes de rolar até a senha/CTA.
+        timer = setTimeout(revealPasswordField, 60);
+      }
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardOpen(false);
+    });
+    return () => {
+      if (timer) clearTimeout(timer);
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [revealPasswordField]);
 
   const loginMutation = useMutation({
     mutationFn: () => authApi.login({ email: email.trim(), password }),
@@ -160,9 +194,20 @@ function LoginContent() {
   return (
     <View style={styles.flex}>
       <Stack.Screen options={{ animation: reduced ? "none" : "fade", animationDuration: 280 }} />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "web" ? undefined : "padding"}
+      >
         <ScrollView
-          contentContainerStyle={styles.container}
+          ref={scrollRef}
+          contentContainerStyle={[
+            styles.container,
+            keyboardOpen && styles.containerKeyboardOpen,
+            {
+              paddingTop: Math.max(insets.top, SPACING[6]),
+              paddingBottom: Math.max(insets.bottom, SPACING[6]) + (keyboardOpen ? SPACING[5] : 0),
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
           showsVerticalScrollIndicator={false}
@@ -192,8 +237,14 @@ function LoginContent() {
                     value={email}
                     editable={!loginMutation.isPending}
                     onChangeText={setEmail}
-                    onFocus={onFocus}
-                    onBlur={onBlur}
+                    onFocus={() => {
+                      activeField.current = "email";
+                      onFocus();
+                    }}
+                    onBlur={() => {
+                      if (activeField.current === "email") activeField.current = null;
+                      onBlur();
+                    }}
                     placeholder="voce@empresa.com"
                     placeholderTextColor={COLORS.textMuted}
                     autoCapitalize="none"
@@ -220,8 +271,15 @@ function LoginContent() {
                     value={password}
                     editable={!loginMutation.isPending}
                     onChangeText={setPassword}
-                    onFocus={onFocus}
-                    onBlur={onBlur}
+                    onFocus={() => {
+                      activeField.current = "password";
+                      onFocus();
+                      if (keyboardOpen) revealPasswordField();
+                    }}
+                    onBlur={() => {
+                      if (activeField.current === "password") activeField.current = null;
+                      onBlur();
+                    }}
                     placeholder="••••••••"
                     placeholderTextColor={COLORS.textMuted}
                     secureTextEntry
@@ -270,6 +328,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: SPACING[6],
     gap: SPACING[8],
+  },
+  containerKeyboardOpen: {
+    justifyContent: "flex-start",
+    gap: SPACING[5],
   },
   header: {
     alignItems: "center",

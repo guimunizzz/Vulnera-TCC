@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "br.com.vulnera.mobile",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#0a0a0d"
       },
