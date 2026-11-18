@@ -40,7 +40,7 @@ function NavigationIcon({ name, focused }: { name: "folder-outline" | "settings-
   </Animated.View>;
 }
 
-export function IconGlassTabBar({ state, descriptors, navigation }: TabBarProps) {
+export function IconGlassTabBar({ state, descriptors, emitter, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const reduced = useWorkspaceReducedMotion();
   const { target: blurTarget } = useActiveWorkspaceBlur();
@@ -65,15 +65,15 @@ export function IconGlassTabBar({ state, descriptors, navigation }: TabBarProps)
         <Animated.View testID="tab-selection-indicator" pointerEvents="none" style={[styles.indicator, indicator]} />
         {routes.map((route) => {
           const focused = route.key === currentKey;
-          const options = descriptors[route.key].options;
-          const title = options.tabBarAccessibilityLabel ?? options.title ?? (route.name === "home" ? "Projetos" : "Minha conta");
+          const options = descriptors[route.key]?.options;
+          const title = options?.tabBarAccessibilityLabel ?? options?.title ?? (route.name === "home" ? "Projetos" : "Minha conta");
           return <SoftPressable key={route.key} accessibilityRole="tab" accessibilityLabel={title}
             accessibilityState={{ selected: focused }} aria-selected={focused} testID={`navigation-${route.name}`} style={styles.button}
             onPress={() => {
-              const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-              if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+              const event = emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+              if (!focused && !event.defaultPrevented) navigateToTab(route.key);
             }}
-            onLongPress={() => { navigation.emit({ type: "tabLongPress", target: route.key }); }}>
+            onLongPress={() => { emitter.emit({ type: "tabLongPress", target: route.key }); }}>
             <NavigationIcon name={route.name === "home" ? "folder-outline" : "settings-outline"} focused={focused} />
           </SoftPressable>;
         })}

@@ -3,10 +3,10 @@
  * Expo exige BlurTargetView no Android; um alvo por tela evita capturas duplicadas.
  * Consumidores: layout autenticado e WorkspaceScreen, sem afetar o login.
  */
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode, type RefObject } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ComponentRef, type ReactNode, type RefObject } from "react";
 import type { View } from "react-native";
 
-type BlurTarget = RefObject<View | null>;
+type BlurTarget = RefObject<ComponentRef<typeof View> | null>;
 type ActiveBlur = { target?: BlurTarget; activate: (target: BlurTarget) => void; deactivate: (target: BlurTarget) => void };
 const ActiveBlurContext = createContext<ActiveBlur>({ activate: () => {}, deactivate: () => {} });
 export const ScreenBlurTargetContext = createContext<BlurTarget | undefined>(undefined);

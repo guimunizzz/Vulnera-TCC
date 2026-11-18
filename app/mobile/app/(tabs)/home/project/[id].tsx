@@ -78,7 +78,7 @@ export default function ProjectDetailScreen() {
       {findingsQuery.isError && <DataState error title={findingsQuery.isFetchNextPageError ? "Não foi possível carregar mais" : "Não foi possível atualizar"} message={errorMessage(findingsQuery.error)} onRetry={() => { if (findingsQuery.isFetchNextPageError) void findingsQuery.fetchNextPage(); else void findingsQuery.refetch(); }} />}
       {findingsQuery.hasNextPage && !findingsQuery.isFetchNextPageError && <ActionButton icon="add-outline" label={findingsQuery.isFetchingNextPage ? "Carregando..." : "Carregar mais vulnerabilidades"} disabled={findingsQuery.isFetching} onPress={() => { void findingsQuery.fetchNextPage(); }} />}
       <Text style={[ui.muted, { textAlign: "center" }]}>Mostrando {findings.length} de {firstPage?.pagination.total ?? findings.length}</Text>
-    </View> : null}
+    </View> : undefined}
   /></WorkspaceScreen>;
 }
 const styles = StyleSheet.create({

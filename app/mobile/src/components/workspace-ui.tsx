@@ -3,7 +3,7 @@
  * Unifica navegação, contraste e estados de dados sem alterar o login.
  * Consumidores: Home, detalhes de projeto/finding e Configurações.
  */
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ComponentRef, type ReactNode } from "react";
 import { ActivityIndicator, RefreshControl, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -36,7 +36,7 @@ export function WorkspaceScreen({ children, scroll = true, refreshing = false, o
 }) {
   const bottom = useTabBarClearance();
   const internalScroll = useWorkspaceScroll();
-  const blurTarget = useRef<View | null>(null);
+  const blurTarget = useRef<ComponentRef<typeof View> | null>(null);
   const { activate, deactivate } = useActiveWorkspaceBlur();
   useFocusEffect(useCallback(() => { activate(blurTarget); return () => deactivate(blurTarget); }, [activate, deactivate]));
   return <WorkspaceContentMotionProvider><ScreenBlurTargetContext.Provider value={blurTarget}><SafeAreaView edges={["top", "left", "right"]} style={styles.screen}>

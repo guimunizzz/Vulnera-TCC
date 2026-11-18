@@ -9,7 +9,7 @@
  * seria pior do que recusar com uma mensagem clara.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { Stack, useRouter } from "expo-router";
 import {
   KeyboardAvoidingView,
@@ -121,7 +121,7 @@ function LoginContent() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const getErrorMessage = useApiError();
-  const passwordInput = useRef<TextInput>(null);
+  const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
   const submitting = useRef(false);
   const reduced = useWorkspaceReducedMotion();
 

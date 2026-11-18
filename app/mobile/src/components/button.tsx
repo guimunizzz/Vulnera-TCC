@@ -43,7 +43,6 @@ export function Button({
   const inativo = disabled || loading;
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const PressTarget = soft ? SoftPressable : AnimatedPressable;
 
   const pressHandlers = {
     onPressIn: () => {
@@ -54,6 +53,15 @@ export function Button({
     },
   };
 
+  const sharedProps = {
+    onPress,
+    disabled: inativo,
+    accessibilityRole: "button" as const,
+    accessibilityLabel: children,
+    accessibilityState: { disabled: inativo, busy: loading },
+    "aria-busy": loading,
+  };
+
   const label = loading ? (
     <ActivityIndicator color={cor.texto} size="small" />
   ) : (
@@ -62,49 +70,36 @@ export function Button({
   const conteudo = soft ? <MotionReveal key={loading ? "loading" : "label"}>{label}</MotionReveal> : label;
 
   if (variant === "primario" && glass) {
-    return (
-      <PressTarget
-        onPress={onPress}
-        disabled={inativo}
-        accessibilityRole="button"
-        accessibilityLabel={children}
-        accessibilityState={{ disabled: inativo, busy: loading }}
-        aria-busy={loading}
-        {...(soft ? {} : pressHandlers)}
-        style={[styles.glassOuter, soft && { minHeight: 48 }, SHADOW.glow, inativo && styles.disabled, !soft && animatedStyle]}
-      >
-        {/* overflow:"hidden" fica no wrapper interno (não no outer com
-            sombra) — mesma regra da tab bar flutuante: sombra + blur
-            recortado no mesmo elemento corta a sombra no iOS. */}
-        <View style={styles.glassInner}>
-          <BlurView intensity={40} tint="dark" pointerEvents="none" style={StyleSheet.absoluteFill} />
-          <View pointerEvents="none" style={styles.glassTint} />
-          {conteudo}
-        </View>
-      </PressTarget>
+    const outerStyle = [styles.glassOuter, soft && { minHeight: 48 }, SHADOW.glow, inativo && styles.disabled];
+    // overflow:"hidden" fica no wrapper interno (não no outer com
+    // sombra) — mesma regra da tab bar flutuante: sombra + blur
+    // recortado no mesmo elemento corta a sombra no iOS.
+    const inner = (
+      <View style={styles.glassInner}>
+        <BlurView intensity={40} tint="dark" pointerEvents="none" style={StyleSheet.absoluteFill} />
+        <View pointerEvents="none" style={styles.glassTint} />
+        {conteudo}
+      </View>
+    );
+    return soft ? (
+      <SoftPressable {...sharedProps} style={outerStyle}>{inner}</SoftPressable>
+    ) : (
+      <AnimatedPressable {...sharedProps} {...pressHandlers} style={[...outerStyle, animatedStyle]}>{inner}</AnimatedPressable>
     );
   }
 
-  return (
-    <PressTarget
-      onPress={onPress}
-      disabled={inativo}
-      accessibilityRole="button"
-      accessibilityLabel={children}
-      accessibilityState={{ disabled: inativo, busy: loading }}
-      aria-busy={loading}
-      {...(soft ? {} : pressHandlers)}
-      style={[
-        styles.base,
-        soft && { minHeight: 48 },
-        { backgroundColor: cor.fundo, borderColor: cor.borda ?? "transparent" },
-        variant === "primario" && SHADOW.glow,
-        inativo && styles.disabled,
-        !soft && animatedStyle,
-      ]}
-    >
-      {conteudo}
-    </PressTarget>
+  const baseStyle = [
+    styles.base,
+    soft && { minHeight: 48 },
+    { backgroundColor: cor.fundo, borderColor: cor.borda ?? "transparent" },
+    variant === "primario" && SHADOW.glow,
+    inativo && styles.disabled,
+  ];
+
+  return soft ? (
+    <SoftPressable {...sharedProps} style={baseStyle}>{conteudo}</SoftPressable>
+  ) : (
+    <AnimatedPressable {...sharedProps} {...pressHandlers} style={[...baseStyle, animatedStyle]}>{conteudo}</AnimatedPressable>
   );
 }
 

@@ -39,7 +39,7 @@ export function TabIcon({
   return (
     <View style={styles.wrap}>
       <Animated.View style={[styles.pill, pillStyle]} />
-      <Ionicons name={name} color={color} size={size} />
+      <Ionicons name={name} color={typeof color === "number" || color == null ? undefined : color} size={size} />
     </View>
   );
 }
