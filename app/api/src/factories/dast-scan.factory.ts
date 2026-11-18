@@ -26,6 +26,9 @@ import { makeTechSuggestionService } from "./threat-intel.factory";
 import { CveRecordRepository } from "../repositories/cve-record.repository";
 import { EnvVar } from "../config/EnvVar";
 import { EnvKeys } from "../config/enum/EnvKeys";
+import { ApplicationRepository } from "../repositories/application.repository";
+import { ProjectRepository } from "../repositories/project.repository";
+import { ProjectMemberRepository } from "../repositories/project-member.repository";
 
 export function makeDastScanService(): DastScanService {
   const repository = new DastScanRepository(prisma);
@@ -39,7 +42,13 @@ export function makeDastScanService(): DastScanService {
   // Sensores passivos rodam depois do ZAP, na ordem desta lista.
   const nvd = new NvdCveService(new CveRecordRepository(prisma), EnvVar.getOptional(EnvKeys.NVD_API_KEY, "").trim() || null);
   const sensors = [new HeadersSensor(), new SslSensor(), new FingerprintSensor(), new InternetDbSensor(nvd), new CrtShSensor()];
-  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog, sensors, makeTechSuggestionService());
+  // ADR-056 — tenant do scan derivado da Application/Project, nunca do body.
+  const scope = {
+    applications: new ApplicationRepository(prisma),
+    projects: new ProjectRepository(prisma),
+    members: new ProjectMemberRepository(prisma),
+  };
+  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog, sensors, scope, makeTechSuggestionService());
 }
 
 export function makeDastScanController(): DastScanController {

@@ -56,6 +56,22 @@ import type { Sensor, SensorResult } from "./sensors/sensor.types";
 import type { TechSuggestionService } from "./threat-intel/tech-suggestion.service";
 import type { DastObservedAsset, DastSensorRun } from "@prisma/client";
 import type { UserRole } from "../models/user.model";
+import type { ApplicationRepository } from "../repositories/application.repository";
+import type { ProjectRepository } from "../repositories/project.repository";
+import type { ProjectMemberRepository } from "../repositories/project-member.repository";
+
+/** ADR-056 — repositórios usados para resolver o tenant de um scan a partir da Application/Project. */
+export interface DastScanScopeRepositories {
+  applications: Pick<ApplicationRepository, "findById">;
+  projects: Pick<ProjectRepository, "findById">;
+  members: Pick<ProjectMemberRepository, "findOne" | "existsForUserInApplication">;
+}
+
+interface ResolvedScanScope {
+  companyId: string | null;
+  applicationId: string | null;
+  projectId: string | null;
+}
 
 interface Actor {
   userId: string;
@@ -106,6 +122,8 @@ export class DastScanService {
     private readonly watchdog: DastWatchdog,
     /** Sensores passivos que rodam depois do ZAP, no mesmo job (spec "Sensores e Security Graph"). */
     private readonly sensors: Sensor[],
+    /** ADR-056 — resolve companyId/applicationId/projectId sem confiar no body. */
+    private readonly scope: DastScanScopeRepositories,
     /** Threat Intel (ADR-053): tecnologias vistas pelo fingerprint viram sugestão no inventário. Opcional. */
     private readonly techSuggestions?: Pick<TechSuggestionService, "sugerirDoScan">,
   ) {}
@@ -122,19 +140,32 @@ export class DastScanService {
     // digitada de duas formas ligeiramente diferentes escape o lock abaixo.
     const targetUrl = parsed.href;
 
+    const scope = await this.resolveScope(actor, dto);
+
     const active = await this.repository.findActiveForTarget(targetUrl);
     if (active) throw new Error("SCAN_ALREADY_RUNNING_FOR_TARGET");
 
-    const created = await this.repository.create({ targetUrl, requestedById: actor.userId, simulated: dto.mode === "SIMULATED" });
+    const created = await this.repository.create({
+      targetUrl,
+      requestedById: actor.userId,
+      simulated: dto.mode === "SIMULATED",
+      ...scope,
+    });
     const scan = await this.repository.update(created.id, { containerName: created.simulated ? null : containerNameFor(created.id) });
 
     await this.auditLogRepository.create({
       actorId: actor.userId,
-      companyId: null,
+      companyId: scope.companyId,
       entityType: "DastScan",
       entityId: scan.id,
       action: "CREATE",
-      diffJson: JSON.stringify({ targetUrl, mode: dto.mode, confirmedRealScan: dto.confirmedRealScan === true }),
+      diffJson: JSON.stringify({
+        targetUrl,
+        mode: dto.mode,
+        confirmedRealScan: dto.confirmedRealScan === true,
+        applicationId: scope.applicationId,
+        projectId: scope.projectId,
+      }),
     });
 
     // Enfileira no watchdog em vez de disparar direto: ele decide QUANDO
@@ -398,6 +429,41 @@ export class DastScanService {
       // O status do sensor é informativo; perder o registro não pode reprovar um scan já concluído.
       console.warn(`[DAST] falha ao gravar execução do sensor ${sensorKey} do scan ${scanId}`, err);
     }
+  }
+
+  /**
+   * ADR-056 (SEC2/SEC3) — o scan manual pode dizer de qual aplicação/projeto
+   * ele é, mas o companyId SEMPRE vem da Application no banco. Sem
+   * applicationId nem projectId, o scan continua sem tenant, como antes.
+   *
+   * PENTESTER precisa ser membro do projeto informado; sem projeto, membro de
+   * algum projeto da aplicação. ADMIN pode qualquer aplicação ativa.
+   * A visibilidade dos scans não muda (ADR-056 §7): continua por requester.
+   */
+  private async resolveScope(actor: Actor, dto: CreateDastScanDTO): Promise<ResolvedScanScope> {
+    if (!dto.applicationId && !dto.projectId) return { companyId: null, applicationId: null, projectId: null };
+
+    let projectId: string | null = null;
+    let applicationId = dto.applicationId ?? null;
+    if (dto.projectId) {
+      const project = await this.scope.projects.findById(dto.projectId);
+      if (!project) throw new Error("PROJECT_NOT_FOUND");
+      if (applicationId && applicationId !== project.applicationId) throw new Error("PROJECT_APPLICATION_MISMATCH");
+      projectId = project.id;
+      applicationId = project.applicationId;
+    }
+
+    const application = applicationId ? await this.scope.applications.findById(applicationId) : null;
+    if (!application || !application.isActive) throw new Error("APPLICATION_NOT_FOUND");
+
+    if (actor.role !== "ADMIN") {
+      const allowed = projectId
+        ? !!(await this.scope.members.findOne(projectId, actor.userId))
+        : await this.scope.members.existsForUserInApplication(actor.userId, application.id);
+      if (!allowed) throw new Error("FORBIDDEN");
+    }
+
+    return { companyId: application.companyId, applicationId: application.id, projectId };
   }
 
   private async getOwnedScan(actor: Actor, id: string): Promise<DastScan> {

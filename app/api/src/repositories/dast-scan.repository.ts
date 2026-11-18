@@ -23,6 +23,10 @@ export interface CreateDastScanInput {
   targetUrl: string;
   requestedById: string;
   simulated?: boolean;
+  /** ADR-056 — tenant já resolvido pelo service (companyId derivado da Application). */
+  companyId?: string | null;
+  applicationId?: string | null;
+  projectId?: string | null;
 }
 
 export interface UpdateDastScanInput {
@@ -58,6 +62,9 @@ export class DastScanRepository {
         targetUrl: input.targetUrl,
         requestedById: input.requestedById,
         simulated: input.simulated ?? false,
+        companyId: input.companyId ?? null,
+        applicationId: input.applicationId ?? null,
+        projectId: input.projectId ?? null,
       },
     });
   }

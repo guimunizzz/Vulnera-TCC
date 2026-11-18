@@ -18,6 +18,7 @@
  *   DAST-PROG-01      progresso/fase chegam a 100/terminal no DTO
  *   DAST-SIM-01       resultado simulado é carimbado e explicado no DTO
  *   DAST-STAT-01      GET /status expõe limite de concorrência e estado do Docker
+ *   DAST-TEN-01..06   ADR-056: tenant derivado da Application, nunca do body
  */
 
 import request from "supertest";
@@ -32,6 +33,10 @@ import { DastScanRepository } from "../../src/repositories/dast-scan.repository"
 import { extractFindingsFromReport } from "../../src/services/dast-findings.service";
 import { makeDastScanService } from "../../src/factories/dast-scan.factory";
 import { resolveReportPath } from "../../src/services/zap-runner.service";
+import { seedPlan } from "../fixtures/plans.fixture";
+import { seedCompany } from "../fixtures/companies.fixture";
+import { seedApplication } from "../fixtures/applications.fixture";
+import { seedProject, seedProjectMember } from "../fixtures/projects.fixture";
 
 const PASSWORD = "senha12345";
 const FIXTURE_PATH = path.resolve(__dirname, "../fixtures/dast/zap-report-example-com.json");
@@ -590,5 +595,102 @@ describe("DAST — procedência da descoberta por execução", () => {
     } finally {
       await fs.unlink(artifact);
     }
+  });
+});
+
+describe("DAST — tenant do scan (ADR-056)", () => {
+  /** Duas empresas, cada uma com aplicação e projeto; o PENTESTER A é membro só do projeto da empresa A. */
+  async function seedTenants() {
+    const actors = await seedActors();
+    const plan = await seedPlan({ name: "Plano DAST" });
+    const companyA = await seedCompany({ name: "Empresa A", planId: plan.id });
+    const companyB = await seedCompany({ name: "Empresa B", planId: plan.id });
+    const appA = await seedApplication({ name: "App A", companyId: companyA.id, url: "https://app-a.test" });
+    const appB = await seedApplication({ name: "App B", companyId: companyB.id, url: "https://app-b.test" });
+    const projectA = await seedProject({ name: "Projeto A", applicationId: appA.id, companyId: companyA.id });
+    const projectB = await seedProject({ name: "Projeto B", applicationId: appB.id, companyId: companyB.id });
+    await seedProjectMember(projectA.id, actors.pentesterA.id);
+    return { ...actors, companyA, companyB, appA, appB, projectA, projectB };
+  }
+
+  it("DAST-TEN-01 — scan sem aplicação continua sem tenant e com trigger MANUAL", async () => {
+    const { pentesterAToken } = await seedActors();
+    const res = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://sem-tenant.test" });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ companyId: null, applicationId: null, projectId: null, trigger: "MANUAL", scheduleId: null });
+    await waitForTerminalStatus(pentesterAToken, res.body.id);
+  });
+
+  it("DAST-TEN-02 — companyId vem da Application, e o companyId do body é ignorado (SEC2)", async () => {
+    const t = await seedTenants();
+    const res = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${t.pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://app-a.test", projectId: t.projectA.id, companyId: t.companyB.id });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ companyId: t.companyA.id, applicationId: t.appA.id, projectId: t.projectA.id });
+
+    const audit = await prisma.auditLog.findFirst({ where: { entityType: "DastScan", entityId: res.body.id, action: "CREATE" } });
+    expect(audit?.companyId).toBe(t.companyA.id);
+    await waitForTerminalStatus(t.pentesterAToken, res.body.id);
+  });
+
+  it("DAST-TEN-03 — PENTESTER sem vínculo com o projeto/aplicação da empresa B recebe 403", async () => {
+    const t = await seedTenants();
+    const auth = { Authorization: `Bearer ${t.pentesterAToken}` };
+    const byProject = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://app-b.test", projectId: t.projectB.id });
+    expect(byProject.status).toBe(403);
+    const byApp = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://app-b.test", applicationId: t.appB.id });
+    expect(byApp.status).toBe(403);
+    expect(await prisma.dastScan.count()).toBe(0);
+  });
+
+  it("DAST-TEN-04 — PENTESTER membro de um projeto da aplicação pode vincular só a aplicação", async () => {
+    const t = await seedTenants();
+    const res = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${t.pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://app-a.test", applicationId: t.appA.id });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ companyId: t.companyA.id, applicationId: t.appA.id, projectId: null });
+    await waitForTerminalStatus(t.pentesterAToken, res.body.id);
+  });
+
+  it("DAST-TEN-05 — projeto de outra aplicação, aplicação inexistente ou inativa são recusados", async () => {
+    const t = await seedTenants();
+    const auth = { Authorization: `Bearer ${t.adminToken}` };
+    const mismatch = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://x.test", applicationId: t.appA.id, projectId: t.projectB.id });
+    expect(mismatch.status).toBe(400);
+    expect(mismatch.body.error).toBe("PROJECT_APPLICATION_MISMATCH");
+
+    const missing = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://x.test", applicationId: "nao-existe" });
+    expect(missing.status).toBe(404);
+
+    await prisma.application.update({ where: { id: t.appB.id }, data: { isActive: false } });
+    const inactive = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://x.test", applicationId: t.appB.id });
+    expect(inactive.status).toBe(404);
+
+    const badType = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://x.test", applicationId: 42 });
+    expect(badType.status).toBe(400);
+    expect(await prisma.dastScan.count()).toBe(0);
+  });
+
+  it("DAST-TEN-06 — vincular tenant não muda a visibilidade: outro PENTESTER do mesmo projeto não vê o scan", async () => {
+    const t = await seedTenants();
+    await seedProjectMember(t.projectA.id, t.pentesterB.id);
+    const created = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${t.pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://app-a.test", projectId: t.projectA.id });
+    expect(created.status).toBe(201);
+
+    const listB = await request(app).get("/api/dast/scans").set("Authorization", `Bearer ${t.pentesterBToken}`);
+    expect(listB.body.map((s: any) => s.id)).not.toContain(created.body.id);
+    const detailB = await request(app).get(`/api/dast/scans/${created.body.id}`).set("Authorization", `Bearer ${t.pentesterBToken}`);
+    expect(detailB.status).toBe(403);
+    await waitForTerminalStatus(t.pentesterAToken, created.body.id);
   });
 });
