@@ -12,14 +12,19 @@
  * O app.ts NUNCA importa este arquivo: os testes importam o app e não podem
  * abrir conexão com o Redis (A6).
  *
- * Fase 2: o motor conecta e encerra limpo, mas ainda NÃO consome job nenhum.
- * Threat Intel (Fase 3), DAST (Fase 4) e agendamentos (Fase 5) registram aqui
- * os seus Workers. Até lá, com QUEUE_DRIVER=bullmq, o DAST e a Threat Intel
- * continuam no motor em memória — o boot avisa isso no log.
+ * Workers registrados: Threat Intel (Fase 3). DAST (Fase 4) e agendamentos
+ * (Fase 5) entram aqui. Até a Fase 4, com QUEUE_DRIVER=bullmq, o DAST segue
+ * no watchdog em memória — o boot avisa isso no log.
  */
 
+import type { Worker } from "bullmq";
+import { EnvVar } from "./config/EnvVar";
+import { EnvKeys } from "./config/enum/EnvKeys";
 import { makeJobQueue } from "./factories/job-queue.factory";
-import type { JobQueue } from "./services/queue/job-queue";
+import { makeThreatIntelSyncService } from "./factories/threat-intel.factory";
+import { BullmqJobQueue } from "./services/queue/bullmq-job-queue";
+import { QUEUE_NAMES, type JobQueue } from "./services/queue/job-queue";
+import { iniciarWorkerThreatIntel } from "./services/queue/workers/threat-intel.worker";
 
 export interface WorkersEmExecucao {
   /** Fecha os workers (espera o job em andamento) e as conexões da fila. */
@@ -27,14 +32,24 @@ export interface WorkersEmExecucao {
 }
 
 export async function iniciarWorkers(fila: JobQueue): Promise<WorkersEmExecucao> {
-  if (fila.driver !== "bullmq") {
+  if (fila.driver !== "bullmq" || !(fila instanceof BullmqJobQueue)) {
     throw new Error("Workers só existem com QUEUE_DRIVER=bullmq; com memory a fila roda no próprio processo da API.");
   }
   await fila.verificarConexao();
-  console.log("🧵 Fila bullmq: conectada ao Redis. Nenhum worker registrado ainda (DAST e Threat Intel seguem no motor em memória até as Fases 3 e 4).");
+  console.log("🧵 Fila bullmq: conectada ao Redis. DAST segue no watchdog em memória até a Fase 4.");
+
+  const workers: Worker[] = [];
+  workers.push(
+    await iniciarWorkerThreatIntel(fila.conexaoParaWorkers(), fila.fila(QUEUE_NAMES.threatIntel), makeThreatIntelSyncService(), {
+      habilitado: EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_ENABLED, "true") !== "false",
+      intervaloMin: Number(EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_INTERVAL_MIN, "360")) || 360,
+    }),
+  );
 
   return {
     encerrar: async () => {
+      // Worker.close() espera o job em andamento terminar antes de soltar.
+      await Promise.allSettled(workers.map((w) => w.close()));
       await fila.close();
     },
   };

@@ -185,6 +185,18 @@ caminho de execução de scan.
   sync deixariam de compartilhar o espaçamento (ver riscos).
 - Jobs que falham ficam retidos (`removeOnFail: { count: 50 }`), o equivalente
   a uma DLQ, e o `ThreatSyncRun` correspondente fica FAILED com o motivo.
+- **Comportamento observado na Fase 3 (2026-11-18, BullMQ 6.7.7, compose):**
+  - criar o scheduler, ou mudar o intervalo dele, dispara uma execução
+    **na hora**. Isso equivale ao "1 min após o boot" do agendador em memória.
+  - Reiniciar a API com o mesmo intervalo **não** dispara de novo nem muda o
+    próximo horário, que continua guardado no Redis.
+  - Matar a API (SIGKILL) no meio de um sync manual: no boot, o worker marca a
+    linha RUNNING como FAILED ("interrompida"). Depois de ~30 s, o BullMQ
+    detecta o job travado e o roda de novo, e o pedido manual não se perde.
+  - Payload inválido falha na 1ª de 3 tentativas (`UnrecoverableError`) e fica
+    retido no conjunto de falhas.
+  - Uma exceção inesperada no meio da execução agora fecha a linha RUNNING
+    como FAILED. Antes ela ficava até 2 h travando a próxima.
 
 ### 6. Scans DAST agendados
 

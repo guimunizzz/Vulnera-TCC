@@ -21,9 +21,12 @@ makeDastScanService()
   })
   .catch((err) => console.error("Watchdog DAST falhou ao rodar no boot", err));
 
+const jobQueue = makeJobQueue();
+
 // Threat Intel (ADR-053): sincronização periódica com NVD, OSV, CISA KEV e EPSS.
 // Só aqui, nunca no app.ts: os testes importam o app e não podem ligar o relógio.
-if (EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_ENABLED, "true") !== "false") {
+// Com bullmq (ADR-056), o relógio é o job scheduler do worker, não este setInterval.
+if (jobQueue.driver === "memory" && EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_ENABLED, "true") !== "false") {
   iniciarAgendador(makeThreatIntelSyncService(), Number(EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_INTERVAL_MIN, "360")) || 360);
 }
 
@@ -31,7 +34,6 @@ if (EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_ENABLED, "true") !== "false") {
 // setInterval acima. Com `bullmq`, os workers sobem aqui, a menos que
 // WORKER_IN_PROCESS=false (aí rodam em `npm run worker`). Falha de conexão
 // com o Redis é logada sem derrubar a API: o ioredis segue reconectando.
-const jobQueue = makeJobQueue();
 if (jobQueue.driver === "bullmq" && workerNoProcessoDaApi()) {
   iniciarWorkers(jobQueue)
     .then((workers) => encerrarAoReceberSinal(() => workers.encerrar()))

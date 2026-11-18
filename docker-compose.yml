@@ -89,6 +89,10 @@ services:
       DAST_ZAP_STARTUP_TIMEOUT_MS: "${DAST_ZAP_STARTUP_TIMEOUT_MS:-180000}"
       DAST_FORCE_SIMULATE: "false"
       NVD_API_KEY: "${NVD_API_KEY:-}"
+      # Threat Intel (ADR-053): liga/desliga e intervalo (mínimo 15 min). Com
+      # QUEUE_DRIVER=bullmq viram o job scheduler `threat-intel-sync` (ADR-056).
+      THREAT_INTEL_SYNC_ENABLED: "${THREAT_INTEL_SYNC_ENABLED:-true}"
+      THREAT_INTEL_SYNC_INTERVAL_MIN: "${THREAT_INTEL_SYNC_INTERVAL_MIN:-360}"
       # ---------------------------------------------------------------------
       # Fila de jobs (ADR-056). memory = comportamento de sempre (watchdog em
       # memória + setInterval da Threat Intel); bullmq = fila no Redis abaixo.

@@ -15,6 +15,7 @@ import { EnvKeys } from "../config/enum/EnvKeys";
 import { parseQueueDriver, type JobQueue } from "../services/queue/job-queue";
 import { MemoryJobQueue } from "../services/queue/memory-job-queue";
 import { BullmqJobQueue } from "../services/queue/bullmq-job-queue";
+import { makeThreatIntelSyncService } from "./threat-intel.factory";
 
 let instancia: JobQueue | null = null;
 
@@ -22,7 +23,11 @@ export function makeJobQueue(): JobQueue {
   if (instancia) return instancia;
   const driver = parseQueueDriver(EnvVar.getOptional(EnvKeys.QUEUE_DRIVER, "memory"));
   // REDIS_URL é obrigatória só com bullmq: EnvVar.get falha alto se faltar.
-  instancia = driver === "bullmq" ? new BullmqJobQueue(EnvVar.get(EnvKeys.REDIS_URL)) : new MemoryJobQueue();
+  instancia =
+    driver === "bullmq"
+      ? new BullmqJobQueue(EnvVar.get(EnvKeys.REDIS_URL))
+      : // Getter, não instância: threat-intel.factory também importa esta factory.
+        new MemoryJobQueue({ threatIntel: () => makeThreatIntelSyncService() });
   return instancia;
 }
 

@@ -97,6 +97,16 @@ export class ThreatIntelSyncService {
     return this.rodando || this.pendentes.size > 0;
   }
 
+  /**
+   * ADR-056 — no boot do worker BullMQ (único executor de sync nesse motor),
+   * toda execução RUNNING é de um processo que morreu: fecha como FAILED já,
+   * sem esperar ORFA_MS, para o job "stalled" que o BullMQ devolve à fila não
+   * ser pulado como "já há uma execução em andamento".
+   */
+  async encerrarExecucoesInterrompidas(): Promise<number> {
+    return this.repository.encerrarOrfas(this.agora());
+  }
+
   /** Para testes e encerramento: resolve quando não há execução nem backfill pendente. */
   async aguardarOcioso(): Promise<void> {
     while (this.emAndamento()) await this.ultimaExecucao.catch(() => undefined).then(() => new Promise((r) => setTimeout(r, 10)));
@@ -134,118 +144,129 @@ export class ThreatIntelSyncService {
 
     const ultima = gatilho === "ASSET" ? null : await this.repository.ultimaExecucaoComFeedNvd();
     const execucao = await this.repository.iniciarExecucao(gatilho);
-    const fontes: Record<string, ResultadoFonte> = {};
-    let novosAvisos = 0;
-    let novosCasamentos = 0;
-    let kevMapa = new Map<string, EntradaKev>();
-
-    // 1. KEV
-    if (gatilho !== "ASSET") {
-      try {
-        const entradas = await this.fontes.kev();
-        kevMapa = new Map(entradas.map((e) => [e.cveId, e]));
-        const r = await this.repository.aplicarKev(entradas, DIAS_KEV_NO_FEED, inicio);
-        novosAvisos += r.criadas;
-        fontes.KEV = { ok: true, itens: entradas.length };
-      } catch (e) {
-        fontes.KEV = falha(e);
-      }
-    }
-
-    // 2. NVD — feed de publicadas
-    if (gatilho !== "ASSET") {
-      const desde = ultima
-        ? new Date(Math.max(ultima.startedAt.getTime() - 3600_000, inicio.getTime() - JANELA_MAX_FEED_MS))
-        : new Date(inicio.getTime() - JANELA_INICIAL_FEED_MS);
-      try {
-        const r = await this.fontes.nvdPublicadas(desde, inicio);
-        novosAvisos += await this.repository.gravarAvisos(r.avisos, kevMapa);
-        fontes.NVD_FEED = { ok: true, itens: r.avisos.length, ...(r.truncado ? { erro: "janela com mais CVEs que o teto; as mais antigas ficaram de fora" } : {}) };
-      } catch (e) {
-        fontes.NVD_FEED = falha(e);
-      }
-    }
-
-    const ativos = await this.assets.confirmados(apenasAtivos);
-
-    // 3. NVD — por produto
-    const produtos = agrupar(ativos.filter((a) => a.kind === "PRODUCT"));
-    if (produtos.size > 0) {
-      let itens = 0;
-      let erro: string | undefined;
-      for (const grupo of produtos.values()) {
-        const ref = grupo[0]!;
-        try {
-          const r = await this.fontes.nvdPorProduto(cpeDeBusca(ref), menorSincronizacao(grupo), inicio);
-          itens += r.avisos.length;
-          novosAvisos += await this.repository.gravarAvisos(r.avisos, kevMapa);
-          novosCasamentos += await this.casar(grupo, r.avisos, (a) => versaoCorrigidaNoNvd(r.bruto, a.id, ref.cpeVendor ?? "", ref.cpeProduct ?? ""));
-          await this.assets.marcarSincronizados(grupo.map((g) => g.id), inicio);
-        } catch (e) {
-          erro = mensagem(e);
-          // NVD fora do ar ou limitando: insistir só prolonga o bloqueio.
-          if (e instanceof FonteIndisponivel) break;
-        }
-      }
-      fontes.NVD_PRODUTOS = { ok: !erro, itens, ...(erro ? { erro } : {}) };
-    }
-
-    // 4. OSV — por pacote
-    const pacotes = agrupar(ativos.filter((a) => a.kind === "PACKAGE"));
-    if (pacotes.size > 0) {
-      try {
-        const grupos = [...pacotes.values()];
-        const ids = await this.fontes.osvLote(grupos.map((g) => ({ ecosystem: g[0]!.ecosystem ?? "", name: g[0]!.packageName ?? "", version: normalizarVersao(g[0]!.version) })));
-        const detalhes = await this.detalhesOsv([...new Set(ids.flat())]);
-        let itens = 0;
-        for (let i = 0; i < grupos.length; i++) {
-          const grupo = grupos[i]!;
-          const ref = grupo[0]!;
-          const avisos = (ids[i] ?? []).flatMap((id) => (detalhes.has(id) ? [detalhes.get(id)!] : []));
-          itens += avisos.length;
-          novosAvisos += await this.repository.gravarAvisos(avisos.map((d) => d.aviso), kevMapa);
-          const brutoPorAviso = new Map(avisos.map((d) => [d.aviso.id, d.bruto]));
-          novosCasamentos += await this.casar(
-            grupo,
-            avisos.map((d) => d.aviso),
-            (a) => versaoCorrigidaNoOsv(brutoPorAviso.get(a.id), ref.ecosystem ?? "", ref.packageName ?? "", normalizarVersao(ref.version)),
-          );
-        }
-        await this.assets.marcarSincronizados(grupos.flat().map((g) => g.id), inicio);
-        fontes.OSV = { ok: true, itens };
-      } catch (e) {
-        fontes.OSV = falha(e);
-      }
-    }
-
-    // 5. EPSS
+    // ADR-056: uma exceção daqui para baixo (banco, rede, bug) não pode deixar
+    // a linha RUNNING para trás — ela bloquearia a próxima tentativa por até
+    // ORFA_MS. Fecha como FAILED com o motivo e relança para quem chamou (o
+    // worker do BullMQ decide se é transitória e merece retry).
     try {
-      const cves = await this.repository.cvesSemEpssRecente(new Date(inicio.getTime() - EPSS_VALIDADE_MS), MAX_CVES_EPSS);
-      if (cves.length > 0) {
-        const notas = await this.fontes.epss(cves);
-        await this.repository.gravarEpss(notas, inicio);
-        fontes.EPSS = { ok: true, itens: notas.size };
+      const fontes: Record<string, ResultadoFonte> = {};
+      let novosAvisos = 0;
+      let novosCasamentos = 0;
+      let kevMapa = new Map<string, EntradaKev>();
+
+      // 1. KEV
+      if (gatilho !== "ASSET") {
+        try {
+          const entradas = await this.fontes.kev();
+          kevMapa = new Map(entradas.map((e) => [e.cveId, e]));
+          const r = await this.repository.aplicarKev(entradas, DIAS_KEV_NO_FEED, inicio);
+          novosAvisos += r.criadas;
+          fontes.KEV = { ok: true, itens: entradas.length };
+        } catch (e) {
+          fontes.KEV = falha(e);
+        }
       }
-    } catch (e) {
-      fontes.EPSS = falha(e);
+
+      // 2. NVD — feed de publicadas
+      if (gatilho !== "ASSET") {
+        const desde = ultima
+          ? new Date(Math.max(ultima.startedAt.getTime() - 3600_000, inicio.getTime() - JANELA_MAX_FEED_MS))
+          : new Date(inicio.getTime() - JANELA_INICIAL_FEED_MS);
+        try {
+          const r = await this.fontes.nvdPublicadas(desde, inicio);
+          novosAvisos += await this.repository.gravarAvisos(r.avisos, kevMapa);
+          fontes.NVD_FEED = { ok: true, itens: r.avisos.length, ...(r.truncado ? { erro: "janela com mais CVEs que o teto; as mais antigas ficaram de fora" } : {}) };
+        } catch (e) {
+          fontes.NVD_FEED = falha(e);
+        }
+      }
+
+      const ativos = await this.assets.confirmados(apenasAtivos);
+
+      // 3. NVD — por produto
+      const produtos = agrupar(ativos.filter((a) => a.kind === "PRODUCT"));
+      if (produtos.size > 0) {
+        let itens = 0;
+        let erro: string | undefined;
+        for (const grupo of produtos.values()) {
+          const ref = grupo[0]!;
+          try {
+            const r = await this.fontes.nvdPorProduto(cpeDeBusca(ref), menorSincronizacao(grupo), inicio);
+            itens += r.avisos.length;
+            novosAvisos += await this.repository.gravarAvisos(r.avisos, kevMapa);
+            novosCasamentos += await this.casar(grupo, r.avisos, (a) => versaoCorrigidaNoNvd(r.bruto, a.id, ref.cpeVendor ?? "", ref.cpeProduct ?? ""));
+            await this.assets.marcarSincronizados(grupo.map((g) => g.id), inicio);
+          } catch (e) {
+            erro = mensagem(e);
+            // NVD fora do ar ou limitando: insistir só prolonga o bloqueio.
+            if (e instanceof FonteIndisponivel) break;
+          }
+        }
+        fontes.NVD_PRODUTOS = { ok: !erro, itens, ...(erro ? { erro } : {}) };
+      }
+
+      // 4. OSV — por pacote
+      const pacotes = agrupar(ativos.filter((a) => a.kind === "PACKAGE"));
+      if (pacotes.size > 0) {
+        try {
+          const grupos = [...pacotes.values()];
+          const ids = await this.fontes.osvLote(grupos.map((g) => ({ ecosystem: g[0]!.ecosystem ?? "", name: g[0]!.packageName ?? "", version: normalizarVersao(g[0]!.version) })));
+          const detalhes = await this.detalhesOsv([...new Set(ids.flat())]);
+          let itens = 0;
+          for (let i = 0; i < grupos.length; i++) {
+            const grupo = grupos[i]!;
+            const ref = grupo[0]!;
+            const avisos = (ids[i] ?? []).flatMap((id) => (detalhes.has(id) ? [detalhes.get(id)!] : []));
+            itens += avisos.length;
+            novosAvisos += await this.repository.gravarAvisos(avisos.map((d) => d.aviso), kevMapa);
+            const brutoPorAviso = new Map(avisos.map((d) => [d.aviso.id, d.bruto]));
+            novosCasamentos += await this.casar(
+              grupo,
+              avisos.map((d) => d.aviso),
+              (a) => versaoCorrigidaNoOsv(brutoPorAviso.get(a.id), ref.ecosystem ?? "", ref.packageName ?? "", normalizarVersao(ref.version)),
+            );
+          }
+          await this.assets.marcarSincronizados(grupos.flat().map((g) => g.id), inicio);
+          fontes.OSV = { ok: true, itens };
+        } catch (e) {
+          fontes.OSV = falha(e);
+        }
+      }
+
+      // 5. EPSS
+      try {
+        const cves = await this.repository.cvesSemEpssRecente(new Date(inicio.getTime() - EPSS_VALIDADE_MS), MAX_CVES_EPSS);
+        if (cves.length > 0) {
+          const notas = await this.fontes.epss(cves);
+          await this.repository.gravarEpss(notas, inicio);
+          fontes.EPSS = { ok: true, itens: notas.size };
+        }
+      } catch (e) {
+        fontes.EPSS = falha(e);
+      }
+
+      // 6. Notificações
+      const enviadas = await this.notificar();
+
+      const algumaFalhou = Object.values(fontes).some((f) => !f.ok);
+      const todasFalharam = Object.keys(fontes).length > 0 && Object.values(fontes).every((f) => !f.ok);
+      const status = todasFalharam ? "FAILED" : algumaFalhou ? "PARTIAL" : "OK";
+      await this.repository.concluirExecucao(execucao.id, {
+        status,
+        finishedAt: this.agora(),
+        sources: fontes as object,
+        newAdvisories: novosAvisos,
+        newMatches: novosCasamentos,
+        notifications: enviadas,
+        errorMessage: algumaFalhou ? Object.entries(fontes).filter(([, f]) => !f.ok).map(([k, f]) => `${k}: ${f.erro}`).join("; ") : null,
+      });
+      return { id: execucao.id, status, newAdvisories: novosAvisos, newMatches: novosCasamentos, notifications: enviadas, sources: fontes };
+    } catch (err) {
+      await this.repository
+        .concluirExecucao(execucao.id, { status: "FAILED", finishedAt: this.agora(), errorMessage: `falha inesperada: ${mensagem(err)}` })
+        .catch(() => undefined);
+      throw err;
     }
-
-    // 6. Notificações
-    const enviadas = await this.notificar();
-
-    const algumaFalhou = Object.values(fontes).some((f) => !f.ok);
-    const todasFalharam = Object.keys(fontes).length > 0 && Object.values(fontes).every((f) => !f.ok);
-    const status = todasFalharam ? "FAILED" : algumaFalhou ? "PARTIAL" : "OK";
-    await this.repository.concluirExecucao(execucao.id, {
-      status,
-      finishedAt: this.agora(),
-      sources: fontes as object,
-      newAdvisories: novosAvisos,
-      newMatches: novosCasamentos,
-      notifications: enviadas,
-      errorMessage: algumaFalhou ? Object.entries(fontes).filter(([, f]) => !f.ok).map(([k, f]) => `${k}: ${f.erro}`).join("; ") : null,
-    });
-    return { id: execucao.id, status, newAdvisories: novosAvisos, newMatches: novosCasamentos, notifications: enviadas, sources: fontes };
   }
 
   /**

@@ -70,7 +70,8 @@ describe("makeJobQueue", () => {
 
 describe("worker", () => {
   it("QUEUE-04 — iniciarWorkers recusa o motor memory", async () => {
-    await expect(iniciarWorkers(new MemoryJobQueue())).rejects.toThrow(/QUEUE_DRIVER=bullmq/);
+    const memoria = new MemoryJobQueue({ threatIntel: () => ({ executar: async () => null, emAndamento: () => false }) });
+    await expect(iniciarWorkers(memoria)).rejects.toThrow(/QUEUE_DRIVER=bullmq/);
   });
 });
 

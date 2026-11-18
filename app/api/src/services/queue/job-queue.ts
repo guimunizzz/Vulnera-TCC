@@ -29,8 +29,25 @@ export const QUEUE_NAMES = {
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
+/** Gatilhos da Threat Intel, os mesmos do `ThreatSyncRun.trigger` (ADR-053). */
+export type GatilhoThreatIntel = "SCHEDULED" | "MANUAL" | "ASSET";
+
+/** Payload da fila `threat-intel`: só o gatilho e, no backfill, ids de TechAsset. */
+export interface ThreatIntelJobData {
+  trigger: GatilhoThreatIntel;
+  assetIds?: string[];
+}
+
 export interface JobQueue {
   readonly driver: QueueDriver;
+  /**
+   * Threat Intel (Fase 3): sincronização manual ou backfill de tecnologias.
+   * memory: dispara no próprio processo, em segundo plano, como sempre.
+   * bullmq: vira job na fila `threat-intel` (concorrência 1 no worker).
+   */
+  enfileirarThreatIntel(dados: ThreatIntelJobData): Promise<void>;
+  /** Há sincronização rodando ou esperando a vez? Alimenta o "sincronizando" da tela. */
+  threatIntelEmAndamento(): Promise<boolean>;
   /**
    * Prova que o motor está utilizável. memory: nada a provar. bullmq: uma ida
    * e volta autenticada ao Redis — rejeita com a causa (senha errada, Redis
