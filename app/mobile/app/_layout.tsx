@@ -27,11 +27,15 @@ import {
 } from "@expo-google-fonts/archivo";
 import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from "@expo-google-fonts/jetbrains-mono";
 import { queryClient } from "../src/lib/query-client";
-import { COLORS, FONT_FAMILY } from "../src/theme/tokens";
+import { FONT_FAMILY } from "../src/theme/tokens";
+import { useAppTheme } from "../src/theme/use-app-theme";
+import { useThemeStore } from "../src/store/theme.store";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const { colors, workspace } = useAppTheme();
+  const themeHydrated = useThemeStore((state) => state.hasHydrated);
   useEffect(() => {
     if (Platform.OS === "web") return;
     const listener = AppState.addEventListener("change", (state) => focusManager.setFocused(state === "active"));
@@ -51,26 +55,26 @@ export default function RootLayout() {
     // cai pra fonte do sistema sozinho (nome de família não registrado não
     // trava nada); o que NÃO pode acontecer é a tela ficar presa em `null`
     // pra sempre esperando um `fontsLoaded` que nunca vira true.
-    if (fontsLoaded || fontError) {
+    if ((fontsLoaded || fontError) && themeHydrated) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, themeHydrated]);
 
-  if (!fontsLoaded && !fontError) {
+  if ((!fontsLoaded && !fontError) || !themeHydrated) {
     return null;
   }
 
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <StatusBar style="light" />
+        <StatusBar style={workspace.statusBarStyle} />
         <Stack
           screenOptions={{
-            headerStyle: { backgroundColor: COLORS.surface },
-            headerTintColor: COLORS.textPrimary,
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.textPrimary,
             headerTitleStyle: { fontFamily: FONT_FAMILY.semibold },
             headerShadowVisible: false,
-            contentStyle: { backgroundColor: COLORS.canvas },
+            contentStyle: { backgroundColor: colors.canvas },
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />

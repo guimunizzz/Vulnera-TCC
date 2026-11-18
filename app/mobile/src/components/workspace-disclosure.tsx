@@ -9,11 +9,12 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { GlassSurface } from "./workspace-ui";
 import { SOFT_MOTION, SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
-import { WORKSPACE, workspaceStyles as ui } from "../theme/workspace";
+import { useAppTheme } from "../theme/use-app-theme";
 
 export function WorkspaceDisclosure({ title, children, initiallyExpanded = true, surface = true }: {
   title: string; children: ReactNode; initiallyExpanded?: boolean; surface?: boolean;
 }) {
+  const { workspace, ui } = useAppTheme();
   const [expanded, setExpanded] = useState(initiallyExpanded);
   const [interacted, setInteracted] = useState(false);
   const [measuredHeight, setMeasuredHeight] = useState(0);
@@ -22,7 +23,6 @@ export function WorkspaceDisclosure({ title, children, initiallyExpanded = true,
   const progress = useSharedValue(expanded ? 1 : 0);
   useEffect(() => {
     const config = { ...SOFT_MOTION, duration: reduced ? 0 : 260 };
-    // A primeira renderização usa a altura natural: não cresce durante a navegação.
     height.value = interacted ? withTiming(expanded ? measuredHeight : 0, config) : expanded ? measuredHeight : 0;
     progress.value = interacted ? withTiming(expanded ? 1 : 0, config) : expanded ? 1 : 0;
     return () => { cancelAnimation(height); cancelAnimation(progress); };
@@ -33,7 +33,7 @@ export function WorkspaceDisclosure({ title, children, initiallyExpanded = true,
     <SoftPressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded }} aria-expanded={expanded}
       onPress={() => { setInteracted(true); setExpanded((value) => !value); }} style={[styles.toggle, !surface && styles.inlineToggle]}>
       <Text style={[ui.eyebrow, styles.title]}>{title}</Text>
-      <Animated.View style={arrow}><Ionicons name="chevron-down" size={18} color={WORKSPACE.muted} /></Animated.View>
+      <Animated.View style={arrow}><Ionicons name="chevron-down" size={18} color={workspace.muted} /></Animated.View>
     </SoftPressable>
     <Animated.View testID={`disclosure-${title}`} pointerEvents={expanded ? "auto" : "none"} accessibilityElementsHidden={!expanded}
       importantForAccessibility={expanded ? "auto" : "no-hide-descendants"} aria-hidden={!expanded} style={[styles.body, body]}>

@@ -1,17 +1,8 @@
-/**
- * skeleton.tsx
- *
- * Placeholder "pulsante" no formato do conteúdo real, em vez de um spinner
- * central parado — mesma ideia do skeleton loading do Mercado Livre/
- * Instagram. `SkeletonBlock` é a peça crua (retângulo pulsando);
- * `ProjectCardSkeleton`/`FindingRowSkeleton` já vêm no formato dos cards
- * reais pra lista de loading não "pular" quando o dado chega.
- */
-
 import { useEffect, type ReactElement } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, Easing } from "react-native-reanimated";
-import { COLORS, RADIUS, SPACING } from "../theme/tokens";
+import { RADIUS, SPACING } from "../theme/tokens";
+import { useAppTheme } from "../theme/use-app-theme";
 
 export function SkeletonBlock({
   width,
@@ -24,6 +15,7 @@ export function SkeletonBlock({
   radius?: number;
   style?: object;
 }) {
+  const { colors } = useAppTheme();
   const opacity = useSharedValue(0.4);
 
   useEffect(() => {
@@ -35,7 +27,7 @@ export function SkeletonBlock({
   return (
     <Animated.View
       style={[
-        { width, height, borderRadius: radius, backgroundColor: COLORS.raised },
+        { width, height, borderRadius: radius, backgroundColor: colors.inset },
         animatedStyle,
         style,
       ]}
@@ -71,7 +63,6 @@ export function FindingRowSkeleton() {
   );
 }
 
-/** Lista de N skeletons — usar no lugar de <LoadingState/> quando o formato final já é conhecido (listas). */
 export function SkeletonList({
   count = 4,
   Item,
@@ -79,10 +70,11 @@ export function SkeletonList({
   count?: number;
   Item: () => ReactElement;
 }) {
+  const { colors } = useAppTheme();
   return (
     <View style={{ gap: SPACING[3], padding: SPACING[4] }}>
       {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={styles.card}>
+        <View key={i} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderSubtle }]}>
           <Item />
         </View>
       ))}
@@ -92,10 +84,8 @@ export function SkeletonList({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.container,
     borderWidth: 1,
-    borderColor: COLORS.borderSubtle,
     padding: SPACING[4],
   },
   row: {

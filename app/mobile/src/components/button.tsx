@@ -1,25 +1,25 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { COLORS, FONT_FAMILY, FONT_SIZE, MOTION, RADIUS, SHADOW, SPACING, TOUCH_TARGET } from "../theme/tokens";
+import { FONT_FAMILY, FONT_SIZE, MOTION, RADIUS, SHADOW, SPACING, TOUCH_TARGET } from "../theme/tokens";
+import { useAppTheme, type AppColors } from "../theme/use-app-theme";
 import { MotionReveal, SoftPressable } from "./workspace-motion";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type Variant = "primario" | "secundario" | "perigo";
 
-const VARIANTES: Record<Variant, { fundo: string; texto: string; borda?: string }> = {
-  primario: { fundo: COLORS.accent, texto: COLORS.accentFg },
-  secundario: { fundo: "transparent", texto: COLORS.textPrimary, borda: COLORS.borderDefault },
-  perigo: { fundo: "transparent", texto: COLORS.dangerInk, borda: COLORS.danger },
-};
+function getVariants(colors: AppColors): Record<Variant, { fundo: string; texto: string; borda?: string }> {
+  return {
+    primario: { fundo: colors.accent, texto: colors.accentFg },
+    secundario: { fundo: "transparent", texto: colors.textPrimary, borda: colors.borderDefault },
+    perigo: { fundo: "transparent", texto: colors.dangerInk, borda: colors.danger },
+  };
+}
 
 /**
- * Botão com alvo de toque de 44px; `soft` eleva o mínimo para 48px.
- * CTA primário ganha um brilho sutil na cor do acento; escala anima
- * no toque em todas as variantes. `glass` (só some efeito em cima de
- * `variant="primario"`) troca o preenchimento chapado por vidro fosco —
- * pontual, pedido pra tela de login, o resto do app continua sólido.
+ * Botão com alvo de toque mínimo de 44px (`soft` eleva para 48px), compatível
+ * com os temas escuro e claro.
  */
 export function Button({
   children,
@@ -36,10 +36,10 @@ export function Button({
   disabled?: boolean;
   loading?: boolean;
   glass?: boolean;
-  /** Mesmo toque amortecido das telas autenticadas, habilitado pelo login. */
   soft?: boolean;
 }) {
-  const cor = VARIANTES[variant];
+  const { isDark, colors, workspace } = useAppTheme();
+  const cor = getVariants(colors)[variant];
   const inativo = disabled || loading;
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -70,14 +70,25 @@ export function Button({
   const conteudo = soft ? <MotionReveal key={loading ? "loading" : "label"}>{label}</MotionReveal> : label;
 
   if (variant === "primario" && glass) {
-    const outerStyle = [styles.glassOuter, soft && { minHeight: 48 }, SHADOW.glow, inativo && styles.disabled];
-    // overflow:"hidden" fica no wrapper interno (não no outer com
-    // sombra) — mesma regra da tab bar flutuante: sombra + blur
-    // recortado no mesmo elemento corta a sombra no iOS.
+    const outerStyle = [
+      styles.glassOuter,
+      { borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(112,70,207,0.35)" },
+      soft && { minHeight: 48 },
+      SHADOW.glow,
+      inativo && styles.disabled,
+    ];
     const inner = (
       <View style={styles.glassInner}>
-        <BlurView intensity={40} tint="dark" pointerEvents="none" style={StyleSheet.absoluteFill} />
-        <View pointerEvents="none" style={styles.glassTint} />
+        {Platform.OS !== "android" && (
+          <BlurView intensity={40} tint={workspace.blurTint} pointerEvents="none" style={StyleSheet.absoluteFill} />
+        )}
+        <View
+          pointerEvents="none"
+          style={[
+            styles.glassTint,
+            { backgroundColor: colors.accent, opacity: isDark ? (Platform.OS === "android" ? 0.85 : 0.38) : 0.92 },
+          ]}
+        />
         {conteudo}
       </View>
     );
@@ -105,9 +116,6 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    // Pill (RADIUS.full já é o token semântico pra esse formato — avatar/pill)
-    // em vez do control padrão: CTA mais "de produto", ao estilo do botão
-    // grande do Mercado Livre, sem inventar valor de raio novo.
     minHeight: TOUCH_TARGET,
     borderRadius: RADIUS.full,
     borderWidth: 1,
@@ -126,7 +134,6 @@ const styles = StyleSheet.create({
     minHeight: TOUCH_TARGET,
     borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
   },
   glassInner: {
     flex: 1,
@@ -136,12 +143,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: SPACING[6],
   },
-  // Tint na cor do acento (não neutro) — sem isso o botão vira um vidro
-  // cinza qualquer e perde a identidade de "ação principal" que a cor
-  // sólida dava.
   glassTint: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: COLORS.accent,
-    opacity: 0.38,
   },
 });

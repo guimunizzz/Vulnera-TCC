@@ -17,8 +17,8 @@ import { ProjectCard } from "../../../src/components/project-card";
 import { DataState, FilterChip, GlassSurface, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { HomeBrand } from "../../../src/components/home-brand";
 import { WorkspaceSkeleton } from "../../../src/components/workspace-skeleton";
-import { COLORS, FONT_FAMILY } from "../../../src/theme/tokens";
-import { WORKSPACE, workspaceStyles as ui } from "../../../src/theme/workspace";
+import { FONT_FAMILY } from "../../../src/theme/tokens";
+import { useAppTheme } from "../../../src/theme/use-app-theme";
 import type { ProjectStatus } from "../../../src/types/project.types";
 import { MotionReveal, SoftPressable as Pressable, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
 
@@ -28,6 +28,7 @@ const FILTERS: { value: "ALL" | ProjectStatus; label: string }[] = [
 ];
 
 export default function HomeScreen() {
+  const { colors, workspace, ui } = useAppTheme();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const bottom = useTabBarClearance();
@@ -36,7 +37,10 @@ export default function HomeScreen() {
   const [search, setSearch] = useState("");
   const reduced = useWorkspaceReducedMotion();
   const searchFocus = useSharedValue(0);
-  const searchStyle = useAnimatedStyle(() => ({ borderColor: interpolateColor(searchFocus.value, [0, 1], [WORKSPACE.line, "rgba(167,139,250,0.5)"]), backgroundColor: interpolateColor(searchFocus.value, [0, 1], ["rgba(255,255,255,0.025)", "rgba(124,58,237,0.065)"]) }));
+  const searchStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(searchFocus.value, [0, 1], [workspace.line, workspace.searchFocusBorder]),
+    backgroundColor: interpolateColor(searchFocus.value, [0, 1], [workspace.searchBg, workspace.searchFocusBg]),
+  }));
   const query = useQuery({ queryKey: ["projects"], queryFn: ({ signal }) => projectsApi.list(signal) });
   const projects = useMemo(() => query.data ?? [], [query.data]);
   const visible = useMemo(() => projects.filter((project) =>
@@ -46,28 +50,31 @@ export default function HomeScreen() {
   const header = <View style={styles.header}>
     <View style={styles.topBar}>
       <HomeBrand />
-      <Pressable onPress={() => router.push("/(tabs)/settings")} accessibilityRole="button" accessibilityLabel="Abrir minha conta" style={styles.avatar}>
-        <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text>
+      <Pressable onPress={() => router.push("/(tabs)/settings")} accessibilityRole="button" accessibilityLabel="Abrir minha conta" style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}>
+        <Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text>
       </Pressable>
     </View>
     <MotionReveal distance={8} style={styles.hero}>
-      <Text accessibilityRole="header" style={ui.title}>Olá, {user?.name?.split(" ")[0] ?? "cliente"}<Text style={{ color: WORKSPACE.lavender }}>.</Text></Text>
+      <Text accessibilityRole="header" style={ui.title}>Olá, {user?.name?.split(" ")[0] ?? "cliente"}<Text style={{ color: workspace.lavender }}>.</Text></Text>
       <Text style={ui.body}>Acompanhe suas análises de segurança.</Text>
     </MotionReveal>
     {query.isPending && !query.data && <WorkspaceSkeleton kind="metrics" label="Carregando resumo dos projetos" />}
     {!!query.data && <MotionReveal delay={40} distance={8}><GlassSurface style={styles.metrics}>
-      <View style={styles.metric}><View style={ui.row}><Ionicons name="scan-outline" size={20} color={COLORS.severity.lowInk} /><Text style={styles.metricNumber}>{underway}</Text></View><Text style={ui.muted}>Em análise ou revisão</Text></View>
-      <View style={styles.metricDivider} />
-      <View style={styles.metric}><View style={ui.row}><Ionicons name="checkmark-done-outline" size={20} color="#8bddb0" /><Text style={styles.metricNumber}>{completed}</Text></View><Text style={ui.muted}>Projetos concluídos</Text></View>
+      <View style={styles.metric}><View style={ui.row}><Ionicons name="scan-outline" size={20} color={colors.severity.lowInk} /><Text style={[styles.metricNumber, { color: workspace.text }]}>{underway}</Text></View><Text style={ui.muted}>Em análise ou revisão</Text></View>
+      <View style={[styles.metricDivider, { backgroundColor: workspace.line }]} />
+      <View style={styles.metric}><View style={ui.row}><Ionicons name="checkmark-done-outline" size={20} color={workspace.successAccent} /><Text style={[styles.metricNumber, { color: workspace.text }]}>{completed}</Text></View><Text style={ui.muted}>Projetos concluídos</Text></View>
     </GlassSurface></MotionReveal>}
+    <GlassSurface accessibilityLabel="Abrir grafo de exposição da empresa" onPress={() => router.push("/(tabs)/home/exposure")}>
+      <View style={ui.spread}><View style={ui.grow}><Text style={ui.heading}>Grafo de exposição</Text><Text style={ui.muted}>Aplicações e categorias OWASP conectadas</Text></View><Ionicons name="git-network-outline" size={24} color={workspace.lavender} /></View>
+    </GlassSurface>
     <MotionReveal delay={80} distance={8} style={styles.portfolio}>
       <SectionHeading title="Seus projetos" meta={query.data ? `${projects.length} no total` : undefined} />
-      <Animated.View style={[styles.search, searchStyle]}>
-        <Ionicons name="search-outline" size={19} color={WORKSPACE.muted} />
-        <TextInput accessibilityLabel="Buscar projetos pelo nome" placeholder="Buscar um projeto" placeholderTextColor={WORKSPACE.muted}
-          value={search} onChangeText={setSearch} style={styles.searchInput} returnKeyType="search"
+      <Animated.View style={[styles.search, { borderColor: workspace.line }, searchStyle]}>
+        <Ionicons name="search-outline" size={19} color={workspace.muted} />
+        <TextInput accessibilityLabel="Buscar projetos pelo nome" placeholder="Buscar um projeto" placeholderTextColor={workspace.muted}
+          value={search} onChangeText={setSearch} style={[styles.searchInput, { color: workspace.text }]} returnKeyType="search"
           onFocus={() => { searchFocus.value = withTiming(1, { duration: reduced ? 0 : 180 }); }} onBlur={() => { searchFocus.value = withTiming(0, { duration: reduced ? 0 : 220 }); }} />
-        {!!search && <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => setSearch("")} style={styles.clear}><Ionicons name="close-circle" size={18} color={WORKSPACE.muted} /></Pressable>}
+        {!!search && <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => setSearch("")} style={styles.clear}><Ionicons name="close-circle" size={18} color={workspace.muted} /></Pressable>}
       </Animated.View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {FILTERS.map((item) => <FilterChip key={item.value} label={item.label} selected={filter === item.value} onPress={() => setFilter(item.value)} />)}
@@ -93,12 +100,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, gap: 12, flexGrow: 1 }, header: { gap: 20, marginBottom: 4 },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 64, paddingVertical: 8 },
-  avatar: { width: 48, height: 48, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: WORKSPACE.neutralTint, borderWidth: 1, borderColor: WORKSPACE.line },
-  avatarText: { fontFamily: FONT_FAMILY.semibold, fontSize: 16, color: WORKSPACE.secondary },
+  avatar: { width: 48, height: 48, borderRadius: 18, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  avatarText: { fontFamily: FONT_FAMILY.semibold, fontSize: 16 },
   hero: { gap: 8, paddingVertical: 4 },
-  metrics: { flexDirection: "row", gap: 16, padding: 16 }, metric: { flex: 1, gap: 6 }, metricDivider: { width: 1, backgroundColor: WORKSPACE.line },
-  metricNumber: { fontFamily: FONT_FAMILY.medium, fontSize: 26, lineHeight: 32, color: WORKSPACE.text },
-  portfolio: { gap: 12 }, search: { flexDirection: "row", alignItems: "center", paddingLeft: 16, paddingRight: 4, minHeight: 52, borderRadius: 18, borderWidth: 1, borderColor: WORKSPACE.line },
-  searchInput: { flex: 1, minWidth: 0, padding: 12, color: WORKSPACE.text, fontFamily: FONT_FAMILY.regular, fontSize: 15 },
+  metrics: { flexDirection: "row", gap: 16, padding: 16 }, metric: { flex: 1, gap: 6 }, metricDivider: { width: 1 },
+  metricNumber: { fontFamily: FONT_FAMILY.medium, fontSize: 26, lineHeight: 32 },
+  portfolio: { gap: 12 }, search: { flexDirection: "row", alignItems: "center", paddingLeft: 16, paddingRight: 4, minHeight: 52, borderRadius: 18, borderWidth: 1 },
+  searchInput: { flex: 1, minWidth: 0, padding: 12, fontFamily: FONT_FAMILY.regular, fontSize: 15 },
   clear: { width: 48, height: 48, alignItems: "center", justifyContent: "center" }, filters: { gap: 8 },
 });

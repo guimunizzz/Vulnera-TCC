@@ -1,15 +1,15 @@
 /**
  * Jornada da análise com luz que percorre apenas as etapas já alcançadas.
  * Explica o progresso real ao abrir o projeto, sem sugerir avanço da análise.
- * Consumidor: detalhe de projeto no mobile; respeita foco e movimento reduzido.
+ * Consumidor: detalhe de projeto no mobile; respeita tema e movimento reduzido.
  */
 import { useCallback, useId, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming, type SharedValue } from "react-native-reanimated";
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
-import { COLORS, FONT_FAMILY } from "../theme/tokens";
-import { WORKSPACE } from "../theme/workspace";
+import { FONT_FAMILY } from "../theme/tokens";
+import { useAppTheme, type AppColors, type AppWorkspace } from "../theme/use-app-theme";
 import { SOFT_MOTION, useWorkspaceReducedMotion } from "./workspace-motion";
 
 const STAGES = [
@@ -22,6 +22,7 @@ const JOURNEY_DURATION = 800;
 const LIGHT_WIDTH = 96;
 
 export function ProjectJourney({ status }: { status: string }) {
+  const { isDark, colors, workspace } = useAppTheme();
   const stage = STAGES.findIndex((item) => item.status === status);
   const completed = status === "COMPLETED";
   const reduced = useWorkspaceReducedMotion();
@@ -32,8 +33,6 @@ export function ProjectJourney({ status }: { status: string }) {
   const gradientId = `journey-light-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const cellWidth = width / STAGES.length;
 
-  // O foco dispara uma vez por abertura; refetch/paginação não refazem a viagem.
-  // A posição usa etapas, permitindo redimensionar sem reiniciar a animação.
   useFocusEffect(useCallback(() => {
     progress.value = reduced ? stage : 0;
     lightOpacity.value = 0;
@@ -65,32 +64,37 @@ export function ProjectJourney({ status }: { status: string }) {
 
   return <View testID="project-journey" style={styles.timeline}
     onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-    <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.rail} />
+    <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.rail, { backgroundColor: workspace.line }]} />
     <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-      style={[styles.trail, completed && styles.completedTrail, trail]} />
+      style={[
+        styles.trail,
+        { backgroundColor: completed ? colors.successInk : isDark ? "rgba(196,162,255,0.55)" : "rgba(112,70,207,0.45)" },
+        trail,
+      ]} />
     <Animated.View testID="journey-light-sweep" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
       style={[styles.light, { left: cellWidth / 2 - LIGHT_WIDTH / 2 }, light]}>
       <Svg width={LIGHT_WIDTH} height={48} viewBox={`0 0 ${LIGHT_WIDTH} 48`}>
         <Defs><RadialGradient id={gradientId}>
-          <Stop offset="0" stopColor="#c4a2ff" stopOpacity="0.58" />
-          <Stop offset="0.4" stopColor="#a47beb" stopOpacity="0.34" />
+          <Stop offset="0" stopColor={isDark ? "#c4a2ff" : "#855fea"} stopOpacity="0.58" />
+          <Stop offset="0.4" stopColor={isDark ? "#a47beb" : "#7046cf"} stopOpacity="0.34" />
           <Stop offset="1" stopColor="#8b5cf6" stopOpacity="0" />
         </RadialGradient></Defs>
         <Ellipse cx={LIGHT_WIDTH / 2} cy={24} rx={LIGHT_WIDTH / 2} ry={20} fill={`url(#${gradientId})`} />
       </Svg>
     </Animated.View>
     {STAGES.map((item, index) => <JourneyStage key={item.status} index={index} label={item.label}
-      stage={stage} completed={completed} progress={progress} lightOpacity={lightOpacity} pulse={pulse} reduced={reduced} />)}
+      stage={stage} completed={completed} progress={progress} lightOpacity={lightOpacity} pulse={pulse} reduced={reduced} colors={colors} workspace={workspace} />)}
   </View>;
 }
 
-function JourneyStage({ index, label, stage, completed, progress, lightOpacity, pulse, reduced }: {
+function JourneyStage({ index, label, stage, completed, progress, lightOpacity, pulse, reduced, colors, workspace }: {
   index: number; label: string; stage: number; completed: boolean; reduced: boolean;
   progress: SharedValue<number>; lightOpacity: SharedValue<number>; pulse: SharedValue<number>;
+  colors: AppColors; workspace: AppWorkspace;
 }) {
   const current = index === stage;
   const reached = index <= stage;
-  const color = current ? (completed ? COLORS.successInk : COLORS.severity.lowInk) : WORKSPACE.lavender;
+  const color = current ? (completed ? colors.successInk : colors.severity.lowInk) : workspace.lavender;
   const dot = useAnimatedStyle(() => ({
     transform: [{ scale: current && !reduced ? 1 + pulse.value * 0.12 : 1 }],
   }));
@@ -105,30 +109,31 @@ function JourneyStage({ index, label, stage, completed, progress, lightOpacity, 
   }));
   return <View style={styles.stage} accessible
     accessibilityLabel={`${label}: ${current && !completed ? "etapa atual" : reached ? "concluída" : "ainda não iniciada"}`}>
-    <Animated.View style={[styles.stageDot, reached && styles.stageDone, current && styles.stageCurrent,
-      current && completed && styles.stageCompleted, dot]}>
+    <Animated.View style={[
+      styles.stageDot,
+      { backgroundColor: workspace.inset, borderColor: workspace.line },
+      reached && { backgroundColor: workspace.stageDoneBg, borderColor: workspace.stageDoneBorder },
+      current && { backgroundColor: colors.severity.lowSurface, borderColor: colors.severity.lowInk },
+      current && completed && { backgroundColor: colors.successSurface, borderColor: colors.successInk },
+      dot,
+    ]}>
       <Animated.View pointerEvents="none" style={[styles.halo, { borderColor: color }, halo]} />
       <Animated.View pointerEvents="none" style={[styles.illumination, { borderColor: color }, illumination]} />
-      <Text style={[styles.stageNumber, reached && { color: WORKSPACE.text }]}>{index + 1}</Text>
+      <Text style={[styles.stageNumber, { color: reached ? workspace.text : workspace.muted }]}>{index + 1}</Text>
     </Animated.View>
-    <Text style={[styles.stageLabel, current && { color }]}>{label}</Text>
+    <Text style={[styles.stageLabel, { color: current ? color : workspace.muted }]}>{label}</Text>
   </View>;
 }
 
 const styles = StyleSheet.create({
   timeline: { flexDirection: "row", marginHorizontal: -8 },
-  rail: { position: "absolute", left: "12.5%", right: "12.5%", top: 13.5, height: 1, backgroundColor: WORKSPACE.line },
-  trail: { position: "absolute", left: "12.5%", top: 13, height: 2, backgroundColor: "rgba(196,162,255,0.55)" },
-  completedTrail: { backgroundColor: COLORS.successInk },
+  rail: { position: "absolute", left: "12.5%", right: "12.5%", top: 13.5, height: 1 },
+  trail: { position: "absolute", left: "12.5%", top: 13, height: 2 },
   light: { position: "absolute", top: -10, width: LIGHT_WIDTH, height: 48 },
   stage: { flex: 1, alignItems: "center", gap: 9 },
-  stageDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: WORKSPACE.inset,
-    borderWidth: 1, borderColor: WORKSPACE.line, alignItems: "center", justifyContent: "center" },
-  stageDone: { backgroundColor: "#34383e", borderColor: "rgba(255,255,255,0.2)" },
-  stageCurrent: { backgroundColor: COLORS.severity.lowSurface, borderColor: COLORS.severity.lowInk },
-  stageCompleted: { backgroundColor: COLORS.successSurface, borderColor: COLORS.successInk },
+  stageDot: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   illumination: { ...StyleSheet.absoluteFill, borderRadius: 14, borderWidth: 1, backgroundColor: "rgba(196,162,255,0.2)" },
   halo: { position: "absolute", top: -6, bottom: -6, left: -6, right: -6, borderRadius: 20, borderWidth: 1 },
-  stageNumber: { fontSize: 12, fontFamily: FONT_FAMILY.medium, color: WORKSPACE.muted },
-  stageLabel: { fontSize: 12, color: WORKSPACE.muted, fontFamily: FONT_FAMILY.medium, textAlign: "center" },
+  stageNumber: { fontSize: 12, fontFamily: FONT_FAMILY.medium },
+  stageLabel: { fontSize: 12, fontFamily: FONT_FAMILY.medium, textAlign: "center" },
 });

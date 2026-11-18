@@ -8,6 +8,7 @@ import { AccessibilityInfo, AppState, Platform, Pressable, View, type PressableP
 import { useFocusEffect } from "expo-router";
 import Animated, { cancelAnimation, Easing, LinearTransition, useAnimatedScrollHandler, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
+import { useAppTheme } from "../theme/use-app-theme";
 
 export const SOFT_MOTION = { duration: 200, easing: Easing.bezier(0.22, 1, 0.36, 1) };
 const RELEASE = { damping: 28, stiffness: 320, mass: 0.7, overshootClamping: true };
@@ -88,12 +89,13 @@ export function useWorkspaceScroll() {
 }
 
 export const WorkspaceAtmosphere = memo(function WorkspaceAtmosphere() {
+  const { isDark } = useAppTheme();
   const gradientId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return <View testID="workspace-atmosphere" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
     style={{ position: "absolute", top: -100, left: -80, right: -80, height: 1000 }}>
     <Svg width="100%" height="100%" viewBox="0 0 550 1000" preserveAspectRatio="xMidYMin slice">
-      <Defs><RadialGradient id={`${gradientId}-glow`}><Stop offset="0" stopColor="#9d78ef" stopOpacity="0.065" /><Stop offset="0.55" stopColor="#7c3aed" stopOpacity="0.018" /><Stop offset="1" stopColor="#7c3aed" stopOpacity="0" /></RadialGradient>
-        <RadialGradient id={`${gradientId}-mist`}><Stop offset="0" stopColor="#d8dde5" stopOpacity="0.045" /><Stop offset="1" stopColor="#d8dde5" stopOpacity="0" /></RadialGradient></Defs>
+      <Defs><RadialGradient id={`${gradientId}-glow`}><Stop offset="0" stopColor={isDark ? "#9d78ef" : "#7046cf"} stopOpacity={isDark ? "0.065" : "0.055"} /><Stop offset="0.55" stopColor="#7c3aed" stopOpacity="0.018" /><Stop offset="1" stopColor="#7c3aed" stopOpacity="0" /></RadialGradient>
+        <RadialGradient id={`${gradientId}-mist`}><Stop offset="0" stopColor={isDark ? "#d8dde5" : "#65a1f9"} stopOpacity={isDark ? "0.045" : "0.04"} /><Stop offset="1" stopColor={isDark ? "#d8dde5" : "#65a1f9"} stopOpacity="0" /></RadialGradient></Defs>
       <Circle cx="440" cy="165" r="300" fill={`url(#${gradientId}-glow)`} /><Circle cx="75" cy="620" r="280" fill={`url(#${gradientId}-mist)`} />
     </Svg>
   </View>;

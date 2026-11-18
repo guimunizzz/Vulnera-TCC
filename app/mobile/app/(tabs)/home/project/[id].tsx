@@ -15,20 +15,27 @@ import { StatusBadge } from "../../../../src/components/badge";
 import { ProjectJourney } from "../../../../src/components/project-journey";
 import { ActionButton, DataState, DetailField, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
 import { FONT_FAMILY } from "../../../../src/theme/tokens";
-import { WORKSPACE, workspaceStyles as ui } from "../../../../src/theme/workspace";
+import { useAppTheme } from "../../../../src/theme/use-app-theme";
 import { displayDate } from "../../../../src/lib/display";
 import { MotionReveal } from "../../../../src/components/workspace-motion";
 import { WorkspaceSkeleton } from "../../../../src/components/workspace-skeleton";
 import { WorkspaceDisclosure } from "../../../../src/components/workspace-disclosure";
 
 const LEVELS: Record<string, string> = { BASIC: "Básico", INTERMEDIATE: "Intermediário", ADVANCED: "Avançado" };
-const SEVERITIES = [{ key: "CRITICAL", label: "Críticas", color: "#fda4af" }, { key: "HIGH", label: "Altas", color: "#fdba74" }, { key: "MEDIUM", label: "Médias", color: "#fde68a" }, { key: "LOW", label: "Baixas", color: "#7dd3fc" }, { key: "NONE", label: "Info", color: WORKSPACE.muted }];
 
 export default function ProjectDetailScreen() {
+  const { colors, workspace, ui } = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const bottom = useTabBarClearance();
   const errorMessage = useApiError();
+  const severities = [
+    { key: "CRITICAL", label: "Críticas", color: colors.severity.criticalInk, dot: colors.severity.critical },
+    { key: "HIGH", label: "Altas", color: colors.severity.highInk, dot: colors.severity.high },
+    { key: "MEDIUM", label: "Médias", color: colors.severity.mediumInk, dot: colors.severity.medium },
+    { key: "LOW", label: "Baixas", color: colors.severity.lowInk, dot: colors.severity.low },
+    { key: "NONE", label: "Info", color: workspace.muted, dot: colors.severity.info },
+  ];
   const projectQuery = useQuery({ queryKey: ["projects", id], queryFn: ({ signal }) => projectsApi.getById(id!, signal), enabled: !!id });
   const findingsQuery = useInfiniteQuery({
     queryKey: ["vulnerabilities", "byProject", id, "paged"], initialPageParam: 1,
@@ -62,8 +69,8 @@ export default function ProjectDetailScreen() {
       {project.closedAt && <DetailField label="ENCERRAMENTO" value={displayDate(project.closedAt)} />}
     </WorkspaceDisclosure></MotionReveal>
     <MotionReveal delay={120} distance={8} style={{ gap: 16 }}><SectionHeading title="Vulnerabilidades" meta={firstPage ? `${firstPage.pagination.total} no total` : undefined} />
-      <GlassSurface style={styles.severities}>{SEVERITIES.map((item) => <View key={item.key} style={styles.severity}>
-        <View style={[styles.severityDot, { backgroundColor: item.color }]} /><Text style={[styles.severityCount, { color: item.color }]}>{firstPage ? firstPage.facets.severity[item.key] ?? 0 : "—"}</Text><Text style={styles.severityLabel}>{item.label}</Text>
+      <GlassSurface style={styles.severities}>{severities.map((item) => <View key={item.key} style={styles.severity}>
+        <View style={[styles.severityDot, { backgroundColor: item.dot }]} /><Text style={[styles.severityCount, { color: item.color }]}>{firstPage ? firstPage.facets.severity[item.key] ?? 0 : "—"}</Text><Text style={[styles.severityLabel, { color: workspace.muted }]}>{item.label}</Text>
       </View>)}</GlassSurface>
     </MotionReveal>
   </View>;
@@ -82,5 +89,5 @@ export default function ProjectDetailScreen() {
 const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, gap: 12 }, header: { gap: 20, marginBottom: 8 }, footer: { gap: 16, paddingTop: 12 }, detailsRow: { flexDirection: "row", gap: 16 },
   severities: { flexDirection: "row", padding: 12, gap: 4 }, severity: { flex: 1, alignItems: "center", gap: 6 }, severityDot: { width: 4, height: 4, borderRadius: 2 },
-  severityCount: { fontFamily: FONT_FAMILY.medium, fontSize: 24 }, severityLabel: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: WORKSPACE.muted },
+  severityCount: { fontFamily: FONT_FAMILY.medium, fontSize: 24 }, severityLabel: { fontFamily: FONT_FAMILY.regular, fontSize: 12 },
 });

@@ -31,7 +31,8 @@ import { IconGlassTabBar, TAB_TRANSITION_DURATION } from "../../src/components/i
 import { haptics } from "../../src/lib/haptics";
 import { LoadingState } from "../../src/components/states";
 import { Screen } from "../../src/components/screen";
-import { COLORS, FONT_FAMILY } from "../../src/theme/tokens";
+import { FONT_FAMILY } from "../../src/theme/tokens";
+import { useAppTheme } from "../../src/theme/use-app-theme";
 import { useWorkspaceReducedMotion, WorkspaceMotionProvider } from "../../src/components/workspace-motion";
 import { WorkspaceBlurProvider } from "../../src/components/workspace-blur";
 
@@ -40,6 +41,7 @@ export default function TabsLayout() {
 }
 
 function AuthenticatedTabs() {
+  const { colors, workspace } = useAppTheme();
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
   const pushStatus = usePushRegistration();
@@ -63,12 +65,12 @@ function AuthenticatedTabs() {
       tabBar={(props) => <IconGlassTabBar {...props} />}
       screenOptions={{
         lazy: false,
-        headerStyle: { backgroundColor: COLORS.surface },
-        headerTintColor: COLORS.textPrimary,
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.textPrimary,
         headerTitleStyle: { fontFamily: FONT_FAMILY.semibold },
         headerShadowVisible: false,
         headerShown: false,
-        sceneStyle: { backgroundColor: COLORS.canvas },
+        sceneStyle: { backgroundColor: workspace.background },
         animation: reduced ? "none" : "fade",
         transitionSpec: { animation: "timing", config: { duration: reduced ? 0 : TAB_TRANSITION_DURATION, easing: Easing.out(Easing.cubic) } },
       }}

@@ -17,7 +17,7 @@ import { SeverityBadge, StatusBadge } from "../../../../src/components/badge";
 import { EvidenceCarousel } from "../../../../src/components/evidence-carousel";
 import { ActionButton, DataState, DetailField, FilterChip, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
 import { FONT_FAMILY } from "../../../../src/theme/tokens";
-import { WORKSPACE, workspaceStyles as ui } from "../../../../src/theme/workspace";
+import { useAppTheme } from "../../../../src/theme/use-app-theme";
 import { OWASP_LABELS, fraseDoSla, VRS_BAND_LABELS } from "../../../../src/types/vulnerability.types";
 import { displayDate } from "../../../../src/lib/display";
 import { CvssRing } from "../../../../src/components/cvss-ring";
@@ -26,6 +26,7 @@ import { WorkspaceSkeleton } from "../../../../src/components/workspace-skeleton
 import { WorkspaceDisclosure } from "../../../../src/components/workspace-disclosure";
 
 export default function FindingDetailScreen() {
+  const { workspace, ui } = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [tab, setTab] = useState<"summary" | "evidence" | "comments">("summary");
   const currentUser = useAuthStore((state) => state.user);
@@ -86,8 +87,8 @@ export default function FindingDetailScreen() {
       {usersQuery.isError && <Text style={ui.muted}>Alguns nomes não estão disponíveis. O conteúdo dos comentários permanece abaixo.</Text>}
       {!commentsQuery.isPending && !commentsQuery.isError && !comments.length && <DataState title="A conversa ainda não começou" message="Os comentários registrados no web aparecerão aqui para consulta." />}
       {comments.map((comment, index) => <MotionReveal key={comment.id} animate={index < 3} distance={4} delay={Math.min(index, 2) * 30}><GlassSurface style={{ gap: 14 }}><View style={ui.row}>
-        <View style={styles.authorAvatar}><Text style={styles.authorInitial}>{comment.authorId === currentUser?.id || usersQuery.data?.some((user) => user.id === comment.authorId) ? author(comment.authorId).charAt(0).toUpperCase() : "?"}</Text></View>
-        <View style={ui.grow}><Text style={styles.authorName}>{author(comment.authorId)}</Text><Text style={ui.muted}>{displayDate(comment.createdAt, true)}</Text></View>
+        <View style={[styles.authorAvatar, { backgroundColor: workspace.neutralTint }]}><Text style={[styles.authorInitial, { color: workspace.secondary }]}>{comment.authorId === currentUser?.id || usersQuery.data?.some((user) => user.id === comment.authorId) ? author(comment.authorId).charAt(0).toUpperCase() : "?"}</Text></View>
+        <View style={ui.grow}><Text style={[styles.authorName, { color: workspace.text }]}>{author(comment.authorId)}</Text><Text style={ui.muted}>{displayDate(comment.createdAt, true)}</Text></View>
       </View><WorkspaceDisclosure title="Texto do comentário" surface={false}><Text style={ui.body}>{comment.content}</Text></WorkspaceDisclosure></GlassSurface></MotionReveal>)}
       {commentsQuery.hasNextPage && !commentsQuery.isFetchNextPageError && <ActionButton icon="add-outline" label={commentsQuery.isFetchingNextPage ? "Carregando..." : "Carregar mais comentários"} disabled={commentsQuery.isFetching} onPress={() => { void commentsQuery.fetchNextPage(); }} />}
     </>}
@@ -96,6 +97,6 @@ export default function FindingDetailScreen() {
 }
 const styles = StyleSheet.create({
   scoreCard: { flexDirection: "row", alignItems: "center", gap: 16, padding: 16 },
-  authorAvatar: { width: 38, height: 38, borderRadius: 14, backgroundColor: WORKSPACE.neutralTint, alignItems: "center", justifyContent: "center" }, authorInitial: { color: WORKSPACE.secondary, fontFamily: FONT_FAMILY.semibold },
-  authorName: { fontFamily: FONT_FAMILY.medium, color: WORKSPACE.text, fontSize: 14 },
+  authorAvatar: { width: 38, height: 38, borderRadius: 14, alignItems: "center", justifyContent: "center" }, authorInitial: { fontFamily: FONT_FAMILY.semibold },
+  authorName: { fontFamily: FONT_FAMILY.medium, fontSize: 14 },
 });

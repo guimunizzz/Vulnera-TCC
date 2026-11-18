@@ -1,47 +1,37 @@
-/**
- * states.tsx — LoadingState, EmptyState, ErrorState
- *
- * Toda tela que busca dado tem 3 desfechos possíveis além do sucesso:
- * carregando, vazio, erro. Centralizar os três aqui é o que faz a "atenção
- * ao CSS" pedida na Fase 7 render igual em Home/ProjectDetail/FindingDetail
- * em vez de cada tela inventar o próprio spinner.
- */
-
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
-import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
+import { FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../theme/tokens";
+import { useAppTheme } from "../theme/use-app-theme";
 import { Button } from "./button";
 
 export function LoadingState({ label = "Carregando..." }: { label?: string }) {
+  const { colors } = useAppTheme();
   return (
     <View style={styles.center}>
-      <ActivityIndicator color={COLORS.accentInk} size="large" />
-      <Text style={styles.mutedText}>{label}</Text>
+      <ActivityIndicator color={colors.accentInk} size="large" />
+      <Text style={[styles.mutedText, { color: colors.textMuted }]}>{label}</Text>
     </View>
   );
 }
 
-/**
- * Ilustração em camadas (mancha grande translúcida + círculo sólido com
- * ícone) em vez de um ícone solto — dá mais "corpo" ao estado vazio sem
- * precisar de um pacote de SVG/ilustração externo.
- */
 function Blob({
   glyph,
   tint,
   tintSurface,
+  blurTint,
 }: {
   glyph: keyof typeof Ionicons.glyphMap;
   tint: string;
   tintSurface: string;
+  blurTint: "dark" | "light";
 }) {
   return (
     <Animated.View entering={ZoomIn.duration(420)} style={styles.blobWrap}>
       <View style={[styles.blobHalo, { backgroundColor: tintSurface }]} />
       <View style={[styles.blobCore, { borderColor: tint }]}>
-        <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+        {Platform.OS !== "android" && <BlurView intensity={30} tint={blurTint} style={StyleSheet.absoluteFill} />}
         <View style={[styles.blobTint, { backgroundColor: tintSurface }]} />
         <Ionicons name={glyph} size={30} color={tint} />
       </View>
@@ -50,20 +40,22 @@ function Blob({
 }
 
 export function EmptyState({ title, subtitle }: { title: string; subtitle?: string }) {
+  const { colors, workspace } = useAppTheme();
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.center}>
-      <Blob glyph="file-tray-outline" tint={COLORS.accentInk} tintSurface={COLORS.accentSurface} />
-      <Text style={styles.title}>{title}</Text>
-      {subtitle && <Text style={styles.mutedText}>{subtitle}</Text>}
+      <Blob glyph="file-tray-outline" tint={colors.accentInk} tintSurface={colors.accentSurface} blurTint={workspace.blurTint} />
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
+      {subtitle && <Text style={[styles.mutedText, { color: colors.textMuted }]}>{subtitle}</Text>}
     </Animated.View>
   );
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { colors, workspace } = useAppTheme();
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.center}>
-      <Blob glyph="alert-circle-outline" tint={COLORS.dangerInk} tintSurface={COLORS.dangerSurface} />
-      <Text style={styles.errorText}>{message}</Text>
+      <Blob glyph="alert-circle-outline" tint={colors.dangerInk} tintSurface={colors.dangerSurface} blurTint={workspace.blurTint} />
+      <Text style={[styles.errorText, { color: colors.dangerInk }]}>{message}</Text>
       {onRetry && <Button onPress={onRetry} variant="secundario">Tentar de novo</Button>}
     </Animated.View>
   );
@@ -106,19 +98,16 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   title: {
-    color: COLORS.textPrimary,
     fontSize: FONT_SIZE.base,
     fontFamily: FONT_FAMILY.semibold,
     textAlign: "center",
   },
   mutedText: {
-    color: COLORS.textMuted,
     fontSize: FONT_SIZE.sm,
     fontFamily: FONT_FAMILY.regular,
     textAlign: "center",
   },
   errorText: {
-    color: COLORS.dangerInk,
     fontSize: FONT_SIZE.sm,
     fontFamily: FONT_FAMILY.medium,
     textAlign: "center",

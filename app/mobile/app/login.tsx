@@ -41,11 +41,13 @@ import { useApiError } from "../src/hooks/use-api-error";
 import { haptics } from "../src/lib/haptics";
 import { Button } from "../src/components/button";
 import { VulneraMark } from "../src/components/vulnera-mark";
-import { COLORS, FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../src/theme/tokens";
+import { FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../src/theme/tokens";
+import { useAppTheme } from "../src/theme/use-app-theme";
 import { MotionReveal, SOFT_MOTION, useWorkspaceMotionActive, useWorkspaceReducedMotion, WorkspaceMotionProvider } from "../src/components/workspace-motion";
 
 /** Cursor com pulsação lenta; para fora da tela e respeita movimento reduzido. */
 function BlinkingCursor() {
+  const { colors } = useAppTheme();
   const active = useWorkspaceMotionActive();
   const opacity = useSharedValue(0.65);
 
@@ -65,7 +67,7 @@ function BlinkingCursor() {
 
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
-  return <Animated.View testID="login-cursor" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.cursor, style]} />;
+  return <Animated.View testID="login-cursor" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.cursor, { backgroundColor: colors.accent }, style]} />;
 }
 
 function FocusField({
@@ -75,6 +77,7 @@ function FocusField({
   icon: keyof typeof Ionicons.glyphMap;
   children: (props: { onFocus: () => void; onBlur: () => void }) => ReactNode;
 }) {
+  const { isDark, colors, workspace } = useAppTheme();
   const focus = useSharedValue(0);
   const focused = useRef(false);
   const reduced = useWorkspaceReducedMotion();
@@ -83,7 +86,7 @@ function FocusField({
     return () => cancelAnimation(focus);
   }, [focus, reduced]);
   const borderStyle = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(focus.value, [0, 1], [COLORS.borderDefault, COLORS.accent]),
+    borderColor: interpolateColor(focus.value, [0, 1], [colors.borderDefault, colors.accent]),
   }));
   const iconColorStyle = useAnimatedStyle(() => ({
     opacity: 0.6 + focus.value * 0.4,
@@ -91,10 +94,10 @@ function FocusField({
 
   return (
     <Animated.View style={[styles.fieldWrap, borderStyle]}>
-      <BlurView intensity={30} tint="dark" pointerEvents="none" style={StyleSheet.absoluteFill} />
-      <View pointerEvents="none" style={styles.fieldTint} />
+      {Platform.OS !== "android" && <BlurView intensity={30} tint={workspace.blurTint} pointerEvents="none" style={StyleSheet.absoluteFill} />}
+      <View pointerEvents="none" style={[styles.fieldTint, { backgroundColor: colors.surface, opacity: isDark ? (Platform.OS === "android" ? 0.92 : 0.5) : 0.95 }]} />
       <Animated.View pointerEvents="none" style={iconColorStyle}>
-        <Ionicons name={icon} size={18} color={COLORS.accentInk} />
+        <Ionicons name={icon} size={18} color={colors.accentInk} />
       </Animated.View>
       {children({
         onFocus: () => {
@@ -115,6 +118,7 @@ export default function LoginScreen() {
 }
 
 function LoginContent() {
+  const { colors } = useAppTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -192,10 +196,10 @@ function LoginContent() {
   }
 
   return (
-    <View style={styles.flex}>
+    <View style={[styles.flex, { backgroundColor: colors.canvas }]}>
       <Stack.Screen options={{ animation: reduced ? "none" : "fade", animationDuration: 280 }} />
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={[styles.flex, { backgroundColor: colors.canvas }]}
         behavior={Platform.OS === "web" ? undefined : "padding"}
       >
         <ScrollView
@@ -215,25 +219,25 @@ function LoginContent() {
           <MotionReveal layout style={styles.header}>
             <View style={styles.lockup}>
               <VulneraMark size={60} />
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: colors.borderDefault }]} />
               <View>
                 <View style={styles.wordRow}>
-                  <Text style={styles.wordmark}>VULNERA</Text>
+                  <Text style={[styles.wordmark, { color: colors.textPrimary }]}>VULNERA</Text>
                   <BlinkingCursor />
                 </View>
-                <Text style={styles.security}>SECURITY</Text>
+                <Text style={[styles.security, { color: colors.textMuted }]}>SECURITY</Text>
               </View>
             </View>
           </MotionReveal>
 
           <MotionReveal layout delay={60} style={styles.form}>
             <View style={styles.field}>
-              <Text style={styles.label}>E-mail</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>E-mail</Text>
               <FocusField icon="mail-outline">
                 {({ onFocus, onBlur }) => (
                   <TextInput
                     accessibilityLabel="E-mail"
-                    style={styles.input}
+                    style={[styles.input, { color: colors.textPrimary }]}
                     value={email}
                     editable={!loginMutation.isPending}
                     onChangeText={setEmail}
@@ -246,7 +250,7 @@ function LoginContent() {
                       onBlur();
                     }}
                     placeholder="voce@empresa.com"
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={colors.textMuted}
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
@@ -261,13 +265,13 @@ function LoginContent() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Senha</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Senha</Text>
               <FocusField icon="lock-closed-outline">
                 {({ onFocus, onBlur }) => (
                   <TextInput
                     ref={passwordInput}
                     accessibilityLabel="Senha"
-                    style={styles.input}
+                    style={[styles.input, { color: colors.textPrimary }]}
                     value={password}
                     editable={!loginMutation.isPending}
                     onChangeText={setPassword}
@@ -281,7 +285,7 @@ function LoginContent() {
                       onBlur();
                     }}
                     placeholder="••••••••"
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={colors.textMuted}
                     secureTextEntry
                     textContentType="password"
                     autoCapitalize="none"
@@ -295,9 +299,9 @@ function LoginContent() {
             </View>
 
             {error && (
-              <MotionReveal style={styles.errorBox}>
-                <Ionicons name="alert-circle" size={16} color={COLORS.dangerInk} />
-                <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.errorText}>{error}</Text>
+              <MotionReveal style={[styles.errorBox, { backgroundColor: colors.dangerSurface }]}>
+                <Ionicons name="alert-circle" size={16} color={colors.dangerInk} />
+                <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.errorText, { color: colors.dangerInk }]}>{error}</Text>
               </MotionReveal>
             )}
 
@@ -318,12 +322,8 @@ function LoginContent() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: COLORS.canvas },
+  flex: { flex: 1 },
   container: {
-    // flexGrow (não flex) — é contentContainerStyle de ScrollView agora:
-    // garante que o conteúdo preenche pelo menos a altura da tela (pro
-    // justifyContent:"center" continuar centralizando com teclado fechado)
-    // mas ainda permite rolar quando o teclado empurra o conteúdo.
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: SPACING[6],
@@ -345,7 +345,6 @@ const styles = StyleSheet.create({
   divider: {
     width: 1,
     height: 44,
-    backgroundColor: COLORS.borderDefault,
   },
   wordRow: {
     flexDirection: "row",
@@ -355,20 +354,17 @@ const styles = StyleSheet.create({
   wordmark: {
     fontSize: FONT_SIZE.xl,
     fontFamily: FONT_FAMILY.monoBold,
-    color: COLORS.textPrimary,
     letterSpacing: 1.5,
   },
   cursor: {
     width: 6,
     height: 18,
-    backgroundColor: COLORS.accent,
     marginLeft: 2,
   },
   security: {
     marginTop: 2,
     fontSize: 11,
     fontFamily: FONT_FAMILY.mono,
-    color: COLORS.textMuted,
     letterSpacing: 3,
     textTransform: "uppercase",
   },
@@ -381,7 +377,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FONT_SIZE.xs,
     fontFamily: FONT_FAMILY.medium,
-    color: COLORS.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -395,18 +390,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING[3],
     overflow: "hidden",
   },
-  // Tint sólido por cima do blur — mesma razão da tab bar flutuante: vidro
-  // fosco puro varia demais de legibilidade dependendo do que tem atrás.
   fieldTint: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: COLORS.surface,
-    opacity: 0.5,
   },
   input: {
     flex: 1,
     minWidth: 0,
     minHeight: 48,
-    color: COLORS.textPrimary,
     fontSize: FONT_SIZE.sm,
     fontFamily: FONT_FAMILY.regular,
     paddingVertical: SPACING[2],
@@ -415,13 +405,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING[2],
-    backgroundColor: COLORS.dangerSurface,
     borderRadius: RADIUS.control,
     padding: SPACING[3],
   },
   errorText: {
     flex: 1,
-    color: COLORS.dangerInk,
     fontSize: FONT_SIZE.sm,
     fontFamily: FONT_FAMILY.regular,
   },

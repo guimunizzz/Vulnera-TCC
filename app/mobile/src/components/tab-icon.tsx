@@ -10,7 +10,8 @@ import { useEffect } from "react";
 import { StyleSheet, View, type ColorValue } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { COLORS, RADIUS } from "../theme/tokens";
+import { RADIUS } from "../theme/tokens";
+import { useAppTheme } from "../theme/use-app-theme";
 import { SOFT_MOTION, useWorkspaceReducedMotion } from "./workspace-motion";
 
 export function TabIcon({
@@ -24,6 +25,7 @@ export function TabIcon({
   color: ColorValue;
   size: number;
 }) {
+  const { colors } = useAppTheme();
   const progress = useSharedValue(focused ? 1 : 0);
   const reduced = useWorkspaceReducedMotion();
 
@@ -38,7 +40,7 @@ export function TabIcon({
 
   return (
     <View style={styles.wrap}>
-      <Animated.View style={[styles.pill, pillStyle]} />
+      <Animated.View style={[styles.pill, { backgroundColor: colors.accentSurface }, pillStyle]} />
       <Ionicons name={name} color={typeof color === "number" || color == null ? undefined : color} size={size} />
     </View>
   );
@@ -56,6 +58,5 @@ const styles = StyleSheet.create({
     width: 48,
     height: 32,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.accentSurface,
   },
 });

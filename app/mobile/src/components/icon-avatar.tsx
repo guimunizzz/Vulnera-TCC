@@ -1,32 +1,25 @@
-/**
- * icon-avatar.tsx
- *
- * Chip circular de vidro fosco com ícone dentro — o "avatar de categoria"
- * que dá às linhas de lista (ProjectCard, FindingRow) a densidade visual do
- * Mercado Livre (cada item com um ícone identificável de relance, não só
- * texto). Cor vem do próprio vocabulário de severidade/acento já definido
- * em tokens.ts — não inventa tom novo.
- */
-
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import type { ComponentProps } from "react";
-import { COLORS, RADIUS } from "../theme/tokens";
+import { RADIUS } from "../theme/tokens";
+import { useAppTheme, type AppColors } from "../theme/use-app-theme";
 
 export type IoniconsGlyph = ComponentProps<typeof Ionicons>["name"];
 
 export type IconAvatarTone = "accent" | "critical" | "high" | "medium" | "low" | "success" | "neutral";
 
-const TONES: Record<IconAvatarTone, { bg: string; fg: string }> = {
-  accent: { bg: COLORS.accentSurface, fg: COLORS.accentInk },
-  critical: { bg: COLORS.severity.criticalSurface, fg: COLORS.severity.critical },
-  high: { bg: COLORS.severity.highSurface, fg: COLORS.severity.high },
-  medium: { bg: COLORS.severity.mediumSurface, fg: COLORS.severity.medium },
-  low: { bg: COLORS.severity.lowSurface, fg: COLORS.severity.low },
-  success: { bg: COLORS.successSurface, fg: COLORS.successInk },
-  neutral: { bg: COLORS.raised, fg: COLORS.textMuted },
-};
+function getTones(colors: AppColors): Record<IconAvatarTone, { bg: string; fg: string }> {
+  return {
+    accent: { bg: colors.accentSurface, fg: colors.accentInk },
+    critical: { bg: colors.severity.criticalSurface, fg: colors.severity.critical },
+    high: { bg: colors.severity.highSurface, fg: colors.severity.high },
+    medium: { bg: colors.severity.mediumSurface, fg: colors.severity.medium },
+    low: { bg: colors.severity.lowSurface, fg: colors.severity.low },
+    success: { bg: colors.successSurface, fg: colors.successInk },
+    neutral: { bg: colors.inset, fg: colors.textMuted },
+  };
+}
 
 export function IconAvatar({
   name,
@@ -37,13 +30,14 @@ export function IconAvatar({
   tone?: IconAvatarTone;
   size?: number;
 }) {
-  const cor = TONES[tone];
+  const { colors, workspace } = useAppTheme();
+  const cor = getTones(colors)[tone];
   const iconSize = Math.round(size * 0.5);
   const shapeStyle = { width: size, height: size, borderRadius: RADIUS.full };
 
   return (
     <View style={[styles.wrap, shapeStyle]}>
-      <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+      {Platform.OS !== "android" && <BlurView intensity={30} tint={workspace.blurTint} style={StyleSheet.absoluteFill} />}
       <View style={[styles.tint, { backgroundColor: cor.bg }]} />
       <Ionicons name={name} size={iconSize} color={cor.fg} />
     </View>
@@ -58,6 +52,6 @@ const styles = StyleSheet.create({
   },
   tint: {
     ...StyleSheet.absoluteFill,
-    opacity: 0.6,
+    opacity: 0.75,
   },
 });
