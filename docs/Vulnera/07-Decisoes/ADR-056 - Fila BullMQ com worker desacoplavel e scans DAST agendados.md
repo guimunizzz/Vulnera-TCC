@@ -304,6 +304,37 @@ caminho de execução de scan.
 - **Fallback automático para `memory` se o Redis cair.** Mascararia uma falha
   de infraestrutura. Descartado.
 
+## Comportamento observado na Fase 4 (2026-11-18, compose isolado, `bullmq`)
+
+- **Guarda atômica:** a tomada do scan virou `UPDATE … WHERE status = QUEUED`
+  (`claimQueued`). Job entregue duas vezes executa uma vez; scan cancelado
+  antes de o worker pegar não volta a RUNNING.
+- **Fila:** com `DAST_MAX_CONCURRENT_SCANS=1`, o segundo scan espera (o banner
+  mostra a posição lida do Redis) e roda depois do primeiro.
+- **SIGKILL da API com 1 rodando e 1 na fila:** no boot, o worker marcou o que
+  rodava como FAILED ("interrompido por reinício") e preservou o da fila, que
+  rodou até COMPLETED. O job morto foi para `failed` ("job stalled more than
+  allowable limit") cerca de 1 min após o SIGKILL, por causa do
+  `maxStalledCount: 0`. O listener de falha não tocou o scan, que já estava FAILED.
+- **Redis fora do ar:** `POST /dast/scans` responde 503 `QUEUE_UNAVAILABLE` em
+  5 s (antes do prazo explícito eram 27 s, o tempo de reconexão do ioredis). O
+  scan fica QUEUED e roda quando a fila volta: o `add` pendente entra na
+  reconexão ou o boot do worker reenfileira com o mesmo `jobId`.
+- **Rollback para `memory`:** mesmos cenários com o mesmo resultado.
+- Visto também com `memory` (comportamento pré-existente, fora do escopo): um
+  scan cancelado em execução pode ficar com fase `SIMULATED`/100% por uma
+  gravação de progresso tardia; o status permanece CANCELLED.
+
+## Pendências
+
+> [!warning] Antes de mudar o status para `vigente`
+> 1. **Scan REAL pela fila `bullmq` não validado.** Os cenários da Fase 4 usaram
+>    scans simulados. O Rafael fará a validação depois, com alvo a escolher.
+> 2. **Padrão de `QUEUE_DRIVER`:** continua `memory`. Trocar para `bullmq` é
+>    decisão pendente, depois do item 1 e da validação da Fase 5 no compose.
+> 3. **Fase 5:** API e worker de agendamentos implementados; validação no
+>    compose e tela web ainda pendentes.
+
 ## Fora do escopo (BACKLOG)
 
 Rescan de verificação, monitor de SLA, resumo semanal, PDF em background, Bull

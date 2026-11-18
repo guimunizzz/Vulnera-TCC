@@ -14,6 +14,36 @@ Contrato atual:
 { "targetUrl": "https://alvo-autorizado.example/", "mode": "REAL", "confirmedRealScan": true }
 ```
 
+**Atualização de 2026-11-18 (ADR-056):** o corpo aceita também `applicationId` e
+`projectId`, ambos opcionais. O `companyId` do scan é **sempre derivado da
+Application** (um `companyId` no corpo é ignorado). PENTESTER precisa ser membro
+do projeto informado ou, sem projeto, de algum projeto da aplicação. Novos
+códigos: `404 APPLICATION_NOT_FOUND`/`PROJECT_NOT_FOUND` (inclui aplicação
+inativa), `400 PROJECT_APPLICATION_MISMATCH`/`INVALID_APPLICATION_ID`/
+`INVALID_PROJECT_ID`, `403 FORBIDDEN` e, só com `QUEUE_DRIVER=bullmq`,
+`503 QUEUE_UNAVAILABLE` (Redis fora do ar; o scan fica `QUEUED` no banco e volta
+à fila quando o worker sobe de novo). A resposta ganhou `companyId`,
+`applicationId`, `projectId`, `trigger` (`MANUAL`|`SCHEDULED`) e `scheduleId`.
+Quem vê qual scan **não mudou**: o PENTESTER vê os que pediu; o ADMIN, todos.
+
+### Fila de execução (ADR-056)
+
+- `QUEUE_DRIVER=memory` (padrão): o watchdog em memória decide quando cada scan
+  começa, como antes; no boot, `QUEUED`/`RUNNING` viram `FAILED`.
+- `QUEUE_DRIVER=bullmq`: o scan vira job `{ scanId }` (`jobId = scanId`) na fila
+  `dast-scan`. O worker (concorrência `DAST_MAX_CONCURRENT_SCANS`, `attempts: 1`,
+  `maxStalledCount: 0`) executa sob o mesmo watchdog, então pulso, abort por
+  travamento, alertas e banner continuam iguais. O scan só é tomado se ainda
+  estiver `QUEUED` (`UPDATE … WHERE status = QUEUED`): job repetido ou scan
+  cancelado não executa. No boot do worker, `RUNNING` vira `FAILED` (container
+  morto) e `QUEUED` **sobrevive**, voltando à fila se o job sumiu do Redis.
+  Cancelamento: job na fila é removido; job em execução é parado por abort +
+  `docker rm -f`.
+- ⚠️ O scan **REAL** pela fila `bullmq` ainda não foi validado; os cenários do
+  compose usaram scans simulados.
+- Scans agendados por aplicação (Fase 5) usam a mesma fila `dast-scan` e saem em
+  nome de quem criou o agendamento. Só disparam com `bullmq`.
+
 Real usa ZAP daemon em modo Protected, **Spider tradicional do ZAP** e análise passiva real. O Spider descobre links, recursos, robots.txt e sitemap, restrito à origem/subárvore por contexto ancorado. Profundidade 2, até 30 filhos por nó (não 30 páginas totais), uma thread, parsing de até 1 MB e duração padrão de 1 minuto, configurável entre 1 e 10. Queries são excluídas também por `spider/action/excludeFromScan`, pois o contexto compara URLs sem parâmetros; credenciais e caminhos comuns de ação ficam fora do escopo. Processamento/envio de formulários, parsers Git/SVN/DS_Store, JavaScript e active scan estão desativados. Não autentica no alvo nem cobre uma SPA completa. A navegação ainda pode causar efeitos em aplicações mal projetadas. Zero alertas não prova ausência de vulnerabilidades.
 
 Cada execução nova grava `discovery.json` com perfil, URLs em escopo e limites, sem chave da API. `/report/data` devolve `discovery` somente depois de validar ownership e o artefato; demo e scans históricos sem metadados retornam `null`. O PDF descreve o perfil registrado, sem atribuir Spider retrospectivamente a scans antigos. A fila passiva precisa drenar antes do relatório. Falha de descoberta não vira demonstração. Ver ADR-046 e [validação do Spider](DAST-SPIDER-VALIDACAO-2026-10-09.md).
