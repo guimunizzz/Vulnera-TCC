@@ -1,54 +1,28 @@
 /**
- * vulnera-mark.tsx
- *
- * Marca "V" oficial (duas polylines convergindo) redesenhada em SVG para rodar
- * nativamente no React Native, com cor de acento sensível ao tema ativo.
+ * Símbolo V vetorizado a partir da referência visual fornecida pelo usuário.
+ * Mantém transparência e nitidez nos temas claro e escuro; usado no login e nos cabeçalhos.
  */
-
-import { useEffect } from "react";
-import { View } from "react-native";
-import Svg, { Polyline } from "react-native-svg";
-import Animated, { Easing, useAnimatedProps, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import { useEffect, useId } from "react";
+import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useAppTheme } from "../theme/use-app-theme";
+import { useWorkspaceReducedMotion } from "./workspace-motion";
 
-const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
-const DASH_LENGTH = 100;
+export function VulneraMark({ size = 72, animate = true }: { size?: number; animate?: boolean }) {
+  const { isDark } = useAppTheme();
+  const reduced = useWorkspaceReducedMotion();
+  const id = `vulnera-mark-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const opacity = useSharedValue(animate && !reduced ? 0 : 1);
+  useEffect(() => { opacity.value = withTiming(1, { duration: animate && !reduced ? 550 : 0 }); }, [animate, opacity, reduced]);
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
-export function VulneraMark({ size = 72 }: { size?: number }) {
-  const { colors } = useAppTheme();
-  const draw = useSharedValue(DASH_LENGTH);
-  const drawDelayed = useSharedValue(DASH_LENGTH);
-
-  useEffect(() => {
-    draw.value = withTiming(0, { duration: 700, easing: Easing.out(Easing.cubic) });
-    drawDelayed.value = withDelay(140, withTiming(0, { duration: 700, easing: Easing.out(Easing.cubic) }));
-  }, [draw, drawDelayed]);
-
-  const leftProps = useAnimatedProps(() => ({ strokeDashoffset: draw.value }));
-  const rightProps = useAnimatedProps(() => ({ strokeDashoffset: drawDelayed.value }));
-
-  return (
-    <View style={{ width: size, height: size }}>
-      <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-        <AnimatedPolyline
-          points="10,10 40,45 50,85"
-          stroke={colors.accent}
-          strokeWidth={7}
-          strokeLinecap="square"
-          strokeLinejoin="miter"
-          strokeDasharray={DASH_LENGTH}
-          animatedProps={leftProps}
-        />
-        <AnimatedPolyline
-          points="90,10 60,45 50,85"
-          stroke={colors.accent}
-          strokeWidth={7}
-          strokeLinecap="square"
-          strokeLinejoin="miter"
-          strokeDasharray={DASH_LENGTH}
-          animatedProps={rightProps}
-        />
-      </Svg>
-    </View>
-  );
+  return <Animated.View accessible={false} style={[{ width: size, height: size }, animatedStyle]}>
+    <Svg width={size} height={size} viewBox="-38 -10 418 399" accessible={false}>
+      <Defs><LinearGradient id={id} x1="0" y1="0" x2="0" y2="379" gradientUnits="userSpaceOnUse">
+        <Stop offset="0" stopColor={isDark ? "#c679cb" : "#85359b"} />
+        <Stop offset="1" stopColor={isDark ? "#8823a8" : "#681184"} />
+      </LinearGradient></Defs>
+      <Path d="M 0 14 L 24 25 L 167 339 L 307 37 L 261 56 L 167 253 L 70 45 L 147 74 L 102 69 L 167 211 L 247 40 L 342 0 L 167 379 Z" fill={`url(#${id})`} />
+    </Svg>
+  </Animated.View>;
 }

@@ -4,17 +4,14 @@
  * Consumidores: cabeçalhos da Home, Relatórios e Minha conta.
  */
 import { StyleSheet, Text, View } from "react-native";
-import Svg, { Polyline } from "react-native-svg";
 import { FONT_FAMILY } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
+import { VulneraMark } from "./vulnera-mark";
 
 export function HomeBrand() {
   const { workspace } = useAppTheme();
   return <View accessible accessibilityRole="image" accessibilityLabel="Vulnera Security" testID="home-brand" style={styles.brand}>
-    <Svg width={28} height={28} viewBox="0 0 100 100" fill="none" accessible={false}>
-      <Polyline points="10,10 40,45 50,85" stroke={workspace.lavender} strokeWidth={7} strokeLinecap="square" strokeLinejoin="miter" />
-      <Polyline points="90,10 60,45 50,85" stroke={workspace.lavender} strokeWidth={7} strokeLinecap="square" strokeLinejoin="miter" />
-    </Svg>
+    <VulneraMark size={28} animate={false} />
     <View style={styles.signature} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <Text accessible={false} style={[styles.name, { color: workspace.text }]}>VULNERA</Text>
       <Text accessible={false} style={[styles.subtitle, { color: workspace.muted }]}>SECURITY</Text>
