@@ -1,0 +1,242 @@
+/**
+ * dast-schedule.test.ts — autorização de DAST e scans agendados (ADR-056, Fase 5).
+ * Banco real; `DAST_FORCE_SIMULATE=true` no .env.test: simulado roda em ~3 s
+ * e REAL termina FAILED sem tocar o alvo (é o que prova "REAL que falha não
+ * vira simulado").
+ *
+ *   SCHED-TEN-01  empresa B não lista, não cria, não edita nem apaga agendamento da A (404)
+ *   SCHED-TEN-02  CLIENT da própria empresa só lê (403 ao escrever); PENTESTER sem vínculo → 404
+ *   SCHED-AUTH-01 sem autorização vigente não agenda; autorização guarda o host normalizado
+ *   SCHED-CRUD-01 PENTESTER precisa de projeto do qual é membro; companyId do corpo é ignorado
+ *   SCHED-EXEC-01 autorização vencida → não roda, lastOutcome + notificação + AuditLog
+ *   SCHED-EXEC-02 host diferente → não roda (HOST_MISMATCH)
+ *   SCHED-EXEC-03 REAL agendado que falha → FAILED, nunca simulado, e notifica o criador
+ *   SCHED-EXEC-04 simulado agendado não entra nas métricas
+ *   SCHED-EXEC-05 criador que deixou de ser membro → NOT_MEMBER
+ */
+
+import request from "supertest";
+import { app } from "../../src/app";
+import { cleanDatabase } from "../setup";
+import { prisma } from "../../src/database/prisma.database";
+import { seedUser } from "../fixtures/users.fixture";
+import { loginAs } from "../fixtures/auth.fixture";
+import { seedPlan } from "../fixtures/plans.fixture";
+import { seedCompany } from "../fixtures/companies.fixture";
+import { seedApplication } from "../fixtures/applications.fixture";
+import { seedProject, seedProjectMember } from "../fixtures/projects.fixture";
+import { makeDastScheduleService } from "../../src/factories/dast-schedule.factory";
+
+const PASSWORD = "senha12345";
+const DIA = 24 * 3600_000;
+
+beforeEach(async () => {
+  await cleanDatabase();
+});
+
+async function cenario() {
+  const plan = await seedPlan({ name: "Plano" });
+  const companyA = await seedCompany({ name: "Empresa A", planId: plan.id });
+  const companyB = await seedCompany({ name: "Empresa B", planId: plan.id });
+  const appA = await seedApplication({ name: "App A", companyId: companyA.id, url: "https://App-A.example.com:443/login" });
+  const appB = await seedApplication({ name: "App B", companyId: companyB.id, url: "https://app-b.example.com" });
+  const projectA = await seedProject({ name: "Proj A", applicationId: appA.id, companyId: companyA.id });
+
+  const admin = await seedUser({ name: "Admin", email: "admin@t.local", password: PASSWORD, role: "ADMIN" });
+  const pentA = await seedUser({ name: "Pent A", email: "penta@t.local", password: PASSWORD, role: "PENTESTER" });
+  const pentOutro = await seedUser({ name: "Pent X", email: "pentx@t.local", password: PASSWORD, role: "PENTESTER" });
+  const clientA = await seedUser({ name: "Cli A", email: "clia@t.local", password: PASSWORD, role: "CLIENT", companyId: companyA.id, companyRole: "OWNER" });
+  const clientB = await seedUser({ name: "Cli B", email: "clib@t.local", password: PASSWORD, role: "CLIENT", companyId: companyB.id, companyRole: "OWNER" });
+  await seedProjectMember(projectA.id, pentA.id);
+
+  const tok = async (email: string) => ({ Authorization: `Bearer ${await loginAs(app, email, PASSWORD)}` });
+  return {
+    companyA, companyB, appA, appB, projectA, admin, pentA, pentOutro, clientA, clientB,
+    h: { admin: await tok(admin.email), pentA: await tok(pentA.email), pentOutro: await tok(pentOutro.email), clientA: await tok(clientA.email), clientB: await tok(clientB.email) },
+  };
+}
+
+const ate = (dias: number) => new Date(Date.now() + dias * DIA).toISOString();
+const corpo = (extra: Record<string, unknown> = {}) => ({ mode: "SIMULATED", frequency: "DAILY", hour: 3, minute: 0, ...extra });
+
+async function autorizarEAgendar(c: Awaited<ReturnType<typeof cenario>>, extra: Record<string, unknown> = {}) {
+  const auth = await request(app).put(`/api/applications/${c.appA.id}/dast-authorization`).set(c.h.pentA).send({ until: ate(30) });
+  expect(auth.status).toBe(200);
+  const res = await request(app).post(`/api/applications/${c.appA.id}/dast-schedules`).set(c.h.pentA).send(corpo({ projectId: c.projectA.id, ...extra }));
+  expect(res.status).toBe(201);
+  return res.body;
+}
+
+/** Espera o scan sair de QUEUED/RUNNING (memory: o watchdog roda no próprio processo). */
+async function esperarTerminal(scanId: string, maxMs = 10_000) {
+  const fim = Date.now() + maxMs;
+  while (Date.now() < fim) {
+    const s = await prisma.dastScan.findUnique({ where: { id: scanId } });
+    if (s && ["COMPLETED", "FAILED", "CANCELLED"].includes(s.status)) return s;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  throw new Error(`scan ${scanId} não terminou`);
+}
+
+/** Aguarda o gancho assíncrono de falha (notificação) depois do markFinished. */
+async function esperar<T>(fn: () => Promise<T | null | undefined>, maxMs = 3000): Promise<T> {
+  const fim = Date.now() + maxMs;
+  while (Date.now() < fim) {
+    const v = await fn();
+    if (v) return v;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error("condição não satisfeita a tempo");
+}
+
+describe("Agendamentos DAST — tenancy (SEC4)", () => {
+  it("SCHED-TEN-01 — empresa B não lista, não cria, não edita nem apaga agendamento da A", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    const base = `/api/applications/${c.appA.id}`;
+
+    expect((await request(app).get(`${base}/dast-schedules`).set(c.h.clientB)).status).toBe(404);
+    expect((await request(app).post(`${base}/dast-schedules`).set(c.h.clientB).send(corpo())).status).toBe(404);
+    expect((await request(app).put(`${base}/dast-schedules/${sched.id}`).set(c.h.clientB).send({ hour: 5 })).status).toBe(404);
+    expect((await request(app).delete(`${base}/dast-schedules/${sched.id}`).set(c.h.clientB)).status).toBe(404);
+    expect((await request(app).get(`${base}/dast-authorization`).set(c.h.clientB)).status).toBe(404);
+    // Agendamento da A não é alcançável pela aplicação da B.
+    expect((await request(app).put(`/api/applications/${c.appB.id}/dast-schedules/${sched.id}`).set(c.h.admin).send({ hour: 5 })).status).toBe(404);
+
+    const intacto = await prisma.scanSchedule.findUniqueOrThrow({ where: { id: sched.id } });
+    expect(intacto.hour).toBe(3);
+    expect(await prisma.scanSchedule.count()).toBe(1);
+  });
+
+  it("SCHED-TEN-02 — CLIENT da própria empresa só lê; PENTESTER sem vínculo não vê", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    const base = `/api/applications/${c.appA.id}`;
+
+    const lista = await request(app).get(`${base}/dast-schedules`).set(c.h.clientA);
+    expect(lista.status).toBe(200);
+    expect(lista.body.map((s: { id: string }) => s.id)).toEqual([sched.id]);
+    const auth = await request(app).get(`${base}/dast-authorization`).set(c.h.clientA);
+    expect(auth.status).toBe(200);
+    expect(auth.body.canEdit).toBe(false);
+
+    expect((await request(app).post(`${base}/dast-schedules`).set(c.h.clientA).send(corpo())).status).toBe(403);
+    expect((await request(app).put(`${base}/dast-schedules/${sched.id}`).set(c.h.clientA).send({ hour: 5 })).status).toBe(403);
+    expect((await request(app).put(`${base}/dast-authorization`).set(c.h.clientA).send({ until: ate(10) })).status).toBe(403);
+    expect((await request(app).get(`${base}/dast-schedules`).set(c.h.pentOutro)).status).toBe(404);
+  });
+});
+
+describe("Agendamentos DAST — autorização e CRUD", () => {
+  it("SCHED-AUTH-01 — sem autorização não agenda; a autorização guarda o host normalizado e é auditada", async () => {
+    const c = await cenario();
+    const base = `/api/applications/${c.appA.id}`;
+    const sem = await request(app).post(`${base}/dast-schedules`).set(c.h.admin).send(corpo());
+    expect(sem.status).toBe(422);
+    expect(sem.body.error).toBe("AUTHORIZATION_MISSING");
+
+    expect((await request(app).put(`${base}/dast-authorization`).set(c.h.admin).send({ until: "ontem" })).status).toBe(400);
+    expect((await request(app).put(`${base}/dast-authorization`).set(c.h.admin).send({ until: ate(-1) })).status).toBe(400);
+
+    const ok = await request(app).put(`${base}/dast-authorization`).set(c.h.admin).send({ until: ate(30) });
+    expect(ok.status).toBe(200);
+    expect(ok.body).toMatchObject({ host: "app-a.example.com", currentHost: "app-a.example.com", problem: null, canEdit: true });
+    expect(await prisma.auditLog.count({ where: { entityType: "Application", entityId: c.appA.id, action: "DAST_AUTHORIZATION_GRANTED", companyId: c.companyA.id } })).toBe(1);
+
+    const revogada = await request(app).delete(`${base}/dast-authorization`).set(c.h.admin);
+    expect(revogada.body.problem).toBe("AUTHORIZATION_MISSING");
+  });
+
+  it("SCHED-CRUD-01 — PENTESTER precisa de projeto em que é membro; companyId do corpo é ignorado", async () => {
+    const c = await cenario();
+    await request(app).put(`/api/applications/${c.appA.id}/dast-authorization`).set(c.h.pentA).send({ until: ate(30) });
+    const base = `/api/applications/${c.appA.id}/dast-schedules`;
+
+    const semProjeto = await request(app).post(base).set(c.h.pentA).send(corpo());
+    expect(semProjeto.body.error).toBe("MISSING_PROJECT_ID");
+    expect((await request(app).post(base).set(c.h.pentA).send(corpo({ frequency: "WEEKLY", projectId: c.projectA.id }))).body.error).toBe("INVALID_DAY_OF_WEEK");
+    expect((await request(app).post(base).set(c.h.pentA).send(corpo({ hour: 24, projectId: c.projectA.id }))).body.error).toBe("INVALID_HOUR");
+    expect((await request(app).post(base).set(c.h.pentA).send(corpo({ timezone: "Marte/Olympus", projectId: c.projectA.id }))).body.error).toBe("INVALID_TIMEZONE");
+
+    const ok = await request(app).post(base).set(c.h.pentA).send(corpo({ projectId: c.projectA.id, companyId: c.companyB.id, frequency: "WEEKLY", dayOfWeek: 1 }));
+    expect(ok.status).toBe(201);
+    expect(ok.body).toMatchObject({ companyId: c.companyA.id, projectId: c.projectA.id, mode: "SIMULATED", dayOfWeek: 1, timezone: "America/Sao_Paulo", enabled: true });
+
+    const modo = await request(app).put(`${base}/${ok.body.id}`).set(c.h.pentA).send({ mode: "REAL" });
+    expect(modo.body.error).toBe("MODE_IS_IMMUTABLE");
+    const desliga = await request(app).put(`${base}/${ok.body.id}`).set(c.h.pentA).send({ enabled: false, frequency: "DAILY" });
+    expect(desliga.status).toBe(200);
+    expect(desliga.body).toMatchObject({ enabled: false, frequency: "DAILY", dayOfWeek: null });
+    expect((await request(app).delete(`${base}/${ok.body.id}`).set(c.h.pentA)).status).toBe(204);
+    const acoes = (await prisma.auditLog.findMany({ where: { entityType: "ScanSchedule", entityId: ok.body.id } })).map((a) => a.action).sort();
+    expect(acoes).toEqual(["CREATE", "DELETE", "UPDATE"]);
+  });
+});
+
+describe("Agendamentos DAST — execução reconfere tudo", () => {
+  it("SCHED-EXEC-01 — autorização vencida: não roda, motivo registrado, criador notificado", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    await prisma.application.update({ where: { id: c.appA.id }, data: { dastAuthorizedUntil: new Date(Date.now() - 1000) } });
+
+    await expect(makeDastScheduleService().executar(sched.id)).resolves.toBe("AUTHORIZATION_EXPIRED");
+    expect(await prisma.dastScan.count()).toBe(0);
+    expect((await prisma.scanSchedule.findUniqueOrThrow({ where: { id: sched.id } })).lastOutcome).toBe("AUTHORIZATION_EXPIRED");
+    expect(await prisma.notification.count({ where: { userId: c.pentA.id, category: "DAST_SCHEDULE" } })).toBe(1);
+    expect(await prisma.auditLog.count({ where: { entityType: "ScanSchedule", entityId: sched.id, action: "EXECUTION" } })).toBe(1);
+  });
+
+  it("SCHED-EXEC-02 — host da aplicação diferente do autorizado: não roda", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    await prisma.application.update({ where: { id: c.appA.id }, data: { url: "https://outro-host.example.com" } });
+    await expect(makeDastScheduleService().executar(sched.id)).resolves.toBe("HOST_MISMATCH");
+    expect(await prisma.dastScan.count()).toBe(0);
+  });
+
+  it("SCHED-EXEC-03 — REAL agendado que falha vira FAILED, nunca simulado, e notifica quem agendou", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c, { mode: "REAL" });
+    await expect(makeDastScheduleService().executar(sched.id)).resolves.toBe("STARTED");
+
+    const scan = await prisma.dastScan.findFirstOrThrow({ where: { scheduleId: sched.id } });
+    expect(scan).toMatchObject({ trigger: "SCHEDULED", requestedById: c.pentA.id, companyId: c.companyA.id, applicationId: c.appA.id, projectId: c.projectA.id });
+    const final = await esperarTerminal(scan.id);
+    expect(final.status).toBe("FAILED");
+    expect(final.simulated).toBe(false);
+    expect(await prisma.dastFinding.count({ where: { scanId: scan.id } })).toBe(0);
+
+    await esperar(() => prisma.notification.findFirst({ where: { userId: c.pentA.id, title: "Scan DAST agendado falhou" } }));
+    expect((await prisma.scanSchedule.findUniqueOrThrow({ where: { id: sched.id } })).lastOutcome).toBe("SCAN_FAILED");
+  });
+
+  it("SCHED-EXEC-04 — simulado agendado roda, mas não entra nas métricas", async () => {
+    const c = await cenario();
+    const antes = await request(app).get(`/api/applications/${c.appA.id}/metrics/summary`).set(c.h.admin);
+    expect(antes.status).toBe(200);
+
+    const sched = await autorizarEAgendar(c);
+    await expect(makeDastScheduleService().executar(sched.id)).resolves.toBe("STARTED");
+    const scan = await prisma.dastScan.findFirstOrThrow({ where: { scheduleId: sched.id } });
+    const final = await esperarTerminal(scan.id);
+    expect(final).toMatchObject({ status: "COMPLETED", simulated: true });
+    expect(await prisma.dastFinding.count({ where: { scanId: scan.id } })).toBeGreaterThan(0);
+
+    const depois = await request(app).get(`/api/applications/${c.appA.id}/metrics/summary`).set(c.h.admin);
+    expect(depois.body.totalFindings).toBe(antes.body.totalFindings);
+    expect(depois.body.totalAbertos).toBe(antes.body.totalAbertos);
+    expect(await prisma.vulnerability.count({ where: { applicationId: c.appA.id } })).toBe(0);
+  });
+
+  it("SCHED-EXEC-05 — criador que saiu do projeto: não roda (NOT_MEMBER); scan ativo no alvo: TARGET_BUSY", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    await prisma.projectMember.deleteMany({ where: { projectId: c.projectA.id, userId: c.pentA.id } });
+    await expect(makeDastScheduleService().executar(sched.id)).resolves.toBe("NOT_MEMBER");
+
+    await seedProjectMember(c.projectA.id, c.pentA.id);
+    await prisma.dastScan.create({ data: { targetUrl: "https://app-a.example.com/login", requestedById: c.admin.id, status: "RUNNING" } });
+    await expect(makeDastScheduleService().executar(sched.id)).resolves.toBe("TARGET_BUSY");
+    expect(await prisma.dastScan.count()).toBe(1);
+  });
+});
