@@ -12,6 +12,7 @@ import {
 import type { EmailVerificationEventType } from "../models/email-verification.model";
 import type { AccessInvitationAuditAction } from "../models/access-invitation.model";
 import { AccessInvitationRepository } from "./access-invitation.repository";
+import { UserRepository } from "./user.repository";
 import { EmailVerificationTokenRepository } from "./email-verification-token.repository";
 import { inAccessTransaction, lockAccessRequest, type AccessDatabaseClient } from "./access-transaction.repository";
 
@@ -19,6 +20,7 @@ export type AccessRepositories = {
   requests: AccessRequestRepository;
   verificationTokens: EmailVerificationTokenRepository;
   invitations: AccessInvitationRepository;
+  users: UserRepository;
 };
 
 export class AccessRequestRepository {
@@ -30,6 +32,7 @@ export class AccessRequestRepository {
       requests: new AccessRequestRepository(client),
       verificationTokens: new EmailVerificationTokenRepository(client),
       invitations: new AccessInvitationRepository(client),
+      users: new UserRepository(client),
     }));
   }
 
@@ -155,6 +158,24 @@ export class AccessRequestRepository {
         diffJson: null,
         createdAt: now,
       },
+    });
+  }
+
+  /** Audita a ativação sem registrar senha, convite ou outro segredo. */
+  async createActivationAuditEvent(accessRequestId: string, actorId: string, now: Date): Promise<void> {
+    if ("$transaction" in this.prisma) {
+      throw new Error("ACCESS_ACTIVATION_AUDIT_REQUIRES_TRANSACTION");
+    }
+    await this.prisma.auditLog.createMany({
+      data: ["ACCOUNT_ACTIVATED", "ACCESS_INVITATION_USED"].map(action => ({
+        actorId,
+        companyId: null,
+        entityType: "AccessRequest",
+        entityId: accessRequestId,
+        action,
+        diffJson: null,
+        createdAt: now,
+      })),
     });
   }
 

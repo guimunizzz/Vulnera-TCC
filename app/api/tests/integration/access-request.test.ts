@@ -486,7 +486,24 @@ describe("AccessRequest — Etapas 0, 1 e 1.1", () => {
     expect(await prisma.user.findUnique({ where: { id: legacy.id } })).toEqual(legacy);
   });
 
-  it("mantém o endpoint futuro de ativação fora da Etapa 3", async () => {
-    await request(app).post("/api/account-activation/activate").send(INPUT).expect(404);
+  it("recusa payload de solicitação no endpoint de ativação sem criar conta ou vínculo", async () => {
+    const before = await Promise.all([
+      prisma.accessRequest.count(),
+      prisma.user.count(),
+      prisma.company.count(),
+      prisma.subscription.count(),
+      prisma.refreshToken.count(),
+    ]);
+    const response = await request(app).post("/api/account-activation/activate").send(INPUT);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "INVALID_BODY" });
+    expect(await Promise.all([
+      prisma.accessRequest.count(),
+      prisma.user.count(),
+      prisma.company.count(),
+      prisma.subscription.count(),
+      prisma.refreshToken.count(),
+    ])).toEqual(before);
   });
 });

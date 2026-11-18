@@ -403,6 +403,13 @@
   .vx-auth-card { gap: 16px; padding: 20px; }
 }
 
+/* O formulário de solicitação tem mais campos que o login; a moldura cresce
+   junto com o conteúdo sem reconstruir o cenário ou limitar a rolagem. */
+.vx-login.vx-request-access .vx-auth-card {
+  width: min(100%, 520px);
+  padding: 24px;
+}
+
 /* Menos espaço externo em notebooks baixos e com o teclado virtual aberto. */
 @media (max-height: 800px) {
   .vx-login { padding-block: 16px; gap: 12px; }
@@ -418,6 +425,13 @@
   .vx-login.vx-register .vx-login-field { gap: 4px; }
   .vx-register .vx-login-submit { margin-top: 0; }
   .vx-register-panel .vx-login-register { margin-top: 8px; padding-top: 0; border-top: 0; }
+  .vx-login.vx-request-access { padding-block: 12px; }
+  .vx-request-access .vx-auth-card { gap: 10px; padding: 14px; }
+  .vx-request-access-panel .vx-login-heading { margin-bottom: 8px; }
+  .vx-request-access-panel .vx-login-form { gap: 8px; }
+  .vx-request-access .vx-login-field { gap: 4px; }
+  .vx-request-access .vx-login-submit { margin-top: 0; }
+  .vx-request-access-panel .vx-login-register { margin-top: 8px; padding-top: 0; border-top: 0; }
 }
 
 @media (hover: none) {

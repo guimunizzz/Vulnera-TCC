@@ -21,10 +21,13 @@ import { makeAdminAccessRequestRoutes } from "./admin-access-request.routes";
 import type { AdminAccessRequestRouteDependencies } from "../factories/admin-access-request.factory";
 import { codeScanRoutes } from "./code-scan.routes";
 import { threatIntelRoutes } from "./threat-intel.routes";
+import { makeAccountActivationRoutes } from "./account-activation.routes";
+import type { AccountActivationRouteDependencies } from "../factories/account-activation.factory";
 
 export function makeApiRoutes(options: {
   accessRequestDependencies?: AccessRequestRouteDependencies;
   adminAccessRequestDependencies?: AdminAccessRequestRouteDependencies;
+  accountActivationDependencies?: AccountActivationRouteDependencies;
 } = {}) {
   const router = Router();
 
@@ -32,6 +35,7 @@ export function makeApiRoutes(options: {
   router.use("/auth", authRoutes);
   router.use("/access-requests", makeAccessRequestRoutes(options.accessRequestDependencies));
   router.use("/admin/access-requests", makeAdminAccessRequestRoutes(options.adminAccessRequestDependencies));
+  router.use("/account-activation", makeAccountActivationRoutes(options.accountActivationDependencies));
   router.use("/users", userRoutes);
   router.use("/plans", planRoutes);
   router.use("/companies", companyRoutes);

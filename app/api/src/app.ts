@@ -8,11 +8,14 @@ import { globalRateLimitMiddleware } from "./middlewares/rate-limit.middleware";
 import type { RateLimitService } from "./services/rate-limit.service";
 import type { AccessRequestRouteDependencies } from "./factories/access-request.factory";
 import type { AdminAccessRequestRouteDependencies } from "./factories/admin-access-request.factory";
+import type { AccountActivationRouteDependencies } from "./factories/account-activation.factory";
+import { accountActivationBodyErrorHandler } from "./middlewares/account-activation-body.middleware";
 
 export function createApp(options: {
   rateLimitService?: RateLimitService;
   accessRequestDependencies?: AccessRequestRouteDependencies;
   adminAccessRequestDependencies?: AdminAccessRequestRouteDependencies;
+  accountActivationDependencies?: AccountActivationRouteDependencies;
 } = {}) {
   const app = express();
   const rateLimitService = options.rateLimitService ?? makeRateLimitService();
@@ -30,11 +33,22 @@ export function createApp(options: {
       exposedHeaders: ["Content-Disposition", "Retry-After"],
     }),
   );
-  app.use(express.json());
+  const jsonBodyParser = express.json();
+  app.use((req, res, next) => {
+    // A ativação usa parser próprio depois do limite de IP, inclusive para JSON inválido ou grande.
+    const requestPath = req.path.toLowerCase();
+    if (requestPath === "/api/account-activation" || requestPath.startsWith("/api/account-activation/")) {
+      next();
+      return;
+    }
+    jsonBodyParser(req, res, next);
+  });
   app.use("/api", globalRateLimitMiddleware, makeApiRoutes({
     accessRequestDependencies: options.accessRequestDependencies,
     adminAccessRequestDependencies: options.adminAccessRequestDependencies,
+    accountActivationDependencies: options.accountActivationDependencies,
   }));
+  app.use("/api/account-activation", accountActivationBodyErrorHandler);
   return app;
 }
 

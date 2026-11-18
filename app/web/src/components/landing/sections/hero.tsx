@@ -2,7 +2,7 @@
  * hero.tsx — primeira dobra: nome, tagline e os dois CTAs.
  *
  * Portado de `vulnera-landing/src/components/sections/Hero.jsx`.
- * "INICIAR ANÁLISE" agora navega pra /register (react-router); "VER DEMO"
+ * "SOLICITAR ACESSO" navega pro fluxo público de acesso; "VER DEMO"
  * continua âncora interna. O fundo 3D é a cena narrativa única da landing
  * (`../scene/`), fixa atrás de todas as seções; este é o ato 0, "Funciona".
  *
@@ -90,13 +90,13 @@ export default function Hero() {
           className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
         >
           <MotionLink
-            to="/register"
+            to="/request-access"
             whileHover={{ scale: ESCALA_LANDING.hover }}
             whileTap={{ scale: ESCALA_LANDING.toque }}
             className="rounded-[6px] bg-[var(--vx-accent)] px-8 py-3 font-mono text-sm font-bold tracking-wider text-[var(--vx-on-accent)] transition-shadow duration-[300ms] hover:shadow-[0_0_30px_rgba(var(--vx-accent-rgb),0.7)]"
             style={{ boxShadow: "0 0 16px rgba(var(--vx-accent-rgb),0.4)" }}
           >
-            <InteractiveLabel>INICIAR ANÁLISE →</InteractiveLabel>
+            <InteractiveLabel>SOLICITAR ACESSO →</InteractiveLabel>
           </MotionLink>
           <motion.a
             href="#demo"

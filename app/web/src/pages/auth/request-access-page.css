@@ -1,0 +1,86 @@
+/* Estilos locais dos formulários públicos de acesso e verificação de e-mail. */
+
+.vx-login .vx-request-access-panel,
+.vx-login .vx-verify-email-panel {
+  width: min(100%, 480px);
+  min-width: 0;
+}
+
+.vx-login .vx-request-access-panel .vx-login-heading,
+.vx-login .vx-verify-email-panel .vx-login-heading {
+  margin-bottom: 18px;
+}
+
+.vx-login .vx-request-access-panel .vx-login-heading h1,
+.vx-login .vx-verify-email-panel .vx-login-heading h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.4rem, 1.2rem + 1vw, 1.75rem);
+  line-height: 1.25;
+}
+
+.vx-login .vx-request-access-panel .vx-login-heading > p:last-child,
+.vx-login .vx-verify-email-panel .vx-login-heading > p:last-child,
+.vx-login .vx-verify-email-hint {
+  margin: 0;
+  color: var(--login-muted, #aaa5b8);
+  font-size: .875rem;
+  line-height: 1.55;
+}
+
+.vx-login .vx-request-access-feedback,
+.vx-login .vx-verify-email-feedback {
+  margin-bottom: 14px;
+}
+
+.vx-login .vx-request-access-captcha {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.vx-login .vx-request-access-captcha-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--login-muted, #aaa5b8);
+  font-size: .8125rem;
+}
+
+.vx-login .vx-request-access-captcha iframe {
+  max-width: 100%;
+}
+
+.vx-login .vx-request-access-switch button {
+  min-height: 44px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--login-text, #edeaf4);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.vx-login .vx-request-access-switch button:hover,
+.vx-login .vx-request-access-switch button:focus-visible,
+.vx-login .vx-verify-email-resend a:hover {
+  color: var(--login-accent, #a78bfa);
+}
+
+.vx-login .vx-request-access-switch button:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
+.vx-login .vx-verify-email-hint {
+  text-align: center;
+}
+
+.vx-login .vx-verify-email-resend a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--login-text, #edeaf4);
+  text-underline-offset: 4px;
+}

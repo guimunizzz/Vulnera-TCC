@@ -44,6 +44,8 @@ describe("Sidebar — SAST/SCA", () => {
   it("CLIENT não vê o item", () => {
     renderComo("CLIENT");
     expect(screen.queryByRole("link", { name: /SAST\/SCA/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Solicitações de acesso" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Aprovações de assinatura" })).not.toBeInTheDocument();
   });
 
   it("só os itens novos têm o selo (SAST/SCA e Threat Intel, ADR-053)", () => {
@@ -59,5 +61,15 @@ describe("Sidebar — SAST/SCA", () => {
       expect(screen.getByRole("link", { name: /Threat Intel/ })).toHaveAttribute("href", "/threat-intel");
       unmount();
     }
+  });
+
+  it("separa solicitações de acesso das aprovações de assinatura para ADMIN", () => {
+    renderComo("ADMIN");
+    expect(screen.getByRole("link", { name: "Solicitações de acesso" })).toHaveAttribute(
+      "href", "/admin/access-requests",
+    );
+    expect(screen.getByRole("link", { name: "Aprovações de assinatura" })).toHaveAttribute(
+      "href", "/admin/subscriptions",
+    );
   });
 });

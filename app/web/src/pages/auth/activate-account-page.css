@@ -1,0 +1,74 @@
+/*
+ * Apresentação privada da página de ativação de conta.
+ * Reaproveita o card, os campos e os tokens da autenticação web sem afetar outras telas.
+ * Consumida somente por activate-account-page.tsx.
+ */
+
+.vx-activate-panel {
+  width: min(100%, 400px);
+  margin-inline: auto;
+  gap: 16px;
+}
+
+.vx-activate-panel .vx-activate-intro {
+  margin: 0;
+  color: var(--login-muted, #aaa5b8);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.vx-activate-panel .vx-activate-form {
+  gap: 14px;
+}
+
+.vx-activate-panel .vx-activate-status {
+  margin: 0;
+  color: var(--login-muted, #aaa5b8);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.vx-activate-panel .vx-activate-state {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vx-activate-panel .vx-activate-countdown {
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.vx-activate-panel .vx-activate-login-link {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--login-border, #2c263c);
+  font-size: 0.875rem;
+}
+
+.vx-activate-panel .vx-activate-login-link a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--login-text, #edeaf4);
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+.vx-activate-panel .vx-activate-login-link a:hover {
+  color: var(--login-accent, #a78bfa);
+  text-decoration: underline;
+}
+
+@media (max-height: 700px) {
+  .vx-activate-panel {
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .vx-activate-panel .vx-activate-form {
+    gap: 8px;
+  }
+}
