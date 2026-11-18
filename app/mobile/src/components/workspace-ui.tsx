@@ -3,51 +3,49 @@
  * Unifica navegação, contraste e estados de dados sem alterar o login.
  * Consumidores: Home, detalhes de projeto/finding e Configurações.
  */
-import { useCallback, useEffect, useRef, type ComponentRef, type ReactNode } from "react";
-import { ActivityIndicator, RefreshControl, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { useEffect, type ReactNode } from "react";
+import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurTargetView, BlurView } from "expo-blur";
-import { useFocusEffect, useRouter } from "expo-router";
+import { BlurView } from "expo-blur";
+import { useRouter } from "expo-router";
 import { FONT_FAMILY } from "../theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../theme/workspace";
 import { useTabBarClearance } from "../hooks/use-tab-bar-clearance";
 import { haptics } from "../lib/haptics";
-import { WorkspaceContentMotionProvider, SoftPressable, SOFT_MOTION, useWorkspaceReducedMotion, useWorkspaceScroll, WorkspaceAtmosphere } from "./workspace-motion";
-import { ScreenBlurTargetContext, useActiveWorkspaceBlur, useScreenBlurTarget } from "./workspace-blur";
+import { WorkspaceContentMotionProvider, SoftPressable, SOFT_MOTION, useWorkspaceReducedMotion, WorkspaceAtmosphere } from "./workspace-motion";
 import { HomeBrand } from "./home-brand";
 
 export function GlassSurface({ children, style, onPress, accessibilityLabel, strong = false }: {
   children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string; strong?: boolean;
 }) {
-  const blurTarget = useScreenBlurTarget();
+  // No Android, evita N instâncias simultâneas de DimezisBlurView recapturando a tela inteira por frame.
+  const surfaceBg = Platform.OS === "android"
+    ? (strong ? "rgba(33,36,42,0.94)" : "rgba(26,28,33,0.90)")
+    : (strong ? WORKSPACE.glassStrong : WORKSPACE.glass);
   const content = <>
-    <BlurView intensity={32} tint="dark" blurTarget={blurTarget} blurMethod={blurTarget ? "dimezisBlurViewSdk31Plus" : "none"} pointerEvents="none" style={StyleSheet.absoluteFill} />
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: strong ? WORKSPACE.glassStrong : WORKSPACE.glass }]} />
+    {Platform.OS !== "android" && <BlurView intensity={32} tint="dark" pointerEvents="none" style={StyleSheet.absoluteFill} />}
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: surfaceBg }]} />
     <View pointerEvents="none" style={styles.reflection} />{children}
   </>;
   return onPress ? <SoftPressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={() => { haptics.tap(); onPress(); }}
     style={[styles.glass, style]}>{content}</SoftPressable> : <View style={[styles.glass, style]}>{content}</View>;
 }
 
-export function WorkspaceScreen({ children, scroll = true, refreshing = false, onRefresh, scrollY }: {
+export function WorkspaceScreen({ children, scroll = true, refreshing = false, onRefresh }: {
   children: ReactNode; scroll?: boolean; refreshing?: boolean; onRefresh?: () => void; scrollY?: SharedValue<number>;
 }) {
   const bottom = useTabBarClearance();
-  const internalScroll = useWorkspaceScroll();
-  const blurTarget = useRef<ComponentRef<typeof View> | null>(null);
-  const { activate, deactivate } = useActiveWorkspaceBlur();
-  useFocusEffect(useCallback(() => { activate(blurTarget); return () => deactivate(blurTarget); }, [activate, deactivate]));
-  return <WorkspaceContentMotionProvider><ScreenBlurTargetContext.Provider value={blurTarget}><SafeAreaView edges={["top", "left", "right"]} style={styles.screen}>
-    <BlurTargetView ref={blurTarget} pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: WORKSPACE.background }]} collapsable={false}>
-      <WorkspaceAtmosphere scrollY={scrollY ?? internalScroll.scrollY} />
-    </BlurTargetView>
-    {scroll ? <Animated.ScrollView onScroll={internalScroll.onScroll} scrollEventThrottle={16} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+  return <WorkspaceContentMotionProvider><SafeAreaView edges={["top", "left", "right"]} style={styles.screen}>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: WORKSPACE.background }]}>
+      <WorkspaceAtmosphere />
+    </View>
+    {scroll ? <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: bottom + 16 }}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={WORKSPACE.lavender} colors={[WORKSPACE.purple]} /> : undefined}>
-      <View style={styles.content}>{children}</View></Animated.ScrollView> : <View style={styles.flex}>{children}</View>}
-  </SafeAreaView></ScreenBlurTargetContext.Provider></WorkspaceContentMotionProvider>;
+      <View style={styles.content}>{children}</View></ScrollView> : <View style={styles.flex}>{children}</View>}
+  </SafeAreaView></WorkspaceContentMotionProvider>;
 }
 
 export function PageHeader({ label, back = false, children }: { label: string; back?: boolean; children?: ReactNode }) {

@@ -59,21 +59,18 @@ function AuthenticatedTabs() {
 
   return (
     <PushStatusContext.Provider value={pushStatus}><Tabs
+      detachInactiveScreens={false}
       tabBar={(props) => <IconGlassTabBar {...props} />}
       screenOptions={{
+        lazy: false,
         headerStyle: { backgroundColor: COLORS.surface },
         headerTintColor: COLORS.textPrimary,
         headerTitleStyle: { fontFamily: FONT_FAMILY.semibold },
         headerShadowVisible: false,
         headerShown: false,
-        animation: reduced ? "none" : "shift",
-        sceneStyleInterpolator: reduced ? undefined : ({ current }) => ({
-          sceneStyle: {
-            opacity: current.progress.interpolate({ inputRange: [-1, 0, 1], outputRange: [0.96, 1, 0.96], extrapolate: "clamp" }),
-            transform: [{ translateX: current.progress.interpolate({ inputRange: [-1, 0, 1], outputRange: [-28, 0, 28], extrapolate: "clamp" }) }],
-          },
-        }),
-        transitionSpec: { animation: "timing", config: { duration: reduced ? 0 : TAB_TRANSITION_DURATION, easing: Easing.bezier(0.22, 1, 0.36, 1) } },
+        sceneStyle: { backgroundColor: COLORS.canvas },
+        animation: reduced ? "none" : "fade",
+        transitionSpec: { animation: "timing", config: { duration: reduced ? 0 : TAB_TRANSITION_DURATION, easing: Easing.out(Easing.cubic) } },
       }}
     >
       <Tabs.Screen

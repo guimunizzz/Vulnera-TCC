@@ -3,8 +3,7 @@
  * Facetas do servidor incluem todas as páginas; a lista carrega sob demanda.
  * Consumidor: navegação de projetos do cliente; sem alteração de dados ou tenancy.
  */
-import { StyleSheet, Text, View } from "react-native";
-import Animated from "react-native-reanimated";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { projectsApi } from "../../../../src/api/projects.api";
@@ -18,7 +17,7 @@ import { ActionButton, DataState, DetailField, GlassSurface, PageHeader, Section
 import { FONT_FAMILY } from "../../../../src/theme/tokens";
 import { WORKSPACE, workspaceStyles as ui } from "../../../../src/theme/workspace";
 import { displayDate } from "../../../../src/lib/display";
-import { MotionReveal, useWorkspaceScroll } from "../../../../src/components/workspace-motion";
+import { MotionReveal } from "../../../../src/components/workspace-motion";
 import { WorkspaceSkeleton } from "../../../../src/components/workspace-skeleton";
 import { WorkspaceDisclosure } from "../../../../src/components/workspace-disclosure";
 
@@ -30,7 +29,6 @@ export default function ProjectDetailScreen() {
   const router = useRouter();
   const bottom = useTabBarClearance();
   const errorMessage = useApiError();
-  const scroll = useWorkspaceScroll();
   const projectQuery = useQuery({ queryKey: ["projects", id], queryFn: ({ signal }) => projectsApi.getById(id!, signal), enabled: !!id });
   const findingsQuery = useInfiniteQuery({
     queryKey: ["vulnerabilities", "byProject", id, "paged"], initialPageParam: 1,
@@ -69,7 +67,7 @@ export default function ProjectDetailScreen() {
       </View>)}</GlassSurface>
     </MotionReveal>
   </View>;
-  return <WorkspaceScreen scroll={false} scrollY={scroll.scrollY}><Animated.FlatList onScroll={scroll.onScroll} scrollEventThrottle={16} data={findings} keyExtractor={(finding) => finding.id}
+  return <WorkspaceScreen scroll={false}><FlatList data={findings} keyExtractor={(finding) => finding.id}
     showsVerticalScrollIndicator={false} contentContainerStyle={[styles.list, { paddingBottom: bottom + 16 }]}
     ListHeaderComponent={header} refreshing={projectQuery.isRefetching || findingsQuery.isRefetching} onRefresh={refresh}
     renderItem={({ item, index }) => <MotionReveal animate={index < 4} delay={Math.min(index, 2) * 30} distance={4}><FindingRow finding={item} onPress={() => router.push(`/(tabs)/home/finding/${item.id}`)} /></MotionReveal>}

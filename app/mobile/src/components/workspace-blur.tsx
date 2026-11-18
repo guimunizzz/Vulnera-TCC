@@ -1,24 +1,11 @@
 /**
- * Compartilha o fundo desfocado da tela ativa com seus vidros e a barra de abas.
- * Expo exige BlurTargetView no Android; um alvo por tela evita capturas duplicadas.
- * Consumidores: layout autenticado e WorkspaceScreen, sem afetar o login.
+ * Contexto legado de blur das telas autenticadas, mantido enxuto e sem estado
+ * reativo por foco para eliminar re-renders da barra inferior durante a troca
+ * de abas e evitar múltiplas capturas offscreen simultâneas no Android.
+ * Consumidores: layout autenticado (compatibilidade de árvore).
  */
-import { createContext, useCallback, useContext, useMemo, useState, type ComponentRef, type ReactNode, type RefObject } from "react";
-import type { View } from "react-native";
-
-type BlurTarget = RefObject<ComponentRef<typeof View> | null>;
-type ActiveBlur = { target?: BlurTarget; activate: (target: BlurTarget) => void; deactivate: (target: BlurTarget) => void };
-const ActiveBlurContext = createContext<ActiveBlur>({ activate: () => {}, deactivate: () => {} });
-export const ScreenBlurTargetContext = createContext<BlurTarget | undefined>(undefined);
+import { type ReactNode } from "react";
 
 export function WorkspaceBlurProvider({ children }: { children: ReactNode }) {
-  const [target, setTarget] = useState<BlurTarget>();
-  const activate = useCallback((next: BlurTarget) => setTarget(next), []);
-  // O cleanup de uma tela anterior não pode remover o alvo da próxima tela.
-  const deactivate = useCallback((previous: BlurTarget) => setTarget((current) => current === previous ? undefined : current), []);
-  const value = useMemo(() => ({ target, activate, deactivate }), [target, activate, deactivate]);
-  return <ActiveBlurContext.Provider value={value}>{children}</ActiveBlurContext.Provider>;
+  return <>{children}</>;
 }
-
-export function useActiveWorkspaceBlur() { return useContext(ActiveBlurContext); }
-export function useScreenBlurTarget() { return useContext(ScreenBlurTargetContext); }
