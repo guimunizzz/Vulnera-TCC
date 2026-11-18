@@ -13,6 +13,7 @@ import { parseQueueDriver } from "../../src/services/queue/job-queue";
 import { MemoryJobQueue } from "../../src/services/queue/memory-job-queue";
 import { BullmqJobQueue, conexaoProdutor, conexaoWorker } from "../../src/services/queue/bullmq-job-queue";
 import { iniciarWorkers } from "../../src/worker";
+import { validarPayloadDast } from "../../src/services/queue/workers/dast-scan.worker";
 
 const ENV_ORIGINAL = { ...process.env };
 
@@ -70,7 +71,7 @@ describe("makeJobQueue", () => {
 
 describe("worker", () => {
   it("QUEUE-04 — iniciarWorkers recusa o motor memory", async () => {
-    const memoria = new MemoryJobQueue({ threatIntel: () => ({ executar: async () => null, emAndamento: () => false }) });
+    const memoria = new MemoryJobQueue({ threatIntel: () => ({ executar: async () => null, emAndamento: () => false }), watchdogDast: () => ({}) as never });
     await expect(iniciarWorkers(memoria)).rejects.toThrow(/QUEUE_DRIVER=bullmq/);
   });
 });
@@ -99,4 +100,24 @@ describe("BullmqJobQueue", () => {
     }
     expect(() => fila.fila("dast-scan")).toThrow("JOB_QUEUE_CLOSED");
   }, 15_000);
+});
+
+describe("DAST na fila", () => {
+  it("QUEUE-07 — payload DAST do Redis é validado", () => {
+    expect(validarPayloadDast({ scanId: "abc" })).toEqual({ scanId: "abc" });
+    expect(() => validarPayloadDast({ scanId: "" })).toThrow(/payload inválido/);
+    expect(() => validarPayloadDast({ scanId: 1 })).toThrow(/payload inválido/);
+    expect(() => validarPayloadDast(null)).toThrow(/payload inválido/);
+  });
+
+  it("QUEUE-08 — motor memory entrega o scan ao watchdog e lê a fila dele", async () => {
+    const submit = jest.fn().mockReturnValue(2);
+    const snapshot = jest.fn().mockReturnValue({ queued: [{ scanId: "s9", queuedAt: "2026-11-18T00:00:00.000Z", targetUrl: "x", requestedById: "u", position: 1 }] });
+    const fila = new MemoryJobQueue({ threatIntel: () => ({ executar: async () => null, emAndamento: () => false }), watchdogDast: () => ({ submit, snapshot }) as never });
+    const pedido = { scanId: "s9", targetUrl: "https://a.test", requestedById: "u", run: async () => undefined };
+    await expect(fila.enfileirarDastScan(pedido)).resolves.toBe(2);
+    expect(submit).toHaveBeenCalledWith(pedido);
+    await expect(fila.removerDastScanDaFila()).resolves.toBe(false);
+    await expect(fila.dastNaFila()).resolves.toEqual([{ scanId: "s9", queuedAt: "2026-11-18T00:00:00.000Z" }]);
+  });
 });

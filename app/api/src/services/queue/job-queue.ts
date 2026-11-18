@@ -10,13 +10,14 @@
  *   - bullmq: fila persistente no Redis, consumida por `src/worker.ts`.
  *
  * O contrato cresce fase a fase, só com o que os dois motores implementam de
- * verdade (sem método que um deles não saiba cumprir): a Fase 2 entrega o
- * motor e a conexão; Threat Intel (Fase 3), DAST (Fase 4) e agendamentos
- * (Fase 5) entram depois.
+ * verdade (sem método que um deles não saiba cumprir): motor e conexão
+ * (Fase 2), Threat Intel (Fase 3), DAST (Fase 4); agendamentos na Fase 5.
  *
  * Regra de payload (ADR-056 §3): jobs levam SÓ ids. O worker recarrega tudo
  * do banco — nada de URL, token ou segredo no Redis.
  */
+
+import type { WatchdogRunContext } from "../dast-watchdog.service";
 
 export type QueueDriver = "memory" | "bullmq";
 
@@ -38,8 +39,45 @@ export interface ThreatIntelJobData {
   assetIds?: string[];
 }
 
+/** Payload da fila `dast-scan`: só o id. O worker recarrega o scan do banco. */
+export interface DastScanJobData {
+  scanId: string;
+}
+
+/**
+ * Pedido de execução de um scan. `run` e os campos descritivos servem só ao
+ * motor memory (o watchdog executa o closure no próprio processo); o motor
+ * bullmq manda ao Redis apenas `{ scanId }`.
+ */
+export interface PedidoScanDast {
+  scanId: string;
+  targetUrl: string;
+  requestedById: string;
+  run: (ctx: WatchdogRunContext) => Promise<void>;
+}
+
+/** Um scan esperando a vez, na ordem em que vai entrar. */
+export interface ScanNaFila {
+  scanId: string;
+  queuedAt: string;
+}
+
 export interface JobQueue {
   readonly driver: QueueDriver;
+  /**
+   * DAST (Fase 4). Devolve a posição na fila: 0 = começa agora (há vaga).
+   * bullmq: `jobId = scanId`, então enfileirar duas vezes não duplica.
+   */
+  enfileirarDastScan(pedido: PedidoScanDast): Promise<number>;
+  /**
+   * Tira da fila um scan que ainda não começou. Scan já em execução não sai
+   * por aqui (o BullMQ não remove job ativo): quem o para é o abort do
+   * watchdog + `docker rm -f`. memory: no-op — o `watchdog.abort` do
+   * cancelamento já cobre a fila em memória.
+   */
+  removerDastScanDaFila(scanId: string): Promise<boolean>;
+  /** Scans esperando a vez, na ordem de entrada. Alimenta o banner da tela DAST. */
+  dastNaFila(): Promise<ScanNaFila[]>;
   /**
    * Threat Intel (Fase 3): sincronização manual ou backfill de tecnologias.
    * memory: dispara no próprio processo, em segundo plano, como sempre.

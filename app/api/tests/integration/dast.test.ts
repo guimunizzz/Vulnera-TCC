@@ -19,6 +19,7 @@
  *   DAST-SIM-01       resultado simulado é carimbado e explicado no DTO
  *   DAST-STAT-01      GET /status expõe limite de concorrência e estado do Docker
  *   DAST-TEN-01..06   ADR-056: tenant derivado da Application, nunca do body
+ *   DAST-FILA-01..06  ADR-056: execução pela fila (guarda, duplicata, cancelamento, boot)
  */
 
 import request from "supertest";
@@ -692,5 +693,78 @@ describe("DAST — tenant do scan (ADR-056)", () => {
     const detailB = await request(app).get(`/api/dast/scans/${created.body.id}`).set("Authorization", `Bearer ${t.pentesterBToken}`);
     expect(detailB.status).toBe(403);
     await waitForTerminalStatus(t.pentesterAToken, created.body.id);
+  });
+});
+
+describe("DAST — execução pela fila (ADR-056, Fase 4)", () => {
+  const service = () => makeDastScanService();
+
+  it("DAST-FILA-01 — processarDaFila ignora scan que não está QUEUED e não mexe nele", async () => {
+    const { pentesterA } = await seedActors();
+    for (const status of ["CANCELLED", "FAILED", "COMPLETED", "RUNNING"] as const) {
+      const scan = await prisma.dastScan.create({ data: { targetUrl: `https://fila-${status}.test`, requestedById: pentesterA.id, status } });
+      await expect(service().processarDaFila(scan.id)).resolves.toBe("ignorado");
+      expect((await prisma.dastScan.findUnique({ where: { id: scan.id } }))?.status).toBe(status);
+    }
+    await expect(service().processarDaFila("nao-existe")).resolves.toBe("ignorado");
+  });
+
+  it("DAST-FILA-02 — processarDaFila executa o scan QUEUED até o fim e só resolve depois", async () => {
+    const { pentesterA, pentesterAToken } = await seedActors();
+    const scan = await prisma.dastScan.create({ data: { targetUrl: "https://fila-ok.test", requestedById: pentesterA.id, simulated: true } });
+    await expect(service().processarDaFila(scan.id)).resolves.toBe("executado");
+    const final = await waitForTerminalStatus(pentesterAToken, scan.id, 1000);
+    expect(final.status).toBe("COMPLETED");
+  });
+
+  it("DAST-FILA-03 — o mesmo job entregue duas vezes executa uma vez só", async () => {
+    const { pentesterA } = await seedActors();
+    const scan = await prisma.dastScan.create({ data: { targetUrl: "https://fila-dup.test", requestedById: pentesterA.id, simulated: true } });
+    const resultados = await Promise.all([service().processarDaFila(scan.id), service().processarDaFila(scan.id)]);
+    expect(resultados.sort()).toEqual(["executado", "ignorado"]);
+    const audit = await prisma.auditLog.count({ where: { entityType: "DastScan", entityId: scan.id, action: "STATUS_CHANGE" } });
+    expect(audit).toBe(1);
+  });
+
+  it("DAST-FILA-04 — cancelado antes de o worker pegar nunca volta a RUNNING", async () => {
+    const { pentesterA, pentesterAToken } = await seedActors();
+    // O motor memory (testes) começa o scan na hora; para simular "cancelado
+    // ainda na fila do Redis", cria o registro QUEUED direto e cancela pela API.
+    const scan = await prisma.dastScan.create({ data: { targetUrl: "https://fila-cancel.test", requestedById: pentesterA.id, simulated: true } });
+    const cancel = await request(app).post(`/api/dast/scans/${scan.id}/cancel`).set("Authorization", `Bearer ${pentesterAToken}`);
+    expect(cancel.status).toBe(200);
+    await expect(service().processarDaFila(scan.id)).resolves.toBe("ignorado");
+    expect((await prisma.dastScan.findUnique({ where: { id: scan.id } }))?.status).toBe("CANCELLED");
+  });
+
+  it("DAST-FILA-05 — job perdido: scan QUEUED vira FAILED com o motivo; scan já iniciado não é tocado", async () => {
+    const { pentesterA } = await seedActors();
+    const queued = await prisma.dastScan.create({ data: { targetUrl: "https://fila-perdido.test", requestedById: pentesterA.id } });
+    const done = await prisma.dastScan.create({ data: { targetUrl: "https://fila-feito.test", requestedById: pentesterA.id, status: "COMPLETED" } });
+    await expect(service().marcarFalhaDaFila(queued.id, "job stalled more than allowable limit")).resolves.toBe(true);
+    await expect(service().marcarFalhaDaFila(done.id, "x")).resolves.toBe(false);
+    const q = await prisma.dastScan.findUnique({ where: { id: queued.id } });
+    expect(q).toMatchObject({ status: "FAILED", phase: "FAILED" });
+    expect(q?.errorMessage).toMatch(/Falha na fila de execução: job stalled/);
+    expect((await prisma.dastScan.findUnique({ where: { id: done.id } }))?.status).toBe("COMPLETED");
+  });
+
+  it("DAST-FILA-06 — boot com fila: RUNNING vira FAILED, QUEUED sobrevive e é garantido na fila em ordem", async () => {
+    const { pentesterA } = await seedActors();
+    const running = await prisma.dastScan.create({ data: { targetUrl: "https://boot-run.test", requestedById: pentesterA.id, status: "RUNNING", simulated: true } });
+    const q1 = await prisma.dastScan.create({ data: { targetUrl: "https://boot-q1.test", requestedById: pentesterA.id, createdAt: new Date(Date.now() - 60_000) } });
+    const q2 = await prisma.dastScan.create({ data: { targetUrl: "https://boot-q2.test", requestedById: pentesterA.id } });
+
+    const garantidos: string[] = [];
+    const r = await service().recuperarParaFila(async (id) => {
+      garantidos.push(id);
+      return id === q2.id; // q2 "sumiu" do Redis e precisou voltar
+    });
+
+    expect(r).toEqual({ falhados: 1, reenfileirados: 1, naFila: 2 });
+    expect(garantidos).toEqual([q1.id, q2.id]);
+    expect((await prisma.dastScan.findUnique({ where: { id: running.id } }))?.status).toBe("FAILED");
+    expect((await prisma.dastScan.findUnique({ where: { id: q1.id } }))?.status).toBe("QUEUED");
+    expect((await prisma.dastScan.findUnique({ where: { id: q2.id } }))?.status).toBe("QUEUED");
   });
 });

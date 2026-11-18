@@ -16,6 +16,7 @@ import { parseQueueDriver, type JobQueue } from "../services/queue/job-queue";
 import { MemoryJobQueue } from "../services/queue/memory-job-queue";
 import { BullmqJobQueue } from "../services/queue/bullmq-job-queue";
 import { makeThreatIntelSyncService } from "./threat-intel.factory";
+import { dastWatchdog } from "../services/dast-watchdog.service";
 
 let instancia: JobQueue | null = null;
 
@@ -25,9 +26,10 @@ export function makeJobQueue(): JobQueue {
   // REDIS_URL é obrigatória só com bullmq: EnvVar.get falha alto se faltar.
   instancia =
     driver === "bullmq"
-      ? new BullmqJobQueue(EnvVar.get(EnvKeys.REDIS_URL))
+      ? // Concorrência do worker DAST = o mesmo teto do watchdog (DAST_MAX_CONCURRENT_SCANS).
+        new BullmqJobQueue(EnvVar.get(EnvKeys.REDIS_URL), dastWatchdog.maxConcurrent)
       : // Getter, não instância: threat-intel.factory também importa esta factory.
-        new MemoryJobQueue({ threatIntel: () => makeThreatIntelSyncService() });
+        new MemoryJobQueue({ threatIntel: () => makeThreatIntelSyncService(), watchdogDast: () => dastWatchdog });
   return instancia;
 }
 

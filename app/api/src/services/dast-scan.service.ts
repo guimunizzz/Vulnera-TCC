@@ -59,6 +59,7 @@ import type { UserRole } from "../models/user.model";
 import type { ApplicationRepository } from "../repositories/application.repository";
 import type { ProjectRepository } from "../repositories/project.repository";
 import type { ProjectMemberRepository } from "../repositories/project-member.repository";
+import type { JobQueue } from "./queue/job-queue";
 
 /** ADR-056 — repositórios usados para resolver o tenant de um scan a partir da Application/Project. */
 export interface DastScanScopeRepositories {
@@ -124,6 +125,12 @@ export class DastScanService {
     private readonly sensors: Sensor[],
     /** ADR-056 — resolve companyId/applicationId/projectId sem confiar no body. */
     private readonly scope: DastScanScopeRepositories,
+    /**
+     * ADR-056 — quem decide QUANDO o scan começa. memory: o próprio watchdog
+     * (comportamento de sempre); bullmq: a fila `dast-scan` no Redis, cujo
+     * worker chama `processarDaFila`.
+     */
+    private readonly fila: Pick<JobQueue, "enfileirarDastScan" | "removerDastScanDaFila" | "dastNaFila">,
     /** Threat Intel (ADR-053): tecnologias vistas pelo fingerprint viram sugestão no inventário. Opcional. */
     private readonly techSuggestions?: Pick<TechSuggestionService, "sugerirDoScan">,
   ) {}
@@ -170,12 +177,23 @@ export class DastScanService {
 
     // Enfileira no watchdog em vez de disparar direto: ele decide QUANDO
     // começar (no máximo N simultâneos) e continua vigiando depois disso.
-    const position = this.watchdog.submit({
-      scanId: scan.id,
-      targetUrl: scan.targetUrl,
-      requestedById: scan.requestedById,
-      run: (ctx) => this.runInBackground(scan.id, ctx),
-    });
+    let position: number;
+    try {
+      position = await this.fila.enfileirarDastScan({
+        scanId: scan.id,
+        targetUrl: scan.targetUrl,
+        requestedById: scan.requestedById,
+        run: async (ctx) => {
+          await this.runInBackground(scan.id, ctx);
+        },
+      });
+    } catch (err) {
+      // ADR-056: Redis fora do ar (motor bullmq). O scan fica QUEUED no banco,
+      // que é a fonte da verdade, e o boot seguinte do worker o reenfileira.
+      // Sem fallback para memória: isso esconderia a falha de infraestrutura.
+      this.watchdog.raise("error", scan.id, `Fila indisponível: o scan ficou registrado e será enfileirado quando a fila voltar (${(err as Error).message}).`);
+      throw new Error("QUEUE_UNAVAILABLE");
+    }
     if (position > 0) {
       await this.repository.update(scan.id, { phase: "QUEUED", progress: 0 });
       this.watchdog.raise("warn", scan.id, `Limite de ${this.watchdog.maxConcurrent} scans simultâneos atingido — este entrou na fila (posição ${position}).`);
@@ -202,6 +220,9 @@ export class DastScanService {
     // interromper a execução; o `docker rm -f` derruba o container que
     // já estiver de pé (nenhum, se o scan ainda estava na fila).
     this.watchdog.abort(scan.id, "Scan cancelado pelo usuário.");
+    // bullmq: tira o job da fila se ainda não começou. Se o worker já o pegou,
+    // a guarda atômica (claimQueued) vê CANCELLED e não roda.
+    await this.fila.removerDastScanDaFila(scan.id).catch(() => false);
     if (!scan.simulated) await killContainer(scan.id);
     const updated = await this.repository.update(scan.id, {
       status: "CANCELLED",
@@ -290,7 +311,10 @@ export class DastScanService {
    */
   async getStatus(actor: Actor): Promise<DastModuleStatus> {
     const docker = await getDockerStatus();
-    const snapshot = this.watchdog.snapshot();
+    const watchdogSnapshot = this.watchdog.snapshot();
+    // ADR-056: a fila de espera vem do motor (memória ou Redis); quem está
+    // rodando e os alertas continuam vindo do watchdog deste processo.
+    const snapshot: WatchdogSnapshot = { ...watchdogSnapshot, ...(await this.queuedSnapshot()) };
     const isAdmin = actor.role === "ADMIN";
 
     return {
@@ -303,6 +327,72 @@ export class DastScanService {
       queued: isAdmin ? snapshot.queued : snapshot.queued.filter((q) => q.requestedById === actor.userId),
       alerts: isAdmin ? snapshot.alerts : snapshot.alerts.filter((a) => a.scanId === null || this.isOwnAlert(a.scanId, snapshot, actor.userId)),
     };
+  }
+
+  private async queuedSnapshot(): Promise<Pick<WatchdogSnapshot, "queued" | "queuedCount">> {
+    const fila = await this.fila.dastNaFila();
+    const scans = new Map((await this.repository.findByIds(fila.map((f) => f.scanId))).map((s) => [s.id, s]));
+    const queued = fila.flatMap((f, index) => {
+      const scan = scans.get(f.scanId);
+      return scan ? [{ scanId: f.scanId, targetUrl: scan.targetUrl, requestedById: scan.requestedById, queuedAt: f.queuedAt, position: index + 1 }] : [];
+    });
+    return { queued, queuedCount: queued.length };
+  }
+
+  /**
+   * ADR-056 — processor do worker BullMQ. Só roda scan ainda QUEUED (guarda
+   * de idempotência); executa sob o watchdog deste processo, para pulso,
+   * abort por travamento, alertas e banner continuarem iguais, e só resolve
+   * quando o scan termina (o job ocupa a vaga o tempo certo).
+   */
+  async processarDaFila(scanId: string): Promise<"executado" | "ignorado"> {
+    const scan = await this.repository.findById(scanId);
+    if (!scan || scan.status !== "QUEUED") return "ignorado";
+    let executou = false;
+    await this.watchdog.executar({
+      scanId: scan.id,
+      targetUrl: scan.targetUrl,
+      requestedById: scan.requestedById,
+      run: async (ctx) => {
+        executou = await this.runInBackground(scan.id, ctx);
+      },
+    });
+    return executou ? "executado" : "ignorado";
+  }
+
+  /**
+   * ADR-056 — job DAST que o BullMQ deu como falho sem o scan ter começado
+   * (ex.: worker morreu entre pegar o job e tomar o scan). O scan não pode
+   * ficar QUEUED para sempre: vira FAILED com o motivo. Scan que já começou
+   * tem dono (runInBackground/markFinished) e não é tocado.
+   */
+  async marcarFalhaDaFila(scanId: string, motivo: string): Promise<boolean> {
+    const marcou = await this.repository.failIfQueued(scanId, `Falha na fila de execução: ${motivo}`);
+    if (marcou) this.watchdog.raise("error", scanId, `Scan não pôde ser executado pela fila: ${motivo}`);
+    return marcou;
+  }
+
+  /**
+   * ADR-056 — boot do worker no motor bullmq (substitui recoverOrphanedScans):
+   *  - RUNNING: nenhum worker sobreviveu ao processo → container morto e FAILED, como antes;
+   *  - QUEUED: SOBREVIVE. Se o job não estiver vivo no Redis, volta para a
+   *    fila (o MySQL é a fonte da verdade), na ordem de criação.
+   */
+  async recuperarParaFila(garantirNaFila: (scanId: string) => Promise<boolean>): Promise<{ falhados: number; reenfileirados: number; naFila: number }> {
+    const pendentes = (await this.repository.findActiveOrQueued()).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    let falhados = 0;
+    let reenfileirados = 0;
+    let naFila = 0;
+    for (const scan of pendentes) {
+      if (scan.status === "RUNNING") {
+        await this.failOrphan(scan);
+        falhados++;
+      } else {
+        naFila++;
+        if (await garantirNaFila(scan.id)) reenfileirados++;
+      }
+    }
+    return { falhados, reenfileirados, naFila };
   }
 
   /** Alerta só aparece pro PENTESTER se for de um scan dele que o watchdog ainda conhece. */
@@ -322,26 +412,28 @@ export class DastScanService {
    */
   async recoverOrphanedScans(): Promise<number> {
     const orphans = await this.repository.findActiveOrQueued();
-    for (const scan of orphans) {
-      if (!scan.simulated) await killContainer(scan.id);
-      await this.repository.update(scan.id, {
-        status: "FAILED",
-        errorMessage: "Scan interrompido por reinício do servidor",
-        finishedAt: new Date(),
-      });
-      // Não existe "usuário sistema" no schema (actorId é FK obrigatória) —
-      // atribuir ao próprio requestedById mantém a trilha íntegra; o
-      // diffJson deixa claro que foi o watchdog, não uma ação do usuário.
-      await this.auditLogRepository.create({
-        actorId: scan.requestedById,
-        companyId: null,
-        entityType: "DastScan",
-        entityId: scan.id,
-        action: "STATUS_CHANGE",
-        diffJson: JSON.stringify({ from: scan.status, to: "FAILED", reason: "watchdog_boot" }),
-      });
-    }
+    for (const scan of orphans) await this.failOrphan(scan);
     return orphans.length;
+  }
+
+  private async failOrphan(scan: DastScan): Promise<void> {
+    if (!scan.simulated) await killContainer(scan.id);
+    await this.repository.update(scan.id, {
+      status: "FAILED",
+      errorMessage: "Scan interrompido por reinício do servidor",
+      finishedAt: new Date(),
+    });
+    // Não existe "usuário sistema" no schema (actorId é FK obrigatória) —
+    // atribuir ao próprio requestedById mantém a trilha íntegra; o
+    // diffJson deixa claro que foi o watchdog, não uma ação do usuário.
+    await this.auditLogRepository.create({
+      actorId: scan.requestedById,
+      companyId: scan.companyId,
+      entityType: "DastScan",
+      entityId: scan.id,
+      action: "STATUS_CHANGE",
+      diffJson: JSON.stringify({ from: scan.status, to: "FAILED", reason: "watchdog_boot" }),
+    });
   }
 
   // ==========================================================================
@@ -473,18 +565,21 @@ export class DastScanService {
     return scan;
   }
 
-  private async runInBackground(scanId: string, ctx: WatchdogRunContext): Promise<void> {
+  /** Devolve false quando o scan não foi tomado (já não estava QUEUED): nada foi executado. */
+  private async runInBackground(scanId: string, ctx: WatchdogRunContext): Promise<boolean> {
     const scan = await this.repository.findById(scanId);
-    if (!scan) return; // registro sumiu entre o create e aqui — não há o que fazer
+    if (!scan) return false; // registro sumiu entre o create e aqui — não há o que fazer
 
-    await this.repository.update(scanId, {
-      status: "RUNNING",
+    // ADR-056: tomada ATÔMICA (UPDATE ... WHERE status = QUEUED). Um job
+    // repetido, ou um scan cancelado entre a fila e aqui, não volta a RUNNING.
+    const claimed = await this.repository.claimQueued(scanId, {
       startedAt: new Date(),
       phase: "STARTING",
       progress: 0,
       simulated: scan.simulated,
       warningMessage: null,
     });
+    if (!claimed) return false;
 
     try {
       const outcome = await runScan({
@@ -505,7 +600,7 @@ export class DastScanService {
             ? String(ctx.signal.reason ?? "Scan interrompido.")
             : (outcome.errorMessage ?? "Falha desconhecida na execução do scan");
         await this.markFinished(scan, "FAILED", outcome.durationMs, `${reason}: ${friendlyFailureReason(reason)}`);
-        return;
+        return true;
       }
 
       // A demonstração NÃO interrompe de verdade o timer interno quando
@@ -514,7 +609,7 @@ export class DastScanService {
       // "rodava" simulado ainda tentaria persistir findings de um registro
       // que já não está mais RUNNING (ou nem existe mais).
       const stillRunning = await this.repository.findById(scanId);
-      if (!stillRunning || stillRunning.status !== "RUNNING") return;
+      if (!stillRunning || stillRunning.status !== "RUNNING") return true;
 
       let counters: RiskCounters;
       try {
@@ -529,7 +624,7 @@ export class DastScanService {
           outcome.htmlReportPath,
           outcome.jsonReportPath,
         );
-        return;
+        return true;
       }
 
       void counters; // já refletido no banco via persistFindingsAndUpdateCounters; aqui só pra deixar o fluxo explícito
@@ -551,6 +646,7 @@ export class DastScanService {
       this.watchdog.raise("error", scanId, `Erro inesperado na execução: ${(err as Error).message}`);
       await this.markFinished(scan, "FAILED", undefined, (err as Error).message || "DOCKER_UNAVAILABLE");
     }
+    return true;
   }
 
   /**

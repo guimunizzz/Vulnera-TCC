@@ -7,8 +7,9 @@
  * ADR-056 — é o caminho de rollback e o padrão até a Fase 4 ser aprovada.
  */
 
-import type { JobQueue, ThreatIntelJobData } from "./job-queue";
+import type { JobQueue, PedidoScanDast, ScanNaFila, ThreatIntelJobData } from "./job-queue";
 import type { ThreatIntelSyncService } from "../threat-intel/threat-intel-sync.service";
+import type { DastWatchdog } from "../dast-watchdog.service";
 
 /**
  * Quem executa cada assunto no próprio processo. São getters (resolvidos na
@@ -17,6 +18,7 @@ import type { ThreatIntelSyncService } from "../threat-intel/threat-intel-sync.s
  */
 export interface ExecutoresEmMemoria {
   threatIntel: () => Pick<ThreatIntelSyncService, "executar" | "emAndamento">;
+  watchdogDast: () => Pick<DastWatchdog, "submit" | "snapshot">;
 }
 
 export class MemoryJobQueue implements JobQueue {
@@ -39,6 +41,23 @@ export class MemoryJobQueue implements JobQueue {
 
   async threatIntelEmAndamento(): Promise<boolean> {
     return this.executores.threatIntel().emAndamento();
+  }
+
+  async enfileirarDastScan(pedido: PedidoScanDast): Promise<number> {
+    // Exatamente o caminho de antes do ADR-056: o watchdog decide quando começa.
+    return this.executores.watchdogDast().submit(pedido);
+  }
+
+  async removerDastScanDaFila(): Promise<boolean> {
+    // O cancelamento já chamou watchdog.abort, que tira o scan da fila em memória.
+    return false;
+  }
+
+  async dastNaFila(): Promise<ScanNaFila[]> {
+    return this.executores
+      .watchdogDast()
+      .snapshot()
+      .queued.map((q) => ({ scanId: q.scanId, queuedAt: q.queuedAt }));
   }
 
   async close(): Promise<void> {

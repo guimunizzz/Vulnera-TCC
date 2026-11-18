@@ -89,6 +89,31 @@ export class DastScanRepository {
   }
 
   /** Todo scan ainda QUEUED/RUNNING — usado pelo watchdog de boot e por testes de órfão. */
+  /**
+   * ADR-056 — toma o scan para execução de forma ATÔMICA: só um chamador vê
+   * `true`, e só se o scan ainda estiver QUEUED. É a guarda de idempotência
+   * da fila (job repetido não roda duas vezes) e fecha a corrida com o
+   * cancelamento (um CANCELLED nunca volta a RUNNING).
+   */
+  async claimQueued(id: string, data: UpdateDastScanInput): Promise<boolean> {
+    const r = await this.prisma.dastScan.updateMany({ where: { id, status: "QUEUED" }, data: { ...data, status: "RUNNING" } });
+    return r.count === 1;
+  }
+
+  /** ADR-056 — falha de fila (job perdido): só um scan ainda QUEUED vira FAILED. */
+  async failIfQueued(id: string, errorMessage: string): Promise<boolean> {
+    const r = await this.prisma.dastScan.updateMany({
+      where: { id, status: "QUEUED" },
+      data: { status: "FAILED", errorMessage, finishedAt: new Date(), phase: "FAILED", progress: 100 },
+    });
+    return r.count === 1;
+  }
+
+  async findByIds(ids: string[]): Promise<DastScan[]> {
+    if (ids.length === 0) return [];
+    return this.prisma.dastScan.findMany({ where: { id: { in: ids } } });
+  }
+
   async findActiveOrQueued(): Promise<DastScan[]> {
     return this.prisma.dastScan.findMany({ where: { status: { in: ["QUEUED", "RUNNING"] } } });
   }

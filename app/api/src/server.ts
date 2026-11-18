@@ -14,14 +14,19 @@ const port = EnvVar.getNumber(EnvKeys.PORT);
 // sobrevivente rodando aquele container) — marca FAILED antes de aceitar
 // tráfego. Sem isso, um restart no meio de um scan deixaria o registro
 // pendurado pra sempre (ver dast-scan.service.ts).
-makeDastScanService()
-  .recoverOrphanedScans()
-  .then((count) => {
-    if (count > 0) console.log(`⚠️  Watchdog DAST: ${count} scan(s) órfão(s) marcado(s) como FAILED`);
-  })
-  .catch((err) => console.error("Watchdog DAST falhou ao rodar no boot", err));
-
+//
+// ADR-056: só no motor memory. Com bullmq, quem recupera é o worker (worker.ts):
+// lá um QUEUED sobrevive ao restart, e com o worker em processo próprio a API
+// não pode declarar órfão um scan que ele continua rodando.
 const jobQueue = makeJobQueue();
+if (jobQueue.driver === "memory") {
+  makeDastScanService()
+    .recoverOrphanedScans()
+    .then((count) => {
+      if (count > 0) console.log(`⚠️  Watchdog DAST: ${count} scan(s) órfão(s) marcado(s) como FAILED`);
+    })
+    .catch((err) => console.error("Watchdog DAST falhou ao rodar no boot", err));
+}
 
 // Threat Intel (ADR-053): sincronização periódica com NVD, OSV, CISA KEV e EPSS.
 // Só aqui, nunca no app.ts: os testes importam o app e não podem ligar o relógio.

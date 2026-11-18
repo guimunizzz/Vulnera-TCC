@@ -58,6 +58,7 @@ export class DastScanController {
       }
       if (error.message === "PROJECT_APPLICATION_MISMATCH") return res.status(400).json({ error: "PROJECT_APPLICATION_MISMATCH" });
       if (error.message === "FORBIDDEN") return res.status(403).json({ error: "FORBIDDEN" });
+      if (error.message === "QUEUE_UNAVAILABLE") return res.status(503).json({ error: "QUEUE_UNAVAILABLE" });
       console.error("DastScanController.create", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }

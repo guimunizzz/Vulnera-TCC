@@ -29,6 +29,7 @@ import { EnvKeys } from "../config/enum/EnvKeys";
 import { ApplicationRepository } from "../repositories/application.repository";
 import { ProjectRepository } from "../repositories/project.repository";
 import { ProjectMemberRepository } from "../repositories/project-member.repository";
+import { makeJobQueue } from "./job-queue.factory";
 
 export function makeDastScanService(): DastScanService {
   const repository = new DastScanRepository(prisma);
@@ -48,7 +49,7 @@ export function makeDastScanService(): DastScanService {
     projects: new ProjectRepository(prisma),
     members: new ProjectMemberRepository(prisma),
   };
-  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog, sensors, scope, makeTechSuggestionService());
+  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog, sensors, scope, makeJobQueue(), makeTechSuggestionService());
 }
 
 export function makeDastScanController(): DastScanController {

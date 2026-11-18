@@ -12,9 +12,13 @@
  * O app.ts NUNCA importa este arquivo: os testes importam o app e não podem
  * abrir conexão com o Redis (A6).
  *
- * Workers registrados: Threat Intel (Fase 3). DAST (Fase 4) e agendamentos
- * (Fase 5) entram aqui. Até a Fase 4, com QUEUE_DRIVER=bullmq, o DAST segue
- * no watchdog em memória — o boot avisa isso no log.
+ * Workers registrados: Threat Intel (Fase 3) e DAST (Fase 4). Agendamentos
+ * (Fase 5) entram aqui.
+ *
+ * Quem executa é quem recupera: no motor bullmq, a reconciliação de boot do
+ * DAST (RUNNING órfão vira FAILED, QUEUED sobrevive) roda AQUI, antes de
+ * consumir — não no server.ts. Com o worker em processo próprio, um restart
+ * da API não pode marcar como FAILED um scan que o worker continua rodando.
  */
 
 import type { Worker } from "bullmq";
@@ -22,6 +26,9 @@ import { EnvVar } from "./config/EnvVar";
 import { EnvKeys } from "./config/enum/EnvKeys";
 import { makeJobQueue } from "./factories/job-queue.factory";
 import { makeThreatIntelSyncService } from "./factories/threat-intel.factory";
+import { makeDastScanService } from "./factories/dast-scan.factory";
+import { dastWatchdog } from "./services/dast-watchdog.service";
+import { iniciarWorkerDast } from "./services/queue/workers/dast-scan.worker";
 import { BullmqJobQueue } from "./services/queue/bullmq-job-queue";
 import { QUEUE_NAMES, type JobQueue } from "./services/queue/job-queue";
 import { iniciarWorkerThreatIntel } from "./services/queue/workers/threat-intel.worker";
@@ -36,7 +43,7 @@ export async function iniciarWorkers(fila: JobQueue): Promise<WorkersEmExecucao>
     throw new Error("Workers só existem com QUEUE_DRIVER=bullmq; com memory a fila roda no próprio processo da API.");
   }
   await fila.verificarConexao();
-  console.log("🧵 Fila bullmq: conectada ao Redis. DAST segue no watchdog em memória até a Fase 4.");
+  console.log("🧵 Fila bullmq: conectada ao Redis.");
 
   const workers: Worker[] = [];
   workers.push(
@@ -45,6 +52,13 @@ export async function iniciarWorkers(fila: JobQueue): Promise<WorkersEmExecucao>
       intervaloMin: Number(EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_INTERVAL_MIN, "360")) || 360,
     }),
   );
+
+  // DAST: reconcilia banco × Redis ANTES de consumir (senão o worker pegaria
+  // um job cujo scan o boot ainda vai declarar órfão).
+  const dast = makeDastScanService();
+  const r = await dast.recuperarParaFila((scanId) => fila.garantirDastScanNaFila(scanId));
+  console.log(`🧵 DAST: ${r.naFila} scan(s) na fila preservado(s) (${r.reenfileirados} reenfileirado(s)), ${r.falhados} em execução marcado(s) como FAILED`);
+  workers.push(iniciarWorkerDast(fila.conexaoParaWorkers(), dast, dastWatchdog.maxConcurrent));
 
   return {
     encerrar: async () => {

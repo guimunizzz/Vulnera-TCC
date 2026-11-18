@@ -88,7 +88,7 @@ describe("Threat Intel na fila", () => {
 
   it("TIQ-07 — motor memory dispara o sync no próprio processo", async () => {
     const sync = { executar: jest.fn().mockResolvedValue(resumo("OK")), emAndamento: jest.fn().mockReturnValue(true) };
-    const fila = new MemoryJobQueue({ threatIntel: () => sync });
+    const fila = new MemoryJobQueue({ threatIntel: () => sync, watchdogDast: () => ({}) as never });
     await fila.enfileirarThreatIntel({ trigger: "ASSET", assetIds: ["t1"] });
     await fila.enfileirarThreatIntel({ trigger: "MANUAL" });
     expect(sync.executar).toHaveBeenNthCalledWith(1, "ASSET", ["t1"]);
