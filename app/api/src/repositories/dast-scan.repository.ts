@@ -27,6 +27,9 @@ export interface CreateDastScanInput {
   companyId?: string | null;
   applicationId?: string | null;
   projectId?: string | null;
+  /** ADR-056 — origem do scan; agendado leva o id do agendamento. */
+  trigger?: "MANUAL" | "SCHEDULED";
+  scheduleId?: string | null;
 }
 
 export interface UpdateDastScanInput {
@@ -65,6 +68,8 @@ export class DastScanRepository {
         companyId: input.companyId ?? null,
         applicationId: input.applicationId ?? null,
         projectId: input.projectId ?? null,
+        trigger: input.trigger ?? "MANUAL",
+        scheduleId: input.scheduleId ?? null,
       },
     });
   }

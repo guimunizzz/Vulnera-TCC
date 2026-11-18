@@ -15,7 +15,8 @@
  */
 
 import { Queue, type ConnectionOptions, type JobsOptions } from "bullmq";
-import { QUEUE_NAMES, type DastScanJobData, type JobQueue, type PedidoScanDast, type QueueName, type ScanNaFila, type ThreatIntelJobData } from "./job-queue";
+import { reconciliarAgendamentosDast } from "./workers/dast-schedule.worker";
+import { QUEUE_NAMES, type AgendamentoDastDesejado, type DastScanJobData, type JobQueue, type PedidoScanDast, type QueueName, type ScanNaFila, type ThreatIntelJobData } from "./job-queue";
 
 const TIMEOUT_VERIFICACAO_MS = 5_000;
 const TIMEOUT_ENFILEIRAR_MS = 5_000;
@@ -162,6 +163,10 @@ export class BullmqJobQueue implements JobQueue {
     }
     await fila.add("scan", { scanId } satisfies DastScanJobData, { ...OPCOES_JOB_DAST, jobId: scanId });
     return true;
+  }
+
+  async aplicarAgendamentosDast(desejados: AgendamentoDastDesejado[]): Promise<{ upserts: number; removidos: number }> {
+    return reconciliarAgendamentosDast(this.fila(QUEUE_NAMES.dastSchedule), desejados);
   }
 
   async verificarConexao(): Promise<void> {

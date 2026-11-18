@@ -114,7 +114,22 @@ export interface DastReportData {
   discovery: DastDiscoveryData | null;
 }
 
+/** ADR-056 — o que a execução de um agendamento já conferiu e resolveu antes de pedir o scan. */
+export interface PedidoScanAgendado {
+  scheduleId: string;
+  requestedById: string;
+  targetUrl: string;
+  mode: "REAL" | "SIMULATED";
+  companyId: string;
+  applicationId: string;
+  projectId: string | null;
+}
+
+/** Chamado quando um scan AGENDADO termina em FAILED (notificar o criador). */
+export type AoFalharScanAgendado = (scan: DastScan) => Promise<void>;
+
 export class DastScanService {
+  private aoFalharAgendado: AoFalharScanAgendado | null = null;
   constructor(
     private readonly repository: DastScanRepository,
     private readonly findingRepository: DastFindingRepository,
@@ -199,6 +214,56 @@ export class DastScanService {
       this.watchdog.raise("warn", scan.id, `Limite de ${this.watchdog.maxConcurrent} scans simultâneos atingido — este entrou na fila (posição ${position}).`);
     }
 
+    return new DastScanEntity(scan);
+  }
+
+  /** ADR-056 — gancho plugado pela factory: o scan não conhece Notification. */
+  setAoFalharAgendado(hook: AoFalharScanAgendado): void {
+    this.aoFalharAgendado = hook;
+  }
+
+  /**
+   * ADR-056 §6 — cria e enfileira o scan de um agendamento, pelo MESMO
+   * caminho do manual (fila `dast-scan`). Quem chama (o service de
+   * agendamentos) já conferiu autorização, tenant e membro NA EXECUÇÃO.
+   * Aqui só o lock "1 scan por alvo" (TARGET_BUSY) e a validação da URL.
+   */
+  async criarAgendado(pedido: PedidoScanAgendado): Promise<DastScanEntity> {
+    const targetUrl = validateTargetUrl(pedido.targetUrl).href;
+    if (await this.repository.findActiveForTarget(targetUrl)) throw new Error("TARGET_BUSY");
+
+    const created = await this.repository.create({
+      targetUrl,
+      requestedById: pedido.requestedById,
+      simulated: pedido.mode === "SIMULATED",
+      companyId: pedido.companyId,
+      applicationId: pedido.applicationId,
+      projectId: pedido.projectId,
+      trigger: "SCHEDULED",
+      scheduleId: pedido.scheduleId,
+    });
+    const scan = await this.repository.update(created.id, { containerName: created.simulated ? null : containerNameFor(created.id) });
+    await this.auditLogRepository.create({
+      actorId: pedido.requestedById,
+      companyId: pedido.companyId,
+      entityType: "DastScan",
+      entityId: scan.id,
+      action: "CREATE",
+      diffJson: JSON.stringify({ targetUrl, mode: pedido.mode, trigger: "SCHEDULED", scheduleId: pedido.scheduleId }),
+    });
+    try {
+      await this.fila.enfileirarDastScan({
+        scanId: scan.id,
+        targetUrl: scan.targetUrl,
+        requestedById: scan.requestedById,
+        run: async (ctx) => {
+          await this.runInBackground(scan.id, ctx);
+        },
+      });
+    } catch (err) {
+      this.watchdog.raise("error", scan.id, `Fila indisponível para o scan agendado: ${(err as Error).message}`);
+      throw new Error("QUEUE_UNAVAILABLE");
+    }
     return new DastScanEntity(scan);
   }
 
@@ -718,11 +783,18 @@ export class DastScanService {
     });
     await this.auditLogRepository.create({
       actorId: scan.requestedById,
-      companyId: null,
+      companyId: scan.companyId,
       entityType: "DastScan",
       entityId: scan.id,
       action: "STATUS_CHANGE",
       diffJson: JSON.stringify({ from: scan.status, to: status }),
     });
+    // ADR-056: scan agendado que falha avisa quem criou o agendamento (falha
+    // real é FAILED, nunca simulado). Falha ao notificar não muda o scan.
+    if (status === "FAILED" && scan.trigger === "SCHEDULED" && this.aoFalharAgendado) {
+      await this.aoFalharAgendado({ ...scan, status: "FAILED", errorMessage: errorMessage ?? null }).catch((e: unknown) =>
+        console.error(`[DAST] não notificou a falha do scan agendado ${scan.id}`, e),
+      );
+    }
   }
 }

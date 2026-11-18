@@ -12,8 +12,8 @@
  * O app.ts NUNCA importa este arquivo: os testes importam o app e não podem
  * abrir conexão com o Redis (A6).
  *
- * Workers registrados: Threat Intel (Fase 3) e DAST (Fase 4). Agendamentos
- * (Fase 5) entram aqui.
+ * Workers registrados: Threat Intel (Fase 3), DAST (Fase 4) e agendamentos
+ * DAST (Fase 5).
  *
  * Quem executa é quem recupera: no motor bullmq, a reconciliação de boot do
  * DAST (RUNNING órfão vira FAILED, QUEUED sobrevive) roda AQUI, antes de
@@ -29,6 +29,8 @@ import { makeThreatIntelSyncService } from "./factories/threat-intel.factory";
 import { makeDastScanService } from "./factories/dast-scan.factory";
 import { dastWatchdog } from "./services/dast-watchdog.service";
 import { iniciarWorkerDast } from "./services/queue/workers/dast-scan.worker";
+import { iniciarWorkerAgendamentosDast } from "./services/queue/workers/dast-schedule.worker";
+import { makeDastScheduleService } from "./factories/dast-schedule.factory";
 import { BullmqJobQueue } from "./services/queue/bullmq-job-queue";
 import { QUEUE_NAMES, type JobQueue } from "./services/queue/job-queue";
 import { iniciarWorkerThreatIntel } from "./services/queue/workers/threat-intel.worker";
@@ -59,6 +61,13 @@ export async function iniciarWorkers(fila: JobQueue): Promise<WorkersEmExecucao>
   const r = await dast.recuperarParaFila((scanId) => fila.garantirDastScanNaFila(scanId));
   console.log(`🧵 DAST: ${r.naFila} scan(s) na fila preservado(s) (${r.reenfileirados} reenfileirado(s)), ${r.falhados} em execução marcado(s) como FAILED`);
   workers.push(iniciarWorkerDast(fila.conexaoParaWorkers(), dast, dastWatchdog.maxConcurrent));
+
+  // Agendamentos DAST (Fase 5): o MySQL é a fonte da verdade; o boot recria no
+  // Redis o que faltar e remove o que sobrou, depois começa a consumir.
+  const agendamentos = makeDastScheduleService();
+  const rec = await agendamentos.reconciliar();
+  console.log(`🗓️  DAST agendado: ${rec?.upserts ?? 0} agendamento(s) no Redis, ${rec?.removidos ?? 0} removido(s)`);
+  workers.push(iniciarWorkerAgendamentosDast(fila.conexaoParaWorkers(), (id) => agendamentos.executar(id)));
 
   return {
     encerrar: async () => {

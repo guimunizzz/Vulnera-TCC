@@ -56,6 +56,18 @@ export interface PedidoScanDast {
   run: (ctx: WatchdogRunContext) => Promise<void>;
 }
 
+/** Payload da fila `dast-schedule`: só o id do agendamento. */
+export interface DastScheduleJobData {
+  scheduleId: string;
+}
+
+/** O que o Redis precisa espelhar de um ScanSchedule habilitado (padrão já gerado no servidor). */
+export interface AgendamentoDastDesejado {
+  scheduleId: string;
+  pattern: string;
+  timezone: string;
+}
+
 /** Um scan esperando a vez, na ordem em que vai entrar. */
 export interface ScanNaFila {
   scanId: string;
@@ -78,6 +90,13 @@ export interface JobQueue {
   removerDastScanDaFila(scanId: string): Promise<boolean>;
   /** Scans esperando a vez, na ordem de entrada. Alimenta o banner da tela DAST. */
   dastNaFila(): Promise<ScanNaFila[]>;
+  /**
+   * Agendamentos DAST (Fase 5): espelha no Redis o conjunto de agendamentos
+   * habilitados (upsert dos desejados, remoção dos que sobraram). Idempotente.
+   * memory: NÃO há execução agendada nesse motor — devolve null e quem chamou
+   * registra isso; o CRUD continua funcionando.
+   */
+  aplicarAgendamentosDast(desejados: AgendamentoDastDesejado[]): Promise<{ upserts: number; removidos: number } | null>;
   /**
    * Threat Intel (Fase 3): sincronização manual ou backfill de tecnologias.
    * memory: dispara no próprio processo, em segundo plano, como sempre.

@@ -30,6 +30,7 @@ import { ApplicationRepository } from "../repositories/application.repository";
 import { ProjectRepository } from "../repositories/project.repository";
 import { ProjectMemberRepository } from "../repositories/project-member.repository";
 import { makeJobQueue } from "./job-queue.factory";
+import { makeDastScheduleService } from "./dast-schedule.factory";
 
 export function makeDastScanService(): DastScanService {
   const repository = new DastScanRepository(prisma);
@@ -49,7 +50,11 @@ export function makeDastScanService(): DastScanService {
     projects: new ProjectRepository(prisma),
     members: new ProjectMemberRepository(prisma),
   };
-  return new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog, sensors, scope, makeJobQueue(), makeTechSuggestionService());
+  const service = new DastScanService(repository, findingRepository, auditLogRepository, userRepository, dastWatchdog, sensors, scope, makeJobQueue(), makeTechSuggestionService());
+  // ADR-056: scan agendado que falha notifica quem agendou. Resolvido só na
+  // hora da falha: dast-schedule.factory também importa esta factory.
+  service.setAoFalharAgendado((scan) => makeDastScheduleService().notificarFalhaDoScan(scan));
+  return service;
 }
 
 export function makeDastScanController(): DastScanController {

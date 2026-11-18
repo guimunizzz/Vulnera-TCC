@@ -57,6 +57,14 @@ export class ApplicationRepository {
     return this.prisma.application.findMany({ where: { companyId }, orderBy: { name: "asc" } });
   }
 
+  /** ADR-056 — registra (ou, com tudo null, revoga) a autorização de DAST da aplicação. */
+  async setDastAuthorization(
+    id: string,
+    data: { dastAuthorizedAt: Date | null; dastAuthorizedById: string | null; dastAuthorizedUntil: Date | null; dastAuthorizedHost: string | null },
+  ): Promise<Application> {
+    return this.prisma.application.update({ where: { id }, data });
+  }
+
   /** RN04: exclusão é soft delete via isActive — nunca DELETE físico. */
   async deactivate(id: string): Promise<Application> {
     return this.prisma.application.update({ where: { id }, data: { isActive: false } });
