@@ -16,6 +16,7 @@ const STATUS: Record<string, number> = {
   INVALID_TIMEZONE: 400,
   INVALID_ENABLED: 400,
   INVALID_PROJECT_ID: 400,
+  INVALID_LIMIT: 400,
   MISSING_PROJECT_ID: 400,
   MODE_IS_IMMUTABLE: 400,
   TARGET_IS_IMMUTABLE: 400,
@@ -54,6 +55,13 @@ export class DastScheduleController {
     this.responder(res, "updateById", () => this.service.atualizarPorId(req.user!, String(req.params.scheduleId), this.corpo(req)));
 
   removeById = (req: Request, res: Response) => this.responder(res, "removeById", () => this.service.removerPorId(req.user!, String(req.params.scheduleId)), 204);
+
+  /** POST /dast-schedules/:scheduleId/run — "Rodar agora". */
+  run = (req: Request, res: Response) => this.responder(res, "run", () => this.service.rodarAgora(req.user!, String(req.params.scheduleId)));
+
+  /** GET /dast-schedules/:scheduleId/history?limit=10 — últimas execuções com o diff. */
+  history = (req: Request, res: Response) =>
+    this.responder(res, "history", () => this.service.historico(req.user!, String(req.params.scheduleId), req.query.limit));
 
   list = (req: Request, res: Response) => this.responder(res, "list", () => this.service.listar(req.user!, String(req.params.id)));
 

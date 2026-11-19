@@ -94,6 +94,19 @@ export class DastScanRepository {
     return this.prisma.dastScan.findMany({ where: { requestedById }, orderBy: { createdAt: "desc" } });
   }
 
+  /** Histórico de um agendamento: os scans dele, do mais recente para o mais antigo. */
+  async findByScheduleId(scheduleId: string, take: number): Promise<DastScan[]> {
+    return this.prisma.dastScan.findMany({ where: { scheduleId }, orderBy: { createdAt: "desc" }, take });
+  }
+
+  /** Base da comparação: o scan COMPLETED mais recente do agendamento anterior a `antesDe`. */
+  async findCompletedBefore(scheduleId: string, antesDe: Date): Promise<DastScan | null> {
+    return this.prisma.dastScan.findFirst({
+      where: { scheduleId, status: "COMPLETED", createdAt: { lt: antesDe } },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   /** Sustenta a regra "1 scan por alvo de cada vez" — consultado ANTES de criar. */
   async findActiveForTarget(targetUrl: string): Promise<DastScan | null> {
     return this.prisma.dastScan.findFirst({

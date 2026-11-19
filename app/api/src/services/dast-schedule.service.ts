@@ -34,6 +34,8 @@ import type { NotificationRepository } from "../repositories/notification.reposi
 import type { JobQueue } from "./queue/job-queue";
 import type { DastScanService } from "./dast-scan.service";
 import type { DastScan } from "../models/dast-scan.model";
+import type { DastScanRepository } from "../repositories/dast-scan.repository";
+import type { DastFindingRepository } from "../repositories/dast-finding.repository";
 import type { UserRole } from "../models/user.model";
 import { validateTargetUrl } from "./zap-runner.service";
 import {
@@ -54,6 +56,10 @@ interface Actor {
 
 /** Teto da autorização: um ano. Autorização sem fim seria uma permissão esquecida. */
 const MAX_AUTORIZACAO_MS = 366 * 24 * 3600_000;
+
+/** Histórico do agendamento: quantas execuções vêm por padrão e o teto aceito. */
+const LIMITE_HISTORICO_PADRAO = 10;
+const LIMITE_HISTORICO_MAX = 50;
 
 export interface AutorizacaoDastDTO {
   applicationId: string;
@@ -126,6 +132,34 @@ export interface AlvoDastDTO {
   projectRequired: boolean;
 }
 
+/** "Rodar agora": o desfecho (o mesmo código gravado em lastOutcome) e o scan criado, quando houve. */
+export interface ResultadoExecucao {
+  outcome: string;
+  scanId: string | null;
+}
+
+/** Diff por fingerprint contra a execução COMPLETED anterior do mesmo agendamento. */
+export interface DiffExecucaoDTO {
+  novos: number;
+  resolvidos: number;
+  persistentes: number;
+}
+
+/** Uma execução do agendamento, como aparece no histórico da página. */
+export interface ExecucaoAgendamentoDTO {
+  id: string;
+  status: string;
+  simulated: boolean;
+  createdAt: string;
+  finishedAt: string | null;
+  alertsHigh: number;
+  alertsMedium: number;
+  alertsLow: number;
+  alertsInfo: number;
+  /** null quando a execução não é COMPLETED ou não há COMPLETED anterior do agendamento. */
+  diff: DiffExecucaoDTO | null;
+}
+
 export interface CriarAgendamentoInput extends Partial<CamposAgendamento> {
   mode?: unknown;
   /** Só no agendamento por URL. */
@@ -170,6 +204,8 @@ export class DastScheduleService {
     private readonly notifications: Pick<NotificationRepository, "criarVarias">,
     private readonly fila: Pick<JobQueue, "driver" | "aplicarAgendamentosDast" | "proximasExecucoesDast">,
     private readonly scans: Pick<DastScanService, "criarAgendado">,
+    private readonly scanRepo: Pick<DastScanRepository, "findByScheduleId" | "findCompletedBefore">,
+    private readonly findings: Pick<DastFindingRepository, "findFingerprintsByScanIds">,
     private readonly agora: () => Date = () => new Date(),
   ) {}
 
@@ -421,16 +457,81 @@ export class DastScheduleService {
   // Execução (worker)
   // ==========================================================================
 
-  /** Processor do job `{ scheduleId }`. Devolve o desfecho gravado em lastOutcome. */
+  /**
+   * "Rodar agora" (página /agendamentos). Permissão = a de editar: o agendamento
+   * precisa ser editável por quem pede (e, por aplicação, a aplicação também).
+   * Executa pelo MESMO caminho do worker: pausado devolve DISABLED, e a
+   * autorização, o host, o criador e o TARGET_BUSY são conferidos de novo.
+   */
+  async rodarAgora(actor: Actor, scheduleId: string): Promise<ResultadoExecucao> {
+    const s = await this.agendamentoParaEscrita(actor, scheduleId);
+    if (s.applicationId) await this.appParaEscrita(actor, s.applicationId);
+    const resultado = await this.executarAgendamento(s.id);
+    await this.auditar(actor.userId, s.companyId, "ScanSchedule", s.id, "RUN_NOW", { outcome: resultado.outcome, scanId: resultado.scanId });
+    return resultado;
+  }
+
+  /**
+   * Últimas execuções do agendamento, da mais recente para a mais antiga. Quem
+   * lê o agendamento lê o histórico (a mesma regra da listagem). Cada execução
+   * COMPLETED traz o diff por fingerprint contra a COMPLETED anterior do mesmo
+   * agendamento; simulados entram, porque são do mesmo agendamento.
+   */
+  async historico(actor: Actor, scheduleId: string, limite: unknown): Promise<ExecucaoAgendamentoDTO[]> {
+    const limit = this.limiteHistorico(limite);
+    const s = await this.agendamentoParaLeitura(actor, scheduleId);
+    const execucoes = await this.scanRepo.findByScheduleId(s.id, limit);
+
+    const completas = execucoes.filter((e) => e.status === "COMPLETED");
+    // A base da comparação da execução mais antiga da janela pode estar fora dela.
+    const anterior = completas.length > 0 ? await this.scanRepo.findCompletedBefore(s.id, completas[completas.length - 1]!.createdAt) : null;
+    // COMPLETED do mais novo ao mais antigo; a base de cada um é o item seguinte.
+    const sequencia = anterior ? [...completas, anterior] : completas;
+    const baseDe = new Map<string, string>();
+    completas.forEach((e, i) => {
+      const base = sequencia[i + 1];
+      if (base) baseDe.set(e.id, base.id);
+    });
+
+    const fingerprints = new Map<string, Set<string>>();
+    for (const linha of await this.findings.findFingerprintsByScanIds(sequencia.map((e) => e.id))) {
+      const conjunto = fingerprints.get(linha.scanId) ?? new Set<string>();
+      conjunto.add(linha.fingerprint);
+      fingerprints.set(linha.scanId, conjunto);
+    }
+
+    return execucoes.map((e) => {
+      const baseId = baseDe.get(e.id);
+      return {
+        id: e.id,
+        status: e.status,
+        simulated: e.simulated,
+        createdAt: e.createdAt.toISOString(),
+        finishedAt: e.finishedAt?.toISOString() ?? null,
+        alertsHigh: e.alertsHigh,
+        alertsMedium: e.alertsMedium,
+        alertsLow: e.alertsLow,
+        alertsInfo: e.alertsInfo,
+        diff: baseId ? this.compararFingerprints(fingerprints.get(baseId) ?? new Set(), fingerprints.get(e.id) ?? new Set()) : null,
+      };
+    });
+  }
+
+  /** Processor do job `{ scheduleId }` do worker. Devolve o desfecho gravado em lastOutcome. */
   async executar(scheduleId: string): Promise<string> {
+    return (await this.executarAgendamento(scheduleId)).outcome;
+  }
+
+  /** Caminho comum ao worker e a "Rodar agora": tudo é reconferido aqui, no disparo. */
+  private async executarAgendamento(scheduleId: string): Promise<ResultadoExecucao> {
     const s = await this.schedules.findById(scheduleId);
-    if (!s) return "NOT_FOUND"; // apagado entre o disparo e aqui; o reconciliador limpa o scheduler
+    if (!s) return { outcome: "NOT_FOUND", scanId: null }; // apagado entre o disparo e aqui; o reconciliador limpa o scheduler
 
     const motivo = await this.motivoParaNaoRodar(s);
     if (motivo) {
       await this.registrarDesfecho(s, motivo, null);
       await this.notificar(s.createdById, s.applicationId, "Scan DAST agendado não executado", `O scan agendado não rodou: ${DESCRICAO[motivo] ?? motivo}.`);
-      return motivo;
+      return { outcome: motivo, scanId: null };
     }
 
     // Por URL: o alvo é o próprio agendamento; por aplicação, a URL atual dela.
@@ -446,12 +547,12 @@ export class DastScheduleService {
         projectId: s.projectId,
       });
       await this.registrarDesfecho(s, "STARTED", scan.id);
-      return "STARTED";
+      return { outcome: "STARTED", scanId: scan.id };
     } catch (err) {
       const codigo = (err as Error).message === "TARGET_BUSY" || (err as Error).message === "QUEUE_UNAVAILABLE" ? (err as Error).message : "ERROR";
       await this.registrarDesfecho(s, codigo, null);
       await this.notificar(s.createdById, s.applicationId, "Scan DAST agendado não executado", `O scan agendado não rodou: ${DESCRICAO[codigo] ?? (err as Error).message}.`);
-      return codigo;
+      return { outcome: codigo, scanId: null };
     }
   }
 
@@ -537,6 +638,46 @@ export class DastScheduleService {
     if (!project || project.applicationId !== app.id) throw new Error("PROJECT_NOT_FOUND");
     if (actor.role === "PENTESTER" && !(await this.members.findOne(project.id, actor.userId))) throw new Error("FORBIDDEN");
     return project.id;
+  }
+
+  /**
+   * Leitura do agendamento (histórico): a mesma regra da listagem. Por URL,
+   * ADMIN e qualquer PENTESTER; por aplicação, quem lê a aplicação. Quem não
+   * lê recebe SCHEDULE_NOT_FOUND, sem revelar que o agendamento existe.
+   */
+  private async agendamentoParaLeitura(actor: Actor, scheduleId: string): Promise<ScanSchedule> {
+    const s = await this.schedules.findById(scheduleId);
+    if (!s) throw new Error("SCHEDULE_NOT_FOUND");
+    if (!s.applicationId) {
+      if (actor.role !== "ADMIN" && actor.role !== "PENTESTER") throw new Error("SCHEDULE_NOT_FOUND");
+      return s;
+    }
+    try {
+      await this.appParaLeitura(actor, s.applicationId);
+    } catch (err) {
+      if ((err as Error).message === "APPLICATION_NOT_FOUND") throw new Error("SCHEDULE_NOT_FOUND");
+      throw err;
+    }
+    return s;
+  }
+
+  /** Padrão 10; teto 50 (acima disso, vale o teto). Não-inteiro ou menor que 1 é INVALID_LIMIT. */
+  private limiteHistorico(limite: unknown): number {
+    if (limite === undefined || limite === "") return LIMITE_HISTORICO_PADRAO;
+    const n = Number(limite);
+    if (!Number.isInteger(n) || n < 1) throw new Error("INVALID_LIMIT");
+    return Math.min(n, LIMITE_HISTORICO_MAX);
+  }
+
+  /**
+   * Mesmo critério de DastTriageService.compare: fingerprint = pluginId + URL
+   * normalizada + parâmetro, sem a evidência. Como (scanId, fingerprint) é
+   * único, o tamanho dos conjuntos é a contagem de findings.
+   */
+  private compararFingerprints(base: Set<string>, head: Set<string>): DiffExecucaoDTO {
+    let persistentes = 0;
+    for (const f of head) if (base.has(f)) persistentes++;
+    return { novos: head.size - persistentes, resolvidos: base.size - persistentes, persistentes };
   }
 
   private async agendamentoDaApp(app: Application, scheduleId: string): Promise<ScanSchedule> {

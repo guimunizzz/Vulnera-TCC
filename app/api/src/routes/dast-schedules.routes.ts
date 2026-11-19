@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { makeDastScheduleController } from "../factories/dast-schedule.factory";
-import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
+import { authRateLimitMiddleware, endpointRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 
 /**
- * ADR-056 — leitura da página /agendamentos. Criar, editar, remover e
- * autorizar continuam por aplicação (`/applications/:id/dast-*`); aqui só se
- * lista o que a pessoa enxerga e as aplicações em que ela pode agendar.
- * Quem vê o quê é decidido no service (ADMIN, PENTESTER membro, CLIENT da empresa).
+ * ADR-056 — página /agendamentos. Criar, editar, remover e autorizar continuam
+ * por aplicação (`/applications/:id/dast-*`) ou pelos ids daqui (agendamento
+ * por URL). Aqui também ficam "Rodar agora" e o histórico. Quem vê e quem
+ * executa é decidido no service (ADMIN, PENTESTER membro, CLIENT da empresa).
  */
 const router = Router();
 const controller = makeDastScheduleController();
@@ -19,5 +19,8 @@ router.get("/targets", controller.targets);
 router.post("/", controller.createByUrl);
 router.put("/:scheduleId", controller.updateById);
 router.delete("/:scheduleId", controller.removeById);
+// "Rodar agora" conta no mesmo limite do DAST: cada clique cria um scan real.
+router.post("/:scheduleId/run", endpointRateLimitMiddleware("dast"), controller.run);
+router.get("/:scheduleId/history", controller.history);
 
 export { router as dastScheduleRoutes };

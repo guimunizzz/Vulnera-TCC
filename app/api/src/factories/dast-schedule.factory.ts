@@ -13,6 +13,8 @@ import { ProjectMemberRepository } from "../repositories/project-member.reposito
 import { UserRepository } from "../repositories/user.repository";
 import { AuditLogRepository } from "../repositories/audit-log.repository";
 import { NotificationRepository } from "../repositories/notification.repository";
+import { DastScanRepository } from "../repositories/dast-scan.repository";
+import { DastFindingRepository } from "../repositories/dast-finding.repository";
 import { DastScheduleService } from "../services/dast-schedule.service";
 import { DastScheduleController } from "../controllers/dast-schedule.controller";
 import { makeJobQueue } from "./job-queue.factory";
@@ -29,6 +31,8 @@ export function makeDastScheduleService(): DastScheduleService {
     new NotificationRepository(prisma),
     makeJobQueue(),
     makeDastScanService(),
+    new DastScanRepository(prisma),
+    new DastFindingRepository(prisma),
   );
 }
 

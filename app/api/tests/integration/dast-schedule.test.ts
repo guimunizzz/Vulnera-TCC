@@ -381,3 +381,168 @@ describe("Agendamento só por URL (decisão de 2026-11-19)", () => {
     expect(await prisma.dastScan.count()).toBe(0);
   });
 });
+
+describe("Rodar agora (página /agendamentos)", () => {
+  it("RUN-01 — mesma permissão de editar; roda pelo caminho do worker e devolve { outcome, scanId }", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    const rota = `/api/dast-schedules/${sched.id}/run`;
+
+    // Sem vínculo com a aplicação: 404; CLIENT da própria empresa: 403; outra empresa: 404.
+    expect((await request(app).post(rota).set(c.h.pentOutro)).status).toBe(404);
+    expect((await request(app).post(rota).set(c.h.clientA)).status).toBe(403);
+    expect((await request(app).post(rota).set(c.h.clientB)).status).toBe(404);
+    expect(await prisma.dastScan.count()).toBe(0);
+
+    const ok = await request(app).post(rota).set(c.h.pentA);
+    expect(ok.status).toBe(200);
+    expect(ok.body).toEqual({ outcome: "STARTED", scanId: expect.any(String) });
+    const scan = await esperarTerminal(ok.body.scanId);
+    expect(scan).toMatchObject({ status: "COMPLETED", trigger: "SCHEDULED", scheduleId: sched.id, requestedById: c.pentA.id, applicationId: c.appA.id });
+    expect((await prisma.scanSchedule.findUniqueOrThrow({ where: { id: sched.id } })).lastScanId).toBe(scan.id);
+
+    // O ADMIN também pode; cada clique gera um AuditLog RUN_NOW com quem pediu.
+    expect((await request(app).post(rota).set(c.h.admin)).status).toBe(200);
+    const auditoria = await prisma.auditLog.findMany({ where: { entityType: "ScanSchedule", entityId: sched.id, action: "RUN_NOW" } });
+    expect(auditoria).toHaveLength(2);
+    expect(auditoria.map((a) => a.actorId)).toContain(c.pentA.id);
+    expect(auditoria.map((a) => a.actorId)).toContain(c.admin.id);
+  });
+
+  it("RUN-02 — agendamento pausado devolve DISABLED, sem scan, e registra o desfecho", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    await request(app).put(`/api/dast-schedules/${sched.id}`).set(c.h.pentA).send({ enabled: false });
+
+    const res = await request(app).post(`/api/dast-schedules/${sched.id}/run`).set(c.h.pentA);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ outcome: "DISABLED", scanId: null });
+    expect(await prisma.dastScan.count()).toBe(0);
+    expect((await prisma.scanSchedule.findUniqueOrThrow({ where: { id: sched.id } })).lastOutcome).toBe("DISABLED");
+  });
+
+  it("RUN-03 — agendamento por URL: qualquer PENTESTER roda; CLIENT não vê nem roda; id inexistente é 404", async () => {
+    const c = await cenario();
+    const criado = (await request(app).post("/api/dast-schedules").set(c.h.pentA).send(corpo({ targetUrl: "https://alvo-solto.example.com/login", confirmedAuthorization: true }))).body;
+    const rota = `/api/dast-schedules/${criado.id}/run`;
+
+    expect((await request(app).post(rota).set(c.h.clientA)).status).toBe(404);
+    const ok = await request(app).post(rota).set(c.h.pentOutro);
+    expect(ok.status).toBe(200);
+    expect(ok.body.outcome).toBe("STARTED");
+    await esperarTerminal(ok.body.scanId);
+
+    const inexistente = await request(app).post("/api/dast-schedules/nao-existe/run").set(c.h.admin);
+    expect(inexistente.status).toBe(404);
+    expect(inexistente.body.error).toBe("SCHEDULE_NOT_FOUND");
+  });
+});
+
+describe("Histórico do agendamento e comparação com a execução anterior", () => {
+  const T0 = Date.parse("2026-11-01T03:00:00Z");
+
+  /** Scan de agendamento inserido direto no banco: a história é controlada pelo teste. */
+  async function scanDoAgendamento(c: Awaited<ReturnType<typeof cenario>>, scheduleId: string, horas: number, extra: Record<string, unknown> = {}) {
+    return prisma.dastScan.create({
+      data: {
+        targetUrl: "https://app-a.example.com/login",
+        requestedById: c.pentA.id,
+        trigger: "SCHEDULED",
+        scheduleId,
+        companyId: c.companyA.id,
+        applicationId: c.appA.id,
+        projectId: c.projectA.id,
+        status: "COMPLETED",
+        simulated: true,
+        createdAt: new Date(T0 + horas * 3600_000),
+        finishedAt: new Date(T0 + horas * 3600_000 + 60_000),
+        ...extra,
+      },
+    });
+  }
+
+  it("HIST-01 — mais recentes primeiro, padrão 10, limit respeitado, teto 50 e entrada inválida é 400", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    await prisma.dastScan.createMany({
+      data: Array.from({ length: 55 }, (_, i) => ({
+        targetUrl: "https://app-a.example.com/login",
+        requestedById: c.pentA.id,
+        trigger: "SCHEDULED" as const,
+        scheduleId: sched.id,
+        companyId: c.companyA.id,
+        applicationId: c.appA.id,
+        projectId: c.projectA.id,
+        status: "COMPLETED" as const,
+        simulated: true,
+        createdAt: new Date(T0 + i * 3600_000),
+        alertsHigh: i,
+      })),
+    });
+    const rota = `/api/dast-schedules/${sched.id}/history`;
+
+    const padrao = await request(app).get(rota).set(c.h.admin);
+    expect(padrao.status).toBe(200);
+    expect(padrao.body).toHaveLength(10);
+    expect(padrao.body[0]).toMatchObject({ status: "COMPLETED", simulated: true, alertsHigh: 54, alertsMedium: 0, alertsLow: 0, alertsInfo: 0 });
+    expect(padrao.body.map((e: { alertsHigh: number }) => e.alertsHigh)).toEqual([54, 53, 52, 51, 50, 49, 48, 47, 46, 45]);
+
+    expect((await request(app).get(`${rota}?limit=3`).set(c.h.admin)).body).toHaveLength(3);
+    expect((await request(app).get(`${rota}?limit=500`).set(c.h.admin)).body).toHaveLength(50);
+    expect((await request(app).get(`${rota}?limit=0`).set(c.h.admin)).body.error).toBe("INVALID_LIMIT");
+    expect((await request(app).get(`${rota}?limit=abc`).set(c.h.admin)).status).toBe(400);
+  });
+
+  it("HIST-02 — tenancy: empresa B não lê o histórico da A; CLIENT da A lê o da aplicação; agendamento por URL é do time", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    await scanDoAgendamento(c, sched.id, 0);
+    const rota = `/api/dast-schedules/${sched.id}/history`;
+
+    expect((await request(app).get(rota).set(c.h.clientB)).status).toBe(404);
+    expect((await request(app).get(rota).set(c.h.pentOutro)).status).toBe(404);
+    expect((await request(app).get(rota).set(c.h.clientA)).status).toBe(200);
+    expect((await request(app).get(rota).set(c.h.pentA)).status).toBe(200);
+    expect((await request(app).get(rota).set(c.h.admin)).status).toBe(200);
+
+    const porUrl = (await request(app).post("/api/dast-schedules").set(c.h.pentA).send(corpo({ targetUrl: "https://alvo-solto.example.com/", confirmedAuthorization: true }))).body;
+    expect((await request(app).get(`/api/dast-schedules/${porUrl.id}/history`).set(c.h.pentOutro)).status).toBe(200);
+    expect((await request(app).get(`/api/dast-schedules/${porUrl.id}/history`).set(c.h.clientA)).status).toBe(404);
+  });
+
+  it("DIFF-01 — novos, resolvidos e persistentes por fingerprint, contra a COMPLETED anterior (também fora da janela)", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    const antigo = await scanDoAgendamento(c, sched.id, 0);
+    // FAILED entre os dois: não tem diff e não é base de comparação.
+    const falhou = await scanDoAgendamento(c, sched.id, 24, { status: "FAILED", simulated: false, errorMessage: "ZAP caiu" });
+    const novo = await scanDoAgendamento(c, sched.id, 48, { alertsMedium: 3 });
+
+    const achado = (scanId: string, fingerprint: string) => ({
+      scanId,
+      fingerprint,
+      pluginId: "10021",
+      title: `Achado ${fingerprint}`,
+      risk: "MEDIUM" as const,
+      confidence: "Medium",
+      url: "https://app-a.example.com/login",
+      normalizedUrl: "https://app-a.example.com/login",
+    });
+    // Antigo: A, B, C. Novo: B, C, D, E → novos 2 (D, E), resolvidos 1 (A), persistentes 2 (B, C).
+    await prisma.dastFinding.createMany({
+      data: [...["fp-a", "fp-b", "fp-c"].map((f) => achado(antigo.id, f)), ...["fp-b", "fp-c", "fp-d", "fp-e"].map((f) => achado(novo.id, f))],
+    });
+
+    const rota = `/api/dast-schedules/${sched.id}/history`;
+    const todo = (await request(app).get(rota).set(c.h.admin)).body;
+    expect(todo.map((e: { id: string }) => e.id)).toEqual([novo.id, falhou.id, antigo.id]);
+    expect(todo[0]).toMatchObject({ id: novo.id, alertsMedium: 3, diff: { novos: 2, resolvidos: 1, persistentes: 2 } });
+    expect(todo[1]).toMatchObject({ id: falhou.id, status: "FAILED", diff: null });
+    expect(todo[2]).toMatchObject({ id: antigo.id, diff: null });
+
+    // Janela de 1: a base do item mostrado está fora dela e ainda assim é usada.
+    const janela = (await request(app).get(`${rota}?limit=1`).set(c.h.admin)).body;
+    expect(janela).toHaveLength(1);
+    expect(janela[0].diff).toEqual({ novos: 2, resolvidos: 1, persistentes: 2 });
+  });
+});
