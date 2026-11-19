@@ -25,6 +25,18 @@ export class NotificationRepository {
     return r.count;
   }
 
+  /**
+   * Avisos já enviados a este usuário nestas categorias e links. É a deduplicação do
+   * monitor de SLA: categoria + link identificam o aviso, sem migration nova.
+   */
+  async jaEnviadas(userId: string, categorias: string[], links: string[]): Promise<{ category: string; link: string | null }[]> {
+    if (categorias.length === 0 || links.length === 0) return [];
+    return this.prisma.notification.findMany({
+      where: { userId, category: { in: categorias }, link: { in: links } },
+      select: { category: true, link: true },
+    });
+  }
+
   async listar(userId: string, apenasNaoLidas: boolean, limite: number): Promise<Notification[]> {
     return this.prisma.notification.findMany({
       where: { userId, ...(apenasNaoLidas ? { isRead: false } : {}) },

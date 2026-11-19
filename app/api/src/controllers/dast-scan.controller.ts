@@ -29,7 +29,23 @@ export class DastScanController {
       if (mode === "REAL" && req.body?.confirmedRealScan !== true) {
         return res.status(400).json({ error: "REAL_SCAN_CONFIRMATION_REQUIRED" });
       }
-      const scan = await this.service.create(actor, { targetUrl, mode, confirmedRealScan: req.body?.confirmedRealScan === true });
+      // ADR-056 — vínculo opcional com aplicação/projeto. companyId do body é
+      // ignorado de propósito: o service deriva da Application (SEC2).
+      const applicationId = req.body?.applicationId;
+      const projectId = req.body?.projectId;
+      if (applicationId !== undefined && applicationId !== null && (typeof applicationId !== "string" || !applicationId)) {
+        return res.status(400).json({ error: "INVALID_APPLICATION_ID" });
+      }
+      if (projectId !== undefined && projectId !== null && (typeof projectId !== "string" || !projectId)) {
+        return res.status(400).json({ error: "INVALID_PROJECT_ID" });
+      }
+      const scan = await this.service.create(actor, {
+        targetUrl,
+        mode,
+        confirmedRealScan: req.body?.confirmedRealScan === true,
+        applicationId: applicationId || undefined,
+        projectId: projectId || undefined,
+      });
       return res.status(201).json(scan.toResponse());
     } catch (error: any) {
       if (error.message === "MISSING_TARGET_URL") return res.status(400).json({ error: "MISSING_TARGET_URL" });
@@ -37,6 +53,12 @@ export class DastScanController {
       if (error.message === "SCAN_ALREADY_RUNNING_FOR_TARGET") {
         return res.status(409).json({ error: "SCAN_ALREADY_RUNNING_FOR_TARGET" });
       }
+      if (error.message === "APPLICATION_NOT_FOUND" || error.message === "PROJECT_NOT_FOUND") {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error.message === "PROJECT_APPLICATION_MISMATCH") return res.status(400).json({ error: "PROJECT_APPLICATION_MISMATCH" });
+      if (error.message === "FORBIDDEN") return res.status(403).json({ error: "FORBIDDEN" });
+      if (error.message === "QUEUE_UNAVAILABLE") return res.status(503).json({ error: "QUEUE_UNAVAILABLE" });
       console.error("DastScanController.create", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }

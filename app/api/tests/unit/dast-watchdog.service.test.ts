@@ -220,3 +220,53 @@ describe("DastWatchdog — alertas", () => {
     expect(watchdog.snapshot().alerts[0].message).toContain("boom");
   });
 });
+
+describe("DastWatchdog.executar (ADR-056, worker BullMQ)", () => {
+  it("DAST-WD-EX-01 — só resolve quando o scan termina, sob a vigilância do watchdog", async () => {
+    const watchdog = new DastWatchdog({ maxConcurrent: 1, autoStartMonitor: false });
+    let terminar!: () => void;
+    let ctxRecebido: { signal: AbortSignal } | null = null;
+    let resolvido = false;
+    const promessa = watchdog
+      .executar({
+        scanId: "s1",
+        targetUrl: "https://a.test",
+        requestedById: "u1",
+        run: (ctx) => {
+          ctxRecebido = ctx;
+          return new Promise<void>((r) => (terminar = r));
+        },
+      })
+      .then(() => (resolvido = true));
+
+    await new Promise((r) => setImmediate(r));
+    expect(watchdog.snapshot().running.map((r) => r.scanId)).toEqual(["s1"]);
+    expect(resolvido).toBe(false);
+    // O abort do cancelamento continua chegando no job.
+    expect(watchdog.abort("s1", "cancelado")).toBe("running");
+    expect(ctxRecebido!.signal.aborted).toBe(true);
+
+    terminar();
+    await promessa;
+    expect(resolvido).toBe(true);
+    expect(watchdog.snapshot().runningCount).toBe(0);
+  });
+
+  it("DAST-WD-EX-02 — scan que já está no watchdog não roda duas vezes", async () => {
+    const watchdog = new DastWatchdog({ maxConcurrent: 1, autoStartMonitor: false });
+    let terminar!: () => void;
+    const run = jest.fn(() => new Promise<void>((r) => (terminar = r)));
+    const primeira = watchdog.executar({ scanId: "s1", targetUrl: "https://a.test", requestedById: "u1", run });
+    await watchdog.executar({ scanId: "s1", targetUrl: "https://a.test", requestedById: "u1", run });
+    expect(run).toHaveBeenCalledTimes(1);
+    terminar();
+    await primeira;
+  });
+
+  it("DAST-WD-EX-03 — job que lança erro também libera a vaga e resolve", async () => {
+    const watchdog = new DastWatchdog({ maxConcurrent: 1, autoStartMonitor: false });
+    await watchdog.executar({ scanId: "s2", targetUrl: "https://a.test", requestedById: "u1", run: () => Promise.reject(new Error("boom")) });
+    expect(watchdog.snapshot().runningCount).toBe(0);
+    expect(watchdog.snapshot().alerts[0]?.message).toMatch(/boom/);
+  });
+});
