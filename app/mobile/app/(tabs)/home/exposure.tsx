@@ -3,7 +3,7 @@
  * Liga empresa, aplicações e categorias compartilhadas sem sugerir caminhos de ataque.
  * A Home abre esta tela; a lista textual oferece acesso aos mesmos nós do desenho.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -111,10 +111,12 @@ function Network({ applications, categories, selection, onSelect }: { applicatio
   const { workspace, colors } = useAppTheme();
   const reduced = useWorkspaceReducedMotion();
   const [zoom, setZoom] = useState(1);
+  const [viewport, setViewport] = useState(0);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const opacity = useSharedValue(reduced ? 1 : 0);
   useEffect(() => { opacity.value = withTiming(1, { duration: reduced ? 0 : 350 }); }, [opacity, reduced]);
   const animation = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  const height = Math.max(220, Math.max(applications.length, categories.length) * 96 + 24) * zoom;
+  const height = Math.max(220, Math.max(applications.length, categories.length) * 96 + 24);
   const position = (index: number, count: number) => count === 1 ? height / 2 : 60 + index * (height - 120) / Math.max(1, count - 1);
   const appY = new Map(applications.map((item, i) => [item.id, position(i, applications.length)]));
   const categoryY = new Map(categories.map((item, i) => [item.code, position(i, categories.length)]));
@@ -125,16 +127,16 @@ function Network({ applications, categories, selection, onSelect }: { applicatio
   const edge = (x1: number, y1: number, x2: number, y2: number, active: boolean, key: string) => <Path key={key} d={`M ${x1} ${y1} C ${x1 + 90} ${y1}, ${x2 - 90} ${y2}, ${x2} ${y2}`} stroke={active ? workspace.lavender : workspace.line} strokeWidth={active ? 2 : 1.5} fill="none" />;
   const isCompany = selection.kind === "company";
   const severityColor = (severity: GraphSeverity | null) => severity === "CRITICAL" ? colors.severity.criticalInk : severity === "HIGH" ? colors.severity.highInk : severity === "MEDIUM" ? colors.severity.mediumInk : severity === "LOW" ? colors.severity.lowInk : workspace.lavender;
-  return <><View style={styles.zoomRow}><FilterChip label="Compactar" selected={false} onPress={() => setZoom((value) => Math.max(0.85, Math.round((value - 0.15) * 100) / 100))} /><Text style={{ color: workspace.secondary }}>{Math.round(zoom * 100)}%</Text><FilterChip label="Espaçar" selected={false} onPress={() => setZoom((value) => Math.min(1.6, Math.round((value + 0.15) * 100) / 100))} /><FilterChip label="Restaurar" selected={false} onPress={() => setZoom(1)} /></View>
-  <ScrollView horizontal showsHorizontalScrollIndicator nestedScrollEnabled><Animated.View style={[{ width: 620 * zoom, height }, animation]}>
-    <Svg width={620 * zoom} height={height} style={StyleSheet.absoluteFill} accessible={false}>
-      {applications.map((item) => edge(104 * zoom, height / 2, 300 * zoom, appY.get(item.id)!, isCompany || item.id === selectedApp || linkedApps.includes(item.id), `company-${item.id}`))}
-      {applications.flatMap((item) => item.categorias.map((category) => edge(300 * zoom, appY.get(item.id)!, 510 * zoom, categoryY.get(category.owaspCategory)!, isCompany || item.id === selectedApp || category.owaspCategory === selectedCategory, `${item.id}-${category.owaspCategory}`)))}
+  return <><View style={styles.zoomRow}><FilterChip label="Afastar" selected={false} onPress={() => setZoom((value) => Math.max(0.85, Math.round((value - 0.15) * 100) / 100))} /><Text style={{ color: workspace.secondary }}>{Math.round(zoom * 100)}%</Text><FilterChip label="Aproximar" selected={false} onPress={() => setZoom((value) => Math.min(1.6, Math.round((value + 0.15) * 100) / 100))} /><FilterChip label="Centralizar" selected={false} onPress={() => scroll.current?.scrollTo({ x: Math.max(0, (620 * zoom - viewport) / 2), animated: !reduced })} /></View>
+  <ScrollView ref={scroll} onLayout={(event) => setViewport(event.nativeEvent.layout.width)} horizontal showsHorizontalScrollIndicator nestedScrollEnabled><View style={{ width: 620 * zoom, height: height * zoom }}><Animated.View style={[{ position: "absolute", width: 620, height, transformOrigin: "top left", transform: [{ scale: zoom }] }, animation]}>
+    <Svg width={620} height={height} style={StyleSheet.absoluteFill} accessible={false}>
+      {applications.map((item) => edge(104, height / 2, 300, appY.get(item.id)!, isCompany || item.id === selectedApp || linkedApps.includes(item.id), `company-${item.id}`))}
+      {applications.flatMap((item) => item.categorias.map((category) => edge(300, appY.get(item.id)!, 510, categoryY.get(category.owaspCategory)!, isCompany || item.id === selectedApp || category.owaspCategory === selectedCategory, `${item.id}-${category.owaspCategory}`)))}
     </Svg>
-    <GraphNode x={104 * zoom} y={height / 2} label="Empresa" icon="business-outline" selected={isCompany} connected={true} onPress={() => onSelect({ kind: "company" })} />
-    {applications.map((item) => <GraphNode key={item.id} x={300 * zoom} y={appY.get(item.id)!} label={item.name} sub={`${item.totalAbertas} abertas`} icon="apps-outline" tint={severityColor(item.piorSeveridade)} selected={selectedApp === item.id} connected={isCompany || selectedApp === item.id || linkedApps.includes(item.id)} onPress={() => onSelect({ kind: "app", id: item.id })} />)}
-    {categories.map((item) => <GraphNode key={item.code} x={510 * zoom} y={categoryY.get(item.code)!} label={item.code} sub={`${item.total} abertas`} icon="shield-outline" selected={selectedCategory === item.code} connected={isCompany || selectedCategory === item.code || selectedAppCategories.includes(item.code)} tint={severityColor(item.severity)} onPress={() => onSelect({ kind: "category", id: item.code })} />)}
-  </Animated.View></ScrollView></>;
+    <GraphNode x={104} y={height / 2} label="Empresa" icon="business-outline" selected={isCompany} connected={true} onPress={() => onSelect({ kind: "company" })} />
+    {applications.map((item) => <GraphNode key={item.id} x={300} y={appY.get(item.id)!} label={item.name} sub={`${item.totalAbertas} abertas`} icon="apps-outline" tint={severityColor(item.piorSeveridade)} selected={selectedApp === item.id} connected={isCompany || selectedApp === item.id || linkedApps.includes(item.id)} onPress={() => onSelect({ kind: "app", id: item.id })} />)}
+    {categories.map((item) => <GraphNode key={item.code} x={510} y={categoryY.get(item.code)!} label={item.code} sub={`${item.total} abertas`} icon="shield-outline" selected={selectedCategory === item.code} connected={isCompany || selectedCategory === item.code || selectedAppCategories.includes(item.code)} tint={severityColor(item.severity)} onPress={() => onSelect({ kind: "category", id: item.code })} />)}
+  </Animated.View></View></ScrollView></>;
 }
 
 function GraphNode({ x, y, label, sub, icon, selected, connected, tint, onPress }: { x: number; y: number; label: string; sub?: string; icon: keyof typeof Ionicons.glyphMap; selected: boolean; connected: boolean; tint?: string; onPress: () => void }) {

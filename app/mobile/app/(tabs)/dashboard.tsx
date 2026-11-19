@@ -7,11 +7,12 @@ import { useEffect, type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import Animated, { cancelAnimation, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { projectsApi } from "../../src/api/projects.api";
 import { exposureGraphApi } from "../../src/api/exposure-graph.api";
+import { vulnerabilitiesApi } from "../../src/api/vulnerabilities.api";
 import { DataState, GlassSurface, SectionHeading, WorkspaceScreen } from "../../src/components/workspace-ui";
 import { HomeBrand } from "../../src/components/home-brand";
 import { ExposureTrend } from "../../src/components/exposure-trend";
@@ -21,10 +22,12 @@ import { exposureOverview, projectOverview } from "../../src/lib/dashboard";
 import { useAuthStore } from "../../src/store/auth.store";
 import { FONT_FAMILY } from "../../src/theme/tokens";
 import { useAppTheme } from "../../src/theme/use-app-theme";
+import { fraseDoSla } from "../../src/types/vulnerability.types";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const circumference = 2 * Math.PI * 42;
 const severityLabels: Record<string, string> = { CRITICAL: "Crítica", HIGH: "Alta", MEDIUM: "Média", LOW: "Baixa" };
+const statusLabels: Record<string, string> = { OPEN: "Em aberto", IN_PROGRESS: "Em andamento" };
 
 export default function DashboardScreen() {
   const { workspace, ui, colors } = useAppTheme();
@@ -35,6 +38,7 @@ export default function DashboardScreen() {
   const exposure = useQuery({ queryKey: ["exposure-graph"], queryFn: ({ signal }) => exposureGraphApi.get(signal) });
   const overview = projects.data ? projectOverview(projects.data) : null;
   const risks = exposure.data ? exposureOverview(exposure.data.aplicacoes) : null;
+  const priorityDetails = useQueries({ queries: (risks?.priorities ?? []).map((finding) => ({ queryKey: ["vulnerabilities", finding.id], queryFn: ({ signal }: { signal: AbortSignal }) => vulnerabilitiesApi.getById(finding.id, signal), retry: false })) });
 
   return <WorkspaceScreen refreshing={projects.isRefetching || exposure.isRefetching} onRefresh={() => { void projects.refetch(); void exposure.refetch(); }}>
     <View style={styles.top}><HomeBrand /><SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable></View>
@@ -49,10 +53,10 @@ export default function DashboardScreen() {
     {exposure.isError && <DataState error title="Exposição indisponível" message={errorMessage(exposure.error)} onRetry={() => { void exposure.refetch(); }} />}
     <DashboardReveal delay={120}><View style={{ gap: 12 }}><SectionHeading title="Prioridades" meta="ATÉ 3 ACHADOS" />
       {exposure.isPending && <DataState loading title="Buscando prioridades" />}
-      {risks && <GlassSurface>{risks.priorities.length ? risks.priorities.map((item, index) => <SoftPressable key={item.id} accessibilityRole="button" accessibilityLabel={`${item.title}, ${severityLabels[item.severityFinal] ?? item.severityFinal}, ${item.applicationName}`} onPress={() => router.push(`/(tabs)/home/finding/${item.id}`)} style={[styles.priority, index > 0 && { borderTopWidth: 1, borderTopColor: workspace.line }]}>
+      {risks && <GlassSurface>{risks.priorities.length ? risks.priorities.map((item, index) => { const sla = priorityDetails[index]?.data?.sla; const prazo = sla?.state && sla.state !== "NO_SLA" ? fraseDoSla(sla.state, sla.remainingMs) : null; return <SoftPressable key={item.id} accessibilityRole="button" accessibilityLabel={`${item.title}, ${severityLabels[item.severityFinal] ?? item.severityFinal}, ${item.applicationName}, ${statusLabels[item.status] ?? item.status}${prazo ? `, prazo ${prazo}` : ""}`} onPress={() => router.push(`/(tabs)/home/finding/${item.id}`)} style={[styles.priority, index > 0 && { borderTopWidth: 1, borderTopColor: workspace.line }]}>
         <View style={[styles.rank, { backgroundColor: workspace.chipActiveBg }]}><Text style={[ui.mono, { color: workspace.lavender }]}>{index + 1}</Text></View>
-        <View style={[ui.grow, { gap: 3 }]}><Text style={ui.body}>{item.title}</Text><Text style={ui.muted}>{item.applicationName} · {severityLabels[item.severityFinal] ?? item.severityFinal}</Text></View><Ionicons name="chevron-forward" size={18} color={workspace.muted} />
-      </SoftPressable>) : <Text style={ui.body}>Nenhuma vulnerabilidade aberta para priorizar.</Text>}</GlassSurface>}
+        <View style={[ui.grow, { gap: 3 }]}><Text style={ui.body}>{item.title}</Text><Text style={ui.muted}>{item.applicationName} · {severityLabels[item.severityFinal] ?? item.severityFinal} · {statusLabels[item.status] ?? item.status}</Text>{prazo && <Text style={ui.muted}>Prazo: {prazo}</Text>}</View><Ionicons name="chevron-forward" size={18} color={workspace.muted} />
+      </SoftPressable>; }) : <Text style={ui.body}>Nenhuma vulnerabilidade aberta para priorizar.</Text>}</GlassSurface>}
     </View></DashboardReveal>
     {exposure.data && <DashboardReveal delay={160}><ExposureTrend applications={exposure.data.aplicacoes} /></DashboardReveal>}
     <DashboardReveal delay={180}><GlassSurface accessibilityLabel="Abrir grafo de exposição" onPress={() => router.push("/(tabs)/security")}><View style={ui.spread}><View style={[ui.grow, { gap: 5 }]}><Text accessibilityRole="header" style={ui.heading}>Exposição</Text><Text style={ui.muted}>{risks ? `${risks.open} vulnerabilidades abertas nas aplicações ativas` : "Veja as conexões entre aplicações e categorias OWASP."}</Text></View><Ionicons name="git-network-outline" size={24} color={workspace.lavender} /></View></GlassSurface></DashboardReveal>
