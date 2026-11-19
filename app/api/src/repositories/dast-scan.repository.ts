@@ -4,8 +4,8 @@
  * Única camada que toca `@prisma/client` pro recurso DastScan (CLAUDE.md
  * P1). Além do CRUD básico, concentra duas operações específicas do módulo:
  *
- *  - `findActiveForTarget`: sustenta a regra "1 scan por alvo de cada vez"
- *    (o service consulta antes de criar).
+ *  - `createIfTargetFree`: sustenta a regra "1 scan por alvo de cada vez"
+ *    com check e INSERT na mesma transação, protegidos por lock.
  *  - `persistFindingsAndUpdateCounters`: a ÚNICA escrita transacional do
  *    projeto até agora (`prisma.$transaction`) — insere os findings
  *    (`skipDuplicates: true`, defesa extra contra reprocessar o mesmo scan)
@@ -15,7 +15,8 @@
  *    mentindo.
  */
 
-import type { PrismaClient, Prisma, DastScan, DastScanStatus, DastSensorRun, DastSensorStatus, DastObservedAsset } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { PrismaClient, DastScan, DastScanStatus, DastSensorRun, DastSensorStatus, DastObservedAsset } from "@prisma/client";
 import type { ObservedAsset } from "../services/sensors/sensor.types";
 import type { CandidateFinding, RiskCounters } from "../services/dast-findings.service";
 
@@ -56,22 +57,63 @@ export interface SaveSensorRunInput {
   durationMs: number;
 }
 
+/** Dados do INSERT de um scan; o status nasce QUEUED pelo default do schema. */
+function dadosDoScan(input: CreateDastScanInput): Prisma.DastScanUncheckedCreateInput {
+  return {
+    targetUrl: input.targetUrl,
+    requestedById: input.requestedById,
+    simulated: input.simulated ?? false,
+    companyId: input.companyId ?? null,
+    applicationId: input.applicationId ?? null,
+    projectId: input.projectId ?? null,
+    trigger: input.trigger ?? "MANUAL",
+    scheduleId: input.scheduleId ?? null,
+  };
+}
+
+/** Deadlock do InnoDB (ou conflito de escrita do Prisma): a transação foi revertida e pode ser refeita. */
+function ehDeadlock(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && (err.code === "P2034" || err.message.includes("Deadlock found"));
+}
+
 export class DastScanRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(input: CreateDastScanInput): Promise<DastScan> {
-    return this.prisma.dastScan.create({
-      data: {
-        targetUrl: input.targetUrl,
-        requestedById: input.requestedById,
-        simulated: input.simulated ?? false,
-        companyId: input.companyId ?? null,
-        applicationId: input.applicationId ?? null,
-        projectId: input.projectId ?? null,
-        trigger: input.trigger ?? "MANUAL",
-        scheduleId: input.scheduleId ?? null,
-      },
-    });
+  /**
+   * Cria o scan só se o alvo estiver livre (nenhum QUEUED/RUNNING). Devolve
+   * null quando o alvo já está ocupado; quem chama traduz em 409 / TARGET_BUSY.
+   *
+   * Por que não é findFirst + create: duas requisições simultâneas liam "livre"
+   * e criavam dois scans. Aqui a checagem é uma leitura com `FOR UPDATE` sobre o
+   * índice (status, targetUrl), na mesma transação do INSERT. O lock cai na faixa
+   * (QUEUED, alvo), onde o novo registro entra: o INSERT concorrente espera o
+   * commit e depois enxerga o scan do vencedor. Isso depende de REPEATABLE READ
+   * (READ COMMITTED não toma gap locks), por isso o isolamento é explícito.
+   * Não precisa de migration: o índice composto já existe no schema.
+   *
+   * Duas transações concorrentes podem se travar (deadlock). O InnoDB reverte
+   * uma delas; refazê-la a faz ver o scan da outra e responder "ocupado".
+   */
+  async createIfTargetFree(input: CreateDastScanInput): Promise<DastScan | null> {
+    const tentativasMax = 3;
+    for (let tentativa = 1; ; tentativa++) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            const ativos = await tx.$queryRaw<{ id: string }[]>`
+              SELECT id FROM DastScan
+              WHERE status IN ('QUEUED', 'RUNNING') AND targetUrl = ${input.targetUrl}
+              FOR UPDATE`;
+            if (ativos.length > 0) return null;
+            return tx.dastScan.create({ data: dadosDoScan(input) });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+        );
+      } catch (err) {
+        if (tentativa < tentativasMax && ehDeadlock(err)) continue;
+        throw err;
+      }
+    }
   }
 
   async findById(id: string): Promise<DastScan | null> {
@@ -107,13 +149,6 @@ export class DastScanRepository {
     });
   }
 
-  /** Sustenta a regra "1 scan por alvo de cada vez" — consultado ANTES de criar. */
-  async findActiveForTarget(targetUrl: string): Promise<DastScan | null> {
-    return this.prisma.dastScan.findFirst({
-      where: { targetUrl, status: { in: ["QUEUED", "RUNNING"] } },
-    });
-  }
-
   /** Todo scan ainda QUEUED/RUNNING — usado pelo watchdog de boot e por testes de órfão. */
   /**
    * ADR-056 — toma o scan para execução de forma ATÔMICA: só um chamador vê
@@ -146,6 +181,16 @@ export class DastScanRepository {
 
   async update(id: string, data: UpdateDastScanInput): Promise<DastScan> {
     return this.prisma.dastScan.update({ where: { id }, data });
+  }
+
+  /**
+   * Grava só se o scan ainda está RUNNING, na mesma instrução do UPDATE. Gravação
+   * tardia do runner (progresso, término) não pode reescrever um scan que o
+   * usuário já cancelou (status e fase CANCELLED). Devolve false se nada foi gravado.
+   */
+  async updateIfRunning(id: string, data: UpdateDastScanInput): Promise<boolean> {
+    const r = await this.prisma.dastScan.updateMany({ where: { id, status: "RUNNING" }, data });
+    return r.count === 1;
   }
 
   /**
