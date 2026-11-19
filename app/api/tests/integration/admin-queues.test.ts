@@ -67,7 +67,7 @@ describe("GET /api/admin/queues", () => {
 describe("POST /api/admin/queues/:name/jobs/:id/retry", () => {
   it("QADM-04 — motor memory recusa o reprocessamento com 409 e não grava AuditLog", async () => {
     const h = await cenario();
-    const res = await request(app).post("/api/admin/queues/dast-scan/jobs/abc/retry").set(h.admin);
+    const res = await request(app).post("/api/admin/queues/threat-intel/jobs/abc/retry").set(h.admin);
     expect(res.status).toBe(409);
     expect(res.body).toEqual({ error: "QUEUE_DRIVER_MEMORY" });
     expect(await prisma.auditLog.count({ where: { action: "RETRY", entityType: "QueueJob" } })).toBe(0);

@@ -207,7 +207,7 @@ describe("QueueAdminService", () => {
     });
 
     fila.reprocessarJob.mockRejectedValueOnce(new Error("JOB_NOT_FAILED"));
-    await expect(service.reprocessar("u1", "dast-scan", "job-8")).rejects.toThrow("JOB_NOT_FAILED");
+    await expect(service.reprocessar("u1", "threat-intel", "job-8")).rejects.toThrow("JOB_NOT_FAILED");
     expect(auditLog.create).toHaveBeenCalledTimes(1);
   });
 });
