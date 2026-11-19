@@ -230,6 +230,8 @@ caminho de execução de scan.
 | Registrar ou revogar a autorização do alvo | **ADMIN** e **PENTESTER membro de um projeto da aplicação**. |
 | `projectId` no agendamento | **Obrigatório para o PENTESTER**, que precisa ser membro do projeto. O ADMIN pode omitir. |
 | CLIENT | Vê os blocos "Autorização DAST" e "Agendamento DAST" da aplicação da própria empresa **somente para leitura**. O resto do módulo DAST continua 403. |
+| Editar/remover agendamento de outra pessoa | **Pode** (decisão de 2026-11-19): qualquer ADMIN, ou PENTESTER membro de um projeto da aplicação, edita e remove os agendamentos dela, não só quem criou. Toda mudança gera AuditLog. |
+| Tela web | Página própria **`/agendamentos`** (decisão de 2026-11-19), **adiada**. |
 
 ## O que muda / o que continua
 
@@ -333,9 +335,9 @@ caminho de execução de scan.
 > 2. **Padrão de `QUEUE_DRIVER`:** continua `memory`. Trocar para `bullmq` é
 >    decisão pendente, depois do item 1.
 > 3. **Fase 5:** API e worker de agendamentos implementados, suíte 917/917 e
->    validados no compose em modo SIMULADO (2026-11-19). Falta a tela web, cujo
->    formato (página própria? caminho no host autorizado? mais frequências?)
->    aguarda decisão do Rafael.
+>    validados no compose em modo SIMULADO (2026-11-19). Falta a tela web:
+>    página própria `/agendamentos`, adiada por decisão do Rafael. Em aberto para
+>    quando for feita: caminho no host autorizado e frequências extras.
 
 ## Fora do escopo (BACKLOG)
 
