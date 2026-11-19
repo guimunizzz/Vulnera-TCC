@@ -46,9 +46,10 @@ describe("Sidebar — SAST/SCA", () => {
     expect(screen.queryByRole("link", { name: /SAST\/SCA/ })).not.toBeInTheDocument();
   });
 
-  it("só os itens novos têm o selo (SAST/SCA e Threat Intel, ADR-053)", () => {
+  it("só os itens novos têm o selo (SAST/SCA, Threat Intel e Agendamentos)", () => {
     renderComo("ADMIN");
-    expect(screen.getAllByText("new")).toHaveLength(2);
+    expect(screen.getAllByText("new")).toHaveLength(3);
+    expect(screen.getByRole("link", { name: /Agendamentos/ })).toHaveTextContent("new");
     expect(screen.getByRole("link", { name: /Threat Intel/ })).toHaveTextContent("new");
     expect(screen.getByRole("link", { name: /SAST\/SCA/ })).toHaveTextContent("new");
   });
@@ -57,6 +58,20 @@ describe("Sidebar — SAST/SCA", () => {
     for (const papel of ["ADMIN", "PENTESTER", "CLIENT"] as const) {
       const { unmount } = renderComo(papel);
       expect(screen.getByRole("link", { name: /Threat Intel/ })).toHaveAttribute("href", "/threat-intel");
+      unmount();
+    }
+  });
+
+  it("Agendamentos (ADR-056) aparece para os três papéis, com o selo new, depois de SAST/SCA", () => {
+    for (const papel of ["ADMIN", "PENTESTER", "CLIENT"] as const) {
+      const { unmount } = renderComo(papel);
+      const link = screen.getByRole("link", { name: /Agendamentos/ });
+      expect(link).toHaveAttribute("href", "/agendamentos");
+      expect(within(link).getByText("new")).toBeInTheDocument();
+      if (papel !== "CLIENT") {
+        const rotulos = within(screen.getByRole("region", { name: "Operação" })).getAllByRole("link").map((l) => l.textContent ?? "");
+        expect(rotulos.findIndex((t) => t.startsWith("Agendamentos"))).toBe(rotulos.findIndex((t) => t.startsWith("SAST/SCA")) + 1);
+      }
       unmount();
     }
   });
