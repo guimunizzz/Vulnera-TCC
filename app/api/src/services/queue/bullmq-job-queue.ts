@@ -14,12 +14,53 @@
  * vem de `REDIS_URL` e nunca é logada (leva a senha).
  */
 
-import { Queue, type ConnectionOptions, type JobsOptions } from "bullmq";
+import { Queue, type ConnectionOptions, type Job, type JobsOptions } from "bullmq";
 import { reconciliarAgendamentosDast } from "./workers/dast-schedule.worker";
-import { QUEUE_NAMES, type AgendamentoDastDesejado, type DastScanJobData, type JobQueue, type PedidoScanDast, type QueueName, type ScanNaFila, type ThreatIntelJobData } from "./job-queue";
+import {
+  QUEUE_NAMES,
+  type AgendamentoDastDesejado,
+  type DastScanJobData,
+  type JobFalhoNoPainel,
+  type JobQueue,
+  type PainelDeFilas,
+  type PedidoScanDast,
+  type QueueName,
+  type ScanNaFila,
+  type ThreatIntelJobData,
+} from "./job-queue";
 
 const TIMEOUT_VERIFICACAO_MS = 5_000;
 const TIMEOUT_ENFILEIRAR_MS = 5_000;
+
+/** Quantas falhas por fila o painel lista (as mais recentes). */
+export const FALHAS_NO_PAINEL = 10;
+/** Teto do `data` serializado de um job no painel (ADR-056 §3: o payload só leva ids, o corte é cinto de segurança). */
+export const LIMITE_DADOS_NO_PAINEL = 500;
+
+/**
+ * Serializa o `data` do job para o painel e corta em 500 caracteres. Não
+ * lança: payload que não serializa (ciclo) vira um marcador, não derruba a tela.
+ */
+export function resumirDadosDoJob(dados: unknown): string {
+  let texto: string;
+  try {
+    texto = JSON.stringify(dados) ?? "null";
+  } catch {
+    return "[não serializável]";
+  }
+  return texto.length <= LIMITE_DADOS_NO_PAINEL ? texto : `${texto.slice(0, LIMITE_DADOS_NO_PAINEL - 1)}…`;
+}
+
+function paraFalhoNoPainel(job: Job): JobFalhoNoPainel {
+  return {
+    id: String(job.id),
+    name: job.name,
+    failedReason: job.failedReason ?? "",
+    attemptsMade: job.attemptsMade,
+    finishedOn: job.finishedOn ? new Date(job.finishedOn).toISOString() : null,
+    data: resumirDadosDoJob(job.data),
+  };
+}
 
 /** Rejeita se a promessa não resolver no prazo (sem cancelá-la). */
 async function comPrazo<T>(promessa: Promise<T>, ms: number, motivo: string): Promise<T> {
@@ -187,6 +228,36 @@ export class BullmqJobQueue implements JobQueue {
       TIMEOUT_VERIFICACAO_MS,
       "Redis não respondeu",
     );
+  }
+
+  async painelDeFilas(): Promise<PainelDeFilas> {
+    const filas = await Promise.all(
+      Object.values(QUEUE_NAMES).map(async (nome) => {
+        const fila = this.fila(nome);
+        const c = await fila.getJobCounts("waiting", "active", "delayed", "completed", "failed");
+        const falhos = await fila.getFailed(0, FALHAS_NO_PAINEL - 1);
+        return {
+          name: nome,
+          counts: {
+            waiting: c.waiting ?? 0,
+            active: c.active ?? 0,
+            delayed: c.delayed ?? 0,
+            completed: c.completed ?? 0,
+            failed: c.failed ?? 0,
+          },
+          failed: falhos.map(paraFalhoNoPainel),
+        };
+      }),
+    );
+    return { driver: "bullmq", queues: filas };
+  }
+
+  async reprocessarJob(nome: QueueName, jobId: string): Promise<void> {
+    const job = await this.fila(nome).getJob(jobId);
+    if (!job) throw new Error("JOB_NOT_FOUND");
+    // Só falha se reprocessa: job ativo, esperando ou concluído não é "tentar de novo".
+    if ((await job.getState()) !== "failed") throw new Error("JOB_NOT_FAILED");
+    await job.retry("failed");
   }
 
   async close(): Promise<void> {

@@ -18,6 +18,7 @@ import { savedQueryRoutes } from "./saved-query.routes";
 import { codeScanRoutes } from "./code-scan.routes";
 import { threatIntelRoutes } from "./threat-intel.routes";
 import { dastScheduleRoutes } from "./dast-schedules.routes";
+import { adminQueuesRoutes } from "./admin-queues.routes";
 
 const router = Router();
 
@@ -50,5 +51,7 @@ router.use("/code-imports", codeScanRoutes);
 router.use("/threat-intel", threatIntelRoutes);
 // ADR-056 — página /agendamentos: lista o que a pessoa enxerga e onde ela pode agendar.
 router.use("/dast-schedules", dastScheduleRoutes);
+// ADR-056 — painel de filas do ADMIN (contagens, falhas, reprocessar job com falha).
+router.use("/admin/queues", adminQueuesRoutes);
 
 export { router as apiRoutes };

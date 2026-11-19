@@ -74,6 +74,36 @@ export interface ScanNaFila {
   queuedAt: string;
 }
 
+/** Contagens de uma fila, como o painel do admin mostra. */
+export interface ContagensFila {
+  waiting: number;
+  active: number;
+  delayed: number;
+  completed: number;
+  failed: number;
+}
+
+/** Job com falha já reduzido ao que o painel mostra. `data` vai serializado e cortado (ADR-056 §3). */
+export interface JobFalhoNoPainel {
+  id: string;
+  name: string;
+  failedReason: string;
+  attemptsMade: number;
+  finishedOn: string | null;
+  data: string;
+}
+
+export interface FilaNoPainel {
+  name: QueueName;
+  counts: ContagensFila;
+  failed: JobFalhoNoPainel[];
+}
+
+export interface PainelDeFilas {
+  driver: QueueDriver;
+  queues: FilaNoPainel[];
+}
+
 export interface JobQueue {
   readonly driver: QueueDriver;
   /**
@@ -116,6 +146,17 @@ export interface JobQueue {
    * fora do ar) em vez de ficar tentando para sempre em silêncio.
    */
   verificarConexao(): Promise<void>;
+  /**
+   * Painel de filas do admin (ADR-056): contagens de cada fila de `QUEUE_NAMES`
+   * e as últimas falhas. memory: não há fila persistente — `queues` vem vazio e
+   * a tela explica isso.
+   */
+  painelDeFilas(): Promise<PainelDeFilas>;
+  /**
+   * Reprocessa um job que falhou (ação do admin). Rejeita com `JOB_NOT_FOUND`
+   * ou `JOB_NOT_FAILED`. memory: rejeita com `QUEUE_DRIVER_MEMORY`.
+   */
+  reprocessarJob(fila: QueueName, jobId: string): Promise<void>;
   /** Fecha conexões. Idempotente. */
   close(): Promise<void>;
 }
