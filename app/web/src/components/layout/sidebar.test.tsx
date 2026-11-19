@@ -46,12 +46,25 @@ describe("Sidebar — SAST/SCA", () => {
     expect(screen.queryByRole("link", { name: /SAST\/SCA/ })).not.toBeInTheDocument();
   });
 
-  it("só os itens novos têm o selo (SAST/SCA, Threat Intel e Agendamentos)", () => {
+  it("só os itens novos têm o selo (SAST/SCA, Threat Intel, Agendamentos e Filas)", () => {
     renderComo("ADMIN");
-    expect(screen.getAllByText("new")).toHaveLength(3);
+    expect(screen.getAllByText("new")).toHaveLength(4);
     expect(screen.getByRole("link", { name: /Agendamentos/ })).toHaveTextContent("new");
     expect(screen.getByRole("link", { name: /Threat Intel/ })).toHaveTextContent("new");
     expect(screen.getByRole("link", { name: /SAST\/SCA/ })).toHaveTextContent("new");
+    expect(screen.getByRole("link", { name: /Filas/ })).toHaveTextContent("new");
+  });
+
+  it("Filas aparece só para ADMIN, no grupo Administração", () => {
+    const { unmount } = renderComo("ADMIN");
+    const admin = screen.getByRole("region", { name: "Administração" });
+    expect(within(admin).getByRole("link", { name: /Filas/ })).toHaveAttribute("href", "/admin/filas");
+    unmount();
+    for (const papel of ["PENTESTER", "CLIENT"] as const) {
+      const tentativa = renderComo(papel);
+      expect(screen.queryByRole("link", { name: /Filas/ })).not.toBeInTheDocument();
+      tentativa.unmount();
+    }
   });
 
   it("Threat Intel aparece para os três papéis", () => {

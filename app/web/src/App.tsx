@@ -42,6 +42,7 @@ const PendingSubscriptionsPage = paginaLazy(
   () => import("./pages/admin/pending-subscriptions-page"),
   "PendingSubscriptionsPage",
 );
+const FilasPage = paginaLazy(() => import("./pages/admin/filas-page"), "FilasPage");
 const ApplicationDashboardPage = paginaLazy(
   () => import("./pages/application-dashboard-page"),
   "ApplicationDashboardPage",
@@ -154,6 +155,8 @@ export function App() {
 
             <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
               <Route path="/admin/subscriptions" element={<PendingSubscriptionsPage />} />
+              {/* ADR-056 — painel de filas: contagens, falhas e "Tentar de novo". Só ADMIN. */}
+              <Route path="/admin/filas" element={<FilasPage />} />
             </Route>
 
             {/* Módulo DAST — não existe pro CLIENT: nem item de menu, nem rota

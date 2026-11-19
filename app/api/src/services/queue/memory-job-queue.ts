@@ -7,7 +7,7 @@
  * ADR-056 — é o caminho de rollback e o padrão até a Fase 4 ser aprovada.
  */
 
-import type { JobQueue, PedidoScanDast, ScanNaFila, ThreatIntelJobData } from "./job-queue";
+import type { JobQueue, PainelDeFilas, PedidoScanDast, QueueName, ScanNaFila, ThreatIntelJobData } from "./job-queue";
 import type { ThreatIntelSyncService } from "../threat-intel/threat-intel-sync.service";
 import type { DastWatchdog } from "../dast-watchdog.service";
 
@@ -67,6 +67,16 @@ export class MemoryJobQueue implements JobQueue {
   async aplicarAgendamentosDast(): Promise<null> {
     // Sem Redis não há relógio para os agendamentos: honesto em vez de fingir.
     return null;
+  }
+
+  async painelDeFilas(): Promise<PainelDeFilas> {
+    // Não há fila persistente para listar: o painel mostra o aviso, não zeros.
+    return { driver: "memory", queues: [] };
+  }
+
+  async reprocessarJob(_fila: QueueName, _jobId: string): Promise<void> {
+    // Sem Redis não existe job com falha guardado para reprocessar.
+    throw new Error("QUEUE_DRIVER_MEMORY");
   }
 
   async close(): Promise<void> {
