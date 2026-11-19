@@ -78,4 +78,7 @@ export enum EnvKeys {
   REDIS_URL = "REDIS_URL",
   // false = a API não sobe os workers (eles rodam em `npm run worker`).
   WORKER_IN_PROCESS = "WORKER_IN_PROCESS",
+  // Monitor de SLA (avisos diários de prazo): só existe com QUEUE_DRIVER=bullmq.
+  // false remove o agendamento diário; o padrão é ligado.
+  SLA_MONITOR_ENABLED = "SLA_MONITOR_ENABLED",
 }

@@ -12,8 +12,8 @@
  * O app.ts NUNCA importa este arquivo: os testes importam o app e não podem
  * abrir conexão com o Redis (A6).
  *
- * Workers registrados: Threat Intel (Fase 3), DAST (Fase 4) e agendamentos
- * DAST (Fase 5).
+ * Workers registrados: Threat Intel (Fase 3), DAST (Fase 4), agendamentos
+ * DAST (Fase 5) e monitor de SLA (FILA-FUT-02).
  *
  * Quem executa é quem recupera: no motor bullmq, a reconciliação de boot do
  * DAST (RUNNING órfão vira FAILED, QUEUED sobrevive) roda AQUI, antes de
@@ -34,6 +34,8 @@ import { makeDastScheduleService } from "./factories/dast-schedule.factory";
 import { BullmqJobQueue } from "./services/queue/bullmq-job-queue";
 import { QUEUE_NAMES, type JobQueue } from "./services/queue/job-queue";
 import { iniciarWorkerThreatIntel } from "./services/queue/workers/threat-intel.worker";
+import { iniciarWorkerSlaMonitor } from "./services/queue/workers/sla-monitor.worker";
+import { makeSlaMonitorService } from "./factories/sla-monitor.factory";
 
 export interface WorkersEmExecucao {
   /** Fecha os workers (espera o job em andamento) e as conexões da fila. */
@@ -68,6 +70,13 @@ export async function iniciarWorkers(fila: JobQueue): Promise<WorkersEmExecucao>
   const rec = await agendamentos.reconciliar();
   console.log(`🗓️  DAST agendado: ${rec?.upserts ?? 0} agendamento(s) no Redis, ${rec?.removidos ?? 0} removido(s)`);
   workers.push(iniciarWorkerAgendamentosDast(fila.conexaoParaWorkers(), (id) => agendamentos.executar(id)));
+
+  // Monitor de SLA (FILA-FUT-02): aviso diário de prazo. O job lê o banco na hora da execução.
+  workers.push(
+    await iniciarWorkerSlaMonitor(fila.conexaoParaWorkers(), fila.fila(QUEUE_NAMES.slaMonitor), makeSlaMonitorService(), {
+      habilitado: EnvVar.getOptional(EnvKeys.SLA_MONITOR_ENABLED, "true") !== "false",
+    }),
+  );
 
   return {
     encerrar: async () => {

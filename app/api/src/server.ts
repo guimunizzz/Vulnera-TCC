@@ -35,6 +35,12 @@ if (jobQueue.driver === "memory" && EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC
   iniciarAgendador(makeThreatIntelSyncService(), Number(EnvVar.getOptional(EnvKeys.THREAT_INTEL_SYNC_INTERVAL_MIN, "360")) || 360);
 }
 
+// Monitor de SLA (FILA-FUT-02): o aviso diário é um job scheduler do BullMQ.
+// Sem Redis não há relógio para ele, e não criamos setInterval só para isso.
+if (jobQueue.driver === "memory") {
+  console.log("⏰ Monitor de SLA: só roda com QUEUE_DRIVER=bullmq (sem fila não há agendamento diário).");
+}
+
 // Fila de jobs (ADR-056). Com `memory` (padrão), nada muda: watchdog e
 // setInterval acima. Com `bullmq`, os workers sobem aqui, a menos que
 // WORKER_IN_PROCESS=false (aí rodam em `npm run worker`). Falha de conexão
