@@ -175,7 +175,14 @@ describe("QueueAdminService", () => {
     const { service } = servico();
     const painel = await service.painel();
     expect(painel.queues[0].label).toBe("Threat Intel");
-    expect(ROTULOS_DAS_FILAS).toEqual({ "dast-scan": "Scans DAST", "threat-intel": "Threat Intel", "dast-schedule": "Agendamentos DAST" });
+    expect(ROTULOS_DAS_FILAS).toEqual({ "dast-scan": "Scans DAST", "threat-intel": "Threat Intel", "dast-schedule": "Agendamentos DAST", "sla-monitor": "Monitor de SLA" });
+  });
+
+  it("QADM-U06 — scan DAST com falha não é reprocessado pelo painel (o worker só roda scan QUEUED)", async () => {
+    const { service, fila, auditLog } = servico();
+    await expect(service.reprocessar("u1", "dast-scan", "job-1")).rejects.toThrow("RETRY_NOT_SUPPORTED");
+    expect(fila.reprocessarJob).not.toHaveBeenCalled();
+    expect(auditLog.create).not.toHaveBeenCalled();
   });
 
   it("QADM-U05b — fila fora de QUEUE_NAMES: INVALID_QUEUE, sem tocar o motor", async () => {
@@ -188,15 +195,15 @@ describe("QueueAdminService", () => {
   it("QADM-U05c — AuditLog RETRY só depois do sucesso; falha do motor não grava nada", async () => {
     const { service, fila, auditLog } = servico();
 
-    await service.reprocessar("u1", "dast-scan", "job-7");
-    expect(fila.reprocessarJob).toHaveBeenCalledWith("dast-scan", "job-7");
+    await service.reprocessar("u1", "threat-intel", "job-7");
+    expect(fila.reprocessarJob).toHaveBeenCalledWith("threat-intel", "job-7");
     expect(auditLog.create).toHaveBeenCalledWith({
       actorId: "u1",
       companyId: null,
       entityType: "QueueJob",
       entityId: "job-7",
       action: "RETRY",
-      diffJson: '{"fila":"dast-scan"}',
+      diffJson: '{"fila":"threat-intel"}',
     });
 
     fila.reprocessarJob.mockRejectedValueOnce(new Error("JOB_NOT_FAILED"));

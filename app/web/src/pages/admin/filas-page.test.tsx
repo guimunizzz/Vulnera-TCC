@@ -77,15 +77,23 @@ describe("Página de filas", () => {
   });
 
   it("'Tentar de novo' chama a API com a fila e o id do job, e avisa o resultado", async () => {
+    api.painel.mockResolvedValue(painelBullmq([fila({ name: "threat-intel", label: "Threat Intel" })]));
     renderPage();
-    const cartao = await screen.findByRole("region", { name: "Scans DAST" });
+    const cartao = await screen.findByRole("region", { name: "Threat Intel" });
 
     fireEvent.click(within(cartao).getByRole("button", { name: "Tentar de novo" }));
 
-    await waitFor(() => expect(api.reprocessar).toHaveBeenCalledWith("dast-scan", "job-1"));
+    await waitFor(() => expect(api.reprocessar).toHaveBeenCalledWith("threat-intel", "job-1"));
     expect(await screen.findByText("Job reenfileirado")).toBeInTheDocument();
     // Depois do sucesso a query é invalidada: o painel é pedido de novo.
     await waitFor(() => expect(api.painel.mock.calls.length).toBeGreaterThanOrEqual(2));
+  });
+
+  it("na fila de scans DAST não oferece 'Tentar de novo': orienta a disparar um scan novo", async () => {
+    renderPage();
+    const cartao = await screen.findByRole("region", { name: "Scans DAST" });
+    expect(within(cartao).queryByRole("button", { name: "Tentar de novo" })).not.toBeInTheDocument();
+    expect(within(cartao).getByText(/dispare um scan novo/)).toBeInTheDocument();
   });
 
   it("com o motor em memória, explica que não há fila persistente e não mostra cartões", async () => {

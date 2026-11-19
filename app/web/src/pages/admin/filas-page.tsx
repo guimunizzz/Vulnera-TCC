@@ -92,9 +92,14 @@ function CartaoFila({ fila }: { fila: FilaPainel }) {
                     <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all rounded-control bg-inset p-2 font-mono">{job.data}</pre>
                   </details>
                 </div>
-                <Button variant="secundario" size="sm" carregando={reenviando} onClick={() => reprocessar.mutate(job)}>
-                  Tentar de novo
-                </Button>
+                {fila.name === "dast-scan" ? (
+                  // Scan DAST com falha já está FAILED no banco: reprocessar o job não rodaria nada.
+                  <p className="max-w-xs text-xs text-fg-muted">Para tentar de novo, dispare um scan novo na tela de DAST.</p>
+                ) : (
+                  <Button variant="secundario" size="sm" carregando={reenviando} onClick={() => reprocessar.mutate(job)}>
+                    Tentar de novo
+                  </Button>
+                )}
               </li>
             );
           })}

@@ -19,7 +19,16 @@ export const ROTULOS_DAS_FILAS: Record<QueueName, string> = {
   "dast-scan": "Scans DAST",
   "threat-intel": "Threat Intel",
   "dast-schedule": "Agendamentos DAST",
+  "sla-monitor": "Monitor de SLA",
 };
+
+/**
+ * Filas cujo job com falha NÃO pode ser reprocessado pelo painel. Num scan DAST,
+ * a falha já deixou o scan FAILED no banco e o worker só executa scan QUEUED
+ * (guarda atômica, ADR-056 §4): o retry "daria certo" sem rodar nada. Para
+ * tentar de novo, dispara-se um scan novo (decisão de 2026-11-19).
+ */
+export const FILAS_SEM_RETRY: readonly QueueName[] = ["dast-scan"];
 
 export interface FilaNoPainelDTO extends FilaNoPainel {
   label: string;
@@ -47,6 +56,7 @@ export class QueueAdminService {
   async reprocessar(actorId: string, nomeFila: string, jobId: string): Promise<{ fila: QueueName; jobId: string }> {
     const fila = (Object.values(QUEUE_NAMES) as string[]).includes(nomeFila) ? (nomeFila as QueueName) : null;
     if (!fila) throw new Error("INVALID_QUEUE");
+    if (FILAS_SEM_RETRY.includes(fila)) throw new Error("RETRY_NOT_SUPPORTED");
 
     await this.fila.reprocessarJob(fila, jobId);
     await this.auditLog.create({

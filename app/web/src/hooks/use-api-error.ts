@@ -173,6 +173,7 @@ const MESSAGES: Record<string, string> = {
   INVALID_QUEUE: "Fila desconhecida. Atualize a tela e tente de novo.",
   JOB_NOT_FOUND: "Job não encontrado. Ele pode ter sido removido da fila.",
   JOB_NOT_FAILED: "Só um job com falha pode ser tentado de novo. Ele já mudou de estado; atualize a tela.",
+  RETRY_NOT_SUPPORTED: "Um scan DAST com falha não é reprocessado pela fila. Dispare um scan novo na tela de DAST.",
   QUEUE_DRIVER_MEMORY: "O motor de filas está em memória e não há job com falha para reprocessar.",
 
   // importação SAST/SCA (ADR-052)
