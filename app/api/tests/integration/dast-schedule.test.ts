@@ -15,6 +15,8 @@
  *   SCHED-EXEC-05 criador que deixou de ser membro → NOT_MEMBER
  *   SCHED-PAG-01  página /agendamentos: cada papel vê só o próprio recorte
  *   SCHED-PAG-02  alvos para agendar: ADMIN todas, PENTESTER as dele, CLIENT 403
+ *   SCHED-URL-01..04 agendamento só por URL: confirmação, visibilidade do time, execução sem tenant
+ *   SCHED-URL-01..04 agendamento só por URL: criação, visibilidade do time, execução sem tenant
  */
 
 import request from "supertest";
@@ -305,5 +307,77 @@ describe("Página /agendamentos — leitura global (SEC4)", () => {
     expect((await request(app).get("/api/dast-schedules/targets").set(c.h.pentOutro)).body).toEqual([]);
     expect((await request(app).get("/api/dast-schedules/targets").set(c.h.clientA)).status).toBe(403);
     expect((await request(app).get("/api/dast-schedules")).status).toBe(401);
+  });
+});
+
+describe("Agendamento só por URL (decisão de 2026-11-19)", () => {
+  const porUrl = (extra: Record<string, unknown> = {}) => ({
+    targetUrl: "https://alvo-solto.example.com/login#x",
+    confirmedAuthorization: true,
+    ...corpo(extra),
+  });
+
+  it("SCHED-URL-01 — ADMIN/PENTESTER criam sem aplicação nem projeto; confirmação obrigatória; CLIENT não cria", async () => {
+    const c = await cenario();
+    const semConfirmar = await request(app).post("/api/dast-schedules").set(c.h.pentA).send(porUrl({ confirmedAuthorization: false }));
+    expect(semConfirmar.status).toBe(400);
+    expect(semConfirmar.body.error).toBe("AUTHORIZATION_CONFIRMATION_REQUIRED");
+    expect((await request(app).post("/api/dast-schedules").set(c.h.pentA).send(porUrl({ targetUrl: "ftp://x" }))).body.error).toBe("INVALID_TARGET_URL");
+    expect((await request(app).post("/api/dast-schedules").set(c.h.pentA).send(porUrl({ targetUrl: "" }))).body.error).toBe("MISSING_TARGET_URL");
+    expect((await request(app).post("/api/dast-schedules").set(c.h.clientA).send(porUrl())).status).toBe(403);
+
+    const res = await request(app).post("/api/dast-schedules").set(c.h.pentA).send(porUrl({ companyId: c.companyA.id, projectId: c.projectA.id }));
+    expect(res.status).toBe(201);
+    // Fragmento removido; empresa e projeto do corpo ignorados (SEC2).
+    expect(res.body).toMatchObject({ targetUrl: "https://alvo-solto.example.com/login", applicationId: null, companyId: null, projectId: null });
+
+    const audit = await prisma.auditLog.findFirst({ where: { entityType: "ScanSchedule", entityId: res.body.id, action: "CREATE" } });
+    expect(JSON.parse(audit!.diffJson!)).toMatchObject({ confirmedAuthorization: true });
+  });
+
+  it("SCHED-URL-02 — todo PENTESTER vê e edita; CLIENT não vê nem edita; modo e alvo não mudam", async () => {
+    const c = await cenario();
+    const criado = (await request(app).post("/api/dast-schedules").set(c.h.pentA).send(porUrl())).body;
+
+    const outro = await request(app).get("/api/dast-schedules").set(c.h.pentOutro);
+    expect(outro.body.schedules).toHaveLength(1);
+    expect(outro.body.schedules[0]).toMatchObject({ id: criado.id, kind: "URL", url: "https://alvo-solto.example.com/login", application: null, authorization: null, canEdit: true });
+
+    const editado = await request(app).put(`/api/dast-schedules/${criado.id}`).set(c.h.pentOutro).send({ hour: 22, enabled: false });
+    expect(editado.status).toBe(200);
+    expect(editado.body).toMatchObject({ hour: 22, enabled: false });
+    expect((await request(app).put(`/api/dast-schedules/${criado.id}`).set(c.h.pentOutro).send({ mode: "REAL" })).body.error).toBe("MODE_IS_IMMUTABLE");
+    expect((await request(app).put(`/api/dast-schedules/${criado.id}`).set(c.h.pentOutro).send({ targetUrl: "https://outro.example.com/" })).body.error).toBe("TARGET_IS_IMMUTABLE");
+
+    expect((await request(app).get("/api/dast-schedules").set(c.h.clientA)).body.schedules).toEqual([]);
+    expect((await request(app).put(`/api/dast-schedules/${criado.id}`).set(c.h.clientA).send({ hour: 1 })).status).toBe(404);
+    expect((await request(app).delete(`/api/dast-schedules/${criado.id}`).set(c.h.clientA)).status).toBe(404);
+
+    expect((await request(app).delete(`/api/dast-schedules/${criado.id}`).set(c.h.pentOutro)).status).toBe(204);
+    expect(await prisma.scanSchedule.count()).toBe(0);
+  });
+
+  it("SCHED-URL-03 — na execução vira scan sem aplicação nem empresa, que todo o time de PENTESTER enxerga", async () => {
+    const c = await cenario();
+    const criado = (await request(app).post("/api/dast-schedules").set(c.h.pentA).send(porUrl())).body;
+
+    await expect(makeDastScheduleService().executar(criado.id)).resolves.toBe("STARTED");
+    const sched = await prisma.scanSchedule.findUniqueOrThrow({ where: { id: criado.id } });
+    const scan = await esperarTerminal(sched.lastScanId!);
+    expect(scan).toMatchObject({ trigger: "SCHEDULED", scheduleId: criado.id, applicationId: null, companyId: null, requestedById: c.pentA.id, simulated: true });
+    expect(scan.targetUrl).toBe("https://alvo-solto.example.com/login");
+
+    const lista = await request(app).get("/api/dast/scans").set(c.h.pentOutro);
+    expect(lista.body.map((s: { id: string }) => s.id)).toContain(scan.id);
+    expect((await request(app).get(`/api/dast/scans/${scan.id}`).set(c.h.pentOutro)).status).toBe(200);
+    expect((await request(app).get(`/api/dast/scans/${scan.id}/findings`).set(c.h.pentOutro)).status).toBe(200);
+  });
+
+  it("SCHED-URL-04 — quem agendou e deixou de ser ADMIN/PENTESTER: não roda (CREATOR_INACTIVE)", async () => {
+    const c = await cenario();
+    const criado = (await request(app).post("/api/dast-schedules").set(c.h.pentA).send(porUrl())).body;
+    await prisma.user.update({ where: { id: c.pentA.id }, data: { role: "CLIENT" } });
+    await expect(makeDastScheduleService().executar(criado.id)).resolves.toBe("CREATOR_INACTIVE");
+    expect(await prisma.dastScan.count()).toBe(0);
   });
 });

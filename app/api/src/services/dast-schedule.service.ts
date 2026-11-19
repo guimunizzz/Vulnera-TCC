@@ -35,6 +35,7 @@ import type { JobQueue } from "./queue/job-queue";
 import type { DastScanService } from "./dast-scan.service";
 import type { DastScan } from "../models/dast-scan.model";
 import type { UserRole } from "../models/user.model";
+import { validateTargetUrl } from "./zap-runner.service";
 import {
   FUSO_PADRAO,
   MODOS,
@@ -69,8 +70,11 @@ export interface AutorizacaoDastDTO {
 
 export interface AgendamentoDTO {
   id: string;
-  applicationId: string;
-  companyId: string;
+  /** null nos agendamentos só por URL. */
+  applicationId: string | null;
+  companyId: string | null;
+  /** Preenchido só nos agendamentos por URL. */
+  targetUrl: string | null;
   projectId: string | null;
   mode: Modo;
   frequency: string;
@@ -89,9 +93,14 @@ export interface AgendamentoDTO {
 
 /** Uma linha da página /agendamentos: o agendamento e o que a pessoa precisa para entendê-lo. */
 export interface AgendamentoVisivelDTO extends AgendamentoDTO {
-  application: { id: string; name: string; url: string | null; companyName: string; active: boolean };
+  /** APPLICATION: alvo é a URL da aplicação, com autorização conferida a cada execução. URL: alvo solto. */
+  kind: "APPLICATION" | "URL";
+  /** URL que vai ser escaneada (da aplicação ou a do agendamento). */
+  url: string | null;
+  application: { id: string; name: string; url: string | null; companyName: string; active: boolean } | null;
   projectName: string | null;
-  authorization: { until: string | null; host: string | null; problem: string | null };
+  /** null nos agendamentos por URL: lá a autorização é só a confirmação de quem criou. */
+  authorization: { until: string | null; host: string | null; problem: string | null } | null;
   /** Próximo disparo segundo o scheduler (bullmq); null sem motor de agendamento ou desligado. */
   nextRunAt: string | null;
   canEdit: boolean;
@@ -119,6 +128,10 @@ export interface AlvoDastDTO {
 
 export interface CriarAgendamentoInput extends Partial<CamposAgendamento> {
   mode?: unknown;
+  /** Só no agendamento por URL. */
+  targetUrl?: unknown;
+  /** Só no agendamento por URL: a pessoa confirma que tem autorização para testar a URL. */
+  confirmedAuthorization?: unknown;
   projectId?: unknown;
   enabled?: unknown;
 }
@@ -127,6 +140,7 @@ const toDTO = (s: ScanSchedule): AgendamentoDTO => ({
   id: s.id,
   applicationId: s.applicationId,
   companyId: s.companyId,
+  targetUrl: s.targetUrl,
   projectId: s.projectId,
   mode: s.mode,
   frequency: s.frequency,
@@ -261,6 +275,72 @@ export class DastScheduleService {
     await this.reconciliar();
   }
 
+  // ==========================================================================
+  // Agendamento só por URL (decisão de 2026-11-19)
+  // ==========================================================================
+
+  /**
+   * Sem aplicação, empresa nem projeto: ADMIN e PENTESTER, e qualquer um deles
+   * vê e edita. Não há autorização com prazo: a pessoa confirma que tem
+   * autorização para testar a URL, e a confirmação fica no AuditLog. Na
+   * execução não há nova checagem de autorização (decisão do Rafael).
+   */
+  async criarPorUrl(actor: Actor, body: CriarAgendamentoInput): Promise<AgendamentoDTO> {
+    if (actor.role !== "ADMIN" && actor.role !== "PENTESTER") throw new Error("FORBIDDEN");
+    if (typeof body.targetUrl !== "string" || !body.targetUrl.trim()) throw new Error("MISSING_TARGET_URL");
+    const targetUrl = validateTargetUrl(body.targetUrl.trim()).href;
+    if (body.confirmedAuthorization !== true) throw new Error("AUTHORIZATION_CONFIRMATION_REQUIRED");
+    if (!MODOS.includes(body.mode as Modo)) throw new Error("INVALID_MODE");
+    const campos = this.camposDe(body, null);
+    const enabled = body.enabled === undefined ? true : body.enabled;
+    if (typeof enabled !== "boolean") throw new Error("INVALID_ENABLED");
+
+    const criado = await this.schedules.create({
+      companyId: null,
+      applicationId: null,
+      targetUrl,
+      projectId: null,
+      mode: body.mode as Modo,
+      ...campos,
+      enabled,
+      createdById: actor.userId,
+    });
+    await this.auditar(actor.userId, null, "ScanSchedule", criado.id, "CREATE", { depois: toDTO(criado), confirmedAuthorization: true });
+    await this.reconciliar();
+    return toDTO(criado);
+  }
+
+  /** Edição pela página /agendamentos: decide pelas regras do tipo do agendamento. */
+  async atualizarPorId(actor: Actor, scheduleId: string, body: CriarAgendamentoInput): Promise<AgendamentoDTO> {
+    const s = await this.agendamentoParaEscrita(actor, scheduleId);
+    if (s.applicationId) return this.atualizar(actor, s.applicationId, s.id, body);
+    if (body.mode !== undefined && body.mode !== s.mode) throw new Error("MODE_IS_IMMUTABLE");
+    if (body.targetUrl !== undefined && body.targetUrl !== s.targetUrl) throw new Error("TARGET_IS_IMMUTABLE");
+    const campos = this.camposDe(body, s);
+    const enabled = body.enabled === undefined ? s.enabled : body.enabled;
+    if (typeof enabled !== "boolean") throw new Error("INVALID_ENABLED");
+    const atualizado = await this.schedules.update(s.id, { ...campos, enabled });
+    await this.auditar(actor.userId, null, "ScanSchedule", s.id, "UPDATE", { antes: toDTO(s), depois: toDTO(atualizado) });
+    await this.reconciliar();
+    return toDTO(atualizado);
+  }
+
+  async removerPorId(actor: Actor, scheduleId: string): Promise<void> {
+    const s = await this.agendamentoParaEscrita(actor, scheduleId);
+    if (s.applicationId) return this.remover(actor, s.applicationId, s.id);
+    await this.schedules.delete(s.id);
+    await this.auditar(actor.userId, null, "ScanSchedule", s.id, "DELETE", { antes: toDTO(s) });
+    await this.reconciliar();
+  }
+
+  /** Por URL: ADMIN/PENTESTER; por aplicação: as regras da aplicação (aplicadas em atualizar/remover). */
+  private async agendamentoParaEscrita(actor: Actor, scheduleId: string): Promise<ScanSchedule> {
+    const s = await this.schedules.findById(scheduleId);
+    if (!s) throw new Error("SCHEDULE_NOT_FOUND");
+    if (!s.applicationId && actor.role !== "ADMIN" && actor.role !== "PENTESTER") throw new Error("SCHEDULE_NOT_FOUND");
+    return s;
+  }
+
   /**
    * Espelha no Redis todos os agendamentos habilitados (boot do worker e após
    * cada mudança). Idempotente. Com memory devolve null: não há execução.
@@ -304,18 +384,21 @@ export class DastScheduleService {
     return {
       runsSchedules: this.fila.driver === "bullmq",
       canCreate: podeEditar,
-      schedules: linhas.map((s) => ({
-        ...toDTO(s),
-        application: { id: s.application.id, name: s.application.name, url: s.application.url, companyName: s.application.company.name, active: s.application.isActive },
-        projectName: s.project?.name ?? null,
-        authorization: {
-          until: s.application.dastAuthorizedUntil?.toISOString() ?? null,
-          host: s.application.dastAuthorizedHost,
-          problem: motivoSemAutorizacao(s.application, agora),
-        },
-        nextRunAt: s.enabled ? (proximas?.get(s.id) ?? null) : null,
-        canEdit: podeEditar,
-      })),
+      schedules: linhas.map((s) => {
+        const app = s.application;
+        return {
+          ...toDTO(s),
+          kind: app ? ("APPLICATION" as const) : ("URL" as const),
+          url: app ? app.url : s.targetUrl,
+          application: app ? { id: app.id, name: app.name, url: app.url, companyName: app.company.name, active: app.isActive } : null,
+          projectName: s.project?.name ?? null,
+          authorization: app
+            ? { until: app.dastAuthorizedUntil?.toISOString() ?? null, host: app.dastAuthorizedHost, problem: motivoSemAutorizacao(app, agora) }
+            : null,
+          nextRunAt: s.enabled ? (proximas?.get(s.id) ?? null) : null,
+          canEdit: podeEditar,
+        };
+      }),
     };
   }
 
@@ -350,12 +433,13 @@ export class DastScheduleService {
       return motivo;
     }
 
-    const app = (await this.applications.findById(s.applicationId))!;
+    // Por URL: o alvo é o próprio agendamento; por aplicação, a URL atual dela.
+    const app = s.applicationId ? (await this.applications.findById(s.applicationId))! : null;
     try {
       const scan = await this.scans.criarAgendado({
         scheduleId: s.id,
         requestedById: s.createdById,
-        targetUrl: app.url!,
+        targetUrl: app ? app.url! : s.targetUrl!,
         mode: s.mode,
         companyId: s.companyId,
         applicationId: s.applicationId,
@@ -390,6 +474,14 @@ export class DastScheduleService {
 
   private async motivoParaNaoRodar(s: ScanSchedule): Promise<string | null> {
     if (!s.enabled) return "DISABLED";
+    if (!s.applicationId) {
+      // Por URL: sem autorização com prazo nem empresa (decisão de 2026-11-19);
+      // ainda assim, quem agendou precisa continuar sendo ADMIN/PENTESTER.
+      if (!s.targetUrl) return "ERROR";
+      const criador = await this.users.findById(s.createdById);
+      if (!criador || (criador.role !== "ADMIN" && criador.role !== "PENTESTER")) return "CREATOR_INACTIVE";
+      return null;
+    }
     const app = await this.applications.findById(s.applicationId);
     if (!app || !app.isActive) return "APPLICATION_INACTIVE";
     if (app.companyId !== s.companyId) return "COMPANY_MISMATCH";
@@ -409,7 +501,8 @@ export class DastScheduleService {
 
   private async notificar(userId: string, applicationId: string | null, title: string, message: string): Promise<void> {
     await this.notifications.criarVarias([
-      { userId, category: "DAST_SCHEDULE", title, message, link: applicationId ? `/applications/${applicationId}/dashboard` : null },
+      // A página dos agendamentos mostra o motivo e permite corrigir; serve aos dois tipos.
+      { userId, category: "DAST_SCHEDULE", title, message, link: "/agendamentos" },
     ]);
   }
 
@@ -499,7 +592,7 @@ export class DastScheduleService {
     };
   }
 
-  private async auditar(actorId: string, companyId: string, entityType: string, entityId: string, action: string, diff: unknown): Promise<void> {
+  private async auditar(actorId: string, companyId: string | null, entityType: string, entityId: string, action: string, diff: unknown): Promise<void> {
     await this.auditLog.create({ actorId, companyId, entityType, entityId, action, diffJson: JSON.stringify(diff) });
   }
 }

@@ -16,6 +16,7 @@ import { marcarTourVisto } from "../lib/tour";
 import type { AgendamentoVisivel, AlvoDast, PainelAgendamentos } from "../types/dast-schedule.types";
 
 const api = vi.hoisted(() => ({
+  criarPorUrl: vi.fn(),
   painel: vi.fn(),
   alvos: vi.fn(),
   autorizar: vi.fn(),
@@ -29,6 +30,9 @@ vi.mock("../lib/api/dast-schedules.api", () => ({ dastSchedulesApi: api }));
 function agendamento(over: Partial<AgendamentoVisivel> = {}): AgendamentoVisivel {
   return {
     id: "s1",
+    kind: "APPLICATION",
+    url: "https://portal.example.com",
+    targetUrl: null,
     applicationId: "app1",
     companyId: "c1",
     projectId: "p1",
@@ -136,7 +140,7 @@ describe("Página de agendamentos", () => {
     renderPage();
     const cartao = await screen.findByRole("article", { name: /Portal do Cliente/ });
     fireEvent.click(within(cartao).getByRole("switch"));
-    await waitFor(() => expect(api.atualizar).toHaveBeenCalledWith("app1", "s1", { enabled: false }));
+    await waitFor(() => expect(api.atualizar).toHaveBeenCalledWith("s1", { enabled: false }));
   });
 
   it("formulário: autoriza o alvo e cria um agendamento semanal, com prévia em português", async () => {
@@ -194,5 +198,56 @@ describe("Página de agendamentos", () => {
     expect(within(dialogo).getByRole("button", { name: "Criar agendamento" })).toBeDisabled();
     fireEvent.click(within(dialogo).getByRole("checkbox", { name: /scan real está autorizado/ }));
     expect(within(dialogo).getByRole("button", { name: "Criar agendamento" })).toBeEnabled();
+  });
+
+  it("só uma URL: sem aplicação nem projeto, exige URL válida e a confirmação de autorização", async () => {
+    api.criarPorUrl.mockResolvedValue({ id: "u1" });
+    renderPage("PENTESTER");
+    fireEvent.click(await screen.findByRole("button", { name: /Novo agendamento/ }));
+    const dialogo = await screen.findByRole("dialog");
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Só uma URL" }));
+    expect(within(dialogo).queryByRole("combobox", { name: /Aplicação/ })).not.toBeInTheDocument();
+    expect(within(dialogo).queryByRole("combobox", { name: /^Projeto/ })).not.toBeInTheDocument();
+    // Sem o passo do projeto, a numeração não pula: Quando é o 2, Modo é o 3.
+    expect(within(dialogo).getByRole("region", { name: "Quando rodar" })).toHaveTextContent(/^2/);
+    expect(within(dialogo).getByRole("region", { name: "Modo" })).toHaveTextContent(/^3/);
+
+    const url = within(dialogo).getByLabelText(/URL do alvo/);
+    fireEvent.change(url, { target: { value: "ftp://nao-serve" } });
+    expect(within(dialogo).getByText(/Use um endereço completo/)).toBeInTheDocument();
+    fireEvent.change(url, { target: { value: "https://alvo-solto.example.com" } });
+    expect(within(dialogo).getByRole("button", { name: "Criar agendamento" })).toBeDisabled();
+
+    fireEvent.click(within(dialogo).getByRole("checkbox", { name: /autorização do responsável para testar esta URL/ }));
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Todo dia" }));
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Criar agendamento" }));
+    await waitFor(() =>
+      expect(api.criarPorUrl).toHaveBeenCalledWith({
+        frequency: "DAILY",
+        hour: 3,
+        minute: 0,
+        dayOfWeek: null,
+        timezone: "America/Sao_Paulo",
+        targetUrl: "https://alvo-solto.example.com",
+        mode: "SIMULATED",
+        confirmedAuthorization: true,
+      }),
+    );
+    expect(api.criar).not.toHaveBeenCalled();
+  });
+
+  it("agendamento só por URL aparece com o host, o selo e a autorização confirmada por quem criou", async () => {
+    api.painel.mockResolvedValue(
+      painel({
+        schedules: [
+          agendamento({ id: "u1", kind: "URL", url: "https://alvo-solto.example.com/login", targetUrl: "https://alvo-solto.example.com/login", application: null, applicationId: null, companyId: null, projectId: null, projectName: null, authorization: null }),
+        ],
+      }),
+    );
+    renderPage();
+    const cartao = await screen.findByRole("article", { name: /alvo-solto\.example\.com/ });
+    expect(within(cartao).getByText("Só URL")).toBeInTheDocument();
+    expect(within(cartao).getByText("Confirmada por quem criou")).toBeInTheDocument();
+    expect(within(cartao).getByText(/visível a todo o time de segurança/)).toBeInTheDocument();
   });
 });

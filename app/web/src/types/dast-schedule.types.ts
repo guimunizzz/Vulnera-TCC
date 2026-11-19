@@ -23,8 +23,11 @@ export interface AutorizacaoDast {
 
 export interface Agendamento {
   id: string;
-  applicationId: string;
-  companyId: string;
+  /** null nos agendamentos só por URL. */
+  applicationId: string | null;
+  companyId: string | null;
+  /** Preenchido só nos agendamentos por URL. */
+  targetUrl: string | null;
   projectId: string | null;
   mode: ModoAgendamento;
   frequency: FrequenciaAgendamento;
@@ -44,9 +47,14 @@ export interface Agendamento {
 }
 
 export interface AgendamentoVisivel extends Agendamento {
-  application: { id: string; name: string; url: string | null; companyName: string; active: boolean };
+  /** APPLICATION: URL da aplicação, autorização conferida a cada execução. URL: alvo solto, visível ao time. */
+  kind: "APPLICATION" | "URL";
+  /** URL que vai ser escaneada. */
+  url: string | null;
+  application: { id: string; name: string; url: string | null; companyName: string; active: boolean } | null;
   projectName: string | null;
-  authorization: { until: string | null; host: string | null; problem: ProblemaAutorizacao | null };
+  /** null nos agendamentos por URL: lá vale a confirmação de quem criou. */
+  authorization: { until: string | null; host: string | null; problem: ProblemaAutorizacao | null } | null;
   nextRunAt: string | null;
   canEdit: boolean;
 }
@@ -75,6 +83,13 @@ export interface QuandoAgendamento {
   minute: number;
   dayOfWeek: number | null;
   timezone: string;
+}
+
+export interface NovoAgendamentoPorUrlInput extends QuandoAgendamento {
+  targetUrl: string;
+  mode: ModoAgendamento;
+  /** A pessoa confirma que tem autorização para testar a URL (vai para o AuditLog). */
+  confirmedAuthorization: true;
 }
 
 export interface NovoAgendamentoInput extends QuandoAgendamento {

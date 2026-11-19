@@ -3,9 +3,12 @@
  *
  * O QUE FAZ
  * Cria ou edita um scan DAST agendado (ADR-056) em quatro passos curtos:
- *   1. Alvo — a aplicação (o scan usa a URL dela). Se o alvo ainda não tem
- *      autorização de teste vigente, ela é registrada aqui mesmo, sem sair da
- *      tela: prazo + confirmação de que o responsável autorizou.
+ *   1. Alvo — uma aplicação (o scan usa a URL dela) OU só uma URL.
+ *      Aplicação: se ainda não tem autorização de teste vigente, ela é
+ *      registrada aqui mesmo (prazo + confirmação do responsável).
+ *      Só URL (decisão de 2026-11-19): sem aplicação, empresa nem projeto,
+ *      visível a todo o time de segurança; basta confirmar que há autorização
+ *      para testar a URL (fica no AuditLog, sem prazo).
  *   2. Projeto — obrigatório para PENTESTER (projeto de que é membro).
  *   3. Quando — "todo dia" ou "toda semana", horário e fuso, com uma prévia
  *      em português ("Toda segunda às 03:00 (horário de Brasília)"). O cron
@@ -49,6 +52,16 @@ import {
 } from "../../lib/agendamento";
 import type { AgendamentoVisivel, FrequenciaAgendamento, ModoAgendamento, QuandoAgendamento } from "../../types/dast-schedule.types";
 
+/** URL http(s) completa, como a API exige (sem usuário/senha embutidos). */
+function urlHttp(valor: string): boolean {
+  try {
+    const u = new URL(valor.trim());
+    return (u.protocol === "http:" || u.protocol === "https:") && !u.username && !u.password;
+  } catch {
+    return false;
+  }
+}
+
 const CLASSE_SELECT = "h-touch w-full rounded-control border border-default bg-surface px-3 text-sm text-fg";
 const QUANDO_PADRAO: QuandoAgendamento = { frequency: "WEEKLY", hour: 3, minute: 0, dayOfWeek: 1, timezone: FUSO_PADRAO };
 
@@ -90,6 +103,9 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
   const getErrorMessage = useApiError();
   const idPrevia = useId();
 
+  const [tipoAlvo, setTipoAlvo] = useState<"APLICACAO" | "URL">("APLICACAO");
+  const [targetUrl, setTargetUrl] = useState("");
+  const [confirmouUrl, setConfirmouUrl] = useState(false);
   const [applicationId, setApplicationId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [quando, setQuando] = useState<QuandoAgendamento>(QUANDO_PADRAO);
@@ -106,12 +122,17 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
     setConfirmouReal(false);
     setConfirmouAutorizacao(false);
     setAutorizarAte(dataDaquiA(30));
+    setConfirmouUrl(false);
     if (editando) {
-      setApplicationId(editando.applicationId);
+      setTipoAlvo(editando.kind === "URL" ? "URL" : "APLICACAO");
+      setTargetUrl(editando.url ?? "");
+      setApplicationId(editando.applicationId ?? "");
       setProjectId(editando.projectId ?? "");
       setModo(editando.mode);
       setQuando({ frequency: editando.frequency, hour: editando.hour, minute: editando.minute, dayOfWeek: editando.dayOfWeek, timezone: editando.timezone });
     } else {
+      setTipoAlvo("APLICACAO");
+      setTargetUrl("");
       setApplicationId("");
       setProjectId("");
       setModo("SIMULATED");
@@ -119,9 +140,10 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
     }
   }, [aberto, editando]);
 
-  const alvosQuery = useQuery({ queryKey: ["dast-schedules", "alvos"], queryFn: dastSchedulesApi.alvos, enabled: aberto && !editando });
+  const alvosQuery = useQuery({ queryKey: ["dast-schedules", "alvos"], queryFn: dastSchedulesApi.alvos, enabled: aberto && !editando && tipoAlvo === "APLICACAO" });
   const alvos = useMemo(() => alvosQuery.data ?? [], [alvosQuery.data]);
-  const alvo = alvos.find((a) => a.applicationId === applicationId) ?? null;
+  const alvo = tipoAlvo === "APLICACAO" ? (alvos.find((a) => a.applicationId === applicationId) ?? null) : null;
+  const urlValida = urlHttp(targetUrl);
 
   // Um só projeto possível (caso comum do PENTESTER): já vem escolhido.
   useEffect(() => {
@@ -141,8 +163,10 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
   const salvar = useMutation({
     mutationFn: () =>
       editando
-        ? dastSchedulesApi.atualizar(editando.applicationId, editando.id, quando)
-        : dastSchedulesApi.criar(applicationId, { ...quando, mode: modo, projectId: projectId || null }),
+        ? dastSchedulesApi.atualizar(editando.id, quando)
+        : tipoAlvo === "URL"
+          ? dastSchedulesApi.criarPorUrl({ ...quando, targetUrl: targetUrl.trim(), mode: modo, confirmedAuthorization: true })
+          : dastSchedulesApi.criar(applicationId, { ...quando, mode: modo, projectId: projectId || null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dast-schedules"] });
       toast.sucesso(editando ? "Agendamento atualizado" : "Agendamento criado", descreverQuandoCompleto(quando));
@@ -151,16 +175,24 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
     onError: (err: unknown) => setErro(getErrorMessage(err)),
   });
 
-  const autorizacaoOk = editando ? true : alvo?.authorization.problem === null;
   const faltando: string[] = [];
-  if (!editando) {
+  if (!editando && tipoAlvo === "URL") {
+    if (!urlValida) faltando.push("informe uma URL http(s) válida");
+    if (!confirmouUrl) faltando.push("confirme a autorização para testar a URL");
+  } else if (!editando) {
     if (!alvo) faltando.push("escolha a aplicação");
-    else if (!autorizacaoOk) faltando.push("registre a autorização do alvo");
+    else if (alvo.authorization.problem !== null) faltando.push("registre a autorização do alvo");
     if (alvo?.projectRequired && !projectId) faltando.push("escolha o projeto");
+  }
+  if (!editando) {
     if (modo === "REAL" && !confirmouReal) faltando.push("confirme o scan real");
   }
   if (quando.frequency === "WEEKLY" && quando.dayOfWeek === null) faltando.push("escolha o dia da semana");
   const ocupado = salvar.isPending || autorizar.isPending;
+  // Os passos se numeram pelo que está na tela: sem projeto (URL solta, ou
+  // aplicação sem projetos), "Quando" é o 2 — nada de pular do 1 para o 3.
+  const mostraProjeto = editando ? !!editando.projectName : !!alvo && alvo.projects.length > 0;
+  const numeroQuando = mostraProjeto ? 3 : 2;
 
   const setFrequencia = (frequency: FrequenciaAgendamento) =>
     setQuando((q) => ({ ...q, frequency, dayOfWeek: frequency === "WEEKLY" ? (q.dayOfWeek ?? 1) : null }));
@@ -190,11 +222,44 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
         <Passo numero={1} titulo="O que escanear" tour="agenda-form-alvo">
           {editando ? (
             <p className="text-sm text-fg">
-              <strong>{editando.application.name}</strong>{" "}
-              <span className="font-mono text-xs text-fg-muted">{editando.application.url}</span>
+              <strong>{editando.application?.name ?? "Só URL"}</strong> <span className="font-mono text-xs text-fg-muted">{editando.url}</span>
             </p>
           ) : (
             <>
+              <div role="group" aria-label="Tipo de alvo" className="flex flex-wrap gap-2">
+                <Pilula ativo={tipoAlvo === "APLICACAO"} aoClicar={() => setTipoAlvo("APLICACAO")}>
+                  Uma aplicação
+                </Pilula>
+                <Pilula ativo={tipoAlvo === "URL"} aoClicar={() => setTipoAlvo("URL")}>
+                  Só uma URL
+                </Pilula>
+              </div>
+              {tipoAlvo === "URL" && (
+                <div className="flex flex-col gap-3" data-tour="agenda-form-url">
+                  <Field rotulo="URL do alvo" obrigatorio dica="Sem aplicação nem projeto: o agendamento fica visível a todo o time de segurança.">
+                    {(attrs) => (
+                      <Input
+                        {...attrs}
+                        type="url"
+                        inputMode="url"
+                        placeholder="https://alvo.exemplo.com"
+                        value={targetUrl}
+                        onChange={(e) => setTargetUrl(e.target.value)}
+                        aria-invalid={targetUrl !== "" && !urlValida}
+                      />
+                    )}
+                  </Field>
+                  {targetUrl !== "" && !urlValida && <p className="text-xs text-danger-ink">Use um endereço completo começando com http:// ou https://.</p>}
+                  <Checkbox
+                    rotulo="Tenho autorização do responsável para testar esta URL."
+                    descricao="A confirmação fica registrada na auditoria. Sem prazo: vale enquanto o agendamento existir."
+                    checked={confirmouUrl}
+                    onChange={(e) => setConfirmouUrl(e.target.checked)}
+                  />
+                </div>
+              )}
+              {tipoAlvo === "APLICACAO" && (
+              <>
               <Field rotulo="Aplicação" obrigatorio dica="O scan usa a URL cadastrada na aplicação.">
                 {(attrs) => (
                   <select {...attrs} className={CLASSE_SELECT} value={applicationId} onChange={(e) => setApplicationId(e.target.value)} disabled={ocupado || alvosQuery.isLoading}>
@@ -247,11 +312,13 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
                   )}
                 </div>
               )}
+              </>
+              )}
             </>
           )}
         </Passo>
 
-        {(editando ? !!editando.projectName : !!alvo && alvo.projects.length > 0) && (
+        {mostraProjeto && (
           <Passo numero={2} titulo="Projeto">
             {editando ? (
               <p className="text-sm text-fg">{editando.projectName}</p>
@@ -276,7 +343,7 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
           </Passo>
         )}
 
-        <Passo numero={editando ? 2 : 3} titulo="Quando rodar" tour="agenda-form-quando">
+        <Passo numero={numeroQuando} titulo="Quando rodar" tour="agenda-form-quando">
           <div role="group" aria-label="Frequência" className="flex flex-wrap gap-2">
             <Pilula ativo={quando.frequency === "DAILY"} aoClicar={() => setFrequencia("DAILY")}>
               Todo dia
@@ -340,7 +407,7 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
           </p>
         </Passo>
 
-        <Passo numero={editando ? 3 : 4} titulo="Modo" tour="agenda-form-modo">
+        <Passo numero={numeroQuando + 1} titulo="Modo" tour="agenda-form-modo">
           {editando ? (
             <p className="text-sm text-fg">{editando.mode === "REAL" ? "Real — o ZAP envia requisições ao alvo." : "Simulado — demonstração, não toca o alvo."}</p>
           ) : (
@@ -382,8 +449,9 @@ export function AgendamentoDialog({ aberto, aoFechar, editando }: { aberto: bool
 
         {erro && <Alert tom="perigo">{erro}</Alert>}
 
-        <DialogFooter className="sticky bottom-0 bg-surface pt-2">
-          {faltando.length > 0 && <p className="mr-auto text-xs text-fg-muted">Para salvar: {faltando.join(", ")}.</p>}
+        <DialogFooter className="sticky bottom-0 flex-wrap bg-surface pt-2">
+          {/* Linha própria: com o aviso longo, os botões não quebram o texto em duas linhas. */}
+          {faltando.length > 0 && <p className="w-full text-xs text-fg-muted">Para salvar: {faltando.join(", ")}.</p>}
           <Button type="button" variant="fantasma" onClick={aoFechar} disabled={ocupado}>
             Cancelar
           </Button>

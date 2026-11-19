@@ -102,6 +102,16 @@ export const ROTULO_PROBLEMA_CURTO: Record<ProblemaAutorizacao, string> = {
   APPLICATION_WITHOUT_URL: "Sem URL",
 };
 
+/** Como chamar o alvo: o nome da aplicação ou, sem aplicação, o host da URL. */
+export function nomeDoAlvo(s: { application: { name: string } | null; url: string | null }): string {
+  if (s.application) return s.application.name;
+  try {
+    return s.url ? new URL(s.url).host : "URL sem endereço";
+  } catch {
+    return s.url ?? "URL sem endereço";
+  }
+}
+
 export function dataCurta(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }

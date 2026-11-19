@@ -13,6 +13,7 @@ import type {
   AutorizacaoDast,
   EdicaoAgendamentoInput,
   NovoAgendamentoInput,
+  NovoAgendamentoPorUrlInput,
   PainelAgendamentos,
 } from "../../types/dast-schedule.types";
 
@@ -30,9 +31,12 @@ export const dastSchedulesApi = {
   criar: (applicationId: string, input: NovoAgendamentoInput) =>
     apiClient.post<Agendamento>(`/applications/${applicationId}/dast-schedules`, input).then((res) => res.data),
 
-  atualizar: (applicationId: string, scheduleId: string, input: EdicaoAgendamentoInput) =>
-    apiClient.put<Agendamento>(`/applications/${applicationId}/dast-schedules/${scheduleId}`, input).then((res) => res.data),
+  /** Agendamento só por URL: sem aplicação, empresa nem projeto. */
+  criarPorUrl: (input: NovoAgendamentoPorUrlInput) => apiClient.post<Agendamento>("/dast-schedules", input).then((res) => res.data),
 
-  remover: (applicationId: string, scheduleId: string) =>
-    apiClient.delete<void>(`/applications/${applicationId}/dast-schedules/${scheduleId}`).then(() => undefined),
+  /** Editar e remover pelo id servem aos dois tipos; a API aplica as regras de cada um. */
+  atualizar: (scheduleId: string, input: EdicaoAgendamentoInput) =>
+    apiClient.put<Agendamento>(`/dast-schedules/${scheduleId}`, input).then((res) => res.data),
+
+  remover: (scheduleId: string) => apiClient.delete<void>(`/dast-schedules/${scheduleId}`).then(() => undefined),
 };

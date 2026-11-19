@@ -115,13 +115,22 @@ export interface DastReportData {
 }
 
 /** ADR-056 — o que a execução de um agendamento já conferiu e resolveu antes de pedir o scan. */
+/**
+ * Scan gerado por agendamento só por URL: todo PENTESTER vê (decisão de
+ * 2026-11-19, a mesma visibilidade do agendamento). Os demais continuam
+ * visíveis só a quem pediu e ao ADMIN (ADR-056 §7).
+ */
+export const scanDeAgendamentoPorUrl = (scan: Pick<DastScan, "trigger" | "applicationId">): boolean =>
+  scan.trigger === "SCHEDULED" && scan.applicationId === null;
+
 export interface PedidoScanAgendado {
   scheduleId: string;
   requestedById: string;
   targetUrl: string;
   mode: "REAL" | "SIMULATED";
-  companyId: string;
-  applicationId: string;
+  /** null nos agendamentos só por URL. */
+  companyId: string | null;
+  applicationId: string | null;
   projectId: string | null;
 }
 
@@ -268,7 +277,7 @@ export class DastScanService {
   }
 
   async list(actor: Actor): Promise<DastScanEntity[]> {
-    const scans = actor.role === "ADMIN" ? await this.repository.findAll() : await this.repository.findByRequester(actor.userId);
+    const scans = actor.role === "ADMIN" ? await this.repository.findAll() : await this.repository.findVisibleToPentester(actor.userId);
     return scans.map((s) => new DastScanEntity(s));
   }
 
@@ -626,7 +635,7 @@ export class DastScanService {
   private async getOwnedScan(actor: Actor, id: string): Promise<DastScan> {
     const scan = await this.repository.findById(id);
     if (!scan) throw new Error("SCAN_NOT_FOUND");
-    if (actor.role !== "ADMIN" && scan.requestedById !== actor.userId) throw new Error("FORBIDDEN");
+    if (actor.role !== "ADMIN" && scan.requestedById !== actor.userId && !scanDeAgendamentoPorUrl(scan)) throw new Error("FORBIDDEN");
     return scan;
   }
 

@@ -15,5 +15,9 @@ router.use(authRateLimitMiddleware);
 
 router.get("/", controller.listAll);
 router.get("/targets", controller.targets);
+// Agendamento só por URL; editar/remover servem aos dois tipos (as regras ficam no service).
+router.post("/", controller.createByUrl);
+router.put("/:scheduleId", controller.updateById);
+router.delete("/:scheduleId", controller.removeById);
 
 export { router as dastScheduleRoutes };

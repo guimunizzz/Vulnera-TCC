@@ -18,6 +18,10 @@ const STATUS: Record<string, number> = {
   INVALID_PROJECT_ID: 400,
   MISSING_PROJECT_ID: 400,
   MODE_IS_IMMUTABLE: 400,
+  TARGET_IS_IMMUTABLE: 400,
+  MISSING_TARGET_URL: 400,
+  INVALID_TARGET_URL: 400,
+  AUTHORIZATION_CONFIRMATION_REQUIRED: 400,
   PROJECT_IS_IMMUTABLE: 400,
   // Alvo sem autorização válida: o pedido é bem formado, mas a regra o barra.
   APPLICATION_WITHOUT_URL: 422,
@@ -42,6 +46,15 @@ export class DastScheduleController {
   /** GET /dast-schedules/targets — aplicações em que dá para agendar. */
   targets = (req: Request, res: Response) => this.responder(res, "targets", () => this.service.alvos(req.user!));
 
+  /** POST /dast-schedules — agendamento só por URL. */
+  createByUrl = (req: Request, res: Response) => this.responder(res, "createByUrl", () => this.service.criarPorUrl(req.user!, this.corpo(req)), 201);
+
+  /** PUT/DELETE /dast-schedules/:scheduleId — pela página /agendamentos, para os dois tipos. */
+  updateById = (req: Request, res: Response) =>
+    this.responder(res, "updateById", () => this.service.atualizarPorId(req.user!, String(req.params.scheduleId), this.corpo(req)));
+
+  removeById = (req: Request, res: Response) => this.responder(res, "removeById", () => this.service.removerPorId(req.user!, String(req.params.scheduleId)), 204);
+
   list = (req: Request, res: Response) => this.responder(res, "list", () => this.service.listar(req.user!, String(req.params.id)));
 
   create = (req: Request, res: Response) =>
@@ -58,6 +71,8 @@ export class DastScheduleController {
     const b = (req.body ?? {}) as Record<string, unknown>;
     return {
       mode: b.mode,
+      targetUrl: b.targetUrl,
+      confirmedAuthorization: b.confirmedAuthorization,
       projectId: b.projectId,
       enabled: b.enabled,
       frequency: b.frequency as never,

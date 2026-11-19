@@ -34,7 +34,7 @@ import { useToast } from "../components/ui/toast";
 import { AgendamentoDialog } from "../components/agendamentos/agendamento-dialog";
 import { BotaoVerTour, TourGuiado, type PassoTour } from "../components/tour/tour-guiado";
 import { useTourAutomatico } from "../components/tour/use-tour-automatico";
-import { dataCurta, dataHora, descreverDesfecho, descreverQuando, emQuantoTempo, ROTULO_PROBLEMA_CURTO, rotuloFuso } from "../lib/agendamento";
+import { dataCurta, dataHora, descreverDesfecho, descreverQuando, emQuantoTempo, nomeDoAlvo, ROTULO_PROBLEMA_CURTO, rotuloFuso } from "../lib/agendamento";
 import type { AgendamentoVisivel } from "../types/dast-schedule.types";
 
 /** Tour da primeira visita. Passo cujo alvo não está na tela (lista vazia, motor ligado) é pulado. */
@@ -47,7 +47,7 @@ const PASSOS_TOUR: PassoTour[] = [
   {
     alvo: '[data-tour="agenda-novo"]',
     titulo: "Crie um agendamento",
-    texto: "Escolha a aplicação, o projeto, o dia e o horário. Nada de cron: você escolhe \"Toda segunda às 03:00\" e o Vulnera cuida do resto.",
+    texto: "Escolha uma aplicação ou cole só uma URL, depois o dia e o horário. Nada de cron: você escolhe \"Toda segunda às 03:00\" e o Vulnera cuida do resto. Os próximos disparos também aparecem na tela de DAST.",
   },
   {
     alvo: '[data-tour="agenda-motor"]',
@@ -98,7 +98,7 @@ function Kpi({ icone, rotulo, valor, dica }: { icone: React.ReactNode; rotulo: s
 }
 
 const precisaAtencao = (s: AgendamentoVisivel) =>
-  s.enabled && (s.authorization.problem !== null || (s.lastOutcome !== null && s.lastOutcome !== "STARTED"));
+  s.enabled && ((s.authorization?.problem ?? null) !== null || (s.lastOutcome !== null && s.lastOutcome !== "STARTED"));
 
 function CartaoAgendamento({
   s,
@@ -121,16 +121,16 @@ function CartaoAgendamento({
   const tour = (nome: string) => (primeiro ? nome : undefined);
 
   const alternar = useMutation({
-    mutationFn: (enabled: boolean) => dastSchedulesApi.atualizar(s.applicationId, s.id, { enabled }),
+    mutationFn: (enabled: boolean) => dastSchedulesApi.atualizar(s.id, { enabled }),
     onSuccess: (_, enabled) => {
       queryClient.invalidateQueries({ queryKey: ["dast-schedules"] });
-      toast.sucesso(enabled ? "Agendamento retomado" : "Agendamento pausado", `${s.application.name} — ${descreverQuando(s)}`);
+      toast.sucesso(enabled ? "Agendamento retomado" : "Agendamento pausado", `${nomeDoAlvo(s)} — ${descreverQuando(s)}`);
     },
     onError: (err: unknown) => toast.erro("Não foi possível mudar o agendamento", getErrorMessage(err)),
   });
 
   const desfecho = descreverDesfecho(s.lastOutcome);
-  const problema = s.authorization.problem;
+  const problema = s.authorization?.problem ?? null;
 
   let proximo: string;
   if (!s.enabled) proximo = "Pausado — não vai rodar até ser ligado de novo.";
@@ -142,19 +142,20 @@ function CartaoAgendamento({
   return (
     <li>
       <article
-        aria-label={`Agendamento de ${s.application.name}`}
+        aria-label={`Agendamento de ${nomeDoAlvo(s)}`}
         className={`flex flex-col gap-4 rounded-container border bg-surface p-4 ${s.enabled ? "border-subtle" : "border-dashed border-default opacity-80"}`}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-fg">{s.application.name}</h3>
+              <h3 className="text-base font-semibold text-fg">{nomeDoAlvo(s)}</h3>
               {s.mode === "SIMULATED" ? <Badge tom="atencao">SIMULADO</Badge> : <Badge tom="acento">REAL</Badge>}
-              {!s.application.active && <Badge tom="perigo">Aplicação desativada</Badge>}
+              {s.kind === "URL" && <Badge tom="neutro">Só URL</Badge>}
+              {s.application && !s.application.active && <Badge tom="perigo">Aplicação desativada</Badge>}
             </div>
-            <p className="mt-1 truncate font-mono text-xs text-fg-muted">{s.application.url}</p>
+            <p className="mt-1 truncate font-mono text-xs text-fg-muted">{s.url}</p>
             <p className="mt-1 text-xs text-fg-muted">
-              {s.application.companyName}
+              {s.application ? s.application.companyName : "Sem aplicação nem projeto · visível a todo o time de segurança"}
               {s.projectName ? ` · ${s.projectName}` : ""}
             </p>
           </div>
@@ -164,7 +165,7 @@ function CartaoAgendamento({
               <Button variant="sutil" size="sm" iconeInicio={<Pencil size={14} aria-hidden="true" />} onClick={aoEditar}>
                 Editar
               </Button>
-              <Button variant="sutil" size="sm" iconeInicio={<Trash2 size={14} aria-hidden="true" />} onClick={aoRemover} rotulo={`Remover agendamento de ${s.application.name}`} />
+              <Button variant="sutil" size="sm" iconeInicio={<Trash2 size={14} aria-hidden="true" />} onClick={aoRemover} rotulo={`Remover agendamento de ${nomeDoAlvo(s)}`} />
             </div>
           )}
         </div>
@@ -179,13 +180,15 @@ function CartaoAgendamento({
           <div data-tour={tour("agenda-autorizacao")}>
             <dt className="text-xs uppercase tracking-[0.1em] text-fg-muted">Autorização do alvo</dt>
             <dd className="mt-1">
-              {problema ? (
+              {!s.authorization ? (
+                <Badge tom="neutro">Confirmada por quem criou</Badge>
+              ) : problema ? (
                 <Badge tom="perigo">{ROTULO_PROBLEMA_CURTO[problema]}</Badge>
               ) : (
                 <Badge tom="sucesso">Autorizado até {dataCurta(s.authorization.until!)}</Badge>
               )}
             </dd>
-            {s.authorization.host && <dd className="mt-1 font-mono text-xs text-fg-muted">{s.authorization.host}</dd>}
+            {s.authorization?.host && <dd className="mt-1 font-mono text-xs text-fg-muted">{s.authorization.host}</dd>}
           </div>
           <div data-tour={tour("agenda-ultima")}>
             <dt className="text-xs uppercase tracking-[0.1em] text-fg-muted">Última execução</dt>
@@ -239,11 +242,11 @@ export function AgendamentosPage() {
   );
 
   const remover = useMutation({
-    mutationFn: (s: AgendamentoVisivel) => dastSchedulesApi.remover(s.applicationId, s.id),
+    mutationFn: (s: AgendamentoVisivel) => dastSchedulesApi.remover(s.id),
     onSuccess: (_, s) => {
       queryClient.invalidateQueries({ queryKey: ["dast-schedules"] });
       setRemovendo(null);
-      toast.sucesso("Agendamento removido", `${s.application.name} — ${descreverQuando(s)}`);
+      toast.sucesso("Agendamento removido", `${nomeDoAlvo(s)} — ${descreverQuando(s)}`);
     },
     onError: (err: unknown) => toast.erro("Não foi possível remover", getErrorMessage(err)),
   });
@@ -260,8 +263,8 @@ export function AgendamentosPage() {
           <p className="mb-2 font-mono text-xs uppercase tracking-[0.14em] text-accent-ink">DAST no piloto automático</p>
           <h1 className="text-2xl font-bold text-fg">Agendamentos</h1>
           <p className="mt-1 max-w-2xl text-fg-muted">
-            Escolha a aplicação, o dia e o horário: o scan roda sozinho e aparece em DAST como qualquer outro. Só alvos com
-            autorização de teste registrada — e ela é conferida de novo a cada execução.
+            Escolha uma aplicação ou cole uma URL, o dia e o horário: o scan roda sozinho e aparece em DAST como qualquer outro.
+            Nas aplicações, a autorização de teste é conferida de novo a cada execução.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -346,7 +349,7 @@ export function AgendamentosPage() {
       <Dialog aberto={!!removendo} aoFechar={() => setRemovendo(null)} tamanho="sm">
         <DialogTitle>Remover agendamento?</DialogTitle>
         <DialogDescription>
-          {removendo && `${removendo.application.name} — ${descreverQuando(removendo)}. `}
+          {removendo && `${nomeDoAlvo(removendo)} — ${descreverQuando(removendo)}. `}
           Os scans que ele já gerou continuam em DAST. Para só parar por um tempo, use a chave "Ativo".
         </DialogDescription>
         <DialogFooter>

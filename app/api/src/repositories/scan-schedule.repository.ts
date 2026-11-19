@@ -30,8 +30,10 @@ export type AgendamentoComContexto = Prisma.ScanScheduleGetPayload<{ include: ty
 export type EscopoAgendamentos = { tudo: true } | { membroId: string } | { companyId: string };
 
 export interface CreateScanScheduleInput {
-  companyId: string;
-  applicationId: string;
+  /** null nos agendamentos só por URL (sem aplicação). */
+  companyId: string | null;
+  applicationId: string | null;
+  targetUrl?: string | null;
   projectId: string | null;
   mode: DastScanMode;
   frequency: ScanScheduleFrequency;
@@ -67,7 +69,8 @@ export class ScanScheduleRepository {
         ? {}
         : "companyId" in escopo
           ? { companyId: escopo.companyId }
-          : { application: { projects: { some: { members: { some: { userId: escopo.membroId } } } } } };
+          : // PENTESTER: as aplicações dos seus projetos + todos os agendamentos só por URL (decisão de 2026-11-19).
+            { OR: [{ application: { projects: { some: { members: { some: { userId: escopo.membroId } } } } } }, { applicationId: null }] };
     return this.prisma.scanSchedule.findMany({ where, include: CONTEXTO, orderBy: [{ enabled: "desc" }, { createdAt: "asc" }] });
   }
 

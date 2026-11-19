@@ -1096,10 +1096,18 @@ model CveRecord {
 // lastScanId é uma referência informativa, sem FK: o histórico completo está
 // em DastScan.scheduleId, e esta coluna só evita uma consulta para desenhar
 // "última execução" na tela.
+//
+// DOIS TIPOS (2026-11-19, decisão do Rafael): por APLICAÇÃO (applicationId e
+// companyId preenchidos, autorização do alvo na Application, conferida a cada
+// execução) ou só por URL (targetUrl preenchido, sem aplicação, empresa nem
+// projeto; a autorização é só a confirmação de quem criou, registrada no
+// AuditLog, sem prazo e sem nova checagem). Exatamente um dos dois — regra no
+// service. Agendamento por URL é visível e editável por todo ADMIN/PENTESTER.
 model ScanSchedule {
   id            String                @id @default(cuid())
-  companyId     String
-  applicationId String
+  companyId     String?
+  applicationId String?
+  targetUrl     String?               @db.VarChar(2048)
   projectId     String?
   mode          DastScanMode
   frequency     ScanScheduleFrequency
@@ -1118,10 +1126,12 @@ model ScanSchedule {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 
-  company     Company     @relation(fields: [companyId], references: [id])
-  application Application @relation(fields: [applicationId], references: [id])
-  project     Project?    @relation(fields: [projectId], references: [id])
-  createdBy   User        @relation("ScanScheduleCreatedBy", fields: [createdById], references: [id])
+  // Restrict (como antes de ficarem opcionais): apagar a aplicação não pode
+  // deixar um agendamento sem aplicação e sem URL.
+  company     Company?     @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  project     Project?     @relation(fields: [projectId], references: [id])
+  createdBy   User         @relation("ScanScheduleCreatedBy", fields: [createdById], references: [id])
   scans       DastScan[]
 
   @@index([companyId])

@@ -231,7 +231,9 @@ caminho de execução de scan.
 | `projectId` no agendamento | **Obrigatório para o PENTESTER**, que precisa ser membro do projeto. O ADMIN pode omitir. |
 | CLIENT | Vê os blocos "Autorização DAST" e "Agendamento DAST" da aplicação da própria empresa **somente para leitura**. O resto do módulo DAST continua 403. |
 | Editar/remover agendamento de outra pessoa | **Pode** (decisão de 2026-11-19): qualquer ADMIN, ou PENTESTER membro de um projeto da aplicação, edita e remove os agendamentos dela, não só quem criou. Toda mudança gera AuditLog. |
-| Tela web | Página própria **`/agendamentos`** (decisão de 2026-11-19), **adiada**. |
+| Tela web | Página própria **`/agendamentos`** (decisão de 2026-11-19), entregue no mesmo dia, com os próximos disparos também na tela de DAST. |
+| Agendamento só por URL | **Permitido** (decisão de 2026-11-19): sem aplicação, empresa nem projeto. ADMIN e PENTESTER criam; **todo** ADMIN/PENTESTER vê e edita, e os scans que ele gera ficam visíveis a todo PENTESTER (exceção à visibilidade por requester). CLIENT não vê. |
+| Autorização da URL solta | **Só a confirmação** de quem cria, registrada no AuditLog; sem prazo e **sem nova checagem na execução** (decisão do Rafael, que difere da regra das aplicações). Na execução só se confere se o agendamento está ligado e se quem criou ainda é ADMIN/PENTESTER. |
 
 ## O que muda / o que continua
 

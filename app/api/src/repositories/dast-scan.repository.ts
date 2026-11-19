@@ -82,6 +82,14 @@ export class DastScanRepository {
     return this.prisma.dastScan.findMany({ orderBy: { createdAt: "desc" } });
   }
 
+  /** O que o PENTESTER vê: os scans que pediu + os de agendamentos só por URL (de todo o time). */
+  async findVisibleToPentester(userId: string): Promise<DastScan[]> {
+    return this.prisma.dastScan.findMany({
+      where: { OR: [{ requestedById: userId }, { trigger: "SCHEDULED", applicationId: null }] },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   async findByRequester(requestedById: string): Promise<DastScan[]> {
     return this.prisma.dastScan.findMany({ where: { requestedById }, orderBy: { createdAt: "desc" } });
   }
