@@ -1,0 +1,27 @@
+# Substituição explícita para desenvolvimento local com o par dummy oficial.
+# Nunca use junto de um ambiente de produção; sem este arquivo, Compose mantém
+# NODE_ENV=production e não injeta credenciais.
+services:
+  api:
+    environment:
+      NODE_ENV: development
+      TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+      TURNSTILE_EXPECTED_ACTION: ""
+      TURNSTILE_EXPECTED_HOSTNAME: ""
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+      SMTP_REQUIRE_TLS: "false"
+      SMTP_FROM: noreply@localhost.test
+      PUBLIC_WEB_URL: http://localhost:8086
+    ports: !override
+      - "127.0.0.1:3001:3001"
+
+  web:
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000", "--strictPort"]
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+      VITE_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      VITE_TURNSTILE_ACTION: access-request
+    ports: !override
+      - "127.0.0.1:8086:3000"

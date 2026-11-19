@@ -5,6 +5,241 @@ Consumidores: Rafael, owners da Etapa 6 e revisores da Issue #51.
 -->
 # Issue #51 — Etapa 6: integração web (concluída em 2026-11-18; aprovada com ressalvas)
 
+## Perfil local opt-in de Turnstile real (2026-11-18)
+
+Foi preparado `docker-compose.turnstile-real.yml`, overlay apenas para a stack
+local baseada em `docker-compose.yml`; ele não é uma configuração de produção e
+deve ser usado isoladamente do overlay dummy. A imagem web continua usando o
+build Vite de produção (`vite preview`), recebe a site key pública e action
+`access-request`. A API usa `NODE_ENV=development` para continuar falando com
+MailHog, recebe a secret somente em runtime, e exige no Siteverify hostname
+`localhost` e action `access-request`. API e web publicam as portas somente em
+loopback; SMTP, MailHog, origem web e portas existentes foram preservados.
+
+O arquivo local esperado é `.env.turnstile-real.local`; o `.gitignore` raiz o
+ignora. `.env.turnstile-real.local.example` contém apenas nomes e valores vazios.
+Copie-o para o nome local e preencha as duas variáveis com um par Turnstile
+autorizado para `localhost`. O overlay falha na interpolação se qualquer chave
+estiver ausente. Se a configuração local normal estiver em `.env`, passe ambos
+os arquivos de interpolação nesta ordem: `--env-file .env --env-file
+.env.turnstile-real.local` (o arquivo dedicado prevalece). Sem `.env`, use só o
+arquivo dedicado:
+
+```powershell
+docker compose --env-file .env.turnstile-real.local -f docker-compose.yml -f docker-compose.turnstile-real.yml build web
+docker compose --env-file .env.turnstile-real.local -f docker-compose.yml -f docker-compose.turnstile-real.yml up -d --no-deps --no-build api web
+```
+
+Se `.env` comum existir e tiver outras substituições necessárias, acrescente
+`--env-file .env` antes do arquivo dedicado em cada comando. Construir só `web`
+incorpora a site key pública; recriar `api web` aplica a secret nova ao runtime
+sem rebuild ou reinício de db/MailHog.
+
+Na etapa de preparação, os comandos acima ainda não haviam sido executados; a
+aplicação posterior está registrada na seção seguinte. O segredo nunca é build
+arg: o argumento do web é exclusivamente a site key;
+além disso, o arquivo na raiz não pertence aos contextos `app/api` nem
+`app/web`, cujos `.dockerignore` também excluem `.env.*.local`. Não use `docker
+compose config` sem `--quiet`, pois a saída resolvida inclui a secret de runtime.
+
+O `NODE_ENV=development` permite chaves dummy pela regra geral da API, mas este
+overlay fixa as duas expectativas do Siteverify. A resposta oficial das chaves
+dummy documentadas tem `hostname: example.com` e não traz `action`; o adapter
+rejeita ambos os desencontros quando essas expectativas estão presentes. Essa
+proteção já existe e foi coberta por teste focal; nenhuma mudança de lógica da
+API foi necessária. Na preparação, validou-se só com valores sintéticos via
+`docker compose config --quiet` (inclusive ausência de chave) e uma projeção
+booleana da configuração resolvida confirmaram site key só no build web, secret
+só no runtime API, expectativas fixas, MailHog e portas loopback; nenhum valor
+resolvido foi exibido. Jest focal (`turnstile-adapter.test.ts` +
+`turnstile-config.test.ts`, 2 suítes/6 testes) passou. Não houve uso de
+credenciais reais, subida/recriação de containers ou escrita no banco. Um desafio
+e o widget com o par real ainda estavam pendentes naquele ponto.
+
+## Aplicação local e jornada real confirmada (2026-11-18)
+
+Depois da preparação, a configuração real foi aplicada somente à stack local
+pelos comandos documentados acima: `docker compose config --quiet`, build apenas
+de `web` e `up -d --no-deps --no-build api web`. Não foram reiniciados db ou
+MailHog. `prisma migrate status` confirmou que não havia migrations pendentes;
+API respondeu HTTP 200 em `/api/health` e web respondeu HTTP 200. A site key
+pública foi encontrada no JS lazy servido. A secret ficou somente no runtime da
+API e não apareceu no web/build. O runtime reportou hostname esperado `localhost`
+e action `access-request`.
+
+Os dois testes Jest focais (`turnstile-adapter.test.ts` e
+`turnstile-config.test.ts`) passaram offline: 2 suítes, 6/6 testes, sem banco ou
+rede. Uma fixture de Siteverify com hostname/action incompatíveis foi rejeitada.
+No Chrome, o acesso foi bloqueado por política de origem; não houve captura
+direta do POST nem status HTTP do envio. O usuário completou a jornada integral
+pela interface e confirmou sucesso. Leitura MySQL independente, somente leitura,
+confirmou uma solicitação `ACTIVATED`, e-mail verificado, um User criado e o
+evento `VERIFICATION_ISSUED`. Busca exata somente leitura no MailHog confirmou
+duas mensagens para o fluxo: uma de verificação e outra de ativação, cada uma
+com link para localhost. Endereço e tokens não foram reproduzidos. O resultado
+confirma as mensagens na caixa local, não captura o POST nem os status HTTP do
+navegador; esses limites permanecem. Nenhuma credencial ou endereço de e-mail é
+reproduzido aqui.
+
+## Correção local do Turnstile Docker (2026-11-18)
+
+Após o fechamento da Etapa 6, a revisão da stack local identificou que o
+Compose passava `VITE_API_URL`, mas não encaminhava `VITE_TURNSTILE_SITE_KEY` nem
+`VITE_TURNSTILE_ACTION` ao build do web. Como Vite incorpora essas variáveis no
+bundle, o widget via Docker recebia chave vazia e falhava fechado. O Dockerfile
+agora declara os dois argumentos de build e o Compose os encaminha. A chave
+pública pode ser definida no `.env` raiz ignorado pelo Git; sem ela, o widget
+continua bloqueando o envio.
+
+O Compose também encaminha `TURNSTILE_SECRET_KEY`,
+`TURNSTILE_EXPECTED_ACTION` e `TURNSTILE_EXPECTED_HOSTNAME` exclusivamente como
+variáveis de runtime da API, sem defaults de credencial. O `NODE_ENV: production`
+da API local foi preservado. A chave secreta não é argumento de build e nunca
+deve ser colocada no bundle do web. A CSP permanece como estava: script/frame
+do widget já são permitidos; conexões para Siteverify são feitas pelo backend.
+
+Para usar o Compose local com uma integração real, configure um par de chaves
+real de Turnstile autorizado para `localhost`, com action coerente nos dois
+serviços. Essas chaves reais não estavam disponíveis nesta correção, então não
+foi possível validar um desafio real. Em ambiente real de produção, use
+hostname(s) exatos autorizados no widget e configure a expectativa correspondente;
+nunca use chaves dummy.
+
+Para desenvolvimento local com o par dummy oficial, foi criado o overlay
+explícito `docker-compose.turnstile-dev.yml`. Ele sobrepõe a API para
+`NODE_ENV=development`, injeta a secret dummy somente no runtime e limpa as
+expectativas de hostname/action neste perfil. O web usa Vite DEV com site key
+dummy/action, e API e web publicam portas somente em loopback; a porta de entrada
+web segue `8086`, compatível com o CORS padrão. O Compose padrão continua em
+`NODE_ENV=production`, sem credenciais e sem aceitar as secret keys dummy.
+
+Com Docker disponível, execute o overlay somente em desenvolvimento local:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.turnstile-dev.yml up -d --build
+```
+
+Abra `http://localhost:8086/request-access`. O par dummy é destinado ao Siteverify
+e pode avançar ao fluxo normal de pedido (que grava dados na base local e pode
+tentar enviar e-mail); para uso exclusivamente visual, valide o widget no
+browser e não envie o formulário. A documentação oficial descreve a resposta
+Siteverify da secret dummy como `hostname: example.com`, sem `action`; por isso,
+este perfil não exercita as checagens de hostname/action reais. As chaves dummy
+só validam o fluxo básico de renderização e Siteverify. A secret de produção
+rejeita tokens dummy. O backend também rejeita as três secret keys dummy oficiais
+sempre que `NODE_ENV=production`. Ver
+[documentação oficial de chaves de teste](https://developers.cloudflare.com/turnstile/troubleshooting/testing/)
+e [validação server-side](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/).
+
+## Diagnóstico e correção do HTTP 500 local (2026-11-18)
+
+A API respondia healthcheck normalmente, mas o primeiro acesso à rota pública de
+solicitação retornava HTTP 500. O wiring da rota é lazy: `runtimeFor()` cria as
+dependências no primeiro request; `makeDefaultAccessRequestRouteDependencies()`
+carrega a factory de e-mail antes de montar o adapter Turnstile e antes de
+instalar o middleware e chamar o controller. A configuração do Compose DEV não
+definia `SMTP_FROM`, `SMTP_HOST` nem `PUBLIC_WEB_URL`. A chamada focal direta da
+factory falhou primeiro em `SMTP_FROM`; a resposta de erro capturada pela rota
+era genérica. Como a falha ocorre na composição, ela antecede limiter,
+Siteverify, controller e qualquer consulta/escrita Prisma. O healthcheck não
+detectava o problema porque não toca nessa rota lazy.
+
+A correção ficou restrita a `docker-compose.turnstile-dev.yml`: `SMTP_HOST`
+aponta para o serviço interno `mailhog`, porta 1025, remetente sintético
+`noreply@localhost.test`, `PUBLIC_WEB_URL=http://localhost:8086` e TLS/STARTTLS
+explicitamente desativados somente nesse perfil local. O Compose padrão e seu
+`NODE_ENV=production`, suas chaves Turnstile sem defaults e a rejeição de dummy
+em produção ficaram intactos; não houve alteração de backend, schema, onboarding
+ou cadastro legado.
+
+Após `docker compose -f docker-compose.yml -f docker-compose.turnstile-dev.yml
+up -d --no-deps api` (sem rebuild), a API ficou saudável e respondeu HTTP 200 ao
+healthcheck; a conexão interna com `mailhog:1025` foi alcançável. Uma única
+solicitação sintética `@example.test` atravessou o Siteverify oficial com o par
+dummy e retornou HTTP 202. MailHog passou de 0 para 1 mensagem. Consulta Prisma
+somente leitura, limitada a campos agregados do marcador sintético, confirmou
+um `AccessRequest` `PENDING_EMAIL_VERIFICATION`, um slot de verificação ativo e
+um evento de emissão.
+
+O link foi lido da mensagem MailHog em memória e sua origem foi conferida como
+`http://localhost:8086/verify-email`; o token nunca foi impresso ou registrado
+pela ferramenta. O POST de confirmação retornou HTTP 200; o replay do mesmo
+token retornou HTTP 400. Consulta Prisma agregada posterior confirmou o pedido
+em `PENDING_REVIEW`, o slot marcado como usado e uma transição de verificação.
+Os pedidos e as mensagens sintéticos dos smokes permanecem na base/caixa locais;
+nada foi apagado.
+
+### Persistência parcial e limites
+
+- Erro ao compor SMTP/URL e rejeição/indisponibilidade do CAPTCHA ocorrem antes
+  do controller e não persistem um pedido.
+- Depois de CAPTCHA válido, a reserva `AccessRequest` é confirmada antes da
+  emissão do token e do envio SMTP síncrono. Se SMTP falhar, o código existente
+  tenta revogar o token e registrar `VERIFICATION_DELIVERY_FAILED`, mas conserva
+  a solicitação pendente para recuperação/reenvio. Se a transação de limpeza
+  também falhar, o endpoint pode retornar 500 com token ainda não revogado; esse
+  caminho não foi provocado neste smoke.
+- Em fluxo separado, o usuário concluiu manualmente pela interface o pedido e a
+  confirmação de e-mail. Relatou as mensagens “Solicitação recebida” e “E-mail
+  confirmado. Sua solicitação seguirá para análise.” Sol verificou por Prisma
+  somente leitura, para esse endereço fictício separado: `requestCount=1`,
+  `PENDING_REVIEW`, e-mail verificado, slot usado, transição confirmada e zero
+  Users; também observou `STATUS_TRANSITION` e `VERIFICATION_ISSUED`, além de
+  uma mensagem MailHog com link local. A extensão de controle permaneceu bloqueada pela
+  permissão salva; o usuário realizou essa etapa manualmente.
+- O request HTTP do navegador não foi inspecionado diretamente. Os HTTP 202 do
+  pedido, 200 da confirmação e 400 do replay registrados acima pertencem ao
+  smoke de API separado, não à sessão manual. A jornada manual comprova o
+  resultado pela interface e pelo estado persistido, mas não fornece captura
+  dos status HTTP do browser. A validação usou o par oficial dummy, portanto não
+  cobre credenciais, hostname/action ou inbox de produção.
+- Após o smoke de API, foram executadas somente as três suítes focais solicitadas:
+  `turnstile-config.test.ts`, `turnstile-adapter.test.ts` e
+  `access-request-protections.test.ts`, **3/3 suítes e 14/14 testes PASS**.
+  `access-request-protections` usa Express/Supertest com fake CAPTCHA e limiter;
+  não importa `cleanDatabase` nem faz operações Prisma. `tests/setup.ts` importa
+  o singleton Prisma, mas a URL foi fixada em `127.0.0.1:9/vulnera_test_s51_focal`
+  (host/porta inativos) para impedir conexão com MySQL. Não foi executada suíte
+  global. As demais validações focais foram Compose filtrado, configuração de
+  runtime, health/TCP, ciclo HTTP sintético e consultas Prisma somente leitura.
+
+## Validação local da correção
+
+Os itens abaixo registram a validação inicial do ajuste Turnstile; a evidência
+manual posterior de pedido e confirmação está registrada acima. A chamada HTTP
+do browser continuou sem captura direta.
+
+- A configuração Compose foi lida em memória com saída apenas booleana: 7/7
+  condições esperadas (modo DEV da API, secret dummy só no serviço API,
+  expectativas vazias, portas API/web em loopback, web em Vite DEV e site key
+  dummy somente no ambiente runtime; build web sem site key dummy) passaram.
+  `docker compose up` não foi executado; nenhum container ou banco existente foi
+  recriado.
+- API Jest focal: 2 suítes, 6/6 testes PASS. Cobre as três secret keys dummy
+  rejeitadas em produção e resposta Siteverify fixture com hostname de teste e
+  `action` ausente; também comprova que hostname/action esperados reais rejeitam
+  esse retorno de teste. Testes não chamaram Cloudflare nem banco.
+- Web Vitest focal no worktree espelhado da Etapa 6: 2 arquivos, 10/10 testes
+  PASS (widget e formulário). SHA-256 do widget no worktree espelhado e no
+  checkout foi igual. Vitest não está instalado no checkout principal. A
+  execução Playwright CA-02 não terminou; não foi contabilizada como aprovação.
+- A primeira chamada direta a Siteverify e a navegação local de Chrome nesta
+  sessão falharam (`SITEVERIFY_UNAVAILABLE` e `net::ERR_NETWORK_ACCESS_DENIED`
+  para `127.0.0.1`). Em verificação separada, a coordenação obteve HTTP 200 no
+  endpoint oficial com o par dummy, resposta `success: true`,
+  `hostname: example.com` e `action` ausente; também confirmou redirecionamento
+  HTTP do script/widget e HTTP 200 da página `localhost:8086`. O widget em Chrome
+  com token visível e o formulário conectado à API não foram confirmados no
+  browser; CA-02 Playwright não terminou. A resposta remota não foi usada para
+  enviar formulário nem acessar banco.
+
+No ajuste inicial do Turnstile, não foram recriados containers nem alterados
+onboarding/cadastro, CSP, chaves reais ou o gate do frontend que impede a site
+key dummy conhecida no bundle de produção. O follow-up acima recriou somente a
+API com o overlay DEV e sem rebuild para validar o SMTP local. As únicas chaves
+no overlay são as credenciais públicas dummy oficiais, limitadas à configuração
+explicitamente opt-in de desenvolvimento.
+
 **Estado:** aprovada com ressalvas em 2026-11-18. Fechamento do recorte web; não
 significa E2E full-stack, lint global ou conclusão do cutover legado.
 
@@ -134,8 +369,9 @@ full-stack, API real, entrega de e-mail ou validação do CAPTCHA real.
 
 ## Roteiro manual local
 
-Este é um roteiro para revisão humana; não representa execução realizada nesta
-sessão.
+Este é o roteiro para revisão humana. O usuário executou manualmente o pedido e
+a confirmação de e-mail, mas os demais passos abaixo não foram verificados nesta
+jornada parcial. Veja a evidência final acima.
 
 1. Subir os serviços locais: `docker compose up -d db mailhog`. Usar o setup do
    [README](../README.md#desenvolvimento-no-host-com-hot-reload) e configurar

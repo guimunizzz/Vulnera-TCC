@@ -43,6 +43,10 @@ RUN --mount=type=cache,target=/root/.npm npm install
 
 ARG VITE_API_URL=http://localhost:3001/api
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_TURNSTILE_SITE_KEY=
+ARG VITE_TURNSTILE_ACTION=access-request
+ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
+ENV VITE_TURNSTILE_ACTION=$VITE_TURNSTILE_ACTION
 
 COPY index.html tsconfig.json vite.config.ts tailwind.config.ts postcss.config.js ./
 # `config/` guarda a Content-Security-Policy (CP-5), importada pelo vite.config

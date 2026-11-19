@@ -15,6 +15,11 @@ export type TurnstileCaptchaConfig = {
 
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify" as const;
 const MAX_TIMEOUT_MS = 10_000;
+const CLOUDFLARE_TEST_SECRET_KEYS = new Set([
+  "1x0000000000000000000000000000000AA",
+  "2x0000000000000000000000000000000AA",
+  "3x0000000000000000000000000000000AA",
+]);
 
 export function loadTurnstileCaptchaConfig(): TurnstileCaptchaConfig {
   const secretKey = EnvVar.get(EnvKeys.TURNSTILE_SECRET_KEY);
@@ -24,6 +29,9 @@ export function loadTurnstileCaptchaConfig(): TurnstileCaptchaConfig {
     secretKey.length > 2_048 ||
     containsControl(secretKey)
   ) {
+    throw new Error("INVALID_TURNSTILE_SECRET_KEY");
+  }
+  if (process.env.NODE_ENV === "production" && CLOUDFLARE_TEST_SECRET_KEYS.has(secretKey)) {
     throw new Error("INVALID_TURNSTILE_SECRET_KEY");
   }
 
