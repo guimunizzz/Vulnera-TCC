@@ -16,7 +16,7 @@ import { DataState, FilterChip, GlassSurface, PageHeader, SectionHeading, Worksp
 import { SoftPressable, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
 import { useApiError } from "../../../src/hooks/use-api-error";
 import { useAuthStore } from "../../../src/store/auth.store";
-import { sharedCategories } from "../../../src/lib/exposure-graph";
+import { graphLayout, sharedCategories, type GraphLayout } from "../../../src/lib/exposure-graph";
 import { FONT_FAMILY } from "../../../src/theme/tokens";
 import { useAppTheme } from "../../../src/theme/use-app-theme";
 import { OWASP_LABELS } from "../../../src/types/vulnerability.types";
@@ -112,31 +112,56 @@ function Network({ applications, categories, selection, onSelect }: { applicatio
   const { workspace, colors } = useAppTheme();
   const reduced = useWorkspaceReducedMotion();
   const [zoom, setZoom] = useState(1);
+  const [layout, setLayout] = useState<GraphLayout>("columns");
   const [viewport, setViewport] = useState(0);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const opacity = useSharedValue(reduced ? 1 : 0);
   useEffect(() => { opacity.value = withTiming(1, { duration: reduced ? 0 : 350 }); }, [opacity, reduced]);
   const animation = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  const height = Math.max(220, Math.max(applications.length, categories.length) * 96 + 24);
-  const position = (index: number, count: number) => count === 1 ? height / 2 : 60 + index * (height - 120) / Math.max(1, count - 1);
-  const appY = new Map(applications.map((item, i) => [item.id, position(i, applications.length)]));
-  const categoryY = new Map(categories.map((item, i) => [item.code, position(i, categories.length)]));
+  const graph = graphLayout(layout, applications.length, categories.length);
+  const appPositions = new Map(applications.map((item, index) => [item.id, graph.applications[index]]));
+  const categoryPositions = new Map(categories.map((item, index) => [item.code, graph.categories[index]]));
   const selectedApp = selection.kind === "app" ? selection.id : null;
   const selectedCategory = selection.kind === "category" ? selection.id : null;
   const selectedAppCategories = applications.find((item) => item.id === selectedApp)?.categorias.map((item) => item.owaspCategory) ?? [];
   const linkedApps = categories.find((item) => item.code === selectedCategory)?.applications.map((item) => item.id) ?? [];
-  const edge = (x1: number, y1: number, x2: number, y2: number, active: boolean, key: string) => <Path key={key} d={`M ${x1} ${y1} C ${x1 + 90} ${y1}, ${x2 - 90} ${y2}, ${x2} ${y2}`} stroke={active ? workspace.lavender : workspace.line} strokeWidth={active ? 2 : 1.5} fill="none" />;
+  function edge(from: { x: number; y: number }, to: { x: number; y: number }, active: boolean, key: string) {
+    const x = (from.x + to.x) / 2;
+    const y = (from.y + to.y) / 2;
+    const curve = layout === "rows"
+      ? `${from.x} ${y}, ${to.x} ${y}`
+      : `${x} ${from.y}, ${x} ${to.y}`;
+    return <Path key={key} d={`M ${from.x} ${from.y} C ${curve}, ${to.x} ${to.y}`} stroke={active ? workspace.lavender : workspace.line} strokeWidth={active ? 2 : 1.5} fill="none" />;
+  }
   const isCompany = selection.kind === "company";
   const severityColor = (severity: GraphSeverity | null) => severity === "CRITICAL" ? colors.severity.criticalInk : severity === "HIGH" ? colors.severity.highInk : severity === "MEDIUM" ? colors.severity.mediumInk : severity === "LOW" ? colors.severity.lowInk : workspace.lavender;
-  return <><View style={styles.zoomRow}><FilterChip label="Afastar" selected={false} onPress={() => setZoom((value) => Math.max(0.85, Math.round((value - 0.15) * 100) / 100))} /><Text style={{ color: workspace.secondary }}>{Math.round(zoom * 100)}%</Text><FilterChip label="Aproximar" selected={false} onPress={() => setZoom((value) => Math.min(1.6, Math.round((value + 0.15) * 100) / 100))} /><FilterChip label="Centralizar" selected={false} onPress={() => scroll.current?.scrollTo({ x: Math.max(0, (620 * zoom - viewport) / 2), animated: !reduced })} /></View>
-  <ScrollView ref={scroll} onLayout={(event) => setViewport(event.nativeEvent.layout.width)} horizontal showsHorizontalScrollIndicator nestedScrollEnabled><View style={{ width: 620 * zoom, height: height * zoom }}><Animated.View style={[{ position: "absolute", width: 620, height, transformOrigin: "top left", transform: [{ scale: zoom }] }, animation]}>
-    <Svg width={620} height={height} style={StyleSheet.absoluteFill} accessible={false}>
-      {applications.map((item) => edge(104, height / 2, 300, appY.get(item.id)!, isCompany || item.id === selectedApp || linkedApps.includes(item.id), `company-${item.id}`))}
-      {applications.flatMap((item) => item.categorias.map((category) => edge(300, appY.get(item.id)!, 510, categoryY.get(category.owaspCategory)!, isCompany || item.id === selectedApp || category.owaspCategory === selectedCategory, `${item.id}-${category.owaspCategory}`)))}
+  function changeLayout(next: GraphLayout) {
+    if (next === layout) return;
+    setLayout(next);
+    scroll.current?.scrollTo({ x: 0, animated: false });
+  }
+
+  return <>
+    <View style={styles.zoomRow}>
+      <FilterChip tab label="Horizontal" selected={layout === "columns"} onPress={() => changeLayout("columns")} />
+      <FilterChip tab label="Vertical" selected={layout === "rows"} onPress={() => changeLayout("rows")} />
+    </View>
+    <View style={styles.zoomRow}>
+      <FilterChip label="Afastar" selected={false} onPress={() => setZoom((value) => Math.max(0.85, Math.round((value - 0.15) * 100) / 100))} />
+      <Text style={{ color: workspace.secondary }}>{Math.round(zoom * 100)}%</Text>
+      <FilterChip label="Aproximar" selected={false} onPress={() => setZoom((value) => Math.min(1.6, Math.round((value + 0.15) * 100) / 100))} />
+      <FilterChip label="Centralizar" selected={false} onPress={() => scroll.current?.scrollTo({ x: Math.max(0, (graph.width * zoom - viewport) / 2), animated: !reduced })} />
+    </View>
+  <ScrollView ref={scroll} onLayout={(event) => setViewport(event.nativeEvent.layout.width)} horizontal showsHorizontalScrollIndicator nestedScrollEnabled>
+    <View style={{ width: Math.max(viewport, graph.width * zoom), height: graph.height * zoom }}>
+    <Animated.View style={[{ position: "absolute", left: Math.max(0, (viewport - graph.width * zoom) / 2), width: graph.width, height: graph.height, transformOrigin: "top left", transform: [{ scale: zoom }] }, animation]}>
+    <Svg width={graph.width} height={graph.height} style={StyleSheet.absoluteFill} accessible={false}>
+      {applications.map((item) => edge(graph.company, appPositions.get(item.id)!, isCompany || item.id === selectedApp || linkedApps.includes(item.id), `company-${item.id}`))}
+      {applications.flatMap((item) => item.categorias.map((category) => edge(appPositions.get(item.id)!, categoryPositions.get(category.owaspCategory)!, isCompany || item.id === selectedApp || category.owaspCategory === selectedCategory, `${item.id}-${category.owaspCategory}`)))}
     </Svg>
-    <GraphNode x={104} y={height / 2} label="Empresa" icon="business-outline" selected={isCompany} connected={true} onPress={() => onSelect({ kind: "company" })} />
-    {applications.map((item) => <GraphNode key={item.id} x={300} y={appY.get(item.id)!} label={item.name} sub={`${item.totalAbertas} abertas`} icon="apps-outline" tint={severityColor(item.piorSeveridade)} selected={selectedApp === item.id} connected={isCompany || selectedApp === item.id || linkedApps.includes(item.id)} onPress={() => onSelect({ kind: "app", id: item.id })} />)}
-    {categories.map((item) => <GraphNode key={item.code} x={510} y={categoryY.get(item.code)!} label={item.code} sub={`${item.total} abertas`} icon="shield-outline" selected={selectedCategory === item.code} connected={isCompany || selectedCategory === item.code || selectedAppCategories.includes(item.code)} tint={severityColor(item.severity)} onPress={() => onSelect({ kind: "category", id: item.code })} />)}
+    <GraphNode {...graph.company} label="Empresa" icon="business-outline" selected={isCompany} connected={true} onPress={() => onSelect({ kind: "company" })} />
+    {applications.map((item) => <GraphNode key={item.id} {...appPositions.get(item.id)!} label={item.name} sub={`${item.totalAbertas} abertas`} icon="apps-outline" tint={severityColor(item.piorSeveridade)} selected={selectedApp === item.id} connected={isCompany || selectedApp === item.id || linkedApps.includes(item.id)} onPress={() => onSelect({ kind: "app", id: item.id })} />)}
+    {categories.map((item) => <GraphNode key={item.code} {...categoryPositions.get(item.code)!} label={item.code} sub={`${item.total} abertas`} icon="shield-outline" selected={selectedCategory === item.code} connected={isCompany || selectedCategory === item.code || selectedAppCategories.includes(item.code)} tint={severityColor(item.severity)} onPress={() => onSelect({ kind: "category", id: item.code })} />)}
   </Animated.View></View></ScrollView></>;
 }
 

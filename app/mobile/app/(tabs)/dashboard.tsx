@@ -13,7 +13,7 @@ import Animated, { cancelAnimation, useAnimatedProps, useAnimatedStyle, useShare
 import { projectsApi } from "../../src/api/projects.api";
 import { exposureGraphApi } from "../../src/api/exposure-graph.api";
 import { vulnerabilitiesApi } from "../../src/api/vulnerabilities.api";
-import { DataState, GlassSurface, SectionHeading, WorkspaceScreen } from "../../src/components/workspace-ui";
+import { ActionButton, DataState, GlassSurface, SectionHeading, WorkspaceScreen } from "../../src/components/workspace-ui";
 import { HomeBrand } from "../../src/components/home-brand";
 import { AssistantButton } from "../../src/components/assistant";
 import { ExposureTrend } from "../../src/components/exposure-trend";
@@ -46,21 +46,29 @@ export default function DashboardScreen() {
     <DashboardReveal><Text accessibilityRole="header" style={ui.title}>Olá, {user?.name?.split(" ")[0] ?? "cliente"}<Text style={{ color: workspace.lavender }}>.</Text></Text><Text style={ui.body}>Ações e riscos que merecem sua atenção.</Text></DashboardReveal>
     <DashboardReveal delay={60}><GlassSurface strong>
       <View style={styles.overview}><ProgressRing percent={overview?.percent ?? null} /><View style={[ui.grow, { gap: 10 }]}><Text accessibilityRole="header" style={ui.heading}>Visão geral</Text>
-        {overview ? <><Text style={ui.body}>{overview.completed} de {overview.total} {overview.total === 1 ? "projeto concluído" : "projetos concluídos"}</Text><Text style={ui.muted}>{overview.active} em análise ou revisão</Text></> : <Text style={ui.muted}>{projects.isPending ? "Carregando projetos..." : "Projetos indisponíveis"}</Text>}
-        {risks ? <Text style={[ui.muted, risks.critical > 0 && { color: colors.dangerInk }]}>{risks.critical} {risks.critical === 1 ? "crítica" : "críticas"} em aberto</Text> : <Text style={ui.muted}>{exposure.isPending ? "Carregando exposição..." : "Exposição indisponível"}</Text>}
+        {overview ? overview.total > 0 ? <><Text style={ui.body}>{overview.completed} de {overview.total} {overview.total === 1 ? "projeto concluído" : "projetos concluídos"}</Text><Text style={ui.muted}>{overview.active} em análise ou revisão</Text></> : <Text style={ui.body}>Nenhum projeto cadastrado.</Text> : <Text style={ui.muted}>{projects.isPending ? "Carregando projetos..." : "Projetos indisponíveis"}</Text>}
+        {risks && <Text style={[ui.muted, risks.critical > 0 && { color: colors.dangerInk }]}>{risks.critical} {risks.critical === 1 ? "crítica" : "críticas"} em aberto</Text>}
       </View></View>
+      {projects.isError && <>
+        <Text style={ui.muted} accessibilityLiveRegion="polite">{overview ? "Exibindo os últimos dados dos projetos. " : ""}{errorMessage(projects.error)}</Text>
+        <ActionButton label="Tentar atualizar projetos" disabled={projects.isRefetching} onPress={() => { void projects.refetch(); }} />
+      </>}
     </GlassSurface></DashboardReveal>
-    {projects.isError && <DataState error title="Projetos indisponíveis" message={errorMessage(projects.error)} onRetry={() => { void projects.refetch(); }} />}
-    {exposure.isError && <DataState error title="Exposição indisponível" message={errorMessage(exposure.error)} onRetry={() => { void exposure.refetch(); }} />}
     <DashboardReveal delay={120}><View style={{ gap: 12 }}><SectionHeading title="Prioridades" meta="ATÉ 3 ACHADOS" />
       {exposure.isPending && <DataState loading title="Buscando prioridades" />}
+      {exposure.isError && !risks && <DataState error title="Prioridades indisponíveis" message={errorMessage(exposure.error)} onRetry={() => { void exposure.refetch(); }} />}
+      {exposure.isError && risks && <GlassSurface>
+        <Text style={ui.body} accessibilityLiveRegion="polite">Exibindo as últimas prioridades carregadas.</Text>
+        <Text style={ui.muted}>{errorMessage(exposure.error)}</Text>
+        <ActionButton label="Tentar atualizar prioridades" disabled={exposure.isRefetching} onPress={() => { void exposure.refetch(); }} />
+      </GlassSurface>}
       {risks && <GlassSurface>{risks.priorities.length ? risks.priorities.map((item, index) => { const sla = priorityDetails[index]?.data?.sla; const prazo = sla?.state && sla.state !== "NO_SLA" ? fraseDoSla(sla.state, sla.remainingMs) : null; return <SoftPressable key={item.id} accessibilityRole="button" accessibilityLabel={`${item.title}, ${severityLabels[item.severityFinal] ?? item.severityFinal}, ${item.applicationName}, ${statusLabels[item.status] ?? item.status}${prazo ? `, prazo ${prazo}` : ""}`} onPress={() => router.push(`/(tabs)/home/finding/${item.id}`)} style={[styles.priority, index > 0 && { borderTopWidth: 1, borderTopColor: workspace.line }]}>
         <View style={[styles.rank, { backgroundColor: workspace.chipActiveBg }]}><Text style={[ui.mono, { color: workspace.lavender }]}>{index + 1}</Text></View>
         <View style={[ui.grow, { gap: 3 }]}><Text style={ui.body}>{item.title}</Text><Text style={ui.muted}>{item.applicationName} · {severityLabels[item.severityFinal] ?? item.severityFinal} · {statusLabels[item.status] ?? item.status}</Text>{prazo && <Text style={ui.muted}>Prazo: {prazo}</Text>}</View><Ionicons name="chevron-forward" size={18} color={workspace.muted} />
-      </SoftPressable>; }) : <Text style={ui.body}>Nenhuma vulnerabilidade aberta para priorizar.</Text>}</GlassSurface>}
+      </SoftPressable>; }) : <Text style={ui.body}>{exposure.data?.aplicacoes.length ? "Nenhuma vulnerabilidade aberta para priorizar." : "Nenhuma aplicação ativa para acompanhar."}</Text>}</GlassSurface>}
     </View></DashboardReveal>
     {exposure.data && <DashboardReveal delay={160}><ExposureTrend applications={exposure.data.aplicacoes} /></DashboardReveal>}
-    <DashboardReveal delay={180}><GlassSurface accessibilityLabel="Abrir grafo de exposição" onPress={() => router.push("/(tabs)/security")}><View style={ui.spread}><View style={[ui.grow, { gap: 5 }]}><Text accessibilityRole="header" style={ui.heading}>Exposição</Text><Text style={ui.muted}>{risks ? `${risks.open} vulnerabilidades abertas nas aplicações ativas` : "Veja as conexões entre aplicações e categorias OWASP."}</Text></View><Ionicons name="git-network-outline" size={24} color={workspace.lavender} /></View></GlassSurface></DashboardReveal>
+    <DashboardReveal delay={180}><GlassSurface accessibilityLabel="Abrir grafo de exposição" onPress={() => router.push("/(tabs)/security?section=exposure")}><View style={ui.spread}><View style={[ui.grow, { gap: 5 }]}><Text accessibilityRole="header" style={ui.heading}>Exposição</Text><Text style={ui.muted}>{risks ? `${risks.open} vulnerabilidades abertas nas aplicações ativas` : "Veja as conexões entre aplicações e categorias OWASP."}</Text></View><Ionicons name="git-network-outline" size={24} color={workspace.lavender} /></View></GlassSurface></DashboardReveal>
     <DashboardReveal delay={220}><GlassSurface accessibilityLabel="Ver projetos" onPress={() => router.push("/(tabs)/home")}><View style={ui.spread}><View style={[ui.grow, { gap: 5 }]}><Text style={ui.heading}>Seus projetos</Text><Text style={ui.muted}>Acompanhe suas análises de segurança.</Text></View><Ionicons name="arrow-forward" size={20} color={workspace.lavender} /></View></GlassSurface></DashboardReveal>
   </WorkspaceScreen>;
 }

@@ -10,7 +10,7 @@ import { useApiError } from "../hooks/use-api-error";
 import { last30Days, trendGeometry } from "../lib/exposure-trend";
 import { useAppTheme } from "../theme/use-app-theme";
 import type { ExposureApplication } from "../types/exposure-graph.types";
-import { DataState, FilterChip, GlassSurface } from "./workspace-ui";
+import { ActionButton, DataState, FilterChip, GlassSurface } from "./workspace-ui";
 import { useWorkspaceReducedMotion } from "./workspace-motion";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -38,11 +38,16 @@ export function ExposureTrend({ applications }: { applications: ExposureApplicat
 
   return <GlassSurface>
     <View style={{ gap: 4 }}><Text accessibilityRole="header" style={ui.heading}>Evolução da exposição</Text><Text style={ui.muted}>Achados identificados por dia · últimos 30 dias</Text></View>
-    {!application ? <Text style={ui.body}>Nenhuma aplicação ativa para acompanhar.</Text> : <>
+    {!application ? <Text style={ui.body}>O histórico ficará disponível quando houver aplicações ativas.</Text> : <>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {applications.map((item) => <FilterChip key={item.id} label={item.name} selected={item.id === application.id} onPress={() => { setSelected(item.id); setDay(null); }} />)}
       </ScrollView>
-      {query.isPending ? <DataState loading title="Carregando histórico" /> : query.isError ? <DataState error title="Histórico indisponível" message={errorMessage(query.error)} onRetry={() => { void query.refetch(); }} /> : !points?.length ? <Text style={ui.body}>Nenhum histórico disponível neste período.</Text> : <>
+      {query.isError && <View style={{ gap: 8 }}>
+        <Text style={ui.body} accessibilityLiveRegion="polite">{query.data ? "Exibindo o último histórico carregado." : "Histórico indisponível"}</Text>
+        <Text style={ui.muted}>{errorMessage(query.error)}</Text>
+        <ActionButton label="Tentar atualizar histórico" disabled={query.isRefetching} onPress={() => { void query.refetch(); }} />
+      </View>}
+      {query.isPending ? <DataState loading title="Carregando histórico" /> : query.data && !points?.length ? <Text style={ui.body}>Nenhum histórico disponível neste período.</Text> : !!points?.length && <>
         <View>
           <Text style={ui.muted}>Máximo diário: {geometry.total === 0 ? 0 : geometry.maximum}</Text>
           <Pressable ref={chartRef} accessibilityRole="adjustable" accessibilityLabel={`Histórico de ${application.name}`} accessibilityValue={{ text: selectedDay ? `${format(selectedDay.periodo)}: ${selectedDay.criados} achados` : `${geometry.total} achados no período` }} accessibilityHint="Deslize para cima ou para baixo para consultar cada dia" accessibilityActions={[{ name: "increment" }, { name: "decrement" }]} onAccessibilityAction={(event) => selectDay((day ?? 0) + (event.nativeEvent.actionName === "increment" ? 1 : -1))} onLayout={(event) => setChartWidth(event.nativeEvent.layout.width)} onPress={(event) => { const pageX = event.nativeEvent.pageX; if (chartWidth > 0 && Number.isFinite(pageX)) chartRef.current?.measureInWindow((x) => selectDay(Math.round((pageX - x) / chartWidth * (points.length - 1)))); }} style={styles.chart}>
