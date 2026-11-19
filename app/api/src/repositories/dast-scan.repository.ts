@@ -136,6 +136,16 @@ export class DastScanRepository {
   }
 
   /**
+   * Grava só se o scan ainda está RUNNING, na mesma instrução do UPDATE. Gravação
+   * tardia do runner (progresso, término) não pode reescrever um scan que o
+   * usuário já cancelou (status e fase CANCELLED). Devolve false se nada foi gravado.
+   */
+  async updateIfRunning(id: string, data: UpdateDastScanInput): Promise<boolean> {
+    const r = await this.prisma.dastScan.updateMany({ where: { id, status: "RUNNING" }, data });
+    return r.count === 1;
+  }
+
+  /**
    * Insere os findings e atualiza os 4 contadores de risco NA MESMA
    * transação. `skipDuplicates` cobre reprocessar o mesmo scanId (o pipeline
    * em dast-findings.service.ts já deduplica por fingerprint antes de

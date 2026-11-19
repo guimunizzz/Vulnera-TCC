@@ -208,6 +208,29 @@ describe("DAST — ciclo de vida", () => {
     expect(secondCancel.body.error).toBe("INVALID_STATUS_TRANSITION");
   });
 
+  it("DAST-LIFE-05 — cancelar enquanto roda: a demonstração que termina depois não reescreve a fase CANCELLED", async () => {
+    const { pentesterAToken } = await seedActors();
+    const createRes = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-cancel-tardio.test" });
+    const scanId = createRes.body.id;
+
+    // Cancela só depois de RUNNING: a demonstração (3 s) ainda vai terminar em background.
+    for (let i = 0; i < 100; i++) {
+      if ((await prisma.dastScan.findUnique({ where: { id: scanId } }))?.status === "RUNNING") break;
+      await sleep(50);
+    }
+    const cancelRes = await request(app).post(`/api/dast/scans/${scanId}/cancel`).set("Authorization", `Bearer ${pentesterAToken}`);
+    expect(cancelRes.status).toBe(200);
+
+    await sleep(4000);
+    const depois = await prisma.dastScan.findUnique({ where: { id: scanId } });
+    expect(depois?.status).toBe("CANCELLED");
+    expect(depois?.phase).toBe("CANCELLED");
+    expect(depois?.progress).toBe(0);
+  });
+
   it("DAST-LIFE-03 — timeout marca FAILED com SCAN_TIMEOUT", async () => {
     const original = process.env.DAST_SCAN_TIMEOUT_MS;
     process.env.DAST_SCAN_TIMEOUT_MS = "50"; // bem menor que os 3000ms do fallback simulado

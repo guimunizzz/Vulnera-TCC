@@ -753,8 +753,9 @@ export class DastScanService {
       // Sem await: o progresso é informativo, e travar o polling do ZAP
       // esperando o MySQL não ajuda ninguém. Falha de escrita vira aviso, não
       // interrompe o scan.
+      // Condicionado a RUNNING: um cancelamento que já gravou CANCELLED não é reescrito por um tick atrasado.
       void this.repository
-        .update(scanId, { progress: progress.percent, phase: progress.phase })
+        .updateIfRunning(scanId, { progress: progress.percent, phase: progress.phase })
         .catch((err: unknown) => {
           console.warn(`[DAST] falha ao gravar progresso do scan ${scanId} (${SCAN_PHASE_LABELS[progress.phase]})`, err);
         });
@@ -770,14 +771,11 @@ export class DastScanService {
     jsonReportPath?: string,
     extra?: { simulated: boolean; warningMessage: string | null },
   ): Promise<void> {
-    // Corrida real (não só de teste): o usuário pode cancelar enquanto o
-    // scan roda em background. Se o registro já saiu de RUNNING (virou
-    // CANCELLED, ou sumiu) antes do resultado chegar, NÃO sobrescreve — quem
-    // cancelou já decidiu o estado final, o resultado tardio é descartado.
-    const current = await this.repository.findById(scan.id);
-    if (!current || current.status !== "RUNNING") return;
-
-    await this.repository.update(scan.id, {
+    // Corrida real: o usuário pode cancelar enquanto o scan roda em background.
+    // A checagem de RUNNING fica no próprio UPDATE (sem ler antes, para não
+    // haver janela entre ler e gravar): se o registro já virou CANCELLED, nada
+    // é escrito — quem cancelou já decidiu o estado final, o resultado tardio é descartado.
+    const finalizou = await this.repository.updateIfRunning(scan.id, {
       status,
       finishedAt: new Date(),
       ...(durationMs !== undefined ? { durationMs } : {}),
@@ -790,6 +788,7 @@ export class DastScanService {
       simulated: extra?.simulated ?? scan.simulated,
       warningMessage: extra?.warningMessage ?? null,
     });
+    if (!finalizou) return;
     await this.auditLogRepository.create({
       actorId: scan.requestedById,
       companyId: scan.companyId,
