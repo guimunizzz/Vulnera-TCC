@@ -1,7 +1,7 @@
 /** Vuvu contextual em memória por sessão; enviada somente por ação explícita do usuário. */
 import { createContext, useContext, useEffect, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { usePathname, useRouter, type Href } from "expo-router";
 import axios from "axios";
@@ -65,56 +65,59 @@ export function AssistantSession({ children }: { children: ReactNode }) {
 
   return <AssistantContext.Provider value={(next) => { setScreen(next); setVisible(true); }}>
     {children}
-    <Modal visible={visible} animationType={reduced ? "none" : "slide"} onRequestClose={() => setVisible(false)}>
-      <SafeAreaView style={[styles.screen, { backgroundColor: workspace.background }]}>
-        <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={[styles.header, { borderBottomColor: workspace.line }]}>
-            <View testID="vuvu-portrait" style={[styles.portrait, { backgroundColor: workspace.neutralTint }]}>
-              <AssistantMascot width={40} />
-            </View>
-            <Text accessibilityRole="header" style={[ui.heading, styles.flex]}>Vuvu</Text>
-            <SoftPressable accessibilityRole="button" accessibilityLabel="Fechar assistente" onPress={() => setVisible(false)} style={styles.icon}>
-              <Ionicons name="close" size={23} color={workspace.text} />
-            </SoftPressable>
-          </View>
-          <ScrollView ref={scroll} style={styles.flex} contentContainerStyle={[styles.messages, showIntro && styles.introContainer]} keyboardShouldPersistTaps="handled" onContentSizeChange={() => { if (!showIntro) scroll.current?.scrollToEnd({ animated: !reduced }); }}>
-            {showIntro && <View style={styles.intro}>
-              <View testID="vuvu-intro" style={styles.mascotStage}>
-                <View style={[styles.mascotHalo, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]} />
-                <AssistantMascot width={136} greet={visible} />
+    <Modal visible={visible} animationType={reduced ? "none" : "slide"} statusBarTranslucent navigationBarTranslucent onRequestClose={() => setVisible(false)}>
+      {/* O modal tem sua própria janela nativa e mede as barras do sistema nela. */}
+      <SafeAreaProvider style={[styles.screen, { backgroundColor: workspace.background }]}>
+        <SafeAreaView style={styles.flex}>
+          <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+            <View style={[styles.header, { borderBottomColor: workspace.line }]}>
+              <View testID="vuvu-portrait" style={[styles.portrait, { backgroundColor: workspace.neutralTint }]}>
+                <AssistantMascot width={40} />
               </View>
-              <Text style={[ui.heading, styles.introTitle]}>Como posso ajudar?</Text>
-            </View>}
-            {messages.map((item, index) => {
-              const isUser = item.role === "user";
-              return <View key={index} style={[styles.message, isUser ? styles.userMessage : styles.assistantMessage, { backgroundColor: isUser ? workspace.chipActiveBg : workspace.inset }]}>
-                <Text selectable accessibilityLabel={`${isUser ? "Você" : "Vuvu"}: ${item.content}`} style={ui.body}>{item.content}</Text>
-                {item.actions?.map((action) => {
-                  if (!Object.prototype.hasOwnProperty.call(assistantActions, action.id)) return null;
-                  const destination = assistantActions[action.id as AssistantActionId];
-                  return <SoftPressable key={action.id} accessibilityRole="button" onPress={() => { setVisible(false); router.push(destination.path as Href); }} style={[styles.action, { borderColor: workspace.actionBorder }]}>
-                    <Text style={[ui.body, { color: workspace.lavender }]}>{destination.label}</Text>
-                  </SoftPressable>;
-                })}
-              </View>;
-            })}
-            {pendingText && <View style={[styles.message, styles.userMessage, { backgroundColor: workspace.chipActiveBg }]}>
-              <Text accessibilityLabel={`Você: ${pendingText}`} style={ui.body}>{pendingText}</Text>
-            </View>}
-            {pending && <View style={styles.waiting} accessibilityLiveRegion="polite"><ActivityIndicator color={workspace.lavender} /><Text style={ui.muted}>Vuvu está respondendo…</Text></View>}
-            {error && <Text accessibilityRole="alert" style={[ui.body, { color: workspace.dangerInk }]}>{error}</Text>}
-          </ScrollView>
-          <View style={[styles.composer, { borderTopColor: workspace.line }]}>
-            <View style={styles.composerRow}>
-              <TextInput accessibilityLabel="Pergunta para Vuvu" multiline maxLength={1000} value={draft} editable={!pending} onChangeText={setDraft} placeholder="Digite sua pergunta" placeholderTextColor={workspace.muted} style={[styles.input, { color: workspace.text, backgroundColor: workspace.inset, borderColor: workspace.line }]} />
-              <SoftPressable accessibilityRole="button" accessibilityLabel="Enviar pergunta" accessibilityState={{ disabled: !canSend }} disabled={!canSend} onPress={() => { void send(); }} style={[styles.send, { backgroundColor: workspace.actionBg }]}>
-                <Ionicons name="send" size={20} color={workspace.lavender} />
+              <Text accessibilityRole="header" style={[ui.heading, styles.flex]}>Vuvu</Text>
+              <SoftPressable accessibilityRole="button" accessibilityLabel="Fechar assistente" onPress={() => setVisible(false)} style={styles.icon}>
+                <Ionicons name="close" size={23} color={workspace.text} />
               </SoftPressable>
             </View>
-            <Text style={[ui.muted, styles.privacy]}>Evite compartilhar dados sensíveis.</Text>
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+            <ScrollView ref={scroll} style={styles.flex} contentContainerStyle={[styles.messages, showIntro && styles.introContainer]} keyboardShouldPersistTaps="handled" onContentSizeChange={() => { if (!showIntro) scroll.current?.scrollToEnd({ animated: !reduced }); }}>
+              {showIntro && <View style={styles.intro}>
+                <View testID="vuvu-intro" style={styles.mascotStage}>
+                  <View style={[styles.mascotHalo, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]} />
+                  <AssistantMascot width={136} greet={visible} />
+                </View>
+                <Text style={[ui.heading, styles.introTitle]}>Como posso ajudar?</Text>
+              </View>}
+              {messages.map((item, index) => {
+                const isUser = item.role === "user";
+                return <View key={index} style={[styles.message, isUser ? styles.userMessage : styles.assistantMessage, { backgroundColor: isUser ? workspace.chipActiveBg : workspace.inset }]}>
+                  <Text selectable accessibilityLabel={`${isUser ? "Você" : "Vuvu"}: ${item.content}`} style={ui.body}>{item.content}</Text>
+                  {item.actions?.map((action) => {
+                    if (!Object.prototype.hasOwnProperty.call(assistantActions, action.id)) return null;
+                    const destination = assistantActions[action.id as AssistantActionId];
+                    return <SoftPressable key={action.id} accessibilityRole="button" onPress={() => { setVisible(false); router.push(destination.path as Href); }} style={[styles.action, { borderColor: workspace.actionBorder }]}>
+                      <Text style={[ui.body, { color: workspace.lavender }]}>{destination.label}</Text>
+                    </SoftPressable>;
+                  })}
+                </View>;
+              })}
+              {pendingText && <View style={[styles.message, styles.userMessage, { backgroundColor: workspace.chipActiveBg }]}>
+                <Text accessibilityLabel={`Você: ${pendingText}`} style={ui.body}>{pendingText}</Text>
+              </View>}
+              {pending && <View style={styles.waiting} accessibilityLiveRegion="polite"><ActivityIndicator color={workspace.lavender} /><Text style={ui.muted}>Vuvu está respondendo…</Text></View>}
+              {error && <Text accessibilityRole="alert" style={[ui.body, { color: workspace.dangerInk }]}>{error}</Text>}
+            </ScrollView>
+            <View style={[styles.composer, { borderTopColor: workspace.line }]}>
+              <View style={styles.composerRow}>
+                <TextInput accessibilityLabel="Pergunta para Vuvu" multiline maxLength={1000} value={draft} editable={!pending} onChangeText={setDraft} placeholder="Digite sua pergunta" placeholderTextColor={workspace.muted} style={[styles.input, { color: workspace.text, backgroundColor: workspace.inset, borderColor: workspace.line }]} />
+                <SoftPressable accessibilityRole="button" accessibilityLabel="Enviar pergunta" accessibilityState={{ disabled: !canSend }} disabled={!canSend} onPress={() => { void send(); }} style={[styles.send, { backgroundColor: workspace.actionBg }]}>
+                  <Ionicons name="send" size={20} color={workspace.lavender} />
+                </SoftPressable>
+              </View>
+              <Text style={[ui.muted, styles.privacy]}>Evite compartilhar dados sensíveis.</Text>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   </AssistantContext.Provider>;
 }
