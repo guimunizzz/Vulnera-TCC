@@ -26,7 +26,11 @@ export const QUEUE_NAMES = {
   dastScan: "dast-scan",
   threatIntel: "threat-intel",
   dastSchedule: "dast-schedule",
+  slaMonitor: "sla-monitor",
 } as const;
+
+/** Payload da fila `sla-monitor`: vazio. O monitor varre o banco inteiro a cada execução. */
+export type SlaMonitorJobData = Record<string, never>;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
