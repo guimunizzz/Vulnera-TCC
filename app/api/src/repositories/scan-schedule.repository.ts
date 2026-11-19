@@ -5,7 +5,29 @@
  * verdade: o worker reconcilia o Redis a partir daqui.
  */
 
-import type { PrismaClient, ScanSchedule, DastScanMode, ScanScheduleFrequency } from "@prisma/client";
+import type { Prisma, PrismaClient, ScanSchedule, DastScanMode, ScanScheduleFrequency } from "@prisma/client";
+
+/** Contexto que a página /agendamentos precisa ao lado de cada agendamento. */
+const CONTEXTO = {
+  application: {
+    select: {
+      id: true,
+      name: true,
+      url: true,
+      isActive: true,
+      dastAuthorizedAt: true,
+      dastAuthorizedUntil: true,
+      dastAuthorizedHost: true,
+      company: { select: { name: true } },
+    },
+  },
+  project: { select: { id: true, name: true } },
+} satisfies Prisma.ScanScheduleInclude;
+
+export type AgendamentoComContexto = Prisma.ScanScheduleGetPayload<{ include: typeof CONTEXTO }>;
+
+/** Quem enxerga o quê (ADR-056 §7) — o service decide o escopo, o repositório só filtra. */
+export type EscopoAgendamentos = { tudo: true } | { membroId: string } | { companyId: string };
 
 export interface CreateScanScheduleInput {
   companyId: string;
@@ -36,6 +58,17 @@ export class ScanScheduleRepository {
 
   async findByApplication(applicationId: string): Promise<ScanSchedule[]> {
     return this.prisma.scanSchedule.findMany({ where: { applicationId }, orderBy: { createdAt: "asc" } });
+  }
+
+  /** Página /agendamentos: os agendamentos do escopo, com aplicação, empresa e projeto. */
+  async findVisiveis(escopo: EscopoAgendamentos): Promise<AgendamentoComContexto[]> {
+    const where: Prisma.ScanScheduleWhereInput =
+      "tudo" in escopo
+        ? {}
+        : "companyId" in escopo
+          ? { companyId: escopo.companyId }
+          : { application: { projects: { some: { members: { some: { userId: escopo.membroId } } } } } };
+    return this.prisma.scanSchedule.findMany({ where, include: CONTEXTO, orderBy: [{ enabled: "desc" }, { createdAt: "asc" }] });
   }
 
   /** Todos os habilitados: o conjunto que o Redis precisa espelhar. */

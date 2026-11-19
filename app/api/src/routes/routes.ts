@@ -17,6 +17,7 @@ import { remediationPlaybookRoutes } from "./remediation-playbook.routes";
 import { savedQueryRoutes } from "./saved-query.routes";
 import { codeScanRoutes } from "./code-scan.routes";
 import { threatIntelRoutes } from "./threat-intel.routes";
+import { dastScheduleRoutes } from "./dast-schedules.routes";
 
 const router = Router();
 
@@ -47,5 +48,7 @@ router.use("/saved-queries", savedQueryRoutes);
 router.use("/code-imports", codeScanRoutes);
 // Threat Intel (ADR-053) — inventário, CVEs que afetam a empresa, feed e sincronização.
 router.use("/threat-intel", threatIntelRoutes);
+// ADR-056 — página /agendamentos: lista o que a pessoa enxerga e onde ela pode agendar.
+router.use("/dast-schedules", dastScheduleRoutes);
 
 export { router as apiRoutes };

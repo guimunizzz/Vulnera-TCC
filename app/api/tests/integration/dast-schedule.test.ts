@@ -13,6 +13,8 @@
  *   SCHED-EXEC-03 REAL agendado que falha → FAILED, nunca simulado, e notifica o criador
  *   SCHED-EXEC-04 simulado agendado não entra nas métricas
  *   SCHED-EXEC-05 criador que deixou de ser membro → NOT_MEMBER
+ *   SCHED-PAG-01  página /agendamentos: cada papel vê só o próprio recorte
+ *   SCHED-PAG-02  alvos para agendar: ADMIN todas, PENTESTER as dele, CLIENT 403
  */
 
 import request from "supertest";
@@ -238,5 +240,70 @@ describe("Agendamentos DAST — execução reconfere tudo", () => {
     await prisma.dastScan.create({ data: { targetUrl: "https://app-a.example.com/login", requestedById: c.admin.id, status: "RUNNING" } });
     await expect(makeDastScheduleService().executar(sched.id)).resolves.toBe("TARGET_BUSY");
     expect(await prisma.dastScan.count()).toBe(1);
+  });
+});
+
+describe("Página /agendamentos — leitura global (SEC4)", () => {
+  it("SCHED-PAG-01 — cada papel vê só o próprio recorte; a outra empresa nunca aparece", async () => {
+    const c = await cenario();
+    const sched = await autorizarEAgendar(c);
+    // Um agendamento da empresa B, criado pelo ADMIN (sem projeto).
+    await request(app).put(`/api/applications/${c.appB.id}/dast-authorization`).set(c.h.admin).send({ until: ate(30) });
+    const deB = await request(app).post(`/api/applications/${c.appB.id}/dast-schedules`).set(c.h.admin).send(corpo());
+    expect(deB.status).toBe(201);
+
+    const ids = async (h: Record<string, string>) => {
+      const r = await request(app).get("/api/dast-schedules").set(h);
+      expect(r.status).toBe(200);
+      return r.body;
+    };
+    const admin = await ids(c.h.admin);
+    expect(admin.schedules.map((s: { id: string }) => s.id).sort()).toEqual([sched.id, deB.body.id].sort());
+    expect(admin.canCreate).toBe(true);
+    // Testes rodam com o motor memory: nada dispara sozinho, e a página precisa dizer isso.
+    expect(admin.runsSchedules).toBe(false);
+
+    const pentA = await ids(c.h.pentA);
+    expect(pentA.schedules.map((s: { id: string }) => s.id)).toEqual([sched.id]);
+    expect(pentA.schedules[0]).toMatchObject({
+      application: { id: c.appA.id, name: "App A", companyName: "Empresa A", active: true },
+      projectName: "Proj A",
+      authorization: { host: "app-a.example.com", problem: null },
+      nextRunAt: null,
+      canEdit: true,
+    });
+
+    expect((await ids(c.h.pentOutro)).schedules).toEqual([]);
+
+    const clientA = await ids(c.h.clientA);
+    expect(clientA.schedules.map((s: { id: string }) => s.id)).toEqual([sched.id]);
+    expect(clientA.canCreate).toBe(false);
+    expect(clientA.schedules[0].canEdit).toBe(false);
+
+    const clientB = await ids(c.h.clientB);
+    expect(clientB.schedules.map((s: { id: string }) => s.id)).toEqual([deB.body.id]);
+  });
+
+  it("SCHED-PAG-02 — alvos: ADMIN vê todas as aplicações com URL; PENTESTER só as dele e só os projetos dele; CLIENT não agenda", async () => {
+    const c = await cenario();
+    await seedProject({ name: "Proj A2 (sem o pentester)", applicationId: c.appA.id, companyId: c.companyA.id });
+    await seedApplication({ name: "Sem URL", companyId: c.companyA.id, url: null });
+
+    const admin = await request(app).get("/api/dast-schedules/targets").set(c.h.admin);
+    expect(admin.status).toBe(200);
+    expect(admin.body.map((a: { name: string }) => a.name).sort()).toEqual(["App A", "App B"]);
+    const appAAdmin = admin.body.find((a: { name: string }) => a.name === "App A");
+    expect(appAAdmin.projects).toHaveLength(2);
+    expect(appAAdmin.projectRequired).toBe(false);
+    expect(appAAdmin.authorization).toMatchObject({ problem: "AUTHORIZATION_MISSING", currentHost: "app-a.example.com", canEdit: true });
+
+    const pent = await request(app).get("/api/dast-schedules/targets").set(c.h.pentA);
+    expect(pent.body.map((a: { name: string }) => a.name)).toEqual(["App A"]);
+    expect(pent.body[0].projects).toEqual([{ id: c.projectA.id, name: "Proj A" }]);
+    expect(pent.body[0].projectRequired).toBe(true);
+
+    expect((await request(app).get("/api/dast-schedules/targets").set(c.h.pentOutro)).body).toEqual([]);
+    expect((await request(app).get("/api/dast-schedules/targets").set(c.h.clientA)).status).toBe(403);
+    expect((await request(app).get("/api/dast-schedules")).status).toBe(401);
   });
 });

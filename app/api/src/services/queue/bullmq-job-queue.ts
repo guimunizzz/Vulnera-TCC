@@ -165,6 +165,16 @@ export class BullmqJobQueue implements JobQueue {
     return true;
   }
 
+  async proximasExecucoesDast(): Promise<Map<string, string>> {
+    const schedulers = await this.fila(QUEUE_NAMES.dastSchedule).getJobSchedulers(0, -1, true);
+    const proximas = new Map<string, string>();
+    for (const s of schedulers) {
+      const id = typeof s.key === "string" && s.key.startsWith("dast-schedule:") ? s.key.slice("dast-schedule:".length) : null;
+      if (id && typeof s.next === "number") proximas.set(id, new Date(s.next).toISOString());
+    }
+    return proximas;
+  }
+
   async aplicarAgendamentosDast(desejados: AgendamentoDastDesejado[]): Promise<{ upserts: number; removidos: number }> {
     return reconciliarAgendamentosDast(this.fila(QUEUE_NAMES.dastSchedule), desejados);
   }

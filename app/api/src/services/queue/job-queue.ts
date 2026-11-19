@@ -98,6 +98,11 @@ export interface JobQueue {
    */
   aplicarAgendamentosDast(desejados: AgendamentoDastDesejado[]): Promise<{ upserts: number; removidos: number } | null>;
   /**
+   * Próximo disparo de cada agendamento (scheduleId → ISO), lido do próprio
+   * scheduler. memory: null — sem relógio, não há próximo disparo para mostrar.
+   */
+  proximasExecucoesDast(): Promise<Map<string, string> | null>;
+  /**
    * Threat Intel (Fase 3): sincronização manual ou backfill de tecnologias.
    * memory: dispara no próprio processo, em segundo plano, como sempre.
    * bullmq: vira job na fila `threat-intel` (concorrência 1 no worker).

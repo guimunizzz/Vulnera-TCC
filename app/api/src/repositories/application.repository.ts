@@ -4,6 +4,23 @@ import type { Application, CreateApplicationDTO, UpdateApplicationDTO } from "..
 export class ApplicationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /**
+   * ADR-056 — aplicações em que dá para agendar DAST: ativas e com URL. Com
+   * `membroId` (PENTESTER), só as de projetos de que ele é membro, e só os
+   * projetos dele; sem, todas (ADMIN).
+   */
+  async findAlvosDast(membroId?: string) {
+    const membro = membroId ? { members: { some: { userId: membroId } } } : undefined;
+    return this.prisma.application.findMany({
+      where: { isActive: true, url: { not: null }, ...(membro ? { projects: { some: membro } } : {}) },
+      include: {
+        company: { select: { name: true } },
+        projects: { where: membro, select: { id: true, name: true }, orderBy: { name: "asc" } },
+      },
+      orderBy: { name: "asc" },
+    });
+  }
+
   async findById(id: string): Promise<Application | null> {
     return this.prisma.application.findUnique({ where: { id } });
   }

@@ -25,7 +25,7 @@
 
 import type { Application, ScanSchedule } from "@prisma/client";
 import type { ApplicationRepository } from "../repositories/application.repository";
-import type { ScanScheduleRepository } from "../repositories/scan-schedule.repository";
+import type { EscopoAgendamentos, ScanScheduleRepository } from "../repositories/scan-schedule.repository";
 import type { ProjectRepository } from "../repositories/project.repository";
 import type { ProjectMemberRepository } from "../repositories/project-member.repository";
 import type { UserRepository } from "../repositories/user.repository";
@@ -87,6 +87,36 @@ export interface AgendamentoDTO {
   updatedAt: string;
 }
 
+/** Uma linha da página /agendamentos: o agendamento e o que a pessoa precisa para entendê-lo. */
+export interface AgendamentoVisivelDTO extends AgendamentoDTO {
+  application: { id: string; name: string; url: string | null; companyName: string; active: boolean };
+  projectName: string | null;
+  authorization: { until: string | null; host: string | null; problem: string | null };
+  /** Próximo disparo segundo o scheduler (bullmq); null sem motor de agendamento ou desligado. */
+  nextRunAt: string | null;
+  canEdit: boolean;
+}
+
+export interface PainelAgendamentosDTO {
+  /** false com QUEUE_DRIVER=memory: o cadastro funciona, mas nada dispara sozinho. */
+  runsSchedules: boolean;
+  /** ADMIN e PENTESTER criam; CLIENT só lê. */
+  canCreate: boolean;
+  schedules: AgendamentoVisivelDTO[];
+}
+
+/** Aplicação em que a pessoa pode agendar, com a autorização atual e os projetos que ela pode usar. */
+export interface AlvoDastDTO {
+  applicationId: string;
+  name: string;
+  url: string | null;
+  companyName: string;
+  authorization: AutorizacaoDastDTO;
+  projects: { id: string; name: string }[];
+  /** PENTESTER precisa escolher um projeto de que é membro; ADMIN pode deixar em branco. */
+  projectRequired: boolean;
+}
+
 export interface CriarAgendamentoInput extends Partial<CamposAgendamento> {
   mode?: unknown;
   projectId?: unknown;
@@ -117,14 +147,14 @@ export class DastScheduleService {
   private avisouMemoria = false;
 
   constructor(
-    private readonly applications: Pick<ApplicationRepository, "findById" | "setDastAuthorization">,
+    private readonly applications: Pick<ApplicationRepository, "findById" | "setDastAuthorization" | "findAlvosDast">,
     private readonly schedules: ScanScheduleRepository,
     private readonly projects: Pick<ProjectRepository, "findById">,
     private readonly members: Pick<ProjectMemberRepository, "findOne" | "existsForUserInApplication">,
     private readonly users: Pick<UserRepository, "findById">,
     private readonly auditLog: Pick<AuditLogRepository, "create">,
     private readonly notifications: Pick<NotificationRepository, "criarVarias">,
-    private readonly fila: Pick<JobQueue, "aplicarAgendamentosDast">,
+    private readonly fila: Pick<JobQueue, "driver" | "aplicarAgendamentosDast" | "proximasExecucoesDast">,
     private readonly scans: Pick<DastScanService, "criarAgendado">,
     private readonly agora: () => Date = () => new Date(),
   ) {}
@@ -245,6 +275,63 @@ export class DastScheduleService {
       console.warn(`🗓️  ${habilitados.length} agendamento(s) DAST cadastrado(s), mas QUEUE_DRIVER=memory não executa agendamentos (ADR-056).`);
     }
     return r;
+  }
+
+  // ==========================================================================
+  // Página /agendamentos (leitura)
+  // ==========================================================================
+
+  /**
+   * Todos os agendamentos que a pessoa enxerga, com o mesmo recorte da leitura
+   * por aplicação: ADMIN tudo; PENTESTER as aplicações de projetos de que é
+   * membro; CLIENT a própria empresa (somente leitura).
+   */
+  async listarVisiveis(actor: Actor): Promise<PainelAgendamentosDTO> {
+    let escopo: EscopoAgendamentos;
+    if (actor.role === "ADMIN") escopo = { tudo: true };
+    else if (actor.role === "PENTESTER") escopo = { membroId: actor.userId };
+    else {
+      const user = await this.users.findById(actor.userId);
+      if (!user?.companyId) return { runsSchedules: this.fila.driver === "bullmq", canCreate: false, schedules: [] };
+      escopo = { companyId: user.companyId };
+    }
+
+    const linhas = await this.schedules.findVisiveis(escopo);
+    // O próximo disparo é informativo: Redis fora do ar não pode derrubar a página.
+    const proximas = await this.fila.proximasExecucoesDast().catch(() => null);
+    const agora = this.agora();
+    const podeEditar = actor.role === "ADMIN" || actor.role === "PENTESTER";
+    return {
+      runsSchedules: this.fila.driver === "bullmq",
+      canCreate: podeEditar,
+      schedules: linhas.map((s) => ({
+        ...toDTO(s),
+        application: { id: s.application.id, name: s.application.name, url: s.application.url, companyName: s.application.company.name, active: s.application.isActive },
+        projectName: s.project?.name ?? null,
+        authorization: {
+          until: s.application.dastAuthorizedUntil?.toISOString() ?? null,
+          host: s.application.dastAuthorizedHost,
+          problem: motivoSemAutorizacao(s.application, agora),
+        },
+        nextRunAt: s.enabled ? (proximas?.get(s.id) ?? null) : null,
+        canEdit: podeEditar,
+      })),
+    };
+  }
+
+  /** Aplicações em que a pessoa pode agendar (o seletor do formulário). CLIENT não agenda. */
+  async alvos(actor: Actor): Promise<AlvoDastDTO[]> {
+    if (actor.role !== "ADMIN" && actor.role !== "PENTESTER") throw new Error("FORBIDDEN");
+    const apps = await this.applications.findAlvosDast(actor.role === "PENTESTER" ? actor.userId : undefined);
+    return apps.map((app) => ({
+      applicationId: app.id,
+      name: app.name,
+      url: app.url,
+      companyName: app.company.name,
+      authorization: this.autorizacaoDTO(app, true),
+      projects: app.projects,
+      projectRequired: actor.role === "PENTESTER",
+    }));
   }
 
   // ==========================================================================

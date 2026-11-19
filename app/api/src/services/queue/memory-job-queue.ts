@@ -60,6 +60,10 @@ export class MemoryJobQueue implements JobQueue {
       .queued.map((q) => ({ scanId: q.scanId, queuedAt: q.queuedAt }));
   }
 
+  async proximasExecucoesDast(): Promise<null> {
+    return null;
+  }
+
   async aplicarAgendamentosDast(): Promise<null> {
     // Sem Redis não há relógio para os agendamentos: honesto em vez de fingir.
     return null;

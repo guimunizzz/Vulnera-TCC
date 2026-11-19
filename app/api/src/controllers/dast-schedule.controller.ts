@@ -36,6 +36,12 @@ export class DastScheduleController {
 
   revoke = (req: Request, res: Response) => this.responder(res, "revoke", () => this.service.revogar(req.user!, String(req.params.id)));
 
+  /** GET /dast-schedules — a página /agendamentos. */
+  listAll = (req: Request, res: Response) => this.responder(res, "listAll", () => this.service.listarVisiveis(req.user!));
+
+  /** GET /dast-schedules/targets — aplicações em que dá para agendar. */
+  targets = (req: Request, res: Response) => this.responder(res, "targets", () => this.service.alvos(req.user!));
+
   list = (req: Request, res: Response) => this.responder(res, "list", () => this.service.listar(req.user!, String(req.params.id)));
 
   create = (req: Request, res: Response) =>
