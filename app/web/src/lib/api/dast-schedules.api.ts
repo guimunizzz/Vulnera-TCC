@@ -12,9 +12,11 @@ import type {
   Agendamento,
   AutorizacaoDast,
   EdicaoAgendamentoInput,
+  ExecucaoAgendamento,
   NovoAgendamentoInput,
   NovoAgendamentoPorUrlInput,
   PainelAgendamentos,
+  ResultadoRodarAgora,
 } from "../../types/dast-schedule.types";
 
 export const dastSchedulesApi = {
@@ -39,4 +41,11 @@ export const dastSchedulesApi = {
     apiClient.put<Agendamento>(`/dast-schedules/${scheduleId}`, input).then((res) => res.data),
 
   remover: (scheduleId: string) => apiClient.delete<void>(`/dast-schedules/${scheduleId}`).then(() => undefined),
+
+  /** "Rodar agora": o mesmo caminho do worker, com as mesmas checagens (pausado devolve DISABLED). */
+  rodarAgora: (scheduleId: string) => apiClient.post<ResultadoRodarAgora>(`/dast-schedules/${scheduleId}/run`).then((res) => res.data),
+
+  /** Últimas execuções, da mais recente para a mais antiga, com o diff contra a anterior. */
+  historico: (scheduleId: string, limite = 10) =>
+    apiClient.get<ExecucaoAgendamento[]>(`/dast-schedules/${scheduleId}/history`, { params: { limit: limite } }).then((res) => res.data),
 };

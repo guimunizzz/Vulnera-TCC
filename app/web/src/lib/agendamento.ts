@@ -76,6 +76,15 @@ const DESFECHOS: Record<string, { texto: string; tom: "sucesso" | "atencao" | "p
   ERROR: { texto: "Não rodou: erro inesperado", tom: "perigo" },
 };
 
+/** Status de uma execução do histórico (DastScanStatus) em português. */
+export const ROTULO_STATUS_EXECUCAO: Record<string, string> = {
+  QUEUED: "Na fila",
+  RUNNING: "Em andamento",
+  COMPLETED: "Concluído",
+  FAILED: "Falhou",
+  CANCELLED: "Cancelado",
+};
+
 export function descreverDesfecho(codigo: string | null): { texto: string; tom: "sucesso" | "atencao" | "perigo" | "neutro" } | null {
   if (!codigo) return null;
   return DESFECHOS[codigo] ?? { texto: `Não rodou (${codigo})`, tom: "atencao" };

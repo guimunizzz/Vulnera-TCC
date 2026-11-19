@@ -155,6 +155,7 @@ const MESSAGES: Record<string, string> = {
   HOST_MISMATCH: "O endereço da aplicação mudou depois da autorização. Autorize de novo para o endereço atual.",
   APPLICATION_WITHOUT_URL: "A aplicação não tem URL cadastrada. Cadastre a URL antes de agendar.",
   SCHEDULE_NOT_FOUND: "Agendamento não encontrado. Ele pode ter sido removido.",
+  INVALID_LIMIT: "Quantidade de execuções inválida. Use um número inteiro maior que zero.",
   INVALID_UNTIL: "Escolha uma data de validade futura, de no máximo um ano.",
   INVALID_TIMEZONE: "Fuso horário inválido.",
   INVALID_DAY_OF_WEEK: "Escolha o dia da semana.",

@@ -24,6 +24,8 @@ const api = vi.hoisted(() => ({
   criar: vi.fn(),
   atualizar: vi.fn(),
   remover: vi.fn(),
+  rodarAgora: vi.fn(),
+  historico: vi.fn(),
 }));
 vi.mock("../lib/api/dast-schedules.api", () => ({ dastSchedulesApi: api }));
 
@@ -249,5 +251,61 @@ describe("Página de agendamentos", () => {
     expect(within(cartao).getByText("Só URL")).toBeInTheDocument();
     expect(within(cartao).getByText("Confirmada por quem criou")).toBeInTheDocument();
     expect(within(cartao).getByText(/visível a todo o time de segurança/)).toBeInTheDocument();
+  });
+
+  it("Rodar agora chama a API e mostra o desfecho em português, com link para o scan", async () => {
+    api.rodarAgora.mockResolvedValue({ outcome: "STARTED", scanId: "scan77" });
+    renderPage();
+    const cartao = await screen.findByRole("article", { name: /Portal do Cliente/ });
+    fireEvent.click(within(cartao).getByRole("button", { name: "Rodar agora" }));
+    await waitFor(() => expect(api.rodarAgora).toHaveBeenCalledWith("s1"));
+    // "Scan iniciado" também é o último desfecho do cartão (fixture), então o aviso se identifica pela descrição.
+    expect(await screen.findByText("Portal do Cliente — Toda segunda às 03:00")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ver scan" })).toBeInTheDocument();
+  });
+
+  it("Rodar agora com agendamento pausado avisa que não rodou, sem link", async () => {
+    api.rodarAgora.mockResolvedValue({ outcome: "DISABLED", scanId: null });
+    renderPage();
+    const cartao = await screen.findByRole("article", { name: /Portal do Cliente/ });
+    fireEvent.click(within(cartao).getByRole("button", { name: "Rodar agora" }));
+    expect(await screen.findByText("Não rodou: estava pausado")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver scan" })).not.toBeInTheDocument();
+  });
+
+  it("Histórico carrega ao abrir, lista as execuções e mostra o diff contra a anterior", async () => {
+    api.historico.mockResolvedValue([
+      { id: "scan2", status: "COMPLETED", simulated: true, createdAt: "2026-11-17T06:00:00Z", finishedAt: "2026-11-17T06:05:00Z", alertsHigh: 1, alertsMedium: 2, alertsLow: 0, alertsInfo: 0, diff: { novos: 2, resolvidos: 1, persistentes: 4 } },
+      { id: "scan1", status: "FAILED", simulated: false, createdAt: "2026-11-10T06:00:00Z", finishedAt: null, alertsHigh: 0, alertsMedium: 0, alertsLow: 0, alertsInfo: 0, diff: null },
+    ]);
+    renderPage();
+    const cartao = await screen.findByRole("article", { name: /Portal do Cliente/ });
+    expect(api.historico).not.toHaveBeenCalled();
+
+    fireEvent.click(within(cartao).getByRole("button", { name: "Histórico" }));
+    await waitFor(() => expect(api.historico).toHaveBeenCalledWith("s1"));
+    const lista = await within(cartao).findByRole("list", { name: "Últimas execuções" });
+    const linhas = within(lista).getAllByRole("listitem");
+    expect(linhas).toHaveLength(2);
+    expect(within(linhas[0]).getByText("Concluído")).toBeInTheDocument();
+    expect(within(linhas[0]).getByText("Alto 1 · Médio 2 · Baixo 0 · Info 0")).toBeInTheDocument();
+    expect(within(linhas[0]).getByText("↗ 2 novos · ↘ 1 resolvidos")).toBeInTheDocument();
+    expect(within(linhas[0]).getByRole("link", { name: /Ver scan de/ })).toHaveAttribute("href", "/dast/scans/scan2");
+    expect(within(linhas[1]).getByText("Falhou")).toBeInTheDocument();
+    expect(within(linhas[1]).queryByText(/novos/)).not.toBeInTheDocument();
+  });
+
+  it("CLIENT lê o histórico, mas sem Rodar agora e sem links para o DAST", async () => {
+    api.painel.mockResolvedValue(painel({ canCreate: false, schedules: [agendamento({ canEdit: false })] }));
+    api.historico.mockResolvedValue([
+      { id: "scan2", status: "COMPLETED", simulated: true, createdAt: "2026-11-17T06:00:00Z", finishedAt: null, alertsHigh: 0, alertsMedium: 0, alertsLow: 0, alertsInfo: 0, diff: { novos: 0, resolvidos: 0, persistentes: 0 } },
+    ]);
+    renderPage("CLIENT");
+    const cartao = await screen.findByRole("article", { name: /Portal do Cliente/ });
+    expect(within(cartao).queryByRole("button", { name: "Rodar agora" })).not.toBeInTheDocument();
+    fireEvent.click(within(cartao).getByRole("button", { name: "Histórico" }));
+    const lista = await within(cartao).findByRole("list", { name: "Últimas execuções" });
+    expect(within(lista).getByText("↗ 0 novos · ↘ 0 resolvidos")).toBeInTheDocument();
+    expect(within(lista).queryByRole("link")).not.toBeInTheDocument();
   });
 });

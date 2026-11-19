@@ -99,3 +99,31 @@ export interface NovoAgendamentoInput extends QuandoAgendamento {
 }
 
 export type EdicaoAgendamentoInput = Partial<QuandoAgendamento> & { enabled?: boolean };
+
+/** "Rodar agora": o desfecho (o mesmo código de lastOutcome) e o scan criado, quando houve. */
+export interface ResultadoRodarAgora {
+  outcome: string;
+  scanId: string | null;
+}
+
+/** Diff por fingerprint contra a execução COMPLETED anterior do agendamento. */
+export interface DiffExecucao {
+  novos: number;
+  resolvidos: number;
+  persistentes: number;
+}
+
+/** Uma execução do agendamento, no histórico. */
+export interface ExecucaoAgendamento {
+  id: string;
+  status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+  simulated: boolean;
+  createdAt: string;
+  finishedAt: string | null;
+  alertsHigh: number;
+  alertsMedium: number;
+  alertsLow: number;
+  alertsInfo: number;
+  /** null quando a execução não é COMPLETED ou não há COMPLETED anterior. */
+  diff: DiffExecucao | null;
+}

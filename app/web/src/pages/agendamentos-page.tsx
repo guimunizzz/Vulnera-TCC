@@ -16,9 +16,9 @@
  */
 
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CalendarClock, CalendarOff, CalendarCheck2, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarOff, CalendarCheck2, History, Pencil, Play, Trash2 } from "lucide-react";
 import { dastSchedulesApi } from "../lib/api/dast-schedules.api";
 import { useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
@@ -34,7 +34,17 @@ import { useToast } from "../components/ui/toast";
 import { AgendamentoDialog } from "../components/agendamentos/agendamento-dialog";
 import { BotaoVerTour, TourGuiado, type PassoTour } from "../components/tour/tour-guiado";
 import { useTourAutomatico } from "../components/tour/use-tour-automatico";
-import { dataCurta, dataHora, descreverDesfecho, descreverQuando, emQuantoTempo, nomeDoAlvo, ROTULO_PROBLEMA_CURTO, rotuloFuso } from "../lib/agendamento";
+import {
+  dataCurta,
+  dataHora,
+  descreverDesfecho,
+  descreverQuando,
+  emQuantoTempo,
+  nomeDoAlvo,
+  ROTULO_PROBLEMA_CURTO,
+  ROTULO_STATUS_EXECUCAO,
+  rotuloFuso,
+} from "../lib/agendamento";
 import type { AgendamentoVisivel } from "../types/dast-schedule.types";
 
 /** Tour da primeira visita. Passo cujo alvo não está na tela (lista vazia, motor ligado) é pulado. */
@@ -117,8 +127,10 @@ function CartaoAgendamento({
 }) {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const navigate = useNavigate();
   const getErrorMessage = useApiError();
   const tour = (nome: string) => (primeiro ? nome : undefined);
+  const [historicoAberto, setHistoricoAberto] = useState(false);
 
   const alternar = useMutation({
     mutationFn: (enabled: boolean) => dastSchedulesApi.atualizar(s.id, { enabled }),
@@ -127,6 +139,30 @@ function CartaoAgendamento({
       toast.sucesso(enabled ? "Agendamento retomado" : "Agendamento pausado", `${nomeDoAlvo(s)} — ${descreverQuando(s)}`);
     },
     onError: (err: unknown) => toast.erro("Não foi possível mudar o agendamento", getErrorMessage(err)),
+  });
+
+  // Mesmo caminho do disparo agendado: o resultado é o desfecho em português, com o scan quando houve.
+  const rodar = useMutation({
+    mutationFn: () => dastSchedulesApi.rodarAgora(s.id),
+    onSuccess: (resultado) => {
+      queryClient.invalidateQueries({ queryKey: ["dast-schedules"] });
+      const desfecho = descreverDesfecho(resultado.outcome);
+      const scanId = resultado.scanId;
+      toast.mostrar({
+        tipo: desfecho?.tom === "sucesso" ? "sucesso" : desfecho?.tom === "perigo" ? "erro" : "info",
+        titulo: desfecho?.texto ?? "Pedido enviado",
+        descricao: `${nomeDoAlvo(s)} — ${descreverQuando(s)}`,
+        acao: scanId && verScan ? { rotulo: "Ver scan", aoClicar: () => navigate(`/dast/scans/${scanId}`) } : undefined,
+      });
+    },
+    onError: (err: unknown) => toast.erro("Não foi possível rodar agora", getErrorMessage(err)),
+  });
+
+  // Carrega só quando a pessoa abre o histórico; a lista da página não paga por isso.
+  const historico = useQuery({
+    queryKey: ["dast-schedules", "historico", s.id],
+    queryFn: () => dastSchedulesApi.historico(s.id),
+    enabled: historicoAberto,
   });
 
   const desfecho = descreverDesfecho(s.lastOutcome);
@@ -162,6 +198,9 @@ function CartaoAgendamento({
           {s.canEdit && (
             <div data-tour={tour("agenda-ativo")} className="flex items-center gap-2">
               <Switch checked={s.enabled} onCheckedChange={(v) => alternar.mutate(v)} rotulo={s.enabled ? "Ativo" : "Pausado"} disabled={alternar.isPending} />
+              <Button variant="sutil" size="sm" iconeInicio={<Play size={14} aria-hidden="true" />} onClick={() => rodar.mutate()} carregando={rodar.isPending}>
+                Rodar agora
+              </Button>
               <Button variant="sutil" size="sm" iconeInicio={<Pencil size={14} aria-hidden="true" />} onClick={aoEditar}>
                 Editar
               </Button>
@@ -214,6 +253,52 @@ function CartaoAgendamento({
             )}
           </div>
         </dl>
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-subtle pt-3">
+          <Button
+            variant="sutil"
+            size="sm"
+            iconeInicio={<History size={14} aria-hidden="true" />}
+            aria-expanded={historicoAberto}
+            onClick={() => setHistoricoAberto((aberto) => !aberto)}
+          >
+            Histórico
+          </Button>
+        </div>
+
+        {historicoAberto && (
+          <section aria-label={`Histórico de ${nomeDoAlvo(s)}`} className="flex flex-col gap-2">
+            {historico.isLoading && <p className="text-sm text-fg-muted">Carregando execuções…</p>}
+            {historico.isError && <p className="text-sm text-danger">Não foi possível carregar o histórico. Tente de novo em instantes.</p>}
+            {historico.isSuccess && historico.data.length === 0 && <p className="text-sm text-fg-muted">Este agendamento ainda não gerou execuções.</p>}
+            {historico.isSuccess && historico.data.length > 0 && (
+              <ol aria-label="Últimas execuções" className="flex flex-col divide-y divide-subtle">
+                {historico.data.map((e) => (
+                  <li key={e.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2 text-sm">
+                    <span className="text-fg-muted">{dataHora(e.createdAt)}</span>
+                    <Badge tom={e.status === "COMPLETED" ? "sucesso" : e.status === "FAILED" ? "perigo" : e.status === "CANCELLED" ? "neutro" : "acento"}>
+                      {ROTULO_STATUS_EXECUCAO[e.status] ?? e.status}
+                    </Badge>
+                    {e.simulated && <Badge tom="atencao">SIMULADO</Badge>}
+                    <span className="font-mono text-xs text-fg-muted">
+                      Alto {e.alertsHigh} · Médio {e.alertsMedium} · Baixo {e.alertsLow} · Info {e.alertsInfo}
+                    </span>
+                    {e.diff && (
+                      <span className="text-xs font-semibold text-fg">
+                        ↗ {e.diff.novos} novos · ↘ {e.diff.resolvidos} resolvidos
+                      </span>
+                    )}
+                    {verScan && (
+                      <Link to={`/dast/scans/${e.id}`} aria-label={`Ver scan de ${dataHora(e.createdAt)}`} className="text-accent-ink underline">
+                        Ver scan
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        )}
       </article>
     </li>
   );
