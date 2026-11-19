@@ -331,9 +331,11 @@ caminho de execução de scan.
 > 1. **Scan REAL pela fila `bullmq` não validado.** Os cenários da Fase 4 usaram
 >    scans simulados. O Rafael fará a validação depois, com alvo a escolher.
 > 2. **Padrão de `QUEUE_DRIVER`:** continua `memory`. Trocar para `bullmq` é
->    decisão pendente, depois do item 1 e da validação da Fase 5 no compose.
-> 3. **Fase 5:** API e worker de agendamentos implementados; validação no
->    compose e tela web ainda pendentes.
+>    decisão pendente, depois do item 1.
+> 3. **Fase 5:** API e worker de agendamentos implementados, suíte 917/917 e
+>    validados no compose em modo SIMULADO (2026-11-19). Falta a tela web, cujo
+>    formato (página própria? caminho no host autorizado? mais frequências?)
+>    aguarda decisão do Rafael.
 
 ## Fora do escopo (BACKLOG)
 
