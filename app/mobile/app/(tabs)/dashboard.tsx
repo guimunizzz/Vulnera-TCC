@@ -14,6 +14,7 @@ import { projectsApi } from "../../src/api/projects.api";
 import { exposureGraphApi } from "../../src/api/exposure-graph.api";
 import { DataState, GlassSurface, SectionHeading, WorkspaceScreen } from "../../src/components/workspace-ui";
 import { HomeBrand } from "../../src/components/home-brand";
+import { ExposureTrend } from "../../src/components/exposure-trend";
 import { SoftPressable, useWorkspaceReducedMotion } from "../../src/components/workspace-motion";
 import { useApiError } from "../../src/hooks/use-api-error";
 import { exposureOverview, projectOverview } from "../../src/lib/dashboard";
@@ -53,6 +54,7 @@ export default function DashboardScreen() {
         <View style={[ui.grow, { gap: 3 }]}><Text style={ui.body}>{item.title}</Text><Text style={ui.muted}>{item.applicationName} · {severityLabels[item.severityFinal] ?? item.severityFinal}</Text></View><Ionicons name="chevron-forward" size={18} color={workspace.muted} />
       </SoftPressable>) : <Text style={ui.body}>Nenhuma vulnerabilidade aberta para priorizar.</Text>}</GlassSurface>}
     </View></DashboardReveal>
+    {exposure.data && <DashboardReveal delay={160}><ExposureTrend applications={exposure.data.aplicacoes} /></DashboardReveal>}
     <DashboardReveal delay={180}><GlassSurface accessibilityLabel="Abrir grafo de exposição" onPress={() => router.push("/(tabs)/security")}><View style={ui.spread}><View style={[ui.grow, { gap: 5 }]}><Text accessibilityRole="header" style={ui.heading}>Exposição</Text><Text style={ui.muted}>{risks ? `${risks.open} vulnerabilidades abertas nas aplicações ativas` : "Veja as conexões entre aplicações e categorias OWASP."}</Text></View><Ionicons name="git-network-outline" size={24} color={workspace.lavender} /></View></GlassSurface></DashboardReveal>
     <DashboardReveal delay={220}><GlassSurface accessibilityLabel="Ver projetos" onPress={() => router.push("/(tabs)/home")}><View style={ui.spread}><View style={[ui.grow, { gap: 5 }]}><Text style={ui.heading}>Seus projetos</Text><Text style={ui.muted}>Acompanhe suas análises de segurança.</Text></View><Ionicons name="arrow-forward" size={20} color={workspace.lavender} /></View></GlassSurface></DashboardReveal>
   </WorkspaceScreen>;
