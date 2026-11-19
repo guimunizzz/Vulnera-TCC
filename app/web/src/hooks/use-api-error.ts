@@ -168,6 +168,12 @@ const MESSAGES: Record<string, string> = {
   REPORT_NOT_FOUND: "Relatório ainda não disponível para este scan.",
   FINDING_ALREADY_PROMOTED: "Este achado já virou uma vulnerabilidade e não pode ser promovido de novo.",
 
+  // painel de filas (ADR-056)
+  INVALID_QUEUE: "Fila desconhecida. Atualize a tela e tente de novo.",
+  JOB_NOT_FOUND: "Job não encontrado. Ele pode ter sido removido da fila.",
+  JOB_NOT_FAILED: "Só um job com falha pode ser tentado de novo. Ele já mudou de estado; atualize a tela.",
+  QUEUE_DRIVER_MEMORY: "O motor de filas está em memória e não há job com falha para reprocessar.",
+
   // importação SAST/SCA (ADR-052)
   INVALID_FILE_FORMAT: "O arquivo não é um JSON válido. Envie o relatório SARIF ou CycloneDX gerado pela ferramenta.",
   UNSUPPORTED_REPORT_FORMAT: "Formato não reconhecido. São aceitos SARIF 2.1.0 (Semgrep, CodeQL, Trivy...) e CycloneDX (SBOM).",
