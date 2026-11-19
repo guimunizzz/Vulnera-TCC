@@ -9,9 +9,10 @@ import { assistantApi, type AssistantHistory, type AssistantResponse } from "../
 import { assistantActions, assistantScreen, type AssistantActionId, type AssistantScreen } from "../lib/assistant-context";
 import { FONT_FAMILY } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
+import { AssistantMascot } from "./assistant-mascot";
 import { SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
 
-type Message = AssistantHistory & { source?: "gemini" | "local"; actions?: AssistantResponse["actions"] };
+type Message = AssistantHistory & { actions?: AssistantResponse["actions"] };
 const AssistantContext = createContext<((screen: AssistantScreen) => void) | null>(null);
 
 export function AssistantButton({ screen }: { screen?: AssistantScreen }) {
@@ -36,6 +37,8 @@ export function AssistantSession({ children }: { children: ReactNode }) {
   const request = useRef<AbortController | null>(null);
   const alive = useRef(true);
   const scroll = useRef<ComponentRefScroll>(null);
+  const showIntro = !messages.length && !pendingText && !error;
+  const canSend = !pending && !!draft.trim();
   useEffect(() => { alive.current = true; return () => { alive.current = false; request.current?.abort(); }; }, []);
 
   async function send() {
@@ -49,7 +52,7 @@ export function AssistantSession({ children }: { children: ReactNode }) {
       const response = await assistantApi.chat(question, screen, history, controller.signal);
       if (!alive.current || controller.signal.aborted) return;
       if (!response.message?.trim()) throw new Error("EMPTY_RESPONSE");
-      setMessages((previous) => [...previous, { role: "user", content: question }, { role: "assistant", content: response.message, source: response.source, actions: Array.isArray(response.actions) ? response.actions : [] }]);
+      setMessages((previous) => [...previous, { role: "user", content: question }, { role: "assistant", content: response.message, actions: Array.isArray(response.actions) ? response.actions : [] }]);
       setDraft("");
     } catch (failure) {
       if (!alive.current || controller.signal.aborted) return;
@@ -64,21 +67,52 @@ export function AssistantSession({ children }: { children: ReactNode }) {
     {children}
     <Modal visible={visible} animationType={reduced ? "none" : "slide"} onRequestClose={() => setVisible(false)}>
       <SafeAreaView style={[styles.screen, { backgroundColor: workspace.background }]}>
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={[styles.header, { borderBottomColor: workspace.line }]}><View style={{ flex: 1 }}><Text accessibilityRole="header" style={ui.heading}>Vuvu</Text><Text style={ui.muted}>Assistente Vulnera</Text></View><SoftPressable accessibilityRole="button" accessibilityLabel="Fechar assistente" onPress={() => setVisible(false)} style={styles.icon}><Ionicons name="close" size={23} color={workspace.text} /></SoftPressable></View>
-          <ScrollView ref={scroll} style={styles.flex} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: !reduced })}>
-            <Text style={ui.muted}>Sua pergunta e parte da conversa são enviadas ao assistente. Evite incluir dados sensíveis.</Text>
-            {!messages.length && !pendingText && <Text style={ui.body}>Olá! Como posso ajudar você a usar o Vulnera?</Text>}
-            {messages.map((item, index) => <View key={index} style={[styles.message, { backgroundColor: item.role === "user" ? workspace.chipActiveBg : workspace.inset }]}><Text style={ui.eyebrow}>{item.role === "user" ? "VOCÊ" : `VUVU · ${item.source === "gemini" ? "IA" : "AJUDA LOCAL"}`}</Text><Text selectable style={ui.body}>{item.content}</Text>{item.actions?.map((action) => {
-              if (!Object.prototype.hasOwnProperty.call(assistantActions, action.id)) return null;
-              const destination = assistantActions[action.id as AssistantActionId];
-              return <SoftPressable key={action.id} accessibilityRole="button" onPress={() => { setVisible(false); router.push(destination.path as Href); }} style={[styles.action, { borderColor: workspace.actionBorder }]}><Text style={[ui.body, { color: workspace.lavender }]}>{destination.label}</Text></SoftPressable>;
-            })}</View>)}
-            {pendingText && <View style={[styles.message, { backgroundColor: workspace.chipActiveBg }]}><Text style={ui.eyebrow}>VOCÊ</Text><Text style={ui.body}>{pendingText}</Text></View>}
-            {pending && <View style={styles.waiting} accessibilityLiveRegion="polite"><ActivityIndicator color={workspace.lavender} /><Text style={ui.muted}>Vuvu está respondendo...</Text></View>}
+        <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={[styles.header, { borderBottomColor: workspace.line }]}>
+            <View testID="vuvu-portrait" style={[styles.portrait, { backgroundColor: workspace.neutralTint }]}>
+              <AssistantMascot width={40} />
+            </View>
+            <Text accessibilityRole="header" style={[ui.heading, styles.flex]}>Vuvu</Text>
+            <SoftPressable accessibilityRole="button" accessibilityLabel="Fechar assistente" onPress={() => setVisible(false)} style={styles.icon}>
+              <Ionicons name="close" size={23} color={workspace.text} />
+            </SoftPressable>
+          </View>
+          <ScrollView ref={scroll} style={styles.flex} contentContainerStyle={[styles.messages, showIntro && styles.introContainer]} keyboardShouldPersistTaps="handled" onContentSizeChange={() => { if (!showIntro) scroll.current?.scrollToEnd({ animated: !reduced }); }}>
+            {showIntro && <View style={styles.intro}>
+              <View testID="vuvu-intro" style={styles.mascotStage}>
+                <View style={[styles.mascotHalo, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]} />
+                <AssistantMascot width={136} greet={visible} />
+              </View>
+              <Text style={[ui.heading, styles.introTitle]}>Como posso ajudar?</Text>
+            </View>}
+            {messages.map((item, index) => {
+              const isUser = item.role === "user";
+              return <View key={index} style={[styles.message, isUser ? styles.userMessage : styles.assistantMessage, { backgroundColor: isUser ? workspace.chipActiveBg : workspace.inset }]}>
+                <Text selectable accessibilityLabel={`${isUser ? "Você" : "Vuvu"}: ${item.content}`} style={ui.body}>{item.content}</Text>
+                {item.actions?.map((action) => {
+                  if (!Object.prototype.hasOwnProperty.call(assistantActions, action.id)) return null;
+                  const destination = assistantActions[action.id as AssistantActionId];
+                  return <SoftPressable key={action.id} accessibilityRole="button" onPress={() => { setVisible(false); router.push(destination.path as Href); }} style={[styles.action, { borderColor: workspace.actionBorder }]}>
+                    <Text style={[ui.body, { color: workspace.lavender }]}>{destination.label}</Text>
+                  </SoftPressable>;
+                })}
+              </View>;
+            })}
+            {pendingText && <View style={[styles.message, styles.userMessage, { backgroundColor: workspace.chipActiveBg }]}>
+              <Text accessibilityLabel={`Você: ${pendingText}`} style={ui.body}>{pendingText}</Text>
+            </View>}
+            {pending && <View style={styles.waiting} accessibilityLiveRegion="polite"><ActivityIndicator color={workspace.lavender} /><Text style={ui.muted}>Vuvu está respondendo…</Text></View>}
             {error && <Text accessibilityRole="alert" style={[ui.body, { color: workspace.dangerInk }]}>{error}</Text>}
           </ScrollView>
-          <View style={[styles.composer, { borderTopColor: workspace.line }]}><TextInput accessibilityLabel="Pergunta para Vuvu" multiline maxLength={1000} value={draft} editable={!pending} onChangeText={setDraft} placeholder="Digite sua pergunta" placeholderTextColor={workspace.muted} style={[styles.input, { color: workspace.text, backgroundColor: workspace.inset, borderColor: workspace.line }]} /><SoftPressable accessibilityRole="button" accessibilityLabel="Enviar pergunta" accessibilityState={{ disabled: pending || !draft.trim() }} disabled={pending || !draft.trim()} onPress={() => { void send(); }} style={[styles.send, { backgroundColor: workspace.actionBg, opacity: pending || !draft.trim() ? 0.5 : 1 }]}><Ionicons name="send" size={20} color={workspace.lavender} /></SoftPressable></View>
+          <View style={[styles.composer, { borderTopColor: workspace.line }]}>
+            <View style={styles.composerRow}>
+              <TextInput accessibilityLabel="Pergunta para Vuvu" multiline maxLength={1000} value={draft} editable={!pending} onChangeText={setDraft} placeholder="Digite sua pergunta" placeholderTextColor={workspace.muted} style={[styles.input, { color: workspace.text, backgroundColor: workspace.inset, borderColor: workspace.line }]} />
+              <SoftPressable accessibilityRole="button" accessibilityLabel="Enviar pergunta" accessibilityState={{ disabled: !canSend }} disabled={!canSend} onPress={() => { void send(); }} style={[styles.send, { backgroundColor: workspace.actionBg }]}>
+                <Ionicons name="send" size={20} color={workspace.lavender} />
+              </SoftPressable>
+            </View>
+            <Text style={[ui.muted, styles.privacy]}>Evite compartilhar dados sensíveis.</Text>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
@@ -87,8 +121,22 @@ export function AssistantSession({ children }: { children: ReactNode }) {
 
 type ComponentRefScroll = ComponentRef<typeof ScrollView>;
 const styles = StyleSheet.create({
-  launcher: { width: 48, height: 48, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center" }, screen: { flex: 1 }, flex: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1 }, icon: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
-  messages: { gap: 12, padding: 20 }, message: { borderRadius: 18, padding: 14, gap: 8 }, waiting: { flexDirection: "row", gap: 8, alignItems: "center" }, action: { minHeight: 48, justifyContent: "center", borderTopWidth: 1 },
-  composer: { flexDirection: "row", alignItems: "flex-end", padding: 12, gap: 8, borderTopWidth: 1 }, input: { flex: 1, minHeight: 48, maxHeight: 120, borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, fontFamily: FONT_FAMILY.regular, fontSize: 15 }, send: { width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  launcher: { width: 48, height: 48, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  screen: { flex: 1 }, content: { flex: 1, width: "100%", maxWidth: 640, alignSelf: "center" }, flex: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },
+  portrait: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  icon: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
+  messages: { gap: 12, padding: 16 }, introContainer: { flexGrow: 1, justifyContent: "center" },
+  intro: { alignItems: "center", gap: 8, paddingVertical: 12 }, introTitle: { textAlign: "center" },
+  mascotStage: { width: 148, height: 148, alignItems: "center", justifyContent: "center" },
+  mascotHalo: { position: "absolute", width: 120, height: 120, borderRadius: 60, borderWidth: 1 },
+  message: { maxWidth: "90%", borderRadius: 18, padding: 14, gap: 8 },
+  userMessage: { alignSelf: "flex-end", borderBottomRightRadius: 6 },
+  assistantMessage: { alignSelf: "flex-start", borderBottomLeftRadius: 6 },
+  waiting: { flexDirection: "row", gap: 8, alignItems: "center" }, action: { minHeight: 48, justifyContent: "center", borderTopWidth: 1 },
+  composer: { paddingHorizontal: 16, paddingVertical: 10, gap: 6, borderTopWidth: 1 },
+  composerRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
+  input: { flex: 1, minHeight: 48, maxHeight: 120, borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, fontFamily: FONT_FAMILY.regular, fontSize: 15 },
+  send: { width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  privacy: { fontSize: 11 },
 });
