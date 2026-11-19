@@ -85,6 +85,7 @@ function AuthenticatedTabs() {
         listeners={{ tabPress: () => haptics.tap() }}
       />
       <Tabs.Screen name="security" options={{ title: "Segurança" }} listeners={{ tabPress: () => haptics.tap() }} />
+      <Tabs.Screen name="reports" options={{ title: "Relatórios" }} listeners={{ tabPress: () => haptics.tap() }} />
       <Tabs.Screen
         name="settings"
         options={{

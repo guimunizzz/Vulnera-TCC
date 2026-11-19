@@ -68,6 +68,7 @@ export default function ProjectDetailScreen() {
       {project.startedAt && <DetailField label="INÍCIO DA ANÁLISE" value={displayDate(project.startedAt)} />}
       {project.closedAt && <DetailField label="ENCERRAMENTO" value={displayDate(project.closedAt)} />}
     </WorkspaceDisclosure></MotionReveal>
+    <ActionButton icon="document-text-outline" label="Ver relatório executivo" onPress={() => router.push(`/(tabs)/reports/${project.id}`)} />
     <MotionReveal delay={120} distance={8} style={{ gap: 16 }}><SectionHeading title="Vulnerabilidades" meta={firstPage ? `${firstPage.pagination.total} no total` : undefined} />
       <GlassSurface style={styles.severities}>{severities.map((item) => <View key={item.key} style={styles.severity}>
         <View style={[styles.severityDot, { backgroundColor: item.dot }]} /><Text style={[styles.severityCount, { color: item.color }]}>{firstPage ? firstPage.facets.severity[item.key] ?? 0 : "—"}</Text><Text style={[styles.severityLabel, { color: workspace.muted }]}>{item.label}</Text>

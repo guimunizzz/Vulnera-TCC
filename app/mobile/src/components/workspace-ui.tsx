@@ -9,7 +9,7 @@ import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTimin
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { FONT_FAMILY } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
 import { useTabBarClearance } from "../hooks/use-tab-bar-clearance";
@@ -55,11 +55,11 @@ export function WorkspaceScreen({ children, scroll = true, refreshing = false, o
   </SafeAreaView></WorkspaceContentMotionProvider>;
 }
 
-export function PageHeader({ label, back = false, children }: { label: string; back?: boolean; children?: ReactNode }) {
+export function PageHeader({ label, back = false, backFallback = "/(tabs)/home", children }: { label: string; back?: boolean; backFallback?: Href; children?: ReactNode }) {
   const router = useRouter();
   const { workspace, ui } = useAppTheme();
   return <View style={styles.header}>
-    {back ? <SoftPressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={() => { haptics.tap(); if (router.canGoBack()) router.back(); else router.replace("/(tabs)/home"); }} style={[styles.iconButton, { borderColor: workspace.line, backgroundColor: workspace.neutralTint }]}>
+    {back ? <SoftPressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={() => { haptics.tap(); if (router.canGoBack()) router.back(); else router.replace(backFallback); }} style={[styles.iconButton, { borderColor: workspace.line, backgroundColor: workspace.neutralTint }]}>
       <Ionicons name="arrow-back" size={22} color={workspace.text} /></SoftPressable>
       : <HomeBrand />}
     <Text style={[ui.eyebrow, styles.headerLabel, { color: workspace.secondary }, !back && styles.brandLabel]}>{label}</Text>{children ?? (back ? <View style={[styles.headerDot, { backgroundColor: workspace.muted }]} /> : null)}
