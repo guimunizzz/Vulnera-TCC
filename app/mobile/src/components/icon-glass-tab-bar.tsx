@@ -5,7 +5,7 @@
  * Consumidor: layout autenticado do mobile, preservando os eventos de navegação.
  */
 import { memo, useEffect, type ComponentProps } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import type { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,7 +20,7 @@ const EDGE = 8;
 const INDICATOR_WIDTH = 24;
 export const TAB_TRANSITION_DURATION = 190;
 
-type TabGlyph = "grid-outline" | "folder-outline" | "document-text-outline" | "settings-outline";
+type TabGlyph = "grid-outline" | "folder-outline" | "shield-outline" | "document-text-outline";
 
 const NavigationIcon = memo(function NavigationIcon({
   name,
@@ -67,24 +67,24 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
   const reduced = useWorkspaceReducedMotion();
   const { isDark, workspace } = useAppTheme();
   const routes = state.routes.filter(
-    (route) => route.name === "dashboard" || route.name === "home" || route.name === "reports" || route.name === "settings",
+    (route) => route.name === "dashboard" || route.name === "home" || route.name === "security" || route.name === "reports",
   );
   const count = Math.max(1, routes.length);
   const barWidth = count >= 3 ? 240 : TAB_BAR.width;
   const cellWidth = (barWidth - EDGE * 2 - 2) / count;
   const currentKey = state.routes[state.index]?.key;
-  const selected = Math.max(0, routes.findIndex((route) => route.key === currentKey));
+  const selected = routes.findIndex((route) => route.key === currentKey);
   const position = useSharedValue(selected);
   useEffect(() => {
-    position.value = withTiming(selected, { ...SOFT_MOTION, duration: reduced ? 0 : TAB_TRANSITION_DURATION });
+    if (selected >= 0) position.value = withTiming(selected, { ...SOFT_MOTION, duration: reduced ? 0 : TAB_TRANSITION_DURATION });
     return () => cancelAnimation(position);
   }, [selected, reduced, position]);
   const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: position.value * cellWidth }] }));
 
   const iconFor = (name: string): TabGlyph =>
-    name === "dashboard" ? "grid-outline" : name === "home" ? "folder-outline" : name === "reports" ? "document-text-outline" : "settings-outline";
+    name === "dashboard" ? "grid-outline" : name === "home" ? "folder-outline" : name === "security" ? "shield-outline" : "document-text-outline";
   const defaultTitle = (name: string): string =>
-    name === "dashboard" ? "Painel" : name === "home" ? "Projetos" : name === "reports" ? "Relatórios" : "Minha conta";
+    name === "dashboard" ? "Painel" : name === "home" ? "Projetos" : name === "security" ? "Segurança" : "Relatórios";
 
   return (
     <View
@@ -128,6 +128,7 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
                 backgroundColor: workspace.lavender,
               },
               indicator,
+              selected < 0 && { opacity: 0 },
             ]}
           />
           {routes.map((route) => {
@@ -157,6 +158,7 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
                   idleColor={workspace.muted}
                   activeColor={workspace.lavender}
                 />
+                <Text accessible={false} numberOfLines={1} style={[styles.label, { color: focused ? workspace.lavender : workspace.muted }]}>{title}</Text>
               </SoftPressable>
             );
           })}
@@ -186,12 +188,13 @@ const styles = StyleSheet.create({
   },
   reflection: { position: "absolute", top: 0, left: 20, right: 20, height: 1 },
   divider: { position: "absolute", width: 1, height: 20, top: 17 },
-  button: { minHeight: 48, alignItems: "center", justifyContent: "center", paddingBottom: 3 },
-  icon: { width: 32, height: 32 },
+  button: { minHeight: 48, alignItems: "center", justifyContent: "center", paddingBottom: 4 },
+  icon: { width: 26, height: 26 },
+  label: { fontSize: 10, lineHeight: 13 },
   iconLayer: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center" },
   indicator: {
     position: "absolute",
-    bottom: 6,
+    bottom: 2,
     width: INDICATOR_WIDTH,
     height: 3,
     borderRadius: 2,

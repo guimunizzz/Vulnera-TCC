@@ -15,6 +15,7 @@ import { exposureGraphApi } from "../../../src/api/exposure-graph.api";
 import { DataState, FilterChip, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { SoftPressable, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
 import { useApiError } from "../../../src/hooks/use-api-error";
+import { useAuthStore } from "../../../src/store/auth.store";
 import { sharedCategories } from "../../../src/lib/exposure-graph";
 import { FONT_FAMILY } from "../../../src/theme/tokens";
 import { useAppTheme } from "../../../src/theme/use-app-theme";
@@ -30,9 +31,10 @@ const sensitivity: Record<string, string> = { PUBLIC: "Pública", INTERNAL: "Int
 const sourceLabels: Record<string, string> = { MANUAL: "Manual", DAST_IMPORT: "DAST", SAST_IMPORT: "SAST", SCA_IMPORT: "SCA" };
 const categoryLabel = (code: string) => OWASP_LABELS[code] ?? code;
 
-export default function ExposureScreen() {
+export default function ExposureScreen({ root = false }: { root?: boolean }) {
   const { workspace, ui } = useAppTheme();
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
   const errorMessage = useApiError();
   const [internetOnly, setInternetOnly] = useState(false);
   const [selection, setSelection] = useState<Selection>({ kind: "company" });
@@ -46,7 +48,7 @@ export default function ExposureScreen() {
   const selectApp = (id: string) => setSelection({ kind: "app", id });
   const selectCategory = (id: string) => setSelection({ kind: "category", id });
   return <WorkspaceScreen refreshing={query.isRefetching} onRefresh={() => { void query.refetch(); }}>
-    <PageHeader label="EXPOSIÇÃO" back />
+    <PageHeader label="EXPOSIÇÃO" back={!root}>{root ? <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable> : undefined}</PageHeader>
     <View style={{ gap: 8 }}><Text accessibilityRole="header" style={ui.title}>Grafo de exposição</Text><Text style={ui.body}>Conexões entre sua empresa, aplicações e categorias OWASP com vulnerabilidades abertas.</Text></View>
     {query.isPending && <DataState loading title="Carregando exposição" />}
     {query.isError && !query.data && (noCompany ? <DataState title="Conta sem empresa" message="Vincule sua conta a uma empresa para consultar a exposição." /> : <DataState error title="Exposição indisponível" message={errorMessage(query.error)} onRetry={() => { void query.refetch(); }} />)}
@@ -152,4 +154,5 @@ const styles = StyleSheet.create({
   counts: { flexDirection: "row", flexWrap: "wrap", gap: 12 }, count: { minWidth: 56, flexGrow: 1 },
   detail: { minHeight: 48, borderTopWidth: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 },
   zoomRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
+  avatar: { width: 48, height: 48, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center" }, avatarText: { fontFamily: FONT_FAMILY.semibold, fontSize: 16 },
 });

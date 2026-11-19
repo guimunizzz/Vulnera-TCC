@@ -14,7 +14,7 @@ import { useApiError } from "../../../src/hooks/use-api-error";
 import { useAuthStore } from "../../../src/store/auth.store";
 import { useTabBarClearance } from "../../../src/hooks/use-tab-bar-clearance";
 import { ProjectCard } from "../../../src/components/project-card";
-import { DataState, FilterChip, GlassSurface, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
+import { DataState, FilterChip, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { HomeBrand } from "../../../src/components/home-brand";
 import { WorkspaceSkeleton } from "../../../src/components/workspace-skeleton";
 import { FONT_FAMILY } from "../../../src/theme/tokens";
@@ -28,7 +28,7 @@ const FILTERS: { value: "ALL" | ProjectStatus; label: string }[] = [
 ];
 
 export default function HomeScreen() {
-  const { colors, workspace, ui } = useAppTheme();
+  const { workspace, ui } = useAppTheme();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const bottom = useTabBarClearance();
@@ -45,8 +45,6 @@ export default function HomeScreen() {
   const projects = useMemo(() => query.data ?? [], [query.data]);
   const visible = useMemo(() => projects.filter((project) =>
     (filter === "ALL" || project.status === filter) && project.name.toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR"))), [projects, filter, search]);
-  const underway = projects.filter((project) => project.status === "IN_PROGRESS" || project.status === "IN_REVIEW").length;
-  const completed = projects.filter((project) => project.status === "COMPLETED").length;
   const header = <View style={styles.header}>
     <View style={styles.topBar}>
       <HomeBrand />
@@ -55,20 +53,11 @@ export default function HomeScreen() {
       </Pressable>
     </View>
     <MotionReveal distance={8} style={styles.hero}>
-      <Text accessibilityRole="header" style={ui.title}>Olá, {user?.name?.split(" ")[0] ?? "cliente"}<Text style={{ color: workspace.lavender }}>.</Text></Text>
+      <Text accessibilityRole="header" style={ui.title}>Seus projetos</Text>
       <Text style={ui.body}>Acompanhe suas análises de segurança.</Text>
     </MotionReveal>
-    {query.isPending && !query.data && <WorkspaceSkeleton kind="metrics" label="Carregando resumo dos projetos" />}
-    {!!query.data && <MotionReveal delay={40} distance={8}><GlassSurface style={styles.metrics}>
-      <View style={styles.metric}><View style={ui.row}><Ionicons name="scan-outline" size={20} color={colors.severity.lowInk} /><Text style={[styles.metricNumber, { color: workspace.text }]}>{underway}</Text></View><Text style={ui.muted}>Em análise ou revisão</Text></View>
-      <View style={[styles.metricDivider, { backgroundColor: workspace.line }]} />
-      <View style={styles.metric}><View style={ui.row}><Ionicons name="checkmark-done-outline" size={20} color={workspace.successAccent} /><Text style={[styles.metricNumber, { color: workspace.text }]}>{completed}</Text></View><Text style={ui.muted}>Projetos concluídos</Text></View>
-    </GlassSurface></MotionReveal>}
-    <GlassSurface accessibilityLabel="Abrir grafo de exposição da empresa" onPress={() => router.push("/(tabs)/home/exposure")}>
-      <View style={ui.spread}><View style={ui.grow}><Text style={ui.heading}>Grafo de exposição</Text><Text style={ui.muted}>Aplicações e categorias OWASP conectadas</Text></View><Ionicons name="git-network-outline" size={24} color={workspace.lavender} /></View>
-    </GlassSurface>
     <MotionReveal delay={80} distance={8} style={styles.portfolio}>
-      <SectionHeading title="Seus projetos" meta={query.data ? `${projects.length} no total` : undefined} />
+      {query.data && <Text style={ui.muted}>{projects.length} {projects.length === 1 ? "projeto" : "projetos"} no total</Text>}
       <Animated.View style={[styles.search, { borderColor: workspace.line }, searchStyle]}>
         <Ionicons name="search-outline" size={19} color={workspace.muted} />
         <TextInput accessibilityLabel="Buscar projetos pelo nome" placeholder="Buscar um projeto" placeholderTextColor={workspace.muted}
@@ -103,8 +92,6 @@ const styles = StyleSheet.create({
   avatar: { width: 48, height: 48, borderRadius: 18, alignItems: "center", justifyContent: "center", borderWidth: 1 },
   avatarText: { fontFamily: FONT_FAMILY.semibold, fontSize: 16 },
   hero: { gap: 8, paddingVertical: 4 },
-  metrics: { flexDirection: "row", gap: 16, padding: 16 }, metric: { flex: 1, gap: 6 }, metricDivider: { width: 1 },
-  metricNumber: { fontFamily: FONT_FAMILY.medium, fontSize: 26, lineHeight: 32 },
   portfolio: { gap: 12 }, search: { flexDirection: "row", alignItems: "center", paddingLeft: 16, paddingRight: 4, minHeight: 52, borderRadius: 18, borderWidth: 1 },
   searchInput: { flex: 1, minWidth: 0, padding: 12, fontFamily: FONT_FAMILY.regular, fontSize: 15 },
   clear: { width: 48, height: 48, alignItems: "center", justifyContent: "center" }, filters: { gap: 8 },
