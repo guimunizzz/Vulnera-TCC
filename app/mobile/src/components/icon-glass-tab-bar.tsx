@@ -20,7 +20,7 @@ const EDGE = 8;
 const INDICATOR_WIDTH = 24;
 export const TAB_TRANSITION_DURATION = 190;
 
-type TabGlyph = "folder-outline" | "document-text-outline" | "settings-outline";
+type TabGlyph = "grid-outline" | "folder-outline" | "document-text-outline" | "settings-outline";
 
 const NavigationIcon = memo(function NavigationIcon({
   name,
@@ -67,7 +67,7 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
   const reduced = useWorkspaceReducedMotion();
   const { isDark, workspace } = useAppTheme();
   const routes = state.routes.filter(
-    (route) => route.name === "home" || route.name === "reports" || route.name === "settings",
+    (route) => route.name === "dashboard" || route.name === "home" || route.name === "reports" || route.name === "settings",
   );
   const count = Math.max(1, routes.length);
   const barWidth = count >= 3 ? 240 : TAB_BAR.width;
@@ -82,9 +82,9 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
   const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: position.value * cellWidth }] }));
 
   const iconFor = (name: string): TabGlyph =>
-    name === "home" ? "folder-outline" : name === "reports" ? "document-text-outline" : "settings-outline";
+    name === "dashboard" ? "grid-outline" : name === "home" ? "folder-outline" : name === "reports" ? "document-text-outline" : "settings-outline";
   const defaultTitle = (name: string): string =>
-    name === "home" ? "Projetos" : name === "reports" ? "Relatórios" : "Minha conta";
+    name === "dashboard" ? "Painel" : name === "home" ? "Projetos" : name === "reports" ? "Relatórios" : "Minha conta";
 
   return (
     <View

@@ -75,6 +75,7 @@ function AuthenticatedTabs() {
         transitionSpec: { animation: "timing", config: { duration: reduced ? 0 : TAB_TRANSITION_DURATION, easing: Easing.out(Easing.cubic) } },
       }}
     >
+      <Tabs.Screen name="dashboard" options={{ title: "Painel" }} listeners={{ tabPress: () => haptics.tap() }} />
       <Tabs.Screen
         name="home"
         options={{

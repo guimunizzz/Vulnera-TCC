@@ -177,7 +177,7 @@ function LoginContent() {
       setError(null);
       haptics.success();
       setAuth(auth);
-      router.replace("/(tabs)/home");
+      router.replace("/(tabs)/dashboard");
     },
     onError: (err: unknown) => {
       setError(getErrorMessage(err));
