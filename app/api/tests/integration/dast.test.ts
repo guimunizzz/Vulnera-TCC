@@ -231,6 +231,24 @@ describe("DAST — ciclo de vida", () => {
     expect(depois?.progress).toBe(0);
   });
 
+  it("DAST-LIFE-06 — duas criações simultâneas para o mesmo alvo: uma 201 e uma 409", async () => {
+    const { pentesterAToken } = await seedActors();
+    const targetUrl = "https://alvo-corrida.test";
+    const criar = () => request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`).send({ mode: "SIMULATED", targetUrl });
+
+    const [a, b] = await Promise.all([criar(), criar()]);
+    expect([a.status, b.status].sort((x, y) => x - y)).toEqual([201, 409]);
+    const vencedor = a.status === 201 ? a : b;
+    const perdedor = a.status === 201 ? b : a;
+    expect(perdedor.body.error).toBe("SCAN_ALREADY_RUNNING_FOR_TARGET");
+
+    // O service grava a URL canonicalizada (.href, com "/" no fim), não a digitada.
+    const ativos = await prisma.dastScan.count({ where: { targetUrl: new URL(targetUrl).href, status: { in: ["QUEUED", "RUNNING"] } } });
+    expect(ativos).toBe(1);
+
+    await request(app).post(`/api/dast/scans/${vencedor.body.id}/cancel`).set("Authorization", `Bearer ${pentesterAToken}`);
+  });
+
   it("DAST-LIFE-03 — timeout marca FAILED com SCAN_TIMEOUT", async () => {
     const original = process.env.DAST_SCAN_TIMEOUT_MS;
     process.env.DAST_SCAN_TIMEOUT_MS = "50"; // bem menor que os 3000ms do fallback simulado

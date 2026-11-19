@@ -173,15 +173,15 @@ export class DastScanService {
 
     const scope = await this.resolveScope(actor, dto);
 
-    const active = await this.repository.findActiveForTarget(targetUrl);
-    if (active) throw new Error("SCAN_ALREADY_RUNNING_FOR_TARGET");
-
-    const created = await this.repository.create({
+    // Checagem do alvo e INSERT na mesma transação com lock: duas requisições
+    // simultâneas para o mesmo alvo não podem criar dois scans.
+    const created = await this.repository.createIfTargetFree({
       targetUrl,
       requestedById: actor.userId,
       simulated: dto.mode === "SIMULATED",
       ...scope,
     });
+    if (!created) throw new Error("SCAN_ALREADY_RUNNING_FOR_TARGET");
     const scan = await this.repository.update(created.id, { containerName: created.simulated ? null : containerNameFor(created.id) });
 
     await this.auditLogRepository.create({
@@ -239,9 +239,7 @@ export class DastScanService {
    */
   async criarAgendado(pedido: PedidoScanAgendado): Promise<DastScanEntity> {
     const targetUrl = validateTargetUrl(pedido.targetUrl).href;
-    if (await this.repository.findActiveForTarget(targetUrl)) throw new Error("TARGET_BUSY");
-
-    const created = await this.repository.create({
+    const created = await this.repository.createIfTargetFree({
       targetUrl,
       requestedById: pedido.requestedById,
       simulated: pedido.mode === "SIMULATED",
@@ -251,6 +249,7 @@ export class DastScanService {
       trigger: "SCHEDULED",
       scheduleId: pedido.scheduleId,
     });
+    if (!created) throw new Error("TARGET_BUSY");
     const scan = await this.repository.update(created.id, { containerName: created.simulated ? null : containerNameFor(created.id) });
     await this.auditLogRepository.create({
       actorId: pedido.requestedById,
