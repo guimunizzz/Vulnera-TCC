@@ -142,11 +142,6 @@ export function loginRateLimitMiddleware(req: Request, res: Response, next: Next
   next();
 }
 
-export function registerRateLimitMiddleware(req: Request, res: Response, next: NextFunction): void {
-  if (!consume(req, res, "auth-register-ip", clientFingerprint(req))) return;
-  next();
-}
-
 export function refreshRateLimitMiddleware(req: Request, res: Response, next: NextFunction): void {
   if (!consume(req, res, "auth-refresh", refreshFingerprint(req))) return;
   next();

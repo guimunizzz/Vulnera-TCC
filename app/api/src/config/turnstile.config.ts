@@ -22,6 +22,7 @@ const CLOUDFLARE_TEST_SECRET_KEYS = new Set([
 ]);
 
 export function loadTurnstileCaptchaConfig(): TurnstileCaptchaConfig {
+  const isProduction = process.env.NODE_ENV === "production";
   const secretKey = EnvVar.get(EnvKeys.TURNSTILE_SECRET_KEY);
   if (
     secretKey !== secretKey.trim() ||
@@ -39,10 +40,16 @@ export function loadTurnstileCaptchaConfig(): TurnstileCaptchaConfig {
   if (expectedHostname && !isHostname(expectedHostname)) {
     throw new Error("INVALID_TURNSTILE_EXPECTED_HOSTNAME");
   }
+  if (isProduction && !expectedHostname) {
+    throw new Error("MISSING_TURNSTILE_EXPECTED_HOSTNAME");
+  }
 
   const expectedAction = optionalText(EnvKeys.TURNSTILE_EXPECTED_ACTION, 32);
   if (expectedAction && !/^[A-Za-z0-9_-]+$/u.test(expectedAction)) {
     throw new Error("INVALID_TURNSTILE_EXPECTED_ACTION");
+  }
+  if (isProduction && !expectedAction) {
+    throw new Error("MISSING_TURNSTILE_EXPECTED_ACTION");
   }
 
   const timeoutMs = readInteger(EnvKeys.TURNSTILE_TIMEOUT_MS, 5_000, 1, MAX_TIMEOUT_MS);

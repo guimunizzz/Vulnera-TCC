@@ -9,6 +9,46 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-19 — Issue #51, Etapa 7 iniciada (cutover em andamento)
+
+Registro preliminar do cutover: `/api/auth/register` retorna 404 e `/register`
+direciona para `/request-access`; login/refresh/logout, ativação transacional,
+autorização e planos são preservados. Company+OWNER usa CAS transacional; pedido
+PENDING do mesmo plano é retomado, plano diferente recebe 409 e pedido/auditoria
+são atômicos. O onboarding-status é restrito ao CLIENT OWNER da própria empresa;
+`/current` permanece ACTIVE. CNPJ é opcional e aprovação comercial continua
+separada do acesso. Production exige hostname e action reais de CAPTCHA, com
+secret somente na API. SMTP externo está reservado para deploy.
+
+API TSC PASS, lint com dois imports antigos e Auth+Company 21/21. Full API: 72
+suítes, 65 passaram/7 falharam; 1064 testes passaram/46 falharam em 967 s.
+Reteste das sete: 6/7 suítes e 231/233 testes passaram; controle isolado em
+`e5e353c` reproduziu os mesmos dois timeouts de `zap-runner`, sem mudança DAST.
+São 71/72 suítes distintas PASS; resultados de testes sobrepostos permanecem
+separados. Web TSC+Vite PASS, lint 0 erros/9 avisos, contraste 132/132, Rollup
+4.68.5 e CSS scoped servido; API/Web Docker final PASS, E2E real de projeto
+1/1, Vitest focal `/register` 2/2 e `min-h-touch` 44 px aprovado na escala.
+Web completa em baixa concorrência: 87 arquivos, 85 PASS/2 FAIL, 708/710;
+finding de nome acessível Code Import preexistente da `dev` antiga, teste local
+de transição imediata onboarding em correção/reteste. Playwright mock original
+9/11; CA-01/CA-09 passaram separados 2/2, sem declarar 11/11 agregado. Smoke
+Chrome isolado confirmou CTA, `/register` → `/request-access`, nenhum POST;
+padding computado 12 px nos quatro campos a 390 px e 16 px a 1440 px; login
+preservou 42 px e prefixo. Smoke HTTP separado: register
+404, rotas protegidas anônimas 401 e CAPTCHA ausente 400. Prova manual na stack
+isolada (porta 8186) mostrou widget em sucesso e solicitação recebida; MySQL
+agregado confirmou a trilha `PENDING_EMAIL_VERIFICATION` → `PENDING_REVIEW` →
+`APPROVED` → `ACTIVATED`, e-mail verificado e convite usado. Verificação e
+aprovação responderam 200; ativação/login/onboarding concluídos pela UI. Leitura
+agregada confirmou uma sessão, User CLIENT/OWNER, Company sem CNPJ e
+Subscription `PENDING_APPROVAL`; MailHog recebeu uma verificação e um convite.
+Owner aplicou padding 12–16 px a quatro inputs sem prefixo, preservando login;
+TSC/Vite build passaram. `origin/dev` observado em `95f3252` (3 commits
+SAST/SCA); sem integração/merge. Após aprovação dos canários, pendem gates de
+integração e validações pós-`dev`/remotas. O rascunho em
+[`SECURITY-AUTH-ETAPA-7.md`](../../../SECURITY-AUTH-ETAPA-7.md) registra limites
+e follow-ups. Este marco não é aceite, merge ou encerramento da issue.
+
 ## 2026-11-17 — Issue #51, Etapa 6 iniciada (integração web)
 
 Recebidos resultados focais A/B/C/D: 101/101 testes distintos em 19 suítes;

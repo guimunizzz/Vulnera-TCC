@@ -7,14 +7,15 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { App } from "../App";
 import { ThemeProvider } from "../design/theme-provider";
+import { RegisterPage } from "../pages/auth/register-page";
+import { RequestAccessPage } from "../pages/auth/request-access-page";
 import { useAuthStore } from "../store/auth.store";
-import { authApi } from "../lib/api/auth.api";
 
 vi.mock("../lib/api/auth.api", () => ({
-  authApi: { login: vi.fn(), register: vi.fn(), logout: vi.fn() },
+  authApi: { login: vi.fn(), logout: vi.fn() },
 }));
 vi.mock("../components/auth/turnstile-challenge", async () => {
   const react = await import("react");
@@ -27,6 +28,11 @@ vi.mock("../components/auth/turnstile-challenge", async () => {
 function LocalizacaoAtual() {
   const location = useLocation();
   return <output data-testid="rota-atual">{location.pathname}</output>;
+}
+
+function VoltarNoHistorico() {
+  const navigate = useNavigate();
+  return <button type="button" onClick={() => navigate(-1)}>Voltar</button>;
 }
 
 function renderApp(path: string) {
@@ -43,12 +49,33 @@ function renderApp(path: string) {
   );
 }
 
+function renderRedirectLegado() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/pagina-anterior", "/register"]} initialIndex={1}>
+          <LocalizacaoAtual />
+          <VoltarNoHistorico />
+          <Routes>
+            <Route path="/pagina-anterior" element={<h1>Página anterior</h1>} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/request-access" element={<RequestAccessPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
+  );
+}
+
 beforeAll(async () => {
   await Promise.all([
     import("../pages/auth/auth-layout"),
     import("../pages/auth/login-page"),
     import("../pages/auth/register-page"),
     import("../pages/auth/request-access-page"),
+    import("../pages/auth/verify-email-page"),
+    import("../pages/auth/activate-account-page"),
   ]);
 }, 60_000);
 
@@ -65,15 +92,18 @@ describe("Navegação para acesso controlado", () => {
 
     expect(await screen.findByRole("heading", { name: "Solicitar acesso" })).toBeInTheDocument();
     expect(screen.getByTestId("rota-atual")).toHaveTextContent("/request-access");
-    expect(authApi.register).not.toHaveBeenCalled();
   });
 
-  it("redireciona /register com replace lógico e não chama authApi.register", async () => {
-    renderApp("/register");
+  it("redireciona /register para solicitação de acesso", async () => {
+    renderRedirectLegado();
 
     expect(await screen.findByRole("heading", { name: "Solicitar acesso" })).toBeInTheDocument();
     expect(screen.getByTestId("rota-atual")).toHaveTextContent("/request-access");
     expect(screen.queryByRole("heading", { name: "Criar conta" })).not.toBeInTheDocument();
-    expect(authApi.register).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Voltar" }));
+
+    expect(await screen.findByRole("heading", { name: "Página anterior" })).toBeInTheDocument();
+    expect(screen.getByTestId("rota-atual")).toHaveTextContent("/pagina-anterior");
   });
 });

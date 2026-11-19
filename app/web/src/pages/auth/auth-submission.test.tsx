@@ -8,11 +8,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { LoginPage } from "./login-page";
 import { authApi } from "../../lib/api/auth.api";
+import { subscriptionsApi } from "../../lib/api/subscriptions.api";
 import { useAuthStore } from "../../store/auth.store";
 import type { AuthResponse } from "../../types/auth.types";
 
 vi.mock("../../lib/api/auth.api", () => ({
-  authApi: { login: vi.fn(), register: vi.fn() },
+  authApi: { login: vi.fn() },
+}));
+
+vi.mock("../../lib/api/subscriptions.api", () => ({
+  subscriptionsApi: { onboardingStatus: vi.fn() },
 }));
 
 const sessao: AuthResponse = {
@@ -58,6 +63,7 @@ function renderFormulario(): void {
 beforeEach(() => {
   vi.clearAllMocks();
   useAuthStore.getState().clearAuth();
+  vi.mocked(subscriptionsApi.onboardingStatus).mockResolvedValue({ status: "NEEDS_ONBOARDING", subscription: null });
 });
 
 afterEach(() => useAuthStore.getState().clearAuth());
@@ -92,11 +98,12 @@ describe("Envio de login", () => {
 
     expect(await screen.findByRole("heading", { name: "Destino onboarding" })).toBeInTheDocument();
     expect(useAuthStore.getState()).toMatchObject(sessao);
-    expect(authApi.register).not.toHaveBeenCalled();
+    expect(subscriptionsApi.onboardingStatus).not.toHaveBeenCalled();
   });
 
   it.each([
     { nome: "CLIENT com empresa", sessao: { ...sessao, user: { ...sessao.user, companyId: "company-1" } }, destino: "Destino dashboard" },
+    { nome: "CLIENT MEMBER com empresa", sessao: { ...sessao, user: { ...sessao.user, companyId: "company-1", companyRole: "MEMBER" } }, destino: "Destino dashboard" },
     { nome: "ADMIN sem empresa", sessao: { ...sessao, user: { ...sessao.user, role: "ADMIN" as const } }, destino: "Destino dashboard" },
     { nome: "PENTESTER sem empresa", sessao: { ...sessao, user: { ...sessao.user, role: "PENTESTER" as const } }, destino: "Destino dashboard" },
   ])("encaminha $nome ao dashboard", async ({ sessao: sessaoEsperada, destino }) => {
@@ -107,7 +114,42 @@ describe("Envio de login", () => {
 
     expect(await screen.findByRole("heading", { name: destino })).toBeInTheDocument();
     expect(useAuthStore.getState()).toMatchObject(sessaoEsperada);
-    expect(authApi.register).not.toHaveBeenCalled();
+    expect(subscriptionsApi.onboardingStatus).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { nome: "sem pedido", status: { status: "NEEDS_ONBOARDING" as const, subscription: null }, destino: "Destino onboarding" },
+    { nome: "com pedido pendente", status: { status: "PENDING_APPROVAL" as const, subscription: null }, destino: "Destino onboarding" },
+    { nome: "com assinatura ativa", status: { status: "ACTIVE" as const, subscription: null }, destino: "Destino dashboard" },
+  ])("retoma OWNER CLIENT com empresa $nome no destino correto", async ({ status, destino }) => {
+    const ownerSession: AuthResponse = {
+      ...sessao,
+      user: { ...sessao.user, companyId: "company-owner", companyRole: "OWNER" },
+    };
+    vi.mocked(authApi.login).mockResolvedValueOnce(ownerSession);
+    vi.mocked(subscriptionsApi.onboardingStatus).mockResolvedValueOnce(status);
+    renderFormulario();
+
+    fireEvent.submit(screen.getByRole("form", { name: "Entrar" }));
+
+    expect(await screen.findByRole("heading", { name: destino })).toBeInTheDocument();
+    expect(subscriptionsApi.onboardingStatus).toHaveBeenCalledOnce();
+    expect(useAuthStore.getState()).toMatchObject(ownerSession);
+  });
+
+  it("encaminha OWNER CLIENT ao onboarding se a leitura de status falha, mantendo a sessão", async () => {
+    const ownerSession: AuthResponse = {
+      ...sessao,
+      user: { ...sessao.user, companyId: "company-owner", companyRole: "OWNER" },
+    };
+    vi.mocked(authApi.login).mockResolvedValueOnce(ownerSession);
+    vi.mocked(subscriptionsApi.onboardingStatus).mockRejectedValueOnce(new Error("NETWORK"));
+    renderFormulario();
+
+    fireEvent.submit(screen.getByRole("form", { name: "Entrar" }));
+
+    expect(await screen.findByRole("heading", { name: "Destino onboarding" })).toBeInTheDocument();
+    expect(useAuthStore.getState()).toMatchObject(ownerSession);
   });
 
   it("anuncia a falha e libera nova tentativa sem perder os dados", async () => {

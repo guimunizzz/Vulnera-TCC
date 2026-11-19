@@ -20,8 +20,22 @@ export class CompanyRepository {
     return this.prisma.company.findUnique({ where: { cnpj } });
   }
 
-  async create(data: CreateCompanyDTO): Promise<Company> {
-    return this.prisma.company.create({ data });
+  /**
+   * Cria a empresa e a vincula ao primeiro OWNER na mesma transação.
+   * O compare-and-set impede que duas abas vinculem empresas diferentes ao
+   * mesmo usuário; se o vínculo perder a corrida, a empresa recém-criada volta.
+   */
+  async createWithOwner(userId: string, data: CreateCompanyDTO): Promise<Company> {
+    return this.prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({ data });
+      const claim = await tx.user.updateMany({
+        where: { id: userId, companyId: null },
+        data: { companyId: company.id, companyRole: "OWNER" },
+      });
+
+      if (claim.count !== 1) throw new Error("USER_ALREADY_HAS_COMPANY");
+      return company;
+    });
   }
 
   async update(id: string, data: UpdateCompanyDTO): Promise<Company> {

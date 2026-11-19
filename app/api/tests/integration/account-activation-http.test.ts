@@ -1,6 +1,6 @@
 /**
  * Confirma o contrato HTTP público de validação e ativação de conta.
- * Verifica respostas neutras e a continuidade do login legado após a ativação.
+ * Verifica respostas neutras e login somente depois da ativação por convite.
  * Consumido pelo Jest de integração da Etapa 5 da Issue #51.
  */
 import request from "supertest";
@@ -111,7 +111,7 @@ describe("HTTP público de ativação de conta", () => {
     expect(response.headers["cache-control"]).toContain("no-store");
   });
 
-  it("ativa sem sessão e permite login, refresh e logout pelo fluxo legado", async () => {
+  it("ativa por convite sem abrir sessão e permite login, refresh e logout", async () => {
     const fixture = await createAccountActivationFixture({
       email: "activated-client@empresa.local",
       name: "Cliente ativado",
@@ -125,6 +125,11 @@ describe("HTTP público de ativação de conta", () => {
     expect(activated.text ?? "").toBe("");
     expect(activated.headers["set-cookie"]).toBeUndefined();
     expect(await prisma.refreshToken.count()).toBe(0);
+    expect(await prisma.user.findUnique({ where: { email: fixture.request.email } })).toMatchObject({
+      name: fixture.request.name,
+      role: "CLIENT",
+      companyId: null,
+    });
 
     const login = await request(app)
       .post("/api/auth/login")
@@ -155,16 +160,21 @@ describe("HTTP público de ativação de conta", () => {
     expect(refreshAfterLogout.body.code).toBe("INVALID_TOKEN");
   });
 
-  it("mantém o cadastro legado ativo e sem exigir convite", async () => {
-    const response = await request(app)
-      .post("/api/auth/register")
-      .send({ name: "Cadastro legado", email: "legacy-register@empresa.local", password: PASSWORD });
+  it("login rejeita pedido sem aprovação/ativação e não abre sessão", async () => {
+    const fixture = await createAccountActivationFixture({
+      email: "pending-client@empresa.local",
+      stage: "PENDING_REVIEW",
+    });
 
-    expect(response.status).toBe(201);
-    expect(response.body.accessToken).toEqual(expect.any(String));
-    expect(response.body.refreshToken).toEqual(expect.any(String));
-    expect(response.body.user).toMatchObject({ email: "legacy-register@empresa.local", role: "CLIENT", companyId: null });
-    expect(await prisma.accessRequest.count()).toBe(0);
+    const response = await request(app)
+      .post("/api/auth/login")
+      .send({ email: fixture.request.email, password: PASSWORD });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toMatchObject({ code: "INVALID_CREDENTIALS" });
+    expect(await prisma.user.findUnique({ where: { email: fixture.request.email } })).toBeNull();
+    expect(await prisma.refreshToken.count()).toBe(0);
+    expect(await prisma.accessRequest.findUnique({ where: { id: fixture.request.id } })).toMatchObject({ status: "PENDING_REVIEW" });
   });
 
   it.each([

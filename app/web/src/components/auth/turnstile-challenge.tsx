@@ -213,7 +213,7 @@ export const TurnstileChallenge = forwardRef<TurnstileChallengeHandle, Turnstile
             <button
               type="button"
               onClick={() => setRetryKey((value) => value + 1)}
-              className="min-h-11 underline underline-offset-4"
+              className="min-h-touch underline underline-offset-4"
             >
               Recarregar verificação
             </button>

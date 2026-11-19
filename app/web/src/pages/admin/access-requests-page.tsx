@@ -156,8 +156,8 @@ export function AccessRequestsPage() {
       )}
 
       <section className="access-requests-toolbar" aria-label="Filtros da fila">
-        <label className="access-requests-filter-label" htmlFor="access-status-filter">Filtrar por estado</label>
-        <Select id="access-status-filter" aria-label="Filtrar solicitações por estado" opcoes={statusOptions} valor={status} aoMudar={(next) => { setStatus(next as AdminAccessRequestStatus | "ALL"); setPage(1); setSelectedId(null); setDeliveryFailed(false); }} />
+        <label className="access-requests-filter-label" htmlFor="access-status-filter">Filtrar solicitações por estado</label>
+        <Select id="access-status-filter" aria-label={`Filtrar solicitações por estado, ${LABELS[status]}`} opcoes={statusOptions} valor={status} aoMudar={(next) => { setStatus(next as AdminAccessRequestStatus | "ALL"); setPage(1); setSelectedId(null); setDeliveryFailed(false); }} />
         <span className="access-requests-total">{listQuery.data?.total ?? 0} solicitações</span>
       </section>
 

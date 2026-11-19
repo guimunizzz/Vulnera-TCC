@@ -6,6 +6,11 @@
   min-width: 0;
 }
 
+/* Os campos de solicitação não têm prefixo; reduza o recuo herdado do login. */
+.vx-login.vx-request-access .vx-request-access-panel .vx-login-input {
+  padding-inline: clamp(12px, 3vw, 16px);
+}
+
 .vx-login .vx-request-access-panel .vx-login-heading,
 .vx-login .vx-verify-email-panel .vx-login-heading {
   margin-bottom: 18px;

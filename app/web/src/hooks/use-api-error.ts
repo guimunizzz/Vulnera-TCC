@@ -45,6 +45,7 @@ const MESSAGES: Record<string, string> = {
   // subscription
   SUBSCRIPTION_NOT_FOUND: "Assinatura não encontrada.",
   ALREADY_HAS_ACTIVE_SUBSCRIPTION: "Esta empresa já tem uma assinatura ativa.",
+  SUBSCRIPTION_REQUEST_ALREADY_PENDING: "Já existe uma solicitação pendente para outro plano. Aguarde a decisão antes de solicitar outro.",
 
   // application
   APPLICATION_NOT_FOUND: "Aplicação não encontrada.",

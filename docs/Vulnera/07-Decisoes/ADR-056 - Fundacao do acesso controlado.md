@@ -469,6 +469,63 @@ conectou. Playwright só será evidência de UI, sem alegação full-stack. Etap
 andamento, sem aceite final. Registro e pendências em
 [`SECURITY-AUTH-ETAPA-6.md`](../../SECURITY-AUTH-ETAPA-6.md).
 
+## Etapa 7 — cutover do cadastro e retomada do onboarding (em andamento, 2026-11-19)
+
+### Contrato observado nesta etapa
+
+O cutover remove o cadastro público direto: `POST /api/auth/register` deve
+responder 404, e `/register` conduz a `/request-access`. Login, refresh, logout,
+ativação transacional, autorização e planos existentes permanecem disponíveis.
+O fluxo de onboarding associa Company e OWNER por CAS dentro da mesma
+transação. Uma solicitação PENDING para o mesmo plano pode ser retomada; plano
+diferente produz conflito 409. A solicitação e sua auditoria são persistidas
+juntas.
+
+`GET /api/subscriptions/onboarding-status` exige usuário CLIENT OWNER e verifica
+que a Company pertence ao próprio usuário. `/current` continua retornando
+somente assinaturas ACTIVE. Login pode retomar sem Company/assinatura, e o web
+apresenta estado PENDING. CNPJ permanece opcional. Aprovação de acesso e
+aprovação da assinatura são decisões separadas.
+
+Siteverify exige hostname e action reais; a configuração de produção agora
+exige ambos. A secret fica apenas no runtime da API. SMTP com provedor externo
+fica reservado ao deploy e não é alegado como validado localmente.
+
+### Estado e ressalvas
+
+Este registro documenta o contrato e o cutover em progresso, não aprovação da
+Etapa 7. API TSC passou; lint retém dois imports antigos; Auth+Company 21/21.
+Na full API, 65/72 suítes passaram; 1064 testes passaram e 46 falharam, em
+967 s. No reteste das
+sete suítes falhas, passaram 6/7 suítes e 231/233 testes; harness isolado em
+`e5e353c` reproduziu exatamente os mesmos dois timeouts de `zap-runner`, sem
+alteração DAST. O resultado distinto é 71/72 suítes; totais de testes das
+execuções sobrepostas são mantidos separados. Web TSC+Vite passou, lint teve
+zero erros/nove avisos, contraste 132/132; Docker Web/API passou. Web completa
+em baixa concorrência teve 85/87 arquivos e 708/710 testes PASS: finding de
+nome acessível Code Import é preexistente de `dev` antiga, a conferir pós-`dev`.
+Onboarding focal passou 11/11 após sincronizar o clique; ADMIN focal 6/6.
+Playwright mock original 9/11; CA-01/CA-09 passaram separadamente (2/2), sem
+alegar 11/11 agregado. Smoke Chrome em produção isolada confirmou CTA,
+redirecionamento sem POST e padding 12/16 px nos quatro campos; login preservou
+42 px e prefixo. A prova manual em stack
+isolada confirmou widget real, pedido, verificação e aprovação ADMIN. Fluxo
+terminou `ACTIVATED`, com convite usado; uma sessão, um User CLIENT/OWNER,
+Company sem CNPJ e Subscription `PENDING_APPROVAL` foram confirmados por leitura
+agregada; ativação, login e retomada concluídos pela UI. Smoke HTTP separado
+observou register 404, rotas admin/da empresa anônimas 401 e CAPTCHA ausente
+400. `origin/dev` observado em `95f3252` (três commits SAST/SCA); sem integração
+ou merge. Canários aprovados; pendem integração e validação pós-`dev`/remota.
+Consulte
+[`SECURITY-AUTH-ETAPA-7.md`](../../SECURITY-AUTH-ETAPA-7.md) para escopo,
+baseline e limites detalhados.
+
+Follow-ups preexistentes ficam fora da decisão de cutover: concorrência de
+refresh e diferença entre `expiresAt` e TTL, concorrência entre decisões
+comerciais approve/reject e variação temporal nas respostas/login. Devem ser
+avaliados separadamente; este ADR não prescreve payloads nem técnicas de
+exploração.
+
 ## Relacionado
 
 - [Issue #51](https://github.com/guimunizzz/Vulnera-TCC/issues/51)

@@ -340,8 +340,8 @@ test.describe("Pedido público e legado de cadastro", () => {
     await setTheme(page, "dark");
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    const cta = page.getByRole("link", { name: /solicitar acesso à plataforma/i });
-    await cta.scrollIntoViewIfNeeded();
+    const cta = page.getByRole("link", { name: "Solicitar acesso →", exact: true });
+    await expect(cta).toBeVisible();
     await cta.click();
     await expect(page).toHaveURL(/\/request-access$/u);
     await expect(page.getByRole("heading", { name: "Solicitar acesso" })).toBeVisible();

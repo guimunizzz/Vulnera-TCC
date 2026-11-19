@@ -8,6 +8,84 @@
 
 ---
 
+## Issue #51 — Etapa 7 · 🚧 Em andamento desde 2026-11-19
+
+### Objetivo e contrato do cutover
+
+Substituir o cadastro público direto pelo pedido de acesso e permitir a retomada
+do onboarding por usuários ativados sem Company/assinatura. `/api/auth/register`
+foi removido (404) e `/register` direciona para `/request-access`. Preservar
+login, refresh, logout, ativação transacional, autorização e catálogo de planos.
+Company e OWNER são criados com CAS na mesma transação; pedido PENDING do mesmo
+plano é reaproveitado, plano diferente recebe 409, e pedido e auditoria ficam
+juntos. `GET /api/subscriptions/onboarding-status` é exclusivo do CLIENT OWNER
+da própria empresa; `/current` continua disponível apenas para assinatura ACTIVE.
+O login deve retomar sem Company/assinatura, com estado PENDING apresentado na
+interface. CNPJ continua opcional; aprovação da assinatura é uma decisão
+separada da aprovação de acesso.
+
+Exigir hostname e action reais no Siteverify; production agora exige ambos e a
+secret fica somente no runtime da API. SMTP externo é trabalho de deploy, não
+evidência local desta etapa.
+
+### Checkpoints e gates de evidência
+
+1. Revisar diff da Etapa 7 e preservar os contratos acima; mudanças de código
+   pertencem aos owners de API/Web, sem ampliar este recorte por defeitos fora
+   de escopo.
+2. Fechar validações API/Web focais e regressões, registrando os avisos/falhas
+   que permanecerem. API TSC PASS, lint retém dois imports antigos; Auth+Company
+   21/21. Full API: 72 suítes, 65 PASS/7 FAIL; 1064 testes PASS/46 FAIL em
+   967 s. Reteste das 7: 6/7 suítes e 231/233 testes PASS; em `e5e353c`, o
+   harness isolado reproduziu os mesmos dois timeouts de `zap-runner`, sem
+   alteração DAST. São 71/72 suítes distintas PASS; não somar contagens de
+   testes sobrepostas. Web TSC+Vite PASS, lint 0 erros/9 warnings, contraste
+   132/132. Docker Web/API PASS final; Rollup 4.68.5 e CSS scoped servidos.
+   Web completa, baixa concorrência: 87 arquivos, 85 PASS/2 FAIL e 708/710
+   testes. O finding de nome acessível Code Import é preexistente da `dev`
+   antiga e será verificado pós-`dev`; onboarding focal passou 11/11 após
+   sincronizar o clique e ADMIN focal 6/6. Playwright mock 9/11 original; CA-01
+   e CA-09 passaram separados (2/2), sem transformar a execução original em
+   11/11. E2E real de
+   projeto 1/1; Vitest focal `/register` 2/2; `min-h-touch` 44 px passou escala.
+3. Stack Docker isolada API/Web PASS final; smoke HTTP separado confirma
+   registro legado 404, acesso anônimo às rotas admin/empresa 401 e CAPTCHA
+   ausente 400. Smoke Chrome de produção isolada confirmou CTA e
+   `/register` → `/request-access`, sem POST observado. Padding dos quatro
+   inputs sem prefixo computou 12 px em viewport 390 px e 16 px em 1440 px;
+   login preservou prefixo e altura 42 px. O E2E real de projeto passou 1/1
+   após ajuste do seletor de senha; CLIENT foi provisionado exclusivamente, sem
+   regressão de role.
+4. Prova manual do widget Turnstile real em stack isolada nova registrada. Prova
+   recebida na porta 8186: interface mostrou widget em sucesso e solicitação
+   recebida; MySQL agregado indicou `PENDING_EMAIL_VERIFICATION`,
+   `VERIFICATION_ISSUED` e zero Users; MailHog recebeu uma verificação.
+   Confirmação de e-mail respondeu 200, pedido entrou na fila elegível e
+   aprovação ADMIN respondeu 200/`APPROVED`; MailHog recebeu um convite. A
+   ativação, login e retomada do onboarding foram concluídos pela UI. Estado
+   agregado: `ACTIVATED`, convite usado, uma sessão, um User CLIENT/OWNER, uma
+   Company sem CNPJ e Subscription `PENDING_APPROVAL` para o plano escolhido.
+   Nenhum endereço, secret, token, usuário ou payload foi copiado. O owner
+   aplicou padding 12–16 px a quatro inputs sem prefixo, preservando login;
+   TSC e build Vite passaram.
+5. Canários aprovados pelos owners. Integrar com `origin/dev` e executar gates e
+   validações pós-`dev`/remotas. `origin/dev` observado em `95f3252`, com três
+   commits SAST/SCA; `docs/BACKLOG.md` é o único arquivo sobreposto. Ainda não
+   há integração, PR ou merge registrados. Não fechar Issue #51.
+
+### Histórico — Issue #51, Etapa 7 (em andamento; checkpoint documental)
+
+- 2026-11-19: contrato de cutover, baseline parcial e prova manual até
+  ativação/login/onboarding e resultados confirmados antes da integração
+  registrados em [`SECURITY-AUTH-ETAPA-7.md`](SECURITY-AUTH-ETAPA-7.md).
+  `origin/dev` observado em `95f3252` com três commits SAST/SCA; só BACKLOG
+  sobrepõe arquivos do recorte. Canários aprovados; sem integração/merge. Web
+  708/710; onboarding focal 11/11 e ADMIN 6/6; Playwright mock 9/11, com CA-01/
+  CA-09 passando separados (2/2), não 11/11 agregado. Este marco não é aceite
+  da etapa nem fechamento da issue.
+
+---
+
 ## Issue #51 — Etapa 6 · ✅ Concluída em 2026-11-18 (aprovada com ressalvas)
 
 Integrar à interface web os fluxos de ativação e revisão ADMIN. Abrange
