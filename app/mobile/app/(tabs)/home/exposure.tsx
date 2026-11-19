@@ -3,7 +3,7 @@
  * Liga empresa, aplicações e categorias compartilhadas sem sugerir caminhos de ataque.
  * A Home abre esta tela; a lista textual oferece acesso aos mesmos nós do desenho.
  */
-import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -31,7 +31,7 @@ const sensitivity: Record<string, string> = { PUBLIC: "Pública", INTERNAL: "Int
 const sourceLabels: Record<string, string> = { MANUAL: "Manual", DAST_IMPORT: "DAST", SAST_IMPORT: "SAST", SCA_IMPORT: "SCA" };
 const categoryLabel = (code: string) => OWASP_LABELS[code] ?? code;
 
-export default function ExposureScreen({ root = false }: { root?: boolean }) {
+export default function ExposureScreen({ root = false, navigation }: { root?: boolean; navigation?: ReactNode }) {
   const { workspace, ui } = useAppTheme();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -49,6 +49,7 @@ export default function ExposureScreen({ root = false }: { root?: boolean }) {
   const selectCategory = (id: string) => setSelection({ kind: "category", id });
   return <WorkspaceScreen refreshing={query.isRefetching} onRefresh={() => { void query.refetch(); }}>
     <PageHeader label="EXPOSIÇÃO" back={!root}>{root ? <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable> : undefined}</PageHeader>
+    {navigation}
     <View style={{ gap: 8 }}><Text accessibilityRole="header" style={ui.title}>Grafo de exposição</Text><Text style={ui.body}>Conexões entre sua empresa, aplicações e categorias OWASP com vulnerabilidades abertas.</Text></View>
     {query.isPending && <DataState loading title="Carregando exposição" />}
     {query.isError && !query.data && (noCompany ? <DataState title="Conta sem empresa" message="Vincule sua conta a uma empresa para consultar a exposição." /> : <DataState error title="Exposição indisponível" message={errorMessage(query.error)} onRetry={() => { void query.refetch(); }} />)}
