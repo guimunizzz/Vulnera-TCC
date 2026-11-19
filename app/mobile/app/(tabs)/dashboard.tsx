@@ -15,6 +15,7 @@ import { exposureGraphApi } from "../../src/api/exposure-graph.api";
 import { vulnerabilitiesApi } from "../../src/api/vulnerabilities.api";
 import { DataState, GlassSurface, SectionHeading, WorkspaceScreen } from "../../src/components/workspace-ui";
 import { HomeBrand } from "../../src/components/home-brand";
+import { AssistantButton } from "../../src/components/assistant";
 import { ExposureTrend } from "../../src/components/exposure-trend";
 import { SoftPressable, useWorkspaceReducedMotion } from "../../src/components/workspace-motion";
 import { useApiError } from "../../src/hooks/use-api-error";
@@ -41,7 +42,7 @@ export default function DashboardScreen() {
   const priorityDetails = useQueries({ queries: (risks?.priorities ?? []).map((finding) => ({ queryKey: ["vulnerabilities", finding.id], queryFn: ({ signal }: { signal: AbortSignal }) => vulnerabilitiesApi.getById(finding.id, signal), retry: false })) });
 
   return <WorkspaceScreen refreshing={projects.isRefetching || exposure.isRefetching} onRefresh={() => { void projects.refetch(); void exposure.refetch(); }}>
-    <View style={styles.top}><HomeBrand /><SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable></View>
+    <View style={styles.top}><HomeBrand /><View style={{ flexDirection: "row", gap: 8 }}><AssistantButton /><SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable></View></View>
     <DashboardReveal><Text accessibilityRole="header" style={ui.title}>Olá, {user?.name?.split(" ")[0] ?? "cliente"}<Text style={{ color: workspace.lavender }}>.</Text></Text><Text style={ui.body}>Ações e riscos que merecem sua atenção.</Text></DashboardReveal>
     <DashboardReveal delay={60}><GlassSurface strong>
       <View style={styles.overview}><ProgressRing percent={overview?.percent ?? null} /><View style={[ui.grow, { gap: 10 }]}><Text accessibilityRole="header" style={ui.heading}>Visão geral</Text>

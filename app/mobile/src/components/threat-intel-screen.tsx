@@ -33,7 +33,7 @@ export function ThreatIntelScreen({ navigation }: { navigation: ReactNode }) {
   const switchSection = (next: Section) => { setSection(next); setSelected(null); setLimit(20); };
   const refresh = () => { void overview.refetch(); void current.refetch(); };
   return <WorkspaceScreen refreshing={overview.isRefetching || current.isRefetching} onRefresh={refresh}>
-    <PageHeader label="SEGURANÇA"><SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { borderColor: workspace.line, backgroundColor: workspace.neutralTint }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable></PageHeader>
+    <PageHeader label="SEGURANÇA" assistantContext="threat-intel"><SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { borderColor: workspace.line, backgroundColor: workspace.neutralTint }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable></PageHeader>
     {navigation}
     <View style={{ gap: 8 }}><Text accessibilityRole="header" style={ui.title}>Threat Intel</Text><Text style={ui.body}>Ameaças relacionadas às tecnologias acompanhadas pela sua empresa.</Text></View>
     {overview.isPending ? <DataState loading title="Carregando panorama" /> : overview.isError ? <DataState error title="Panorama indisponível" message={errorMessage(overview.error)} onRetry={() => { void overview.refetch(); }} /> : overview.data && <GlassSurface>

@@ -36,6 +36,8 @@ interface AuthState {
    * sessão salva — ver app/index.tsx, que espera este flag antes de decidir
    * pra onde navegar. */
   hasHydrated: boolean;
+  /** Muda em novo login ou saída; não muda durante rotação de tokens. */
+  sessionVersion: number;
   setAuth: (auth: AuthResponse) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   clearAuth: () => void;
@@ -49,15 +51,16 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       hasHydrated: false,
+      sessionVersion: 0,
       setAuth: (auth) => {
         // Cancela consultas da sessão anterior antes de expor a nova identidade.
         queryClient.clear();
-        set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user });
+        set((state) => ({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user, sessionVersion: state.sessionVersion + 1 }));
       },
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
       clearAuth: () => {
         queryClient.clear();
-        set({ accessToken: null, refreshToken: null, user: null });
+        set((state) => ({ accessToken: null, refreshToken: null, user: null, sessionVersion: state.sessionVersion + 1 }));
       },
       setHasHydrated: (value) => set({ hasHydrated: value }),
     }),

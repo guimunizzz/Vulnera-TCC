@@ -48,7 +48,7 @@ export default function ExposureScreen({ root = false, navigation }: { root?: bo
   const selectApp = (id: string) => setSelection({ kind: "app", id });
   const selectCategory = (id: string) => setSelection({ kind: "category", id });
   return <WorkspaceScreen refreshing={query.isRefetching} onRefresh={() => { void query.refetch(); }}>
-    <PageHeader label="EXPOSIÇÃO" back={!root}>{root ? <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable> : undefined}</PageHeader>
+    <PageHeader label="EXPOSIÇÃO" back={!root} assistantContext="exposure-graph">{root ? <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable> : undefined}</PageHeader>
     {navigation}
     <View style={{ gap: 8 }}><Text accessibilityRole="header" style={ui.title}>Grafo de exposição</Text><Text style={ui.body}>Conexões entre sua empresa, aplicações e categorias OWASP com vulnerabilidades abertas.</Text></View>
     {query.isPending && <DataState loading title="Carregando exposição" />}

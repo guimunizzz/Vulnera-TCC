@@ -16,6 +16,7 @@ import { useTabBarClearance } from "../../../src/hooks/use-tab-bar-clearance";
 import { ProjectCard } from "../../../src/components/project-card";
 import { DataState, FilterChip, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { HomeBrand } from "../../../src/components/home-brand";
+import { AssistantButton } from "../../../src/components/assistant";
 import { WorkspaceSkeleton } from "../../../src/components/workspace-skeleton";
 import { FONT_FAMILY } from "../../../src/theme/tokens";
 import { useAppTheme } from "../../../src/theme/use-app-theme";
@@ -48,9 +49,9 @@ export default function HomeScreen() {
   const header = <View style={styles.header}>
     <View style={styles.topBar}>
       <HomeBrand />
-      <Pressable onPress={() => router.push("/(tabs)/settings")} accessibilityRole="button" accessibilityLabel="Abrir minha conta" style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}>
+      <View style={{ flexDirection: "row", gap: 8 }}><AssistantButton /><Pressable onPress={() => router.push("/(tabs)/settings")} accessibilityRole="button" accessibilityLabel="Abrir minha conta" style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}>
         <Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text>
-      </Pressable>
+      </Pressable></View>
     </View>
     <MotionReveal distance={8} style={styles.hero}>
       <Text accessibilityRole="header" style={ui.title}>Seus projetos</Text>

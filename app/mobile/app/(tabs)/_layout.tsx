@@ -35,6 +35,7 @@ import { FONT_FAMILY } from "../../src/theme/tokens";
 import { useAppTheme } from "../../src/theme/use-app-theme";
 import { useWorkspaceReducedMotion, WorkspaceMotionProvider } from "../../src/components/workspace-motion";
 import { WorkspaceBlurProvider } from "../../src/components/workspace-blur";
+import { AssistantSession } from "../../src/components/assistant";
 
 export default function TabsLayout() {
   return <WorkspaceMotionProvider><WorkspaceBlurProvider><AuthenticatedTabs /></WorkspaceBlurProvider></WorkspaceMotionProvider>;
@@ -44,6 +45,8 @@ function AuthenticatedTabs() {
   const { colors, workspace } = useAppTheme();
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const userId = useAuthStore((s) => s.user?.id);
+  const sessionVersion = useAuthStore((s) => s.sessionVersion);
   const pushStatus = usePushRegistration();
   const reduced = useWorkspaceReducedMotion();
 
@@ -60,7 +63,7 @@ function AuthenticatedTabs() {
   }
 
   return (
-    <PushStatusContext.Provider value={pushStatus}><Tabs
+    <PushStatusContext.Provider value={pushStatus}><AssistantSession key={`${sessionVersion}:${userId ?? "none"}`}><Tabs
       detachInactiveScreens={false}
       tabBar={(props) => <IconGlassTabBar {...props} />}
       screenOptions={{
@@ -93,6 +96,6 @@ function AuthenticatedTabs() {
         }}
         listeners={{ tabPress: () => haptics.tap() }}
       />
-    </Tabs></PushStatusContext.Provider>
+    </Tabs></AssistantSession></PushStatusContext.Provider>
   );
 }
