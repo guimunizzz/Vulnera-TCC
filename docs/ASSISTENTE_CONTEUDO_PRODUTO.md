@@ -2,9 +2,40 @@
 
 # Conteúdo de domínio e produto do assistente
 
+## Inventário por perfil e perguntas de conversa — 2026-11-20
+
+Pedidos de uma lista de funções usam `ASSISTANT_CAPABILITIES`, separado do
+catálogo de 56 tópicos. Há uma lista de blocos para ADMIN, CLIENT e PENTESTER.
+A API usa a versão curada quando a resposta gerada omite blocos ou não os
+apresenta como lista. As perguntas “Por onde começo?” e “Minha assinatura
+está pendente” têm orientações distintas. O ensaio com 30 perguntas por meio
+da rota do assistente fica em `output/vuvu-three-personas/`, com 10 perguntas
+para cada persona e um registro identificado da rodada ao vivo.
+
+## Passos de uso — 2026-11-20
+
+O catálogo tem **56 tópicos**, incluindo doze fichas de uso em
+`assistant-product-guides.config.ts`. As fichas priorizam a tela, o perfil,
+as pré-condições e o próximo passo, com textos úteis quando a geração está em
+espera. Os rótulos foram conferidos nas telas e nas regras de acesso atuais.
+
+| Fichas e ajustes | Referência de produto conferida |
+| --- | --- |
+| Cadastro de aplicação, solicitação de análise e participantes do projeto | Jornadas do vault, `docs/DEMO.md` e telas de Aplicações, Nova análise e Visão geral do projeto. |
+| Dashboard da aplicação e filtros de achados | `docs/DEMO.md`, `docs/FINDINGS_QUERY.md` e as abas e sugestões das telas atuais. |
+| Responsável e etapa no quadro, adaptar playbook, revalidar achado | `docs/EXPOSURE_REMEDIATION.md`, fluxo de revalidação no vault, quadro, playbooks e detalhe do finding. |
+| Comparar execuções DAST e ler o CyberGraph | Seções de comparação e grafo de `docs/DAST.md` e o detalhe da execução. |
+| Triagem SAST/SCA e voltar do Security Graph à lista | Seções Como usar, Promoção e Tour guiado de `docs/SAST_SCA.md`, com o detalhe da importação. |
+| Escolher PDF ou exportação e interpretar avisos | Fluxo de geração de relatório no vault, guias de DAST, SAST/SCA e `docs/THREAT_INTEL.md`. |
+
+O catálogo usa nomes de recursos, procedimentos e formatos públicos. A origem
+da resposta é genérica, inclusive na ficha de uso da própria Vuvu. Referências
+de revisão, código e configurações ficam nesta documentação interna e não são
+enviados ao provedor. ADR-059 especifica a fronteira pública.
+
 ## Conversa básica — complemento de 2026-11-16
 
-Além dos 44 tópicos abaixo, `assistant-conversation.config.ts` mantém três
+Além dos 44 tópicos existentes em 16/11, `assistant-conversation.config.ts` mantém três
 respostas básicas separadas: saudação, identidade da Vuvu e apresentação do
 Vulnera. Fontes: identidade autorizada e descrição de produto vigente. Intenções
 completas são tratadas localmente; abreviações são normalizadas por palavra.
@@ -15,7 +46,7 @@ separação entre proteção HTTP e orçamento de geração, sem aumentar cotas.
 
 ## Ampliação da Vuvu — 2026-11-16
 
-O catálogo atual tem **44 tópicos**: preservados os 29 anteriores e acrescentados 15 aprofundamentos em `app/api/src/config/assistant-workflow-help.config.ts`. A API principal ainda executava 17 tópicos na inspeção inicial desta rodada, porque as últimas aplicações haviam atualizado somente a Web. O fechamento da aplicação da API é registrado no relatório desta ampliação.
+Nessa ampliação, o catálogo chegou a **44 tópicos**: preservados os 29 anteriores e acrescentados 15 aprofundamentos em `app/api/src/config/assistant-workflow-help.config.ts`. A API principal ainda executava 17 tópicos na inspeção inicial desta rodada, porque as últimas aplicações haviam atualizado somente a Web. O fechamento da aplicação da API é registrado no relatório desta ampliação.
 
 | Conteúdo novo | Fontes de produto e comportamento conferido |
 | --- | --- |

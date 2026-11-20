@@ -17,7 +17,7 @@ export function assistantSessionKey(): string {
 
 function responseIsValid(response: AssistantChatResponse): boolean {
   return !!response && typeof response.message === "string" && response.message.trim().length > 0
-    && response.message.length <= 8_000 && ["gemini", "local"].includes(response.source) && Array.isArray(response.actions)
+    && response.message.length <= 8_000 && ["generated", "local"].includes(response.source) && Array.isArray(response.actions)
     && (response.providerRetryAfterSeconds === undefined || (typeof response.providerRetryAfterSeconds === "number" && Number.isFinite(response.providerRetryAfterSeconds) && response.providerRetryAfterSeconds > 0));
 }
 
@@ -70,7 +70,7 @@ export function useAssistantConversation(role: UserRole) {
     }
     if (providerUntil && clock >= providerUntil) {
       setProviderUntil(0);
-      setAvailability("Você já pode tentar o Gemini novamente enviando uma pergunta. A ajuda local continua disponível.");
+      setAvailability("Você já pode enviar uma nova pergunta para tentar outra resposta da Vuvu. A ajuda local continua disponível.");
     }
   }, [clock, blockedUntil, providerUntil]);
 
@@ -106,8 +106,8 @@ export function useAssistantConversation(role: UserRole) {
       if (response.providerRetryAfterSeconds) {
         setClock(Date.now());
         setProviderUntil(Date.now() + Math.min(86_400, response.providerRetryAfterSeconds) * 1_000);
-        setAvailability("O limite temporário do Gemini foi atingido. A ajuda local continua disponível; você pode enviar outras perguntas.");
-      } else if (response.source === "gemini") setProviderUntil(0);
+        setAvailability("As respostas da Vuvu estão temporariamente limitadas. Você pode continuar perguntando com a ajuda local.");
+      } else if (response.source === "generated") setProviderUntil(0);
       const actions = response.actions.flatMap((action) => {
         const destination = assistantDestination(action?.id, role);
         return destination ? [{ id: destination.id, label: destination.label }] : [];

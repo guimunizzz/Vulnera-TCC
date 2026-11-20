@@ -5,7 +5,7 @@
  */
 import { ASSISTANT_ACTIONS, ASSISTANT_TOPICS } from "../config/assistant-help.config";
 import { ASSISTANT_CONVERSATION } from "../config/assistant-conversation.config";
-import type { AssistantActionDTO, AssistantChatDTO, AssistantResponseDTO, AssistantScreen, AssistantTopic } from "../models/assistant.model";
+import type { AssistantActionDTO, AssistantChatDTO, AssistantScreen, AssistantTopic } from "../models/assistant.model";
 import type { UserRole } from "../models/user.model";
 
 export function normalizeAssistantText(value: string): string {
@@ -14,14 +14,12 @@ export function normalizeAssistantText(value: string): string {
 }
 
 export class AssistantHelpService {
-  conversation(question: string, role: UserRole): AssistantResponseDTO | null {
+  conversation(question: string): string | null {
     const text = normalizeAssistantText(question).replace(/^(?:oi+|ola|opa|bom dia|boa tarde|boa noite)\s+(?=quem|o que|que|para|pra|qual)/, "").replace(/ por favor$/, "");
     const intent = /^(?:oi+|ola|opa|e ai|bom dia|boa tarde|boa noite)(?: vuvu)?(?: tudo bem| tudo bom| como vai)?$/.test(text) || /^(?:tudo bem|tudo bom|como vai)(?: vuvu)?$/.test(text) ? "greeting"
       : /^(?:(?:quem|o que) (?:e|eh) (?:voce|a vuvu)|qual (?:e )?(?:o )?seu nome|se apresente)(?: mesmo)?$/.test(text) ? "identity"
       : /^(?:(?:o que|que) (?:e|eh) (?:o )?vulnera|(?:para|pra) que serve (?:o )?vulnera)(?: mesmo)?$/.test(text) ? "product" : null;
-    if (!intent) return null;
-    const response = ASSISTANT_CONVERSATION[intent];
-    return { source: "local", message: response.message, actions: response.actions.filter((id) => ASSISTANT_ACTIONS[id].roles.includes(role)).map((id) => ({ id, label: ASSISTANT_ACTIONS[id].label })) };
+    return intent ? ASSISTANT_CONVERSATION[intent] : null;
   }
 
   select(dto: AssistantChatDTO, role: UserRole): AssistantTopic[] {

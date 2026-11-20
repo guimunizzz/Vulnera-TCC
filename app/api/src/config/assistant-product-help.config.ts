@@ -11,7 +11,7 @@ const ALL: readonly UserRole[] = ["ADMIN", "CLIENT", "PENTESTER"];
 export const ASSISTANT_PRODUCT_TOPICS: readonly AssistantTopic[] = [
   {
     id: "analysis-origins", title: "Tipos e origens dos achados",
-    keywords: ["o que e dast", "o que e sast", "o que e sca", "diferenca entre dast e sast", "diferenca entre sast e sca", "origem do achado", "origem dos achados", "procedencia", "finding manual"],
+    keywords: ["o que e dast", "o que e sast", "o que e sca", "diferenca entre dast e sast", "diferenca entre sast e sca", "diferenca entre dast sast e sca", "origem do achado", "origem dos achados", "procedencia", "finding manual"],
     screens: ["findings", "finding-detail", "sast-sca", "code-import-detail", "dast-detail"], roles: ALL, actions: ["projects", "dast", "sast-sca"],
     guidance: "DAST observa uma aplicação em execução. SAST analisa código e SCA analisa componentes e dependências. No Vulnera, DAST tem fluxo próprio de scan; SAST/SCA recebe relatórios importados. Um finding manual é registrado por uma pessoa autorizada. A origem informa de onde veio o achado; não prova exploração, não substitui triagem nem revisão humana do CVSS. Resultados brutos de ferramentas e vulnerabilidades publicadas no projeto são etapas distintas.",
     byRole: { CLIENT: "Como CLIENT, acompanhe os findings publicados nos seus projetos; os módulos e relatórios brutos de DAST/SAST/SCA são restritos a ADMIN e PENTESTER autorizado." },

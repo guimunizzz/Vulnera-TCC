@@ -6,6 +6,7 @@
 import type { UserRole } from "../models/user.model";
 import type { AssistantActionId, AssistantTopic } from "../models/assistant.model";
 import { ASSISTANT_PRODUCT_TOPICS } from "./assistant-product-help.config";
+import { ASSISTANT_PRODUCT_GUIDES } from "./assistant-product-guides.config";
 import { ASSISTANT_WORKFLOW_TOPICS } from "./assistant-workflow-help.config";
 
 const ALL: readonly UserRole[] = ["ADMIN", "CLIENT", "PENTESTER"];
@@ -32,15 +33,15 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
     byRole: { ADMIN: "Como ADMIN, você tem visão administrativa global; os detalhes continuam nas telas de cada recurso.", CLIENT: "Como CLIENT, você acompanha a própria empresa e os findings dentro dos projetos.", PENTESTER: "Como PENTESTER, você acompanha os projetos aos quais foi atribuído e suas atividades de análise." },
   },
   {
-    id: "applications", title: "Cadastro de aplicações", keywords: ["aplicacao", "aplicacoes", "cadastrar", "cadastro", "inventario", "ativo"],
+    id: "applications", title: "Cadastro de aplicações", keywords: ["aplicacao", "aplicacoes", "nova aplicacao", "criar aplicacao", "cadastrar aplicacao", "cadastrar", "cadastro", "inventario", "ativo"],
     screens: ["applications", "application-dashboard"], roles: ALL, actions: ["applications", "new-analysis"],
-    guidance: "1. Abra Aplicações e escolha cadastrar uma aplicação.\n2. Preencha os campos da tela e confirme.\n3. Use uma aplicação ativa ao solicitar uma análise. Cadastro e quantidade disponível respeitam as permissões e o plano.",
+    guidance: "1. Abra Aplicações e clique em Nova aplicação. 2. Preencha o nome e, se precisar, o endereço e a descrição. 3. Confirme o cadastro e confira a aplicação na lista. Use uma aplicação ativa para solicitar análise. Se não conseguir cadastrar, confira a situação da empresa e o limite de aplicações do plano.",
     byRole: { ADMIN: "ADMIN seleciona explicitamente a empresa da aplicação.", CLIENT: "CLIENT cadastra na própria empresa; não escolhe outra empresa.", PENTESTER: "PENTESTER não acessa o cadastro de aplicações. Peça a um CLIENT ou ADMIN para preparar a aplicação." },
   },
   {
     id: "new-analysis", title: "Solicitar uma análise", keywords: ["solicitar", "solicito", "solicitacao", "analise", "nova analise", "novo projeto"],
     screens: ["new-analysis"], roles: ALL, actions: ["new-analysis", "applications", "projects"],
-    guidance: "1. Cadastre uma aplicação ativa em Aplicações.\n2. Abra Solicitar análise, selecione a aplicação e preencha os passos do formulário.\n3. Revise e confirme. A solicitação cria um projeto; não executa um scan automaticamente. Assinatura ativa, capacidade do plano e regras da aplicação são verificadas pela plataforma.",
+    guidance: "1. Abra Solicitar análise ou use Nova análise na linha de uma aplicação elegível. 2. Em Aplicação, escolha o alvo e depois selecione o Tipo de análise. 3. Preencha Nome, nível e escopo, incluindo o que fica fora. 4. Revise Remediação e clique em Criar projeto. Confira a solicitação na lista de projetos. Se a aplicação não aparecer, verifique se está ativa, se já tem projeto e se há assinatura ativa e capacidade. Criar projeto não inicia scan automaticamente.",
     byRole: { PENTESTER: "PENTESTER não solicita análise. Essa ação é de CLIENT ou ADMIN; acompanhe os projetos atribuídos a você." },
   },
   {
@@ -64,13 +65,13 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
   {
     id: "dast", title: "DAST e triagem humana", keywords: ["dast", "zap", "scan", "varredura", "triagem", "promover", "falso positivo", "automatizada"],
     screens: ["dast", "dast-detail", "dast-report"], roles: ALL, actions: ["dast", "projects"],
-    guidance: "DAST usa o OWASP ZAP para analisar um alvo autorizado. Resultados de scan ficam separados dos findings do projeto. Uma pessoa faz a triagem: novo, confirmado, falso positivo ou risco aceito. Promoção de um resultado confirmado para finding exige projeto autorizado e CVSS revisado por humano. Demonstração simulada não permite promoção. O assistente não inicia scans.",
+    guidance: "DAST mostra resultados de análises de aplicações em execução. Resultados de scan ficam separados dos findings do projeto. Uma pessoa faz a triagem: novo, confirmado, falso positivo ou risco aceito. Promoção de um resultado confirmado para finding exige projeto autorizado e CVSS revisado por humano. Demonstração simulada não permite promoção. O assistente não inicia scans.",
     byRole: { CLIENT: "O módulo DAST é restrito a ADMIN e PENTESTER. Como CLIENT, acompanhe os findings publicados no projeto.", PENTESTER: "PENTESTER acessa os próprios scans, além das autorizações necessárias para o projeto da promoção." },
   },
   {
     id: "cvss-vrs", title: "CVSS e VRS", keywords: ["cvss", "vrs", "severidade", "prioridade", "risco", "score", "pontuacao"],
     screens: ["finding-detail", "finding-editor", "application-dashboard"], roles: ALL, actions: ["projects", "findings"],
-    guidance: "CVSS descreve a severidade técnica da vulnerabilidade a partir de um vetor revisado por uma pessoa. VRS é a prioridade contextual calculada pelo Vulnera, considerando também fatores da aplicação e do negócio. Eles têm objetivos diferentes. Consulte os valores e a explicação no finding; o assistente não recalcula nem substitui esses resultados.",
+    guidance: "VRS é a prioridade contextual do achado no Vulnera, numa escala de 0 a 100. A mesma falha pode exigir atenção primeiro numa aplicação crítica e exposta. CVSS mede a gravidade técnica a partir de um vetor revisado por uma pessoa. Abra o finding para ver as duas notas e os fatores do VRS.",
   },
   {
     id: "sla", title: "SLA de remediação", keywords: ["sla", "prazo", "prazos", "vencido", "vencimento", "politica"],
@@ -97,8 +98,8 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
   {
     id: "dast-reports", title: "Relatórios do scan DAST", keywords: ["relatorio", "relatorios", "pdf", "relatorio dast", "relatorio do dast", "relatorio zap", "relatorio do zap", "pdf dast", "pdf do dast", "pdf do zap"],
     screens: ["dast-detail", "dast-report"], roles: ALL, actions: ["dast"],
-    guidance: "1. Abra DAST e selecione um scan autorizado.\n2. Quando o scan estiver concluído, use Baixar PDF no detalhe do scan.\n3. Para consultar o HTML original, use Ver relatório do ZAP, que abre em outra aba. Esses relatórios pertencem ao scan; não exigem um projeto Em revisão ou Concluído. O assistente apenas orienta e não gera o arquivo.",
-    byRole: { CLIENT: "Relatórios de scans DAST são restritos a ADMIN e PENTESTER autorizado. Como CLIENT, consulte os relatórios publicados no seu projeto; não há acesso ao relatório original do ZAP." },
+    guidance: "1. Abra DAST e selecione um scan autorizado.\n2. Quando o scan estiver concluído, use Baixar PDF no detalhe do scan.\n3. A opção de ver o relatório original fica ao lado do PDF quando disponível e abre em outra aba. Esses relatórios pertencem ao scan; não exigem um projeto Em revisão ou Concluído. O assistente apenas orienta e não gera o arquivo.",
+    byRole: { CLIENT: "Relatórios de scans DAST são restritos a ADMIN e PENTESTER autorizado. Como CLIENT, consulte os relatórios publicados no seu projeto." },
   },
   {
     id: "onboarding", title: "Primeiro acesso e plano", keywords: ["onboarding", "plano", "assinatura", "empresa", "primeiro acesso"],
@@ -126,4 +127,5 @@ export const ASSISTANT_TOPICS: readonly AssistantTopic[] = [
   },
   ...ASSISTANT_PRODUCT_TOPICS,
   ...ASSISTANT_WORKFLOW_TOPICS,
+  ...ASSISTANT_PRODUCT_GUIDES,
 ];

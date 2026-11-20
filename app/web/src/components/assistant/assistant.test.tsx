@@ -141,7 +141,7 @@ describe("Assistente autenticado", () => {
   });
 
   it("usa somente rótulos/destinos controlados e filtra ações por perfil, inclusive forjadas", async () => {
-    vi.mocked(assistantApi.chat).mockResolvedValue({ message: "Orientação segura <script>nunca executar</script>", source: "gemini", actions: [
+    vi.mocked(assistantApi.chat).mockResolvedValue({ message: "Orientação segura <script>nunca executar</script>", source: "generated", actions: [
       { id: "projects", label: "Excluir tudo" }, { id: "dast", label: "Abrir DAST" },
       { id: "__proto__", label: "Ataque" }, { id: "https://outside.test", label: "Sair da plataforma" },
     ] } as unknown as AssistantChatResponse);
@@ -152,7 +152,7 @@ describe("Assistente autenticado", () => {
     expect(screen.queryByRole("button", { name: "Abrir DAST" })).not.toBeInTheDocument();
     expect(screen.queryByText("Excluir tudo")).not.toBeInTheDocument();
     expect(screen.getByRole("dialog").querySelector("script")).toBeNull();
-    expect(screen.getByText("Gemini")).toBeInTheDocument();
+    expect(screen.getByText("Resposta da Vuvu")).toBeInTheDocument();
     fireEvent.click(action);
     expect(screen.getByTestId("current-route")).toHaveTextContent("/projects");
   });
@@ -299,7 +299,7 @@ describe("Assistente autenticado", () => {
     mount(); await open();
     vi.mocked(assistantApi.chat).mockResolvedValueOnce({ ...localResponse, providerRetryAfterSeconds: 60 });
     await act(async () => submit());
-    expect(screen.getByText(/Nova tentativa com Gemini em 60 segundos/)).toBeInTheDocument();
+    expect(screen.getByText(/Nova tentativa em 60 segundos/)).toBeInTheDocument();
     const input = screen.getByRole("textbox", { name: "Sua pergunta" });
     fireEvent.change(input, { target: { value: "quem e vc" } });
     expect(screen.getByRole("button", { name: "Enviar pergunta" })).toBeEnabled();
@@ -309,7 +309,7 @@ describe("Assistente autenticado", () => {
   });
 
   it("recusa resposta inválida como erro recuperável", async () => {
-    vi.mocked(assistantApi.chat).mockResolvedValue({ message: "", source: "gemini", actions: [] });
+    vi.mocked(assistantApi.chat).mockResolvedValue({ message: "", source: "generated", actions: [] });
     mount();
     await open();
     submit();

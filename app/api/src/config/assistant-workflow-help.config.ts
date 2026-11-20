@@ -1,6 +1,6 @@
 /**
  * Aprofunda jornadas, pré-condições e limites de uso com conteúdo curado de produto.
- * Não lê registros ou docs em execução; consumido pelo catálogo de ajuda local e Gemini.
+ * Não lê registros ou docs em execução; consumido pela ajuda local e pela resposta gerada.
  */
 import type { AssistantTopic } from "../models/assistant.model";
 import type { UserRole } from "../models/user.model";
@@ -11,17 +11,17 @@ const ANALYSTS: readonly UserRole[] = ["ADMIN", "PENTESTER"];
 export const ASSISTANT_WORKFLOW_TOPICS: readonly AssistantTopic[] = [
   {
     id: "platform-journey", title: "Jornada completa do Vulnera",
-    keywords: ["fluxo completo", "jornada completa", "do cadastro ao relatorio", "como usar o vulnera", "por onde comecar no vulnera"],
+    keywords: ["fluxo completo", "jornada completa", "do cadastro ao relatorio", "como usar o vulnera", "por onde comecar no vulnera", "por onde comeco no vulnera"],
     screens: ["dashboard", "onboarding", "projects"], roles: ALL, actions: ["applications", "new-analysis", "projects"],
     guidance: "O caminho completo liga pessoas e etapas: o CLIENT prepara a empresa e solicita um plano; ADMIN analisa a assinatura. Com assinatura ativa e capacidade disponível, CLIENT ou ADMIN cadastra uma aplicação ativa e solicita sua análise. O projeto passa por Pendente, Em andamento, Em revisão e Concluído. ADMIN organiza participantes; PENTESTER trabalha nos projetos atribuídos, revisa achados e publica findings. O time acompanha correção, evidências, comentários, SLA e eventual aceite de risco. Relatórios executivo e técnico ficam disponíveis na revisão/conclusão. Solicitar projeto, iniciar scan, importar resultado e publicar finding são operações distintas, realizadas por quem tem permissão.",
     byRole: { CLIENT: "Como CLIENT, acompanhe a própria empresa e os findings dos projetos; não faça triagem de resultados brutos nem transições de findings.", PENTESTER: "Como PENTESTER, comece pelos projetos atribuídos e pelo escopo aprovado. Cadastro comercial, assinatura e solicitação de análise ficam com CLIENT/ADMIN." },
   },
   {
     id: "onboarding-subscription", title: "Empresa e aprovação da assinatura",
-    keywords: ["onboarding", "primeiro acesso", "assinatura pendente", "aguardar aprovacao", "empresa plano confirmacao", "cadastro interrompido"],
+    keywords: ["onboarding", "primeiro acesso", "assinatura pendente", "assinatura esta pendente", "aguardar aprovacao", "empresa plano confirmacao", "cadastro interrompido"],
     screens: ["onboarding", "subscriptions", "dashboard"], roles: ALL, actions: ["dashboard", "applications"],
     guidance: "Depois de criar a conta CLIENT, o onboarding autenticado tem as etapas Empresa, Plano e Confirmação. O cliente informa os dados pedidos da empresa, escolhe um plano e solicita a assinatura. Se a empresa já foi salva e uma etapa posterior falhou, o fluxo retoma essa empresa; não crie outra por impulso. A assinatura começa Pendente de aprovação; ADMIN aprova ou rejeita. Somente aprovação leva a Ativa. Existe no máximo uma assinatura ativa por empresa. Estar cadastrado ou ter solicitado um plano não significa já poder solicitar projetos: confira a situação da assinatura. Não há promessa de aprovação imediata, cobrança real, convite ou e-mail de confirmação por este fluxo.",
-    byRole: { PENTESTER: "PENTESTER não faz onboarding de empresa contratante; peça ao responsável CLIENT/ADMIN para verificar a situação comercial." },
+    byRole: { CLIENT: "Se sua assinatura já está pendente, confira o status no Dashboard e aguarde a aprovação do ADMIN. Evite criar outra empresa ou reenviar o pedido enquanto o primeiro estiver em análise.", PENTESTER: "PENTESTER não faz onboarding de empresa contratante; peça ao responsável CLIENT/ADMIN para verificar a situação comercial." },
   },
   {
     id: "plan-capacity", title: "Limites do plano e remediação contratada",
@@ -94,7 +94,7 @@ export const ASSISTANT_WORKFLOW_TOPICS: readonly AssistantTopic[] = [
     id: "vuvu-help-controls", title: "Como usar a Vuvu e interpretar suas respostas",
     keywords: ["como usar a vuvu", "modo discreto", "recolher vuvu", "mostrar vuvu", "arrastar a vuvu", "six seven", "ajuda local", "limites da vuvu"],
     screens: ["dashboard"], roles: ALL, actions: ["dashboard", "projects"],
-    guidance: "Um clique na personagem abre a conversa. Arraste para reposicionar, use as setas quando ela estiver focada ou Home para voltar ao canto. Duplo clique ou Shift+Enter com foco na personagem faz o six seven. No campo de pergunta do chat, Enter envia e Shift+Enter quebra linha; o botão Enviar também funciona por Tab e Enter. Recolher Vuvu no chat deixa um ícone na borda; clique nele para restaurar e reabra a conversa. Conversa, rascunho e posição ficam na sessão e não são recuperados após reload/nova sessão. Gemini identifica resposta gerada; Ajuda local identifica a orientação documentada, usada também quando o provedor falha ou não está configurado. A ajuda local continua disponível quando a cota de geração acaba; o prazo mostrado não agenda reenvio. Reações visuais locais não significam que o Gemini consultou dados ou fez uma operação. Pergunte com termos do produto, sem nomes, URLs, credenciais ou conteúdo real de achados; a Vuvu não lê registros nem executa tarefas por você.",
+    guidance: "Um clique na personagem abre a conversa. Arraste para reposicionar, use as setas quando ela estiver focada ou Home para voltar ao canto. Duplo clique ou Shift+Enter com foco na personagem faz o six seven. No chat, Enter envia e Shift+Enter quebra linha; o botão Enviar também funciona por teclado. Recolher Vuvu deixa um ícone na borda para restaurar a personagem. Conversa, rascunho e posição ficam na sessão da aba. Resposta da Vuvu indica uma resposta gerada; Ajuda local indica a orientação documentada. Durante a espera você ainda pode fazer perguntas. O prazo mostrado não agenda reenvio. Pergunte sem enviar nomes, endereços, credenciais ou dados reais do achado. A Vuvu explica como usar o produto, sem consultar seus registros ou executar ações.",
   },
   {
     id: "accessibility-controls", title: "Acessibilidade e conforto visual",

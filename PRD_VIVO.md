@@ -16,6 +16,34 @@
 
 ## 1. Estado geral do projeto
 
+**✅ 2026-11-20 — Inventário de funções e humor variado da Vuvu (100% do código, AI-CHAT-11).** Inventário por perfil com validação dos blocos em lista. Humor reage ao assunto, responde escolhas e evita bordões repetidos. Pedidos de credenciais com erros de digitação são recusados antes da geração. O ensaio de 30 perguntas em três personas teve 19 respostas geradas e 11 locais na rodada ao vivo; revelou orientações de onboarding repetidas, despedidas automáticas e identificadores de tela, tratados na revisão final. API: 174 testes, lint, build e 30 próprias respostas locais finais aprovados. Relatórios locais em `output/vuvu-three-personas/`.
+
+- [x] AI-CHAT-11 — Variar a conversa, listar recursos por perfil, proteger credenciais e registrar 30 perguntas e respostas em três personas.
+
+**✅ 2026-11-20 — Cota inicial de 20 respostas geradas na Vuvu (100% do código, AI-CHAT-10).** Padrões pessoal e compartilhado de 20, com as taxas de reposição e a proteção HTTP vigentes. Regressão HTTP com provedor simulado confirmou 20 respostas geradas e ajuda local na 21ª. Lint, build e 167 testes do assistente aprovados. A suíte adicional de rate limiting depende de banco de teste isolado e não pôde ser validada nesta rodada.
+
+- [x] AI-CHAT-10 — Aumentar para 20 a geração inicial da Vuvu e conferir a transição para ajuda local.
+
+**✅ 2026-11-20 — Vuvu com origem pública genérica e mais guias de uso (100% do código, AI-CHAT-09).** O chat, os avisos acessíveis e o JSON público usam origem genérica. Pedidos de bastidores recebem recusa controlada, e a API rejeita detalhes internos reconhecíveis na saída. Catálogo de 44 para 56 tópicos com passos conferidos; mesmas permissões, limites e dados de produto. API focal 166/166, Web 697/697, contraste 132/132, builds e Chrome com os três perfis aprovados com geração simulada. ADR-059 e matriz de curadoria atualizadas.
+
+- [x] AI-CHAT-09 — Remover identificação técnica da experiência pública, ampliar a orientação prática e validar API, Web e navegador.
+
+**✅ 2026-11-20 — Vuvu no nível 4 de humor e recusas por tipo (100% do código, AI-CHAT-08).** Gemini e ajuda local usam absurdo bem-humorado nos casos reconhecidos de injeção ou de pedido fora do produto. Falsa autoridade, instruções embutidas e pedidos de bastidores passam pela classificação antes da busca de ajuda, evitando respostas de CVSS ou evidências e atalhos alheios. Lint, build e 139/139 testes focais com provedor simulado aprovados. Guia e ADR-058 atualizados.
+
+- [x] AI-CHAT-08 — Aplicar o nível 4 nos dois casos, cobrir a sequência relatada e preservar atendimento neutro a dúvidas legítimas ou ambíguas.
+
+**✅ 2026-11-20 — Histórico filtrado, atalhos por intenção e diagnóstico da Vuvu (100% do código, AI-CHAT-07).** A API verifica a pergunta atual separadamente e descarta turnos sensíveis ou com tentativas explícitas do histórico enviado. Atalhos dependem de pedido claro e da classificação da resposta do Gemini, com destinos definidos pelo perfil. Ajuda local registra motivo, versão da API e revisão do assistente sem texto da conversa. A Vuvu ganha respostas mais debochadas para tentativas explícitas e pedidos claramente fora do produto. Lint, build e 120/120 testes focais com transporte simulado aprovados. ADR-058.
+
+- [x] AI-CHAT-07 — Separar histórico da checagem atual, evitar atalhos alheios, explicar a queda em log e reforçar a personalidade das recusas.
+
+**✅ 2026-11-20 — Ironia leve em recusas da Vuvu (100% do código, AI-CHAT-06).** O Gemini recebe orientação para usar ironia breve quando identificar uma tentativa explícita de mudar regras, forjar autoridade ou pedir instruções privadas. O tom é neutro em perguntas legítimas, casos ambíguos e relatos de incidentes. Lint, build e 111/111 testes focais com provedor simulado aprovados. Tom ao vivo ainda não validado.
+
+- [x] AI-CHAT-06 — Definir ironia leve para recusas do Gemini em tentativas explícitas de injeção de prompt.
+
+**✅ 2026-11-20 — Gemini priorizado na conversa da Vuvu (100% do código, AI-CHAT-05).** Mensagens elegíveis, inclusive saudações e perguntas sem tópico reconhecido, passam pelo Gemini primeiro. A ajuda local cobre falta de configuração ou cota, falha ou resposta externa inválida e conteúdo sensível reconhecível. Limites e atalhos por perfil preservados. API: lint, build e 111/111 testes do assistente com provedor simulado aprovados. Decisão registrada na ADR-057.
+
+- [x] AI-CHAT-05 — Usar Gemini primeiro e manter a ajuda local como alternativa, preservando a verificação de privacidade.
+
 **✅ 2026-11-16 — Conversa, cota e acessibilidade aplicadas no principal (100%; AI-CHAT-01..04).** Código `7388ba0`, como iannxz. API 957/957 em 58 suítes, Web final 697/697 em 78 arquivos, contraste 132/132, focal Web 40/40, builds e navegador final 11/11 aprovados. Imagens validadas aplicadas somente em API/Web após zero scans/migrations/variáveis divergentes. Sequência real em Aplicações por Enter: OI local, OQ E O VULNERA local, análise Gemini (1.297 ms), quem e vc local; quatro POST, foco/Escape corretos, zero erros de página/CSP. Banco/Mailhog e QA pré-existente, todos os volumes/portas, contagens e `.env` preservados. ADR-056, guias e relatório `docs/QA_VUVU_CONVERSA_2026-11-16.md` atualizados; sem nova cota/dependência/schema. Imagens anteriores e QA bruto somente locais; marcos parciais abaixo concluídos por esta entrada.
 
 **✅ 2026-11-16 — Conversa, cota e teclado da Vuvu validados (100% do código; aplicação em fechamento).** Sequência relatada corrigida com três respostas básicas locais, mantendo 44 tópicos. Abreviações e esclarecimento sem atalhos alheios; cota de geração separada da proteção HTTP, com ajuda local no esgotamento e limites numéricos preservados (ADR-056). Enter/Shift+Enter/Tab, composição, foco, espera sem reenvio e cabeçalho a 200% implementados. API check final 957/957 em 58 suítes; Web final 697/697, contraste 132/132, focal 40/40, builds e navegador final 11/11 aprovados. Aplicação principal e publicação em fechamento. Relatório `docs/QA_VUVU_CONVERSA_2026-11-16.md`.
@@ -654,6 +682,20 @@ Rafael decide quando commitar.
 ---
 
 ## 6. Histórico de marcos importantes
+
+**✅ 2026-11-20 — Ensaio de três personas da Vuvu.** A rodada ao vivo (19 geradas, 11 locais) precedeu os ajustes de lista, despedidas e nomes de tela. A API compilada final respondeu as mesmas 30 perguntas em Ajuda local e passou 174 testes focais. A stack em execução ainda precisa receber a API atualizada.
+
+**✅ 2026-11-20 — Capacidade inicial da Vuvu ampliada.** Configuração da API e do Compose alinhadas em 20. Em teste com as cotas inicialmente cheias, a resposta 21 usou ajuda local e a cota compartilhada também ficou esgotada para outra pessoa. Reposição preservada. A configuração passa a valer ao aplicar a nova API.
+
+**✅ 2026-11-20 — Origem pública e doze fichas de uso da Vuvu.** Chrome com Web compilada e rotas reais do assistente confirmou ambos os selos, espera genérica, aviso acessível e o JSON para ADMIN, CLIENT e PENTESTER. Provedor e dados de negócio simulados. Lint, API focal 166/166, Web 697/697, contraste 132/132 e builds passaram. Atualização conjunta da stack em execução é uma etapa de aplicação.
+
+**✅ 2026-11-20 — Nível 4 de humor na Vuvu.** Regressões cobrindo os tipos relatados, cota esgotada, pedido culinário e uso legítimo de auditoria e evidências aprovaram 139/139 testes focais. Lint e build da API aprovados. O tom do Gemini ao vivo e a aplicação à API em execução seguem pendentes.
+
+**✅ 2026-11-20 — Coerência da conversa e diagnóstico local da Vuvu.** Regressão HTTP confirmou que “oq é VRS?” chega ao Gemini simulado depois de uma pergunta sensível, sem o turno barrado no histórico. Recusas, esclarecimentos e pedidos fora de escopo não ganham atalhos. Logs distinguem cota, timeout, privacidade, bloqueio e outras causas. API: lint, build e 120/120 testes focais. Mudança verificada no checkout, com tom ao vivo e aplicação à API em execução pendentes.
+
+**✅ 2026-11-20 — Tom das recusas da Vuvu.** Ajuste no prompt do Gemini documentado no guia do assistente e verificado com lint, build e 111 testes focais. A mudança de tom depende da interpretação do provedor e não foi aplicada à API em execução nesta tarefa.
+
+**✅ 2026-11-20 — Prioridade do Gemini na Vuvu.** A ADR-057 substitui a preferência pela ajuda local nas mensagens básicas e sem tópico da ADR-056. Validação no checkout `refactor/assistant-ui` com 111/111 testes do assistente, lint e build da API. Alteração de código verificada com provedor simulado, sem aplicação a container em execução nesta tarefa.
 
 **✅ 2026-10-23 — Continuação e entrega do Assistente Vulnera (7/7 fases).** Autorização explícita para executar sem pausar checkpoints. 14 tópicos de ajuda, catálogo por perfil, API sem persistência nova, Gemini opcional/ajuda local e mascote web com sessão/contexto implementados. API focal 47/47, web 400/400, builds host/Docker, navegador produção 12/12 e fluxo real CLIENT aprovados; três perfis autenticados na API local. Serviços novos com 100% de linhas cobertas. Resultado API combinado 772/773: falha anterior de aspas no Content-Disposition Excel; check global conserva dois imports antigos. Ajustes ambientais de uploads/CVSS e encerramento nativo Windows registrados com distinção no relatório. Stack local atualizada em modo local, sem scans ativos antes da recriação, dados/volumes preservados. Não houve chamadas Gemini por ausência de credenciais/modelo; guia explica Free Tier, configuração privada e roteiro de três minutos. Sem schema/lockfile/`.env` real/commit/push/PR. Evidências `output/assistant/`, ADR-048 vigente; ADR-006/011/017 preservam evolução histórica.
 

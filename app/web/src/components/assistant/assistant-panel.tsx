@@ -71,7 +71,7 @@ export function AssistantPanel({ screen, role, conversation, onClose, onMinimize
         {messages.map((message) => <article key={message.id} className={`assistant-message assistant-message-${message.role}`}>
           <span className="assistant-message-author">{message.role === "user" ? "Você" : "Vuvu"}</span>
           <p>{message.content}</p>
-          {message.source && <span className="assistant-source">{message.source === "gemini" ? "Gemini" : "Ajuda local"}</span>}
+          {message.source && <span className="assistant-source">{message.source === "generated" ? "Resposta da Vuvu" : "Ajuda local"}</span>}
           {message.screen !== screen && <span className="assistant-message-context">Sobre: {ASSISTANT_SCREEN_LABELS[message.screen]}</span>}
           {message.actions && <div className="assistant-actions">
             {message.actions.map((action) => {
@@ -112,7 +112,7 @@ export function AssistantPanel({ screen, role, conversation, onClose, onMinimize
         </form>
         <p id="assistant-keyboard" className="assistant-keyboard">Enter envia · Shift+Enter quebra linha</p>
         {retryAfterSeconds > 0 && <p id="assistant-retry" className="assistant-notice" aria-live="off">Aguarde {retryAfterSeconds} segundos para enviar. Seu texto foi mantido.</p>}
-        {providerRetryAfterSeconds > 0 && <p id="assistant-provider-retry" className="assistant-notice" aria-live="off">Nova tentativa com Gemini em {providerRetryAfterSeconds} segundos. A ajuda local continua disponível.</p>}
+        {providerRetryAfterSeconds > 0 && <p id="assistant-provider-retry" className="assistant-notice" aria-live="off">Nova tentativa em {providerRetryAfterSeconds} segundos. A ajuda local continua disponível.</p>}
         <span className="sr-only" role="status">{availability}</span>
         <span id="assistant-count" className={draft.length >= 800 ? "assistant-count" : "sr-only"}>{draft.length}/1.000</span>
         <p id="assistant-privacy" className="assistant-privacy">Não compartilhe dados confidenciais.</p>

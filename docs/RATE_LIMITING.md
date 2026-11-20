@@ -20,8 +20,8 @@ o estado é limitado por TTL e quantidade máxima de chaves.
 | Escopo | Onde | Padrão | Variável |
 |---|---|---|---|
 | `export` | `GET /api/vulnerabilities/export.xlsx` (exportação Excel de findings), **por usuário** | 6/min, rajada de 2 | `RATE_LIMIT_EXPORT_PER_MINUTE` |
-| `assistant-user` | `POST /api/assistant/chat`, por usuário autenticado | Reposição 10/h, rajada de 5 | `RATE_LIMIT_ASSISTANT_USER_PER_HOUR`, `RATE_LIMIT_ASSISTANT_USER_BURST` |
-| `assistant-global` | `POST /api/assistant/chat`, compartilhado pela instância | Reposição 30/h, rajada de 10 | `RATE_LIMIT_ASSISTANT_GLOBAL_PER_HOUR`, `RATE_LIMIT_ASSISTANT_GLOBAL_BURST` |
+| `assistant-user` | `POST /api/assistant/chat`, por usuário autenticado | Reposição 10/h, rajada de 20 | `RATE_LIMIT_ASSISTANT_USER_PER_HOUR`, `RATE_LIMIT_ASSISTANT_USER_BURST` |
+| `assistant-global` | `POST /api/assistant/chat`, compartilhado pela instância | Reposição 30/h, rajada de 20 | `RATE_LIMIT_ASSISTANT_GLOBAL_PER_HOUR`, `RATE_LIMIT_ASSISTANT_GLOBAL_BURST` |
 
 Os budgets do assistente repõem continuamente, sem teto de janela civil; são
 limites da aplicação separados das cotas Google. O store os retém pelo maior

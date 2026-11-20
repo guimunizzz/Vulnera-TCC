@@ -1,5 +1,19 @@
 # BACKLOG.md — Vulnera
 
+- [x] AI-CHAT-11 (2026-11-20, 100% do código) — Variar as tiradas e respostas fora de escopo, exibir inventário por perfil, recusar pedidos de senhas e validar 30 perguntas em três personas. Lint, build, 174 testes e a rodada final em Ajuda local aprovados. Ensaio ao vivo anterior aos ajustes finais registrou 19 respostas geradas e 11 locais.
+
+- [x] AI-CHAT-10 (2026-11-20, 100% do código) — Aumentar para 20 a capacidade inicial pessoal e compartilhada de geração. API: build, lint e 167 testes do assistente, incluindo 20 respostas geradas e ajuda local na 21ª com provedor simulado.
+
+- [x] AI-CHAT-09 (2026-11-20, 100% do código) — Generalizar a origem no painel e na API, proteger detalhes internos e ampliar o catálogo de 44 para 56 tópicos de produto. API focal 166/166, Web 697/697, contraste 132/132, builds e Chrome nos três perfis aprovados com geração simulada. ADR-059.
+
+- [x] AI-CHAT-08 (2026-11-20, 100% do código) — Aplicar absurdo bem-humorado em recusas e pedidos fora de escopo, reconhecer os casos explícitos antes da ajuda por palavras e validar Gemini e ajuda local. Lint, build e 139/139 testes focais aprovados com provedor simulado. ADR-058.
+
+- [x] AI-CHAT-07 (2026-11-20, 100% do código) — Descartar turnos barrados do histórico, condicionar atalhos à intenção, diagnosticar ajuda local sem gravar conversa e reforçar deboche em recusas e pedidos fora do produto. Lint, build e 120/120 testes focais aprovados com provedor simulado. ADR-058.
+
+- [x] AI-CHAT-06 (2026-11-20, 100% do código) — Orientar o Gemini a recusar tentativas explícitas de injeção com ironia leve e retomar o assunto Vulnera. Lint, build e 111/111 testes focais aprovados com provedor simulado.
+
+- [x] AI-CHAT-05 (2026-11-20, 100% do código) — Priorizar Gemini para mensagens elegíveis, incluindo saudações e perguntas sem tópico. Preservar ajuda local em falha, cota ou conteúdo sensível reconhecível. API: lint, build e 111/111 testes do assistente aprovados com provedor simulado. ADR-057.
+
 **✅ 2026-11-16 — AI-CHAT-01..04 concluídas (100%).** Código `7388ba0`: conversa informal, cota de geração separada sem aumento numérico, Enter/Shift+Enter/Tab e acessibilidade de foco/espera/texto 200%. API 957/957, Web final 697/697, contraste 132/132, focal Web 40/40, builds e navegador final 11/11 aprovados. Somente API/Web principais atualizados; sequência real por Enter com três respostas locais e uma Gemini HTTP 200, zero erros de página/CSP. Banco/QA/volumes/contagens/ambiente privado preservados; sem seed/reset. Docs/ADR-056 e `QA_VUVU_CONVERSA_2026-11-16.md`; backups e QA bruto só locais. Marco parcial abaixo concluído.
 
 **✅ 2026-11-16 — AI-CHAT-01..03 validadas (100% do código; aplicação em fechamento).** Conversa informal/apresentações locais, orçamento externo separado, ajuda local sem bloqueio por cota de geração, Enter/Shift+Enter/Tab e espera acessível implementados. ADR-056; API 957/957, Web final 697/697, contraste 132/132, focal Web 40/40, builds e navegador final 11/11 aprovados, incluindo cabeçalho a 200%. Aplicação e publicação em fechamento. Relatório `QA_VUVU_CONVERSA_2026-11-16.md`.

@@ -46,7 +46,7 @@ describe("Espera manual do assistente", () => {
     expect(result.current.providerRetryAfterSeconds).toBe(60);
     act(() => { vi.advanceTimersByTime(60_000); });
     expect(result.current.providerRetryAfterSeconds).toBe(0); expect(assistantApi.chat).toHaveBeenCalledTimes(2);
-    expect(result.current.availability).toContain("tentar o Gemini novamente");
+    expect(result.current.availability).toContain("enviar uma nova pergunta");
   });
 
   it("entende Retry-After em data HTTP e limpa timers ao sair da sessão", async () => {

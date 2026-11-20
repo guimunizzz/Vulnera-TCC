@@ -17,7 +17,7 @@ export type AssistantActionId = "dashboard" | "projects" | "applications" | "new
 export interface AssistantHistoryMessage { role: "user" | "assistant"; content: string }
 export interface AssistantChatDTO { question: string; screen: AssistantScreen; history: AssistantHistoryMessage[] }
 export interface AssistantActionDTO { id: AssistantActionId; label: string }
-export interface AssistantResponseDTO { message: string; source: "gemini" | "local"; actions: AssistantActionDTO[]; providerRetryAfterSeconds?: number }
+export interface AssistantResponseDTO { message: string; source: "generated" | "local"; actions: AssistantActionDTO[]; providerRetryAfterSeconds?: number }
 export interface AssistantBudgetResult { allowed: boolean; retryAfterSeconds: number }
 export interface AssistantTopic {
   id: string;
@@ -36,4 +36,11 @@ export interface AssistantGatewayInput {
   history: AssistantHistoryMessage[];
   help: string;
 }
-export interface AssistantGateway { generate(input: AssistantGatewayInput): Promise<string | null> }
+export const ASSISTANT_REPLY_KINDS = ["answer", "navigation", "clarification", "refusal", "off_topic"] as const;
+export type AssistantReplyKind = (typeof ASSISTANT_REPLY_KINDS)[number];
+export type AssistantGatewayFailure = "provider_not_configured" | "provider_quota" | "provider_timeout" |
+  "provider_blocked" | "provider_invalid_response" | "provider_error";
+export type AssistantGatewayResult =
+  | { ok: true; kind: AssistantReplyKind; message: string }
+  | { ok: false; reason: AssistantGatewayFailure };
+export interface AssistantGateway { generate(input: AssistantGatewayInput): Promise<AssistantGatewayResult> }
