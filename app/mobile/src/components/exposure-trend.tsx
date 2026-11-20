@@ -10,7 +10,7 @@ import { useApiError } from "../hooks/use-api-error";
 import { last30Days, trendGeometry } from "../lib/exposure-trend";
 import { useAppTheme } from "../theme/use-app-theme";
 import type { ExposureApplication } from "../types/exposure-graph.types";
-import { ActionButton, DataState, FilterChip, GlassSurface } from "./workspace-ui";
+import { ActionButton, DataState, FilterChip, Surface } from "./workspace-ui";
 import { useWorkspaceReducedMotion } from "./workspace-motion";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -36,7 +36,7 @@ export function ExposureTrend({ applications }: { applications: ExposureApplicat
   const selectedDay = day !== null && points && day < points.length ? points[day] : null;
   const selectDay = (index: number) => { if (points?.length) setDay(Math.max(0, Math.min(points.length - 1, index))); };
 
-  return <GlassSurface>
+  return <Surface>
     <View style={{ gap: 4 }}><Text accessibilityRole="header" style={ui.heading}>Evolução da exposição</Text><Text style={ui.muted}>Achados identificados por dia · últimos 30 dias</Text></View>
     {!application ? <Text style={ui.body}>O histórico ficará disponível quando houver aplicações ativas.</Text> : <>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
@@ -64,7 +64,7 @@ export function ExposureTrend({ applications }: { applications: ExposureApplicat
         <Text style={ui.muted}>Mostra novos achados, não o total de vulnerabilidades em aberto.</Text>
       </>}
     </>}
-  </GlassSurface>;
+  </Surface>;
 }
 
 const styles = StyleSheet.create({ filters: { gap: 8 }, chart: { minHeight: 112 }, dayControls: { flexDirection: "row", flexWrap: "wrap", gap: 8 } });

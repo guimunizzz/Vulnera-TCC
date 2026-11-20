@@ -24,15 +24,15 @@ export function WorkspaceSkeleton({ kind, label }: { kind: "metrics" | "projects
   }, [active, phase]);
   const glow = useAnimatedStyle(() => ({ opacity: active ? 0.92 + phase.value * 0.08 : 1 }));
   const line = (width: DimensionValue = "100%", height = 14) => <SkeletonLine width={width} height={height} tint={workspace.neutralTint} />;
-  const card = (key: number, tall = false) => <View key={key} style={[styles.card, { borderColor: workspace.line, backgroundColor: workspace.glass }]}>
+  const card = (key: number, tall = false) => <View key={key} style={[styles.card, { borderColor: workspace.line, backgroundColor: workspace.surface }]}>
     <View style={styles.row}>{line(32, 32)}{line("35%")}</View>{line("84%", 22)}{line("64%")}{tall && <>{line("92%")}{line("75%")}</>}
   </View>;
   return <View accessible accessibilityRole="progressbar" accessibilityLabel={label} accessibilityState={{ busy: true }} aria-busy testID={`skeleton-${kind}`} style={styles.group}>
     {kind !== "metrics" && <Text style={ui.muted}>{label}</Text>}
     <Animated.View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.group, glow]}>
-      {kind === "metrics" ? <View style={[styles.card, styles.metrics, { borderColor: workspace.line, backgroundColor: workspace.glass }]}><View style={styles.metric}>{line(32, 26)}{line("90%")}</View><View style={styles.metric}>{line(32, 26)}{line("90%")}</View></View>
+      {kind === "metrics" ? <View style={[styles.card, styles.metrics, { borderColor: workspace.line, backgroundColor: workspace.surface }]}><View style={styles.metric}>{line(32, 26)}{line("90%")}</View><View style={styles.metric}>{line(32, 26)}{line("90%")}</View></View>
         : kind === "project" || kind === "finding" ? <>{line("88%", 34)}{line("67%")}{card(0, true)}{card(1, true)}</>
-        : kind === "evidence" ? <View style={[styles.card, { borderColor: workspace.line, backgroundColor: workspace.glass }]}>{line("100%", 180)}{line("70%")}</View>
+        : kind === "evidence" ? <View style={[styles.card, { borderColor: workspace.line, backgroundColor: workspace.surface }]}>{line("100%", 180)}{line("70%")}</View>
         : <>{card(0)}{card(1)}</>}
     </Animated.View>
   </View>;

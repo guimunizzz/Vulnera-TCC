@@ -1,9 +1,7 @@
 /**
  * app/(tabs)/_layout.tsx
  *
- * Barra de abas inferior — padrão mais reconhecível de navegação mobile do
- * que um menu escondido atrás de um ícone, e é só isso que o escopo enxuto
- * do CLIENT precisa: "meus projetos" e "configurações". Redireciona pro
+ * Barra de abas compartilhada e guarda dos fluxos autenticados. Redireciona pro
  * login se a sessão não existir (segunda linha de defesa — index.tsx já
  * faz essa checagem antes de chegar aqui, mas um deep link direto pra
  * /(tabs)/home pularia aquela checagem).
@@ -16,11 +14,8 @@
  * Também é onde o registro de push dispara (usePushRegistration) — roda uma
  * vez por sessão autenticada, independente de qual aba o usuário está vendo.
  *
- * Modelo 7: indicador roxo deslizante e ícone com escala leve em 320 ms.
- * O conteúdo acompanha com fade e deslocamento lateral de 28 px: Configurações
- * entra pela direita e Home pela esquerda, seguindo a ordem real das abas.
- * O React Navigation mantém rotas/eventos; a cápsula respeita área segura
- * e o respiro compartilhado em TAB_BAR, sem mudar as telas ou consultas.
+ * O React Navigation mantém rotas/eventos; a cápsula respeita a área segura
+ * e o respiro compartilhado em TAB_BAR.
  */
 
 import { Easing } from "react-native";
@@ -34,11 +29,10 @@ import { Screen } from "../../src/components/screen";
 import { FONT_FAMILY } from "../../src/theme/tokens";
 import { useAppTheme } from "../../src/theme/use-app-theme";
 import { useWorkspaceReducedMotion, WorkspaceMotionProvider } from "../../src/components/workspace-motion";
-import { WorkspaceBlurProvider } from "../../src/components/workspace-blur";
 import { AssistantSession } from "../../src/components/assistant";
 
 export default function TabsLayout() {
-  return <WorkspaceMotionProvider><WorkspaceBlurProvider><AuthenticatedTabs /></WorkspaceBlurProvider></WorkspaceMotionProvider>;
+  return <WorkspaceMotionProvider><AuthenticatedTabs /></WorkspaceMotionProvider>;
 }
 
 function AuthenticatedTabs() {

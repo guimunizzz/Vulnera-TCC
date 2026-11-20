@@ -1,14 +1,8 @@
 /**
  * theme/tokens.ts
  *
- * Paleta própria do mobile — 3ª rodada de feedback: v1 era gradiente
- * violeta/rosa vibrante, v2 tirou gradiente mas ainda tingia TUDO (fundo,
- * texto, borda) de violeta, o que lia como "roxo demais". Essa versão volta
- * pra uma base neutra (cinza-chumbo, sem tingimento de cor) e reserva o
- * violeta só pra DETALHES: botão primário, ícone/link ativo, badge de
- * status selecionado — nunca preenchendo fundo de card/tela inteiro. Só a
- * SEMÂNTICA de severidade (crítico=vermelho, alto=laranja, médio=âmbar,
- * baixo=azul) é compartilhada com o web — os tons em si são livres.
+ * Paleta escura do mobile. Superfícies neutras com leve tom ameixa,
+ * violeta para identidade e ação, dourado para detalhes de apoio.
  *
  * Fontes customizadas (Archivo/JetBrains Mono) — carregadas via
  * @expo-google-fonts/* e expo-font no app/_layout.tsx raiz, com guarda de
@@ -16,30 +10,30 @@
  */
 
 export const COLORS = {
-  // --- superfícies (cinza-chumbo neutro, SEM tingimento de violeta —
-  // degrade suave entre os 3 níveis pra card não parecer uma caixa
-  // separada flutuando no fundo) ---
-  canvas: "#0a0a0d",
-  surface: "#131318",
-  raised: "#1d1d24",
-  inset: "#050506",
+  canvas: "#15131a",
+  surface: "#201d26",
+  raised: "#2a2332",
+  inset: "#19161e",
 
   // --- texto (neutro) ---
-  textPrimary: "#f5f5f7",
-  textSecondary: "#b4b4bd",
-  textMuted: "#75757f",
+  textPrimary: "#f7f4fa",
+  textSecondary: "#d7d1da",
+  textMuted: "#bcb4c1",
 
   // --- bordas (neutro) ---
-  borderSubtle: "#1f1f27",
-  borderDefault: "#2d2d37",
-  borderStrong: "#4c4c58",
+  borderSubtle: "#302a36",
+  borderDefault: "#403746",
+  borderStrong: "#786b81",
 
   // --- ação (violeta — só pra detalhe: CTA, link, ícone/estado ativo) ---
-  accent: "#7c3aed",
-  accentHover: "#8b5cf6",
+  accent: "#6e40bd",
+  accentHover: "#794bc7",
   accentFg: "#ffffff",
-  accentInk: "#a78bfa",
-  accentSurface: "#1e1638",
+  accentInk: "#b79bf7",
+  accentSurface: "#322540",
+  highlightInk: "#eac17e",
+  highlightSurface: "#34291d",
+  highlightBorder: "#80643f",
 
   // --- estados ---
   success: "#16a34a",
@@ -88,9 +82,9 @@ export const SPACING = {
 
 /** tokens.css §4 — raio nomeado por INTENÇÃO, não por tamanho. */
 export const RADIUS = {
-  control: 6, // botão, input, chip
-  container: 10, // card, painel
-  overlay: 14, // modal/dialog (não usado hoje, reservado)
+  control: 16, // botão, input, chip
+  container: 24, // card, painel
+  overlay: 26, // modal, diálogo
   full: 9999, // avatar, pill
 } as const;
 
@@ -142,7 +136,7 @@ export const SHADOW = {
     elevation: 10,
   },
   glow: {
-    shadowColor: "#7c3aed",
+    shadowColor: COLORS.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,

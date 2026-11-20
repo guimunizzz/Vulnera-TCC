@@ -15,7 +15,7 @@ import { useAuthStore } from "../../../../src/store/auth.store";
 import { useApiError } from "../../../../src/hooks/use-api-error";
 import { SeverityBadge, StatusBadge } from "../../../../src/components/badge";
 import { EvidenceCarousel } from "../../../../src/components/evidence-carousel";
-import { ActionButton, DataState, DetailField, FilterChip, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
+import { ActionButton, DataState, DetailField, FilterChip, Surface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
 import { FONT_FAMILY } from "../../../../src/theme/tokens";
 import { useAppTheme } from "../../../../src/theme/use-app-theme";
 import { OWASP_LABELS, fraseDoSla, VRS_BAND_LABELS } from "../../../../src/types/vulnerability.types";
@@ -53,9 +53,9 @@ export default function FindingDetailScreen() {
       <Text accessibilityRole="header" style={[ui.title, { fontSize: 28, lineHeight: 34 }]}>{finding.title}</Text>
       <Text style={ui.muted}>{OWASP_LABELS[finding.owaspCategory] ?? finding.owaspCategory}</Text></MotionReveal>
     {findingQuery.isError && <DataState error title="Não foi possível atualizar" message={errorMessage(findingQuery.error)} onRetry={() => { void findingQuery.refetch(); }} />}
-    <MotionReveal delay={40} distance={8}><GlassSurface style={styles.scoreCard}>
+    <MotionReveal delay={40} distance={8}><Surface style={styles.scoreCard}>
       <CvssRing score={score} severity={finding.severityCalculated} /><View style={[ui.grow, { gap: 8 }]}><Text style={ui.eyebrow}>SEVERIDADE TÉCNICA</Text><Text style={ui.muted}>Registrada em {displayDate(finding.createdAt)}</Text></View>
-    </GlassSurface></MotionReveal>
+    </Surface></MotionReveal>
     <MotionReveal delay={80} distance={8} style={{ flexDirection: "row", alignItems: "stretch", gap: 8 }}>
       <FilterChip tab label="Resumo" selected={tab === "summary"} onPress={() => setTab("summary")} />
       <FilterChip tab label="Evidências" selected={tab === "evidence"} onPress={() => setTab("evidence")} />
@@ -67,11 +67,11 @@ export default function FindingDetailScreen() {
       {finding.impact && <WorkspaceDisclosure title="IMPACTO"><Text style={ui.body}>{finding.impact}</Text></WorkspaceDisclosure>}
       {finding.recommendation && <WorkspaceDisclosure title="RECOMENDAÇÃO"><Text style={ui.body}>{finding.recommendation}</Text></WorkspaceDisclosure>}
       {finding.severityOverrideReason && <WorkspaceDisclosure title="JUSTIFICATIVA DA SEVERIDADE AJUSTADA"><Text style={ui.body}>{finding.severityOverrideReason}</Text></WorkspaceDisclosure>}
-      {(finding.sla?.state && finding.sla.state !== "NO_SLA" || finding.vrs?.score != null) && <GlassSurface>
+      {(finding.sla?.state && finding.sla.state !== "NO_SLA" || finding.vrs?.score != null) && <Surface>
         {finding.sla?.state && finding.sla.state !== "NO_SLA" && <DetailField label="PRAZO DE REMEDIAÇÃO" value={fraseDoSla(finding.sla.state, finding.sla.remainingMs)} />}
         {finding.sla?.dueAt && <Text style={ui.muted}>Prazo em {displayDate(finding.sla.dueAt, true)}</Text>}
         {finding.vrs?.score != null && <DetailField label="PRIORIDADE CONTEXTUAL / VRS" value={`${finding.vrs.score}/100${finding.vrs.band ? ` · ${VRS_BAND_LABELS[finding.vrs.band]}` : ""}`} />}
-      </GlassSurface>}
+      </Surface>}
       {finding.cvssVector && <WorkspaceDisclosure title="VETOR CVSS" initiallyExpanded={false}><Text style={ui.body}>{finding.cvssVector}</Text></WorkspaceDisclosure>}
       <Text style={ui.muted}>Atualizada em {displayDate(finding.updatedAt, true)}</Text>
     </>}
@@ -86,10 +86,10 @@ export default function FindingDetailScreen() {
       {commentsQuery.isError && <DataState error title="Comentários indisponíveis" message={errorMessage(commentsQuery.error)} onRetry={() => { if (commentsQuery.isFetchNextPageError) void commentsQuery.fetchNextPage(); else void commentsQuery.refetch(); }} />}
       {usersQuery.isError && <Text style={ui.muted}>Alguns nomes não estão disponíveis. O conteúdo dos comentários permanece abaixo.</Text>}
       {!commentsQuery.isPending && !commentsQuery.isError && !comments.length && <DataState title="A conversa ainda não começou" message="Os comentários registrados no web aparecerão aqui para consulta." />}
-      {comments.map((comment, index) => <MotionReveal key={comment.id} animate={index < 3} distance={4} delay={Math.min(index, 2) * 30}><GlassSurface style={{ gap: 14 }}><View style={ui.row}>
+      {comments.map((comment, index) => <MotionReveal key={comment.id} animate={index < 3} distance={4} delay={Math.min(index, 2) * 30}><Surface style={{ gap: 14 }}><View style={ui.row}>
         <View style={[styles.authorAvatar, { backgroundColor: workspace.neutralTint }]}><Text style={[styles.authorInitial, { color: workspace.secondary }]}>{comment.authorId === currentUser?.id || usersQuery.data?.some((user) => user.id === comment.authorId) ? author(comment.authorId).charAt(0).toUpperCase() : "?"}</Text></View>
         <View style={ui.grow}><Text style={[styles.authorName, { color: workspace.text }]}>{author(comment.authorId)}</Text><Text style={ui.muted}>{displayDate(comment.createdAt, true)}</Text></View>
-      </View><WorkspaceDisclosure title="Texto do comentário" surface={false}><Text style={ui.body}>{comment.content}</Text></WorkspaceDisclosure></GlassSurface></MotionReveal>)}
+      </View><WorkspaceDisclosure title="Texto do comentário" surface={false}><Text style={ui.body}>{comment.content}</Text></WorkspaceDisclosure></Surface></MotionReveal>)}
       {commentsQuery.hasNextPage && !commentsQuery.isFetchNextPageError && <ActionButton icon="add-outline" label={commentsQuery.isFetchingNextPage ? "Carregando..." : "Carregar mais comentários"} disabled={commentsQuery.isFetching} onPress={() => { void commentsQuery.fetchNextPage(); }} />}
     </>}
     </MotionReveal>

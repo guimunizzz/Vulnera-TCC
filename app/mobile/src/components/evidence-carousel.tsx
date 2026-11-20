@@ -12,7 +12,7 @@ import { useAuthStore } from "../store/auth.store";
 import { useAppTheme } from "../theme/use-app-theme";
 import { FONT_FAMILY } from "../theme/tokens";
 import { displayBytes, displayDate } from "../lib/display";
-import { ActionButton, GlassSurface } from "./workspace-ui";
+import { ActionButton, Surface } from "./workspace-ui";
 import type { Evidence } from "../types/evidence.types";
 
 function EvidenceImage({ evidence, vulnerabilityId }: { evidence: Evidence; vulnerabilityId: string }) {
@@ -63,13 +63,13 @@ export function EvidenceCarousel({ vulnerabilityId, evidences }: { vulnerability
     {width > 0 && <FlatList key={width} data={evidences} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
       keyExtractor={(evidence) => evidence.id} getItemLayout={(_data, index) => ({ length: width, offset: width * index, index })}
       onMomentumScrollEnd={(event) => setActive(Math.max(0, Math.min(evidences.length - 1, Math.round(event.nativeEvent.contentOffset.x / width))))}
-      renderItem={({ item }) => <View style={{ width }}><GlassSurface style={styles.slide}>
+      renderItem={({ item }) => <View style={{ width }}><Surface style={styles.slide}>
         <View style={ui.spread}><View style={[ui.row, ui.grow, { gap: 8 }]}><Ionicons name="attach-outline" size={18} color={workspace.secondary} /><Text numberOfLines={2} style={[styles.fileName, { color: workspace.text }, ui.grow]}>{item.originalName}</Text></View><Text style={ui.mono}>{displayBytes(item.sizeBytes)}</Text></View>
         {item.mimeType.startsWith("image/") ? <EvidenceImage vulnerabilityId={vulnerabilityId} evidence={item} /> : <View style={[styles.file, { backgroundColor: workspace.mediaWell }]}>
           <Ionicons name="document-text-outline" size={36} color={workspace.secondary} /><Text style={ui.body}>Arquivo anexado</Text><Text style={[ui.muted, { textAlign: "center" }]}>Consulte este documento na plataforma web.</Text>
         </View>}
         {!!item.proof && <Text style={ui.body}>{item.proof}</Text>}<Text style={ui.muted}>Enviada em {displayDate(item.createdAt)}</Text>
-      </GlassSurface></View>}
+      </Surface></View>}
     />}
     <View style={ui.spread}><Text style={ui.muted}>Deslize para consultar os arquivos</Text><Text style={ui.mono}>{Math.min(active + 1, evidences.length)} / {evidences.length}</Text></View>
   </View>;

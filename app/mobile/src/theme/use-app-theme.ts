@@ -1,10 +1,7 @@
 /**
  * theme/use-app-theme.ts
  *
- * Resolve os tokens semânticos de cor, superfícies de vidro e estilos base
- * conforme o tema ativo ("dark" padrão ou "light" branco/claro).
- * A paleta clara espelha `app/web/src/styles/tokens.css` (`[data-theme="light"]`),
- * garantindo contraste WCAG AA em textos, bordas e severidades sobre fundo claro.
+ * Resolve a mesma paleta semântica para login, navegação e área autenticada.
  * Consumidores: layouts, telas e componentes visuais de todo o app mobile.
  */
 
@@ -29,6 +26,9 @@ export interface AppColors {
   accentFg: string;
   accentInk: string;
   accentSurface: string;
+  highlightInk: string;
+  highlightSurface: string;
+  highlightBorder: string;
   success: string;
   successInk: string;
   successSurface: string;
@@ -56,12 +56,9 @@ export interface AppColors {
 
 export interface AppWorkspace {
   background: string;
-  glass: string;
-  glassStrong: string;
-  glassAndroid: string;
-  glassStrongAndroid: string;
-  tabGlass: string;
-  tabGlassAndroid: string;
+  surface: string;
+  raised: string;
+  tabSurface: string;
   tabBorder: string;
   line: string;
   shine: string;
@@ -95,21 +92,24 @@ export interface AppWorkspace {
 const DARK_COLORS: AppColors = COLORS;
 
 const LIGHT_COLORS: AppColors = {
-  canvas: "#f4f5f8",
+  canvas: "#f7f5f8",
   surface: "#ffffff",
-  raised: "#ffffff",
-  inset: "#eceef4",
-  textPrimary: "#181a20",
-  textSecondary: "#3f4451",
-  textMuted: "#5d6472",
-  borderSubtle: "#e2e5ed",
-  borderDefault: "#cfd4df",
-  borderStrong: "#6e7685",
+  raised: "#f5f0f8",
+  inset: "#ede9ef",
+  textPrimary: "#231e29",
+  textSecondary: "#433a4a",
+  textMuted: "#655a6c",
+  borderSubtle: "#e9e2ec",
+  borderDefault: "#d7cbdc",
+  borderStrong: "#80728a",
   accent: "#7046cf",
   accentHover: "#5b2bb5",
   accentFg: "#ffffff",
   accentInk: "#5b2bb5",
   accentSurface: "#f3f0fc",
+  highlightInk: "#77501b",
+  highlightSurface: "#fbf1df",
+  highlightBorder: "#d7b980",
   success: "#187c49",
   successInk: "#116339",
   successSurface: "#e8fbee",
@@ -135,81 +135,55 @@ const LIGHT_COLORS: AppColors = {
   },
 };
 
-const DARK_WORKSPACE: AppWorkspace = {
-  background: "#101113",
-  glass: "rgba(34,36,40,0.58)",
-  glassStrong: "rgba(43,46,51,0.62)",
-  glassAndroid: "rgba(26,28,33,0.90)",
-  glassStrongAndroid: "rgba(33,36,42,0.94)",
-  tabGlass: "rgba(29,31,36,0.68)",
-  tabGlassAndroid: "rgba(24,26,31,0.94)",
+const DARK_WORKSPACE = createWorkspace(DARK_COLORS, {
   tabBorder: "rgba(255,255,255,0.17)",
-  line: "rgba(255,255,255,0.10)",
   shine: "rgba(255,255,255,0.17)",
-  muted: "#a8acb5",
-  text: "#f5f6f8",
-  secondary: "#c9ccd3",
-  inset: "#1b1d21",
   neutralTint: "rgba(255,255,255,0.045)",
-  searchBg: "rgba(255,255,255,0.025)",
-  searchFocusBg: "rgba(124,58,237,0.065)",
-  searchFocusBorder: "rgba(167,139,250,0.5)",
-  chipBg: "rgba(255,255,255,0.025)",
-  chipActiveBg: "rgba(124,58,237,0.20)",
-  chipActiveBorder: "rgba(167,139,250,0.24)",
-  actionBg: "rgba(124,58,237,0.12)",
-  actionBorder: "rgba(167,139,250,0.25)",
-  dangerActionBg: "rgba(225,29,72,0.06)",
-  dangerActionBorder: "rgba(253,164,175,0.18)",
-  dangerInk: "#fda4af",
-  purple: "#7c3aed",
-  lavender: "#a78bfa",
-  successAccent: "#6ee7a0",
-  stageDoneBg: "#34383e",
-  stageDoneBorder: "rgba(255,255,255,0.2)",
   mediaWell: "rgba(0,0,0,0.25)",
-  radius: 24,
   blurTint: "dark",
   statusBarStyle: "light",
-};
+});
 
-const LIGHT_WORKSPACE: AppWorkspace = {
-  background: "#f3f4f8",
-  glass: "rgba(255,255,255,0.84)",
-  glassStrong: "rgba(255,255,255,0.94)",
-  glassAndroid: "#ffffff",
-  glassStrongAndroid: "#ffffff",
-  tabGlass: "rgba(255,255,255,0.86)",
-  tabGlassAndroid: "#ffffff",
+const LIGHT_WORKSPACE = createWorkspace(LIGHT_COLORS, {
   tabBorder: "rgba(24,26,32,0.12)",
-  line: "rgba(24,26,32,0.09)",
   shine: "rgba(255,255,255,0.90)",
-  muted: "#5d6472",
-  text: "#181a20",
-  secondary: "#3f4451",
-  inset: "#ebedf3",
   neutralTint: "rgba(24,26,32,0.05)",
-  searchBg: "#ffffff",
-  searchFocusBg: "rgba(112,70,207,0.06)",
-  searchFocusBorder: "rgba(112,70,207,0.45)",
-  chipBg: "#ffffff",
-  chipActiveBg: "rgba(112,70,207,0.12)",
-  chipActiveBorder: "rgba(112,70,207,0.32)",
-  actionBg: "rgba(112,70,207,0.09)",
-  actionBorder: "rgba(112,70,207,0.26)",
-  dangerActionBg: "rgba(193,28,31,0.07)",
-  dangerActionBorder: "rgba(193,28,31,0.24)",
-  dangerInk: "#9b1416",
-  purple: "#7046cf",
-  lavender: "#5b2bb5",
-  successAccent: "#187c49",
-  stageDoneBg: "#dfe3ec",
-  stageDoneBorder: "rgba(24,26,32,0.16)",
   mediaWell: "rgba(24,26,32,0.05)",
-  radius: 24,
   blurTint: "light",
   statusBarStyle: "dark",
-};
+});
+
+function createWorkspace(colors: AppColors, material: Pick<AppWorkspace, "tabBorder" | "shine" | "neutralTint" | "mediaWell" | "blurTint" | "statusBarStyle">): AppWorkspace {
+  return {
+    ...material,
+    background: colors.canvas,
+    surface: colors.surface,
+    raised: colors.raised,
+    tabSurface: colors.raised,
+    line: colors.borderSubtle,
+    muted: colors.textMuted,
+    text: colors.textPrimary,
+    secondary: colors.textSecondary,
+    inset: colors.inset,
+    searchBg: colors.surface,
+    searchFocusBg: colors.accentSurface,
+    searchFocusBorder: colors.accentInk,
+    chipBg: colors.surface,
+    chipActiveBg: colors.accentSurface,
+    chipActiveBorder: `${colors.accentInk}66`,
+    actionBg: colors.accentSurface,
+    actionBorder: `${colors.accentInk}66`,
+    dangerActionBg: colors.dangerSurface,
+    dangerActionBorder: `${colors.dangerInk}66`,
+    dangerInk: colors.dangerInk,
+    purple: colors.accent,
+    lavender: colors.accentInk,
+    successAccent: colors.successInk,
+    stageDoneBg: colors.raised,
+    stageDoneBorder: colors.borderDefault,
+    radius: 24,
+  };
+}
 
 function createThemedUiStyles(w: AppWorkspace) {
   return StyleSheet.create({

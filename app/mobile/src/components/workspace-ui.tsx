@@ -1,17 +1,17 @@
 /**
- * Superfícies liquid glass e estrutura das telas autenticadas.
- * Unifica navegação, contraste e estados de dados nos temas escuro e claro.
+ * Superfícies e estrutura das telas autenticadas. O conteúdo usa a mesma
+ * hierarquia de cor e os mesmos controles nos temas escuro e claro.
  * Consumidores: Home, Relatórios, detalhes de projeto/finding e Configurações.
  */
 import { useEffect, type ReactNode } from "react";
-import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import { useRouter, type Href } from "expo-router";
-import { FONT_FAMILY } from "../theme/tokens";
+import { FONT_FAMILY, RADIUS, SPACING } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
+import { useAuthStore } from "../store/auth.store";
 import { useTabBarClearance } from "../hooks/use-tab-bar-clearance";
 import { haptics } from "../lib/haptics";
 import { WorkspaceContentMotionProvider, SoftPressable, SOFT_MOTION, useWorkspaceReducedMotion, WorkspaceAtmosphere } from "./workspace-motion";
@@ -19,26 +19,18 @@ import { HomeBrand } from "./home-brand";
 import { AssistantButton } from "./assistant";
 import type { AssistantScreen } from "../lib/assistant-context";
 
-export function GlassSurface({ children, style, onPress, accessibilityLabel, strong = false }: {
+export function Surface({ children, style, onPress, accessibilityLabel, strong = false }: {
   children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string; strong?: boolean;
 }) {
   const { isDark, workspace } = useAppTheme();
-  const surfaceBg = Platform.OS === "android"
-    ? (strong ? workspace.glassStrongAndroid : workspace.glassAndroid)
-    : (strong ? workspace.glassStrong : workspace.glass);
   const surfaceStyle = [
-    styles.glass,
-    { borderColor: workspace.line },
+    styles.surface,
+    { borderColor: workspace.line, backgroundColor: strong ? workspace.raised : workspace.surface },
     !isDark && styles.lightElevation,
     style,
   ];
-  const content = <>
-    {Platform.OS !== "android" && <BlurView intensity={32} tint={workspace.blurTint} pointerEvents="none" style={StyleSheet.absoluteFill} />}
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: surfaceBg }]} />
-    <View pointerEvents="none" style={[styles.reflection, { backgroundColor: workspace.shine }]} />{children}
-  </>;
   return onPress ? <SoftPressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={() => { haptics.tap(); onPress(); }}
-    style={surfaceStyle}>{content}</SoftPressable> : <View style={surfaceStyle}>{content}</View>;
+    style={surfaceStyle}>{children}</SoftPressable> : <View style={surfaceStyle}>{children}</View>;
 }
 
 export function WorkspaceScreen({ children, scroll = true, refreshing = false, onRefresh }: {
@@ -57,14 +49,21 @@ export function WorkspaceScreen({ children, scroll = true, refreshing = false, o
   </SafeAreaView></WorkspaceContentMotionProvider>;
 }
 
-export function PageHeader({ label, back = false, backFallback = "/(tabs)/home", assistantContext, children }: { label: string; back?: boolean; backFallback?: Href; assistantContext?: AssistantScreen; children?: ReactNode }) {
+export function PageHeader({ label, back = false, backFallback = "/(tabs)/home", assistantContext, account = false }: { label?: string; back?: boolean; backFallback?: Href; assistantContext?: AssistantScreen; account?: boolean }) {
   const router = useRouter();
   const { workspace, ui } = useAppTheme();
+  const initial = useAuthStore((state) => state.user?.name?.trim().charAt(0).toUpperCase()) || "?";
   return <View style={styles.header}>
     {back ? <SoftPressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={() => { haptics.tap(); if (router.canGoBack()) router.back(); else router.replace(backFallback); }} style={[styles.iconButton, { borderColor: workspace.line, backgroundColor: workspace.neutralTint }]}>
       <Ionicons name="arrow-back" size={22} color={workspace.text} /></SoftPressable>
       : <HomeBrand />}
-    <Text style={[ui.eyebrow, styles.headerLabel, { color: workspace.secondary }, !back && styles.brandLabel]}>{label}</Text><AssistantButton screen={assistantContext} />{children ?? (back ? <View style={[styles.headerDot, { backgroundColor: workspace.muted }]} /> : null)}
+    <View style={ui.grow}>{label && <Text style={[ui.eyebrow, !back && styles.brandLabel]}>{label}</Text>}</View>
+    <AssistantButton screen={assistantContext} />
+    {account && <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta"
+      onPress={() => { haptics.tap(); router.push("/(tabs)/settings"); }}
+      style={[styles.iconButton, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}>
+      <Text style={ui.heading}>{initial}</Text>
+    </SoftPressable>}
   </View>;
 }
 
@@ -78,13 +77,10 @@ export function FilterChip({ label, selected, onPress, tab = false }: { label: s
   const reduced = useWorkspaceReducedMotion();
   const progress = useSharedValue(selected ? 1 : 0);
   useEffect(() => { progress.value = withTiming(selected ? 1 : 0, { ...SOFT_MOTION, duration: reduced ? 0 : 190 }); }, [selected, reduced, progress]);
-  const highlight = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(progress.value, [0, 1], ["rgba(124,58,237,0)", workspace.chipActiveBg]),
-    opacity: progress.value,
-  }));
+  const highlight = useAnimatedStyle(() => ({ opacity: progress.value }));
   return <SoftPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} onPress={() => { haptics.tap(); onPress(); }}
     style={[styles.chip, { borderColor: workspace.line, backgroundColor: workspace.chipBg }, tab && styles.tabChip]}>
-    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.chipActive, { borderColor: workspace.chipActiveBorder }, highlight]} />
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.chipActive, { borderColor: workspace.chipActiveBorder, backgroundColor: workspace.chipActiveBg }, highlight]} />
     <Text style={[styles.chipText, { color: workspace.muted }, tab && styles.tabChipText, selected && { color: workspace.text }]}>{label}</Text>
   </SoftPressable>;
 }
@@ -110,13 +106,13 @@ export function DataState({ title, message, loading = false, error = false, onRe
   title: string; message?: string; loading?: boolean; error?: boolean; onRetry?: () => void;
 }) {
   const { workspace, ui } = useAppTheme();
-  return <GlassSurface style={styles.state}>
+  return <Surface style={styles.state}>
     <View style={[styles.stateIcon, { backgroundColor: error ? workspace.dangerActionBg : workspace.neutralTint }]}>
       {loading ? <ActivityIndicator color={workspace.lavender} /> : <Ionicons name={error ? "cloud-offline-outline" : "layers-outline"} size={25} color={error ? workspace.dangerInk : workspace.secondary} />}
     </View><Text accessibilityRole="header" style={[ui.heading, { fontSize: 17, textAlign: "center" }]}>{title}</Text>
     {message && <Text accessibilityLiveRegion={error ? "polite" : "none"} style={[ui.muted, { textAlign: "center" }]}>{message}</Text>}
     {onRetry && <ActionButton label="Tentar novamente" onPress={onRetry} />}
-  </GlassSurface>;
+  </Surface>;
 }
 
 export function DetailField({ label, value }: { label: string; value: string }) {
@@ -125,18 +121,16 @@ export function DetailField({ label, value }: { label: string; value: string }) 
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, overflow: "hidden" }, flex: { flex: 1 }, content: { paddingHorizontal: 20, gap: 20 },
-  glass: { borderRadius: 24, borderWidth: 1, overflow: "hidden", padding: 20, gap: 16 },
+  screen: { flex: 1, overflow: "hidden" }, flex: { flex: 1 }, content: { paddingHorizontal: SPACING[5], gap: SPACING[5] },
+  surface: { borderRadius: RADIUS.container, borderWidth: 1, padding: SPACING[5], gap: SPACING[4] },
   lightElevation: { shadowColor: "#181a20", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
-  reflection: { position: "absolute", top: 0, left: 22, right: 22, height: 1 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingVertical: 8 }, headerLabel: { flex: 1, letterSpacing: 0.8 },
-  brandLabel: { textAlign: "right", flexShrink: 1 },
-  headerDot: { width: 6, height: 6, borderRadius: 3, marginRight: 8 },
-  iconButton: { width: 48, height: 48, alignItems: "center", justifyContent: "center", borderRadius: 18, borderWidth: 1 },
+  header: { flexDirection: "row", alignItems: "center", gap: SPACING[2], minHeight: 64, paddingVertical: SPACING[2] },
+  brandLabel: { textAlign: "right" },
+  iconButton: { width: 48, height: 48, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.control, borderWidth: 1 },
   chip: { minHeight: 48, minWidth: 48, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 18, overflow: "hidden" },
   chipActive: { borderRadius: 17, borderWidth: 1 }, chipText: { fontFamily: FONT_FAMILY.medium, fontSize: 14 },
   tabChip: { flex: 1, minWidth: 0, paddingHorizontal: 8, justifyContent: "center" }, tabChipText: { fontSize: 13, textAlign: "center", flexShrink: 1 },
-  action: { minHeight: 48, paddingHorizontal: 18, paddingVertical: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, borderRadius: 16, borderWidth: 1 },
+  action: { minHeight: 48, paddingHorizontal: SPACING[4], paddingVertical: SPACING[3], flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING[2], borderRadius: RADIUS.control, borderWidth: 1 },
   actionText: { fontFamily: FONT_FAMILY.medium, fontSize: 14, flexShrink: 1, textAlign: "center" },
   state: { alignItems: "center", paddingVertical: 32, gap: 14 }, stateIcon: { width: 52, height: 52, borderRadius: 18, alignItems: "center", justifyContent: "center" },
 });

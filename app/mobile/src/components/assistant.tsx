@@ -7,7 +7,7 @@ import { usePathname, useRouter, type Href } from "expo-router";
 import axios from "axios";
 import { assistantApi, type AssistantHistory, type AssistantResponse } from "../api/assistant.api";
 import { assistantActions, assistantScreen, type AssistantActionId, type AssistantScreen } from "../lib/assistant-context";
-import { FONT_FAMILY } from "../theme/tokens";
+import { FONT_FAMILY, RADIUS } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
 import { AssistantMascot } from "./assistant-mascot";
 import { SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
@@ -18,9 +18,9 @@ const AssistantContext = createContext<((screen: AssistantScreen) => void) | nul
 export function AssistantButton({ screen }: { screen?: AssistantScreen }) {
   const open = useContext(AssistantContext);
   const pathname = usePathname();
-  const { workspace } = useAppTheme();
+  const { colors, workspace } = useAppTheme();
   if (!open) return null;
-  return <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir assistente Vuvu" testID="assistant-open" onPress={() => open(screen ?? assistantScreen(pathname))} style={[styles.launcher, { borderColor: workspace.line, backgroundColor: workspace.neutralTint }]}><Ionicons name="chatbubble-ellipses-outline" size={20} color={workspace.lavender} /></SoftPressable>;
+  return <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir assistente Vuvu" testID="assistant-open" onPress={() => open(screen ?? assistantScreen(pathname))} style={[styles.launcher, { borderColor: colors.highlightBorder, backgroundColor: workspace.neutralTint }]}><Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.highlightInk} /></SoftPressable>;
 }
 
 export function AssistantSession({ children }: { children: ReactNode }) {
@@ -124,7 +124,7 @@ export function AssistantSession({ children }: { children: ReactNode }) {
 
 type ComponentRefScroll = ComponentRef<typeof ScrollView>;
 const styles = StyleSheet.create({
-  launcher: { width: 48, height: 48, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  launcher: { width: 48, height: 48, borderRadius: RADIUS.control, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   screen: { flex: 1 }, content: { flex: 1, width: "100%", maxWidth: 640, alignSelf: "center" }, flex: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },
   portrait: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },

@@ -5,15 +5,15 @@
  * Consumidor: layout autenticado do mobile, preservando os eventos de navegação.
  */
 import { memo, useEffect, type ComponentProps } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { SHADOW, TAB_BAR } from "../theme/tokens";
+import { FONT_FAMILY, SHADOW, TAB_BAR } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
 import { SOFT_MOTION, SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
+import { TabBarMaterial } from "./tab-bar-material";
 
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>["tabBar"]>>[0];
 const EDGE = 8;
@@ -64,13 +64,14 @@ const NavigationIcon = memo(function NavigationIcon({
 
 export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptors, emitter, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const reduced = useWorkspaceReducedMotion();
   const { isDark, workspace } = useAppTheme();
   const routes = state.routes.filter(
     (route) => route.name === "dashboard" || route.name === "home" || route.name === "security" || route.name === "reports",
   );
   const count = Math.max(1, routes.length);
-  const barWidth = count >= 3 ? 240 : TAB_BAR.width;
+  const barWidth = Math.min(count >= 3 ? 304 : TAB_BAR.width, width - insets.left - insets.right - 24);
   const cellWidth = (barWidth - EDGE * 2 - 2) / count;
   const currentKey = state.routes[state.index]?.key;
   const selected = routes.findIndex((route) => route.key === currentKey);
@@ -100,16 +101,7 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
         ]}
       >
         <View style={[styles.glass, { borderColor: workspace.tabBorder }]}>
-          {Platform.OS !== "android" && (
-            <BlurView intensity={45} tint={workspace.blurTint} pointerEvents="none" style={StyleSheet.absoluteFill} />
-          )}
-          <View
-            pointerEvents="none"
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: Platform.OS === "android" ? workspace.tabGlassAndroid : workspace.tabGlass },
-            ]}
-          />
+          <TabBarMaterial />
           <View pointerEvents="none" style={[styles.reflection, { backgroundColor: workspace.shine }]} />
           {Array.from({ length: Math.max(0, count - 1) }).map((_, idx) => (
             <View
@@ -158,7 +150,8 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
                   idleColor={workspace.muted}
                   activeColor={workspace.lavender}
                 />
-                <Text accessible={false} numberOfLines={1} style={[styles.label, { color: focused ? workspace.lavender : workspace.muted }]}>{title}</Text>
+                <Text accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.45}
+                  style={[styles.label, { color: focused ? workspace.lavender : workspace.muted }]}>{title}</Text>
               </SoftPressable>
             );
           })}
@@ -190,7 +183,7 @@ const styles = StyleSheet.create({
   divider: { position: "absolute", width: 1, height: 20, top: 17 },
   button: { minHeight: 48, alignItems: "center", justifyContent: "center", paddingBottom: 4 },
   icon: { width: 26, height: 26 },
-  label: { fontSize: 10, lineHeight: 13 },
+  label: { fontFamily: FONT_FAMILY.medium, fontSize: 10, lineHeight: 14, textAlign: "center" },
   iconLayer: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center" },
   indicator: {
     position: "absolute",

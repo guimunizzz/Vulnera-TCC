@@ -23,7 +23,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import { useMutation } from "@tanstack/react-query";
 import Animated, {
   Easing,
@@ -40,10 +39,13 @@ import { useAuthStore } from "../src/store/auth.store";
 import { useApiError } from "../src/hooks/use-api-error";
 import { haptics } from "../src/lib/haptics";
 import { Button } from "../src/components/button";
-import { VulneraMark } from "../src/components/vulnera-mark";
+import { LOGIN_CONFIRMATION_MS, LoginMark } from "../src/components/login-mark";
 import { FONT_FAMILY, FONT_SIZE, RADIUS, SPACING } from "../src/theme/tokens";
 import { useAppTheme } from "../src/theme/use-app-theme";
-import { MotionReveal, SOFT_MOTION, useWorkspaceMotionActive, useWorkspaceReducedMotion, WorkspaceMotionProvider } from "../src/components/workspace-motion";
+import { MotionReveal, SOFT_MOTION, useWorkspaceMotionActive, useWorkspaceReducedMotion, WorkspaceAtmosphere, WorkspaceMotionProvider } from "../src/components/workspace-motion";
+import type { AuthResponse } from "../src/types/auth.types";
+
+type LoginFeedback = { kind: "success"; auth: AuthResponse } | { kind: "failure" };
 
 /** Cursor com pulsação lenta; para fora da tela e respeita movimento reduzido. */
 function BlinkingCursor() {
@@ -77,7 +79,7 @@ function FocusField({
   icon: keyof typeof Ionicons.glyphMap;
   children: (props: { onFocus: () => void; onBlur: () => void }) => ReactNode;
 }) {
-  const { isDark, colors, workspace } = useAppTheme();
+  const { colors } = useAppTheme();
   const focus = useSharedValue(0);
   const focused = useRef(false);
   const reduced = useWorkspaceReducedMotion();
@@ -93,9 +95,7 @@ function FocusField({
   }));
 
   return (
-    <Animated.View style={[styles.fieldWrap, borderStyle]}>
-      {Platform.OS !== "android" && <BlurView intensity={30} tint={workspace.blurTint} pointerEvents="none" style={StyleSheet.absoluteFill} />}
-      <View pointerEvents="none" style={[styles.fieldTint, { backgroundColor: colors.surface, opacity: isDark ? (Platform.OS === "android" ? 0.92 : 0.5) : 0.95 }]} />
+    <Animated.View style={[styles.fieldWrap, { backgroundColor: colors.surface }, borderStyle]}>
       <Animated.View pointerEvents="none" style={iconColorStyle}>
         <Ionicons name={icon} size={18} color={colors.accentInk} />
       </Animated.View>
@@ -122,6 +122,7 @@ function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<LoginFeedback | null>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -165,29 +166,48 @@ function LoginContent() {
 
   const loginMutation = useMutation({
     mutationFn: () => authApi.login({ email: email.trim(), password }),
-    onMutate: () => setError(null),
+    onMutate: () => { setError(null); setFeedback(null); },
     onSuccess: (auth) => {
       if (auth.user.role !== "CLIENT") {
         // Não persiste sessão de ADMIN/PENTESTER — mobile é exclusivo do CLIENT (ADR-004).
         clearAuth();
         setError("Este aplicativo é exclusivo para clientes. Administradores e pentesters usam o navegador.");
+        setFeedback({ kind: "failure" });
         haptics.warning();
         return;
       }
       setError(null);
+      setFeedback({ kind: "success", auth });
       haptics.success();
-      setAuth(auth);
-      router.replace("/(tabs)/dashboard");
     },
     onError: (err: unknown) => {
       setError(getErrorMessage(err));
+      setFeedback({ kind: "failure" });
       haptics.warning();
     },
     onSettled: () => { submitting.current = false; },
   });
 
+  useEffect(() => {
+    if (feedback?.kind !== "success") return;
+
+    const completeLogin = () => {
+      setAuth(feedback.auth);
+      router.replace("/(tabs)/dashboard");
+    };
+    if (reduced) {
+      completeLogin();
+      return;
+    }
+    // Mantém a tela montada durante a confirmação da marca e cancela ao sair dela.
+    const confirmation = setTimeout(completeLogin, LOGIN_CONFIRMATION_MS);
+    return () => clearTimeout(confirmation);
+  }, [feedback, reduced, router, setAuth]);
+
+  const busy = loginMutation.isPending || feedback?.kind === "success";
+
   function submitLogin() {
-    if (!email.trim() || !password || submitting.current || loginMutation.isPending) return;
+    if (!email.trim() || !password || submitting.current || busy) return;
     // Enter repetido antes do próximo render também não duplica autenticação.
     submitting.current = true;
     haptics.tap();
@@ -198,8 +218,9 @@ function LoginContent() {
   return (
     <View style={[styles.flex, { backgroundColor: colors.canvas }]}>
       <Stack.Screen options={{ animation: reduced ? "none" : "fade", animationDuration: 280 }} />
+      <WorkspaceAtmosphere />
       <KeyboardAvoidingView
-        style={[styles.flex, { backgroundColor: colors.canvas }]}
+        style={styles.flex}
         behavior={Platform.OS === "web" ? undefined : "padding"}
       >
         <ScrollView
@@ -218,7 +239,7 @@ function LoginContent() {
         >
           <MotionReveal layout style={styles.header}>
             <View style={styles.lockup}>
-              <VulneraMark size={60} />
+              <LoginMark feedback={feedback} />
               <View style={[styles.divider, { backgroundColor: colors.borderDefault }]} />
               <View>
                 <View style={styles.wordRow}>
@@ -239,7 +260,7 @@ function LoginContent() {
                     accessibilityLabel="E-mail"
                     style={[styles.input, { color: colors.textPrimary }]}
                     value={email}
-                    editable={!loginMutation.isPending}
+                    editable={!busy}
                     onChangeText={setEmail}
                     onFocus={() => {
                       activeField.current = "email";
@@ -273,7 +294,7 @@ function LoginContent() {
                     accessibilityLabel="Senha"
                     style={[styles.input, { color: colors.textPrimary }]}
                     value={password}
-                    editable={!loginMutation.isPending}
+                    editable={!busy}
                     onChangeText={setPassword}
                     onFocus={() => {
                       activeField.current = "password";
@@ -307,12 +328,11 @@ function LoginContent() {
 
             <Button
               onPress={submitLogin}
-              disabled={!email.trim() || !password || loginMutation.isPending}
-              loading={loginMutation.isPending}
-              glass
+              disabled={!email.trim() || !password || busy}
+              loading={busy}
               soft
             >
-              Entrar
+              {feedback?.kind === "success" ? "Acesso confirmado" : "Entrar"}
             </Button>
           </MotionReveal>
         </ScrollView>
@@ -389,9 +409,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.control,
     paddingHorizontal: SPACING[3],
     overflow: "hidden",
-  },
-  fieldTint: {
-    ...StyleSheet.absoluteFill,
   },
   input: {
     flex: 1,

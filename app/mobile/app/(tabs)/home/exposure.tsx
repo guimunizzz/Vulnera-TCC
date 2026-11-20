@@ -12,10 +12,9 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { exposureGraphApi } from "../../../src/api/exposure-graph.api";
-import { DataState, FilterChip, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
+import { DataState, FilterChip, Surface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { SoftPressable, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
 import { useApiError } from "../../../src/hooks/use-api-error";
-import { useAuthStore } from "../../../src/store/auth.store";
 import { graphLayout, sharedCategories, type GraphLayout } from "../../../src/lib/exposure-graph";
 import { FONT_FAMILY } from "../../../src/theme/tokens";
 import { useAppTheme } from "../../../src/theme/use-app-theme";
@@ -34,7 +33,6 @@ const categoryLabel = (code: string) => OWASP_LABELS[code] ?? code;
 export default function ExposureScreen({ root = false, navigation }: { root?: boolean; navigation?: ReactNode }) {
   const { workspace, ui } = useAppTheme();
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
   const errorMessage = useApiError();
   const [internetOnly, setInternetOnly] = useState(false);
   const [selection, setSelection] = useState<Selection>({ kind: "company" });
@@ -48,7 +46,7 @@ export default function ExposureScreen({ root = false, navigation }: { root?: bo
   const selectApp = (id: string) => setSelection({ kind: "app", id });
   const selectCategory = (id: string) => setSelection({ kind: "category", id });
   return <WorkspaceScreen refreshing={query.isRefetching} onRefresh={() => { void query.refetch(); }}>
-    <PageHeader label="EXPOSIÇÃO" back={!root} assistantContext="exposure-graph">{root ? <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}><Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></SoftPressable> : undefined}</PageHeader>
+    <PageHeader label={root ? undefined : "EXPOSIÇÃO"} back={!root} account={root} assistantContext="exposure-graph" />
     {navigation}
     <View style={{ gap: 8 }}><Text accessibilityRole="header" style={ui.title}>Grafo de exposição</Text><Text style={ui.body}>Conexões entre sua empresa, aplicações e categorias OWASP com vulnerabilidades abertas.</Text></View>
     {query.isPending && <DataState loading title="Carregando exposição" />}
@@ -58,13 +56,13 @@ export default function ExposureScreen({ root = false, navigation }: { root?: bo
       {!query.data.aplicacoes.length ? <DataState title="Nenhuma aplicação ativa" message="As aplicações da sua empresa aparecerão aqui quando estiverem disponíveis." /> : <>
         <FilterChip label="Só expostas à Internet" selected={internetOnly} onPress={() => { setInternetOnly(!internetOnly); setSelection({ kind: "company" }); }} />
         {!applications.length ? <DataState title="Nenhuma aplicação exposta" message="Desative o filtro para ver todas as aplicações." /> : <>
-          <GlassSurface style={{ gap: 12, padding: 16 }}>
+          <Surface style={{ gap: 12, padding: 16 }}>
             <View style={ui.spread}><Text style={ui.heading}>Rede de exposição</Text><Text style={ui.mono}>{1 + applications.length + categories.length} nós</Text></View>
             <Text style={ui.muted}>Deslize para explorar. Toque em um nó para ver seus detalhes.</Text>
             <Network applications={applications} categories={categories} selection={selection} onSelect={setSelection} />
             <Text style={ui.muted}>Empresa → aplicações → categorias OWASP abertas</Text>
-          </GlassSurface>
-          <GlassSurface accessibilityLabel={undefined}>
+          </Surface>
+          <Surface accessibilityLabel={undefined}>
             {app ? <>
               <View style={ui.spread}><View style={ui.grow}><Text style={ui.eyebrow}>APLICAÇÃO</Text><Text accessibilityRole="header" style={ui.heading}>{app.name}</Text></View><Text style={[ui.muted, { color: workspace.lavender }]}>{app.totalAbertas} abertas</Text></View>
               <Text style={ui.body}>{environment[app.environment] ?? app.environment} · Criticidade {criticality[app.criticality] ?? app.criticality} · Dados {sensitivity[app.dataSensitivity] ?? app.dataSensitivity}</Text>
@@ -85,13 +83,13 @@ export default function ExposureScreen({ root = false, navigation }: { root?: bo
               <Text style={ui.eyebrow}>ABERTAS POR ORIGEM</Text><Text style={ui.body}>{Object.entries(applications.reduce<Record<string, number>>((acc, item) => { for (const [source, count] of Object.entries(item.abertasPorOrigem ?? {})) acc[source] = (acc[source] ?? 0) + count; return acc; }, {})).map(([source, count]) => `${sourceLabels[source] ?? source}: ${count}`).join(" · ") || "Nenhuma"}</Text>
               <Text style={ui.muted}>Achados ainda não triados não aparecem até serem promovidos a vulnerabilidades vinculadas à aplicação.</Text>
             </>}
-          </GlassSurface>
+          </Surface>
           <SectionHeading title="Explorar conexões" />
-          <GlassSurface><Text style={ui.muted}>Selecione pela lista para acessar os mesmos detalhes da rede.</Text>
+          <Surface><Text style={ui.muted}>Selecione pela lista para acessar os mesmos detalhes da rede.</Text>
             <DetailLink label="Empresa" meta={`${applications.length} aplicações`} onPress={() => setSelection({ kind: "company" })} />
             {applications.map((item) => <DetailLink key={item.id} label={item.name} meta={`${item.totalAbertas} abertas`} onPress={() => selectApp(item.id)} />)}
             {categories.map((item) => <DetailLink key={item.code} label={categoryLabel(item.code)} meta={`${item.total} abertas`} onPress={() => selectCategory(item.code)} />)}
-          </GlassSurface>
+          </Surface>
         </>}
       </>}
     </>}
@@ -182,5 +180,4 @@ const styles = StyleSheet.create({
   counts: { flexDirection: "row", flexWrap: "wrap", gap: 12 }, count: { minWidth: 56, flexGrow: 1 },
   detail: { minHeight: 48, borderTopWidth: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 },
   zoomRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
-  avatar: { width: 48, height: 48, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center" }, avatarText: { fontFamily: FONT_FAMILY.semibold, fontSize: 16 },
 });

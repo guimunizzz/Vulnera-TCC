@@ -1,9 +1,8 @@
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { BlurView } from "expo-blur";
+import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { FONT_FAMILY, FONT_SIZE, MOTION, RADIUS, SHADOW, SPACING, TOUCH_TARGET } from "../theme/tokens";
 import { useAppTheme, type AppColors } from "../theme/use-app-theme";
-import { MotionReveal, SoftPressable } from "./workspace-motion";
+import { MotionReveal, SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -27,7 +26,6 @@ export function Button({
   variant = "primario",
   disabled,
   loading,
-  glass = false,
   soft = false,
 }: {
   children: string;
@@ -35,10 +33,10 @@ export function Button({
   variant?: Variant;
   disabled?: boolean;
   loading?: boolean;
-  glass?: boolean;
   soft?: boolean;
 }) {
-  const { isDark, colors, workspace } = useAppTheme();
+  const { colors } = useAppTheme();
+  const reduced = useWorkspaceReducedMotion();
   const cor = getVariants(colors)[variant];
   const inativo = disabled || loading;
   const scale = useSharedValue(1);
@@ -46,10 +44,10 @@ export function Button({
 
   const pressHandlers = {
     onPressIn: () => {
-      scale.value = withTiming(0.96, { duration: MOTION.fast });
+      if (!reduced) scale.value = withTiming(0.96, { duration: MOTION.fast });
     },
     onPressOut: () => {
-      scale.value = withTiming(1, { duration: MOTION.fast });
+      scale.value = reduced ? 1 : withTiming(1, { duration: MOTION.fast });
     },
   };
 
@@ -69,36 +67,6 @@ export function Button({
   );
   const conteudo = soft ? <MotionReveal key={loading ? "loading" : "label"}>{label}</MotionReveal> : label;
 
-  if (variant === "primario" && glass) {
-    const outerStyle = [
-      styles.glassOuter,
-      { borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(112,70,207,0.35)" },
-      soft && { minHeight: 48 },
-      SHADOW.glow,
-      inativo && styles.disabled,
-    ];
-    const inner = (
-      <View style={styles.glassInner}>
-        {Platform.OS !== "android" && (
-          <BlurView intensity={40} tint={workspace.blurTint} pointerEvents="none" style={StyleSheet.absoluteFill} />
-        )}
-        <View
-          pointerEvents="none"
-          style={[
-            styles.glassTint,
-            { backgroundColor: colors.accent, opacity: isDark ? (Platform.OS === "android" ? 0.85 : 0.38) : 0.92 },
-          ]}
-        />
-        {conteudo}
-      </View>
-    );
-    return soft ? (
-      <SoftPressable {...sharedProps} style={outerStyle}>{inner}</SoftPressable>
-    ) : (
-      <AnimatedPressable {...sharedProps} {...pressHandlers} style={[...outerStyle, animatedStyle]}>{inner}</AnimatedPressable>
-    );
-  }
-
   const baseStyle = [
     styles.base,
     soft && { minHeight: 48 },
@@ -117,7 +85,7 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     minHeight: TOUCH_TARGET,
-    borderRadius: RADIUS.full,
+    borderRadius: RADIUS.control,
     borderWidth: 1,
     paddingHorizontal: SPACING[6],
     alignItems: "center",
@@ -129,21 +97,5 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.5,
-  },
-  glassOuter: {
-    minHeight: TOUCH_TARGET,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-  },
-  glassInner: {
-    flex: 1,
-    borderRadius: RADIUS.full,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: SPACING[6],
-  },
-  glassTint: {
-    ...StyleSheet.absoluteFill,
   },
 });

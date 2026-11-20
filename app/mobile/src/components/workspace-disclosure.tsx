@@ -7,7 +7,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { GlassSurface } from "./workspace-ui";
+import { Surface } from "./workspace-ui";
 import { SOFT_MOTION, SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
 import { useAppTheme } from "../theme/use-app-theme";
 
@@ -42,7 +42,7 @@ export function WorkspaceDisclosure({ title, children, initiallyExpanded = true,
       </View>
     </Animated.View>
   </>;
-  return surface ? <GlassSurface style={styles.surface}>{content}</GlassSurface> : <View>{content}</View>;
+  return surface ? <Surface style={styles.surface}>{content}</Surface> : <View>{content}</View>;
 }
 const styles = StyleSheet.create({
   surface: { padding: 0, gap: 0 }, toggle: { minHeight: 56, paddingHorizontal: 20, paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 12 },

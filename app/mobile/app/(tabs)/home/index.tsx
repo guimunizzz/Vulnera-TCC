@@ -11,12 +11,9 @@ import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { projectsApi } from "../../../src/api/projects.api";
 import { useApiError } from "../../../src/hooks/use-api-error";
-import { useAuthStore } from "../../../src/store/auth.store";
 import { useTabBarClearance } from "../../../src/hooks/use-tab-bar-clearance";
 import { ProjectCard } from "../../../src/components/project-card";
-import { DataState, FilterChip, WorkspaceScreen } from "../../../src/components/workspace-ui";
-import { HomeBrand } from "../../../src/components/home-brand";
-import { AssistantButton } from "../../../src/components/assistant";
+import { DataState, FilterChip, PageHeader, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { WorkspaceSkeleton } from "../../../src/components/workspace-skeleton";
 import { FONT_FAMILY } from "../../../src/theme/tokens";
 import { useAppTheme } from "../../../src/theme/use-app-theme";
@@ -31,7 +28,6 @@ const FILTERS: { value: "ALL" | ProjectStatus; label: string }[] = [
 export default function HomeScreen() {
   const { workspace, ui } = useAppTheme();
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
   const bottom = useTabBarClearance();
   const errorMessage = useApiError();
   const [filter, setFilter] = useState<"ALL" | ProjectStatus>("ALL");
@@ -47,12 +43,7 @@ export default function HomeScreen() {
   const visible = useMemo(() => projects.filter((project) =>
     (filter === "ALL" || project.status === filter) && project.name.toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR"))), [projects, filter, search]);
   const header = <View style={styles.header}>
-    <View style={styles.topBar}>
-      <HomeBrand />
-      <View style={{ flexDirection: "row", gap: 8 }}><AssistantButton /><Pressable onPress={() => router.push("/(tabs)/settings")} accessibilityRole="button" accessibilityLabel="Abrir minha conta" style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}>
-        <Text style={[styles.avatarText, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text>
-      </Pressable></View>
-    </View>
+    <PageHeader account />
     <MotionReveal distance={8} style={styles.hero}>
       <Text accessibilityRole="header" style={ui.title}>Seus projetos</Text>
       <Text style={ui.body}>Acompanhe suas análises de segurança.</Text>
@@ -89,9 +80,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, gap: 12, flexGrow: 1 }, header: { gap: 20, marginBottom: 4 },
-  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 64, paddingVertical: 8 },
-  avatar: { width: 48, height: 48, borderRadius: 18, alignItems: "center", justifyContent: "center", borderWidth: 1 },
-  avatarText: { fontFamily: FONT_FAMILY.semibold, fontSize: 16 },
   hero: { gap: 8, paddingVertical: 4 },
   portfolio: { gap: 12 }, search: { flexDirection: "row", alignItems: "center", paddingLeft: 16, paddingRight: 4, minHeight: 52, borderRadius: 18, borderWidth: 1 },
   searchInput: { flex: 1, minWidth: 0, padding: 12, fontFamily: FONT_FAMILY.regular, fontSize: 15 },

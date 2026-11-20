@@ -13,7 +13,7 @@ import { useTabBarClearance } from "../../../../src/hooks/use-tab-bar-clearance"
 import { FindingRow } from "../../../../src/components/finding-row";
 import { StatusBadge } from "../../../../src/components/badge";
 import { ProjectJourney } from "../../../../src/components/project-journey";
-import { ActionButton, DataState, DetailField, GlassSurface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
+import { ActionButton, DataState, DetailField, Surface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
 import { FONT_FAMILY } from "../../../../src/theme/tokens";
 import { useAppTheme } from "../../../../src/theme/use-app-theme";
 import { displayDate } from "../../../../src/lib/display";
@@ -55,11 +55,11 @@ export default function ProjectDetailScreen() {
     <MotionReveal distance={8} style={{ gap: 12 }}><View style={ui.spread}><Text style={ui.eyebrow}>ANÁLISE / {project.analysisType}</Text><StatusBadge status={project.status} /></View>
       <Text accessibilityRole="header" style={ui.title}>{project.name}</Text><Text style={ui.muted}>Acompanhe cada etapa da sua análise de segurança.</Text></MotionReveal>
     {projectQuery.isError && <DataState error title="Não foi possível atualizar o projeto" message={errorMessage(projectQuery.error)} onRetry={() => { void projectQuery.refetch(); }} />}
-    <MotionReveal delay={40} distance={8}><GlassSurface>
+    <MotionReveal delay={40} distance={8}><Surface>
       <Text style={ui.eyebrow}>JORNADA DA ANÁLISE</Text>
       <ProjectJourney key={project.id} status={project.status} />
       <View style={ui.divider} /><View style={ui.spread}><Text style={ui.muted}>Solicitado em</Text><Text style={ui.muted}>{displayDate(project.requestedAt)}</Text></View>
-    </GlassSurface></MotionReveal>
+    </Surface></MotionReveal>
     <MotionReveal delay={80} distance={8}><WorkspaceDisclosure title="SOBRE A ANÁLISE">
       <View style={styles.detailsRow}><View style={ui.grow}><DetailField label="NÍVEL" value={LEVELS[project.analysisLevel] ?? project.analysisLevel} /></View><View style={ui.grow}><DetailField label="REMEDIAÇÃO" value={project.hasRemediation ? "Incluída" : "Não incluída"} /></View></View>
       {!!project.description && <DetailField label="DESCRIÇÃO" value={project.description} />}
@@ -70,9 +70,9 @@ export default function ProjectDetailScreen() {
     </WorkspaceDisclosure></MotionReveal>
     <ActionButton icon="document-text-outline" label="Ver relatório executivo" onPress={() => router.push(`/(tabs)/reports/${project.id}`)} />
     <MotionReveal delay={120} distance={8} style={{ gap: 16 }}><SectionHeading title="Vulnerabilidades" meta={firstPage ? `${firstPage.pagination.total} no total` : undefined} />
-      <GlassSurface style={styles.severities}>{severities.map((item) => <View key={item.key} style={styles.severity}>
+      <Surface style={styles.severities}>{severities.map((item) => <View key={item.key} style={styles.severity}>
         <View style={[styles.severityDot, { backgroundColor: item.dot }]} /><Text style={[styles.severityCount, { color: item.color }]}>{firstPage ? firstPage.facets.severity[item.key] ?? 0 : "—"}</Text><Text style={[styles.severityLabel, { color: workspace.muted }]}>{item.label}</Text>
-      </View>)}</GlassSurface>
+      </View>)}</Surface>
     </MotionReveal>
   </View>;
   return <WorkspaceScreen scroll={false}><FlatList data={findings} keyExtractor={(finding) => finding.id}
