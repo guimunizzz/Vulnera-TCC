@@ -22,7 +22,7 @@ const JOURNEY_DURATION = 800;
 const LIGHT_WIDTH = 96;
 
 export function ProjectJourney({ status }: { status: string }) {
-  const { isDark, colors, workspace } = useAppTheme();
+  const { colors, workspace } = useAppTheme();
   const stage = STAGES.findIndex((item) => item.status === status);
   const completed = status === "COMPLETED";
   const reduced = useWorkspaceReducedMotion();
@@ -68,15 +68,15 @@ export function ProjectJourney({ status }: { status: string }) {
     <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
       style={[
         styles.trail,
-        { backgroundColor: completed ? colors.successInk : isDark ? "rgba(196,162,255,0.55)" : "rgba(112,70,207,0.45)" },
+        { backgroundColor: completed ? colors.successInk : `${colors.accentInk}88` },
         trail,
       ]} />
     <Animated.View testID="journey-light-sweep" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
       style={[styles.light, { left: cellWidth / 2 - LIGHT_WIDTH / 2 }, light]}>
       <Svg width={LIGHT_WIDTH} height={48} viewBox={`0 0 ${LIGHT_WIDTH} 48`}>
         <Defs><RadialGradient id={gradientId}>
-          <Stop offset="0" stopColor={isDark ? "#c4a2ff" : "#855fea"} stopOpacity="0.58" />
-          <Stop offset="0.4" stopColor={isDark ? "#a47beb" : "#7046cf"} stopOpacity="0.34" />
+          <Stop offset="0" stopColor={colors.accentInk} stopOpacity="0.58" />
+          <Stop offset="0.4" stopColor={colors.accent} stopOpacity="0.34" />
           <Stop offset="1" stopColor="#8b5cf6" stopOpacity="0" />
         </RadialGradient></Defs>
         <Ellipse cx={LIGHT_WIDTH / 2} cy={24} rx={LIGHT_WIDTH / 2} ry={20} fill={`url(#${gradientId})`} />

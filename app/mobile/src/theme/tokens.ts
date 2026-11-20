@@ -1,8 +1,8 @@
 /**
  * theme/tokens.ts
  *
- * Paleta escura do mobile. Superfícies neutras com leve tom ameixa,
- * violeta para identidade e ação, com dourado, azul e menta em detalhes.
+ * Paleta roxa escura do mobile. Define as superfícies, os detalhes da
+ * identidade e as cores semânticas de alertas e severidade.
  *
  * Fontes customizadas (Archivo/JetBrains Mono) — carregadas via
  * @expo-google-fonts/* e expo-font no app/_layout.tsx raiz, com guarda de
@@ -10,10 +10,10 @@
  */
 
 export const COLORS = {
-  canvas: "#15131a",
-  surface: "#201d26",
-  raised: "#2a2332",
-  inset: "#19161e",
+  canvas: "#140e1d",
+  surface: "#1d1428",
+  raised: "#271a35",
+  inset: "#170f21",
 
   // --- texto (neutro) ---
   textPrimary: "#f7f4fa",
@@ -21,22 +21,19 @@ export const COLORS = {
   textMuted: "#bcb4c1",
 
   // --- bordas (neutro) ---
-  borderSubtle: "#302a36",
-  borderDefault: "#403746",
-  borderStrong: "#786b81",
+  borderSubtle: "#342445",
+  borderDefault: "#463259",
+  borderStrong: "#7b6591",
 
   // --- ação (violeta — só pra detalhe: CTA, link, ícone/estado ativo) ---
-  accent: "#633398",
-  accentHover: "#703da9",
+  accent: "#573185",
+  accentHover: "#643698",
   accentFg: "#ffffff",
-  accentInk: "#a382d7",
-  accentSurface: "#2e2339",
-  brandMark: { start: "#a56dca", end: "#6a2a9c" },
-  highlightInk: "#eac17e",
-  highlightSurface: "#34291d",
-  highlightBorder: "#80643f",
-  blueInk: "#82b3ed",
-  mintInk: "#80c6ad",
+  accentInk: "#9d77d0",
+  accentSurface: "#261833",
+  brandMark: { start: "#8852bb", end: "#7540a4" },
+  chartCreated: "#986bc8",
+  chartResolved: "#7f56b3",
 
   // --- estados ---
   success: "#16a34a",

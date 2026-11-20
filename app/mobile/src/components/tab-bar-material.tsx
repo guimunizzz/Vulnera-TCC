@@ -13,7 +13,7 @@ import { useWorkspaceReducedMotion } from "./workspace-motion";
 type NativeGlassView = typeof import("expo-glass-effect").GlassView;
 
 export function TabBarMaterial({ children, style }: { children: ReactNode; style: StyleProp<ViewStyle> }) {
-  const { colors, mode, workspace } = useAppTheme();
+  const { colors, workspace } = useAppTheme();
   const reducedMotion = useWorkspaceReducedMotion();
   const [GlassView, setGlassView] = useState<NativeGlassView | null>(null);
   const [allowsTransparency, setAllowsTransparency] = useState(false);
@@ -45,7 +45,7 @@ export function TabBarMaterial({ children, style }: { children: ReactNode; style
   }, []);
 
   if (GlassView && allowsTransparency) {
-    return <GlassView testID="tab-bar-native-glass" glassEffectStyle="regular" colorScheme={mode}
+    return <GlassView testID="tab-bar-native-glass" glassEffectStyle="regular" colorScheme="dark"
       isInteractive={!reducedMotion} style={style}>{children}</GlassView>;
   }
 

@@ -22,11 +22,10 @@ import type { AssistantScreen } from "../lib/assistant-context";
 export function Surface({ children, style, onPress, accessibilityLabel, strong = false }: {
   children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string; strong?: boolean;
 }) {
-  const { isDark, workspace } = useAppTheme();
+  const { workspace } = useAppTheme();
   const surfaceStyle = [
     styles.surface,
     { borderColor: workspace.line, backgroundColor: strong ? workspace.raised : workspace.surface },
-    !isDark && styles.lightElevation,
     style,
   ];
   return onPress ? <SoftPressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={() => { haptics.tap(); onPress(); }}
@@ -121,7 +120,6 @@ export function DetailField({ label, value }: { label: string; value: string }) 
 const styles = StyleSheet.create({
   screen: { flex: 1, overflow: "hidden" }, flex: { flex: 1 }, content: { paddingHorizontal: SPACING[5], gap: SPACING[5] },
   surface: { borderRadius: RADIUS.container, borderWidth: 1, padding: SPACING[5], gap: SPACING[4] },
-  lightElevation: { shadowColor: "#181a20", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
   header: { flexDirection: "row", alignItems: "center", gap: SPACING[2], minHeight: 64, paddingVertical: SPACING[2] },
   brandLabel: { textAlign: "right" },
   iconButton: { width: 48, height: 48, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.control, borderWidth: 1 },

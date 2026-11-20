@@ -109,7 +109,7 @@ function GraphLegend() {
     {graphLegend.map(({ icon, label }) => <View key={icon} style={styles.legendItem}>
       <Ionicons name={icon} size={15} color={colors.textMuted} /><Text style={ui.muted}>{label}</Text>
     </View>)}
-    <View style={styles.legendItem}><View style={[styles.legendLine, { backgroundColor: colors.blueInk }]} /><Text style={ui.muted}>Conexão selecionada</Text></View>
+    <View style={styles.legendItem}><View style={[styles.legendLine, { backgroundColor: colors.accentInk }]} /><Text style={ui.muted}>Conexão selecionada</Text></View>
   </View>;
 }
 
@@ -147,7 +147,7 @@ function Network({ applications, categories, selection, onSelect }: { applicatio
     const curve = layout === "rows"
       ? `${from.x} ${y}, ${to.x} ${y}`
       : `${x} ${from.y}, ${x} ${to.y}`;
-    const stroke = isCompany ? workspace.lavender : active ? colors.blueInk : workspace.line;
+    const stroke = isCompany ? colors.borderStrong : active ? colors.accentInk : workspace.line;
     return <Path key={key} d={`M ${from.x} ${from.y} C ${curve}, ${to.x} ${to.y}`} stroke={stroke} strokeWidth={active && !isCompany ? 2.5 : 1.5} fill="none" />;
   }
   const severityColor = (severity: GraphSeverity | null) => severity === "CRITICAL" ? colors.severity.criticalInk : severity === "HIGH" ? colors.severity.highInk : severity === "MEDIUM" ? colors.severity.mediumInk : severity === "LOW" ? colors.severity.lowInk : workspace.lavender;

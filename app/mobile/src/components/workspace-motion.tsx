@@ -89,13 +89,13 @@ export function useWorkspaceScroll() {
 }
 
 export const WorkspaceAtmosphere = memo(function WorkspaceAtmosphere() {
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const gradientId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return <View testID="workspace-atmosphere" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
     style={{ position: "absolute", top: -100, left: -80, right: -80, height: 1000 }}>
     <Svg width="100%" height="100%" viewBox="0 0 550 1000" preserveAspectRatio="xMidYMin slice">
-      <Defs><RadialGradient id={`${gradientId}-glow`}><Stop offset="0" stopColor={colors.accent} stopOpacity={isDark ? "0.065" : "0.045"} /><Stop offset="0.55" stopColor={colors.accent} stopOpacity="0.018" /><Stop offset="1" stopColor={colors.accent} stopOpacity="0" /></RadialGradient>
-        <RadialGradient id={`${gradientId}-mist`}><Stop offset="0" stopColor={colors.textSecondary} stopOpacity={isDark ? "0.045" : "0.04"} /><Stop offset="1" stopColor={colors.textSecondary} stopOpacity="0" /></RadialGradient></Defs>
+      <Defs><RadialGradient id={`${gradientId}-glow`}><Stop offset="0" stopColor={colors.accent} stopOpacity="0.12" /><Stop offset="0.55" stopColor={colors.accent} stopOpacity="0.035" /><Stop offset="1" stopColor={colors.accent} stopOpacity="0" /></RadialGradient>
+        <RadialGradient id={`${gradientId}-mist`}><Stop offset="0" stopColor={colors.brandMark.end} stopOpacity="0.04" /><Stop offset="1" stopColor={colors.brandMark.end} stopOpacity="0" /></RadialGradient></Defs>
       <Circle cx="440" cy="165" r="300" fill={`url(#${gradientId}-glow)`} /><Circle cx="75" cy="620" r="280" fill={`url(#${gradientId}-mist)`} />
     </Svg>
   </View>;

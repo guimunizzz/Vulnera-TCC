@@ -27,11 +27,8 @@ export interface AppColors {
   accentInk: string;
   accentSurface: string;
   brandMark: { start: string; end: string };
-  highlightInk: string;
-  highlightSurface: string;
-  highlightBorder: string;
-  blueInk: string;
-  mintInk: string;
+  chartCreated: string;
+  chartResolved: string;
   success: string;
   successInk: string;
   successSurface: string;
@@ -86,76 +83,29 @@ export interface AppWorkspace {
   stageDoneBorder: string;
   mediaWell: string;
   radius: number;
-  blurTint: "dark" | "light";
-  statusBarStyle: "light" | "dark";
+  blurTint: "dark";
+  statusBarStyle: "light";
 }
 
-const DARK_COLORS: AppColors = COLORS;
-
-const LIGHT_COLORS: AppColors = {
-  canvas: "#f7f5f8",
-  surface: "#ffffff",
-  raised: "#f5f0f8",
-  inset: "#ede9ef",
-  textPrimary: "#231e29",
-  textSecondary: "#433a4a",
-  textMuted: "#655a6c",
-  borderSubtle: "#e9e2ec",
-  borderDefault: "#d7cbdc",
-  borderStrong: "#80728a",
-  accent: "#6b379f",
-  accentHover: "#582983",
-  accentFg: "#ffffff",
-  accentInk: "#542b82",
-  accentSurface: "#f0e8f5",
-  brandMark: { start: "#7b3fb0", end: "#4b1b74" },
-  highlightInk: "#77501b",
-  highlightSurface: "#fbf1df",
-  highlightBorder: "#d7b980",
-  blueInk: "#2f5d96",
-  mintInk: "#256652",
-  success: "#187c49",
-  successInk: "#116339",
-  successSurface: "#e8fbee",
-  danger: "#c11c1f",
-  dangerInk: "#9b1416",
-  dangerSurface: "#faf3f2",
-  severity: {
-    critical: "#c11c1f",
-    criticalInk: "#9b1416",
-    criticalSurface: "#f7e3e1",
-    high: "#9c5313",
-    highInk: "#7d410d",
-    highSurface: "#f7e5d9",
-    medium: "#836414",
-    mediumInk: "#4e3a0b",
-    mediumSurface: "#f6e7c7",
-    low: "#1464cd",
-    lowInk: "#0e4fa5",
-    lowSurface: "#e0e9f6",
-    info: "#6e7685",
-    infoInk: "#3f4451",
-    infoSurface: "#e4e7ee",
-  },
+const DEEP_COLORS: AppColors = {
+  ...COLORS,
+  canvas: "#0d0913",
+  surface: "#160e20",
+  raised: "#20132c",
+  inset: "#110b19",
+  borderSubtle: "#2d1f3a",
+  borderDefault: "#3f2c50",
+  accent: "#492875",
+  accentHover: "#593486",
+  accentSurface: "#221530",
 };
 
-const DARK_WORKSPACE = createWorkspace(DARK_COLORS, {
-  neutralTint: "rgba(255,255,255,0.045)",
-  mediaWell: "rgba(0,0,0,0.25)",
-  blurTint: "dark",
-  statusBarStyle: "light",
-});
-
-const LIGHT_WORKSPACE = createWorkspace(LIGHT_COLORS, {
-  neutralTint: "rgba(24,26,32,0.05)",
-  mediaWell: "rgba(24,26,32,0.05)",
-  blurTint: "light",
-  statusBarStyle: "dark",
-});
-
-function createWorkspace(colors: AppColors, material: Pick<AppWorkspace, "neutralTint" | "mediaWell" | "blurTint" | "statusBarStyle">): AppWorkspace {
-  return {
-    ...material,
+function createTheme(colors: AppColors) {
+  const workspace: AppWorkspace = {
+    neutralTint: `${colors.accentInk}14`,
+    mediaWell: "rgba(0,0,0,0.25)",
+    blurTint: "dark",
+    statusBarStyle: "light",
     background: colors.canvas,
     surface: colors.surface,
     raised: colors.raised,
@@ -183,6 +133,7 @@ function createWorkspace(colors: AppColors, material: Pick<AppWorkspace, "neutra
     stageDoneBorder: colors.borderDefault,
     radius: 24,
   };
+  return { colors, workspace, ui: createThemedUiStyles(workspace) };
 }
 
 function createThemedUiStyles(w: AppWorkspace) {
@@ -200,23 +151,10 @@ function createThemedUiStyles(w: AppWorkspace) {
   });
 }
 
-const DARK_UI = createThemedUiStyles(DARK_WORKSPACE);
-const LIGHT_UI = createThemedUiStyles(LIGHT_WORKSPACE);
-
-export function getAppTheme(mode: ThemeMode) {
-  const isDark = mode === "dark";
-  return {
-    mode,
-    isDark,
-    colors: isDark ? DARK_COLORS : LIGHT_COLORS,
-    workspace: isDark ? DARK_WORKSPACE : LIGHT_WORKSPACE,
-    ui: isDark ? DARK_UI : LIGHT_UI,
-  };
-}
+const themes = { dark: createTheme(COLORS), deep: createTheme(DEEP_COLORS) } satisfies Record<ThemeMode, ReturnType<typeof createTheme>>;
 
 export function useAppTheme() {
-  const mode = useThemeStore((s) => s.mode);
+  const mode = useThemeStore((state) => state.mode === "deep" ? "deep" : "dark");
   const setMode = useThemeStore((s) => s.setMode);
-  const toggleMode = useThemeStore((s) => s.toggleMode);
-  return useMemo(() => ({ ...getAppTheme(mode), setMode, toggleMode }), [mode, setMode, toggleMode]);
+  return useMemo(() => ({ ...themes[mode], mode, setMode }), [mode, setMode]);
 }

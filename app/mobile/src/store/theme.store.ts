@@ -1,7 +1,7 @@
 /**
  * store/theme.store.ts
  *
- * Gerencia a preferência global de tema do aplicativo ("dark" ou "light"),
+ * Gerencia a preferência entre Roxo escuro e Roxo profundo,
  * persistida no SecureStore em Android/iOS e em memória no preview web.
  * Existe para permitir alternância imediata em Minha conta refletida em todas
  * as telas autenticadas, barra inferior, StatusBar e tela de login.
@@ -13,7 +13,7 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-export type ThemeMode = "dark" | "light";
+export type ThemeMode = "dark" | "deep";
 
 const webThemeMemory = new Map<string, string>();
 const themeStorage: StateStorage =
@@ -37,7 +37,6 @@ interface ThemeState {
   mode: ThemeMode;
   hasHydrated: boolean;
   setMode: (mode: ThemeMode) => void;
-  toggleMode: () => void;
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -46,12 +45,16 @@ export const useThemeStore = create<ThemeState>()(
       mode: "dark",
       hasHydrated: false,
       setMode: (mode) => set({ mode }),
-      toggleMode: () => set((state) => ({ mode: state.mode === "dark" ? "light" : "dark" })),
     }),
     {
       name: "vulnera-theme",
+      version: 1,
       storage: createJSONStorage(() => themeStorage),
       partialize: (state) => ({ mode: state.mode }),
+      migrate: (stored) => {
+        const savedMode = (stored as { mode?: unknown } | null)?.mode;
+        return { mode: savedMode === "light" || savedMode === "deep" ? "deep" : "dark" };
+      },
       // Aguarda a preferência antes de liberar a interface, inclusive se a
       // leitura segura falhar, evitando troca tardia sobre a escolha do usuário.
       onRehydrateStorage: () => () => useThemeStore.setState({ hasHydrated: true }),

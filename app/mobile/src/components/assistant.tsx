@@ -20,7 +20,7 @@ export function AssistantButton({ screen }: { screen?: AssistantScreen }) {
   const pathname = usePathname();
   const { colors, workspace } = useAppTheme();
   if (!open) return null;
-  return <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir assistente Vuvu" testID="assistant-open" onPress={() => open(screen ?? assistantScreen(pathname))} style={[styles.launcher, { borderColor: `${colors.blueInk}66`, backgroundColor: workspace.neutralTint }]}><Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.blueInk} /></SoftPressable>;
+  return <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir assistente Vuvu" testID="assistant-open" onPress={() => open(screen ?? assistantScreen(pathname))} style={[styles.launcher, { borderColor: workspace.actionBorder, backgroundColor: workspace.neutralTint }]}><Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.accentInk} /></SoftPressable>;
 }
 
 export function AssistantSession({ children }: { children: ReactNode }) {

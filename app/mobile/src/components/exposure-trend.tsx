@@ -60,8 +60,8 @@ export function ExposureTrend({ applications }: { applications: ExposureApplicat
       </View>}
       {query.isPending ? <DataState loading title="Carregando histórico" /> : query.data && !points?.length ? <Text style={ui.body}>Nenhum histórico disponível neste período.</Text> : !!points?.length && <>
         <View style={styles.legend}>
-          <View style={ui.row}><View style={[styles.key, { backgroundColor: colors.highlightInk }]} /><Text style={ui.muted}>Novos</Text></View>
-          <View style={ui.row}><View style={[styles.key, styles.dashedKey, { borderColor: colors.mintInk }]} /><Text style={ui.muted}>Resolvidos</Text></View>
+          <View style={ui.row}><View style={[styles.key, { backgroundColor: colors.chartCreated }]} /><Text style={ui.muted}>Novos</Text></View>
+          <View style={ui.row}><View style={[styles.key, styles.dashedKey, { borderColor: colors.chartResolved }]} /><Text style={ui.muted}>Resolvidos</Text></View>
         </View>
         <View style={styles.plotRow}>
           <View style={styles.yAxis} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -85,13 +85,13 @@ export function ExposureTrend({ applications }: { applications: ExposureApplicat
                 {geometry.grid.map(({ value, y }) => <Line key={value} x1={0} y1={y} x2={TREND_PLOT.width} y2={y} stroke={workspace.line} strokeWidth={1} />)}
                 {selectedDay && selectedCreated && <Line x1={selectedCreated.x} y1={TREND_PLOT.top} x2={selectedCreated.x} y2={TREND_PLOT.bottom} stroke={workspace.muted} strokeWidth={1} strokeDasharray="3 3" />}
                 {points.length > 1 && <>
-                  <AnimatedPath d={geometry.created.path} fill="none" stroke={colors.highlightInk} strokeWidth={2.5}
+                  <AnimatedPath d={geometry.created.path} fill="none" stroke={colors.chartCreated} strokeWidth={2.5}
                     strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${geometry.created.length} ${geometry.created.length}`} animatedProps={animated} />
-                  <Path d={geometry.resolved.path} fill="none" stroke={colors.mintInk} strokeWidth={2} strokeDasharray="5 4" />
+                  <Path d={geometry.resolved.path} fill="none" stroke={colors.chartResolved} strokeWidth={2} strokeDasharray="5 4" />
                 </>}
                 {selectedResolved && <Circle cx={selectedResolved.x} cy={selectedResolved.y}
-                  r={5} stroke={colors.mintInk} strokeWidth={2} fill={workspace.surface} />}
-                {selectedCreated && <Circle cx={selectedCreated.x} cy={selectedCreated.y} r={3.5} fill={colors.highlightInk} />}
+                  r={5} stroke={colors.chartResolved} strokeWidth={2} fill={workspace.surface} />}
+                {selectedCreated && <Circle cx={selectedCreated.x} cy={selectedCreated.y} r={3.5} fill={colors.chartCreated} />}
               </Svg>
             </Pressable>
             <View style={ui.spread}><Text style={ui.muted}>{formatDay(points[0].periodo)}</Text>{points.length > 1 && <Text style={ui.muted}>{formatDay(points[points.length - 1].periodo)}</Text>}</View>

@@ -18,20 +18,20 @@ export function Card({
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }) {
-  const { isDark, colors, workspace } = useAppTheme();
+  const { colors, workspace } = useAppTheme();
   const scale = useSharedValue(1);
   const [pressed, setPressed] = useState(false);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const glass = (
-    <View style={[styles.inner, !isDark && { borderWidth: 1, borderColor: colors.borderSubtle }, style]}>
+    <View style={[styles.inner, style]}>
       {Platform.OS !== "android" && <BlurView intensity={35} tint={workspace.blurTint} style={StyleSheet.absoluteFill} />}
       <View
         style={[
           styles.tint,
           {
             backgroundColor: pressed ? colors.raised : colors.surface,
-            opacity: isDark ? (pressed ? 0.65 : 0.55) : 0.94,
+            opacity: pressed ? 0.65 : 0.55,
           },
         ]}
       />
