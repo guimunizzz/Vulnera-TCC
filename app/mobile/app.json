@@ -28,7 +28,7 @@
       [
         "expo-notifications",
         {
-          "color": "#6e40bd"
+          "color": "#633398"
         }
       ],
       "expo-font",

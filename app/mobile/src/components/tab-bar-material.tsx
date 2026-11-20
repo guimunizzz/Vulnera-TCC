@@ -3,16 +3,18 @@
  * tenha o módulo e respeita a redução de transparência no iOS.
  * Consumidor: a cápsula compartilhada pelas telas autenticadas.
  */
-import { useEffect, useState } from "react";
-import { AccessibilityInfo, Platform, StyleSheet, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { AccessibilityInfo, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { requireOptionalNativeModule } from "expo";
 import { useAppTheme } from "../theme/use-app-theme";
 import { TAB_BAR } from "../theme/tokens";
+import { useWorkspaceReducedMotion } from "./workspace-motion";
 
 type NativeGlassView = typeof import("expo-glass-effect").GlassView;
 
-export function TabBarMaterial() {
-  const { mode, workspace } = useAppTheme();
+export function TabBarMaterial({ children, style }: { children: ReactNode; style: StyleProp<ViewStyle> }) {
+  const { colors, mode, workspace } = useAppTheme();
+  const reducedMotion = useWorkspaceReducedMotion();
   const [GlassView, setGlassView] = useState<NativeGlassView | null>(null);
   const [allowsTransparency, setAllowsTransparency] = useState(false);
 
@@ -44,12 +46,15 @@ export function TabBarMaterial() {
 
   if (GlassView && allowsTransparency) {
     return <GlassView testID="tab-bar-native-glass" glassEffectStyle="regular" colorScheme={mode}
-      pointerEvents="none" style={styles.native} />;
+      isInteractive={!reducedMotion} style={style}>{children}</GlassView>;
   }
 
-  return <View testID="tab-bar-solid-surface" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: workspace.tabSurface }]} />;
+  return <View testID="tab-bar-solid-surface" style={[style, { backgroundColor: workspace.tabSurface }]}>
+    <View pointerEvents="none" style={[styles.solidBorder, { borderColor: colors.borderDefault }]} />
+    {children}
+  </View>;
 }
 
 const styles = StyleSheet.create({
-  native: { ...StyleSheet.absoluteFill, borderRadius: TAB_BAR.height / 2 },
+  solidBorder: { ...StyleSheet.absoluteFill, borderRadius: TAB_BAR.height / 2, borderWidth: 1 },
 });

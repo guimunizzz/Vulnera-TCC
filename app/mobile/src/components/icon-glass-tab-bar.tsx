@@ -1,6 +1,6 @@
 /**
- * Barra glass compacta do modelo 7: ícones e seleção deslizante adaptados
- * aos temas escuro e claro. Segue a aba realmente aberta para manter clique,
+ * Barra inferior com ícones e seleção deslizante nos temas escuro e claro.
+ * Segue a aba realmente aberta para manter clique,
  * deep link e retorno alinhados.
  * Consumidor: layout autenticado do mobile, preservando os eventos de navegação.
  */
@@ -10,7 +10,7 @@ import type { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { FONT_FAMILY, SHADOW, TAB_BAR } from "../theme/tokens";
+import { FONT_FAMILY, TAB_BAR } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
 import { SOFT_MOTION, SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
 import { TabBarMaterial } from "./tab-bar-material";
@@ -66,13 +66,13 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const reduced = useWorkspaceReducedMotion();
-  const { isDark, workspace } = useAppTheme();
+  const { workspace } = useAppTheme();
   const routes = state.routes.filter(
     (route) => route.name === "dashboard" || route.name === "home" || route.name === "security" || route.name === "reports",
   );
   const count = Math.max(1, routes.length);
   const barWidth = Math.min(count >= 3 ? 304 : TAB_BAR.width, width - insets.left - insets.right - 24);
-  const cellWidth = (barWidth - EDGE * 2 - 2) / count;
+  const cellWidth = (barWidth - EDGE * 2) / count;
   const currentKey = state.routes[state.index]?.key;
   const selected = routes.findIndex((route) => route.key === currentKey);
   const position = useSharedValue(selected);
@@ -92,24 +92,8 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
       pointerEvents="box-none"
       style={[styles.anchor, { left: insets.left, right: insets.right, bottom: insets.bottom + TAB_BAR.bottomMargin }]}
     >
-      <View
-        testID="icon-glass-tab-bar"
-        style={[
-          styles.outer,
-          { width: barWidth },
-          isDark ? SHADOW.raised : styles.lightShadow,
-        ]}
-      >
-        <View style={[styles.glass, { borderColor: workspace.tabBorder }]}>
-          <TabBarMaterial />
-          <View pointerEvents="none" style={[styles.reflection, { backgroundColor: workspace.shine }]} />
-          {Array.from({ length: Math.max(0, count - 1) }).map((_, idx) => (
-            <View
-              key={idx}
-              pointerEvents="none"
-              style={[styles.divider, { left: EDGE + cellWidth * (idx + 1), backgroundColor: workspace.line }]}
-            />
-          ))}
+      <View testID="icon-glass-tab-bar" style={[styles.outer, { width: barWidth }]}>
+        <TabBarMaterial style={styles.material}>
           <Animated.View
             testID="tab-selection-indicator"
             pointerEvents="none"
@@ -155,7 +139,7 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
               </SoftPressable>
             );
           })}
-        </View>
+        </TabBarMaterial>
       </View>
     </View>
   );
@@ -163,24 +147,13 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
 
 const styles = StyleSheet.create({
   anchor: { position: "absolute", alignItems: "center", height: TAB_BAR.height },
-  outer: { height: TAB_BAR.height, borderRadius: TAB_BAR.height / 2 },
-  lightShadow: {
-    shadowColor: "#181a20",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  glass: {
+  outer: { height: TAB_BAR.height },
+  material: {
     flex: 1,
     flexDirection: "row",
     paddingHorizontal: EDGE,
     borderRadius: TAB_BAR.height / 2,
-    borderWidth: 1,
-    overflow: "hidden",
   },
-  reflection: { position: "absolute", top: 0, left: 20, right: 20, height: 1 },
-  divider: { position: "absolute", width: 1, height: 20, top: 17 },
   button: { minHeight: 48, alignItems: "center", justifyContent: "center", paddingBottom: 4 },
   icon: { width: 26, height: 26 },
   label: { fontFamily: FONT_FAMILY.medium, fontSize: 10, lineHeight: 14, textAlign: "center" },

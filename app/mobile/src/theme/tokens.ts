@@ -2,7 +2,7 @@
  * theme/tokens.ts
  *
  * Paleta escura do mobile. Superfícies neutras com leve tom ameixa,
- * violeta para identidade e ação, dourado para detalhes de apoio.
+ * violeta para identidade e ação, com dourado, azul e menta em detalhes.
  *
  * Fontes customizadas (Archivo/JetBrains Mono) — carregadas via
  * @expo-google-fonts/* e expo-font no app/_layout.tsx raiz, com guarda de
@@ -26,14 +26,17 @@ export const COLORS = {
   borderStrong: "#786b81",
 
   // --- ação (violeta — só pra detalhe: CTA, link, ícone/estado ativo) ---
-  accent: "#6e40bd",
-  accentHover: "#794bc7",
+  accent: "#633398",
+  accentHover: "#703da9",
   accentFg: "#ffffff",
-  accentInk: "#b79bf7",
-  accentSurface: "#322540",
+  accentInk: "#a382d7",
+  accentSurface: "#2e2339",
+  brandMark: { start: "#a56dca", end: "#6a2a9c" },
   highlightInk: "#eac17e",
   highlightSurface: "#34291d",
   highlightBorder: "#80643f",
+  blueInk: "#82b3ed",
+  mintInk: "#80c6ad",
 
   // --- estados ---
   success: "#16a34a",

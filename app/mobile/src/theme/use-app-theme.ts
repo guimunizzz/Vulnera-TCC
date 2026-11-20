@@ -26,9 +26,12 @@ export interface AppColors {
   accentFg: string;
   accentInk: string;
   accentSurface: string;
+  brandMark: { start: string; end: string };
   highlightInk: string;
   highlightSurface: string;
   highlightBorder: string;
+  blueInk: string;
+  mintInk: string;
   success: string;
   successInk: string;
   successSurface: string;
@@ -59,9 +62,7 @@ export interface AppWorkspace {
   surface: string;
   raised: string;
   tabSurface: string;
-  tabBorder: string;
   line: string;
-  shine: string;
   muted: string;
   text: string;
   secondary: string;
@@ -102,14 +103,17 @@ const LIGHT_COLORS: AppColors = {
   borderSubtle: "#e9e2ec",
   borderDefault: "#d7cbdc",
   borderStrong: "#80728a",
-  accent: "#7046cf",
-  accentHover: "#5b2bb5",
+  accent: "#6b379f",
+  accentHover: "#582983",
   accentFg: "#ffffff",
-  accentInk: "#5b2bb5",
-  accentSurface: "#f3f0fc",
+  accentInk: "#542b82",
+  accentSurface: "#f0e8f5",
+  brandMark: { start: "#7b3fb0", end: "#4b1b74" },
   highlightInk: "#77501b",
   highlightSurface: "#fbf1df",
   highlightBorder: "#d7b980",
+  blueInk: "#2f5d96",
+  mintInk: "#256652",
   success: "#187c49",
   successInk: "#116339",
   successSurface: "#e8fbee",
@@ -136,8 +140,6 @@ const LIGHT_COLORS: AppColors = {
 };
 
 const DARK_WORKSPACE = createWorkspace(DARK_COLORS, {
-  tabBorder: "rgba(255,255,255,0.17)",
-  shine: "rgba(255,255,255,0.17)",
   neutralTint: "rgba(255,255,255,0.045)",
   mediaWell: "rgba(0,0,0,0.25)",
   blurTint: "dark",
@@ -145,15 +147,13 @@ const DARK_WORKSPACE = createWorkspace(DARK_COLORS, {
 });
 
 const LIGHT_WORKSPACE = createWorkspace(LIGHT_COLORS, {
-  tabBorder: "rgba(24,26,32,0.12)",
-  shine: "rgba(255,255,255,0.90)",
   neutralTint: "rgba(24,26,32,0.05)",
   mediaWell: "rgba(24,26,32,0.05)",
   blurTint: "light",
   statusBarStyle: "dark",
 });
 
-function createWorkspace(colors: AppColors, material: Pick<AppWorkspace, "tabBorder" | "shine" | "neutralTint" | "mediaWell" | "blurTint" | "statusBarStyle">): AppWorkspace {
+function createWorkspace(colors: AppColors, material: Pick<AppWorkspace, "neutralTint" | "mediaWell" | "blurTint" | "statusBarStyle">): AppWorkspace {
   return {
     ...material,
     background: colors.canvas,

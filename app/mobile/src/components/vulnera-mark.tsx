@@ -9,7 +9,7 @@ import { useAppTheme } from "../theme/use-app-theme";
 import { useWorkspaceReducedMotion } from "./workspace-motion";
 
 export function VulneraMark({ size = 72, animate = true }: { size?: number; animate?: boolean }) {
-  const { isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const reduced = useWorkspaceReducedMotion();
   const id = `vulnera-mark-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const opacity = useSharedValue(animate && !reduced ? 0 : 1);
@@ -19,8 +19,8 @@ export function VulneraMark({ size = 72, animate = true }: { size?: number; anim
   return <Animated.View accessible={false} style={[{ width: size, height: size }, animatedStyle]}>
     <Svg width={size} height={size} viewBox="-38 -10 418 399" accessible={false}>
       <Defs><LinearGradient id={id} x1="0" y1="0" x2="0" y2="379" gradientUnits="userSpaceOnUse">
-        <Stop offset="0" stopColor={isDark ? "#c679cb" : "#85359b"} />
-        <Stop offset="1" stopColor={isDark ? "#8823a8" : "#681184"} />
+        <Stop offset="0" stopColor={colors.brandMark.start} />
+        <Stop offset="1" stopColor={colors.brandMark.end} />
       </LinearGradient></Defs>
       <Path d="M 0 14 L 24 25 L 167 339 L 307 37 L 261 56 L 167 253 L 70 45 L 147 74 L 102 69 L 167 211 L 247 40 L 342 0 L 167 379 Z" fill={`url(#${id})`} />
     </Svg>

@@ -44,9 +44,8 @@ export function LoginMark({ feedback }: { feedback: { kind: "success" | "failure
   }));
 
   return <Animated.View testID={`login-mark-${feedback?.kind ?? "idle"}`} style={[styles.mark, motion]}>
-    {feedback && <View pointerEvents="none" style={[styles.halo, feedback.kind === "success"
-      ? { backgroundColor: colors.highlightSurface, borderColor: colors.highlightBorder }
-      : { backgroundColor: colors.dangerSurface, borderColor: colors.dangerInk }]} />}
+    {feedback?.kind === "success" && <View testID="login-success-halo" pointerEvents="none"
+      style={[styles.halo, { backgroundColor: colors.highlightSurface, borderColor: colors.highlightBorder }]} />}
     <VulneraMark size={60} />
   </Animated.View>;
 }
