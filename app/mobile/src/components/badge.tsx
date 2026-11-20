@@ -7,8 +7,7 @@
  * Consumidores: listas e detalhes de projetos, achados e relatórios.
  */
 
-import { Platform, StyleSheet, Text, View } from "react-native";
-import { BlurView } from "expo-blur";
+import { StyleSheet, Text, View } from "react-native";
 import { COLORS, FONT_FAMILY, RADIUS, SPACING } from "../theme/tokens";
 import { useAppTheme, type AppColors } from "../theme/use-app-theme";
 
@@ -37,15 +36,13 @@ export function getSeverityColors(
 export const CORES_SEVERIDADE = getSeverityColors(COLORS);
 
 export function SeverityBadge({ severidade, cvss }: { severidade: string; cvss?: number | null }) {
-  const { isDark, colors, workspace } = useAppTheme();
+  const { colors } = useAppTheme();
   const palette = getSeverityColors(colors);
   const s = (severidade in palette ? severidade : "NONE") as Severidade;
   const cor = palette[s];
 
   return (
-    <View style={styles.chip}>
-      {Platform.OS !== "android" && <BlurView intensity={25} tint={workspace.blurTint} style={StyleSheet.absoluteFill} />}
-      <View style={[styles.chipTint, { backgroundColor: cor.fundo, opacity: isDark ? 0.78 : 0.94 }]} />
+    <View style={[styles.chip, { backgroundColor: cor.fundo }]}>
       <View style={[styles.ponto, { backgroundColor: cor.ponto }]} />
       <Text style={[styles.texto, { color: cor.texto }]}>{ROTULO_SEVERIDADE[s]}</Text>
       {cvss != null && <Text style={[styles.cvss, { color: cor.texto }]}>{cvss.toFixed(1)}</Text>}
@@ -76,13 +73,11 @@ export const ROTULO_ESTADO: Record<string, { texto: string; tom: TomBadge }> = {
 };
 
 export function StatusBadge({ status }: { status: string }) {
-  const { isDark, colors, workspace } = useAppTheme();
+  const { colors } = useAppTheme();
   const info = ROTULO_ESTADO[status] ?? { texto: status, tom: "neutro" as TomBadge };
   const cor = getToneColors(colors)[info.tom];
   return (
-    <View style={styles.chip}>
-      {Platform.OS !== "android" && <BlurView intensity={25} tint={workspace.blurTint} style={StyleSheet.absoluteFill} />}
-      <View style={[styles.chipTint, { backgroundColor: cor.fundo, opacity: isDark ? 0.78 : 0.94 }]} />
+    <View style={[styles.chip, { backgroundColor: cor.fundo }]}>
       <Text style={[styles.texto, { color: cor.texto }]}>{info.texto}</Text>
     </View>
   );
@@ -98,9 +93,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     alignSelf: "flex-start",
     overflow: "hidden",
-  },
-  chipTint: {
-    ...StyleSheet.absoluteFill,
   },
   ponto: {
     width: 6,

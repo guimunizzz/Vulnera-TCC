@@ -1,13 +1,13 @@
 /** Detalha o relatório executivo da API e gera o PDF no dispositivo após a regra RN18. */
 import { useRef, useState } from "react";
-import { Platform, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { projectsApi } from "../../../src/api/projects.api";
 import { reportsApi } from "../../../src/api/reports.api";
-import { SeverityBadge } from "../../../src/components/badge";
+import { getSeverityColors, ROTULO_SEVERIDADE, SeverityBadge } from "../../../src/components/badge";
 import { ActionButton, DataState, Surface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { useApiError } from "../../../src/hooks/use-api-error";
 import { displayDate } from "../../../src/lib/display";
@@ -16,11 +16,13 @@ import { useAppTheme } from "../../../src/theme/use-app-theme";
 import { OWASP_LABELS } from "../../../src/types/vulnerability.types";
 import type { ReportData } from "../../../src/types/report.types";
 
-const severityLabels: Record<string, string> = { CRITICAL: "Crítica", HIGH: "Alta", MEDIUM: "Média", LOW: "Baixa", NONE: "Informativa" };
+const severityOrder = Object.keys(ROTULO_SEVERIDADE) as (keyof typeof ROTULO_SEVERIDADE)[];
+const formatScore = (value: number) => value.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
 export default function ReportDetailScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const { ui, workspace, colors } = useAppTheme();
+  const severityColors = getSeverityColors(colors);
   const router = useRouter();
   const cache = useQueryClient();
   const errorMessage = useApiError();
@@ -52,15 +54,26 @@ export default function ReportDetailScreen() {
     {project.isPending ? <DataState loading title="Carregando projeto" /> : project.isError || !project.data ? <DataState error title="Projeto indisponível" message={errorMessage(project.error)} onRetry={() => { void project.refetch(); }} /> : !ready ? <DataState title="Relatório ainda indisponível" message="O relatório executivo fica disponível quando o projeto estiver em revisão ou concluído." /> : <>
       {report.isPending ? <DataState loading title="Carregando relatório" /> : report.isError || !report.data ? <DataState error title="Relatório indisponível" message={errorMessage(report.error)} onRetry={() => { void report.refetch(); }} /> : <>
         <View style={{ gap: 8 }}><Text accessibilityRole="header" style={ui.title}>{report.data.project.name}</Text><Text style={ui.body}>{report.data.application.name} · {report.data.company.name}</Text><Text style={ui.muted}>Solicitado em {displayDate(report.data.project.requestedAt)}{report.data.project.closedAt ? ` · Concluído em ${displayDate(report.data.project.closedAt)}` : ""}</Text></View>
-        <Surface><Text style={ui.heading}>Sumário executivo</Text><Text style={ui.body}>Visão consolidada dos achados e do acompanhamento de remediação.</Text><ReportMetrics data={report.data} /></Surface>
-        <Surface><Text style={ui.heading}>Distribuição por severidade</Text>{Object.entries(report.data.stats.bySeverity).map(([severity, count]) => <View key={severity} style={{ gap: 6 }}><View style={ui.spread}><Text style={ui.body}>{severityLabels[severity] ?? severity}</Text><Text style={ui.mono}>{count}</Text></View><View style={{ height: 6, borderRadius: 3, backgroundColor: workspace.inset }}><View style={{ width: `${report.data!.stats.total ? count / report.data!.stats.total * 100 : 0}%`, height: 6, borderRadius: 3, backgroundColor: severity === "CRITICAL" ? colors.severity.critical : severity === "HIGH" ? colors.severity.high : severity === "MEDIUM" ? colors.severity.medium : severity === "LOW" ? colors.severity.low : colors.severity.info }} /></View></View>)}</Surface>
+        {Platform.OS === "web" ? <Text style={ui.muted}>A geração e o compartilhamento do PDF estão disponíveis no aplicativo móvel.</Text> : <ActionButton variant="primary" icon="share-outline" label={exporting ? "Gerando PDF..." : "Exportar e compartilhar PDF"} disabled={exporting} onPress={() => { void exportPdf(); }} />}
+        {message && <Text accessibilityLiveRegion="polite" style={ui.body}>{message}</Text>}
+        <Surface strong><Text accessibilityRole="header" style={ui.heading}>Sumário executivo</Text><ReportMetrics data={report.data} /></Surface>
+        <Surface>
+          <Text accessibilityRole="header" style={ui.heading}>Distribuição por severidade</Text>
+          {severityOrder.map((severity) => <MetricBar key={severity} label={ROTULO_SEVERIDADE[severity]}
+            value={report.data.stats.bySeverity[severity] ?? 0} maximum={report.data.stats.total} color={severityColors[severity].ponto} />)}
+        </Surface>
         <SectionHeading title="Principais riscos" />
         {!report.data.topRisks.length ? <DataState title="Nenhum risco registrado" /> : report.data.topRisks.map((risk) => <Surface key={risk.id} onPress={() => router.push(`/(tabs)/home/finding/${risk.id}`)} accessibilityLabel={`Abrir vulnerabilidade ${risk.title}`}><View style={ui.spread}><Text style={[ui.heading, ui.grow]}>{risk.title}</Text><SeverityBadge severidade={risk.severityFinal} cvss={risk.cvssScore} /></View><Text style={ui.muted}>{OWASP_LABELS[risk.owaspCategory] ?? risk.owaspCategory}</Text><Text style={ui.body}>Recomendação: {risk.recommendation || "Não informada"}</Text></Surface>)}
         {!!report.data.acceptedRisks.length && <><SectionHeading title="Riscos aceitos" />{report.data.acceptedRisks.map((risk) => <Surface key={risk.vulnerabilityId}><Text style={ui.heading}>{risk.title}</Text><Text style={ui.body}>{risk.reason}</Text><Text style={ui.muted}>Justificativa: {risk.businessJustification}</Text><Text style={ui.muted}>Validade: {displayDate(risk.expiresAt)} · Aprovação: {risk.approvedByName || "Não informada"}</Text></Surface>)}</>}
-        <Surface><Text style={ui.heading}>Maturidade de segurança</Text>{report.data.maturity ? <><Text style={ui.body}>Nível {report.data.maturity.level} · {report.data.maturity.overallScore}</Text>{report.data.maturity.domains.map((domain) => <Text key={domain.domainId} style={ui.muted}>{domain.domainName}: {domain.average}</Text>)}</> : <Text style={ui.body}>Avaliação de maturidade ainda não disponível.</Text>}</Surface>
+        <Surface>
+          <Text accessibilityRole="header" style={ui.heading}>Maturidade de segurança</Text>
+          {report.data.maturity ? <>
+            <Text style={ui.body}>Nível {report.data.maturity.level} · {formatScore(report.data.maturity.overallScore)} de 5</Text>
+            {report.data.maturity.domains.map((domain) => <MetricBar key={domain.domainId} label={domain.domainName}
+              value={domain.average} maximum={5} detail={`${formatScore(domain.average)} de 5`} color={workspace.lavender} />)}
+          </> : <Text style={ui.body}>Avaliação de maturidade ainda não disponível.</Text>}
+        </Surface>
         <Surface><Text style={ui.heading}>Conclusão</Text><Text style={ui.body}>Priorize os achados em aberto conforme a severidade e acompanhe as ações de remediação.</Text></Surface>
-        {Platform.OS === "web" ? <Text style={ui.muted}>A geração e o compartilhamento do PDF estão disponíveis no aplicativo móvel.</Text> : <ActionButton icon="share-outline" label={exporting ? "Gerando PDF..." : "Exportar e compartilhar PDF"} disabled={exporting} onPress={() => { void exportPdf(); }} />}
-        {message && <Text accessibilityLiveRegion="polite" style={ui.body}>{message}</Text>}
       </>}
       <SectionHeading title="Histórico" />
       {history.isPending ? <DataState loading title="Carregando histórico" /> : history.isError ? <DataState error title="Histórico indisponível" message={errorMessage(history.error)} onRetry={() => { void history.refetch(); }} /> : !executiveHistory.length ? <DataState title="Nenhum relatório gerado" /> : executiveHistory.map((entry) => <Surface key={entry.id}><Text style={ui.body}>{entry.title}</Text><Text style={ui.muted}>{displayDate(entry.createdAt, true)}</Text></Surface>)}
@@ -68,8 +81,24 @@ export default function ReportDetailScreen() {
   </WorkspaceScreen>;
 }
 
+function MetricBar({ label, value, maximum, detail, color }: { label: string; value: number; maximum: number; detail?: string; color: string }) {
+  const { ui, workspace } = useAppTheme();
+  const percent = maximum > 0 ? Math.max(0, Math.min(100, (value / maximum) * 100)) : 0;
+  return <View style={styles.metricBar}>
+    <View style={ui.spread}><Text style={[ui.body, ui.grow]}>{label}</Text><Text style={ui.mono}>{detail ?? value}</Text></View>
+    <View style={[styles.track, { backgroundColor: workspace.line }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <View style={[styles.track, { width: `${percent}%`, backgroundColor: color }]} />
+    </View>
+  </View>;
+}
+
 function ReportMetrics({ data }: { data: ReportData }) {
   const { ui } = useAppTheme();
   const metrics = reportMetrics(data);
   return <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}><View style={ui.grow}><Text style={ui.heading}>{metrics.total}</Text><Text style={ui.muted}>achados</Text></View><View style={ui.grow}><Text style={ui.heading}>{metrics.criticalOpen}</Text><Text style={ui.muted}>críticos em aberto</Text></View><View style={ui.grow}><Text style={ui.heading}>{metrics.remediatedPercent}%</Text><Text style={ui.muted}>remediados</Text></View></View>;
 }
+
+const styles = StyleSheet.create({
+  metricBar: { gap: 6 },
+  track: { height: 7, borderRadius: 4 },
+});

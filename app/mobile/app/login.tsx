@@ -88,7 +88,7 @@ function FocusField({
     return () => cancelAnimation(focus);
   }, [focus, reduced]);
   const borderStyle = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(focus.value, [0, 1], [colors.borderDefault, colors.accent]),
+    borderColor: interpolateColor(focus.value, [0, 1], [colors.borderStrong, colors.accentInk]),
   }));
   const iconColorStyle = useAnimatedStyle(() => ({
     opacity: 0.6 + focus.value * 0.4,

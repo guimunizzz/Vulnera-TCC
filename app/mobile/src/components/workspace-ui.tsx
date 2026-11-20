@@ -85,20 +85,18 @@ export function FilterChip({ label, selected, onPress, tab = false }: { label: s
   </SoftPressable>;
 }
 
-export function ActionButton({ label, onPress, disabled = false, danger = false, icon = "refresh-outline" }: {
-  label: string; onPress: () => void; disabled?: boolean; danger?: boolean; icon?: keyof typeof Ionicons.glyphMap;
+export function ActionButton({ label, onPress, disabled = false, variant = "secondary", icon = "refresh-outline" }: {
+  label: string; onPress: () => void; disabled?: boolean; variant?: "primary" | "secondary" | "danger"; icon?: keyof typeof Ionicons.glyphMap;
 }) {
-  const { workspace } = useAppTheme();
-  const tintColor = danger ? workspace.dangerInk : workspace.lavender;
+  const { colors, workspace } = useAppTheme();
+  const appearance = {
+    primary: { ink: colors.accentFg, borderColor: colors.accent, backgroundColor: colors.accent },
+    secondary: { ink: workspace.lavender, borderColor: workspace.actionBorder, backgroundColor: workspace.actionBg },
+    danger: { ink: workspace.dangerInk, borderColor: workspace.dangerActionBorder, backgroundColor: workspace.dangerActionBg },
+  }[variant];
   return <SoftPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={() => { haptics.tap(); onPress(); }}
-    style={[
-      styles.action,
-      {
-        borderColor: danger ? workspace.dangerActionBorder : workspace.actionBorder,
-        backgroundColor: danger ? workspace.dangerActionBg : workspace.actionBg,
-      },
-    ]}>
-    <Ionicons name={icon} size={18} color={tintColor} /><Text style={[styles.actionText, { color: tintColor }]}>{label}</Text>
+    style={[styles.action, { borderColor: appearance.borderColor, backgroundColor: appearance.backgroundColor }]}>
+    <Ionicons name={icon} size={18} color={appearance.ink} /><Text style={[styles.actionText, { color: appearance.ink }]}>{label}</Text>
   </SoftPressable>;
 }
 

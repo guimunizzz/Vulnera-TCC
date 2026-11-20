@@ -1,5 +1,5 @@
 /**
- * Conta do cliente: perfil real, preferência de tema (escuro/branco),
+ * Conta do cliente: perfil real, preferência de tema (escuro/claro),
  * estado compartilhado do push e saída segura.
  * Consome /users/me e o registro único do layout; limpa consultas ao sair.
  */
@@ -32,7 +32,7 @@ const PUSH_LABELS = {
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; icon: "moon-outline" | "sunny-outline" }[] = [
   { value: "dark", label: "Tema escuro", icon: "moon-outline" },
-  { value: "light", label: "Tema branco", icon: "sunny-outline" },
+  { value: "light", label: "Tema claro", icon: "sunny-outline" },
 ];
 
 export default function SettingsScreen() {
@@ -56,8 +56,8 @@ export default function SettingsScreen() {
     finally { clearAuth(); router.replace("/login"); }
   }
   return <WorkspaceScreen refreshing={profile.isRefetching} onRefresh={() => { void profile.refetch(); }}>
-    <PageHeader label="MINHA CONTA" />
-    <MotionReveal distance={8} style={{ gap: 8 }}><Text style={ui.title}>Seu perfil</Text><Text style={ui.body}>Seus dados, aparência e o acesso ao aplicativo.</Text></MotionReveal>
+    <PageHeader />
+    <MotionReveal distance={8} style={{ gap: 8 }}><Text accessibilityRole="header" style={ui.title}>Minha conta</Text><Text style={ui.body}>Seus dados, aparência e o acesso ao aplicativo.</Text></MotionReveal>
     <MotionReveal delay={40} distance={8}><Surface strong>
       <View style={ui.row}><View style={[styles.avatar, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]}><Text style={[styles.initial, { color: workspace.secondary }]}>{user?.name?.charAt(0).toUpperCase() ?? "?"}</Text></View><View style={[ui.grow, { gap: 4 }]}><Text style={ui.heading}>{user?.name ?? "Carregando perfil"}</Text><Text style={ui.muted}>{user?.email}</Text></View></View>
       <View style={ui.divider} /><DetailField label="TIPO DE CONTA" value="Cliente" />
@@ -67,9 +67,8 @@ export default function SettingsScreen() {
     {profile.isError && <DataState error title="Perfil não atualizado" message={errorMessage(profile.error)} onRetry={() => { void profile.refetch(); }} />}
 
     <MotionReveal delay={60} distance={8} style={{ gap: 20 }}>
-      <SectionHeading title="Aparência" meta={mode === "light" ? "Branco" : "Escuro"} />
+      <SectionHeading title="Aparência" />
       <Surface>
-        <Text style={ui.body}>Escolha entre o visual escuro padrão e o tema branco para ambientes iluminados.</Text>
         <View accessibilityRole="radiogroup" accessibilityLabel="Tema do aplicativo" style={[styles.themeGroup, { backgroundColor: workspace.inset, borderColor: workspace.line }]}>
           {THEME_OPTIONS.map((option) => {
             const active = mode === option.value;
@@ -112,8 +111,8 @@ export default function SettingsScreen() {
     </Surface></MotionReveal>
     <MotionReveal delay={120} distance={8} layout style={{ gap: 20 }}><SectionHeading title="Sua sessão" />
     <Surface><View style={ui.row}><Ionicons name="lock-closed-outline" size={20} color={workspace.secondary} /><Text style={[ui.heading, { fontSize: 17 }]}>Acesso pessoal</Text></View><Text style={ui.body}>Os projetos e as vulnerabilidades exibidos pertencem à sua empresa.</Text>
-      {confirming ? <MotionReveal style={{ gap: 12 }}><Text style={ui.body}>Deseja sair? Você precisará entrar novamente para acompanhar seus projetos.</Text><ActionButton danger icon="log-out-outline" label={loggingOut ? "Saindo..." : "Confirmar saída"} disabled={loggingOut} onPress={() => { void logout(); }} /><ActionButton icon="close-outline" label="Continuar no app" disabled={loggingOut} onPress={() => setConfirming(false)} /></MotionReveal>
-        : <ActionButton danger icon="log-out-outline" label="Sair da conta" onPress={() => setConfirming(true)} />}
+      {confirming ? <MotionReveal style={{ gap: 12 }}><Text style={ui.body}>Deseja sair? Você precisará entrar novamente para acompanhar seus projetos.</Text><ActionButton variant="danger" icon="log-out-outline" label={loggingOut ? "Saindo..." : "Confirmar saída"} disabled={loggingOut} onPress={() => { void logout(); }} /><ActionButton icon="close-outline" label="Continuar no app" disabled={loggingOut} onPress={() => setConfirming(false)} /></MotionReveal>
+        : <ActionButton variant="danger" icon="log-out-outline" label="Sair da conta" onPress={() => setConfirming(true)} />}
     </Surface></MotionReveal>
     <MotionReveal delay={160} distance={8} layout style={styles.footer}><Text style={[styles.wordmark, { color: workspace.muted }]}>VULNERA</Text><Text style={ui.muted}>Versão {Constants.expoConfig?.version ?? "1.0.0"} · Segurança em acompanhamento</Text></MotionReveal>
   </WorkspaceScreen>;

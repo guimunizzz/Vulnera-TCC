@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { AccessibilityInfo, Platform, StyleSheet, View } from "react-native";
 import { requireOptionalNativeModule } from "expo";
 import { useAppTheme } from "../theme/use-app-theme";
+import { TAB_BAR } from "../theme/tokens";
 
 type NativeGlassView = typeof import("expo-glass-effect").GlassView;
 
@@ -43,8 +44,12 @@ export function TabBarMaterial() {
 
   if (GlassView && allowsTransparency) {
     return <GlassView testID="tab-bar-native-glass" glassEffectStyle="regular" colorScheme={mode}
-      pointerEvents="none" style={StyleSheet.absoluteFill} />;
+      pointerEvents="none" style={styles.native} />;
   }
 
   return <View testID="tab-bar-solid-surface" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: workspace.tabSurface }]} />;
 }
+
+const styles = StyleSheet.create({
+  native: { ...StyleSheet.absoluteFill, borderRadius: TAB_BAR.height / 2 },
+});

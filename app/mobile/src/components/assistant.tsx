@@ -79,7 +79,9 @@ export function AssistantSession({ children }: { children: ReactNode }) {
                 <Ionicons name="close" size={23} color={workspace.text} />
               </SoftPressable>
             </View>
-            <ScrollView ref={scroll} style={styles.flex} contentContainerStyle={[styles.messages, showIntro && styles.introContainer]} keyboardShouldPersistTaps="handled" onContentSizeChange={() => { if (!showIntro) scroll.current?.scrollToEnd({ animated: !reduced }); }}>
+            <ScrollView ref={scroll} style={styles.flex} contentContainerStyle={[styles.messages, showIntro && styles.introContainer]}
+              keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+              onContentSizeChange={() => { if (!showIntro) scroll.current?.scrollToEnd({ animated: !reduced }); }}>
               {showIntro && <View style={styles.intro}>
                 <View testID="vuvu-intro" style={styles.mascotStage}>
                   <View style={[styles.mascotHalo, { backgroundColor: workspace.neutralTint, borderColor: workspace.line }]} />
