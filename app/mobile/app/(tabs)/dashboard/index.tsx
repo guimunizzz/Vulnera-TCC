@@ -1,22 +1,20 @@
-/**
- * Painel executivo para clientes: visão de projetos e riscos em aberto.
- * Usa as mesmas fontes de projetos e exposição já consumidas pelo app e permite abrir os detalhes.
- * Consumidor: aba inicial autenticada do Expo Router.
+﻿/**
+ * Painel do cliente. Destaca um achado e agrupa a consulta das demais prioridades e da evolução.
+ * Consumidor: aba inicial autenticada, com acesso aos achados e projetos.
  */
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import Animated, { cancelAnimation, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { projectsApi } from "../../../src/api/projects.api";
 import { exposureGraphApi } from "../../../src/api/exposure-graph.api";
 import { vulnerabilitiesApi } from "../../../src/api/vulnerabilities.api";
-import { ActionButton, DataState, PageHeader, Surface, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
+import { SeverityBadge, ROTULO_SEVERIDADE } from "../../../src/components/badge";
 import { ExposureTrend } from "../../../src/components/exposure-trend";
-import { ROTULO_ESTADO, ROTULO_SEVERIDADE, SeverityBadge } from "../../../src/components/badge";
-import { SoftPressable, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
+import { ActionButton, DataState, PageHeader, SectionHeading, Surface, WorkspaceScreen } from "../../../src/components/workspace-ui";
+import { SoftPressable, SOFT_MOTION, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
 import { useApiError } from "../../../src/hooks/use-api-error";
 import { exposureOverview, projectOverview } from "../../../src/lib/dashboard";
 import { haptics } from "../../../src/lib/haptics";
@@ -25,93 +23,147 @@ import { FONT_FAMILY } from "../../../src/theme/tokens";
 import { getSlaInk, useAppTheme } from "../../../src/theme/use-app-theme";
 import { fraseDoSla } from "../../../src/types/vulnerability.types";
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-const circumference = 2 * Math.PI * 42;
-
 export default function DashboardScreen() {
   const { workspace, ui, colors } = useAppTheme();
-  const user = useAuthStore((state) => state.user);
+  const name = useAuthStore((state) => state.user?.name?.trim().split(/\s+/)[0]) || "cliente";
   const router = useRouter();
   const errorMessage = useApiError();
+  const [showOtherPriorities, setShowOtherPriorities] = useState(false);
+  const [showTrend, setShowTrend] = useState(false);
   const projects = useQuery({ queryKey: ["projects"], queryFn: ({ signal }) => projectsApi.list(signal) });
   const exposure = useQuery({ queryKey: ["exposure-graph"], queryFn: ({ signal }) => exposureGraphApi.get(signal) });
   const overview = projects.data ? projectOverview(projects.data) : null;
-  const risks = exposure.data ? exposureOverview(exposure.data.aplicacoes) : null;
-  const priorityDetails = useQueries({ queries: (risks?.priorities ?? []).map((finding) => ({ queryKey: ["vulnerabilities", finding.id], queryFn: ({ signal }: { signal: AbortSignal }) => vulnerabilitiesApi.getById(finding.id, signal), retry: false })) });
+  const priorities = exposure.data ? exposureOverview(exposure.data.aplicacoes).priorities : [];
+  const details = useQueries({ queries: priorities.map(({ id }) => ({
+    queryKey: ["vulnerabilities", id], queryFn: ({ signal }: { signal: AbortSignal }) => vulnerabilitiesApi.getById(id, signal), retry: false,
+  })) });
+  const [first, ...other] = priorities;
+  const firstSla = details[0]?.data?.sla;
+  const deadline = firstSla && firstSla.state !== "NO_SLA" ? fraseDoSla(firstSla.state, firstSla.remainingMs) : undefined;
+  const otherPrioritiesLabel = (showOtherPriorities ? "Recolher prioridades" : "Ver outras prioridades") + ` (${other.length})`;
+  const openFinding = (id: string) => router.push({ pathname: "/(tabs)/dashboard/finding/[id]", params: { id } });
 
-  return <WorkspaceScreen refreshing={projects.isRefetching || exposure.isRefetching} onRefresh={() => { void projects.refetch(); void exposure.refetch(); }}>
+  return <WorkspaceScreen refreshing={projects.isRefetching || exposure.isRefetching}
+    onRefresh={() => { void projects.refetch(); void exposure.refetch(); }}>
     <PageHeader account />
-    <DashboardReveal><Text accessibilityRole="header" style={ui.title}>Olá, {user?.name?.split(" ")[0] ?? "cliente"}<Text style={{ color: workspace.lavender }}>.</Text></Text><Text style={ui.body}>Ações e riscos que merecem sua atenção.</Text></DashboardReveal>
-    <DashboardReveal delay={60}><View style={styles.section}><SectionHeading title="Prioridades" />
-      {exposure.isPending && <DataState loading title="Buscando prioridades" />}
-      {exposure.isError && !risks && <DataState error title="Prioridades indisponíveis" message={errorMessage(exposure.error)} onRetry={() => { void exposure.refetch(); }} />}
-      {exposure.isError && risks && <Surface>
-        <Text style={ui.body} accessibilityLiveRegion="polite">Exibindo as últimas prioridades carregadas.</Text>
-        <Text style={ui.muted}>{errorMessage(exposure.error)}</Text>
-        <ActionButton label="Tentar atualizar prioridades" disabled={exposure.isRefetching} onPress={() => { void exposure.refetch(); }} />
-      </Surface>}
-      {risks && (risks.priorities.length > 0 ? risks.priorities.map((item, index) => {
-        const sla = priorityDetails[index]?.data?.sla;
-        const prazo = sla && sla.state !== "NO_SLA" ? fraseDoSla(sla.state, sla.remainingMs) : null;
-        const severity = ROTULO_SEVERIDADE[item.severityFinal as keyof typeof ROTULO_SEVERIDADE] ?? item.severityFinal;
-        const status = ROTULO_ESTADO[item.status]?.texto ?? item.status;
-        const prazoInk = getSlaInk(sla?.state, colors);
-        const first = index === 0;
 
-        return <SoftPressable key={item.id} accessibilityRole="button"
-          accessibilityLabel={`${first ? "Maior prioridade, " : ""}${item.title}, ${severity}, ${item.applicationName}, ${status}${prazo ? `, prazo ${prazo}` : ""}`}
-          accessibilityHint="Abre os detalhes do achado"
-          onPress={() => { haptics.tap(); router.push({ pathname: "/(tabs)/dashboard/finding/[id]", params: { id: item.id } }); }}
-          style={[styles.priority, { backgroundColor: first ? workspace.raised : workspace.surface, borderColor: first ? workspace.actionBorder : workspace.line }]}>
-          <View style={[ui.grow, { gap: 6 }]}>
-            <View style={styles.priorityMeta}><SeverityBadge severidade={item.severityFinal} /><Text style={ui.muted}>{status}</Text></View>
-            <Text style={first ? ui.heading : ui.body}>{item.title}</Text>
-            <Text style={ui.muted}>{item.applicationName}</Text>
-            {prazo && <Text style={[ui.muted, prazoInk && { color: prazoInk }]}>Prazo: {prazo}</Text>}
+    <DashboardReveal>
+      <Text accessibilityRole="header" style={ui.title}>Olá, {name}<Text style={{ color: workspace.lavender }}>.</Text></Text>
+    </DashboardReveal>
+
+    <DashboardReveal delay={45}>
+      <SectionHeading title="Prioridades" />
+      {exposure.isPending && <DataState loading title="Buscando prioridades" />}
+      {exposure.isError && !exposure.data && <DataState error title="Prioridades indisponíveis"
+        message={errorMessage(exposure.error)} onRetry={() => { void exposure.refetch(); }} />}
+      {exposure.isError && exposure.data && <View style={styles.rows}>
+        <Text accessibilityLiveRegion="polite" style={ui.muted}>Exibindo as últimas prioridades carregadas. {errorMessage(exposure.error)}</Text>
+        <ActionButton label="Atualizar prioridades" disabled={exposure.isRefetching} onPress={() => { void exposure.refetch(); }} />
+      </View>}
+      {first && <Surface strong onPress={() => openFinding(first.id)} accessibilityLabel={
+        `Abrir achado ${first.title}, ${severityLabel(first.severityFinal)}, ${first.applicationName}${deadline ? `, ${deadline}` : ""}`
+      } style={[styles.featured, { borderColor: workspace.actionBorder }]}>
+        <View style={styles.metadata}>
+          <SeverityBadge severidade={first.severityFinal} />
+          {deadline && <Text style={[styles.deadline, { color: getSlaInk(firstSla?.state, colors) ?? workspace.text }]}>{deadline}</Text>}
+        </View>
+        <View style={styles.context}>
+          <Text style={[ui.heading, styles.findingTitle]}>{first.title}</Text>
+          <Text style={ui.body}>{first.applicationName}</Text>
+        </View>
+        <View style={[ui.spread, styles.featuredAction, { borderTopColor: workspace.line }]}>
+          <Text style={[ui.body, { color: workspace.lavender, fontFamily: FONT_FAMILY.semibold }]}>Abrir achado</Text>
+          <Ionicons name="arrow-forward" size={20} color={workspace.lavender} />
+        </View>
+      </Surface>}
+      {exposure.data && !first && <Text style={ui.body}>{exposure.data.aplicacoes.length
+        ? "Nenhum achado aberto para priorizar."
+        : "Nenhuma aplicação ativa para acompanhar."}</Text>}
+      {other.length > 0 && <View>
+        <SoftPressable accessibilityRole="button" accessibilityLabel={otherPrioritiesLabel}
+          accessibilityState={{ expanded: showOtherPriorities }} aria-expanded={showOtherPriorities}
+          onPress={() => setShowOtherPriorities((value) => !value)} style={[ui.spread, styles.simpleRow]}>
+          <Text style={[ui.body, { color: workspace.lavender, fontFamily: FONT_FAMILY.medium }]}>
+            {otherPrioritiesLabel}
+          </Text>
+          <Ionicons name={showOtherPriorities ? "chevron-up" : "chevron-down"} size={18} color={workspace.lavender} />
+        </SoftPressable>
+        {showOtherPriorities && other.map((item, index) => {
+          const sla = details[index + 1]?.data?.sla;
+          const due = sla && sla.state !== "NO_SLA" ? fraseDoSla(sla.state, sla.remainingMs) : null;
+          const severity = severityLabel(item.severityFinal);
+          return <SoftPressable key={item.id} onPress={() => { haptics.tap(); openFinding(item.id); }} accessibilityRole="button"
+            accessibilityLabel={`Abrir achado ${item.title}, ${severity}${due ? `, ${due}` : ""}`}
+            style={[ui.spread, styles.listRow, { borderColor: workspace.line }]}>
+            <View style={ui.grow}><Text style={ui.heading}>{item.title}</Text>
+              <Text style={ui.muted}>{severity}{due && <Text style={{ color: getSlaInk(sla?.state, colors) }}>{` · ${due}`}</Text>}</Text></View>
+            <Ionicons name="chevron-forward" size={18} color={workspace.muted} />
+          </SoftPressable>;
+        })}
+      </View>}
+    </DashboardReveal>
+
+    <DashboardReveal delay={65} style={[styles.projects, { borderColor: workspace.line }]}>
+      <Text accessibilityRole="header" style={ui.heading}>Projetos</Text>
+      <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir projetos"
+        onPress={() => { haptics.tap(); router.push("/(tabs)/home"); }} style={[ui.spread, styles.simpleRow]}>
+        <View style={[ui.row, ui.grow]}>
+          <View style={[styles.projectIcon, { backgroundColor: workspace.neutralTint }]}>
+            <Ionicons name="folder-outline" size={21} color={workspace.lavender} />
           </View>
-          <Ionicons name="chevron-forward" size={20} color={first ? workspace.lavender : workspace.muted} />
-        </SoftPressable>;
-      }) : <Surface><Text style={ui.body}>{exposure.data?.aplicacoes.length ? "Nenhuma vulnerabilidade aberta para priorizar." : "Nenhuma aplicação ativa para acompanhar."}</Text></Surface>)}
-    </View></DashboardReveal>
-    <DashboardReveal delay={120}><Surface>
-      <View style={styles.overview}><ProgressRing percent={overview?.percent ?? null} /><View style={[ui.grow, { gap: 10 }]}><Text accessibilityRole="header" style={ui.heading}>Visão geral</Text>
-        {overview ? overview.total > 0 ? <><Text style={ui.body}>{overview.completed} de {overview.total} {overview.total === 1 ? "projeto concluído" : "projetos concluídos"}</Text><Text style={ui.muted}>{overview.active} em análise ou revisão</Text></> : <Text style={ui.body}>Nenhum projeto cadastrado.</Text> : <Text style={ui.muted}>{projects.isPending ? "Carregando projetos..." : "Projetos indisponíveis"}</Text>}
-        {risks && <Text style={[ui.muted, risks.critical > 0 && { color: colors.dangerInk }]}>{risks.critical} {risks.critical === 1 ? "crítica" : "críticas"} em aberto</Text>}
-      </View></View>
-      {projects.isError && <>
-        <Text style={ui.muted} accessibilityLiveRegion="polite">{overview ? "Exibindo os últimos dados dos projetos. " : ""}{errorMessage(projects.error)}</Text>
-        <ActionButton label="Tentar atualizar projetos" disabled={projects.isRefetching} onPress={() => { void projects.refetch(); }} />
-      </>}
-    </Surface></DashboardReveal>
-    {exposure.data && <DashboardReveal delay={160}><ExposureTrend applications={exposure.data.aplicacoes} /></DashboardReveal>}
-    <DashboardReveal delay={180}><Surface accessibilityLabel="Abrir grafo de exposição" onPress={() => router.push("/(tabs)/security?section=exposure")}><View style={ui.spread}><View style={[ui.grow, { gap: 5 }]}><Text accessibilityRole="header" style={ui.heading}>Exposição</Text><Text style={ui.muted}>{risks ? `${risks.open} vulnerabilidades abertas nas aplicações ativas` : "Veja as conexões entre aplicações e categorias OWASP."}</Text></View><Ionicons name="git-network-outline" size={24} color={workspace.lavender} /></View></Surface></DashboardReveal>
-    <DashboardReveal delay={220}><Surface accessibilityLabel="Ver projetos" onPress={() => router.push("/(tabs)/home")}><View style={ui.spread}><View style={[ui.grow, { gap: 5 }]}><Text style={ui.heading}>Seus projetos</Text><Text style={ui.muted}>Acompanhe suas análises de segurança.</Text></View><Ionicons name="arrow-forward" size={20} color={workspace.lavender} /></View></Surface></DashboardReveal>
+          <Text style={[ui.body, ui.grow]}>{overview
+            ? overview.active === 0 ? "Nenhum em análise ou revisão" : overview.active + " em análise ou revisão"
+            : projects.isPending ? "Carregando projetos…" : "Ver projetos"}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={workspace.muted} />
+      </SoftPressable>
+      {projects.isError && <View style={styles.rows}>
+        <Text accessibilityLiveRegion="polite" style={ui.muted}>{errorMessage(projects.error)}</Text>
+        <ActionButton label="Atualizar projetos" disabled={projects.isRefetching} onPress={() => { void projects.refetch(); }} />
+      </View>}
+    </DashboardReveal>
+
+    {!!exposure.data?.aplicacoes.length && <DashboardReveal delay={90} style={[styles.trend, { borderColor: workspace.line }]}>
+      <SoftPressable accessibilityRole="button" accessibilityLabel={showTrend ? "Recolher evolução" : "Evolução da exposição"}
+        accessibilityState={{ expanded: showTrend }} aria-expanded={showTrend}
+        onPress={() => setShowTrend((value) => !value)} style={[ui.spread, styles.simpleRow]}>
+        <Text style={[ui.heading, ui.grow]}>{showTrend ? "Recolher evolução" : "Evolução da exposição"}</Text>
+        <Ionicons name={showTrend ? "chevron-up" : "chevron-down"} size={18} color={workspace.lavender} />
+      </SoftPressable>
+      {showTrend && <ExposureTrend applications={exposure.data.aplicacoes} />}
+    </DashboardReveal>}
   </WorkspaceScreen>;
 }
 
-function DashboardReveal({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
-  const reduced = useWorkspaceReducedMotion();
-  const progress = useSharedValue(reduced ? 1 : 0);
-  useEffect(() => { progress.value = reduced ? 1 : withDelay(delay, withTiming(1, { duration: 320 })); return () => cancelAnimation(progress); }, [delay, progress, reduced]);
-  const style = useAnimatedStyle(() => ({ opacity: progress.value, transform: [{ translateY: (1 - progress.value) * 8 }] }));
-  return <Animated.View style={[{ gap: 8 }, style]}>{children}</Animated.View>;
+function severityLabel(severity: string) {
+  return ROTULO_SEVERIDADE[severity as keyof typeof ROTULO_SEVERIDADE] ?? severity;
 }
 
-function ProgressRing({ percent }: { percent: number | null }) {
-  const { workspace, ui } = useAppTheme();
+function DashboardReveal({ children, delay = 0, style }: {
+  children: ReactNode; delay?: number; style?: ComponentProps<typeof Animated.View>["style"];
+}) {
   const reduced = useWorkspaceReducedMotion();
-  const progress = useSharedValue(reduced ? (percent ?? 0) / 100 : 0);
-  useEffect(() => { progress.value = withTiming((percent ?? 0) / 100, { duration: reduced ? 0 : 650 }); return () => cancelAnimation(progress); }, [percent, progress, reduced]);
-  const animated = useAnimatedProps(() => ({ strokeDashoffset: circumference * (1 - progress.value) }));
-  return <View style={styles.ring} accessible accessibilityLabel={percent == null ? "Percentual de projetos concluídos indisponível" : `${percent}% dos projetos concluídos`}>
-    <Svg width={112} height={112} style={StyleSheet.absoluteFill} accessibilityElementsHidden><Circle cx={56} cy={56} r={42} stroke={workspace.line} strokeWidth={8} fill="none" /><AnimatedCircle cx={56} cy={56} r={42} stroke={workspace.lavender} strokeWidth={8} fill="none" strokeLinecap="round" strokeDasharray={`${circumference} ${circumference}`} animatedProps={animated} rotation={-90} origin="56,56" /></Svg>
-    <Text style={[styles.percent, { color: workspace.text }]}>{percent == null ? "—" : `${percent}%`}</Text><Text style={ui.muted}>concluídos</Text>
-  </View>;
+  const progress = useSharedValue(reduced ? 1 : 0);
+  useEffect(() => {
+    progress.value = reduced ? 1 : withDelay(delay, withTiming(1, SOFT_MOTION));
+    return () => cancelAnimation(progress);
+  }, [delay, progress, reduced]);
+  const motionStyle = useAnimatedStyle(() => ({ opacity: progress.value, transform: [{ translateY: (1 - progress.value) * 6 }] }));
+  return <Animated.View style={[styles.group, style, motionStyle]}>{children}</Animated.View>;
 }
 
 const styles = StyleSheet.create({
-  overview: { flexDirection: "row", alignItems: "center", gap: 16 }, ring: { width: 112, height: 112, alignItems: "center", justifyContent: "center" }, percent: { fontFamily: FONT_FAMILY.semibold, fontSize: 24 },
-  section: { gap: 12 },
-  priority: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderWidth: 1, borderRadius: 18 },
-  priorityMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 },
+  group: { gap: 18 },
+  rows: { gap: 8 },
+  featured: { padding: 20, gap: 19 },
+  metadata: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 10, justifyContent: "space-between" },
+  context: { gap: 5 },
+  findingTitle: { fontSize: 22, lineHeight: 28, letterSpacing: -0.45 },
+  deadline: { fontFamily: FONT_FAMILY.semibold, fontSize: 13, lineHeight: 19 },
+  featuredAction: { borderTopWidth: 1, paddingTop: 13 },
+  simpleRow: { paddingVertical: 3 },
+  listRow: { borderTopWidth: 1, paddingVertical: 12 },
+  projects: { borderTopWidth: 1, paddingTop: 22, marginTop: 4, gap: 9 },
+  trend: { borderTopWidth: 1, paddingTop: 12, gap: 8 },
+  projectIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
 });
