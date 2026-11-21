@@ -1,21 +1,21 @@
-/** Verifica indicadores e prioridades do painel com dados fictícios, sem depender da API. */
+﻿/** Confere as distribuições e o recorte do histórico apresentados no Painel. */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { exposureOverview, projectOverview } from "../src/lib/dashboard.ts";
+import { exposureOverview, projectsByStatus } from "../src/lib/dashboard.ts";
 
-test("calcula a proporção de projetos concluídos sem inventar percentual para lista vazia", () => {
-  assert.deepEqual(projectOverview([]), { total: 0, completed: 0, active: 0, percent: null });
-  const projects = [{ status: "COMPLETED" }, { status: "IN_REVIEW" }, { status: "PENDING" }];
-  assert.deepEqual(projectOverview(projects), { total: 3, completed: 1, active: 1, percent: 33 });
+test("agrupa todos os projetos nas etapas correspondentes, incluindo contagens vazias", () => {
+  assert.deepEqual(projectsByStatus([]), { PENDING: 0, IN_PROGRESS: 0, IN_REVIEW: 0, COMPLETED: 0 });
+  const projects = [{ status: "PENDING" }, { status: "COMPLETED" }, { status: "IN_REVIEW" }, { status: "IN_REVIEW" }];
+  assert.deepEqual(projectsByStatus(projects), { PENDING: 1, IN_PROGRESS: 0, IN_REVIEW: 2, COMPLETED: 1 });
 });
 
-test("ordena achados mais graves, remove repetidos e contabiliza críticas", () => {
-  const item = (id, severityFinal) => ({ id, title: id, severityFinal });
-  const result = exposureOverview([
-    { name: "Portal", totalAbertas: 5, abertas: { CRITICAL: 1 }, principais: [item("alta", "HIGH"), item("critica", "CRITICAL")] },
-    { name: "API", totalAbertas: 2, abertas: { CRITICAL: 1 }, principais: [item("critica", "CRITICAL"), item("media", "MEDIUM")] },
-  ]);
-  assert.equal(result.open, 7);
-  assert.equal(result.critical, 2);
-  assert.deepEqual(result.priorities.map((item) => item.id), ["critica", "alta", "media"]);
+test("consolida o estoque e escolhe para o histórico a aplicação com mais achados abertos", () => {
+  const portal = { name: "Portal", totalAbertas: 4, abertas: { CRITICAL: 1, HIGH: 2, MEDIUM: 1, LOW: 0 } };
+  const api = { name: "API", totalAbertas: 7, abertas: { CRITICAL: 0, HIGH: 1, MEDIUM: 4, LOW: 2 } };
+  const result = exposureOverview([portal, api]);
+  assert.equal(result.total, 11);
+  assert.deepEqual(result.bySeverity, { CRITICAL: 1, HIGH: 3, MEDIUM: 5, LOW: 2 });
+  assert.equal(result.mainApplication, api);
+  assert.equal(exposureOverview([]).mainApplication, undefined);
+  assert.equal(exposureOverview([]).total, 0);
 });

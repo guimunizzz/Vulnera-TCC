@@ -1,18 +1,31 @@
-/** Calcula indicadores e prioridades do painel a partir dos dados reais consumidos pelo cliente. */
-import type { ExposureApplication } from "../types/exposure-graph.types";
-import type { Project } from "../types/project.types";
+﻿/**
+ * Resume a distribuição atual de achados e projetos com as contagens da API.
+ * Consumidor: gráficos da aba Painel.
+ */
+import type { ExposureApplication, GraphSeverity } from "../types/exposure-graph.types";
+import type { Project, ProjectStatus } from "../types/project.types";
 
-const severityOrder: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-export function projectOverview(projects: Project[]) {
-  const total = projects.length;
-  const completed = projects.filter((project) => project.status === "COMPLETED").length;
-  return { total, completed, active: projects.filter((project) => project.status === "IN_PROGRESS" || project.status === "IN_REVIEW").length, percent: total ? Math.round(completed / total * 100) : null };
+export const graphSeverities = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
+
+export function exposureOverview(applications: readonly ExposureApplication[]) {
+  const bySeverity: Record<GraphSeverity, number> = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+  let mainApplication: ExposureApplication | undefined;
+
+  for (const application of applications) {
+    for (const severity of graphSeverities) bySeverity[severity] += application.abertas[severity];
+    // O histórico tem um recorte explícito e requer só uma consulta, mesmo com muitas aplicações.
+    if (!mainApplication || application.totalAbertas > mainApplication.totalAbertas) mainApplication = application;
+  }
+
+  return {
+    bySeverity,
+    total: graphSeverities.reduce((sum, severity) => sum + bySeverity[severity], 0),
+    mainApplication,
+  };
 }
 
-export function exposureOverview(applications: ExposureApplication[]) {
-  const seen = new Set<string>();
-  const priorities = applications.flatMap((app) => app.principais.map((finding) => ({ ...finding, applicationName: app.name })))
-    .sort((a, b) => (severityOrder[a.severityFinal] ?? 4) - (severityOrder[b.severityFinal] ?? 4))
-    .filter((finding) => { if (seen.has(finding.id)) return false; seen.add(finding.id); return true; }).slice(0, 3);
-  return { open: applications.reduce((sum, app) => sum + app.totalAbertas, 0), critical: applications.reduce((sum, app) => sum + app.abertas.CRITICAL, 0), priorities };
+export function projectsByStatus(projects: readonly Project[]): Record<ProjectStatus, number> {
+  const counts = { PENDING: 0, IN_PROGRESS: 0, IN_REVIEW: 0, COMPLETED: 0 };
+  for (const project of projects) counts[project.status] += 1;
+  return counts;
 }

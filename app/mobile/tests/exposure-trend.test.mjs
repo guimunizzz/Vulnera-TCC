@@ -1,28 +1,31 @@
-/** Verifica janela e geometria do histórico com contagens fictícias. */
+﻿/** Verifica as semanas de calendário e a escala comum do histórico semanal. */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { last30Days, trendGeometry } from "../src/lib/exposure-trend.ts";
+import { lastFourWeeks, weeklyActivity } from "../src/lib/exposure-trend.ts";
 
-test("define 30 dias de calendário incluindo o dia corrente", () => {
-  assert.deepEqual(last30Days(new Date("2026-11-19T12:00:00Z")), { from: "2026-10-21T00:00:00.000Z", to: "2026-11-19T12:00:00.000Z" });
+test("usa quatro semanas completas em UTC e exclui a semana em andamento", () => {
+  assert.deepEqual(lastFourWeeks(new Date("2026-11-21T12:00:00Z")), {
+    from: "2026-10-19T00:00:00.000Z",
+    to: "2026-11-15T23:59:59.999Z",
+    weekStarts: ["2026-10-19", "2026-10-26", "2026-11-02", "2026-11-09"],
+  });
+  const rollover = lastFourWeeks(new Date("2027-01-04T00:00:00Z"));
+  assert.equal(rollover.from, "2026-12-07T00:00:00.000Z");
+  assert.equal(rollover.to, "2027-01-03T23:59:59.999Z");
 });
 
-test("desenha valores reais sem dividir por zero e soma cada série", () => {
-  const empty = trendGeometry([]);
-  assert.equal(empty.created.total, 0);
-  assert.equal(empty.resolved.path, "");
-  const zero = trendGeometry([{ criados: 0, resolvidos: 0 }, { criados: 0, resolvidos: 0 }]);
-  assert.equal(zero.created.path, "M 0.00 100.00 L 280.00 100.00");
-  const series = trendGeometry([{ criados: 0, resolvidos: 1 }, { criados: 2, resolvidos: 0 }, { criados: 1, resolvidos: 2 }]);
-  assert.equal(series.created.total, 3);
-  assert.equal(series.resolved.total, 3);
-  assert.equal(series.created.path, "M 0.00 100.00 L 140.00 8.00 L 280.00 54.00");
-  assert.equal(series.resolved.path, "M 0.00 54.00 L 140.00 100.00 L 280.00 8.00");
+test("ordena as semanas pedidas, soma as séries e compartilha o mesmo máximo", () => {
+  const weeks = ["2026-10-19", "2026-10-26", "2026-11-02", "2026-11-09"];
+  const points = weeks.map((periodo, index) => ({ periodo, criados: index, resolvidos: index * 2 })).reverse();
+  const activity = weeklyActivity(weeks, points);
+  assert.deepEqual(activity.weeks.map((week) => week.periodo), weeks);
+  assert.equal(activity.created, 6);
+  assert.equal(activity.resolved, 12);
+  assert.equal(activity.max, 6);
 });
 
-test("a série maior define a mesma escala para resolvidos e novos, inclusive com um único dia", () => {
-  const series = trendGeometry([{ criados: 2, resolvidos: 8 }]);
-  assert.deepEqual(series.grid.map(({ value }) => value), [9, 6, 3, 0]);
-  assert.equal(series.created.coordinates[0].x, 140);
-  assert.ok(series.resolved.coordinates[0].y < series.created.coordinates[0].y);
+test("separa uma semana ausente de um zero confirmado no histórico", () => {
+  const week = "2026-11-09";
+  assert.equal(weeklyActivity([week], []), null);
+  assert.equal(weeklyActivity([week], [{ periodo: week, criados: 0, resolvidos: 0 }]).max, 1);
 });

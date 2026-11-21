@@ -1,134 +1,85 @@
-/** Gráfico diário por aplicação para o Painel; distingue novos achados do estoque em aberto. */
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
-import Animated, { cancelAnimation, useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
-import { useQuery } from "@tanstack/react-query";
-import { useFocusEffect } from "expo-router";
-import { metricsApi } from "../api/metrics.api";
-import { useApiError } from "../hooks/use-api-error";
-import { last30Days, TREND_PLOT, trendGeometry } from "../lib/exposure-trend";
+﻿/**
+ * Gráfico de leitura direta das quatro semanas completas de uma aplicação.
+ * Consumidor: Painel, com valores visíveis e sem seleção de datas ou de série.
+ */
+import { StyleSheet, Text, View } from "react-native";
+import type { weeklyActivity } from "../lib/exposure-trend";
+import { FONT_FAMILY } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
-import type { ExposureApplication } from "../types/exposure-graph.types";
-import { ActionButton, FilterChip, Surface } from "./workspace-ui";
-import { useWorkspaceReducedMotion } from "./workspace-motion";
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-const plotHeight = 144;
-const formatDay = (value: string) => `${value.slice(8, 10)}/${value.slice(5, 7)}`;
+const wholeNumber = new Intl.NumberFormat("pt-BR");
+const compactNumber = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 0 });
+const shortDate = (iso: string) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
+const columnsHeight = 124;
 
-export function ExposureTrend({ applications }: { applications: ExposureApplication[] }) {
-  const { colors, workspace, ui } = useAppTheme();
-  const [selected, setSelected] = useState<string | null>(null);
-  const [day, setDay] = useState<number | null>(null);
-  const [chartWidth, setChartWidth] = useState(0);
-  const [periodStart, setPeriodStart] = useState(() => last30Days(new Date()).from);
-  useFocusEffect(useCallback(() => { setPeriodStart(last30Days(new Date()).from); }, []));
-  const application = applications.find((app) => app.id === selected) ?? applications[0];
-  // O instante de consulta atualiza a requisição sem invalidar a série a cada troca de aba.
-  const query = useQuery({
-    queryKey: ["metrics", "timeseries", application?.id, periodStart],
-    queryFn: ({ signal }) => metricsApi.timeseries(application!.id, periodStart, new Date().toISOString(), signal),
-    enabled: !!application,
-  });
-  const errorMessage = useApiError();
-  const reduced = useWorkspaceReducedMotion();
-  const points = query.data?.pontos;
-  const geometry = useMemo(() => trendGeometry(points ?? []), [points]);
-  const progress = useSharedValue(0);
-  useEffect(() => { progress.value = 0; progress.value = withTiming(1, { duration: reduced ? 0 : 700 }); return () => cancelAnimation(progress); }, [geometry.created.path, progress, reduced]);
-  const animated = useAnimatedProps(() => ({ strokeDashoffset: geometry.created.length * (1 - progress.value) }));
-  const selectedDay = day === null ? undefined : points?.[day];
-  const markerIndex = day ?? (points?.length === 1 ? 0 : -1);
-  const selectedCreated = geometry.created.coordinates[markerIndex];
-  const selectedResolved = geometry.resolved.coordinates[markerIndex];
-  const periodTotals = `${geometry.created.total} novos · ${geometry.resolved.total} resolvidos`;
-  const daySummary = selectedDay ? `${formatDay(selectedDay.periodo)} · ${selectedDay.criados} novos · ${selectedDay.resolvidos} resolvidos` : null;
-  const selectDay = (index: number) => { if (points?.length) setDay(Math.max(0, Math.min(points.length - 1, index))); };
+type Activity = NonNullable<ReturnType<typeof weeklyActivity>>;
 
-  return <Surface>
-    <View style={{ gap: 4 }}><Text accessibilityRole="header" style={ui.heading}>Evolução da exposição</Text><Text style={ui.muted}>Achados por dia · últimos 30 dias</Text></View>
-    {!application ? <Text style={ui.body}>O histórico ficará disponível quando houver aplicações ativas.</Text> : <>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-        {applications.map((item) => <FilterChip key={item.id} label={item.name} selected={item.id === application.id} onPress={() => { setSelected(item.id); setDay(null); }} />)}
-      </ScrollView>
-      {query.isError && <View style={{ gap: 8 }}>
-        <Text style={ui.body} accessibilityLiveRegion="polite">{query.data ? "Exibindo o último histórico carregado." : "Histórico indisponível"}</Text>
-        <Text style={ui.muted}>{errorMessage(query.error)}</Text>
-        <ActionButton label="Tentar atualizar histórico" disabled={query.isRefetching} onPress={() => { void query.refetch(); }} />
-      </View>}
-      {query.isPending ? <View style={styles.pending}>
-        <ActivityIndicator color={workspace.lavender} />
-        <Text accessibilityLiveRegion="polite" style={ui.body}>Carregando histórico de {application.name}…</Text>
-      </View> : query.data && !points?.length ? <Text style={ui.body}>Nenhum histórico disponível neste período.</Text> : !!points?.length && <>
-        <View style={styles.legend}>
-          <View style={ui.row}><View style={[styles.key, { backgroundColor: colors.chartCreated }]} /><Text style={ui.muted}>Novos</Text></View>
-          <View style={ui.row}><View style={[styles.key, styles.dashedKey, { borderColor: colors.chartResolved }]} /><Text style={ui.muted}>Resolvidos</Text></View>
-        </View>
-        <View style={styles.plotRow}>
-          <View style={styles.yAxis} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            {geometry.grid.map(({ value, y }) => <Text key={value} style={[ui.mono, styles.tick, { top: y * plotHeight / TREND_PLOT.height - 8 }]}>{value}</Text>)}
-          </View>
-          <View style={ui.grow}>
-            <Pressable accessibilityRole="adjustable" accessibilityLabel={`Histórico de ${application.name}`}
-              accessibilityValue={{ text: daySummary ?? `${periodTotals} no período` }} aria-valuetext={daySummary ?? `${periodTotals} no período`}
-              accessibilityHint="Use o ajuste para consultar os valores de cada dia"
-              accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-              onAccessibilityAction={(event) => selectDay((day ?? 0) + (event.nativeEvent.actionName === "increment" ? 1 : -1))}
-              onLayout={(event) => setChartWidth(event.nativeEvent.layout.width)}
-              onPress={(event) => {
-                const { currentTarget, nativeEvent } = event;
-                // No navegador, o Pressable entrega um MouseEvent até para toques na tela.
-                const browserPress = Platform.OS === "web" && nativeEvent instanceof MouseEvent && currentTarget instanceof HTMLElement;
-                if (browserPress && nativeEvent.detail === 0) return;
-                const bounds = browserPress ? currentTarget.getBoundingClientRect() : null;
-                const width = bounds?.width ?? chartWidth;
-                const x = browserPress && bounds ? nativeEvent.clientX - bounds.left : nativeEvent.locationX;
-                if (width > 0 && Number.isFinite(x)) selectDay(Math.round(x / width * (points.length - 1)));
-              }} style={styles.chart}>
-              <Svg pointerEvents="none" width="100%" height={plotHeight} viewBox={`0 0 ${TREND_PLOT.width} ${TREND_PLOT.height}`}
-                preserveAspectRatio="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                {geometry.grid.map(({ value, y }) => <Line key={value} x1={0} y1={y} x2={TREND_PLOT.width} y2={y} stroke={workspace.line} strokeWidth={1} />)}
-                {selectedDay && selectedCreated && <>
-                  <Rect x={selectedCreated.x - 4} y={TREND_PLOT.top} width={8} height={TREND_PLOT.bottom - TREND_PLOT.top} fill={workspace.lavender} opacity={0.14} />
-                  <Line x1={selectedCreated.x} y1={TREND_PLOT.top} x2={selectedCreated.x} y2={TREND_PLOT.bottom} stroke={workspace.lavender} strokeWidth={1} strokeDasharray="3 3" />
-                </>}
-                {points.length > 1 && <>
-                  <AnimatedPath d={geometry.created.path} fill="none" stroke={colors.chartCreated} strokeWidth={2.5}
-                    strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${geometry.created.length} ${geometry.created.length}`} animatedProps={animated} />
-                  <Path d={geometry.resolved.path} fill="none" stroke={colors.chartResolved} strokeWidth={2} strokeDasharray="5 4" />
-                </>}
-                {selectedResolved && <Circle cx={selectedResolved.x} cy={selectedResolved.y}
-                  r={selectedDay ? 6 : 5} stroke={colors.chartResolved} strokeWidth={2} fill={workspace.surface} />}
-                {selectedCreated && <Circle cx={selectedCreated.x} cy={selectedCreated.y} r={selectedDay ? 4.5 : 3.5} fill={colors.chartCreated} />}
-              </Svg>
-            </Pressable>
-            <View style={ui.spread}><Text style={ui.muted}>{formatDay(points[0].periodo)}</Text>{points.length > 1 && <Text style={ui.muted}>{formatDay(points[points.length - 1].periodo)}</Text>}</View>
+export function ExposureTrend({ activity }: { activity: Activity }) {
+  const { colors, ui, workspace } = useAppTheme();
+  const series = [
+    { label: "Novos", key: "criados", total: activity.created, color: colors.chartCreated, outlined: false },
+    { label: "Resolvidos", key: "resolvidos", total: activity.resolved, color: colors.chartResolved, outlined: true },
+  ] as const;
+
+  return <>
+    <View style={styles.legend}>
+      {series.map(({ key, label, total, color, outlined }) => (
+        <View key={key} style={styles.legendItem}>
+          <Text style={[styles.total, { color: workspace.text }]}>{wholeNumber.format(total)}</Text>
+          <View style={styles.legendLabel}>
+            <View style={[styles.swatch, {
+              backgroundColor: outlined ? color + "30" : color,
+              borderWidth: outlined ? 1.5 : 0,
+              borderColor: color,
+            }]} />
+            <Text style={ui.muted}>{label}</Text>
           </View>
         </View>
-        <View style={[styles.readout, { backgroundColor: workspace.inset, borderColor: selectedDay ? workspace.actionBorder : workspace.line }]}>
-          <Text style={ui.muted}>{selectedDay ? "Dia selecionado" : "Total no período"}</Text>
-          <Text accessibilityLiveRegion="polite" style={ui.body}>{daySummary ?? periodTotals}</Text>
-        </View>
-        {points.length > 1 && <View style={styles.dayControls}>
-          <ActionButton icon="chevron-back-outline" label="Dia anterior" disabled={day === 0} onPress={() => selectDay((day ?? points.length) - 1)} />
-          <ActionButton icon="chevron-forward-outline" label="Próximo dia" disabled={day === points.length - 1} onPress={() => selectDay((day ?? -1) + 1)} />
-        </View>}
-      </>}
-    </>}
-  </Surface>;
+      ))}
+    </View>
+    <View testID="dashboard-weekly-trend"
+      accessible accessibilityRole="image"
+      accessibilityLabel={activity.weeks.map((week) =>
+        "Semana de " + shortDate(week.periodo) + ", novos: " + week.criados + ", resolvidos: " + week.resolvidos).join(". ")}>
+      <View style={[styles.columns, { borderBottomColor: workspace.line }]}>
+        {activity.weeks.map((week) => (
+          <View key={week.periodo} style={styles.pair}>
+            {series.map(({ key, color, outlined }) => {
+              const value = week[key];
+              const height = (value / activity.max) * columnsHeight;
+              return <View key={key} style={styles.column}>
+                <Text numberOfLines={1} maxFontSizeMultiplier={1.25}
+                  style={[styles.value, { color: value > 0 ? workspace.text : workspace.muted }]}>
+                  {value < 1000 ? value : compactNumber.format(value)}
+                </Text>
+                {value > 0 && <View style={[styles.bar, {
+                  height, backgroundColor: outlined ? color + "30" : color, borderColor: color,
+                  borderWidth: outlined ? Math.min(1.5, height / 2) : 0,
+                }]} />}
+              </View>;
+            })}
+          </View>
+        ))}
+      </View>
+      <View style={styles.dates}>
+        {activity.weeks.map((week) =>
+          <Text key={week.periodo} maxFontSizeMultiplier={1.4} style={[ui.mono, styles.date]}>{shortDate(week.periodo)}</Text>)}
+      </View>
+    </View>
+  </>;
 }
 
 const styles = StyleSheet.create({
-  filters: { gap: 8 },
-  pending: { minHeight: plotHeight, alignItems: "center", justifyContent: "center", gap: 8 },
-  legend: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
-  key: { width: 20, height: 3, borderRadius: 2 },
-  dashedKey: { height: 0, borderTopWidth: 2, borderStyle: "dashed", borderRadius: 0 },
-  plotRow: { flexDirection: "row", gap: 8 },
-  yAxis: { width: 34, height: plotHeight },
-  tick: { position: "absolute", right: 0, lineHeight: 16 },
-  chart: { minHeight: plotHeight },
-  readout: { padding: 12, borderRadius: 12, borderWidth: 1, gap: 2 },
-  dayControls: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: 24 },
+  legendItem: { gap: 2 },
+  legendLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
+  total: { fontFamily: FONT_FAMILY.semibold, fontSize: 26, lineHeight: 32, letterSpacing: -0.7, fontVariant: ["tabular-nums"] },
+  swatch: { width: 10, height: 10, borderRadius: 3 },
+  columns: { height: columnsHeight + 24, flexDirection: "row", borderBottomWidth: 1, marginTop: 2 },
+  pair: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "flex-end", justifyContent: "center" },
+  column: { flex: 1, maxWidth: 37, minWidth: 0, alignItems: "center", justifyContent: "flex-end", gap: 4 },
+  value: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 16, fontVariant: ["tabular-nums"] },
+  bar: { width: "68%", maxWidth: 23, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
+  dates: { flexDirection: "row", marginTop: 8 },
+  date: { flex: 1, textAlign: "center" },
 });

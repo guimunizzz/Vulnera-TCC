@@ -1,30 +1,38 @@
-/** Converte novos achados e resoluções reais em duas séries na mesma escala do Painel. */
+﻿/**
+ * Define semanas completas e prepara os valores da série semanal do Painel.
+ * Usa UTC para acompanhar os limites e os rótulos do endpoint de métricas.
+ */
 import type { MetricsPoint } from "../api/metrics.api";
 
-export const TREND_PLOT = { width: 280, top: 8, bottom: 100, height: 108 } as const;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-export function last30Days(now: Date) {
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29));
-  return { from: start.toISOString(), to: now.toISOString() };
+export function lastFourWeeks(now: Date) {
+  const dayStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const daysSinceMonday = (now.getUTCDay() + 6) % 7;
+  const thisMonday = dayStart - daysSinceMonday * (WEEK_MS / 7);
+  const start = thisMonday - 4 * WEEK_MS;
+  const weekStarts = Array.from({ length: 4 }, (_, index) =>
+    new Date(start + index * WEEK_MS).toISOString().slice(0, 10));
+
+  return { from: new Date(start).toISOString(), to: new Date(thisMonday - 1).toISOString(), weekStarts };
 }
 
-type DailyCounts = Pick<MetricsPoint, "criados" | "resolvidos">;
+type WeeklyPoint = Pick<MetricsPoint, "periodo" | "criados" | "resolvidos">;
 
-export function trendGeometry(points: DailyCounts[]) {
-  const { width, top, bottom } = TREND_PLOT;
-  const maximum = points.reduce((max, point) => Math.max(max, point.criados, point.resolvidos), 1);
-  const step = Math.ceil(maximum / 3);
-  const ticks = Array.from({ length: Math.ceil(maximum / step) + 1 }, (_, index) => index * step).reverse();
-  const y = (value: number) => bottom - (value / ticks[0]) * (bottom - top);
-  const makeSeries = (key: keyof DailyCounts) => {
-    const coordinates = points.map((point, index) => ({
-      x: points.length > 1 ? index * width / (points.length - 1) : width / 2,
-      y: y(point[key]),
-    }));
-    const path = coordinates.map((point, index) => `${index ? "L" : "M"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ");
-    const length = coordinates.slice(1).reduce((sum, point, index) => sum + Math.hypot(point.x - coordinates[index].x, point.y - coordinates[index].y), 0);
-    return { coordinates, path, length: Math.max(1, length), total: points.reduce((sum, point) => sum + point[key], 0) };
+export function weeklyActivity(weekStarts: readonly string[], points: readonly WeeklyPoint[]) {
+  const byWeek = new Map(points.map((point) => [point.periodo, point]));
+  const weeks: WeeklyPoint[] = [];
+  for (const start of weekStarts) {
+    const point = byWeek.get(start);
+    // O endpoint já preenche as semanas vazias. Uma semana ausente não vale zero.
+    if (!point) return null;
+    weeks.push(point);
+  }
+
+  return {
+    weeks,
+    created: weeks.reduce((sum, week) => sum + week.criados, 0),
+    resolved: weeks.reduce((sum, week) => sum + week.resolvidos, 0),
+    max: Math.max(1, ...weeks.map((week) => Math.max(week.criados, week.resolvidos))),
   };
-
-  return { created: makeSeries("criados"), resolved: makeSeries("resolvidos"), grid: ticks.map((value) => ({ value, y: y(value) })) };
 }
