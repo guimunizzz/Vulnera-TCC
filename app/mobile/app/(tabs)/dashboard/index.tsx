@@ -12,7 +12,7 @@ import { exposureGraphApi } from "../../../src/api/exposure-graph.api";
 import { metricsApi } from "../../../src/api/metrics.api";
 import { OpenFindingsChart, ProjectStagesChart } from "../../../src/components/dashboard-charts";
 import { ExposureTrend } from "../../../src/components/exposure-trend";
-import { PageHeader, SectionHeading, Surface, WorkspaceScreen } from "../../../src/components/workspace-ui";
+import { PageHeader, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { SOFT_MOTION, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
 import { exposureOverview, projectsByStatus } from "../../../src/lib/dashboard";
 import { lastFourWeeks, weeklyActivity } from "../../../src/lib/exposure-trend";
@@ -55,46 +55,48 @@ export default function DashboardScreen() {
     <Text accessibilityRole="header" style={ui.title}>Olá, {name}<Text style={{ color: workspace.lavender }}>.</Text></Text>
 
     <DashboardReveal>
-      <ChartCard title="Novos e resolvidos" subtitle={application ? application.name + " · 4 semanas completas" : "4 semanas completas"}>
+      <ChartSection title="Achados em aberto" subtitle="Todas as aplicações ativas">
+        {overview ? <>
+          {exposure.isError && <ChartMessage text={staleData} />}
+          <OpenFindingsChart data={overview} />
+        </> : <ChartMessage busy={exposure.isPending} text={exposure.isPending ? "Carregando severidades…" : readError} />}
+      </ChartSection>
+    </DashboardReveal>
+
+    <DashboardReveal delay={45}>
+      <ChartSection divided title="Novos e resolvidos" subtitle={application ? application.name + " · 4 semanas completas" : "4 semanas completas"}>
         {activity ? <>
           {trend.isError && <ChartMessage text={staleData} />}
           <ExposureTrend activity={activity} />
         </> : exposure.isPending || application && trend.isPending ? <ChartMessage busy text="Carregando histórico…" />
           : exposure.isError || trend.isError || trend.data ? <ChartMessage text={readError} />
           : <ChartMessage text="Nenhuma aplicação ativa para acompanhar." />}
-      </ChartCard>
-    </DashboardReveal>
-
-    <DashboardReveal delay={45}>
-      <ChartCard title="Achados em aberto" subtitle="Todas as aplicações ativas">
-        {overview ? <>
-          {exposure.isError && <ChartMessage text={staleData} />}
-          <OpenFindingsChart data={overview} />
-        </> : <ChartMessage busy={exposure.isPending} text={exposure.isPending ? "Carregando severidades…" : readError} />}
-      </ChartCard>
+      </ChartSection>
     </DashboardReveal>
 
     <DashboardReveal delay={90}>
-      <ChartCard title="Projetos por etapa" subtitle={projects.data?.length ? number.format(projects.data.length) +
+      <ChartSection divided title="Projetos por etapa" subtitle={projects.data?.length ? number.format(projects.data.length) +
         (projects.data.length === 1 ? " projeto no total" : " projetos no total") : undefined}>
         {projects.data ? <>
           {projects.isError && <ChartMessage text={staleData} />}
           <ProjectStagesChart counts={projectsByStatus(projects.data)} total={projects.data.length} />
         </> : <ChartMessage busy={projects.isPending} text={projects.isPending ? "Carregando projetos…" : readError} />}
-      </ChartCard>
+      </ChartSection>
     </DashboardReveal>
   </WorkspaceScreen>;
 }
 
-function ChartCard({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
-  const { ui } = useAppTheme();
-  return <Surface>
+function ChartSection({ title, subtitle, children, divided = false }: {
+  title: string; subtitle?: string; children: ReactNode; divided?: boolean;
+}) {
+  const { ui, workspace } = useAppTheme();
+  return <View style={[styles.section, divided && { borderTopWidth: 1, borderTopColor: workspace.line, paddingTop: 20 }]}>
     <View style={styles.heading}>
       <SectionHeading title={title} />
       {subtitle && <Text style={ui.muted}>{subtitle}</Text>}
     </View>
     {children}
-  </Surface>;
+  </View>;
 }
 
 function ChartMessage({ text, busy = false }: { text: string; busy?: boolean }) {
@@ -117,6 +119,7 @@ function DashboardReveal({ children, delay = 0 }: { children: ReactNode; delay?:
 }
 
 const styles = StyleSheet.create({
+  section: { gap: 16 },
   heading: { gap: 3 },
   message: { flexDirection: "row", alignItems: "center", gap: 8 },
 });
