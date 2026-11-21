@@ -12,7 +12,7 @@
  */
 
 import { useEffect } from "react";
-import { AppState, Platform } from "react-native";
+import { Appearance, AppState, Platform } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { focusManager, QueryClientProvider } from "@tanstack/react-query";
@@ -35,7 +35,11 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const { colors, workspace } = useAppTheme();
+  const scheme = workspace.blurTint;
   const themeHydrated = useThemeStore((state) => state.hasHydrated);
+  useEffect(() => {
+    if (Platform.OS !== "web" && themeHydrated) Appearance.setColorScheme(scheme);
+  }, [scheme, themeHydrated]);
   useEffect(() => {
     if (Platform.OS === "web") return;
     const listener = AppState.addEventListener("change", (state) => focusManager.setFocused(state === "active"));

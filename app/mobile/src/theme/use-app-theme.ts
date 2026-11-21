@@ -86,8 +86,8 @@ export interface AppWorkspace {
   stageDoneBorder: string;
   mediaWell: string;
   radius: number;
-  blurTint: "dark";
-  statusBarStyle: "light";
+  blurTint: "dark" | "light";
+  statusBarStyle: "light" | "dark";
 }
 
 const DEEP_COLORS: AppColors = {
@@ -103,12 +103,48 @@ const DEEP_COLORS: AppColors = {
   accentSurface: "#221530",
 };
 
-function createTheme(colors: AppColors) {
+const LIGHT_COLORS: AppColors = {
+  canvas: "#f8f7f9",
+  surface: "#ffffff",
+  raised: "#f4f0f7",
+  inset: "#f0edf2",
+  textPrimary: "#241b2c",
+  textSecondary: "#453b4d",
+  textMuted: "#62596a",
+  borderSubtle: "#e5dfe9",
+  borderDefault: "#d1c5da",
+  borderStrong: "#81738b",
+  accent: "#492875",
+  accentHover: "#3e1e68",
+  accentFg: "#ffffff",
+  accentInk: "#522a7e",
+  accentSurface: "#eee8f4",
+  brandMark: { start: "#6b4099", end: "#44236d" },
+  chartCreated: "#67438e",
+  chartResolved: "#26735b",
+  assistantInk: "#285991",
+  success: "#18744b",
+  successInk: "#14613e",
+  successSurface: "#e5f4ec",
+  danger: "#ba2238",
+  dangerInk: "#a11e31",
+  dangerSurface: "#fbecee",
+  warningInk: "#765019",
+  severity: {
+    critical: "#b61c40", criticalInk: "#98213b", criticalSurface: "#f8e5eb",
+    high: "#a04a15", highInk: "#80390f", highSurface: "#faebdf",
+    medium: "#886219", mediumInk: "#6f4f10", mediumSurface: "#f9f1db",
+    low: "#2367a7", lowInk: "#20588e", lowSurface: "#e5eef9",
+    info: "#625d6c", infoInk: "#51485d", infoSurface: "#eeeaf1",
+  },
+};
+
+function createTheme(colors: AppColors, scheme: AppWorkspace["blurTint"]) {
   const workspace: AppWorkspace = {
     neutralTint: `${colors.accentInk}14`,
-    mediaWell: "rgba(0,0,0,0.25)",
-    blurTint: "dark",
-    statusBarStyle: "light",
+    mediaWell: scheme === "dark" ? "rgba(0,0,0,0.25)" : colors.inset,
+    blurTint: scheme,
+    statusBarStyle: scheme === "dark" ? "light" : "dark",
     background: colors.canvas,
     surface: colors.surface,
     raised: colors.raised,
@@ -154,10 +190,10 @@ function createThemedUiStyles(w: AppWorkspace) {
   });
 }
 
-const themes = { dark: createTheme(COLORS), deep: createTheme(DEEP_COLORS) } satisfies Record<ThemeMode, ReturnType<typeof createTheme>>;
+const themes = { deep: createTheme(DEEP_COLORS, "dark"), light: createTheme(LIGHT_COLORS, "light") } satisfies Record<ThemeMode, ReturnType<typeof createTheme>>;
 
 export function useAppTheme() {
-  const mode = useThemeStore((state) => state.mode === "dark" ? "dark" : DEFAULT_THEME_MODE);
+  const mode = useThemeStore((state) => state.mode === "light" ? "light" : DEFAULT_THEME_MODE);
   const setMode = useThemeStore((s) => s.setMode);
   return useMemo(() => ({ ...themes[mode], mode, setMode }), [mode, setMode]);
 }

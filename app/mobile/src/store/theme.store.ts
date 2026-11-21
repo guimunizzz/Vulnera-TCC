@@ -1,7 +1,7 @@
 /**
  * store/theme.store.ts
  *
- * Gerencia a preferência entre Roxo escuro e Roxo profundo,
+ * Gerencia a preferência entre Roxo profundo e Claro,
  * persistida no SecureStore em Android/iOS e em memória no preview web.
  * Existe para permitir alternância imediata em Minha conta refletida em todas
  * as telas autenticadas, barra inferior, StatusBar e tela de login.
@@ -13,7 +13,7 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-export type ThemeMode = "dark" | "deep";
+export type ThemeMode = "deep" | "light";
 export const DEFAULT_THEME_MODE: ThemeMode = "deep";
 
 const webThemeMemory = new Map<string, string>();
@@ -49,12 +49,12 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: "vulnera-theme",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => themeStorage),
       partialize: (state) => ({ mode: state.mode }),
       migrate: (stored) => {
         const savedMode = (stored as { mode?: unknown } | null)?.mode;
-        return { mode: savedMode === "dark" ? "dark" : DEFAULT_THEME_MODE };
+        return { mode: savedMode === "light" ? "light" : DEFAULT_THEME_MODE };
       },
       // Aguarda a preferência antes de liberar a interface, inclusive se a
       // leitura segura falhar, evitando troca tardia sobre a escolha do usuário.

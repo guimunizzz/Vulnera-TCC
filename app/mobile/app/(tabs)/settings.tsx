@@ -1,5 +1,5 @@
 /**
- * Conta do cliente: perfil real, preferência entre as variantes escuras,
+ * Conta do cliente: perfil real, preferência entre Roxo profundo e Claro,
  * estado compartilhado do push e saída segura.
  * Consome /users/me e o registro único do layout; limpa consultas ao sair.
  */
@@ -30,9 +30,9 @@ const PUSH_LABELS = {
   indisponivel: { label: "Indisponíveis", description: "Alertas indisponíveis neste ambiente.", icon: "notifications-off-outline" },
 } as const;
 
-const THEME_OPTIONS: { value: ThemeMode; label: string; icon: "moon-outline" | "moon" }[] = [
+const THEME_OPTIONS: { value: ThemeMode; label: string; icon: "moon" | "sunny-outline" }[] = [
   { value: "deep", label: "Roxo profundo", icon: "moon" },
-  { value: "dark", label: "Roxo escuro", icon: "moon-outline" },
+  { value: "light", label: "Claro", icon: "sunny-outline" },
 ];
 
 export default function SettingsScreen() {

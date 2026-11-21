@@ -45,7 +45,7 @@ export function TabBarMaterial({ children, style }: { children: ReactNode; style
   }, []);
 
   if (GlassView && allowsTransparency) {
-    return <GlassView testID="tab-bar-native-glass" glassEffectStyle="regular" colorScheme="dark"
+    return <GlassView testID="tab-bar-native-glass" glassEffectStyle="regular" colorScheme={workspace.blurTint}
       isInteractive={!reducedMotion} style={style}>{children}</GlassView>;
   }
 
