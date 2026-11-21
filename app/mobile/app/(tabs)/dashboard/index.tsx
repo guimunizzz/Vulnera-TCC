@@ -22,7 +22,6 @@ import { useAppTheme } from "../../../src/theme/use-app-theme";
 const refreshHint = Platform.OS === "web" ? "Recarregue a página para tentar novamente." : "Puxe para atualizar.";
 const readError = "Não foi possível carregar os dados. " + refreshHint;
 const staleData = "Mostrando os últimos dados disponíveis. " + refreshHint;
-const number = new Intl.NumberFormat("pt-BR");
 
 export default function DashboardScreen() {
   const { workspace, ui } = useAppTheme();
@@ -52,7 +51,10 @@ export default function DashboardScreen() {
 
   return <WorkspaceScreen onRefresh={refresh} refreshing={exposure.isRefetching || projects.isRefetching || trend.isRefetching}>
     <PageHeader account />
-    <Text accessibilityRole="header" style={ui.title}>Olá, {name}<Text style={{ color: workspace.lavender }}>.</Text></Text>
+    <View style={styles.greeting}>
+      <Text accessibilityRole="header" style={ui.title}>Olá, {name}<Text style={{ color: workspace.lavender }}>.</Text></Text>
+      <Text style={ui.body}>Ações e riscos que merecem sua atenção.</Text>
+    </View>
 
     <DashboardReveal>
       <ChartSection title="Achados em aberto" subtitle="Todas as aplicações ativas">
@@ -75,8 +77,7 @@ export default function DashboardScreen() {
     </DashboardReveal>
 
     <DashboardReveal delay={90}>
-      <ChartSection divided title="Projetos por etapa" subtitle={projects.data?.length ? number.format(projects.data.length) +
-        (projects.data.length === 1 ? " projeto no total" : " projetos no total") : undefined}>
+      <ChartSection divided title="Projetos por etapa">
         {projects.data ? <>
           {projects.isError && <ChartMessage text={staleData} />}
           <ProjectStagesChart counts={projectsByStatus(projects.data)} total={projects.data.length} />
@@ -119,6 +120,7 @@ function DashboardReveal({ children, delay = 0 }: { children: ReactNode; delay?:
 }
 
 const styles = StyleSheet.create({
+  greeting: { gap: 4 },
   section: { gap: 16 },
   heading: { gap: 3 },
   message: { flexDirection: "row", alignItems: "center", gap: 8 },

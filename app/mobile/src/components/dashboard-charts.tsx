@@ -47,9 +47,7 @@ export function OpenFindingsChart({ data }: { data: ExposureOverview }) {
 
 export function ProjectStagesChart({ counts, total }: { counts: ProjectCounts; total: number }) {
   const { colors, ui, workspace } = useAppTheme();
-  const { width, fontScale } = useWindowDimensions();
   if (!total) return <Text style={ui.body}>Nenhum projeto cadastrado.</Text>;
-  const stacked = width < 320 || fontScale > 1.25;
 
   const stages = [
     { label: "Pendentes", count: counts.PENDING, color: colors.warningInk },
@@ -58,20 +56,25 @@ export function ProjectStagesChart({ counts, total }: { counts: ProjectCounts; t
     { label: "Concluídos", count: counts.COMPLETED, color: colors.chartResolved },
   ];
 
-  return <View style={styles.stages}>
-    {stages.map(({ label, count, color }) => (
-      <View key={label} style={[styles.stage, stacked && styles.stageStacked]}>
-        <View style={styles.stageLabel}>
-          <Text style={[ui.muted, ui.grow]}>{label}</Text>
+  return <>
+    <View style={styles.projectsTotal}>
+      <Text style={[styles.projectNumber, { color: workspace.text }]}>{number.format(total)}</Text>
+      <Text style={[ui.muted, ui.grow]}>{total === 1 ? "projeto no total" : "projetos no total"}</Text>
+    </View>
+    <View testID="dashboard-project-stages">
+      {stages.map(({ label, count, color }, index) => (
+        <View key={label} accessible accessibilityLabel={`${label}, ${number.format(count)}`}
+          style={[styles.stage, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: workspace.line }]}>
+          <Text style={[ui.body, styles.stageName]}>{label}</Text>
+          <View aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+            style={[styles.stageTrack, { backgroundColor: workspace.line }]}>
+            {count > 0 && <View style={[styles.stageFill, { backgroundColor: color, width: `${100 * count / total}%` }]} />}
+          </View>
           <Text style={[ui.body, styles.stageCount, { color: workspace.text }]}>{number.format(count)}</Text>
         </View>
-        <View aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-          style={[styles.stageTrack, { backgroundColor: workspace.line }]}>
-          {count > 0 && <View style={[styles.stageFill, { backgroundColor: color, width: `${100 * count / total}%` }]} />}
-        </View>
-      </View>
-    ))}
-  </View>;
+      ))}
+    </View>
+  </>;
 }
 
 const styles = StyleSheet.create({
@@ -86,11 +89,11 @@ const styles = StyleSheet.create({
   severity: { flexDirection: "row", alignItems: "center", gap: 6, width: "50%", paddingRight: 4 },
   swatch: { width: 8, height: 8, borderRadius: 4 },
   legendText: { flexShrink: 1 },
-  stages: { flexDirection: "row", flexWrap: "wrap", columnGap: 18, rowGap: 14 },
-  stage: { flexBasis: "45%", flexGrow: 1, gap: 5 },
-  stageStacked: { flexBasis: "100%" },
-  stageLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
-  stageCount: { fontFamily: FONT_FAMILY.semibold, fontVariant: ["tabular-nums"] },
-  stageTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
-  stageFill: { height: "100%", borderRadius: 3 },
+  projectsTotal: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  projectNumber: { fontFamily: FONT_FAMILY.semibold, fontSize: 30, lineHeight: 36, fontVariant: ["tabular-nums"] },
+  stage: { flexDirection: "row", alignItems: "center", minHeight: 44, gap: 10, paddingVertical: 8 },
+  stageName: { flexBasis: "44%" },
+  stageCount: { minWidth: 28, textAlign: "right", fontFamily: FONT_FAMILY.semibold, fontVariant: ["tabular-nums"] },
+  stageTrack: { flex: 1, minWidth: 0, height: 8, borderRadius: 4, overflow: "hidden" },
+  stageFill: { height: "100%", borderRadius: 4 },
 });
