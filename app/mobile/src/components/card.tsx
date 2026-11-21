@@ -1,11 +1,9 @@
 import { useState, type ReactNode } from "react";
-import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { BlurView } from "expo-blur";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { MOTION, RADIUS, SHADOW, SPACING } from "../theme/tokens";
+import { RADIUS, SHADOW, SPACING } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+import { SoftPressable } from "./workspace-motion";
 
 export function Card({
   children,
@@ -19,9 +17,7 @@ export function Card({
   accessibilityLabel?: string;
 }) {
   const { colors, workspace } = useAppTheme();
-  const scale = useSharedValue(1);
   const [pressed, setPressed] = useState(false);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const glass = (
     <View style={[styles.inner, style]}>
@@ -41,23 +37,16 @@ export function Card({
 
   if (onPress) {
     return (
-      <AnimatedPressable
+      <SoftPressable
         onPress={onPress}
-        onPressIn={() => {
-          scale.value = withTiming(0.97, { duration: MOTION.fast });
-          setPressed(true);
-        }}
-        onPressOut={() => {
-          scale.value = withTiming(1, { duration: MOTION.fast });
-          setPressed(false);
-        }}
+        onPressIn={() => setPressed(true)}
+        onPressOut={() => setPressed(false)}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={[styles.outer, animatedStyle]}
-        hitSlop={4}
+        style={styles.outer}
       >
         {glass}
-      </AnimatedPressable>
+      </SoftPressable>
     );
   }
   return <View style={styles.outer}>{glass}</View>;

@@ -13,11 +13,11 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { exposureGraphApi } from "../../../src/api/exposure-graph.api";
 import { DataState, FilterChip, Surface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../src/components/workspace-ui";
-import { SoftPressable, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
+import { SELECTION_MOTION, SoftPressable, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
 import { useApiError } from "../../../src/hooks/use-api-error";
 import { graphLayout, sharedCategories, type GraphLayout } from "../../../src/lib/exposure-graph";
 import { ROTULO_SEVERIDADE } from "../../../src/components/badge";
-import { FONT_FAMILY } from "../../../src/theme/tokens";
+import { FONT_FAMILY, RADIUS, TOUCH_TARGET } from "../../../src/theme/tokens";
 import { useAppTheme } from "../../../src/theme/use-app-theme";
 import { OWASP_LABELS } from "../../../src/types/vulnerability.types";
 import type { ExposureApplication, GraphSeverity } from "../../../src/types/exposure-graph.types";
@@ -30,6 +30,9 @@ const criticality: Record<string, string> = { CRITICAL: "Crítica", HIGH: "Alta"
 const sensitivity: Record<string, string> = { PUBLIC: "Pública", INTERNAL: "Interna", CONFIDENTIAL: "Confidencial", RESTRICTED: "Restrita" };
 const sourceLabels: Record<string, string> = { MANUAL: "Manual", DAST_IMPORT: "DAST", SAST_IMPORT: "SAST", SCA_IMPORT: "SCA" };
 const categoryLabel = (code: string) => OWASP_LABELS[code] ?? code;
+const MIN_ZOOM = 0.85;
+const MAX_ZOOM = 1.6;
+const ZOOM_STEP = 0.15;
 
 export default function ExposureScreen({ root = false, navigation }: { root?: boolean; navigation?: ReactNode }) {
   const { workspace, ui } = useAppTheme();
@@ -124,10 +127,11 @@ function DetailLink({ label, meta, onPress }: { label: string; meta: string; onP
 }
 
 function Network({ applications, categories, selection, onSelect }: { applications: ExposureApplication[]; categories: ReturnType<typeof sharedCategories>; selection: Selection; onSelect: (value: Selection) => void }) {
-  const { workspace, colors } = useAppTheme();
+  const { workspace, colors, ui } = useAppTheme();
   const reduced = useWorkspaceReducedMotion();
   const [zoom, setZoom] = useState(1);
   const [layout, setLayout] = useState<GraphLayout>("columns");
+  const [controlsOpen, setControlsOpen] = useState(false);
   const [viewport, setViewport] = useState(0);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const opacity = useSharedValue(reduced ? 1 : 0);
@@ -156,18 +160,39 @@ function Network({ applications, categories, selection, onSelect }: { applicatio
     setLayout(next);
     scroll.current?.scrollTo({ x: 0, animated: false });
   }
+  function changeZoom(direction: -1 | 1) {
+    setZoom((value) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round((value + direction * ZOOM_STEP) * 100) / 100)));
+  }
+  const viewControls = [
+    { label: "Afastar", icon: "remove-outline", disabled: zoom <= MIN_ZOOM, onPress: () => changeZoom(-1) },
+    { label: "Aproximar", icon: "add-outline", disabled: zoom >= MAX_ZOOM, onPress: () => changeZoom(1) },
+    { label: "Centralizar", icon: "locate-outline", disabled: false, onPress: () => scroll.current?.scrollTo({ x: Math.max(0, (graph.width * zoom - viewport) / 2), animated: !reduced }) },
+  ] as const;
 
   return <>
-    <View style={styles.zoomRow}>
-      <FilterChip tab label="Horizontal" selected={layout === "columns"} onPress={() => changeLayout("columns")} />
-      <FilterChip tab label="Vertical" selected={layout === "rows"} onPress={() => changeLayout("rows")} />
-    </View>
-    <View style={styles.zoomRow}>
-      <FilterChip label="Afastar" selected={false} onPress={() => setZoom((value) => Math.max(0.85, Math.round((value - 0.15) * 100) / 100))} />
-      <Text style={{ color: workspace.secondary }}>{Math.round(zoom * 100)}%</Text>
-      <FilterChip label="Aproximar" selected={false} onPress={() => setZoom((value) => Math.min(1.6, Math.round((value + 0.15) * 100) / 100))} />
-      <FilterChip label="Centralizar" selected={false} onPress={() => scroll.current?.scrollTo({ x: Math.max(0, (graph.width * zoom - viewport) / 2), animated: !reduced })} />
-    </View>
+    <SoftPressable accessibilityRole="button" accessibilityLabel="Controles do mapa" accessibilityState={{ expanded: controlsOpen }}
+      aria-expanded={controlsOpen} onPress={() => setControlsOpen((value) => !value)}
+      style={[ui.spread, styles.controlsToggle, { borderColor: workspace.line, backgroundColor: workspace.chipBg }]}>
+      <Ionicons name="options-outline" size={18} color={workspace.lavender} />
+      <Text style={[ui.body, ui.grow]}>Controles do mapa</Text>
+      <Ionicons name={controlsOpen ? "chevron-up" : "chevron-down"} size={16} color={workspace.muted} />
+    </SoftPressable>
+    {controlsOpen && <View style={styles.controls}>
+      <Text style={ui.eyebrow}>Orientação</Text>
+      <View style={styles.zoomRow}>
+        <FilterChip tab label="Horizontal" selected={layout === "columns"} onPress={() => changeLayout("columns")} />
+        <FilterChip tab label="Vertical" selected={layout === "rows"} onPress={() => changeLayout("rows")} />
+      </View>
+      <Text style={ui.eyebrow}>Zoom e posição</Text>
+      <View style={styles.zoomRow}>
+        {viewControls.map(({ label, icon, disabled, onPress }) => <SoftPressable key={label} accessibilityRole="button" accessibilityLabel={label}
+          accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
+          style={[styles.controlButton, { borderColor: workspace.line, backgroundColor: workspace.chipBg }]}>
+          <Ionicons name={icon} size={22} color={workspace.lavender} />
+        </SoftPressable>)}
+        <Text accessibilityLiveRegion="polite" style={ui.mono}>{Math.round(zoom * 100)}%</Text>
+      </View>
+    </View>}
   <ScrollView ref={scroll} onLayout={(event) => setViewport(event.nativeEvent.layout.width)} horizontal showsHorizontalScrollIndicator nestedScrollEnabled>
     <View style={{ width: Math.max(viewport, graph.width * zoom), height: graph.height * zoom }}>
     <Animated.View style={[{ position: "absolute", left: Math.max(0, (viewport - graph.width * zoom) / 2), width: graph.width, height: graph.height, transformOrigin: "top left", transform: [{ scale: zoom }] }, animation]}>
@@ -185,8 +210,8 @@ function GraphNode({ x, y, label, sub, icon, selected, connected, tint, onPress 
   const { workspace, ui } = useAppTheme();
   const reduced = useWorkspaceReducedMotion();
   const progress = useSharedValue(selected ? 1 : 0);
-  useEffect(() => { progress.value = withTiming(selected ? 1 : 0, { duration: reduced ? 0 : 200 }); }, [progress, reduced, selected]);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: 1 + progress.value * 0.04 }] }));
+  useEffect(() => { progress.value = reduced ? 0 : withTiming(Number(selected), SELECTION_MOTION); }, [progress, reduced, selected]);
+  const animated = useAnimatedStyle(() => ({ transform: [{ scale: reduced ? 1 : 1 + progress.value * 0.04 }] }));
   return <Animated.View style={[styles.nodePosition, { left: x - 58, top: y - 38 }, animated]}><SoftPressable accessibilityRole="button" accessibilityLabel={`${label}${sub ? `, ${sub}` : ""}`} accessibilityState={{ selected }} onPress={onPress} style={[styles.node, { borderColor: selected ? workspace.lavender : workspace.line, backgroundColor: selected ? workspace.chipActiveBg : connected ? workspace.raised : workspace.inset }]}>
     <Ionicons name={icon} size={20} color={tint ?? workspace.lavender} /><Text numberOfLines={2} style={[ui.muted, styles.nodeText, { color: workspace.text }]}>{label}</Text>{sub && <Text style={[ui.mono, styles.nodeSub]}>{sub}</Text>}
   </SoftPressable></Animated.View>;
@@ -197,6 +222,9 @@ const styles = StyleSheet.create({
   nodeText: { fontFamily: FONT_FAMILY.medium, textAlign: "center", fontSize: 12, lineHeight: 15 }, nodeSub: { fontSize: 10 },
   counts: { flexDirection: "row", flexWrap: "wrap", gap: 12 }, count: { minWidth: 56, flexGrow: 1 },
   detail: { minHeight: 48, borderTopWidth: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 },
+  controls: { gap: 8 },
+  controlsToggle: { borderWidth: 1, borderRadius: RADIUS.control, paddingHorizontal: 12 },
+  controlButton: { width: TOUCH_TARGET, height: TOUCH_TARGET, borderRadius: RADIUS.control, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   zoomRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },

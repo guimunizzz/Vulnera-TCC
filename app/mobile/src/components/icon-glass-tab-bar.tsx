@@ -12,13 +12,13 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { FONT_FAMILY, TAB_BAR } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
-import { SOFT_MOTION, SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
+import { SELECTION_MOTION, SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
 import { TabBarMaterial } from "./tab-bar-material";
 
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>["tabBar"]>>[0];
 const EDGE = 8;
 const INDICATOR_WIDTH = 24;
-export const TAB_TRANSITION_DURATION = 190;
+export const TAB_TRANSITION_DURATION = SELECTION_MOTION.duration;
 
 type TabGlyph = "grid-outline" | "folder-outline" | "shield-outline" | "document-text-outline";
 
@@ -36,7 +36,7 @@ const NavigationIcon = memo(function NavigationIcon({
   const reduced = useWorkspaceReducedMotion();
   const progress = useSharedValue(focused ? 1 : 0);
   useEffect(() => {
-    progress.value = withTiming(focused ? 1 : 0, { ...SOFT_MOTION, duration: reduced ? 0 : TAB_TRANSITION_DURATION });
+    progress.value = reduced ? Number(focused) : withTiming(Number(focused), SELECTION_MOTION);
     return () => cancelAnimation(progress);
   }, [focused, reduced, progress]);
   const animated = useAnimatedStyle(() => ({
@@ -77,7 +77,7 @@ export const IconGlassTabBar = memo(function IconGlassTabBar({ state, descriptor
   const selected = routes.findIndex((route) => route.key === currentKey);
   const position = useSharedValue(selected);
   useEffect(() => {
-    if (selected >= 0) position.value = withTiming(selected, { ...SOFT_MOTION, duration: reduced ? 0 : TAB_TRANSITION_DURATION });
+    if (selected >= 0) position.value = reduced ? selected : withTiming(selected, SELECTION_MOTION);
     return () => cancelAnimation(position);
   }, [selected, reduced, position]);
   const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: position.value * cellWidth }] }));
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: EDGE,
     borderRadius: TAB_BAR.height / 2,
   },
-  button: { minHeight: 48, alignItems: "center", justifyContent: "center", paddingBottom: 4 },
+  button: { alignItems: "center", justifyContent: "center", paddingBottom: 4 },
   icon: { width: 26, height: 26 },
   label: { fontFamily: FONT_FAMILY.medium, fontSize: 10, lineHeight: 14, textAlign: "center" },
   iconLayer: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center" },

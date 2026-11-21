@@ -1,7 +1,7 @@
 /** Gráfico diário por aplicação para o Painel; distingue novos achados do estoque em aberto. */
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, Line, Path } from "react-native-svg";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
 import Animated, { cancelAnimation, useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
@@ -10,7 +10,7 @@ import { useApiError } from "../hooks/use-api-error";
 import { last30Days, TREND_PLOT, trendGeometry } from "../lib/exposure-trend";
 import { useAppTheme } from "../theme/use-app-theme";
 import type { ExposureApplication } from "../types/exposure-graph.types";
-import { ActionButton, DataState, FilterChip, Surface } from "./workspace-ui";
+import { ActionButton, FilterChip, Surface } from "./workspace-ui";
 import { useWorkspaceReducedMotion } from "./workspace-motion";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -22,7 +22,6 @@ export function ExposureTrend({ applications }: { applications: ExposureApplicat
   const [selected, setSelected] = useState<string | null>(null);
   const [day, setDay] = useState<number | null>(null);
   const [chartWidth, setChartWidth] = useState(0);
-  const chartRef = useRef<ComponentRef<typeof Pressable>>(null);
   const [periodStart, setPeriodStart] = useState(() => last30Days(new Date()).from);
   useFocusEffect(useCallback(() => { setPeriodStart(last30Days(new Date()).from); }, []));
   const application = applications.find((app) => app.id === selected) ?? applications[0];
@@ -58,7 +57,10 @@ export function ExposureTrend({ applications }: { applications: ExposureApplicat
         <Text style={ui.muted}>{errorMessage(query.error)}</Text>
         <ActionButton label="Tentar atualizar histórico" disabled={query.isRefetching} onPress={() => { void query.refetch(); }} />
       </View>}
-      {query.isPending ? <DataState loading title="Carregando histórico" /> : query.data && !points?.length ? <Text style={ui.body}>Nenhum histórico disponível neste período.</Text> : !!points?.length && <>
+      {query.isPending ? <View style={styles.pending}>
+        <ActivityIndicator color={workspace.lavender} />
+        <Text accessibilityLiveRegion="polite" style={ui.body}>Carregando histórico de {application.name}…</Text>
+      </View> : query.data && !points?.length ? <Text style={ui.body}>Nenhum histórico disponível neste período.</Text> : !!points?.length && <>
         <View style={styles.legend}>
           <View style={ui.row}><View style={[styles.key, { backgroundColor: colors.chartCreated }]} /><Text style={ui.muted}>Novos</Text></View>
           <View style={ui.row}><View style={[styles.key, styles.dashedKey, { borderColor: colors.chartResolved }]} /><Text style={ui.muted}>Resolvidos</Text></View>
@@ -68,36 +70,43 @@ export function ExposureTrend({ applications }: { applications: ExposureApplicat
             {geometry.grid.map(({ value, y }) => <Text key={value} style={[ui.mono, styles.tick, { top: y * plotHeight / TREND_PLOT.height - 8 }]}>{value}</Text>)}
           </View>
           <View style={ui.grow}>
-            <Pressable ref={chartRef} accessibilityRole="adjustable" accessibilityLabel={`Histórico de ${application.name}`}
+            <Pressable accessibilityRole="adjustable" accessibilityLabel={`Histórico de ${application.name}`}
               accessibilityValue={{ text: daySummary ?? `${periodTotals} no período` }} aria-valuetext={daySummary ?? `${periodTotals} no período`}
               accessibilityHint="Use o ajuste para consultar os valores de cada dia"
               accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
               onAccessibilityAction={(event) => selectDay((day ?? 0) + (event.nativeEvent.actionName === "increment" ? 1 : -1))}
               onLayout={(event) => setChartWidth(event.nativeEvent.layout.width)}
               onPress={(event) => {
-                const pageX = event.nativeEvent.pageX;
-                if (chartWidth > 0 && Number.isFinite(pageX)) {
-                  chartRef.current?.measureInWindow((x) => selectDay(Math.round((pageX - x) / chartWidth * (points.length - 1))));
-                }
+                const { currentTarget, nativeEvent } = event;
+                // No navegador, o Pressable entrega um MouseEvent até para toques na tela.
+                const browserPress = Platform.OS === "web" && nativeEvent instanceof MouseEvent && currentTarget instanceof HTMLElement;
+                if (browserPress && nativeEvent.detail === 0) return;
+                const bounds = browserPress ? currentTarget.getBoundingClientRect() : null;
+                const width = bounds?.width ?? chartWidth;
+                const x = browserPress && bounds ? nativeEvent.clientX - bounds.left : nativeEvent.locationX;
+                if (width > 0 && Number.isFinite(x)) selectDay(Math.round(x / width * (points.length - 1)));
               }} style={styles.chart}>
               <Svg pointerEvents="none" width="100%" height={plotHeight} viewBox={`0 0 ${TREND_PLOT.width} ${TREND_PLOT.height}`}
                 preserveAspectRatio="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                 {geometry.grid.map(({ value, y }) => <Line key={value} x1={0} y1={y} x2={TREND_PLOT.width} y2={y} stroke={workspace.line} strokeWidth={1} />)}
-                {selectedDay && selectedCreated && <Line x1={selectedCreated.x} y1={TREND_PLOT.top} x2={selectedCreated.x} y2={TREND_PLOT.bottom} stroke={workspace.muted} strokeWidth={1} strokeDasharray="3 3" />}
+                {selectedDay && selectedCreated && <>
+                  <Rect x={selectedCreated.x - 4} y={TREND_PLOT.top} width={8} height={TREND_PLOT.bottom - TREND_PLOT.top} fill={workspace.lavender} opacity={0.14} />
+                  <Line x1={selectedCreated.x} y1={TREND_PLOT.top} x2={selectedCreated.x} y2={TREND_PLOT.bottom} stroke={workspace.lavender} strokeWidth={1} strokeDasharray="3 3" />
+                </>}
                 {points.length > 1 && <>
                   <AnimatedPath d={geometry.created.path} fill="none" stroke={colors.chartCreated} strokeWidth={2.5}
                     strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${geometry.created.length} ${geometry.created.length}`} animatedProps={animated} />
                   <Path d={geometry.resolved.path} fill="none" stroke={colors.chartResolved} strokeWidth={2} strokeDasharray="5 4" />
                 </>}
                 {selectedResolved && <Circle cx={selectedResolved.x} cy={selectedResolved.y}
-                  r={5} stroke={colors.chartResolved} strokeWidth={2} fill={workspace.surface} />}
-                {selectedCreated && <Circle cx={selectedCreated.x} cy={selectedCreated.y} r={3.5} fill={colors.chartCreated} />}
+                  r={selectedDay ? 6 : 5} stroke={colors.chartResolved} strokeWidth={2} fill={workspace.surface} />}
+                {selectedCreated && <Circle cx={selectedCreated.x} cy={selectedCreated.y} r={selectedDay ? 4.5 : 3.5} fill={colors.chartCreated} />}
               </Svg>
             </Pressable>
             <View style={ui.spread}><Text style={ui.muted}>{formatDay(points[0].periodo)}</Text>{points.length > 1 && <Text style={ui.muted}>{formatDay(points[points.length - 1].periodo)}</Text>}</View>
           </View>
         </View>
-        <View style={[styles.readout, { backgroundColor: workspace.inset }]}>
+        <View style={[styles.readout, { backgroundColor: workspace.inset, borderColor: selectedDay ? workspace.actionBorder : workspace.line }]}>
           <Text style={ui.muted}>{selectedDay ? "Dia selecionado" : "Total no período"}</Text>
           <Text accessibilityLiveRegion="polite" style={ui.body}>{daySummary ?? periodTotals}</Text>
         </View>
@@ -112,6 +121,7 @@ export function ExposureTrend({ applications }: { applications: ExposureApplicat
 
 const styles = StyleSheet.create({
   filters: { gap: 8 },
+  pending: { minHeight: plotHeight, alignItems: "center", justifyContent: "center", gap: 8 },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
   key: { width: 20, height: 3, borderRadius: 2 },
   dashedKey: { height: 0, borderTopWidth: 2, borderStyle: "dashed", borderRadius: 0 },
@@ -119,6 +129,6 @@ const styles = StyleSheet.create({
   yAxis: { width: 34, height: plotHeight },
   tick: { position: "absolute", right: 0, lineHeight: 16 },
   chart: { minHeight: plotHeight },
-  readout: { padding: 12, borderRadius: 12, gap: 2 },
+  readout: { padding: 12, borderRadius: 12, borderWidth: 1, gap: 2 },
   dayControls: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

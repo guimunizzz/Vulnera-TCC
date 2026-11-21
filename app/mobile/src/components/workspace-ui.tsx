@@ -5,16 +5,16 @@
  */
 import { useEffect, type ReactNode } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
-import { FONT_FAMILY, RADIUS, SPACING } from "../theme/tokens";
+import { FONT_FAMILY, RADIUS, SPACING, TOUCH_TARGET } from "../theme/tokens";
 import { useAppTheme } from "../theme/use-app-theme";
 import { useAuthStore } from "../store/auth.store";
 import { useTabBarClearance } from "../hooks/use-tab-bar-clearance";
 import { haptics } from "../lib/haptics";
-import { WorkspaceContentMotionProvider, SoftPressable, SOFT_MOTION, useWorkspaceReducedMotion, WorkspaceAtmosphere } from "./workspace-motion";
+import { WorkspaceContentMotionProvider, SoftPressable, SELECTION_MOTION, useWorkspaceReducedMotion, WorkspaceAtmosphere } from "./workspace-motion";
 import { HomeBrand } from "./home-brand";
 import { AssistantButton } from "./assistant";
 import type { AssistantScreen } from "../lib/assistant-context";
@@ -75,10 +75,14 @@ export function FilterChip({ label, selected, onPress, tab = false }: { label: s
   const { workspace } = useAppTheme();
   const reduced = useWorkspaceReducedMotion();
   const progress = useSharedValue(selected ? 1 : 0);
-  useEffect(() => { progress.value = withTiming(selected ? 1 : 0, { ...SOFT_MOTION, duration: reduced ? 0 : 190 }); }, [selected, reduced, progress]);
+  useEffect(() => {
+    progress.value = reduced ? Number(selected) : withTiming(Number(selected), SELECTION_MOTION);
+    return () => cancelAnimation(progress);
+  }, [selected, reduced, progress]);
   const highlight = useAnimatedStyle(() => ({ opacity: progress.value }));
-  return <SoftPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} onPress={() => { haptics.tap(); onPress(); }}
-    style={[styles.chip, { borderColor: workspace.line, backgroundColor: workspace.chipBg }, tab && styles.tabChip]}>
+  return <SoftPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} aria-pressed={selected}
+    onPress={() => { haptics.tap(); onPress(); }}
+    style={[styles.chip, { borderColor: selected ? workspace.chipActiveBorder : workspace.line, backgroundColor: workspace.chipBg }, tab && styles.tabChip]}>
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.chipActive, { borderColor: workspace.chipActiveBorder, backgroundColor: workspace.chipActiveBg }, highlight]} />
     <Text style={[styles.chipText, { color: workspace.muted }, tab && styles.tabChipText, selected && { color: workspace.text }]}>{label}</Text>
   </SoftPressable>;
@@ -125,11 +129,11 @@ const styles = StyleSheet.create({
   surface: { borderRadius: RADIUS.container, borderWidth: 1, padding: SPACING[5], gap: SPACING[4] },
   header: { flexDirection: "row", alignItems: "center", gap: SPACING[2], minHeight: 64, paddingVertical: SPACING[2] },
   brandLabel: { textAlign: "right" },
-  iconButton: { width: 48, height: 48, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.control, borderWidth: 1 },
-  chip: { minHeight: 48, minWidth: 48, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 18, overflow: "hidden" },
+  iconButton: { width: TOUCH_TARGET, height: TOUCH_TARGET, alignItems: "center", justifyContent: "center", borderRadius: RADIUS.control, borderWidth: 1 },
+  chip: { paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 18, overflow: "hidden" },
   chipActive: { borderRadius: 17, borderWidth: 1 }, chipText: { fontFamily: FONT_FAMILY.medium, fontSize: 14 },
-  tabChip: { flex: 1, minWidth: 0, paddingHorizontal: 8, justifyContent: "center" }, tabChipText: { fontSize: 13, textAlign: "center", flexShrink: 1 },
-  action: { minHeight: 48, paddingHorizontal: SPACING[4], paddingVertical: SPACING[3], flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING[2], borderRadius: RADIUS.control, borderWidth: 1 },
+  tabChip: { flex: 1, paddingHorizontal: 8, justifyContent: "center" }, tabChipText: { fontSize: 13, textAlign: "center", flexShrink: 1 },
+  action: { paddingHorizontal: SPACING[4], paddingVertical: SPACING[3], flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING[2], borderRadius: RADIUS.control, borderWidth: 1 },
   actionText: { fontFamily: FONT_FAMILY.medium, fontSize: 14, flexShrink: 1, textAlign: "center" },
   state: { alignItems: "center", paddingVertical: 32, gap: 14 }, stateIcon: { width: 52, height: 52, borderRadius: 18, alignItems: "center", justifyContent: "center" },
 });

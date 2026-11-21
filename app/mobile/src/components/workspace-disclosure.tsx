@@ -6,10 +6,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { Surface } from "./workspace-ui";
-import { SOFT_MOTION, SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
+import { SoftPressable, useWorkspaceReducedMotion } from "./workspace-motion";
 import { useAppTheme } from "../theme/use-app-theme";
+
+const DISCLOSURE_MOTION = { duration: 230, easing: Easing.inOut(Easing.cubic) };
 
 export function WorkspaceDisclosure({ title, children, initiallyExpanded = true, surface = true }: {
   title: string; children: ReactNode; initiallyExpanded?: boolean; surface?: boolean;
@@ -22,9 +24,10 @@ export function WorkspaceDisclosure({ title, children, initiallyExpanded = true,
   const height = useSharedValue(0);
   const progress = useSharedValue(expanded ? 1 : 0);
   useEffect(() => {
-    const config = { ...SOFT_MOTION, duration: reduced ? 0 : 260 };
-    height.value = interacted ? withTiming(expanded ? measuredHeight : 0, config) : expanded ? measuredHeight : 0;
-    progress.value = interacted ? withTiming(expanded ? 1 : 0, config) : expanded ? 1 : 0;
+    const targetHeight = expanded ? measuredHeight : 0;
+    const targetProgress = Number(expanded);
+    height.value = interacted && !reduced ? withTiming(targetHeight, DISCLOSURE_MOTION) : targetHeight;
+    progress.value = interacted && !reduced ? withTiming(targetProgress, DISCLOSURE_MOTION) : targetProgress;
     return () => { cancelAnimation(height); cancelAnimation(progress); };
   }, [expanded, interacted, measuredHeight, reduced, height, progress]);
   const body = useAnimatedStyle(() => ({ height: !interacted && expanded ? undefined : height.value, opacity: progress.value }));

@@ -156,8 +156,8 @@ export const MOTION = {
   slow: 400,
 } as const;
 
-/** WCAG 2.5.5/2.5.8 — todo controle interativo alcança 44px, igual ao web (--size-touch-target). */
-export const TOUCH_TARGET = 44;
+/** Alvo compartilhado de 48 unidades lógicas, cobrindo as referências de iOS e Android. */
+export const TOUCH_TARGET = 48;
 
 /**
  * Dimensões da tab bar flutuante (pill com glassmorphism, ver

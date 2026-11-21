@@ -5,12 +5,15 @@
  */
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
-import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
+import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 import { useAppTheme } from "../theme/use-app-theme";
 import { VulneraMark } from "./vulnera-mark";
 import { SOFT_MOTION, useWorkspaceReducedMotion } from "./workspace-motion";
 
 export const LOGIN_CONFIRMATION_MS = 360;
+const PREPARATION_MS = 60;
+const RISE_MS = 135;
+const SHAKE_EASING = Easing.inOut(Easing.quad);
 
 export function LoginMark({ feedback }: { feedback: { kind: "success" | "failure" } | null }) {
   const { colors } = useAppTheme();
@@ -25,22 +28,27 @@ export function LoginMark({ feedback }: { feedback: { kind: "success" | "failure
 
     if (feedback.kind === "success") {
       lift.value = withSequence(
-        withTiming(1, { ...SOFT_MOTION, duration: 150 }),
-        withTiming(0, { ...SOFT_MOTION, duration: LOGIN_CONFIRMATION_MS - 150 }),
+        withTiming(-0.28, { duration: PREPARATION_MS, easing: SHAKE_EASING }),
+        withTiming(1, { ...SOFT_MOTION, duration: RISE_MS }),
+        withTiming(0, { duration: LOGIN_CONFIRMATION_MS - PREPARATION_MS - RISE_MS, easing: SHAKE_EASING }),
       );
     } else {
       shake.value = withSequence(
-        withTiming(-7, { duration: 55 }),
-        withTiming(6, { duration: 70 }),
-        withTiming(-3, { duration: 65 }),
-        withTiming(0, { duration: 80 }),
+        withTiming(-7, { duration: 55, easing: SHAKE_EASING }),
+        withTiming(6, { duration: 70, easing: SHAKE_EASING }),
+        withTiming(-3, { duration: 65, easing: SHAKE_EASING }),
+        withTiming(0, { duration: 80, easing: SHAKE_EASING }),
       );
     }
     return () => { cancelAnimation(lift); cancelAnimation(shake); };
   }, [feedback, lift, reduced, shake]);
 
   const motion = useAnimatedStyle(() => ({
-    transform: [{ translateX: shake.value }, { translateY: -6 * lift.value }, { scale: 1 + 0.1 * lift.value }],
+    transform: [
+      { translateX: reduced ? 0 : shake.value },
+      { translateY: reduced ? 0 : -6 * lift.value },
+      { scale: reduced ? 1 : 1 + 0.1 * lift.value },
+    ],
   }));
 
   return <Animated.View testID={`login-mark-${feedback?.kind ?? "idle"}`} style={[styles.mark, motion]}>

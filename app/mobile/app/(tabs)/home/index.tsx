@@ -12,13 +12,14 @@ import { useQuery } from "@tanstack/react-query";
 import { projectsApi } from "../../../src/api/projects.api";
 import { useApiError } from "../../../src/hooks/use-api-error";
 import { useTabBarClearance } from "../../../src/hooks/use-tab-bar-clearance";
+import { normalizeSearchText } from "../../../src/lib/display";
 import { ProjectCard } from "../../../src/components/project-card";
 import { DataState, FilterChip, PageHeader, WorkspaceScreen } from "../../../src/components/workspace-ui";
 import { WorkspaceSkeleton } from "../../../src/components/workspace-skeleton";
-import { FONT_FAMILY } from "../../../src/theme/tokens";
+import { FONT_FAMILY, TOUCH_TARGET } from "../../../src/theme/tokens";
 import { useAppTheme } from "../../../src/theme/use-app-theme";
 import type { ProjectStatus } from "../../../src/types/project.types";
-import { MotionReveal, SoftPressable as Pressable, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
+import { MotionReveal, SoftPressable, useWorkspaceReducedMotion } from "../../../src/components/workspace-motion";
 
 const FILTERS: { value: "ALL" | ProjectStatus; label: string }[] = [
   { value: "ALL", label: "Todos" }, { value: "IN_PROGRESS", label: "Em andamento" },
@@ -40,8 +41,9 @@ export default function HomeScreen() {
   }));
   const query = useQuery({ queryKey: ["projects"], queryFn: ({ signal }) => projectsApi.list(signal) });
   const projects = useMemo(() => query.data ?? [], [query.data]);
+  const searchTerm = normalizeSearchText(search);
   const visible = useMemo(() => projects.filter((project) =>
-    (filter === "ALL" || project.status === filter) && project.name.toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR"))), [projects, filter, search]);
+    (filter === "ALL" || project.status === filter) && (!searchTerm || normalizeSearchText(project.name).includes(searchTerm))), [projects, filter, searchTerm]);
   const header = <View style={styles.header}>
     <PageHeader account />
     <MotionReveal distance={8} style={styles.hero}>
@@ -55,7 +57,7 @@ export default function HomeScreen() {
         <TextInput accessibilityLabel="Buscar projetos pelo nome" placeholder="Buscar um projeto" placeholderTextColor={workspace.muted}
           value={search} onChangeText={setSearch} style={[styles.searchInput, { color: workspace.text }]} returnKeyType="search"
           onFocus={() => { searchFocus.value = withTiming(1, { duration: reduced ? 0 : 180 }); }} onBlur={() => { searchFocus.value = withTiming(0, { duration: reduced ? 0 : 220 }); }} />
-        {!!search && <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => setSearch("")} style={styles.clear}><Ionicons name="close-circle" size={18} color={workspace.muted} /></Pressable>}
+        {!!search && <SoftPressable accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => setSearch("")} style={styles.clear}><Ionicons name="close-circle" size={18} color={workspace.muted} /></SoftPressable>}
       </Animated.View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         {FILTERS.map((item) => <FilterChip key={item.value} label={item.label} selected={filter === item.value} onPress={() => setFilter(item.value)} />)}
@@ -71,8 +73,8 @@ export default function HomeScreen() {
       renderItem={({ item, index }) => <MotionReveal animate={index < 4} delay={Math.min(index, 2) * 30} distance={4}><ProjectCard project={item} onPress={() => router.push(`/(tabs)/home/project/${item.id}`)} /></MotionReveal>}
       ListEmptyComponent={query.isPending ? <WorkspaceSkeleton kind="projects" label="Buscando seus projetos" />
         : query.isError && !query.data ? <DataState error title="Projetos indisponíveis" message={errorMessage(query.error)} onRetry={() => { void query.refetch(); }} />
-        : <DataState title={search || filter !== "ALL" ? "Nenhum resultado" : "Seu próximo projeto começa aqui"}
-          message={search || filter !== "ALL" ? "Experimente outro nome ou selecione Todos." : "Quando uma análise for aberta para sua empresa, você poderá acompanhá-la aqui."} />}
+        : <DataState title={searchTerm || filter !== "ALL" ? "Nenhum resultado" : "Seu próximo projeto começa aqui"}
+          message={searchTerm || filter !== "ALL" ? "Experimente outro nome ou selecione Todos." : "Quando uma análise for aberta para sua empresa, você poderá acompanhá-la aqui."} />}
       removeClippedSubviews={false}
     />
   </WorkspaceScreen>;
@@ -83,5 +85,5 @@ const styles = StyleSheet.create({
   hero: { gap: 8, paddingVertical: 4 },
   portfolio: { gap: 12 }, search: { flexDirection: "row", alignItems: "center", paddingLeft: 16, paddingRight: 4, minHeight: 52, borderRadius: 18, borderWidth: 1 },
   searchInput: { flex: 1, minWidth: 0, padding: 12, fontFamily: FONT_FAMILY.regular, fontSize: 15 },
-  clear: { width: 48, height: 48, alignItems: "center", justifyContent: "center" }, filters: { gap: 8 },
+  clear: { width: TOUCH_TARGET, height: TOUCH_TARGET, alignItems: "center", justifyContent: "center" }, filters: { gap: 8 },
 });

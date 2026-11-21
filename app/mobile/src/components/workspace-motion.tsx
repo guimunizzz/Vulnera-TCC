@@ -4,14 +4,15 @@
  * Consumidores: login, componentes de vidro e acompanhamento do cliente.
  */
 import { createContext, memo, useCallback, useContext, useEffect, useId, useState, type ReactNode } from "react";
-import { AccessibilityInfo, AppState, Platform, Pressable, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+import { AccessibilityInfo, AppState, Platform, Pressable, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 import { useFocusEffect } from "expo-router";
-import Animated, { cancelAnimation, Easing, LinearTransition, useAnimatedScrollHandler, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { cancelAnimation, Easing, LinearTransition, useAnimatedScrollHandler, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 import { useAppTheme } from "../theme/use-app-theme";
+import { MOTION, TOUCH_TARGET } from "../theme/tokens";
 
 export const SOFT_MOTION = { duration: 200, easing: Easing.bezier(0.22, 1, 0.36, 1) };
-const RELEASE = { damping: 28, stiffness: 320, mass: 0.7, overshootClamping: true };
+export const SELECTION_MOTION = { ...SOFT_MOTION, duration: 190 };
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const ReducedMotionContext = createContext(true);
 const ContentMotionContext = createContext(false);
@@ -58,15 +59,25 @@ export function useWorkspaceMotionActive() {
   return focused && active && !reduced;
 }
 
-export function SoftPressable({ style, onPressIn, onPressOut, disabled, ...props }: Omit<PressableProps, "style"> & { style?: StyleProp<ViewStyle> }) {
+export function SoftPressable({ style, onPressIn, onPressOut, disabled, accessibilityState, ...props }: Omit<PressableProps, "style"> & { style?: StyleProp<ViewStyle> }) {
   const reduced = useWorkspaceReducedMotion();
   const subtle = useContext(ContentMotionContext);
+  const dimmed = disabled && !accessibilityState?.busy;
   const progress = useSharedValue(0);
-  const animated = useAnimatedStyle(() => ({ opacity: 1 - progress.value * (subtle ? 0.04 : 0.12), transform: [{ scale: 1 - progress.value * (subtle ? 0.01 : 0.018) }] }));
-  return <AnimatedPressable {...props} disabled={disabled} style={[style, animated, disabled && { opacity: 0.5 }]}
-    onPressIn={(event) => { progress.value = reduced ? 0 : withTiming(1, { duration: 80 }); onPressIn?.(event); }}
-    onPressOut={(event) => { progress.value = reduced ? 0 : withSpring(0, RELEASE); onPressOut?.(event); }} />;
+  useEffect(() => {
+    progress.value = 0;
+    return () => cancelAnimation(progress);
+  }, [disabled, progress, reduced]);
+  const animated = useAnimatedStyle(() => ({
+    opacity: dimmed ? 0.55 : 1 - progress.value * (reduced ? 0.18 : subtle ? 0.08 : 0.12),
+    transform: [{ scale: reduced ? 1 : 1 - progress.value * (subtle ? 0.01 : 0.018) }],
+  }));
+  return <AnimatedPressable {...props} disabled={disabled} accessibilityState={accessibilityState} style={[pressStyles.target, style, animated]}
+    onPressIn={(event) => { progress.value = reduced ? 1 : withTiming(1, { duration: 65 }); onPressIn?.(event); }}
+    onPressOut={(event) => { progress.value = reduced ? 0 : withTiming(0, { ...SOFT_MOTION, duration: MOTION.fast }); onPressOut?.(event); }} />;
 }
+
+const pressStyles = StyleSheet.create({ target: { minWidth: TOUCH_TARGET, minHeight: TOUCH_TARGET } });
 
 export function MotionReveal({ children, delay = 0, distance = 10, style, layout = false, animate = true }: { children: ReactNode; delay?: number; distance?: number; style?: StyleProp<ViewStyle>; layout?: boolean; animate?: boolean }) {
   const reduced = useWorkspaceReducedMotion();

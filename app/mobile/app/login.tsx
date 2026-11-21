@@ -320,19 +320,18 @@ function LoginContent() {
             </View>
 
             {error && (
-              <MotionReveal style={[styles.errorBox, { backgroundColor: colors.dangerSurface }]}>
+              <View style={[styles.errorBox, { backgroundColor: colors.dangerSurface }]}>
                 <Ionicons name="alert-circle" size={16} color={colors.dangerInk} />
                 <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.errorText, { color: colors.dangerInk }]}>{error}</Text>
-              </MotionReveal>
+              </View>
             )}
 
             <Button
               onPress={submitLogin}
               disabled={!email.trim() || !password || busy}
-              loading={busy}
-              soft
+              loading={loginMutation.isPending}
             >
-              {feedback?.kind === "success" ? "Acesso confirmado" : "Entrar"}
+              {feedback?.kind === "success" ? "Acesso confirmado" : loginMutation.isPending ? "Entrando…" : "Entrar"}
             </Button>
           </MotionReveal>
         </ScrollView>
