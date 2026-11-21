@@ -14,6 +14,7 @@ import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
 export type ThemeMode = "dark" | "deep";
+export const DEFAULT_THEME_MODE: ThemeMode = "deep";
 
 const webThemeMemory = new Map<string, string>();
 const themeStorage: StateStorage =
@@ -42,7 +43,7 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      mode: "dark",
+      mode: DEFAULT_THEME_MODE,
       hasHydrated: false,
       setMode: (mode) => set({ mode }),
     }),
@@ -53,7 +54,7 @@ export const useThemeStore = create<ThemeState>()(
       partialize: (state) => ({ mode: state.mode }),
       migrate: (stored) => {
         const savedMode = (stored as { mode?: unknown } | null)?.mode;
-        return { mode: savedMode === "light" || savedMode === "deep" ? "deep" : "dark" };
+        return { mode: savedMode === "dark" ? "dark" : DEFAULT_THEME_MODE };
       },
       // Aguarda a preferência antes de liberar a interface, inclusive se a
       // leitura segura falhar, evitando troca tardia sobre a escolha do usuário.

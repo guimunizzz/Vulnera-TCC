@@ -7,7 +7,8 @@
 
 import { useMemo } from "react";
 import { StyleSheet } from "react-native";
-import { useThemeStore, type ThemeMode } from "../store/theme.store";
+import { DEFAULT_THEME_MODE, useThemeStore, type ThemeMode } from "../store/theme.store";
+import type { SlaState } from "../types/vulnerability.types";
 import { COLORS, FONT_FAMILY } from "./tokens";
 
 export interface AppColors {
@@ -29,12 +30,14 @@ export interface AppColors {
   brandMark: { start: string; end: string };
   chartCreated: string;
   chartResolved: string;
+  assistantInk: string;
   success: string;
   successInk: string;
   successSurface: string;
   danger: string;
   dangerInk: string;
   dangerSurface: string;
+  warningInk: string;
   severity: {
     critical: string;
     criticalInk: string;
@@ -154,7 +157,13 @@ function createThemedUiStyles(w: AppWorkspace) {
 const themes = { dark: createTheme(COLORS), deep: createTheme(DEEP_COLORS) } satisfies Record<ThemeMode, ReturnType<typeof createTheme>>;
 
 export function useAppTheme() {
-  const mode = useThemeStore((state) => state.mode === "deep" ? "deep" : "dark");
+  const mode = useThemeStore((state) => state.mode === "dark" ? "dark" : DEFAULT_THEME_MODE);
   const setMode = useThemeStore((s) => s.setMode);
   return useMemo(() => ({ ...themes[mode], mode, setMode }), [mode, setMode]);
+}
+
+export function getSlaInk(state: SlaState | undefined, colors: AppColors): string | undefined {
+  if (state === "BREACHED") return colors.dangerInk;
+  if (state === "DUE_SOON") return colors.warningInk;
+  return undefined;
 }

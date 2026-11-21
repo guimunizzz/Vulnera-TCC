@@ -20,7 +20,7 @@ import { useApiError } from "../../src/hooks/use-api-error";
 import { exposureOverview, projectOverview } from "../../src/lib/dashboard";
 import { useAuthStore } from "../../src/store/auth.store";
 import { FONT_FAMILY } from "../../src/theme/tokens";
-import { useAppTheme } from "../../src/theme/use-app-theme";
+import { getSlaInk, useAppTheme } from "../../src/theme/use-app-theme";
 import { fraseDoSla } from "../../src/types/vulnerability.types";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -60,10 +60,28 @@ export default function DashboardScreen() {
         <Text style={ui.muted}>{errorMessage(exposure.error)}</Text>
         <ActionButton label="Tentar atualizar prioridades" disabled={exposure.isRefetching} onPress={() => { void exposure.refetch(); }} />
       </Surface>}
-      {risks && <Surface>{risks.priorities.length ? risks.priorities.map((item, index) => { const sla = priorityDetails[index]?.data?.sla; const prazo = sla?.state && sla.state !== "NO_SLA" ? fraseDoSla(sla.state, sla.remainingMs) : null; return <SoftPressable key={item.id} accessibilityRole="button" accessibilityLabel={`${item.title}, ${severityLabels[item.severityFinal] ?? item.severityFinal}, ${item.applicationName}, ${statusLabels[item.status] ?? item.status}${prazo ? `, prazo ${prazo}` : ""}`} onPress={() => router.push(`/(tabs)/home/finding/${item.id}`)} style={[styles.priority, index > 0 && { borderTopWidth: 1, borderTopColor: workspace.line }]}>
-        <View style={[styles.rank, { backgroundColor: workspace.chipActiveBg }]}><Text style={[ui.mono, { color: workspace.lavender }]}>{index + 1}</Text></View>
-        <View style={[ui.grow, { gap: 3 }]}><Text style={ui.body}>{item.title}</Text><Text style={ui.muted}>{item.applicationName} · {severityLabels[item.severityFinal] ?? item.severityFinal} · {statusLabels[item.status] ?? item.status}</Text>{prazo && <Text style={ui.muted}>Prazo: {prazo}</Text>}</View><Ionicons name="chevron-forward" size={18} color={workspace.muted} />
-      </SoftPressable>; }) : <Text style={ui.body}>{exposure.data?.aplicacoes.length ? "Nenhuma vulnerabilidade aberta para priorizar." : "Nenhuma aplicação ativa para acompanhar."}</Text>}</Surface>}
+      {risks && <Surface>{risks.priorities.length ? risks.priorities.map((item, index) => {
+        const sla = priorityDetails[index]?.data?.sla;
+        const prazo = sla && sla.state !== "NO_SLA" ? fraseDoSla(sla.state, sla.remainingMs) : null;
+        const severity = severityLabels[item.severityFinal] ?? item.severityFinal;
+        const status = statusLabels[item.status] ?? item.status;
+        const prazoInk = getSlaInk(sla?.state, colors);
+
+        return <SoftPressable key={item.id} accessibilityRole="button"
+          accessibilityLabel={`${item.title}, ${severity}, ${item.applicationName}, ${status}${prazo ? `, prazo ${prazo}` : ""}`}
+          onPress={() => router.push(`/(tabs)/home/finding/${item.id}`)}
+          style={[styles.priority, index > 0 && { borderTopWidth: 1, borderTopColor: workspace.line }]}>
+          <View style={[styles.rank, { backgroundColor: workspace.chipActiveBg }]}>
+            <Text style={[ui.mono, { color: workspace.lavender }]}>{index + 1}</Text>
+          </View>
+          <View style={[ui.grow, { gap: 3 }]}>
+            <Text style={ui.body}>{item.title}</Text>
+            <Text style={ui.muted}>{item.applicationName} · {severity} · {status}</Text>
+            {prazo && <Text style={[ui.muted, prazoInk && { color: prazoInk }]}>Prazo: {prazo}</Text>}
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={workspace.muted} />
+        </SoftPressable>;
+      }) : <Text style={ui.body}>{exposure.data?.aplicacoes.length ? "Nenhuma vulnerabilidade aberta para priorizar." : "Nenhuma aplicação ativa para acompanhar."}</Text>}</Surface>}
     </View></DashboardReveal>
     {exposure.data && <DashboardReveal delay={160}><ExposureTrend applications={exposure.data.aplicacoes} /></DashboardReveal>}
     <DashboardReveal delay={180}><Surface accessibilityLabel="Abrir grafo de exposição" onPress={() => router.push("/(tabs)/security?section=exposure")}><View style={ui.spread}><View style={[ui.grow, { gap: 5 }]}><Text accessibilityRole="header" style={ui.heading}>Exposição</Text><Text style={ui.muted}>{risks ? `${risks.open} vulnerabilidades abertas nas aplicações ativas` : "Veja as conexões entre aplicações e categorias OWASP."}</Text></View><Ionicons name="git-network-outline" size={24} color={workspace.lavender} /></View></Surface></DashboardReveal>

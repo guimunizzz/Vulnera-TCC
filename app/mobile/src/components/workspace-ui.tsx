@@ -112,9 +112,12 @@ export function DataState({ title, message, loading = false, error = false, onRe
   </Surface>;
 }
 
-export function DetailField({ label, value }: { label: string; value: string }) {
+export function DetailField({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   const { ui } = useAppTheme();
-  return <View style={{ gap: 6 }}><Text style={ui.eyebrow}>{label}</Text><Text style={ui.body}>{value}</Text></View>;
+  return <View style={{ gap: 6 }}>
+    <Text style={ui.eyebrow}>{label}</Text>
+    <Text style={[ui.body, valueColor && { color: valueColor }]}>{value}</Text>
+  </View>;
 }
 
 const styles = StyleSheet.create({

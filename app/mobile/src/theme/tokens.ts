@@ -33,7 +33,8 @@ export const COLORS = {
   accentSurface: "#261833",
   brandMark: { start: "#8852bb", end: "#7540a4" },
   chartCreated: "#986bc8",
-  chartResolved: "#7f56b3",
+  chartResolved: "#79b49f",
+  assistantInk: "#8eb5e3",
 
   // --- estados ---
   success: "#16a34a",
@@ -42,6 +43,7 @@ export const COLORS = {
   danger: "#dc2626",
   dangerInk: "#fca5a5",
   dangerSurface: "#2f0a0a",
+  warningInk: "#e3bb78",
 
   // --- severidade (mesma semântica do web, tons sólidos e mais escuros) ---
   severity: {

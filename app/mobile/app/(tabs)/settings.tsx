@@ -31,8 +31,8 @@ const PUSH_LABELS = {
 } as const;
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; icon: "moon-outline" | "moon" }[] = [
-  { value: "dark", label: "Roxo escuro", icon: "moon-outline" },
   { value: "deep", label: "Roxo profundo", icon: "moon" },
+  { value: "dark", label: "Roxo escuro", icon: "moon-outline" },
 ];
 
 export default function SettingsScreen() {

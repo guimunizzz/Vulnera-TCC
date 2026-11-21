@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#140e1d",
+    "backgroundColor": "#0d0913",
     "scheme": "vulnera",
     "ios": {
       "supportsTablet": false,
@@ -15,7 +15,7 @@
       "package": "br.com.vulnera.mobile",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#140e1d"
+        "backgroundColor": "#0d0913"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -28,7 +28,7 @@
       [
         "expo-notifications",
         {
-          "color": "#573185"
+          "color": "#492875"
         }
       ],
       "expo-font",

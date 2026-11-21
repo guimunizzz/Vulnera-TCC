@@ -18,9 +18,13 @@ const AssistantContext = createContext<((screen: AssistantScreen) => void) | nul
 export function AssistantButton({ screen }: { screen?: AssistantScreen }) {
   const open = useContext(AssistantContext);
   const pathname = usePathname();
-  const { colors, workspace } = useAppTheme();
+  const { colors } = useAppTheme();
   if (!open) return null;
-  return <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir assistente Vuvu" testID="assistant-open" onPress={() => open(screen ?? assistantScreen(pathname))} style={[styles.launcher, { borderColor: workspace.actionBorder, backgroundColor: workspace.neutralTint }]}><Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.accentInk} /></SoftPressable>;
+  return <SoftPressable accessibilityRole="button" accessibilityLabel="Abrir assistente Vuvu" testID="assistant-open"
+    onPress={() => open(screen ?? assistantScreen(pathname))}
+    style={[styles.launcher, { borderColor: `${colors.assistantInk}50`, backgroundColor: `${colors.assistantInk}12` }]}>
+    <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.assistantInk} />
+  </SoftPressable>;
 }
 
 export function AssistantSession({ children }: { children: ReactNode }) {

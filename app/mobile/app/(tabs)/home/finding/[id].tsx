@@ -17,7 +17,7 @@ import { SeverityBadge, StatusBadge } from "../../../../src/components/badge";
 import { EvidenceCarousel } from "../../../../src/components/evidence-carousel";
 import { ActionButton, DataState, DetailField, FilterChip, Surface, PageHeader, SectionHeading, WorkspaceScreen } from "../../../../src/components/workspace-ui";
 import { FONT_FAMILY } from "../../../../src/theme/tokens";
-import { useAppTheme } from "../../../../src/theme/use-app-theme";
+import { getSlaInk, useAppTheme } from "../../../../src/theme/use-app-theme";
 import { OWASP_LABELS, fraseDoSla, VRS_BAND_LABELS } from "../../../../src/types/vulnerability.types";
 import { displayDate } from "../../../../src/lib/display";
 import { CvssRing } from "../../../../src/components/cvss-ring";
@@ -26,7 +26,7 @@ import { WorkspaceSkeleton } from "../../../../src/components/workspace-skeleton
 import { WorkspaceDisclosure } from "../../../../src/components/workspace-disclosure";
 
 export default function FindingDetailScreen() {
-  const { workspace, ui } = useAppTheme();
+  const { colors, workspace, ui } = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [tab, setTab] = useState<"summary" | "evidence" | "comments">("summary");
   const currentUser = useAuthStore((state) => state.user);
@@ -68,7 +68,8 @@ export default function FindingDetailScreen() {
       {finding.recommendation && <WorkspaceDisclosure title="RECOMENDAÇÃO"><Text style={ui.body}>{finding.recommendation}</Text></WorkspaceDisclosure>}
       {finding.severityOverrideReason && <WorkspaceDisclosure title="JUSTIFICATIVA DA SEVERIDADE AJUSTADA"><Text style={ui.body}>{finding.severityOverrideReason}</Text></WorkspaceDisclosure>}
       {(finding.sla?.state && finding.sla.state !== "NO_SLA" || finding.vrs?.score != null) && <Surface>
-        {finding.sla?.state && finding.sla.state !== "NO_SLA" && <DetailField label="PRAZO DE REMEDIAÇÃO" value={fraseDoSla(finding.sla.state, finding.sla.remainingMs)} />}
+        {finding.sla?.state && finding.sla.state !== "NO_SLA" && <DetailField label="PRAZO DE REMEDIAÇÃO"
+          value={fraseDoSla(finding.sla.state, finding.sla.remainingMs)} valueColor={getSlaInk(finding.sla.state, colors)} />}
         {finding.sla?.dueAt && <Text style={ui.muted}>Prazo em {displayDate(finding.sla.dueAt, true)}</Text>}
         {finding.vrs?.score != null && <DetailField label="PRIORIDADE CONTEXTUAL / VRS" value={`${finding.vrs.score}/100${finding.vrs.band ? ` · ${VRS_BAND_LABELS[finding.vrs.band]}` : ""}`} />}
       </Surface>}
