@@ -20,7 +20,7 @@
 
 import { NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Clock3, FileCode2, FileText, Folder, LayoutDashboard, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
+import { CalendarClock, Check, Clock3, FileCode2, FileText, Folder, LayoutDashboard, ListTodo, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { savedQueriesApi } from "../../lib/api/saved-queries.api";
@@ -64,6 +64,8 @@ const GRUPOS: GrupoNav[] = [
       { para: "/dast", rotulo: "DAST", papeis: ["ADMIN", "PENTESTER"], icone: ScanLine },
       // ADR-052 — importação de relatórios SAST (SARIF) e SCA (CycloneDX).
       { para: "/sast-sca", rotulo: "SAST/SCA", papeis: ["ADMIN", "PENTESTER"], icone: FileCode2, novo: true },
+      // ADR-056 — scans DAST agendados. Os três papéis: o CLIENT acompanha os da própria empresa, sem editar.
+      { para: "/agendamentos", rotulo: "Agendamentos", icone: CalendarClock, novo: true },
       { para: "/playbooks", rotulo: "Playbooks", icone: FileText },
     ],
   },
@@ -72,6 +74,8 @@ const GRUPOS: GrupoNav[] = [
     itens: [
       { para: "/settings/sla", rotulo: "Políticas de SLA", papeis: ["ADMIN", "CLIENT"], icone: Clock3 },
       { para: "/admin/subscriptions", rotulo: "Aprovações", papeis: ["ADMIN"], icone: Check },
+      // ADR-056 — painel de filas (contagens e falhas do BullMQ). Só ADMIN, como a rota.
+      { para: "/admin/filas", rotulo: "Filas", papeis: ["ADMIN"], icone: ListTodo, novo: true },
     ],
   },
 ];

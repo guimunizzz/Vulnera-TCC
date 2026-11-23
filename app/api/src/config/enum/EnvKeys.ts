@@ -72,4 +72,13 @@ export enum EnvKeys {
   // Threat Intel (ADR-053): sincronização periódica com NVD, OSV, CISA KEV e EPSS.
   THREAT_INTEL_SYNC_ENABLED = "THREAT_INTEL_SYNC_ENABLED",
   THREAT_INTEL_SYNC_INTERVAL_MIN = "THREAT_INTEL_SYNC_INTERVAL_MIN",
+  // Fila (ADR-056): memory = watchdog + setInterval de sempre; bullmq = Redis.
+  QUEUE_DRIVER = "QUEUE_DRIVER",
+  // redis://:senha@host:6379 — obrigatória só com QUEUE_DRIVER=bullmq.
+  REDIS_URL = "REDIS_URL",
+  // false = a API não sobe os workers (eles rodam em `npm run worker`).
+  WORKER_IN_PROCESS = "WORKER_IN_PROCESS",
+  // Monitor de SLA (avisos diários de prazo): só existe com QUEUE_DRIVER=bullmq.
+  // false remove o agendamento diário; o padrão é ligado.
+  SLA_MONITOR_ENABLED = "SLA_MONITOR_ENABLED",
 }

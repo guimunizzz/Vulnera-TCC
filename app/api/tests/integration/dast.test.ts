@@ -18,6 +18,8 @@
  *   DAST-PROG-01      progresso/fase chegam a 100/terminal no DTO
  *   DAST-SIM-01       resultado simulado é carimbado e explicado no DTO
  *   DAST-STAT-01      GET /status expõe limite de concorrência e estado do Docker
+ *   DAST-TEN-01..06   ADR-056: tenant derivado da Application, nunca do body
+ *   DAST-FILA-01..06  ADR-056: execução pela fila (guarda, duplicata, cancelamento, boot)
  */
 
 import request from "supertest";
@@ -32,6 +34,10 @@ import { DastScanRepository } from "../../src/repositories/dast-scan.repository"
 import { extractFindingsFromReport } from "../../src/services/dast-findings.service";
 import { makeDastScanService } from "../../src/factories/dast-scan.factory";
 import { resolveReportPath } from "../../src/services/zap-runner.service";
+import { seedPlan } from "../fixtures/plans.fixture";
+import { seedCompany } from "../fixtures/companies.fixture";
+import { seedApplication } from "../fixtures/applications.fixture";
+import { seedProject, seedProjectMember } from "../fixtures/projects.fixture";
 
 const PASSWORD = "senha12345";
 const FIXTURE_PATH = path.resolve(__dirname, "../fixtures/dast/zap-report-example-com.json");
@@ -200,6 +206,47 @@ describe("DAST — ciclo de vida", () => {
     const secondCancel = await request(app).post(`/api/dast/scans/${scanId}/cancel`).set("Authorization", `Bearer ${pentesterAToken}`);
     expect(secondCancel.status).toBe(422);
     expect(secondCancel.body.error).toBe("INVALID_STATUS_TRANSITION");
+  });
+
+  it("DAST-LIFE-05 — cancelar enquanto roda: a demonstração que termina depois não reescreve a fase CANCELLED", async () => {
+    const { pentesterAToken } = await seedActors();
+    const createRes = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://alvo-cancel-tardio.test" });
+    const scanId = createRes.body.id;
+
+    // Cancela só depois de RUNNING: a demonstração (3 s) ainda vai terminar em background.
+    for (let i = 0; i < 100; i++) {
+      if ((await prisma.dastScan.findUnique({ where: { id: scanId } }))?.status === "RUNNING") break;
+      await sleep(50);
+    }
+    const cancelRes = await request(app).post(`/api/dast/scans/${scanId}/cancel`).set("Authorization", `Bearer ${pentesterAToken}`);
+    expect(cancelRes.status).toBe(200);
+
+    await sleep(4000);
+    const depois = await prisma.dastScan.findUnique({ where: { id: scanId } });
+    expect(depois?.status).toBe("CANCELLED");
+    expect(depois?.phase).toBe("CANCELLED");
+    expect(depois?.progress).toBe(0);
+  });
+
+  it("DAST-LIFE-06 — duas criações simultâneas para o mesmo alvo: uma 201 e uma 409", async () => {
+    const { pentesterAToken } = await seedActors();
+    const targetUrl = "https://alvo-corrida.test";
+    const criar = () => request(app).post("/api/dast/scans").set("Authorization", `Bearer ${pentesterAToken}`).send({ mode: "SIMULATED", targetUrl });
+
+    const [a, b] = await Promise.all([criar(), criar()]);
+    expect([a.status, b.status].sort((x, y) => x - y)).toEqual([201, 409]);
+    const vencedor = a.status === 201 ? a : b;
+    const perdedor = a.status === 201 ? b : a;
+    expect(perdedor.body.error).toBe("SCAN_ALREADY_RUNNING_FOR_TARGET");
+
+    // O service grava a URL canonicalizada (.href, com "/" no fim), não a digitada.
+    const ativos = await prisma.dastScan.count({ where: { targetUrl: new URL(targetUrl).href, status: { in: ["QUEUED", "RUNNING"] } } });
+    expect(ativos).toBe(1);
+
+    await request(app).post(`/api/dast/scans/${vencedor.body.id}/cancel`).set("Authorization", `Bearer ${pentesterAToken}`);
   });
 
   it("DAST-LIFE-03 — timeout marca FAILED com SCAN_TIMEOUT", async () => {
@@ -590,5 +637,175 @@ describe("DAST — procedência da descoberta por execução", () => {
     } finally {
       await fs.unlink(artifact);
     }
+  });
+});
+
+describe("DAST — tenant do scan (ADR-056)", () => {
+  /** Duas empresas, cada uma com aplicação e projeto; o PENTESTER A é membro só do projeto da empresa A. */
+  async function seedTenants() {
+    const actors = await seedActors();
+    const plan = await seedPlan({ name: "Plano DAST" });
+    const companyA = await seedCompany({ name: "Empresa A", planId: plan.id });
+    const companyB = await seedCompany({ name: "Empresa B", planId: plan.id });
+    const appA = await seedApplication({ name: "App A", companyId: companyA.id, url: "https://app-a.test" });
+    const appB = await seedApplication({ name: "App B", companyId: companyB.id, url: "https://app-b.test" });
+    const projectA = await seedProject({ name: "Projeto A", applicationId: appA.id, companyId: companyA.id });
+    const projectB = await seedProject({ name: "Projeto B", applicationId: appB.id, companyId: companyB.id });
+    await seedProjectMember(projectA.id, actors.pentesterA.id);
+    return { ...actors, companyA, companyB, appA, appB, projectA, projectB };
+  }
+
+  it("DAST-TEN-01 — scan sem aplicação continua sem tenant e com trigger MANUAL", async () => {
+    const { pentesterAToken } = await seedActors();
+    const res = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://sem-tenant.test" });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ companyId: null, applicationId: null, projectId: null, trigger: "MANUAL", scheduleId: null });
+    await waitForTerminalStatus(pentesterAToken, res.body.id);
+  });
+
+  it("DAST-TEN-02 — companyId vem da Application, e o companyId do body é ignorado (SEC2)", async () => {
+    const t = await seedTenants();
+    const res = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${t.pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://app-a.test", projectId: t.projectA.id, companyId: t.companyB.id });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ companyId: t.companyA.id, applicationId: t.appA.id, projectId: t.projectA.id });
+
+    const audit = await prisma.auditLog.findFirst({ where: { entityType: "DastScan", entityId: res.body.id, action: "CREATE" } });
+    expect(audit?.companyId).toBe(t.companyA.id);
+    await waitForTerminalStatus(t.pentesterAToken, res.body.id);
+  });
+
+  it("DAST-TEN-03 — PENTESTER sem vínculo com o projeto/aplicação da empresa B recebe 403", async () => {
+    const t = await seedTenants();
+    const auth = { Authorization: `Bearer ${t.pentesterAToken}` };
+    const byProject = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://app-b.test", projectId: t.projectB.id });
+    expect(byProject.status).toBe(403);
+    const byApp = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://app-b.test", applicationId: t.appB.id });
+    expect(byApp.status).toBe(403);
+    expect(await prisma.dastScan.count()).toBe(0);
+  });
+
+  it("DAST-TEN-04 — PENTESTER membro de um projeto da aplicação pode vincular só a aplicação", async () => {
+    const t = await seedTenants();
+    const res = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${t.pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://app-a.test", applicationId: t.appA.id });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ companyId: t.companyA.id, applicationId: t.appA.id, projectId: null });
+    await waitForTerminalStatus(t.pentesterAToken, res.body.id);
+  });
+
+  it("DAST-TEN-05 — projeto de outra aplicação, aplicação inexistente ou inativa são recusados", async () => {
+    const t = await seedTenants();
+    const auth = { Authorization: `Bearer ${t.adminToken}` };
+    const mismatch = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://x.test", applicationId: t.appA.id, projectId: t.projectB.id });
+    expect(mismatch.status).toBe(400);
+    expect(mismatch.body.error).toBe("PROJECT_APPLICATION_MISMATCH");
+
+    const missing = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://x.test", applicationId: "nao-existe" });
+    expect(missing.status).toBe(404);
+
+    await prisma.application.update({ where: { id: t.appB.id }, data: { isActive: false } });
+    const inactive = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://x.test", applicationId: t.appB.id });
+    expect(inactive.status).toBe(404);
+
+    const badType = await request(app).post("/api/dast/scans").set(auth).send({ mode: "SIMULATED", targetUrl: "https://x.test", applicationId: 42 });
+    expect(badType.status).toBe(400);
+    expect(await prisma.dastScan.count()).toBe(0);
+  });
+
+  it("DAST-TEN-06 — vincular tenant não muda a visibilidade: outro PENTESTER do mesmo projeto não vê o scan", async () => {
+    const t = await seedTenants();
+    await seedProjectMember(t.projectA.id, t.pentesterB.id);
+    const created = await request(app)
+      .post("/api/dast/scans")
+      .set("Authorization", `Bearer ${t.pentesterAToken}`)
+      .send({ mode: "SIMULATED", targetUrl: "https://app-a.test", projectId: t.projectA.id });
+    expect(created.status).toBe(201);
+
+    const listB = await request(app).get("/api/dast/scans").set("Authorization", `Bearer ${t.pentesterBToken}`);
+    expect(listB.body.map((s: any) => s.id)).not.toContain(created.body.id);
+    const detailB = await request(app).get(`/api/dast/scans/${created.body.id}`).set("Authorization", `Bearer ${t.pentesterBToken}`);
+    expect(detailB.status).toBe(403);
+    await waitForTerminalStatus(t.pentesterAToken, created.body.id);
+  });
+});
+
+describe("DAST — execução pela fila (ADR-056, Fase 4)", () => {
+  const service = () => makeDastScanService();
+
+  it("DAST-FILA-01 — processarDaFila ignora scan que não está QUEUED e não mexe nele", async () => {
+    const { pentesterA } = await seedActors();
+    for (const status of ["CANCELLED", "FAILED", "COMPLETED", "RUNNING"] as const) {
+      const scan = await prisma.dastScan.create({ data: { targetUrl: `https://fila-${status}.test`, requestedById: pentesterA.id, status } });
+      await expect(service().processarDaFila(scan.id)).resolves.toBe("ignorado");
+      expect((await prisma.dastScan.findUnique({ where: { id: scan.id } }))?.status).toBe(status);
+    }
+    await expect(service().processarDaFila("nao-existe")).resolves.toBe("ignorado");
+  });
+
+  it("DAST-FILA-02 — processarDaFila executa o scan QUEUED até o fim e só resolve depois", async () => {
+    const { pentesterA, pentesterAToken } = await seedActors();
+    const scan = await prisma.dastScan.create({ data: { targetUrl: "https://fila-ok.test", requestedById: pentesterA.id, simulated: true } });
+    await expect(service().processarDaFila(scan.id)).resolves.toBe("executado");
+    const final = await waitForTerminalStatus(pentesterAToken, scan.id, 1000);
+    expect(final.status).toBe("COMPLETED");
+  });
+
+  it("DAST-FILA-03 — o mesmo job entregue duas vezes executa uma vez só", async () => {
+    const { pentesterA } = await seedActors();
+    const scan = await prisma.dastScan.create({ data: { targetUrl: "https://fila-dup.test", requestedById: pentesterA.id, simulated: true } });
+    const resultados = await Promise.all([service().processarDaFila(scan.id), service().processarDaFila(scan.id)]);
+    expect(resultados.sort()).toEqual(["executado", "ignorado"]);
+    const audit = await prisma.auditLog.count({ where: { entityType: "DastScan", entityId: scan.id, action: "STATUS_CHANGE" } });
+    expect(audit).toBe(1);
+  });
+
+  it("DAST-FILA-04 — cancelado antes de o worker pegar nunca volta a RUNNING", async () => {
+    const { pentesterA, pentesterAToken } = await seedActors();
+    // O motor memory (testes) começa o scan na hora; para simular "cancelado
+    // ainda na fila do Redis", cria o registro QUEUED direto e cancela pela API.
+    const scan = await prisma.dastScan.create({ data: { targetUrl: "https://fila-cancel.test", requestedById: pentesterA.id, simulated: true } });
+    const cancel = await request(app).post(`/api/dast/scans/${scan.id}/cancel`).set("Authorization", `Bearer ${pentesterAToken}`);
+    expect(cancel.status).toBe(200);
+    await expect(service().processarDaFila(scan.id)).resolves.toBe("ignorado");
+    expect((await prisma.dastScan.findUnique({ where: { id: scan.id } }))?.status).toBe("CANCELLED");
+  });
+
+  it("DAST-FILA-05 — job perdido: scan QUEUED vira FAILED com o motivo; scan já iniciado não é tocado", async () => {
+    const { pentesterA } = await seedActors();
+    const queued = await prisma.dastScan.create({ data: { targetUrl: "https://fila-perdido.test", requestedById: pentesterA.id } });
+    const done = await prisma.dastScan.create({ data: { targetUrl: "https://fila-feito.test", requestedById: pentesterA.id, status: "COMPLETED" } });
+    await expect(service().marcarFalhaDaFila(queued.id, "job stalled more than allowable limit")).resolves.toBe(true);
+    await expect(service().marcarFalhaDaFila(done.id, "x")).resolves.toBe(false);
+    const q = await prisma.dastScan.findUnique({ where: { id: queued.id } });
+    expect(q).toMatchObject({ status: "FAILED", phase: "FAILED" });
+    expect(q?.errorMessage).toMatch(/Falha na fila de execução: job stalled/);
+    expect((await prisma.dastScan.findUnique({ where: { id: done.id } }))?.status).toBe("COMPLETED");
+  });
+
+  it("DAST-FILA-06 — boot com fila: RUNNING vira FAILED, QUEUED sobrevive e é garantido na fila em ordem", async () => {
+    const { pentesterA } = await seedActors();
+    const running = await prisma.dastScan.create({ data: { targetUrl: "https://boot-run.test", requestedById: pentesterA.id, status: "RUNNING", simulated: true } });
+    const q1 = await prisma.dastScan.create({ data: { targetUrl: "https://boot-q1.test", requestedById: pentesterA.id, createdAt: new Date(Date.now() - 60_000) } });
+    const q2 = await prisma.dastScan.create({ data: { targetUrl: "https://boot-q2.test", requestedById: pentesterA.id } });
+
+    const garantidos: string[] = [];
+    const r = await service().recuperarParaFila(async (id) => {
+      garantidos.push(id);
+      return id === q2.id; // q2 "sumiu" do Redis e precisou voltar
+    });
+
+    expect(r).toEqual({ falhados: 1, reenfileirados: 1, naFila: 2 });
+    expect(garantidos).toEqual([q1.id, q2.id]);
+    expect((await prisma.dastScan.findUnique({ where: { id: running.id } }))?.status).toBe("FAILED");
+    expect((await prisma.dastScan.findUnique({ where: { id: q1.id } }))?.status).toBe("QUEUED");
+    expect((await prisma.dastScan.findUnique({ where: { id: q2.id } }))?.status).toBe("QUEUED");
   });
 });

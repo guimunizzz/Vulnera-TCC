@@ -33,6 +33,7 @@ import { EmptyState, ErrorState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { DastStatusBanner, useDastStatus } from "../components/dast/dast-status-banner";
+import { ProximosAgendados } from "../components/agendamentos/proximos-agendados";
 import { ACTIVE_DAST_STATUSES, labelDaFase, type DastScan } from "../types/dast.types";
 import { TABELA } from "../components/ui/table-estilos";
 
@@ -162,6 +163,9 @@ export function DastPage() {
       </div>
 
       <DastStatusBanner status={statusQuery.data} />
+
+      {/* ADR-056: o que vai rodar sozinho, e quando. */}
+      <ProximosAgendados />
 
       {scansQuery.isLoading && (
         <div className="mt-6 flex flex-col gap-2" aria-busy="true">
