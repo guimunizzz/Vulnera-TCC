@@ -3,23 +3,24 @@
  *
  * O QUE FAZ
  * Traduz dado real que a tela JÁ carregou num "risco" de 0 a 1 para a
- * atmosfera (mais relevo, mais magenta, mais ping de alerta) e o entrega à
- * cena do layout por um store mínimo.
+ * atmosfera (mais relevo, mais magenta, mais ping de alerta). A entrega à
+ * cena é pelo store (`atmosfera.store.ts`, `usePublicarRisco`).
  *
  * REGRAS
  *   - Nenhuma requisição nova: cada tela publica a partir do que já buscou.
  *   - Tela que não publica fica com o risco neutro (`RISCO_NEUTRO`).
  *   - É decoração: o número exato nunca aparece; só a direção importa
  *     (mais grave → mais intenso; corrigiu → acalma).
+ *   - Resposta incompleta vira "sem dado" (null), nunca exceção.
  *
  * QUEM PUBLICA
- *   Dashboard ... severidade dos findings do escopo, puxada pelos críticos abertos
- *   Remediação .. severidade do quadro pesada pelo estágio (corrigido pesa pouco)
- *   Threat Intel  CVEs em aberto por severidade, puxadas pelos KEV abertos
+ *   Dashboard ....... severidade dos findings do escopo, puxada pelos críticos abertos
+ *   Remediação ...... severidade do quadro pesada pelo estágio (corrigido pesa pouco)
+ *   Threat Intel .... CVEs em aberto por severidade, puxadas pelos KEV abertos
+ *   Exposure Graph .. vulnerabilidades abertas das aplicações por severidade
+ *   Aplicações ...... superfície de exposição: criticidade, Internet, dados, produção
+ *   (Projetos fica neutro: status de projeto não é risco — D21.4.)
  */
-
-import { useEffect, useId } from "react";
-import { create } from "zustand";
 
 /** Peso de cada severidade (o mesmo nome das facetas da API). */
 const PESO: Record<string, number> = { CRITICAL: 1, HIGH: 0.6, MEDIUM: 0.25, LOW: 0.08 };
@@ -36,12 +37,17 @@ const pressao = (quantidade: number, escala: number) => 1 - Math.exp(-quantidade
 export function pesoMedio(contagens: Record<string, number> | null | undefined): number | null {
   let total = 0;
   let soma = 0;
-  // Decoração não pode quebrar a tela: resposta incompleta vira "sem dado".
   for (const [severidade, quantidade] of Object.entries(contagens ?? {})) {
     total += quantidade;
     soma += (PESO[severidade] ?? 0) * quantidade;
   }
   return total > 0 ? soma / total : null;
+}
+
+/** Risco de um conjunto de contagens por severidade (todas abertas). */
+export function riscoPorSeveridade(contagens: Record<string, number> | null | undefined): number | null {
+  const base = pesoMedio(contagens);
+  return base === null ? null : curva(base);
 }
 
 export function riscoDoDashboard({ porSeveridade, criticosAbertos = 0 }: { porSeveridade?: Record<string, number>; criticosAbertos?: number }): number | null {
@@ -65,30 +71,31 @@ export function riscoDoThreatIntel({ abertosPorSeveridade, kevAbertos = 0 }: { a
   return Math.max(curva(base ?? 0), pressao(kevAbertos, 3));
 }
 
-interface EstadoDaAtmosfera {
-  risco: number | null;
-  /** Quem publicou o valor atual: só ele pode limpar. */
-  dono: string | null;
-  publicar: (dono: string, risco: number | null) => void;
-  limpar: (dono: string) => void;
+/** Soma as abertas por severidade de todas as aplicações do Exposure Graph. */
+export function riscoDoExposureGraph(aplicacoes: Array<{ abertas: Record<string, number> }>): number | null {
+  const soma: Record<string, number> = {};
+  for (const app of aplicacoes) {
+    for (const [severidade, n] of Object.entries(app.abertas ?? {})) soma[severidade] = (soma[severidade] ?? 0) + n;
+  }
+  return riscoPorSeveridade(soma);
 }
 
-export const useAtmosferaStore = create<EstadoDaAtmosfera>((set) => ({
-  risco: null,
-  dono: null,
-  publicar: (dono, risco) => set({ dono, risco }),
-  // Na troca de rota a página que sai ainda está montada durante a transição:
-  // a desmontagem dela não pode apagar o risco que a página nova já publicou.
-  limpar: (dono) => set((estado) => (estado.dono === dono ? { dono: null, risco: null } : estado)),
-}));
+const PESO_CRITICIDADE: Record<string, number> = { LOW: 0.1, MEDIUM: 0.35, HIGH: 0.7, CRITICAL: 1 };
+const PESO_SENSIBILIDADE: Record<string, number> = { PUBLIC: 0, INTERNAL: 0.3, CONFIDENTIAL: 0.7, RESTRICTED: 1 };
 
-/** A tela entrega o seu risco enquanto estiver montada. */
-export function usePublicarRisco(risco: number | null | undefined): void {
-  const dono = useId();
-  const publicar = useAtmosferaStore((s) => s.publicar);
-  const limpar = useAtmosferaStore((s) => s.limpar);
-  useEffect(() => {
-    if (risco !== undefined) publicar(dono, risco);
-  }, [dono, risco, publicar]);
-  useEffect(() => () => limpar(dono), [dono, limpar]);
+/**
+ * Superfície de exposição das aplicações, só com o contexto de negócio (a
+ * lista não traz vulnerabilidades): criticidade pesa mais, depois estar na
+ * Internet, a sensibilidade dos dados e estar em produção.
+ */
+export function riscoDasAplicacoes(
+  apps: Array<{ criticality?: string; internetFacing?: boolean; dataSensitivity?: string; environment?: string }>,
+): number | null {
+  if (apps.length === 0) return null;
+  const soma = apps.reduce((total, app) => total
+    + 0.45 * (PESO_CRITICIDADE[app.criticality ?? ""] ?? 0.35)
+    + 0.3 * (app.internetFacing ? 1 : 0)
+    + 0.15 * (PESO_SENSIBILIDADE[app.dataSensitivity ?? ""] ?? 0.3)
+    + 0.1 * (app.environment === "PROD" ? 1 : 0), 0);
+  return limitar((soma / apps.length) * 1.2);
 }

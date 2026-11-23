@@ -14,11 +14,12 @@ import type { TemaDaVariante } from "./tipos-base";
  * mais claro. É o que garante AA ao texto solto sobre ela, no pior caso
  * (branco da soma aditiva no escuro, tinta no claro) — `atmosfera-3d-contrast.test.ts`.
  *
- * plataforma: o mesmo teto da atmosfera ASCII (0,30 / 0,24), mais calmo.
+ * plataforma: 0,30 no escuro (o teto do ASCII); 0,32 no claro — o claro usa
+ *   blending normal e sumia a 0,24 (D21.5). O AA do claro aguenta até 0,40.
  * apresentacao: o teto calculado de AA (0,32 / 0,40) — não passa disso.
  */
 export const TETO_DA_CAMADA: Record<"plataforma" | "apresentacao", Record<TemaDaVariante, number>> = {
-  plataforma: { dark: 0.3, light: 0.24 },
+  plataforma: { dark: 0.3, light: 0.32 },
   apresentacao: { dark: 0.32, light: 0.4 },
 };
 

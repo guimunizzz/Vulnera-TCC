@@ -1,21 +1,27 @@
 /**
  * risco.test.ts — o dado real que vira intensidade da atmosfera.
- *   ARS-01  peso médio por severidade; nada contado → null
+ *   ARS-01  peso médio por severidade; nada contado (ou resposta incompleta) → null
  *   ARS-02  Dashboard: mais grave → mais risco; críticos abertos puxam para cima
  *   ARS-03  Remediação: o mesmo quadro acalma conforme anda para "corrigido"
  *   ARS-04  Threat Intel: KEV aberto pesa mesmo com poucas CVEs
- *   ARS-05  store: a página que sai não apaga o risco da que entrou
+ *   ARS-05  Exposure Graph: soma as abertas de todas as aplicações
+ *   ARS-06  Aplicações: crítica, exposta, dado restrito e produção pesam mais que o contrário
  */
 
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
-import { pesoMedio, riscoDaRemediacao, riscoDoDashboard, riscoDoThreatIntel, useAtmosferaStore, usePublicarRisco } from "./risco";
-
-beforeEach(() => useAtmosferaStore.setState({ risco: null, dono: null }));
+import { describe, expect, it } from "vitest";
+import {
+  pesoMedio,
+  riscoDasAplicacoes,
+  riscoDaRemediacao,
+  riscoDoDashboard,
+  riscoDoExposureGraph,
+  riscoDoThreatIntel,
+} from "./risco";
 
 describe("funções de risco", () => {
   it("ARS-01 — peso médio por severidade", () => {
     expect(pesoMedio({})).toBeNull();
+    expect(pesoMedio(undefined)).toBeNull();
     expect(pesoMedio({ CRITICAL: 1, LOW: 0 })).toBe(1);
     expect(pesoMedio({ CRITICAL: 1, INFO: 1 })).toBe(0.5);
   });
@@ -27,6 +33,8 @@ describe("funções de risco", () => {
     expect(grave).toBeGreaterThan(leve);
     expect(comCriticos).toBeGreaterThan(0.8);
     expect(riscoDoDashboard({ porSeveridade: {}, criticosAbertos: 0 })).toBeNull();
+    // Mock parcial (como nos testes do Dashboard) não pode derrubar a tela.
+    expect(riscoDoDashboard({})).toBeNull();
     for (const valor of [leve, grave, comCriticos]) expect(valor).toBeLessThanOrEqual(1);
   });
 
@@ -44,25 +52,22 @@ describe("funções de risco", () => {
     const comKev = riscoDoThreatIntel({ abertosPorSeveridade: { LOW: 3 }, kevAbertos: 4 })!;
     expect(comKev).toBeGreaterThan(semKev + 0.5);
   });
-});
 
-describe("usePublicarRisco", () => {
-  it("ARS-05 — a desmontagem da página anterior não apaga o risco da nova", () => {
-    const anterior = renderHook(() => usePublicarRisco(0.2));
-    expect(useAtmosferaStore.getState().risco).toBe(0.2);
-    // A nova entra enquanto a anterior ainda está na transição de saída.
-    renderHook(() => usePublicarRisco(0.9));
-    expect(useAtmosferaStore.getState().risco).toBe(0.9);
-    act(() => anterior.unmount());
-    expect(useAtmosferaStore.getState().risco).toBe(0.9);
+  it("ARS-05 — Exposure Graph soma as abertas das aplicações", () => {
+    const leve = riscoDoExposureGraph([{ abertas: { CRITICAL: 0, HIGH: 0, MEDIUM: 2, LOW: 6 } }])!;
+    const grave = riscoDoExposureGraph([
+      { abertas: { CRITICAL: 0, HIGH: 0, MEDIUM: 2, LOW: 6 } },
+      { abertas: { CRITICAL: 4, HIGH: 3, MEDIUM: 0, LOW: 0 } },
+    ])!;
+    expect(grave).toBeGreaterThan(leve);
+    expect(riscoDoExposureGraph([{ abertas: { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 } }])).toBeNull();
   });
 
-  it("ARS-05b — quem publicou limpa ao sair; undefined (carregando) não publica", () => {
-    const carregando = renderHook(({ v }: { v: number | undefined }) => usePublicarRisco(v), { initialProps: { v: undefined as number | undefined } });
-    expect(useAtmosferaStore.getState().risco).toBeNull();
-    carregando.rerender({ v: 0.6 });
-    expect(useAtmosferaStore.getState().risco).toBe(0.6);
-    act(() => carregando.unmount());
-    expect(useAtmosferaStore.getState().risco).toBeNull();
+  it("ARS-06 — superfície de exposição das aplicações", () => {
+    const exposta = riscoDasAplicacoes([{ criticality: "CRITICAL", internetFacing: true, dataSensitivity: "RESTRICTED", environment: "PROD" }])!;
+    const recolhida = riscoDasAplicacoes([{ criticality: "LOW", internetFacing: false, dataSensitivity: "PUBLIC", environment: "DEV" }])!;
+    expect(exposta).toBe(1);
+    expect(recolhida).toBeLessThan(0.1);
+    expect(riscoDasAplicacoes([])).toBeNull();
   });
 });

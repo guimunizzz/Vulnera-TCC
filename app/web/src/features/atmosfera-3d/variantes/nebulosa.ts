@@ -202,7 +202,8 @@ export const criarNebulosa: FabricaDeVariante = (paleta, tema, modo) => {
       mouse.y += (alvo - mouse.y) * Math.min(1, delta * 5);
     },
     redimensionar(_largura, altura, dpr) {
-      material.uniforms.uEscalaPx.value = altura * dpr * 0.06 * ajuste.tamanho;
+      // No claro a partícula é tinta sobre papel, sem soma de luz: um pouco maior para não sumir.
+      material.uniforms.uEscalaPx.value = altura * dpr * 0.06 * ajuste.tamanho * (escuro ? 1 : 1.25);
     },
     aoClicar(ponteiro, tempo) {
       const local = noDisco(ponteiro);

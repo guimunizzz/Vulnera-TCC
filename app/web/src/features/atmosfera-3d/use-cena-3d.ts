@@ -5,7 +5,7 @@
  * Hospeda uma atmosfera 3D (`variantes/`): renderer do kit `src/three/`,
  * pós-processamento (bloom só no imersivo escuro + OutputPass), ponteiro em
  * dois ritmos (efeito e câmera) com "agitação", risco suavizado, tamanho pelo
- * ResizeObserver, ping de transição na troca de rota e medição de fps.
+ * ResizeObserver, ping a cada `chaveDePing` nova e medição de fps.
  *
  * POR QUE O COMPOSER SEMPRE, MESMO SEM BLOOM
  * Os shaders das variantes escrevem cor linear. O `OutputPass` é quem converte
@@ -55,8 +55,8 @@ export interface OpcoesDaCena3d {
   raiz: RefObject<HTMLElement>;
   /** Lido a cada quadro: o risco alvo (0–1). */
   obterRisco: () => number;
-  /** Muda a cada troca de página: a cena solta um ping do centro do radar. */
-  chaveDeRota?: string;
+  /** Muda a cada evento que merece um ping (troca de página, seleção no grafo). */
+  chaveDePing?: string;
   /** Primeiro quadro desenhado: hora de mostrar a camada. */
   aoPronta?: () => void;
   /** Chamado ~2x por segundo com o fps medido. */
@@ -199,8 +199,8 @@ export function useCena3d(palcoRef: RefObject<HTMLElement>, opcoes: OpcoesDaCena
     };
   }, [palcoRef, raiz, fabrica, tema, modo]);
 
-  // Troca de página dentro da mesma atmosfera: um ping do centro do radar
-  // marca a chegada (o equivalente à varredura do ASCII). Não na montagem.
+  // Troca de página na mesma atmosfera, ou seleção no grafo: um ping do
+  // centro do radar marca o evento (o equivalente à varredura do ASCII). Não na montagem.
   const primeiraChave = useRef(true);
   useEffect(() => {
     if (primeiraChave.current) {
@@ -209,5 +209,5 @@ export function useCena3d(palcoRef: RefObject<HTMLElement>, opcoes: OpcoesDaCena
     }
     const cena = viva.current;
     cena?.variante.aoTrocarRota?.(cena.tempo());
-  }, [opcoes.chaveDeRota]);
+  }, [opcoes.chaveDePing]);
 }

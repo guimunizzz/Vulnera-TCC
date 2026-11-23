@@ -3,8 +3,10 @@
  *
  * O QUE FAZ
  * A atmosfera da área autenticada, escolhida pela seção (`rotas.ts`):
- * nebulosa no Dashboard, relevo com radar no monitoramento, ASCII no trabalho
- * técnico, nada em formulários. Troca de seção = crossfade de 0,8 s.
+ * nebulosa no Dashboard, relevo com radar no monitoramento e no Exposure
+ * Graph, ASCII no trabalho técnico, ASCII parado (pôster) em formulários.
+ * Troca de seção = crossfade de 0,8 s. Uma tela pode suprimir a atmosfera
+ * (aba Mapa 3D do Exposure Graph) e pedir pings (`atmosfera.store.ts`).
  *
  * COMO
  *   - Cada atmosfera é uma CAMADA. Ao mudar a seção entra uma camada nova; a
@@ -31,7 +33,8 @@ import { OPACIDADE_ATMOSFERA } from "../../components/dashboard/hero/atmosfera-c
 import "../../components/dashboard/hero/dashboard-atmosphere.css";
 import { useApresentacao } from "./apresentacao";
 import { DURACAO_TROCA_MS, TETO_DA_CAMADA } from "./config";
-import { linguagemDaRota, type Linguagem } from "./rotas";
+import { useAtmosferaStore } from "./atmosfera.store";
+import { atmosferaDaRota, type Linguagem } from "./rotas";
 import type { PropsDaCena3d } from "./cena-3d-canvas";
 import type { ModoDaVariante } from "./tipos-base";
 import { useTemaDoDocumento } from "./use-tema-do-documento";
@@ -78,8 +81,12 @@ export function AtmosferaDaPlataforma({ pausado = false }: { pausado?: boolean }
   const { ativa: apresentando } = useApresentacao();
   const tema = useTemaDoDocumento();
 
-  const linguagem = modoDeCena === "nenhuma" ? null : linguagemDaRota(pathname);
-  const estilo: Estilo = modoDeCena === "animada" && !pausado ? "animada" : "poster";
+  const suprimida = useAtmosferaStore((s) => s.supressao !== null);
+  const sinal = useAtmosferaStore((s) => s.sinal);
+
+  const atmosfera = modoDeCena === "nenhuma" || suprimida ? null : atmosferaDaRota(pathname);
+  const linguagem = atmosfera?.linguagem ?? null;
+  const estilo: Estilo = modoDeCena === "animada" && !pausado && !atmosfera?.parada ? "animada" : "poster";
   const modo: ModoDaVariante = apresentando ? "imersivo" : "plataforma";
   const chave = `${linguagem}|${estilo}|${modo}`;
 
@@ -117,7 +124,7 @@ export function AtmosferaDaPlataforma({ pausado = false }: { pausado?: boolean }
             key={camada.id}
             camada={camada}
             visivel={visivel}
-            chaveDeRota={pathname}
+            chaveDePing={`${pathname}|${sinal}`}
             opacidade={opacidadeDaCamada(camada, tema)}
             aoPronta={() => marcar(camada.id, { pronta: true })}
             aoFalhar={() => marcar(camada.id, { falhou: true })}
@@ -135,10 +142,11 @@ function opacidadeDaCamada(camada: Camada, tema: "dark" | "light"): number {
   return TETO_DA_CAMADA[camada.modo === "imersivo" ? "apresentacao" : "plataforma"][tema];
 }
 
-function CamadaDaAtmosfera({ camada, visivel, chaveDeRota, opacidade, aoPronta, aoFalhar }: {
+function CamadaDaAtmosfera({ camada, visivel, chaveDePing, opacidade, aoPronta, aoFalhar }: {
   camada: Camada;
   visivel: boolean;
-  chaveDeRota: string;
+  /** Muda a cada evento que merece um ping: troca de página, seleção no grafo. */
+  chaveDePing: string;
   opacidade: number;
   aoPronta: () => void;
   aoFalhar: () => void;
@@ -168,7 +176,7 @@ function CamadaDaAtmosfera({ camada, visivel, chaveDeRota, opacidade, aoPronta, 
         ) : linguagem === "ascii" ? (
           <CenaAscii aoPronta={avisarPronta} aoFalhar={avisarFalha} />
         ) : (
-          <Cena3d linguagem={linguagem} modo={camada.modo} chaveDeRota={chaveDeRota} aoPronta={avisarPronta} aoFalhar={avisarFalha} />
+          <Cena3d linguagem={linguagem} modo={camada.modo} chaveDePing={chaveDePing} aoPronta={avisarPronta} aoFalhar={avisarFalha} />
         )}
       </Suspense>
     </div>

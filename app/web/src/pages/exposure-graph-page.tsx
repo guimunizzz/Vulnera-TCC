@@ -16,7 +16,8 @@
  * `App.tsx` (rota `/exposure-graph`, ADMIN e CLIENT) e o item da Sidebar.
  */
 
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Pause, Play } from "lucide-react";
 import { exposureGraphApi } from "../lib/api/exposure-graph.api";
@@ -32,6 +33,8 @@ import { idDaAplicacao } from "../features/security-graph/exposure-graph-model";
 import { PainelExposicao } from "../features/security-graph/painel-exposicao";
 import { ExposureGraph2D } from "../features/security-graph/exposure-graph";
 import type { ExposureGraph } from "../types/exposure-graph.types";
+import { riscoDoExposureGraph } from "../features/atmosfera-3d/risco";
+import { pingarAtmosfera, usePublicarRisco, useSuprimirAtmosfera } from "../features/atmosfera-3d/atmosfera.store";
 
 // A página já é lazy (paginaLazy); o mapa é outro chunk para `three` só baixar na aba do mapa.
 const ExposureMap3D = lazy(
@@ -138,6 +141,16 @@ export function ExposureGraphPage() {
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const semEmpresa = getApiErrorCode(consulta.error) === "COMPANY_NOT_FOUND";
 
+  // A atmosfera (relevo) acompanha o grafo: sobe com as abertas, pinga a cada
+  // seleção e some na aba do mapa 3D, que tem a própria cena (D21.2).
+  const [params] = useSearchParams();
+  useSuprimirAtmosfera(params.get("visao") === "mapa");
+  usePublicarRisco(consulta.data ? riscoDoExposureGraph(consulta.data.aplicacoes) : undefined);
+  const selecionar = useCallback((id: string | null) => {
+    setSelecionadoId(id);
+    if (id) pingarAtmosfera();
+  }, []);
+
   return (
     <div className="space-y-6">
       <Breadcrumb
@@ -193,7 +206,7 @@ export function ExposureGraphPage() {
                       dados={consulta.data}
                       nomeEmpresa={empresa.data?.name ?? "Empresa"}
                       selecionadoId={selecionadoId}
-                      aoSelecionar={setSelecionadoId}
+                      aoSelecionar={selecionar}
                     />
                   ),
                 },
@@ -204,7 +217,7 @@ export function ExposureGraphPage() {
                     <MapaComApresentacao
                       dados={consulta.data}
                       selecionadoId={selecionadoId}
-                      aoSelecionar={setSelecionadoId}
+                      aoSelecionar={selecionar}
                     />
                   ),
                 },
@@ -214,7 +227,7 @@ export function ExposureGraphPage() {
           <PainelExposicao
             dados={consulta.data}
             selecionadoId={selecionadoId}
-            aoSelecionar={setSelecionadoId}
+            aoSelecionar={selecionar}
           />
         </div>
       )}

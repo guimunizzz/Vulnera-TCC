@@ -22,7 +22,7 @@ import { useCenaPermitida } from "../three/gate";
 import { CATALOGO_3D } from "../features/atmosfera-3d/variantes";
 import { useCena3d } from "../features/atmosfera-3d/use-cena-3d";
 import { RISCO_NEUTRO, TETO_DA_CAMADA } from "../features/atmosfera-3d/config";
-import { useAtmosferaStore, usePublicarRisco } from "../features/atmosfera-3d/risco";
+import { useAtmosferaStore, usePublicarRisco } from "../features/atmosfera-3d/atmosfera.store";
 import PosterDaAtmosfera from "../features/atmosfera-3d/poster-da-atmosfera";
 import type { Linguagem } from "../features/atmosfera-3d/rotas";
 import type { FabricaDeVariante, ModoDaVariante, TemaDaVariante } from "../features/atmosfera-3d/tipos";

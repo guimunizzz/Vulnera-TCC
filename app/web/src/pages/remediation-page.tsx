@@ -56,7 +56,8 @@ import type { FindingListItem } from "../types/vulnerability.types";
 import type { AssigneeCandidate, User } from "../types/auth.types";
 import { NumeroAnimado } from "../motion/components";
 import { useMotion } from "../motion/use-motion";
-import { riscoDaRemediacao, usePublicarRisco } from "../features/atmosfera-3d/risco";
+import { riscoDaRemediacao } from "../features/atmosfera-3d/risco";
+import { usePublicarRisco } from "../features/atmosfera-3d/atmosfera.store";
 import "./remediation-page.css";
 
 /** As colunas do quadro. `CLOSED` fica de fora — ver o cabeçalho. */

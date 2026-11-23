@@ -26,7 +26,8 @@ import { STATUS_ABERTOS, useFindingsResumo } from "../../hooks/use-findings";
 import { useMotion } from "../../motion/use-motion";
 import type { UserRole } from "../../types/auth.types";
 import { useApresentacao } from "../../features/atmosfera-3d/apresentacao";
-import { riscoDoDashboard, usePublicarRisco } from "../../features/atmosfera-3d/risco";
+import { riscoDoDashboard } from "../../features/atmosfera-3d/risco";
+import { usePublicarRisco } from "../../features/atmosfera-3d/atmosfera.store";
 
 const ESCOPO: Record<UserRole, string> = {
   ADMIN: "Visão geral da plataforma",

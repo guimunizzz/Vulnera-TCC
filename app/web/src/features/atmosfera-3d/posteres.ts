@@ -264,9 +264,11 @@ function desenharRelevo(ctx: CanvasRenderingContext2D, largura: number, altura: 
       ctx.stroke(lote.caminho);
     }
   }
+  // No claro a linha é tinta sobre papel: um pouco mais grossa (como `uEspessura` na cena).
+  const espessura = cores.escuro ? 1 : 1.45;
   for (const lote of lotes.values()) {
     ctx.strokeStyle = rgba(lote.cor, lote.alfa);
-    ctx.lineWidth = lote.mestra ? 1.6 : 1;
+    ctx.lineWidth = (lote.mestra ? 1.6 : 1) * espessura;
     ctx.stroke(lote.caminho);
   }
 
@@ -328,7 +330,7 @@ function desenharNebulosa(ctx: CanvasRenderingContext2D, largura: number, altura
   const orbita = 0.55;
   const projetar = criarProjecao([Math.sin(orbita) * 30, 17, Math.cos(orbita) * 30], [0, -2, 0], 50, largura, altura);
   // O `uEscalaPx` da cena em px CSS (o contexto já está escalado pelo dpr).
-  const escalaPx = altura * 0.06 * 1.15;
+  const escalaPx = altura * 0.06 * 1.15 * (cores.escuro ? 1 : 1.25);
   const aleatorio = sementeAleatoria(2026);
   const espalhar = () => (aleatorio() + aleatorio() + aleatorio() - 1.5) / 1.5;
   const inclinacao = 0.18;

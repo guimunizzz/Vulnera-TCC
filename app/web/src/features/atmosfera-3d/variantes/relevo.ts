@@ -72,6 +72,7 @@ uniform float uOpacidade;
 uniform float uForcaPing;
 uniform float uForcaAneis;
 uniform float uRisco;
+uniform float uEspessura; // 1 no escuro; mais grossa no claro (tinta sobre papel some fina)
 varying float vAltura;
 varying float vDist;
 varying vec3 vMundo;
@@ -85,8 +86,8 @@ float linha(float valor, float espessura) {
 
 void main() {
   float nivel = vAltura * 1.2;
-  float fina = linha(nivel, 1.0);
-  float mestra = linha(nivel / 5.0, 1.6);
+  float fina = linha(nivel, 1.0 * uEspessura);
+  float mestra = linha(nivel / 5.0, 1.6 * uEspessura);
 
   float t = smoothstep(-1.5, 9.0, vAltura);
   vec3 cor = mix(uTinta, uCiano, smoothstep(0.05, 0.45, t));
@@ -149,6 +150,7 @@ export const criarRelevo: FabricaDeVariante = (paleta, tema, modo) => {
       uOpacidade: { value: ajuste.opacidade },
       uForcaPing: { value: ajuste.ping },
       uForcaAneis: { value: ajuste.aneis },
+      uEspessura: { value: escuro ? 1 : 1.45 },
     },
   });
   cena.add(new THREE.Mesh(geometria, material));

@@ -28,7 +28,8 @@ import { AfetaTab } from "../components/threat-intel/afeta-tab";
 import { InventarioTab } from "../components/threat-intel/inventario-tab";
 import { FeedTab, FontesTab } from "../components/threat-intel/feed-tab";
 import { useAuthStore } from "../store/auth.store";
-import { riscoDoThreatIntel, usePublicarRisco } from "../features/atmosfera-3d/risco";
+import { riscoDoThreatIntel } from "../features/atmosfera-3d/risco";
+import { usePublicarRisco } from "../features/atmosfera-3d/atmosfera.store";
 
 const CLASSE_SELECT = "h-touch rounded-control border border-default bg-surface px-3 text-sm text-fg";
 

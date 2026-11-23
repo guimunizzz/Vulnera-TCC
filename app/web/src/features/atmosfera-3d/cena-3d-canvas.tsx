@@ -6,12 +6,13 @@
  * conhece `atmosfera-da-plataforma.tsx`, que importa este arquivo por `lazy()`.
  *
  * O risco vem do store (dado real publicado pela tela) e é lido a cada quadro;
- * o tema muda a cena inteira (as cores saem dos tokens na montagem).
+ * o tema muda a cena inteira (as cores saem dos tokens na montagem). Cada
+ * mudança de `chaveDePing` (troca de página, seleção no grafo) solta um ping.
  */
 
 import { useRef } from "react";
 import { RISCO_NEUTRO } from "./config";
-import { useAtmosferaStore } from "./risco";
+import { useAtmosferaStore } from "./atmosfera.store";
 import type { Linguagem } from "./rotas";
 import type { ModoDaVariante } from "./tipos";
 import { useCena3d } from "./use-cena-3d";
@@ -24,18 +25,18 @@ const FABRICAS = { relevo: criarRelevo, nebulosa: criarNebulosa } as const;
 export interface PropsDaCena3d {
   linguagem: Exclude<Linguagem, "ascii">;
   modo: ModoDaVariante;
-  chaveDeRota: string;
+  chaveDePing: string;
   aoPronta: () => void;
   aoFalhar: () => void;
 }
 
 const obterRisco = () => useAtmosferaStore.getState().risco ?? RISCO_NEUTRO;
 
-function Cena3dCanvas({ linguagem, modo, chaveDeRota, aoPronta, aoFalhar }: PropsDaCena3d) {
+function Cena3dCanvas({ linguagem, modo, chaveDePing, aoPronta, aoFalhar }: PropsDaCena3d) {
   const palcoRef = useRef<HTMLDivElement>(null);
   const raizRef = useRef<HTMLElement>(document.documentElement);
   const tema = useTemaDoDocumento();
-  useCena3d(palcoRef, { fabrica: FABRICAS[linguagem], tema, modo, raiz: raizRef, obterRisco, chaveDeRota, aoPronta, aoFalhar });
+  useCena3d(palcoRef, { fabrica: FABRICAS[linguagem], tema, modo, raiz: raizRef, obterRisco, chaveDePing, aoPronta, aoFalhar });
   return <div ref={palcoRef} aria-hidden="true" data-cena-3d={linguagem} className="absolute inset-0" />;
 }
 

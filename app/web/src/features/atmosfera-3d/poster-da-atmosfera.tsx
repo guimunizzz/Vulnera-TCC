@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { RISCO_NEUTRO } from "./config";
 import { desenharPoster, lerCoresDoPoster } from "./posteres";
-import { useAtmosferaStore } from "./risco";
+import { useAtmosferaStore } from "./atmosfera.store";
 import type { Linguagem } from "./rotas";
 import { useTemaDoDocumento } from "./use-tema-do-documento";
 
