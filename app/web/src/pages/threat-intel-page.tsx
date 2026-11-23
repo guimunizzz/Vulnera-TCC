@@ -28,6 +28,7 @@ import { AfetaTab } from "../components/threat-intel/afeta-tab";
 import { InventarioTab } from "../components/threat-intel/inventario-tab";
 import { FeedTab, FontesTab } from "../components/threat-intel/feed-tab";
 import { useAuthStore } from "../store/auth.store";
+import { riscoDoThreatIntel, usePublicarRisco } from "../features/atmosfera-3d/risco";
 
 const CLASSE_SELECT = "h-touch rounded-control border border-default bg-surface px-3 text-sm text-fg";
 
@@ -59,6 +60,8 @@ export function ThreatIntelPage() {
     queryFn: () => threatIntelApi.overview(companyId ?? undefined),
     enabled: !!companyId,
   });
+  // O radar acha mais alerta conforme as CVEs abertas e os KEV do inventário.
+  usePublicarRisco(resumo.data ? riscoDoThreatIntel(resumo.data.casamentos) : undefined);
 
   const seletor =
     !ehCliente && (empresas.data?.length ?? 0) > 1 ? (
