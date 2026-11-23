@@ -123,7 +123,7 @@ export function ExposureGraph2D({
         <div className="flex flex-wrap items-center gap-2 border-b border-subtle bg-surface px-3 py-2">
           <SeletorDeLayout valor={layout} aoMudar={trocarLayout} />
         </div>
-        <div className="cg-palco relative">
+        <div className="cg-palco cg-palco--radar relative">
           <CyberGraph2D
             ref={ref}
             visao={visao}
