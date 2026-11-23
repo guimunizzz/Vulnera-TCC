@@ -1056,3 +1056,32 @@ da empresa veem; o PENTESTER vê as empresas dos projetos de que é membro.
 Decorrência registrada no ADR-053 §7: CLIENT OWNER e PENTESTER membro triam;
 promover é de ADMIN e PENTESTER membro do projeto de destino (a regra de
 escrita de Vulnerability); "Sincronizar agora" é só do ADMIN.
+
+## D20 — Atmosferas 3D por seção: decisões de produto (2026-11-23)
+
+Respostas do Rafael durante o laboratório `/lab-3d` (branch
+`feat/atmosfera-3d`). Arquitetura em
+[ADR-060](Vulnera/07-Decisoes/ADR-060%20-%20Atmosferas%20por%20secao%20na%20area%20autenticada.md).
+
+**D20.1 — Linhas visuais:** relevo e nebulosa, aproveitando o radar e os
+pings da landing. *Descartadas:* constelação e cidade.
+
+**D20.2 — Atmosfera por papel da seção, não sorteada.** O ASCII continua no
+trabalho técnico. Mapeamento aprovado: nebulosa no Dashboard; relevo em
+Aplicações, Projetos, Threat Intel e Remediação; ASCII em Findings, DAST,
+SAST/SCA, Playbooks e Agendamentos; nada em administração e no Exposure
+Graph.
+
+**D20.3 — Dentro da plataforma, mais calma:** opacidade menor (o mesmo teto do
+ASCII), sem bloom. O mouse acompanha sem atraso.
+
+**D20.4 — Troca de seção com crossfade de 0,8 s.**
+
+**D20.5 — Risco com dado real**, perceptível também na nebulosa.
+
+**D20.6 — Tela imersiva = modo apresentação do Dashboard** (tela cheia por
+botão).
+
+**D20.7 — Pôster por linguagem** com movimento reduzido e no celular, com
+capricho nos detalhes.
+

@@ -6,6 +6,23 @@
 
 ## Status
 
+**🚧 2026-11-23 — Atmosferas 3D por seção (ADR-060, D20).** Branch `feat/atmosfera-3d` a partir da `dev` @ `effd32a`.
+
+- Nebulosa no Dashboard, relevo com radar e pings no monitoramento, ASCII no trabalho técnico e nada em formulários. Crossfade de 0,8 s.
+- Modo apresentação do Dashboard.
+- Risco real (Dashboard, Remediação, Threat Intel).
+- Pôster em canvas 2D com movimento reduzido, no celular, sem WebGL2 e em "Pausar animações".
+- Laboratório `/lab-3d` só em desenvolvimento.
+
+Validado na stack Docker (:8086) logado como ADMIN: atmosfera certa em cada seção, crossfade com a camada anterior removida, apresentação em tela cheia com teto de 0,32, pôsteres com movimento reduzido e tema claro.
+
+Web 718/720. As 2 falhas são do `findings-table.test.tsx`, que já estava fora do git antes desta branch. Lint 0 erros, contraste OK, build OK (three só em chunk lazy).
+
+- [ ] ATM-FUT-01 — Medir o fps na GPU do Rafael e numa integrada (Iris Xe) nos dois modos; o headless (SwiftShader, CPU) não serve de referência.
+- [ ] ATM-FUT-02 — O tema claro é discreto (blending normal, teto de 0,24): avaliar com o Rafael se precisa de mais presença dentro do AA.
+- [ ] ATM-FUT-03 — Refazer o mapa 3D do Exposure Graph na linguagem nova (shaders próprios); hoje a tela fica sem atmosfera para não disputar com ele.
+- [ ] ATM-FUT-04 — Aplicações e Projetos ainda usam o risco neutro: publicar um risco a partir dos dados dessas telas.
+
 **🚧 2026-11-18 — Fila BullMQ com worker desacoplável e scans DAST agendados (ADR-056, issue #76).** Branches `feat/fila-fase0-adr` a `feat/fila-fase6-docs`, empilhadas a partir da `dev` @ `95f3252`. O padrão continua `QUEUE_DRIVER=memory` (comportamento de antes); `bullmq` é opt-in.
 
 - [x] FILA-00 — ADR-056 e texto revisado da issue #76 (fora do git). Investigação: fila DAST em memória, findings idempotentes por `@@unique`, visibilidade de scans por requester, simulado fora das métricas só pela promoção.

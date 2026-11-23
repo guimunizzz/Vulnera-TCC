@@ -233,7 +233,43 @@ OWASP ZAP (com o limite dito na página), importação SAST/SCA, Threat Intel,
 visão unificada e Exposure Graph. A lista do que foi removido e por quê está
 em `output/landing-pintura/RELATORIO.md`.
 
-## Fundo único da área autenticada
+## Atmosferas por seção (2026-11-23, ADR-060)
+
+Desde o ADR-060 o `AppLayout` monta `AtmosferaDaPlataforma`
+(`features/atmosfera-3d/`) no lugar da `DashboardAtmosphere`. A atmosfera
+depende da seção (`rotas.ts`):
+
+- **Nebulosa:** Dashboard.
+- **Relevo com radar:** Aplicações, Projetos, Threat Intel e Remediação.
+- **ASCII:** Findings, DAST, SAST/SCA, Playbooks, Agendamentos e Nova análise.
+- **Nenhuma:** SLA, Aprovações, Filas, Maturidade e Exposure Graph.
+
+A troca de seção faz crossfade de 0,8 s. A camada nova aparece depois do
+primeiro quadro, e a anterior apaga e sai do DOM.
+
+- **Teto de AA na camada (CSS):** 0,30/0,24 na plataforma e 0,32/0,40 no
+  modo apresentação (`config.ts`, teste `atmosfera-3d-contrast.test.ts`). A
+  cena desenha cheia por dentro. O ASCII animado continua com o teto próprio,
+  aplicado no shader.
+- **Modo plataforma:** sem bloom, DPR ≤ 1,25, metade das partículas e da
+  malha. O efeito sob o cursor segue em cerca de 40 ms e só a câmera é lenta.
+- **Modo apresentação:** botão "Apresentar" no cabeçalho do Dashboard. O
+  `#conteudo` vai para tela cheia e a cena fica imersiva (bloom, e o clique
+  no fundo dispara ping). Sai com Esc ou pelo mesmo botão.
+- **Risco real:** Dashboard, Remediação e Threat Intel publicam o seu risco
+  (`risco.ts`, `usePublicarRisco`) a partir do que já carregaram. A cena
+  persegue o valor: mais pings e alertas magenta, relevo mais alto, mais
+  estrelas quentes.
+- **Pôster (`posteres.ts`):** canvas 2D, sem three e sem imagem. Entra com
+  movimento reduzido, tela estreita, sem WebGL2, "Pausar animações" ou falha
+  da cena. Com alto contraste não há decoração.
+- **Laboratório `/lab-3d`** (só em desenvolvimento): compara as linhas, os
+  modos, o tema, o risco e o pôster com a mesma opacidade do produto.
+
+O texto abaixo descreve o fundo anterior a 2026-11-23. Ele continua valendo
+para a camada ASCII, para a base CSS e para a pausa de Findings.
+
+### Fundo único da área autenticada (até 2026-11-22)
 
 `AppLayout` monta `operations-backdrop.css` e `DashboardAtmosphere` uma vez,
 como camadas sem interação sob `operations-content`. A base CSS desenha uma
