@@ -16,12 +16,14 @@
 
 Validado na stack Docker (:8086) logado como ADMIN: atmosfera certa em cada seção, crossfade com a camada anterior removida, apresentação em tela cheia com teto de 0,32, pôsteres com movimento reduzido e tema claro.
 
-Web 718/720. As 2 falhas são do `findings-table.test.tsx`, que já estava fora do git antes desta branch. Lint 0 erros, contraste OK, build OK (three só em chunk lazy).
+Segunda rodada (D21): web **725/727**. As 2 falhas são do `findings-table.test.tsx`, que estava fora do git antes desta branch e não entra nela. Lint 0 erros, contraste OK, build OK (three só em chunk lazy). E2E `exposure-graph` 3/3. `cybergraph` passa caso a caso, com a instabilidade ATM-FUT-06 que já existia.
 
-- [ ] ATM-FUT-01 — Medir o fps na GPU do Rafael e numa integrada (Iris Xe) nos dois modos; o headless (SwiftShader, CPU) não serve de referência.
-- [ ] ATM-FUT-02 — O tema claro é discreto (blending normal, teto de 0,24): avaliar com o Rafael se precisa de mais presença dentro do AA.
-- [ ] ATM-FUT-03 — Refazer o mapa 3D do Exposure Graph na linguagem nova (shaders próprios); hoje a tela fica sem atmosfera para não disputar com ele.
-- [ ] ATM-FUT-04 — Aplicações e Projetos ainda usam o risco neutro: publicar um risco a partir dos dados dessas telas.
+- [ ] ATM-FUT-01 — ✅ parcial (2026-11-23): na RTX 3060 Ti do Rafael a página fica a 240 fps em todos os cenários (p95 4,3 ms; `docs/evidencias/atmosfera-3d/`). **Falta** medir numa GPU integrada (Iris Xe).
+- [x] ATM-FUT-02 — ✅ 2026-11-23 (D21.5): teto do claro de 0,24 para 0,32 e traço/partícula mais grossos.
+- [x] ATM-FUT-03 — ✅ 2026-11-23, substituída (D21.3): o mapa 3D não é refeito. O grafo 2D recebeu acabamento (halos, ping, pacotes, palco com radar) e a atmosfera some na aba do mapa. ~~Refazer o mapa 3D na linguagem nova.~~
+- [x] ATM-FUT-04 — ✅ 2026-11-23 (D21.4): Aplicações publica a superfície de exposição; Projetos fica neutro por decisão.
+- [x] ATM-FUT-05 — ✅ 2026-11-23 (D21.1): Exposure Graph, SLA, Aprovações e Filas tinham ficado sem fundo. Formulários ganham o ASCII parado e o Exposure Graph o relevo.
+- [ ] ATM-FUT-06 — E2E `cybergraph.spec.ts` instável (CG-02/CG-06 alternam): o scan simulado chega a COMPLETED mas os sensores seguem acrescentando nós (16 → 33 durante o teste). Passam isolados. Esperar a contagem estabilizar antes de medir. Existia antes desta branch; não foi corrigido aqui.
 
 **🚧 2026-11-18 — Fila BullMQ com worker desacoplável e scans DAST agendados (ADR-056, issue #76).** Branches `feat/fila-fase0-adr` a `feat/fila-fase6-docs`, empilhadas a partir da `dev` @ `95f3252`. O padrão continua `QUEUE_DRIVER=memory` (comportamento de antes); `bullmq` é opt-in.
 

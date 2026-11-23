@@ -41,7 +41,7 @@ um modo apresentação do Dashboard e um pôster para quando a cena não roda.
    | Nebulosa | o todo | Dashboard |
    | Relevo + radar | vigilância da superfície de risco | Aplicações, Projetos, Threat Intel, Remediação |
    | ASCII | trabalho técnico cru | Findings, DAST, SAST/SCA, Playbooks, Agendamentos, Nova análise |
-   | Nenhuma | formulário/configuração; tela que já tem 3D | SLA, Aprovações, Filas, Maturidade, Exposure Graph |
+   | Nenhuma | formulário/configuração; tela que já tem 3D | SLA, Aprovações, Filas, Maturidade, Exposure Graph — *substituída na segunda rodada, ver Atualização* |
 
    Uma rota que não está na tabela fica com o ASCII.
 
@@ -85,6 +85,36 @@ um modo apresentação do Dashboard e um pôster para quando a cena não roda.
    estrelas, mesmas ondas do ASCII. As cores vêm dos tokens na hora do
    desenho. Com alto contraste não há decoração nenhuma.
 
+## Atualização — 2026-11-23, segunda rodada (D21)
+
+Depois da primeira entrega, o Rafael apontou que Exposure Graph, SLA,
+Aprovações e Filas tinham ficado "sem fundo".
+
+- **Formulários com ASCII parado.** SLA, Aprovações, Filas e Maturidade
+  mostram o pôster ASCII, sem movimento: o fundo existe e o foco continua no
+  preenchimento. `rotas.ts` passa a devolver `{ linguagem, parada }`.
+- **O Exposure Graph vai para o relevo e o fundo acompanha o grafo.** A
+  página publica o risco das vulnerabilidades abertas, pede um ping a cada
+  seleção (`pingarAtmosfera`) e suprime a atmosfera na aba **Mapa 3D**
+  (`useSuprimirAtmosfera`), que tem a própria cena. O store
+  (`atmosfera.store.ts`) concentra risco, supressão e sinal de ping. Risco e
+  supressão têm dono.
+- **O 2D é a visão principal e recebeu acabamento**, no `CyberGraph2D`
+  compartilhado:
+  - corpo do nó com degradê;
+  - halo de severidade (o crítico respira);
+  - ping de radar na seleção;
+  - pacotes de luz até os nós graves;
+  - rótulos com contorno;
+  - palco com anéis e varredura.
+
+  Halo e ping ficam numa camada fora do botão do nó, para a animação não
+  mexer na caixa clicável. O mapa 3D antigo **não** foi refeito.
+- **Aplicações publica a superfície de exposição** (criticidade, Internet,
+  dados, produção). Projetos continua neutro.
+- **Tema claro:** o teto da plataforma passa de 0,24 para 0,32 (o AA aguenta
+  0,40), e o traço do relevo e as partículas ficam mais grossos.
+
 ## Alternativas descartadas
 
 - **Uma atmosfera só** (antes): não aproveita o 3D novo e trata o trabalho
@@ -100,9 +130,8 @@ um modo apresentação do Dashboard e um pôster para quando a cena não roda.
 - O three fica em chunks lazy (`cena-3d-canvas`, `palette`). O pôster tem
   chunk próprio de cerca de 9 kB, sem three.
 - O tema claro é mais discreto que o escuro (blending normal, teto de 0,24).
-- O mapa 3D do Exposure Graph continua como era. A tela fica sem atmosfera
-  para não disputar com ele, e refazê-lo na linguagem nova é trabalho
-  futuro.
+- O mapa 3D do Exposure Graph continua como era. Na aba dele a atmosfera
+  some (D21.2). O esforço visual foi para o grafo 2D (D21.3).
 
 ## Relacionado
 

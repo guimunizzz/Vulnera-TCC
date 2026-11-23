@@ -1085,3 +1085,29 @@ botão).
 **D20.7 — Pôster por linguagem** com movimento reduzido e no celular, com
 capricho nos detalhes.
 
+## D21 — Atmosferas: pendências da primeira entrega (2026-11-23)
+
+Respostas do Rafael na segunda rodada de perguntas (branch
+`feat/atmosfera-3d`). Arquitetura em
+[ADR-060 §Atualização](Vulnera/07-Decisoes/ADR-060%20-%20Atmosferas%20por%20secao%20na%20area%20autenticada.md).
+
+**D21.1 — Fundo das telas que ficaram sem cena:** escolha delegada ao agente.
+Formulários (SLA, Aprovações, Filas, Maturidade) recebem o ASCII **parado**
+(pôster). O Exposure Graph recebe o relevo.
+
+**D21.2 — Na aba Mapa 3D do Exposure Graph, o mapa assume:** a atmosfera
+some.
+
+**D21.3 — O mapa 3D não é refeito.** O 2D vira o principal, "trabalhado bem",
+e o fundo acompanha de forma sutil.
+
+**D21.4 — Risco:** Aplicações pela superfície de exposição (contexto de
+negócio); Projetos continua neutro.
+
+**D21.5 — Tema claro:** teto maior (0,32) e um pouco mais de traço.
+
+**D21.6 — FPS medido na GPU do Rafael** com o Chrome visível (evidências em
+`docs/evidencias/atmosfera-3d/`).
+
+**D21.7 — Commits por bloco**, na mesma branch, sem push.
+
