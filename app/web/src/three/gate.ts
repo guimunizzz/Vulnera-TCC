@@ -38,7 +38,17 @@ export function suportaWebGL2(): boolean {
   return typeof window !== "undefined" && "WebGL2RenderingContext" in window;
 }
 
-export function useCenaPermitida({ larguraMinima = LARGURA_MINIMA_PADRAO }: { larguraMinima?: number } = {}): boolean {
+/**
+ * O que a decoração pode ser nesta sessão:
+ *   animada — a cena three.js roda
+ *   poster  — um quadro parado (desenhado em canvas 2D, sem three): movimento
+ *             reduzido, tela estreita ou navegador sem WebGL2
+ *   nenhuma — alto contraste: o fundo fica liso, nem pôster (mesma razão do
+ *             bloqueio da cena: o teto de opacidade é de AA, não de AAA)
+ */
+export type ModoDeCena = "animada" | "poster" | "nenhuma";
+
+export function useModoDeCena({ larguraMinima = LARGURA_MINIMA_PADRAO }: { larguraMinima?: number } = {}): ModoDeCena {
   const { reduzido } = useMotion();
   const { altoContraste } = usePreferenciasAcessibilidade();
   const consulta = `(max-width: ${larguraMinima - 1}px)`;
@@ -52,5 +62,10 @@ export function useCenaPermitida({ larguraMinima = LARGURA_MINIMA_PADRAO }: { la
     return () => media.removeEventListener("change", atualizar);
   }, [consulta]);
 
-  return !reduzido && !altoContraste && !estreita && suportaWebGL2();
+  if (altoContraste) return "nenhuma";
+  return !reduzido && !estreita && suportaWebGL2() ? "animada" : "poster";
+}
+
+export function useCenaPermitida(opcoes: { larguraMinima?: number } = {}): boolean {
+  return useModoDeCena(opcoes) === "animada";
 }
