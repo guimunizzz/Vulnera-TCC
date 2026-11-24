@@ -57,6 +57,8 @@ import type { AssigneeCandidate, User } from "../types/auth.types";
 import { NumeroAnimado } from "../motion/components";
 import { useMotion } from "../motion/use-motion";
 import { riscoDaRemediacao } from "../features/atmosfera-3d/risco";
+import { CalendarioDePrazos } from "../components/sla/calendario-de-prazos";
+import { Tabs } from "../components/ui/tabs";
 import { usePublicarRisco } from "../features/atmosfera-3d/atmosfera.store";
 import "./remediation-page.css";
 
@@ -195,161 +197,176 @@ export function RemediationPage() {
         </dl>
       </header>
 
-      <Card titulo="Recorte do quadro" descricao="Escolha o projeto e a pessoa responsável." className="remediation-filters">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field rotulo="Projeto">
-            {(props) => (
-              <Select
-                {...props}
-                valor={projetoFiltrado}
-                aoMudar={(v) => trocarFiltro("projectId", v)}
-                opcoes={[
-                  { valor: "", rotulo: "Todos os projetos" },
-                  ...(projetos.data ?? []).map((p) => ({ valor: p.id, rotulo: p.name })),
-                ]}
-              />
-            )}
-          </Field>
+      {/* Quadro e calendário de prazos (ADR-062): a mesma fila vista pelo fluxo ou pelo vencimento. */}
+      <Tabs
+        paramUrl="vista"
+        abas={[
+          {
+            id: "quadro",
+            rotulo: "Quadro",
+            conteudo: (
+              <div className="space-y-5">
+                <Card titulo="Recorte do quadro" descricao="Escolha o projeto e a pessoa responsável." className="remediation-filters">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field rotulo="Projeto">
+                      {(props) => (
+                        <Select
+                          {...props}
+                          valor={projetoFiltrado}
+                          aoMudar={(v) => trocarFiltro("projectId", v)}
+                          opcoes={[
+                            { valor: "", rotulo: "Todos os projetos" },
+                            ...(projetos.data ?? []).map((p) => ({ valor: p.id, rotulo: p.name })),
+                          ]}
+                        />
+                      )}
+                    </Field>
 
-          <Field rotulo="Responsável">
-            {(props) => (
-              <Select
-                {...props}
-                valor={responsavelFiltrado}
-                aoMudar={(v) => trocarFiltro("assignedTo", v)}
-                opcoes={[
-                  { valor: "", rotulo: "Qualquer responsável" },
-                  ...(usuarioAtual ? [{ valor: usuarioAtual.id, rotulo: "Atribuídos a mim" }] : []),
-                  // "none" é o valor que a API entende como IS NULL.
-                  { valor: "none", rotulo: "Sem responsável" },
-                  ...(candidatosDoFiltro.data ?? [])
-                    .filter((u) => u.id !== usuarioAtual?.id)
-                    .map((u) => ({ valor: u.id, rotulo: u.name })),
-                ]}
-              />
-            )}
-          </Field>
-        </div>
-      </Card>
+                    <Field rotulo="Responsável">
+                      {(props) => (
+                        <Select
+                          {...props}
+                          valor={responsavelFiltrado}
+                          aoMudar={(v) => trocarFiltro("assignedTo", v)}
+                          opcoes={[
+                            { valor: "", rotulo: "Qualquer responsável" },
+                            ...(usuarioAtual ? [{ valor: usuarioAtual.id, rotulo: "Atribuídos a mim" }] : []),
+                            // "none" é o valor que a API entende como IS NULL.
+                            { valor: "none", rotulo: "Sem responsável" },
+                            ...(candidatosDoFiltro.data ?? [])
+                              .filter((u) => u.id !== usuarioAtual?.id)
+                              .map((u) => ({ valor: u.id, rotulo: u.name })),
+                          ]}
+                        />
+                      )}
+                    </Field>
+                  </div>
+                </Card>
 
-      {erro && (
-        <Alert tom="perigo" aoFechar={() => setErro(null)}>
-          {erro}
-        </Alert>
-      )}
-      <p className="sr-only" role="status" aria-live="polite">
-        {movimentoConfirmado ? "Finding movido para a nova etapa." : ""}
-      </p>
+                {erro && (
+                  <Alert tom="perigo" aoFechar={() => setErro(null)}>
+                    {erro}
+                  </Alert>
+                )}
+                <p className="sr-only" role="status" aria-live="polite">
+                  {movimentoConfirmado ? "Finding movido para a nova etapa." : ""}
+                </p>
 
-      {busca.isLoading && (
-        <div className="grid gap-4 lg:grid-cols-3" aria-busy="true" aria-label="Carregando quadro de remediação">
-          <span className="sr-only">Carregando quadro de remediação</span>
-          {COLUNAS.map((coluna) => <div key={coluna.status} className="remediation-column rounded-container border border-subtle p-4"><Skeleton className="h-6 w-[8rem]" /><Skeleton className="mt-3 h-4 w-[11rem]" /><Skeleton className="mt-6 h-[10rem] w-full" /><Skeleton className="mt-3 h-[10rem] w-full" /></div>)}
-        </div>
-      )}
-
-      {busca.isError && <ErrorState titulo="Não foi possível carregar o quadro" descricao={getErrorMessage(busca.error)} aoTentarNovamente={() => void busca.refetch()} />}
-
-      {busca.isSuccess && (
-        <LayoutGroup id={`remediation-${paramsDaBusca.toString()}`}>
-        <motion.div className="grid items-start gap-4 lg:grid-cols-3" variants={troca} initial="inicial" animate="visivel">
-          {COLUNAS.map((coluna) => {
-            const itens = porColuna.get(coluna.status) ?? [];
-            return (
-              <motion.section
-                key={coluna.status}
-                aria-label={`${coluna.titulo}: ${itens.length} finding(s)`}
-                className={`remediation-column remediation-column--${coluna.status.toLowerCase()} flex min-w-0 flex-col gap-3 rounded-container border border-subtle p-3 sm:p-4`}
-                variants={item}
-                initial={jaMostrouQuadro.current ? false : "inicial"}
-                animate="visivel"
-              >
-                <header className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2"><span aria-hidden="true" className="remediation-column-dot" /><h2 className="text-base font-semibold text-fg">{coluna.titulo}</h2></div>
-                  <span className="rounded-control border border-subtle px-2 py-1 font-mono text-sm tabular-nums text-fg-secondary">{itens.length}</span>
-                </header>
-                <p className="-mt-2 pl-4 text-sm text-fg-muted">{coluna.descricao}</p>
-
-                {itens.length === 0 && (
-                  <p className="remediation-empty rounded-control border border-dashed border-subtle p-6 text-center text-sm text-fg-muted">
-                    Nenhum finding nesta etapa.
-                  </p>
+                {busca.isLoading && (
+                  <div className="grid gap-4 lg:grid-cols-3" aria-busy="true" aria-label="Carregando quadro de remediação">
+                    <span className="sr-only">Carregando quadro de remediação</span>
+                    {COLUNAS.map((coluna) => <div key={coluna.status} className="remediation-column rounded-container border border-subtle p-4"><Skeleton className="h-6 w-[8rem]" /><Skeleton className="mt-3 h-4 w-[11rem]" /><Skeleton className="mt-6 h-[10rem] w-full" /><Skeleton className="mt-3 h-[10rem] w-full" /></div>)}
+                  </div>
                 )}
 
-                <motion.ul className="flex flex-col gap-3" variants={lista} initial={jaMostrouQuadro.current ? false : "inicial"} animate="visivel">
-                  {itens.map((f, index) => {
-                    const destinos = ALLOWED_TRANSITIONS[f.status as VulnerabilityStatus] ?? [];
-                    const responsavel = f.assigneeName;
-                    const movendo = mover.isPending && mover.variables?.id === f.id;
-                    const atribuindo = atribuir.isPending && atribuir.variables?.id === f.id;
+                {busca.isError && <ErrorState titulo="Não foi possível carregar o quadro" descricao={getErrorMessage(busca.error)} aoTentarNovamente={() => void busca.refetch()} />}
 
-                    return (
-                      <motion.li key={f.id} variants={index < 12 ? item : undefined} initial={jaMostrouQuadro.current ? false : "inicial"} animate="visivel">
-                        <motion.article
-                          layoutId={reduzido ? undefined : `finding-${f.id}`}
-                          transition={{ layout }}
-                          data-moving={movendo || undefined}
-                          data-confirmed={ultimaMovimentacao?.id === f.id && ultimaMovimentacao.status === f.status || undefined}
-                          data-assigned={ultimaAtribuicao?.id === f.id && ultimaAtribuicao.assignedTo === f.assignedTo || undefined}
-                          className="remediation-finding space-y-3 rounded-control border border-subtle bg-raised p-4"
+                {busca.isSuccess && (
+                  <LayoutGroup id={`remediation-${paramsDaBusca.toString()}`}>
+                  <motion.div className="grid items-start gap-4 lg:grid-cols-3" variants={troca} initial="inicial" animate="visivel">
+                    {COLUNAS.map((coluna) => {
+                      const itens = porColuna.get(coluna.status) ?? [];
+                      return (
+                        <motion.section
+                          key={coluna.status}
+                          aria-label={`${coluna.titulo}: ${itens.length} finding(s)`}
+                          className={`remediation-column remediation-column--${coluna.status.toLowerCase()} flex min-w-0 flex-col gap-3 rounded-container border border-subtle p-3 sm:p-4`}
+                          variants={item}
+                          initial={jaMostrouQuadro.current ? false : "inicial"}
+                          animate="visivel"
                         >
-                          <Link
-                            to={`/findings/${f.id}`}
-                            className="block rounded-control text-sm font-semibold leading-6 text-fg underline-offset-2 hover:text-accent-ink hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                          >
-                            {f.title}
-                          </Link>
+                          <header className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2"><span aria-hidden="true" className="remediation-column-dot" /><h2 className="text-base font-semibold text-fg">{coluna.titulo}</h2></div>
+                            <span className="rounded-control border border-subtle px-2 py-1 font-mono text-sm tabular-nums text-fg-secondary">{itens.length}</span>
+                          </header>
+                          <p className="-mt-2 pl-4 text-sm text-fg-muted">{coluna.descricao}</p>
 
-                          <div className="flex flex-wrap items-center gap-2">
-                            <SeverityBadge severidade={f.severityFinal} cvss={f.cvssScore} />
-                            {f.vrsScore != null && <VrsBadge score={f.vrsScore} band={f.vrsBand} />}
-                            <SlaBadge state={f.slaState} remainingMs={f.slaRemainingMs} dueAt={f.slaDueAt} />
-                          </div>
+                          {itens.length === 0 && (
+                            <p className="remediation-empty rounded-control border border-dashed border-subtle p-6 text-center text-sm text-fg-muted">
+                              Nenhum finding nesta etapa.
+                            </p>
+                          )}
 
-                          <p className="text-sm text-fg-muted">
-                            {f.projectName}
-                            {responsavel ? ` · ${responsavel}` : " · sem responsável"}
-                          </p>
+                          <motion.ul className="flex flex-col gap-3" variants={lista} initial={jaMostrouQuadro.current ? false : "inicial"} animate="visivel">
+                            {itens.map((f, index) => {
+                              const destinos = ALLOWED_TRANSITIONS[f.status as VulnerabilityStatus] ?? [];
+                              const responsavel = f.assigneeName;
+                              const movendo = mover.isPending && mover.variables?.id === f.id;
+                              const atribuindo = atribuir.isPending && atribuir.variables?.id === f.id;
 
-                          <div className="flex flex-wrap gap-2 border-t border-subtle pt-3">
-                            {/* Menu, não arrastar: operável por teclado e só com
-                                as transições que o backend aceita. */}
-                            <DropdownMenu
-                              rotulo={`Mover "${f.title}" para outra etapa`}
-                              gatilho={
-                                <Button variant="secundario" size="sm" disabled={movendo || atribuindo}>
-                                  {movendo ? "Movendo…" : "Mover para…"}
-                                </Button>
-                              }
-                              itens={destinos.map((destino) => ({
-                                id: destino,
-                                rotulo: transitionLabel(f.status as VulnerabilityStatus, destino),
-                                aoEscolher: () => mover.mutate({ id: f.id, status: destino }),
-                              }))}
-                            />
+                              return (
+                                <motion.li key={f.id} variants={index < 12 ? item : undefined} initial={jaMostrouQuadro.current ? false : "inicial"} animate="visivel">
+                                  <motion.article
+                                    layoutId={reduzido ? undefined : `finding-${f.id}`}
+                                    transition={{ layout }}
+                                    data-moving={movendo || undefined}
+                                    data-confirmed={ultimaMovimentacao?.id === f.id && ultimaMovimentacao.status === f.status || undefined}
+                                    data-assigned={ultimaAtribuicao?.id === f.id && ultimaAtribuicao.assignedTo === f.assignedTo || undefined}
+                                    className="remediation-finding space-y-3 rounded-control border border-subtle bg-raised p-4"
+                                  >
+                                    <Link
+                                      to={`/findings/${f.id}`}
+                                      className="block rounded-control text-sm font-semibold leading-6 text-fg underline-offset-2 hover:text-accent-ink hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                                    >
+                                      {f.title}
+                                    </Link>
 
-                            <AssigneeMenu
-                              finding={f}
-                              usuarioAtual={usuarioAtual}
-                              disabled={movendo || atribuindo}
-                              onAssign={(assignedTo) => {
-                                setUltimaAtribuicao(null);
-                                atribuir.mutate({ id: f.id, assignedTo });
-                              }}
-                            />
-                            {atribuindo && <span className="self-center text-xs text-fg-muted" role="status">Atualizando…</span>}
-                          </div>
-                        </motion.article>
-                      </motion.li>
-                    );
-                  })}
-                </motion.ul>
-              </motion.section>
-            );
-          })}
-        </motion.div>
-        </LayoutGroup>
-      )}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <SeverityBadge severidade={f.severityFinal} cvss={f.cvssScore} />
+                                      {f.vrsScore != null && <VrsBadge score={f.vrsScore} band={f.vrsBand} />}
+                                      <SlaBadge state={f.slaState} remainingMs={f.slaRemainingMs} dueAt={f.slaDueAt} />
+                                    </div>
+
+                                    <p className="text-sm text-fg-muted">
+                                      {f.projectName}
+                                      {responsavel ? ` · ${responsavel}` : " · sem responsável"}
+                                    </p>
+
+                                    <div className="flex flex-wrap gap-2 border-t border-subtle pt-3">
+                                      {/* Menu, não arrastar: operável por teclado e só com
+                                          as transições que o backend aceita. */}
+                                      <DropdownMenu
+                                        rotulo={`Mover "${f.title}" para outra etapa`}
+                                        gatilho={
+                                          <Button variant="secundario" size="sm" disabled={movendo || atribuindo}>
+                                            {movendo ? "Movendo…" : "Mover para…"}
+                                          </Button>
+                                        }
+                                        itens={destinos.map((destino) => ({
+                                          id: destino,
+                                          rotulo: transitionLabel(f.status as VulnerabilityStatus, destino),
+                                          aoEscolher: () => mover.mutate({ id: f.id, status: destino }),
+                                        }))}
+                                      />
+
+                                      <AssigneeMenu
+                                        finding={f}
+                                        usuarioAtual={usuarioAtual}
+                                        disabled={movendo || atribuindo}
+                                        onAssign={(assignedTo) => {
+                                          setUltimaAtribuicao(null);
+                                          atribuir.mutate({ id: f.id, assignedTo });
+                                        }}
+                                      />
+                                      {atribuindo && <span className="self-center text-xs text-fg-muted" role="status">Atualizando…</span>}
+                                    </div>
+                                  </motion.article>
+                                </motion.li>
+                              );
+                            })}
+                          </motion.ul>
+                        </motion.section>
+                      );
+                    })}
+                  </motion.div>
+                  </LayoutGroup>
+                )}
+              </div>
+            ),
+          },
+          { id: "calendario", rotulo: "Calendário de prazos", conteudo: <CalendarioDePrazos /> },
+        ]}
+      />
     </div>
   );
 }
