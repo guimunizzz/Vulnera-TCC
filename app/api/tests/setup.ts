@@ -32,6 +32,8 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.codeScanImport.deleteMany();
   await prisma.evidence.deleteMany();
   await prisma.vulnerabilityComment.deleteMany();
+  // GraphComment (ADR-061) antes de User: authorId é RESTRICT.
+  await prisma.graphComment.deleteMany();
   await prisma.vulnerability.deleteMany();
   await prisma.projectMember.deleteMany();
   await prisma.project.deleteMany();

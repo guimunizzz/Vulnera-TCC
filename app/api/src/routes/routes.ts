@@ -19,6 +19,7 @@ import { codeScanRoutes } from "./code-scan.routes";
 import { threatIntelRoutes } from "./threat-intel.routes";
 import { dastScheduleRoutes } from "./dast-schedules.routes";
 import { adminQueuesRoutes } from "./admin-queues.routes";
+import { graphCommentRoutes } from "./graph-comment.routes";
 
 const router = Router();
 
@@ -53,5 +54,6 @@ router.use("/threat-intel", threatIntelRoutes);
 router.use("/dast-schedules", dastScheduleRoutes);
 // ADR-056 — painel de filas do ADMIN (contagens, falhas, reprocessar job com falha).
 router.use("/admin/queues", adminQueuesRoutes);
+router.use("/graph-comments", graphCommentRoutes);
 
 export { router as apiRoutes };
