@@ -141,7 +141,7 @@ export class TriageInboxService {
         const escopo = await this.fontes.threatIntel.escopo(actor, empresa.id).catch(() => null);
         if (!escopo?.permissoes.triar) return [];
         const casamentos = await this.fontes.threatIntel.listarCasamentos(actor, escopo.companyId, { triagem: "NEW" }).catch(() => []);
-        return casamentos.slice(0, LIMITE_POR_FONTE).map(
+        return casamentos.map(
           (m): ItemDaCaixaDTO => ({
             fonte: "THREAT_INTEL",
             id: m.id,
@@ -156,6 +156,7 @@ export class TriageInboxService {
         );
       }),
     );
-    return porEmpresa.flat();
+    // O corte é da fonte inteira, não por empresa: senão a soma passaria do limite e o "200+" mentiria.
+    return ordenarItens(porEmpresa.flat()).slice(0, LIMITE_POR_FONTE);
   }
 }
