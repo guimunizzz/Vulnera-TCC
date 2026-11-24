@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { chaveLocal, montarCalendario, type PrazoAberto } from "./calendario-de-prazos";
+import { chaveLocal, montarCalendario, prazosDosAchados, type PrazoAberto } from "./calendario-de-prazos";
 
 // Quarta-feira, 18/11/2026, 10h local.
 const HOJE = new Date(2026, 10, 18, 10, 0, 0);
@@ -49,3 +49,17 @@ describe("montarCalendario", () => {
     expect(cal.semanas[0][0]).toMatchObject({ peso: 0, nivel: 0 });
   });
 });
+
+describe("prazosDosAchados", () => {
+  it("CAL-04 — só abertas (OPEN/IN_PROGRESS) com prazo", () => {
+    const base = { title: "t", severityFinal: "HIGH", applicationName: "App" };
+    const prazos = prazosDosAchados([
+      { ...base, id: "a", status: "OPEN", slaDueAt: "2026-12-01T00:00:00.000Z" },
+      { ...base, id: "b", status: "IN_PROGRESS", slaDueAt: "2026-12-02T00:00:00.000Z" },
+      { ...base, id: "c", status: "FIXED", slaDueAt: "2026-12-03T00:00:00.000Z" },
+      { ...base, id: "d", status: "OPEN", slaDueAt: null },
+    ]);
+    expect(prazos.map((p) => p.id)).toEqual(["a", "b"]);
+  });
+});
+

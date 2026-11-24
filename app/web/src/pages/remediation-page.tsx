@@ -37,6 +37,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { vulnerabilitiesApi } from "../lib/api/vulnerabilities.api";
 import { buscarTodosFindings } from "../lib/remediation-board";
+import { prazosDosAchados } from "../lib/calendario-de-prazos";
 import { projectsApi } from "../lib/api/projects.api";
 import { useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
@@ -156,6 +157,9 @@ export function RemediationPage() {
   usePublicarRisco(busca.data ? riscoDaRemediacao(busca.data.data) : undefined);
 
   const totalNoQuadro = busca.data?.data.length;
+  // O calendário usa a busca do quadro (mesmo recorte) em vez de paginar a busca de novo.
+  const dadosDosPrazos = useMemo(() => (busca.data ? prazosDosAchados(busca.data.data) : undefined), [busca.data]);
+  const prazosDoQuadro = { data: dadosDosPrazos, isLoading: busca.isLoading, isError: busca.isError, error: busca.error, refetch: busca.refetch };
   const movimentoConfirmado = ultimaMovimentacao && busca.data?.data.some(
     (finding) => finding.id === ultimaMovimentacao.id && finding.status === ultimaMovimentacao.status,
   );
@@ -197,6 +201,43 @@ export function RemediationPage() {
         </dl>
       </header>
 
+      <Card titulo="Recorte" descricao="Escolha o projeto e a pessoa responsável. Vale para o quadro e para o calendário." className="remediation-filters">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field rotulo="Projeto">
+            {(props) => (
+              <Select
+                {...props}
+                valor={projetoFiltrado}
+                aoMudar={(v) => trocarFiltro("projectId", v)}
+                opcoes={[
+                  { valor: "", rotulo: "Todos os projetos" },
+                  ...(projetos.data ?? []).map((p) => ({ valor: p.id, rotulo: p.name })),
+                ]}
+              />
+            )}
+          </Field>
+
+          <Field rotulo="Responsável">
+            {(props) => (
+              <Select
+                {...props}
+                valor={responsavelFiltrado}
+                aoMudar={(v) => trocarFiltro("assignedTo", v)}
+                opcoes={[
+                  { valor: "", rotulo: "Qualquer responsável" },
+                  ...(usuarioAtual ? [{ valor: usuarioAtual.id, rotulo: "Atribuídos a mim" }] : []),
+                  // "none" é o valor que a API entende como IS NULL.
+                  { valor: "none", rotulo: "Sem responsável" },
+                  ...(candidatosDoFiltro.data ?? [])
+                    .filter((u) => u.id !== usuarioAtual?.id)
+                    .map((u) => ({ valor: u.id, rotulo: u.name })),
+                ]}
+              />
+            )}
+          </Field>
+        </div>
+      </Card>
+
       {/* Quadro e calendário de prazos (ADR-062): a mesma fila vista pelo fluxo ou pelo vencimento. */}
       <Tabs
         paramUrl="vista"
@@ -206,42 +247,6 @@ export function RemediationPage() {
             rotulo: "Quadro",
             conteudo: (
               <div className="space-y-5">
-                <Card titulo="Recorte do quadro" descricao="Escolha o projeto e a pessoa responsável." className="remediation-filters">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field rotulo="Projeto">
-                      {(props) => (
-                        <Select
-                          {...props}
-                          valor={projetoFiltrado}
-                          aoMudar={(v) => trocarFiltro("projectId", v)}
-                          opcoes={[
-                            { valor: "", rotulo: "Todos os projetos" },
-                            ...(projetos.data ?? []).map((p) => ({ valor: p.id, rotulo: p.name })),
-                          ]}
-                        />
-                      )}
-                    </Field>
-
-                    <Field rotulo="Responsável">
-                      {(props) => (
-                        <Select
-                          {...props}
-                          valor={responsavelFiltrado}
-                          aoMudar={(v) => trocarFiltro("assignedTo", v)}
-                          opcoes={[
-                            { valor: "", rotulo: "Qualquer responsável" },
-                            ...(usuarioAtual ? [{ valor: usuarioAtual.id, rotulo: "Atribuídos a mim" }] : []),
-                            // "none" é o valor que a API entende como IS NULL.
-                            { valor: "none", rotulo: "Sem responsável" },
-                            ...(candidatosDoFiltro.data ?? [])
-                              .filter((u) => u.id !== usuarioAtual?.id)
-                              .map((u) => ({ valor: u.id, rotulo: u.name })),
-                          ]}
-                        />
-                      )}
-                    </Field>
-                  </div>
-                </Card>
 
                 {erro && (
                   <Alert tom="perigo" aoFechar={() => setErro(null)}>
@@ -364,7 +369,7 @@ export function RemediationPage() {
               </div>
             ),
           },
-          { id: "calendario", rotulo: "Calendário de prazos", conteudo: <CalendarioDePrazos /> },
+          { id: "calendario", rotulo: "Calendário de prazos", conteudo: <CalendarioDePrazos fonte={prazosDoQuadro} /> },
         ]}
       />
     </div>

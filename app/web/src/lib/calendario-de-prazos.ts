@@ -27,6 +27,15 @@ export interface PrazoAberto {
   slaDueAt: string;
 }
 
+/** Das linhas da busca de achados, as abertas (OPEN/IN_PROGRESS) que têm prazo. */
+export function prazosDosAchados(
+  achados: ReadonlyArray<{ id: string; title: string; severityFinal: string; applicationName: string; status: string; slaDueAt?: string | null }>,
+): PrazoAberto[] {
+  return achados
+    .filter((f) => (f.status === "OPEN" || f.status === "IN_PROGRESS") && f.slaDueAt)
+    .map((f) => ({ id: f.id, title: f.title, severityFinal: f.severityFinal, applicationName: f.applicationName, slaDueAt: f.slaDueAt! }));
+}
+
 export interface DiaDoCalendario {
   /** "AAAA-MM-DD" no fuso local. */
   data: string;

@@ -16,7 +16,8 @@
  *
  * DADOS
  * As abertas com prazo, pela busca de achados (o escopo do papel é o da busca).
- * Uma consulta só, compartilhada entre Dashboard e Remediação pelo cache.
+ * Na Remediação, quem busca é o quadro e o calendário recebe a consulta pronta
+ * (`fonte`): duas paginações da busca ao mesmo tempo estouravam o rate limit.
  *
  * QUEM USA
  * O Dashboard (cartão compacto) e a Remediação (aba "Calendário").
@@ -32,7 +33,7 @@ import { ErrorState } from "../ui/empty-state";
 import { useApiError } from "../../hooks/use-api-error";
 import { vulnerabilitiesApi } from "../../lib/api/vulnerabilities.api";
 import { buscarTodosFindings } from "../../lib/remediation-board";
-import { montarCalendario, type DiaDoCalendario, type PrazoAberto } from "../../lib/calendario-de-prazos";
+import { montarCalendario, prazosDosAchados, type DiaDoCalendario, type PrazoAberto } from "../../lib/calendario-de-prazos";
 import { cn } from "../../lib/cn";
 
 const DIAS_DA_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
@@ -51,16 +52,24 @@ function rotuloDoDia(dia: DiaDoCalendario): string {
   return `${dataLonga(dia.data)}: ${n} prazo${n === 1 ? "" : "s"}${criticos ? `, ${criticos} crítico${criticos === 1 ? "" : "s"}` : ""}`;
 }
 
-/** As abertas com prazo de SLA (consulta compartilhada pelo cache). */
-function usePrazosAbertos() {
+/** Uma consulta de prazos já feita por quem usa o calendário (o quadro da Remediação). */
+export interface FonteDePrazos {
+  data?: PrazoAberto[];
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch(): unknown;
+}
+
+/** As abertas com prazo de SLA, quando o calendário busca sozinho (Dashboard). */
+function usePrazosAbertos(ativa: boolean) {
   return useQuery({
     queryKey: ["findings", "sla-calendario"],
+    enabled: ativa,
     queryFn: async (): Promise<PrazoAberto[]> => {
       const params = new URLSearchParams({ status: "OPEN,IN_PROGRESS", sortBy: "slaDueAt", sortOrder: "asc" });
       const resposta = await buscarTodosFindings(vulnerabilitiesApi.search, params);
-      return resposta.data
-        .filter((f) => f.slaDueAt)
-        .map((f) => ({ id: f.id, title: f.title, severityFinal: f.severityFinal, applicationName: f.applicationName, slaDueAt: f.slaDueAt! }));
+      return prazosDosAchados(resposta.data);
     },
     staleTime: 60_000,
   });
@@ -98,8 +107,9 @@ function ListaDePrazos({ titulo, itens }: { titulo: string; itens: PrazoAberto[]
   );
 }
 
-export function CalendarioDePrazos({ semanas = 13, compacto = false }: { semanas?: number; compacto?: boolean }) {
-  const prazos = usePrazosAbertos();
+export function CalendarioDePrazos({ semanas = 13, compacto = false, fonte }: { semanas?: number; compacto?: boolean; fonte?: FonteDePrazos }) {
+  const propria = usePrazosAbertos(!fonte);
+  const prazos: FonteDePrazos = fonte ?? propria;
   const mensagemDeErro = useApiError();
   const calendario = useMemo(() => montarCalendario(prazos.data ?? [], new Date(), semanas), [prazos.data, semanas]);
   const dias = useMemo(() => calendario.semanas.flat(), [calendario]);
