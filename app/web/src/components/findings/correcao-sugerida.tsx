@@ -133,7 +133,7 @@ export function CorrecaoSugerida({ origem }: { origem: OrigemDaCorrecao }) {
       {(advisory || referencia) && (
         <div className="flex flex-wrap gap-4 border-t border-subtle pt-3">
           {advisory && <LinkExterno href={advisory}>{origem.advisoryId?.toUpperCase().startsWith("CVE") ? "CVE no NVD" : "Advisory no GitHub"}</LinkExterno>}
-          {referencia && <LinkExterno href={referencia}>Referência da regra</LinkExterno>}
+          {referencia && <LinkExterno href={referencia}>{dependencia ? "Referência do relatório" : "Referência da regra"}</LinkExterno>}
         </div>
       )}
     </section>
