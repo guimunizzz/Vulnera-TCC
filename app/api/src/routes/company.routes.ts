@@ -2,6 +2,7 @@ import { Router } from "express";
 import { makeCompanyController } from "../factories/company.factory";
 import { makeMetricsController } from "../factories/metrics.factory";
 import { makeExposureGraphController } from "../factories/exposure-graph.factory";
+import { makeExposureAnalysisController } from "../factories/exposure-analysis.factory";
 import { makeSlaPolicyController } from "../factories/sla-policy.factory";
 import { authRateLimitMiddleware, endpointRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 import { requireRole } from "../middlewares/require-role.middleware";
@@ -10,6 +11,7 @@ const router = Router();
 const controller = makeCompanyController();
 const metricsController = makeMetricsController();
 const exposureGraphController = makeExposureGraphController();
+const exposureAnalysisController = makeExposureAnalysisController();
 // Política de SLA (CP-2) mora numa sub-rota de Company pela mesma razão das
 // métricas: a URL é aninhada (é governança DA empresa), mas o recurso é outro.
 const slaPolicyController = makeSlaPolicyController();
@@ -20,6 +22,11 @@ router.use(authRateLimitMiddleware);
 router.get("/me/metrics/comparison", endpointRateLimitMiddleware("expensive"), (req, res) => metricsController.comparison(req, res));
 // Exposure Graph (D8): projeção da company do ator, mesma regra de escopo do comparativo.
 router.get("/me/exposure-graph", endpointRateLimitMiddleware("expensive"), (req, res) => exposureGraphController.get(req, res));
+// Análises do Exposure Graph (ADR-061): mesmo escopo (company do usuário no banco) e mesmo custo.
+router.get("/me/exposure-graph/toxic-combinations", endpointRateLimitMiddleware("expensive"), (req, res) => exposureAnalysisController.combinacoesToxicas(req, res));
+router.get("/me/exposure-graph/blast-radius/options", endpointRateLimitMiddleware("expensive"), (req, res) => exposureAnalysisController.opcoesDeImpacto(req, res));
+router.get("/me/exposure-graph/blast-radius", endpointRateLimitMiddleware("expensive"), (req, res) => exposureAnalysisController.impacto(req, res));
+router.get("/me/exposure-graph/history", endpointRateLimitMiddleware("expensive"), (req, res) => exposureAnalysisController.historico(req, res));
 router.get("/me", (req, res) => controller.me(req, res));
 
 // SLA — sub-rotas de /:id, ANTES de "/:id" por consistência (CLAUDE.md §5.6).
