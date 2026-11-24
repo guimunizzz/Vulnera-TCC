@@ -16,7 +16,7 @@ describe("atmosferaDaRota", () => {
   });
 
   it("ATR-02 — monitoramento é o relevo", () => {
-    for (const rota of ["/applications", "/applications/abc/dashboard", "/projects", "/projects/abc", "/threat-intel", "/remediation", "/exposure-graph"]) {
+    for (const rota of ["/applications", "/applications/abc/dashboard", "/projects", "/projects/abc", "/threat-intel", "/remediation", "/exposure-graph", "/conformidade"]) {
       expect(atmosferaDaRota(rota), rota).toEqual({ linguagem: "relevo", parada: false });
     }
   });

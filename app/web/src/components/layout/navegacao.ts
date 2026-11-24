@@ -7,7 +7,7 @@
  * fast refresh do Vite continuar funcionando.
  */
 
-import { CalendarClock, Check, Clock3, FileCode2, FileText, Folder, Inbox, LayoutDashboard, ListTodo, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
+import { CalendarClock, Check, Clock3, FileCode2, FileText, Folder, Inbox, LayoutDashboard, ListTodo, Monitor, Network, Radar, Scale, ScanLine, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { UserRole } from "../../types/auth.types";
 
 export interface ItemNav {
@@ -38,6 +38,8 @@ export const GRUPOS: GrupoNav[] = [
     itens: [
       { para: "/applications", rotulo: "Aplicações", papeis: ["ADMIN", "CLIENT"], icone: Monitor },
       { para: "/exposure-graph", rotulo: "Exposure Graph", papeis: ["ADMIN", "CLIENT"], icone: Network },
+      // ADR-063 — requisitos de LGPD, ISO 27001 e NIST CSF em risco pelas vulnerabilidades abertas.
+      { para: "/conformidade", rotulo: "Conformidade", papeis: ["ADMIN", "CLIENT"], icone: Scale, novo: true },
       // Threat Intel (ADR-053): os três papéis — o que cada um pode fazer em cada empresa a API decide.
       { para: "/threat-intel", rotulo: "Threat Intel", icone: Radar, novo: true },
       { para: "/projects", rotulo: "Projetos", icone: Folder },

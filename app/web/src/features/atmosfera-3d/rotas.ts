@@ -9,7 +9,8 @@
  *   relevo    vigilância da superfície de risco (radar) .... Aplicações,
  *             Projetos, Threat Intel, Remediação (o relevo baixa quando o
  *             risco cai, a metáfora do ato 4 da landing) e Exposure Graph
- *             (o fundo acompanha o grafo; some na aba do mapa 3D)
+ *             (o fundo acompanha o grafo; some na aba do mapa 3D) e
+ *             Conformidade (a mesma superfície, lida pela norma — ADR-063)
  *   ascii     trabalho técnico cru (terminal, evidência) ... Findings, DAST,
  *             SAST/SCA, Playbooks, Agendamentos, Nova análise
  *   ascii     PARADO (pôster, sem movimento) — formulário e configuração,
@@ -36,7 +37,7 @@ const REGRAS: Array<[RegExp, AtmosferaDaRota]> = [
   // Criar finding mora sob /projects, mas é trabalho técnico.
   [/^\/projects\/[^/]+\/findings(\/|$)/, animada("ascii")],
   [/^\/dashboard\/?$/, animada("nebulosa")],
-  [/^\/(applications|projects|threat-intel|remediation|exposure-graph)(\/|$)/, animada("relevo")],
+  [/^\/(applications|projects|threat-intel|remediation|exposure-graph|conformidade)(\/|$)/, animada("relevo")],
   [/^\/(findings|dast|sast-sca|playbooks|agendamentos|new-analysis)(\/|$)/, animada("ascii")],
   [/^\/(settings|admin)(\/|$)/, { linguagem: "ascii", parada: true }],
   [/^\/companies\/[^/]+\/maturity(\/|$)/, { linguagem: "ascii", parada: true }],

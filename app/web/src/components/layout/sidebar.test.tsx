@@ -46,10 +46,11 @@ describe("Sidebar — SAST/SCA", () => {
     expect(screen.queryByRole("link", { name: /SAST\/SCA/ })).not.toBeInTheDocument();
   });
 
-  it("só os itens novos têm o selo (SAST/SCA, Threat Intel, Agendamentos, Filas e Triagem)", () => {
+  it("só os itens novos têm o selo (SAST/SCA, Threat Intel, Agendamentos, Filas, Triagem e Conformidade)", () => {
     renderComo("ADMIN");
-    expect(screen.getAllByText("new")).toHaveLength(5);
+    expect(screen.getAllByText("new")).toHaveLength(6);
     expect(screen.getByRole("link", { name: /Triagem/ })).toHaveTextContent("new");
+    expect(screen.getByRole("link", { name: /Conformidade/ })).toHaveTextContent("new");
     expect(screen.getByRole("link", { name: /Agendamentos/ })).toHaveTextContent("new");
     expect(screen.getByRole("link", { name: /Threat Intel/ })).toHaveTextContent("new");
     expect(screen.getByRole("link", { name: /SAST\/SCA/ })).toHaveTextContent("new");
