@@ -44,6 +44,7 @@ import { CodeReopenSuggestion } from "../components/code-imports/code-reopen-sug
 import { PainelPreTriagem } from "../components/code-imports/code-pretriage-panel";
 import { BotaoVerTour, TourGuiado, type PassoTour } from "../components/tour/tour-guiado";
 import { useTourAutomatico } from "../components/tour/use-tour-automatico";
+import { CorrecaoSugerida } from "../components/findings/correcao-sugerida";
 import { cn } from "../lib/cn";
 import { FILTROS_INICIAIS, filtrarAchados, urlSegura, type FiltrosAchados } from "../lib/code-import";
 import {
@@ -622,6 +623,15 @@ function LinhaAchado({
               )}
               {f.cvssScore != null && <Item rotulo="Score da ferramenta" valor={`${f.cvssScore.toFixed(1)}${f.cvssVector ? ` · ${f.cvssVector}` : ""}`} mono />}
             </dl>
+
+            {/* ADR-063 — dependência vulnerável: comando e manifesto da versão corrigida (o SAST já mostra trecho e recomendação abaixo). */}
+            {f.category === "SCA" && (
+              <div className="mt-4">
+                <CorrecaoSugerida
+                  origem={{ tipo: "SCA", purl: f.purl, pacote: f.packageName, versao: f.packageVersion, versaoCorrigida: f.fixedVersion, advisoryId: f.advisoryId }}
+                />
+              </div>
+            )}
 
             {f.snippet && (
               <div className="mt-4">
