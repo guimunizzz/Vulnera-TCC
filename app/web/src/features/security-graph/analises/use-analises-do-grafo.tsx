@@ -135,7 +135,8 @@ export function useAnalisesDoGrafo(dados: ExposureGraph | undefined, aoSeleciona
         />
       )}
       {modo === "tempo" && historico.data && (
-        <div className="min-w-0 flex-1">
+        // Base de 20rem: sem ela o controle encolhe ao lado do seletor em vez de quebrar para a linha de baixo.
+        <div className="min-w-0 flex-1 basis-[20rem]">
           <ControleDoTempo historico={historico.data} instante={instante ?? fimDoTempo} aoMudar={setInstante} />
         </div>
       )}
