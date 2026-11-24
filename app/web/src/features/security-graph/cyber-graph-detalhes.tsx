@@ -246,6 +246,7 @@ export function PainelDoNo({
   aoExpandir,
   aoVerNaLista,
   certificado,
+  rodape,
 }: {
   detalhe: DetalheDoNo | null;
   targetUrl: string;
@@ -255,6 +256,8 @@ export function PainelDoNo({
   aoVerNaLista(findingId: string): void;
   /** Resumo do sensor SSL/TLS (mostrado no nó do alvo). */
   certificado?: string | null;
+  /** Conteúdo no fim do painel com um nó selecionado (comentários, ADR-061). */
+  rodape?: ReactNode;
 }) {
   const { troca } = useMotion();
   const token = detalhe ? tokenDoNo(detalhe) : "--color-accent";
@@ -380,6 +383,7 @@ export function PainelDoNo({
                 </Button>
               )}
             </div>
+            {rodape}
           </>
         )}
       </motion.div>

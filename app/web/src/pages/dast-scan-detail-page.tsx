@@ -17,7 +17,7 @@
  */
 
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dastApi } from "../lib/api/dast.api";
 import { useApiError } from "../hooks/use-api-error";
@@ -261,7 +261,10 @@ export function DastScanDetailPage() {
   // Aba ativa da área de resultado: a lista de achados ou o diff com uma
   // execução anterior. Comparação é uma pergunta diferente ("a correção
   // funcionou?") e merece o próprio espaço em vez de disputar a mesma tabela.
-  const [aba, setAba] = useState<"findings" | "comparacao" | "grafo">("findings");
+  // `?no=` vem do link da notificação de comentário no grafo (ADR-061): abre direto no CyberGraph.
+  const [buscaDaUrl] = useSearchParams();
+  const noDaUrl = buscaDaUrl.get("no");
+  const [aba, setAba] = useState<"findings" | "comparacao" | "grafo">(noDaUrl ? "grafo" : "findings");
   const [findingParaPromover, setFindingParaPromover] = useState<DastFinding | null>(null);
 
   const scanQuery = useQuery({
@@ -555,6 +558,8 @@ export function DastScanDetailPage() {
           {aba === "grafo" && findingsQuery.data && (
             <Suspense fallback={<Skeleton className="mt-4 h-[28rem] w-full bg-inset" />}>
               <CyberGraph
+                scanId={scan.id}
+                noInicial={noDaUrl}
                 targetUrl={scan.targetUrl}
                 findings={findingsQuery.data}
                 sensores={sensorsQuery.data ?? []}

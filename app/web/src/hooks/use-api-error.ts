@@ -138,6 +138,16 @@ const MESSAGES: Record<string, string> = {
   COMMENT_NOT_FOUND: "Comentário não encontrado.",
   INVALID_CONTENT: "Escreva algo antes de comentar.",
 
+  // comentários no grafo e análises do Exposure Graph (ADR-061)
+  MISSING_COMMENT_BODY: "Escreva algo antes de comentar.",
+  INVALID_COMMENT_BODY: "O comentário passou do limite de 2.000 caracteres.",
+  MISSING_NODE_ID: "Selecione um nó do grafo para comentar.",
+  INVALID_NODE_ID: "Este nó não pode receber comentários.",
+  INVALID_GRAPH_KIND: "Grafo inválido.",
+  MISSING_SCOPE: "Abra o grafo de uma análise para comentar.",
+  INVALID_IMPACT_TYPE: "Escolha um pacote, uma CVE ou uma categoria.",
+  INVALID_IMPACT_VALUE: "Alvo do raio de impacto inválido.",
+
   // report
   MISSING_PROJECT_ID: "Selecione um projeto válido.",
   INVALID_TYPE: "Tipo de relatório inválido.",

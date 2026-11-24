@@ -8,6 +8,11 @@
  * compartilhados. No 3D, "Apresentar" percorre as aplicações da mais grave
  * para a menos grave (desligado com movimento reduzido).
  *
+ * No grafo, as análises do ADR-061 (combinações tóxicas, raio de impacto,
+ * máquina do tempo — `analises/use-analises-do-grafo.tsx`) e os comentários
+ * por nó. `?no=<id>` (link da notificação de comentário) já abre com o nó
+ * selecionado.
+ *
  * POR QUE EXISTE
  * O CyberGraph mostra um scan; esta página mostra a empresa. Nome oficial:
  * Exposure Graph / Cadeias de Exposição — nunca "Attack Path" (DECISIONS D8).
@@ -31,6 +36,9 @@ import { EmptyState, ErrorState } from "../components/ui/empty-state";
 import { useMotion } from "../motion/use-motion";
 import { idDaAplicacao } from "../features/security-graph/exposure-graph-model";
 import { PainelExposicao } from "../features/security-graph/painel-exposicao";
+import { chaveDosComentarios, contarPorNo } from "../features/security-graph/comentarios";
+import { useAnalisesDoGrafo } from "../features/security-graph/analises/use-analises-do-grafo";
+import { graphCommentsApi } from "../lib/api/graph-comments.api";
 import { ExposureGraph2D } from "../features/security-graph/exposure-graph";
 import type { ExposureGraph } from "../types/exposure-graph.types";
 import { riscoDoExposureGraph } from "../features/atmosfera-3d/risco";
@@ -151,6 +159,21 @@ export function ExposureGraphPage() {
     if (id) pingarAtmosfera();
   }, []);
 
+  const temDados = !!consulta.data && consulta.data.aplicacoes.length > 0;
+  const analises = useAnalisesDoGrafo(consulta.data, selecionar);
+  const comentarios = useQuery({
+    queryKey: chaveDosComentarios("EXPOSURE"),
+    queryFn: () => graphCommentsApi.listar("EXPOSURE"),
+    enabled: temDados,
+  });
+  const comentariosPorNo = useMemo(() => contarPorNo(comentarios.data), [comentarios.data]);
+
+  // Link da notificação de comentário: abre com o nó selecionado.
+  const noDaUrl = params.get("no");
+  useEffect(() => {
+    if (noDaUrl && temDados) setSelecionadoId(noDaUrl);
+  }, [noDaUrl, temDados]);
+
   return (
     <div className="space-y-6">
       <Breadcrumb
@@ -203,10 +226,13 @@ export function ExposureGraphPage() {
                   rotulo: "Grafo",
                   conteudo: (
                     <ExposureGraph2D
-                      dados={consulta.data}
+                      dados={analises.dadosExibidos ?? consulta.data}
                       nomeEmpresa={empresa.data?.name ?? "Empresa"}
                       selecionadoId={selecionadoId}
                       aoSelecionar={selecionar}
+                      barraDeAnalise={analises.barra}
+                      destaque={analises.destaque}
+                      comentarios={comentariosPorNo}
                     />
                   ),
                 },
@@ -224,11 +250,15 @@ export function ExposureGraphPage() {
               ]}
             />
           </div>
-          <PainelExposicao
-            dados={consulta.data}
-            selecionadoId={selecionadoId}
-            aoSelecionar={selecionar}
-          />
+          {/* No mapa 3D a análise não se aplica: volta o painel da seleção. */}
+          {(params.get("visao") !== "mapa" && analises.painel) || (
+            <PainelExposicao
+              dados={consulta.data}
+              selecionadoId={selecionadoId}
+              aoSelecionar={selecionar}
+              comentarios={comentarios.data}
+            />
+          )}
         </div>
       )}
     </div>

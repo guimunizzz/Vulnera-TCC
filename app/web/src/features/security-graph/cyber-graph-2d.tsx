@@ -80,6 +80,14 @@ interface Props {
   animarTroca?: string;
   /** O que o grafo mostra, para leitor de tela. */
   descricao?: string;
+  /**
+   * Nós em destaque sem seleção (combinações tóxicas, raio de impacto): o resto
+   * apaga, como na seleção, e as arestas entre dois nós destacados ficam acesas.
+   * A seleção, quando há, vence o destaque.
+   */
+  destaque?: ReadonlySet<string> | null;
+  /** Quantos comentários cada nó tem (selo de balão no nó). */
+  comentarios?: ReadonlyMap<string, number>;
 }
 
 const RAIO: Record<Kind2D, number> = {
@@ -240,7 +248,7 @@ const ZOOM_MAX = 2.5;
 const limitarZoom = (k: number) => Math.min(Math.max(k, ZOOM_MIN), ZOOM_MAX);
 
 export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function CyberGraph2D(
-  { visao, selecionadoId, aoClicar, aoAbrir, aoLimpar, aoMover, minimapa, animarTroca, descricao = "da Internet até os findings" },
+  { visao, selecionadoId, aoClicar, aoAbrir, aoLimpar, aoMover, minimapa, animarTroca, descricao = "da Internet até os findings", destaque = null, comentarios },
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -356,10 +364,12 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
     };
   }, []);
 
-  const contexto = useMemo(
-    () => (selecionadoId && visao.nodes.some((n) => n.id === selecionadoId) ? contextoDoNo(visao, selecionadoId) : null),
-    [visao, selecionadoId],
-  );
+  const contexto = useMemo(() => {
+    if (selecionadoId && visao.nodes.some((n) => n.id === selecionadoId)) return contextoDoNo(visao, selecionadoId);
+    if (!destaque || destaque.size === 0) return null;
+    const arestas = new Set(visao.edges.filter((e) => destaque.has(e.source) && destaque.has(e.target)).map(chaveDaAresta));
+    return { nos: new Set(destaque), arestas };
+  }, [visao, selecionadoId, destaque]);
   const porId = useMemo(() => new Map(visao.nodes.map((n) => [n.id, n])), [visao]);
 
   // Tokens presentes no desenho: um degradê de corpo e um de halo por token, nos <defs>.
@@ -591,7 +601,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                 tabIndex={no.id === tabulavel ? 0 : -1}
                 aria-pressed={selecionado}
                 aria-expanded={no.kind === "GROUP" || no.expandivel ? no.expandido : undefined}
-                aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${ROTULO_RISCO[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} ${NOME_DO_TOTAL[no.kind] ?? "findings"}` : ""}`}
+                aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${ROTULO_RISCO[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} ${NOME_DO_TOTAL[no.kind] ?? "findings"}` : ""}${comentarios?.get(no.id) ? `, ${comentarios.get(no.id)} comentário${comentarios.get(no.id) === 1 ? "" : "s"}` : ""}`}
                 className="cg-no cg-entrar cursor-grab outline-none active:cursor-grabbing"
                 opacity={apagado ? 0.28 : 1}
                 onFocus={() => setFocoId(no.id)}
@@ -628,6 +638,20 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                   strokeWidth={internet ? 1.4 : 1.8}
                   aria-hidden="true"
                 />
+                {/* Selo de comentários: balão no canto oposto ao do contador do grupo. */}
+                {!!comentarios?.get(no.id) && (
+                  <g transform={`translate(${-raio * 0.78} ${-raio * 0.78})`} aria-hidden="true">
+                    <path
+                      d="M -9 -7 h 18 a 3 3 0 0 1 3 3 v 7 a 3 3 0 0 1 -3 3 h -9 l -5 4 v -4 h -4 a 3 3 0 0 1 -3 -3 v -7 a 3 3 0 0 1 3 -3 z"
+                      fill={cor("--color-bg-surface")}
+                      stroke={cor("--color-accent-ink")}
+                      strokeWidth={1.3}
+                    />
+                    <text textAnchor="middle" y={-0.5} dy="0.35em" fontSize={9} fontWeight={700} fill={cor("--color-accent-ink")}>
+                      {Math.min(comentarios.get(no.id)!, 99)}
+                    </text>
+                  </g>
+                )}
                 {(no.kind === "GROUP" || no.expandivel) && (
                   <g transform={`translate(${raio * 0.75} ${-raio * 0.75})`}>
                     {/* Só os tokens de severidade têm -surface/-ink; o resto usa a superfície neutra. */}
