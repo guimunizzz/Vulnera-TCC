@@ -22,5 +22,7 @@ export interface CaixaDeTriagem {
   geradoEm: string;
   porFonte: Record<FonteDeTriagem, number>;
   total: number;
+  /** Corte por fonte: uma fonte com `porFonte` igual a ele tem pelo menos isso. */
+  limitePorFonte: number;
   itens: ItemDaCaixa[];
 }

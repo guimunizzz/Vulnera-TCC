@@ -25,7 +25,6 @@ import type { CasamentoDTO } from "../models/threat-intel.model";
 import type { TriageInboxRepository } from "../repositories/triage-inbox.repository";
 import {
   caminhoDaUrl,
-  LIMITE_DA_CAIXA,
   LIMITE_DE_EMPRESAS,
   LIMITE_DE_IMPORTACOES,
   LIMITE_DE_SCANS,
@@ -85,7 +84,8 @@ export class TriageInboxService {
       geradoEm: agora.toISOString(),
       porFonte: { DAST: dast.length, CODIGO: codigo.length, THREAT_INTEL: threat.length },
       total: todos.length,
-      itens: todos.slice(0, LIMITE_DA_CAIXA),
+      limitePorFonte: LIMITE_POR_FONTE,
+      itens: todos,
     };
   }
 

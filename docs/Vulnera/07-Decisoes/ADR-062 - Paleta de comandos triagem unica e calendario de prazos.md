@@ -69,6 +69,11 @@ SAST/SCA na importação e casamentos do Threat Intel na aba "Afeta". O SLA
    filtro por data de vencimento e criar um só para isto ampliaria a API sem
    necessidade.
 
+   No Dashboard, o calendário busca sozinho. Na Remediação, ele usa a busca
+   do quadro e o recorte (projeto e responsável), que fica acima das abas e
+   vale para as duas vistas. Duas paginações da busca de achados ao mesmo
+   tempo estouravam o rate limit, e isso foi visto na validação no navegador.
+
 ## Alternativas descartadas
 
 - **Busca global no backend** (um `/search`): duplicaria a autorização das
@@ -86,7 +91,9 @@ SAST/SCA na importação e casamentos do Threat Intel na aba "Afeta". O SLA
 - A sidebar e a paleta leem a mesma lista, então um item novo aparece nas
   duas.
 - Limite: a caixa não pagina. Ela olha até 30 scans, 60 importações e 10
-  empresas, e devolve no máximo 200 itens, os mais graves primeiro.
+  empresas, e devolve até 200 itens por fonte, os mais graves e recentes. A
+  tela mostra "200+" na fonte que bateu no corte. Não há corte global, porque
+  o filtro por fonte é feito na tela e precisa dos itens de cada uma.
 
 ## Relacionado
 

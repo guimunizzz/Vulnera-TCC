@@ -84,6 +84,13 @@ export function TriagePage() {
 
   const ativo = fila.itens[fila.ativo];
 
+  // A fila abre pronta para o teclado. `autoFocus` não serve: o React só o aplica a
+  // input/button/select/textarea. Só puxa o foco se ele estiver solto no body.
+  const temItens = fila.itens.length > 0;
+  useEffect(() => {
+    if (temItens && document.activeElement === document.body) lista.current?.focus({ preventScroll: true });
+  }, [temItens]);
+
   // O item ativo fica à vista quando a pessoa anda com o teclado.
   useEffect(() => {
     if (!ativo) return;
@@ -151,6 +158,10 @@ export function TriagePage() {
   };
 
   const contagem = useMemo(() => caixa.data?.porFonte ?? { DAST: 0, CODIGO: 0, THREAT_INTEL: 0 }, [caixa.data]);
+  // Fonte no corte tem "pelo menos" isso: "200+" não finge um total exato.
+  const limite = caixa.data?.limitePorFonte ?? Infinity;
+  const rotuloDaContagem = (n: number) => (n >= limite ? `${n}+` : String(n));
+  const algumaNoCorte = FONTES.some((f) => contagem[f] >= limite);
 
   return (
     <div className="space-y-5" onKeyDown={aoTeclar}>
@@ -180,7 +191,7 @@ export function TriagePage() {
               >
                 {f ? ROTULO_DA_FONTE[f] : "Todas"}
                 <span className="ml-1 font-mono" data-numeric>
-                  {f ? contagem[f] : caixa.data?.total ?? 0}
+                  {f ? rotuloDaContagem(contagem[f]) : algumaNoCorte ? `${caixa.data?.total ?? 0}+` : caixa.data?.total ?? 0}
                 </span>
               </button>
             ))}
@@ -214,6 +225,12 @@ export function TriagePage() {
           {erro}
         </Alert>
       )}
+      {algumaNoCorte && (
+        <p className="text-xs text-fg-muted">
+          Mostrando os {limite} mais graves e recentes de cada fonte. Decida e clique em Atualizar para trazer os próximos.
+        </p>
+      )}
+
       <p className="sr-only" role="status" aria-live="polite">
         {aviso}
       </p>
@@ -244,9 +261,7 @@ export function TriagePage() {
             tabIndex={0}
             aria-label={`Fila de triagem: ${fila.itens.length} itens. j e k andam, a confirma, f falso positivo, r risco aceito, u desfaz, Enter abre.`}
             aria-activedescendant={ativo ? `triagem-${ativo.id}` : undefined}
-            className="space-y-2 rounded-container outline-none focus-visible:ring-2 focus-visible:ring-[oklch(var(--color-focus-ring))]"
-            // A fila abre pronta para o teclado.
-            autoFocus
+            className="min-w-0 space-y-2 rounded-container outline-none focus-visible:ring-2 focus-visible:ring-[oklch(var(--color-focus-ring))]"
           >
             {fila.itens.map((item, i) => {
               const eAtivo = i === fila.ativo;
@@ -274,7 +289,7 @@ export function TriagePage() {
                       <p className="truncate font-mono text-xs text-fg-secondary" title={item.contexto}>
                         {item.contexto}
                       </p>
-                      {eAtivo && item.detalhe && <p className="mt-2 text-sm text-fg-secondary">{item.detalhe}</p>}
+                      {eAtivo && item.detalhe && <p className="mt-2 text-sm text-fg-secondary [overflow-wrap:anywhere]">{item.detalhe}</p>}
                     </div>
                   </div>
                 </div>

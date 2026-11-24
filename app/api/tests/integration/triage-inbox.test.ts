@@ -94,6 +94,7 @@ describe("Caixa de triagem (ADR-062)", () => {
     const res = await request(app).get(ROTA).set(auth(token));
     expect(res.status).toBe(200);
     expect(res.body.porFonte).toEqual({ DAST: 1, CODIGO: 1, THREAT_INTEL: 0 });
+    expect(res.body.limitePorFonte).toBe(200);
     const porId = new Map(res.body.itens.map((i: { id: string }) => [i.id, i]));
     expect(porId.get(sqli.id)).toMatchObject({ fonte: "DAST", contexto: "loja.exemplo.test · /login?next=/ · parâmetro user", link: `/dast/scans/${scan.id}` });
     expect(porId.get(evalAchado.id)).toMatchObject({ fonte: "CODIGO", contexto: "Portal · semgrep · src/app.js:42", link: `/sast-sca/imports/${nova.id}` });

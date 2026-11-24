@@ -37,19 +37,22 @@ export interface ItemDaCaixaDTO {
 
 export interface CaixaDeTriagemDTO {
   geradoEm: string;
-  /** Quantos itens cada fonte tem (antes do corte). */
+  /** Quantos itens cada fonte devolveu; igual a `limitePorFonte` quando a fonte tem mais do que isso. */
   porFonte: Record<FonteDeTriagem, number>;
   total: number;
+  /** O corte por fonte, para a tela dizer "200+" em vez de um número que parece exato. */
+  limitePorFonte: number;
   itens: ItemDaCaixaDTO[];
 }
-
-/** Quantos itens a caixa devolve: é fila de trabalho, não relatório. */
-export const LIMITE_DA_CAIXA = 200;
 /** Tetos de busca por fonte — a caixa olha o trabalho recente, não o histórico inteiro. */
 export const LIMITE_DE_SCANS = 30;
 export const LIMITE_DE_IMPORTACOES = 60;
 export const LIMITE_DE_EMPRESAS = 10;
-export const LIMITE_POR_FONTE = 300;
+/**
+ * Corte por fonte (os mais graves e recentes). Não há corte global: o filtro por
+ * fonte é feito na tela e precisaria dos itens de cada uma — no máximo 3 × 200.
+ */
+export const LIMITE_POR_FONTE = 200;
 
 const RANK: Record<SeveridadeDaCaixa, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 };
 
