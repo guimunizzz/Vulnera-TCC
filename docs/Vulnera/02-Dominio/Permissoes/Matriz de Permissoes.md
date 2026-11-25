@@ -6,9 +6,13 @@ status: ativo
 
 # Matriz de Permissoes
 
+> [!info] Adesão, gestão de equipes e sessões · ADR-058
+> ADMIN decide adesões e assinaturas e pode recuperar um OWNER histórico na empresa original. CLIENT OWNER edita o perfil da própria empresa, administra sua equipe e solicita assinatura no fluxo legado. CLIENT MEMBER usa recursos operacionais autorizados da empresa. A empresa e os papéis vêm do banco. A desativação bloqueia novas requisições e refresh.
+> O histórico de agendamentos DAST por URL sem vínculo empresarial segue a exceção global descrita no ADR-056. Os registros vinculados a empresas mantêm o escopo próprio.
+
 > [!info] Atualizada em 2026-09-10 com o módulo [[DAST]]
 > `PENTESTER` e `ADMIN` têm acesso total ao módulo; `CLIENT` (Owner ou Member) **não tem acesso nenhum** — sem item de menu e com 403 em qualquer rota `/dast/*` ou `/api/dast/*`. Não existe meio-termo de visibilidade, diferente de [[Vulnerability]], que o cliente lê.
-> Dentro do módulo, cada `PENTESTER` só enxerga **os próprios scans** (ownership fina no service, não no middleware); `ADMIN` vê todos. Promover um achado exige ser [[ProjectMember]] do projeto de destino.
+> Dentro do módulo, cada `PENTESTER` enxerga os próprios scans e a exceção de agendamentos globais por URL descrita no ADR-056. `ADMIN` vê todos. Promover um achado exige ser [[ProjectMember]] do projeto de destino.
 
 ## Admin
 Pode:
@@ -31,7 +35,7 @@ Pode:
 
 ## Client Owner
 Pode:
-- criar empresa no onboarding
+- criar empresa na ativação da adesão aprovada ou retomar o onboarding legado quando autorizado
 - editar empresa própria
 - convidar usuários
 - cadastrar aplicação

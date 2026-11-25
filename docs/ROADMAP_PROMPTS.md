@@ -8,6 +8,14 @@
 
 ---
 
+## Adesão B2B, equipes e segurança de tenants · ✅ Concluída em 2026-11-25, validação local com ressalvas
+
+A mesma aprovação habilita a criação da empresa, do OWNER e da assinatura inicial na ativação. A gestão de equipes delega ao OWNER apenas membros da própria empresa. A API revalida identidade persistida, e a wave exercita autorização e concorrência com dois tenants.
+
+### Histórico
+
+2026-11-25 · Branch `feat/unified-onboarding-tenant-security` a partir de `db91b70`, fundação local `fd4f7a0`. Integração local por commits de responsabilidade. A publicação e as jornadas reais aguardam revisão. Contratos, evidências e desvios da validação no [relatório da wave](UNIFIED-B2B-TENANT-SECURITY.md).
+
 ## Issue #51 — Etapa 7 · ✅ Validada localmente com ressalvas em 2026-11-25
 
 ### Objetivo e contrato do cutover

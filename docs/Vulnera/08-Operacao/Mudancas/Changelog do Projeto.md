@@ -9,6 +9,10 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-25 — Adesão B2B, equipes e segurança de tenants
+
+Registrada a decisão [[ADR-058 - Adesao B2B, equipes e revogacao de sessoes]]. A primeira migration acrescenta condições comerciais da adesão, convites próprios de equipe e estado de sessão. A segunda permite registrar o encerramento administrativo de uma adesão aprovada e incompatível. Ambas foram aplicadas em MySQL isolado. O gate local foi aprovado com ressalvas após a revisão independente. Build, resultados e roteiro manual em [Adesão B2B, equipes e segurança de tenants](../../../UNIFIED-B2B-TENANT-SECURITY.md).
+
 ## 2026-11-25 — Issue #51, Etapa 7: validada localmente com ressalvas
 
 O código do cutover e retomada do onboarding foi implementado em `53d142e`.

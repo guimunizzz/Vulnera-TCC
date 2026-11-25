@@ -13,6 +13,10 @@ No Vulnera, o tenant é a `Company`. Todas as entidades operacionais (Applicatio
 
 ## Como o isolamento funciona no Vulnera
 
+A API consulta a identidade persistida antes de determinar os papéis e o tenant permitido. Company, Project e demais relações do recurso prevalecem sobre valores do corpo da requisição. Convites e decisões comerciais revalidam vínculos na transação. Jobs que executam em nome de um usuário conferem sua identidade ativa e as relações do escopo ao assumir o trabalho.
+
+A matriz desta wave registra operações, papéis e evidência de cobertura. [[ADR-058 - Adesao B2B, equipes e revogacao de sessoes]]
+
 O isolamento é implementado em três camadas:
 
 ### 1. Guards de role
