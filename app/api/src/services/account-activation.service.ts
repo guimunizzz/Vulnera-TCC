@@ -1,12 +1,13 @@
 /**
- * Ativa uma conta aprovada consumindo convite, criando User e encerrando o pedido.
- * Existe para manter esse uso único e suas auditorias no mesmo commit transacional.
- * Consumido pelo controller público de ativação; nunca emite JWT ou vínculo comercial.
+ * Ativa um convite aprovado e, em adesões novas, cria OWNER, Company e Subscription ACTIVE.
+ * Pedidos legados continuam criando CLIENT sem vínculo para retomar onboarding.
+ * Consumo, identidade, vínculo e auditorias compartilham o mesmo commit; nunca emite JWT.
  */
 import type { AccessInvitation } from "../models/access-invitation.model";
 import {
   AccessRequestEntity,
   type AccessRequest,
+  type AccessRequestEnrollment,
 } from "../models/access-request.model";
 import {
   isValidAccountActivationToken,
@@ -37,6 +38,10 @@ export class AccountActivationService {
       const candidate = await this.findUsableCandidate(token, now);
       if (!candidate) return { valid: false };
       if (await this.requests.existsUserByEmail(candidate.request.email)) return { valid: false };
+      if (candidate.enrollment) {
+        if (!await this.requests.isEnrollmentPlanCurrent(candidate.enrollment)) return { valid: false };
+        if (await this.requests.hasEnrollmentCompanyCnpjConflict(candidate.enrollment)) return { valid: false };
+      }
       return { valid: true };
     } catch {
       throw new Error("ACCOUNT_ACTIVATION_VALIDATION_FAILED");
@@ -59,31 +64,59 @@ export class AccountActivationService {
       }
       const passwordHash = await this.passwordHasher(password);
 
-      await this.requests.transactionWithRetry(async ({ requests, invitations, users }) => {
+      await this.requests.transactionWithRetry(async ({ requests, invitations, enrollments, users }) => {
         // Todos os escritores do domínio usam esta ordem para evitar snapshots antigos.
         const parent = await requests.findByIdForUpdate(candidate.request.id);
         if (!parent) throw new Error(INVALID_ACTIVATION_TOKEN);
         const current = await invitations.findByAccessRequestIdForUpdate(parent.id);
-        // O prazo é avaliado depois dos locks; espera pela concorrência não estende o convite.
+        const enrollment = await enrollments.findByAccessRequestIdForUpdate(parent.id);
+        const lockedPlan = enrollment
+          ? await enrollments.findPlanForUpdate(enrollment.planId)
+          : null;
+        const existingUser = await users.findByEmail(parent.email);
+        const companyCnpjConflict = enrollment?.companyCnpj
+          ? await enrollments.companyCnpjIsInUse(enrollment.companyCnpj)
+          : false;
+        // O prazo usa o instante posterior aos locks e leituras que podem esperar.
         const now = this.clock();
         if (!isValidDate(now)) throw new Error(INVALID_ACTIVATION_TOKEN);
         if (!isUsableInvitation(parent, current, tokenHash, now)) {
           throw new Error(INVALID_ACTIVATION_TOKEN);
         }
-        if (await users.findByEmail(parent.email)) throw new Error(INVALID_ACTIVATION_TOKEN);
+        if (enrollment) enrollments.assertSnapshotMatchesPlan(enrollment, lockedPlan);
+        if (companyCnpjConflict) throw new Error("COMPANY_ALREADY_EXISTS");
+        if (existingUser) throw new Error(INVALID_ACTIVATION_TOKEN);
 
         // A condição do UPDATE arbitra o uso único dentro da mesma transação.
         if (!await invitations.consumeIfAvailable(tokenHash, now)) {
           throw new Error(INVALID_ACTIVATION_TOKEN);
         }
+        const company = enrollment
+          ? await enrollments.createCompany({
+            name: parent.companyName,
+            enrollment,
+          })
+          : null;
         const user = await users.create({
           name: parent.name,
           email: parent.email,
           password: passwordHash,
           role: "CLIENT",
-          companyId: null,
-          companyRole: null,
+          companyId: company?.id ?? null,
+          companyRole: company ? "OWNER" : null,
+          legacyOnboardingAllowed: !enrollment,
         }, { uniqueEmailConflictCode: "USER_EMAIL_ALREADY_EXISTS" });
+
+        if (enrollment) {
+          if (!parent.reviewedById) throw new Error(INVALID_ACTIVATION_TOKEN);
+          await enrollments.createActiveSubscription({
+            companyId: company!.id,
+            ownerId: user.id,
+            reviewedById: parent.reviewedById!,
+            enrollment,
+            now,
+          });
+        }
 
         const transition = new AccessRequestEntity(parent).transitionTo(
           "ACTIVATED",
@@ -94,26 +127,33 @@ export class AccountActivationService {
         if (!await requests.transitionIfCurrent(parent.id, transition)) {
           throw new Error(INVALID_ACTIVATION_TOKEN);
         }
-        await requests.createActivationAuditEvent(parent.id, user.id, now);
+        await requests.createActivationAuditEvent(parent.id, user.id, now, company?.id ?? null);
       }, false);
     } catch (error) {
       if (error instanceof Error && (error.message === INVALID_ACTIVATION_TOKEN
         || error.message === "USER_EMAIL_ALREADY_EXISTS")) {
         throw new Error(INVALID_ACTIVATION_TOKEN);
       }
+      if (error instanceof Error && [
+        "ACCESS_REQUEST_PLAN_NOT_FOUND",
+        "ACCESS_REQUEST_PLAN_UNAVAILABLE",
+        "ACCESS_REQUEST_PLAN_CHANGED",
+        "COMPANY_ALREADY_EXISTS",
+      ].includes(error.message)) throw error;
       throw new Error("ACCOUNT_ACTIVATION_FAILED");
     }
   }
   private async findUsableCandidate(
     token: string,
     now: Date,
-  ): Promise<{ request: AccessRequest; invitation: AccessInvitation } | null> {
+  ): Promise<{ request: AccessRequest; invitation: AccessInvitation; enrollment: AccessRequestEnrollment | null } | null> {
     const tokenHash = hashAccessToken(token);
     const invitation = await this.invitations.findByHash(tokenHash);
     if (!invitation || invitation.tokenHash !== tokenHash) return null;
     const request = await this.requests.findById(invitation.accessRequestId);
     if (!request || !isUsableInvitation(request, invitation, tokenHash, now)) return null;
-    return { request, invitation };
+    const enrollment = await this.requests.findEnrollmentByAccessRequestId(request.id);
+    return { request, invitation, enrollment };
   }
 }
 

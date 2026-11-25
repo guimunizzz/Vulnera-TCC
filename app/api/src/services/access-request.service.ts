@@ -5,7 +5,7 @@ import {
   AccessRequestEntity,
   normalizeAccessRequestEmail,
   type AccessRequest,
-  type CreateAccessRequestDTO,
+  type CreateAccessRequestEnrollmentDTO,
 } from "../models/access-request.model";
 import type { AccessRequestRepository } from "../repositories/access-request.repository";
 import type { EmailVerificationService } from "./email-verification.service";
@@ -16,6 +16,11 @@ export type AccessRequestServiceOptions = {
 };
 
 const DEFAULT_RESEND_COOLDOWN_MS = 60_000;
+const SAFE_ENROLLMENT_ERRORS = new Set([
+  "PLAN_NOT_FOUND",
+  "PLAN_UNAVAILABLE",
+  "COMPANY_ALREADY_EXISTS",
+]);
 
 type PublicRequestResolution =
   | { kind: "USER_EXISTS" }
@@ -38,12 +43,12 @@ export class AccessRequestService {
   }
 
   /** Resposta pública uniforme; nenhuma informação do pedido volta ao chamador. */
-  async request(dto: CreateAccessRequestDTO): Promise<void> {
+  async request(dto: CreateAccessRequestEnrollmentDTO): Promise<void> {
     let resolution: PublicRequestResolution;
     try {
       const now = this.clock();
       const email = normalizeAccessRequestEmail(dto.email);
-      resolution = await this.requests.transactionWithRetry(async ({ requests }) => {
+      resolution = await this.requests.transactionWithRetry(async ({ requests, enrollments }) => {
         const existingUser = await requests.existsUserByEmail(email);
         const active = await requests.findActiveByEmailForUpdate(email);
 
@@ -64,11 +69,25 @@ export class AccessRequestService {
         // Libera uma reserva vencida, mas nunca cria um pedido para identidade existente.
         if (existingUser) return { kind: "USER_EXISTS" } as const;
 
-        const created = await requests.createIfEmailAvailable({ ...dto, email }, now);
+        const plan = await enrollments.findPlanForUpdate(dto.planId);
+        if (!plan) throw new Error("PLAN_NOT_FOUND");
+        if (!plan.isActive) throw new Error("PLAN_UNAVAILABLE");
+        const created = await requests.createIfEmailAvailable({
+          name: dto.name,
+          email,
+          companyName: dto.companyName,
+          phone: dto.phone,
+        }, now);
         if (!created) return { kind: "USER_EXISTS" } as const;
+        await enrollments.createSnapshot({
+          accessRequestId: created.id,
+          companyCnpj: dto.companyCnpj ?? null,
+          plan,
+        });
         return { kind: "REQUEST", request: created } as const;
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && SAFE_ENROLLMENT_ERRORS.has(error.message)) throw error;
       // Erro de banco deve virar 500 genérico no controller, nunca sucesso neutro.
       throw new Error("ACCESS_REQUEST_PERSISTENCE_FAILED");
     }

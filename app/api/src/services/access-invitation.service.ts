@@ -1,7 +1,11 @@
 // Prepara convites no ciclo transacional e entrega a mensagem após o commit.
 // Existe para ligar aprovação administrativa a tokens de uso único sem criar User.
 
-import { AccessRequestEntity, type AccessRequest } from "../models/access-request.model";
+import {
+  AccessRequestEntity,
+  type AccessRequest,
+  type AccessRequestEnrollment,
+} from "../models/access-request.model";
 import {
   AccessInvitationCooldownError,
   type InvitationDeliveryStatus,
@@ -21,6 +25,10 @@ const SAFE_ACCESS_INVITATION_ERRORS = new Set([
   "ACCESS_REQUEST_NOT_FOUND",
   "ACCESS_REQUEST_EXPIRED",
   "ACCESS_REQUEST_USER_ALREADY_EXISTS",
+  "ACCESS_REQUEST_PLAN_NOT_FOUND",
+  "ACCESS_REQUEST_PLAN_UNAVAILABLE",
+  "ACCESS_REQUEST_PLAN_CHANGED",
+  "COMPANY_ALREADY_EXISTS",
   "ACCESS_REQUEST_TRANSITION_CONFLICT",
   "ACCESS_INVITATION_ALREADY_EXISTS",
   "ACCESS_INVITATION_ALREADY_USED",
@@ -113,16 +121,30 @@ export class AccessInvitationService {
   async resend(
     accessRequestId: string,
     actor: AccessRequestAdminActor,
-  ): Promise<{ request: AccessRequest; invitationDelivery: InvitationDeliveryStatus }> {
+  ): Promise<{ request: AccessRequest; enrollment: AccessRequestEnrollment | null; invitationDelivery: InvitationDeliveryStatus }> {
     await this.authorization.ensureAdmin(actor);
 
     const outcome = await this.withPersistence(() => this.requests.transactionWithRetry(
-      async ({ requests, invitations }) => {
+      async ({ requests, invitations, enrollments }) => {
         const parent = await requests.findByIdForUpdate(accessRequestId);
         if (!parent) throw new Error("ACCESS_REQUEST_NOT_FOUND");
+        await requests.lockActiveAdminForUpdate(actor.userId);
 
+        if (parent.status !== "APPROVED") throw new Error("INVALID_STATUS_TRANSITION");
+        const existingUser = await requests.existsUserByEmail(parent.email);
+
+        const current = await invitations.findByAccessRequestIdForUpdate(parent.id);
+        const enrollment = await enrollments.findByAccessRequestIdForUpdate(parent.id);
+        const lockedPlan = enrollment
+          ? await enrollments.findPlanForUpdate(enrollment.planId)
+          : null;
+        const companyCnpjConflict = enrollment?.companyCnpj
+          ? await enrollments.companyCnpjIsInUse(enrollment.companyCnpj)
+          : false;
+
+        // A emissão usa o instante posterior a qualquer espera pelo catálogo.
         const now = this.clock();
-        if (parent.status === "APPROVED" && now.getTime() >= parent.expiresAt.getTime()) {
+        if (now.getTime() >= parent.expiresAt.getTime()) {
           const expiration = new AccessRequestEntity(parent).transitionTo("EXPIRED", undefined, undefined, now);
           if (!await requests.transitionIfCurrent(parent.id, expiration)) {
             throw new Error("ACCESS_REQUEST_TRANSITION_CONFLICT");
@@ -131,12 +153,7 @@ export class AccessInvitationService {
           return { kind: "EXPIRED" } as const;
         }
 
-        if (parent.status !== "APPROVED") throw new Error("INVALID_STATUS_TRANSITION");
-        if (await requests.existsUserByEmail(parent.email)) {
-          throw new Error("ACCESS_REQUEST_USER_ALREADY_EXISTS");
-        }
-
-        const current = await invitations.findByAccessRequestIdForUpdate(parent.id);
+        if (existingUser) throw new Error("ACCESS_REQUEST_USER_ALREADY_EXISTS");
         if (current?.usedAt) throw new Error("ACCESS_INVITATION_ALREADY_USED");
         if (current && current.issuedAt.getTime() + this.cooldownMs > now.getTime()) {
           const retryAfterSeconds = Math.max(
@@ -145,6 +162,11 @@ export class AccessInvitationService {
           );
           throw new AccessInvitationCooldownError(retryAfterSeconds);
         }
+
+        if (enrollment) {
+          enrollments.assertSnapshotMatchesPlan(enrollment, lockedPlan);
+        }
+        if (companyCnpjConflict) throw new Error("COMPANY_ALREADY_EXISTS");
 
         const { token, tokenHash } = generateAccessToken();
         const expiresAt = accessTokenDeadline("INVITATION", parent.expiresAt, now);
@@ -176,6 +198,7 @@ export class AccessInvitationService {
         return {
           kind: "PREPARED",
           request: parent,
+          enrollment,
           delivery: this.toPrepared(parent, actor.userId, token, tokenHash, expiresAt),
         } as const;
       },
@@ -184,7 +207,7 @@ export class AccessInvitationService {
 
     if (outcome.kind === "EXPIRED") throw new Error("ACCESS_REQUEST_EXPIRED");
     const invitationDelivery = await this.sendPrepared(outcome.delivery);
-    return { request: outcome.request, invitationDelivery };
+    return { request: outcome.request, enrollment: outcome.enrollment, invitationDelivery };
   }
 
   private toPrepared(

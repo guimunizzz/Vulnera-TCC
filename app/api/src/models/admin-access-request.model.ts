@@ -4,7 +4,7 @@
  * repositories de leitura, services administrativos e controllers.
  */
 
-import type { AccessInvitation as PrismaAccessInvitation } from "@prisma/client";
+import type { AccessInvitation as PrismaAccessInvitation, AccessRequestEnrollment as PrismaAccessRequestEnrollment } from "@prisma/client";
 import type { AccessRequest as PrismaAccessRequest, AccessRequestEvent as PrismaAccessRequestEvent } from "@prisma/client";
 import type { AccessRequestStatus } from "./access-request.model";
 import type { UserRole } from "./user.model";
@@ -13,6 +13,17 @@ export type AccessRequestAdminActor = {
   userId: string;
   role: UserRole;
 };
+
+export type AdminAccessRequestEnrollmentRaw = Pick<
+  PrismaAccessRequestEnrollment,
+  | "companyCnpj"
+  | "planId"
+  | "planName"
+  | "planPrice"
+  | "planMaxApplications"
+  | "planMaxProjects"
+  | "planIncludesRemediation"
+>;
 
 export type AdminAccessRequestRaw = Pick<
   PrismaAccessRequest,
@@ -31,6 +42,7 @@ export type AdminAccessRequestRaw = Pick<
   | "updatedAt"
 > & {
   invitation?: Pick<PrismaAccessInvitation, "issuedAt" | "expiresAt" | "usedAt" | "revokedAt"> | null;
+  enrollment?: AdminAccessRequestEnrollmentRaw | null;
 };
 
 export type AdminAccessRequestEventRaw = Pick<
@@ -52,7 +64,26 @@ export type AdminAccessRequestResponseDTO = {
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
+  enrollment: AdminAccessRequestEnrollmentDTO | null;
 };
+
+export type AdminAccessRequestEnrollmentDTO = {
+  companyCnpj: string | null;
+  planId: string;
+  planName: string;
+  planPrice: string;
+  planMaxApplications: number;
+  planMaxProjects: number;
+  planIncludesRemediation: boolean;
+};
+
+export type AdminAccessRequestEnrollmentEligibility =
+  | "LEGACY"
+  | "ELIGIBLE"
+  | "PLAN_NOT_FOUND"
+  | "PLAN_UNAVAILABLE"
+  | "PLAN_CHANGED"
+  | "COMPANY_CNPJ_CONFLICT";
 
 export type AdminAccessRequestInvitationDTO = {
   issuedAt: string;
@@ -63,6 +94,7 @@ export type AdminAccessRequestInvitationDTO = {
 
 export type AdminAccessRequestDetailDTO = AdminAccessRequestResponseDTO & {
   invitation: AdminAccessRequestInvitationDTO | null;
+  enrollmentEligibility: AdminAccessRequestEnrollmentEligibility;
 };
 
 export type AdminAccessRequestEventDTO = {
@@ -107,10 +139,19 @@ export class AdminAccessRequestEntity {
       rejectionReason: this.data.rejectionReason,
       createdAt: this.data.createdAt.toISOString(),
       updatedAt: this.data.updatedAt.toISOString(),
+      enrollment: this.data.enrollment ? {
+        companyCnpj: this.data.enrollment.companyCnpj,
+        planId: this.data.enrollment.planId,
+        planName: this.data.enrollment.planName,
+        planPrice: this.data.enrollment.planPrice.toFixed(2),
+        planMaxApplications: this.data.enrollment.planMaxApplications,
+        planMaxProjects: this.data.enrollment.planMaxProjects,
+        planIncludesRemediation: this.data.enrollment.planIncludesRemediation,
+      } : null,
     };
   }
 
-  toDetailResponse(): AdminAccessRequestDetailDTO {
+  toDetailResponse(enrollmentEligibility: AdminAccessRequestEnrollmentEligibility): AdminAccessRequestDetailDTO {
     const invitation = this.data.invitation;
     return {
       ...this.toResponse(),
@@ -120,6 +161,7 @@ export class AdminAccessRequestEntity {
         usedAt: invitation.usedAt?.toISOString() ?? null,
         revokedAt: invitation.revokedAt?.toISOString() ?? null,
       } : null,
+      enrollmentEligibility,
     };
   }
 }

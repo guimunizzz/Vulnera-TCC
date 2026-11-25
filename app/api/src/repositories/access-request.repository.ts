@@ -6,12 +6,13 @@
 import {
   ACCESS_REQUEST_RESERVED_STATUSES, accessRequestDeadline,
   normalizeAccessRequestEmail,
-  type AccessRequest, type AccessRequestEvent, type AccessRequestTransitionDTO,
+  type AccessRequest, type AccessRequestEnrollment, type AccessRequestEvent, type AccessRequestTransitionDTO,
   type CreateAccessRequestDTO,
 } from "../models/access-request.model";
 import type { EmailVerificationEventType } from "../models/email-verification.model";
 import type { AccessInvitationAuditAction } from "../models/access-invitation.model";
 import { AccessInvitationRepository } from "./access-invitation.repository";
+import { AccessRequestEnrollmentRepository } from "./access-request-enrollment.repository";
 import { UserRepository } from "./user.repository";
 import { EmailVerificationTokenRepository } from "./email-verification-token.repository";
 import { inAccessTransaction, lockAccessRequest, type AccessDatabaseClient } from "./access-transaction.repository";
@@ -20,6 +21,7 @@ export type AccessRepositories = {
   requests: AccessRequestRepository;
   verificationTokens: EmailVerificationTokenRepository;
   invitations: AccessInvitationRepository;
+  enrollments: AccessRequestEnrollmentRepository;
   users: UserRepository;
 };
 
@@ -32,6 +34,7 @@ export class AccessRequestRepository {
       requests: new AccessRequestRepository(client),
       verificationTokens: new EmailVerificationTokenRepository(client),
       invitations: new AccessInvitationRepository(client),
+      enrollments: new AccessRequestEnrollmentRepository(client),
       users: new UserRepository(client),
     }));
   }
@@ -48,6 +51,32 @@ export class AccessRequestRepository {
   async existsUserByEmail(email: string): Promise<boolean> {
     const normalized = normalizeAccessRequestEmail(email);
     return (await this.prisma.user.findUnique({ where: { email: normalized }, select: { id: true } })) !== null;
+  }
+
+  findEnrollmentByAccessRequestId(accessRequestId: string): Promise<AccessRequestEnrollment | null> {
+    return new AccessRequestEnrollmentRepository(this.prisma).findByAccessRequestId(accessRequestId);
+  }
+
+  isEnrollmentPlanCurrent(enrollment: AccessRequestEnrollment): Promise<boolean> {
+    return new AccessRequestEnrollmentRepository(this.prisma).isCurrentActivePlan(enrollment);
+  }
+
+  hasEnrollmentCompanyCnpjConflict(enrollment: AccessRequestEnrollment): Promise<boolean> {
+    return new AccessRequestEnrollmentRepository(this.prisma).hasCompanyCnpjConflict(enrollment);
+  }
+
+  /** Locks the persisted actor only after the AccessRequest lock is held. */
+  async lockActiveAdminForUpdate(userId: string): Promise<void> {
+    if ("$transaction" in this.prisma) {
+      throw new Error("ACCESS_REQUEST_ADMIN_LOCK_REQUIRES_TRANSACTION");
+    }
+    const rows = await this.prisma.$queryRaw<Array<{ id: string; role: string; deactivatedAt: Date | null }>>`
+      SELECT id, role, deactivatedAt FROM User WHERE id = ${userId} FOR UPDATE
+    `;
+    const user = rows[0];
+    if (!user || user.role !== "ADMIN" || user.deactivatedAt !== null) {
+      throw new Error("FORBIDDEN");
+    }
   }
 
   createIfEmailAvailable(dto: CreateAccessRequestDTO, now: Date = new Date()): Promise<AccessRequest | null> {
@@ -162,14 +191,19 @@ export class AccessRequestRepository {
   }
 
   /** Audita a ativação sem registrar senha, convite ou outro segredo. */
-  async createActivationAuditEvent(accessRequestId: string, actorId: string, now: Date): Promise<void> {
+  async createActivationAuditEvent(
+    accessRequestId: string,
+    actorId: string,
+    now: Date,
+    companyId: string | null = null,
+  ): Promise<void> {
     if ("$transaction" in this.prisma) {
       throw new Error("ACCESS_ACTIVATION_AUDIT_REQUIRES_TRANSACTION");
     }
     await this.prisma.auditLog.createMany({
       data: ["ACCOUNT_ACTIVATED", "ACCESS_INVITATION_USED"].map(action => ({
         actorId,
-        companyId: null,
+        companyId,
         entityType: "AccessRequest",
         entityId: accessRequestId,
         action,

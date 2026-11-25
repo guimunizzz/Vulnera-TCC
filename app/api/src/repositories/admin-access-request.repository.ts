@@ -5,8 +5,14 @@
  */
 
 import type { Prisma, PrismaClient } from "@prisma/client";
-import type { AccessRequestStatus } from "../models/access-request.model";
-import type { AdminAccessRequestEventRaw, AdminAccessRequestRaw } from "../models/admin-access-request.model";
+import { matchesAccessRequestPlanSnapshot, type AccessRequestStatus } from "../models/access-request.model";
+import type {
+  AdminAccessRequestEnrollmentRaw,
+  AdminAccessRequestEnrollmentEligibility,
+  AdminAccessRequestEventRaw,
+  AdminAccessRequestRaw,
+} from "../models/admin-access-request.model";
+import { companyCnpjVariants } from "../utils/cnpj.util";
 
 const ACCESS_REQUEST_LIST_SELECT = {
   id: true,
@@ -22,6 +28,17 @@ const ACCESS_REQUEST_LIST_SELECT = {
   rejectionReason: true,
   createdAt: true,
   updatedAt: true,
+  enrollment: {
+    select: {
+      companyCnpj: true,
+      planId: true,
+      planName: true,
+      planPrice: true,
+      planMaxApplications: true,
+      planMaxProjects: true,
+      planIncludesRemediation: true,
+    },
+  },
 } satisfies Prisma.AccessRequestSelect;
 
 const ACCESS_REQUEST_DETAIL_SELECT = {
@@ -78,6 +95,23 @@ export class AdminAccessRequestQueryRepository {
       where: { id },
       select: ACCESS_REQUEST_DETAIL_SELECT,
     });
+  }
+
+  async enrollmentEligibility(
+    enrollment: AdminAccessRequestEnrollmentRaw,
+  ): Promise<Exclude<AdminAccessRequestEnrollmentEligibility, "LEGACY">> {
+    const plan = await this.prisma.plan.findUnique({ where: { id: enrollment.planId } });
+    if (!plan) return "PLAN_NOT_FOUND";
+    if (!plan.isActive) return "PLAN_UNAVAILABLE";
+    if (!matchesAccessRequestPlanSnapshot(enrollment, plan)) return "PLAN_CHANGED";
+    if (enrollment.companyCnpj) {
+      const existingCompany = await this.prisma.company.findFirst({
+        where: { cnpj: { in: companyCnpjVariants(enrollment.companyCnpj) } },
+        select: { id: true },
+      });
+      if (existingCompany) return "COMPANY_CNPJ_CONFLICT";
+    }
+    return "ELIGIBLE";
   }
 
   async findEvents(

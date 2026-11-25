@@ -249,6 +249,7 @@ describe("AccountActivationService — consumo e criação atômicos", () => {
       role: "CLIENT",
       companyId: null,
       companyRole: null,
+      legacyOnboardingAllowed: true,
     });
     expect(user!.password).not.toBe(PASSWORD);
     await expect(comparePassword(PASSWORD, user!.password)).resolves.toBe(true);
