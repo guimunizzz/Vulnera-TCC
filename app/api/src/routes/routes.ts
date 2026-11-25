@@ -25,11 +25,14 @@ import { makeAccountActivationRoutes } from "./account-activation.routes";
 import type { AccountActivationRouteDependencies } from "../factories/account-activation.factory";
 import { dastScheduleRoutes } from "./dast-schedules.routes";
 import { adminQueuesRoutes } from "./admin-queues.routes";
+import { makeCompanyInvitationActivationRoutes, makeCompanyTeamRoutes } from "./company-invitation.routes";
+import type { CompanyInvitationRouteDependencies } from "../factories/company-invitation.factory";
 
 export function makeApiRoutes(options: {
   accessRequestDependencies?: AccessRequestRouteDependencies;
   adminAccessRequestDependencies?: AdminAccessRequestRouteDependencies;
   accountActivationDependencies?: AccountActivationRouteDependencies;
+  companyInvitationDependencies?: CompanyInvitationRouteDependencies;
 } = {}) {
   const router = Router();
 
@@ -38,8 +41,10 @@ export function makeApiRoutes(options: {
   router.use("/access-requests", makeAccessRequestRoutes(options.accessRequestDependencies));
   router.use("/admin/access-requests", makeAdminAccessRequestRoutes(options.adminAccessRequestDependencies));
   router.use("/account-activation", makeAccountActivationRoutes(options.accountActivationDependencies));
+  router.use("/company-invitations", makeCompanyInvitationActivationRoutes(options.companyInvitationDependencies));
   router.use("/users", userRoutes);
   router.use("/plans", planRoutes);
+  router.use("/companies", makeCompanyTeamRoutes(options.companyInvitationDependencies));
   router.use("/companies", companyRoutes);
   router.use("/subscriptions", subscriptionRoutes);
   router.use("/applications", applicationRoutes);
