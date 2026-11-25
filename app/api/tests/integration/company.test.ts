@@ -5,8 +5,8 @@ import { prisma } from "../../src/database/prisma.database";
 import { seedUser } from "../fixtures/users.fixture";
 import { seedPlan } from "../fixtures/plans.fixture";
 import { seedCompany } from "../fixtures/companies.fixture";
-import { loginAs } from "../fixtures/auth.fixture";
 import { CompanyRepository } from "../../src/repositories/company.repository";
+import { loginAs } from "../fixtures/auth.fixture";
 
 const PASSWORD = "senha12345";
 
@@ -36,6 +36,38 @@ describe("Company (me/list/getById/create/update/delete)", () => {
     const me = await request(app).get("/api/companies/me").set("Authorization", `Bearer ${token}`);
     expect(me.status).toBe(200);
     expect(me.body.id).toBe(res.body.id);
+  });
+
+  it("CompanyRepository reverte a empresa se o compare-and-set do OWNER falhar", async () => {
+    const plan = await seedPlan({ name: "BASIC" });
+    const repository = new CompanyRepository(prisma);
+
+    await expect(repository.createWithOwner("missing-user", {
+      name: "Empresa sem responsável",
+      planId: plan.id,
+    })).rejects.toThrow("USER_ALREADY_HAS_COMPANY");
+
+    expect(await prisma.company.count()).toBe(0);
+  });
+
+  it("POST /api/companies serializa abas concorrentes e vincula uma única empresa ao OWNER", async () => {
+    const plan = await seedPlan({ name: "BASIC" });
+    const client = await seedUser({ name: "Client", email: "client-race@vulnera.local", password: PASSWORD, role: "CLIENT" });
+    const token = await loginAs(app, client.email, PASSWORD);
+    const payload = { name: "Empresa única", planId: plan.id };
+
+    const responses = await Promise.all([
+      request(app).post("/api/companies").set("Authorization", `Bearer ${token}`).send(payload),
+      request(app).post("/api/companies").set("Authorization", `Bearer ${token}`).send(payload),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+    expect(responses.find((response) => response.status === 409)?.body.error).toBe("USER_ALREADY_HAS_COMPANY");
+    expect(await prisma.company.count()).toBe(1);
+    expect(await prisma.user.findUnique({ where: { id: client.id } })).toMatchObject({
+      companyId: responses.find((response) => response.status === 201)?.body.id,
+      companyRole: "OWNER",
+    });
   });
 
   // COMP-02

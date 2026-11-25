@@ -72,7 +72,7 @@ export function PlansPage() {
         {isError && (
           <ErrorState
             titulo="Não foi possível carregar os planos"
-            descricao="A API não respondeu. Isso não impede o cadastro — você pode escolher o plano depois."
+            descricao="A API não respondeu. Você ainda pode solicitar acesso e escolher o plano depois."
             aoTentarNovamente={() => refetch()}
           />
         )}
@@ -107,11 +107,11 @@ export function PlansPage() {
                   {/* Link com aparência de botão. Não é `<Button asChild>`: o
                       `asChild` dependia do `Slot` do Radix, removido no CP2. */}
                   <Link
-                    to="/register"
+                    to="/request-access"
                     className="press mt-6 inline-flex h-10 items-center justify-center rounded-control bg-accent px-4 text-sm font-medium text-accent-fg shadow-raised transition-colors duration-fast hover:bg-accent-hover"
                   >
                     {/* Uma string só: num inline-flex, "texto {expr}" vira dois itens e o espaço entre eles some ("Começar comPRO"). */}
-                    {`Começar com ${plano.name}`}
+                    {`Solicitar acesso ao ${plano.name}`}
                   </Link>
                 </Card>
               </StaggerItem>

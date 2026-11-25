@@ -13,19 +13,25 @@ import { paginaLazy } from "./lib/lazy-page";
  * página — `AppLayout` e `ProtectedRoute` — e a `LandingPage`, que já faz o
  * próprio `lazy()` da landing inteira.
  *
- * O cenário de acesso anima a troca login ↔ cadastro e foca o título no fim da
- * animação. Layout e as duas páginas vêm num só lote para que essa troca nunca
- * espere download (o que piscaria o cenário ou perderia o foco).
+ * O cenário de acesso anima a troca entre login, solicitação e confirmação, e
+ * foca o título no fim da animação. Layout e páginas públicas vêm num só lote
+ * para preservar o fundo e o foco durante a navegação entre esses formulários.
  */
 const carregarAcesso = () =>
   Promise.all([
     import("./pages/auth/auth-layout"),
     import("./pages/auth/login-page"),
     import("./pages/auth/register-page"),
+    import("./pages/auth/request-access-page"),
+    import("./pages/auth/verify-email-page"),
+    import("./pages/auth/activate-account-page"),
   ]);
 const AuthLayout = paginaLazy(() => carregarAcesso().then(([layout]) => layout), "AuthLayout");
 const LoginPage = paginaLazy(() => carregarAcesso().then(([, login]) => login), "LoginPage");
 const RegisterPage = paginaLazy(() => carregarAcesso().then(([, , cadastro]) => cadastro), "RegisterPage");
+const RequestAccessPage = paginaLazy(() => carregarAcesso().then(([, , , pagina]) => pagina), "RequestAccessPage");
+const VerifyEmailPage = paginaLazy(() => carregarAcesso().then(([, , , , pagina]) => pagina), "VerifyEmailPage");
+const ActivateAccountPage = paginaLazy(() => carregarAcesso().then(([, , , , , pagina]) => pagina), "ActivateAccountPage");
 
 const PlansPage = paginaLazy(() => import("./pages/plans-page"), "PlansPage");
 const OnboardingPage = paginaLazy(() => import("./pages/onboarding-page"), "OnboardingPage");
@@ -42,6 +48,10 @@ const FindingsPage = paginaLazy(() => import("./pages/findings-page"), "Findings
 const PendingSubscriptionsPage = paginaLazy(
   () => import("./pages/admin/pending-subscriptions-page"),
   "PendingSubscriptionsPage",
+);
+const AccessRequestsPage = paginaLazy(
+  () => import("./pages/admin/access-requests-page"),
+  "AccessRequestsPage",
 );
 const FilasPage = paginaLazy(() => import("./pages/admin/filas-page"), "FilasPage");
 const ApplicationDashboardPage = paginaLazy(
@@ -93,6 +103,9 @@ export function App() {
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/request-access" element={<RequestAccessPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/activate-account" element={<ActivateAccountPage />} />
           </Route>
           <Route path="/plans" element={<PlansPage />} />
 
@@ -166,6 +179,7 @@ export function App() {
 
             <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
               <Route path="/admin/subscriptions" element={<PendingSubscriptionsPage />} />
+              <Route path="/admin/access-requests" element={<AccessRequestsPage />} />
               {/* ADR-056 — painel de filas: contagens, falhas e "Tentar de novo". Só ADMIN. */}
               <Route path="/admin/filas" element={<FilasPage />} />
             </Route>

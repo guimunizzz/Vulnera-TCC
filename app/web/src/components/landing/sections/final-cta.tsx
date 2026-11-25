@@ -2,7 +2,7 @@
  * final-cta.tsx — chamada final + rodapé da landing.
  *
  * Portado de `vulnera-landing/src/components/sections/FinalCTA.jsx`.
- * O CTA agora navega pra /register (react-router).
+ * O CTA leva ao fluxo público de solicitação de acesso.
  *
  * Uma biblioteca só: o título entra com GSAP preso à rolagem; o hover e o
  * toque do botão são CSS (`.vx-cta-escala` em landing.css).
@@ -64,14 +64,14 @@ export default function FinalCTA() {
             Pronto pra dormir tranquilo?
           </GlitchHeading>
           <p className="mt-6 text-lg text-[var(--vx-text-2)]">
-            Crie sua conta, cadastre a primeira aplicação e solicite um plano.
+            Solicite acesso para sua empresa conhecer a plataforma.
           </p>
           <Link
-            to="/register"
+            to="/request-access"
             className="vx-cta-escala mt-12 inline-block rounded-[6px] bg-[var(--vx-accent)] px-12 py-4 font-mono text-base font-bold tracking-wider text-[var(--vx-on-accent)] hover:shadow-[0_0_44px_rgba(var(--vx-accent-rgb),0.8)]"
             style={{ boxShadow: "0 0 20px rgba(var(--vx-accent-rgb),0.45)" }}
           >
-            <InteractiveLabel>ORGANIZAR MINHA PRIMEIRA ANÁLISE →</InteractiveLabel>
+            <InteractiveLabel>SOLICITAR ACESSO À PLATAFORMA →</InteractiveLabel>
           </Link>
         </div>
       </section>

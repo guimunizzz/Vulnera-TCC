@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { authApi } from "../../lib/api/auth.api";
+import { subscriptionsApi } from "../../lib/api/subscriptions.api";
 import { useAuthStore } from "../../store/auth.store";
 import { useApiError } from "../../hooks/use-api-error";
 import { Alert, Button, Field, Input } from "../../components/ui";
@@ -21,9 +22,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const mensagemDeErro = useApiError();
 
-  // Todo login bem-sucedido vai para /dashboard (abaixo), então o código dessa
-  // página é baixado no tempo ocioso enquanto a pessoa digita. Mesmo módulo do
-  // `lazy()` de App.tsx: o navegador reaproveita o download na navegação.
+  // O dashboard costuma ser o próximo destino; baixa-se durante a digitação.
+  // Mesmo módulo do `lazy()` de App.tsx, então o navegador reaproveita o download.
   useEffect(() => {
     const baixar = () => void import("../dashboard-page").catch(() => undefined);
     // Nem todo navegador (nem o jsdom) implementa requestIdleCallback.
@@ -45,7 +45,21 @@ export function LoginPage() {
     try {
       const auth = await authApi.login({ email, password: senha });
       setAuth(auth);
-      navigate("/dashboard");
+      if (
+        auth.user.role === "CLIENT" &&
+        auth.user.companyId &&
+        auth.user.companyRole === "OWNER"
+      ) {
+        try {
+          const status = await subscriptionsApi.onboardingStatus();
+          navigate(status.status === "ACTIVE" ? "/dashboard" : "/onboarding");
+        } catch {
+          // O onboarding pode reconsultar o estado e oferecer retry sem perder a sessão.
+          navigate("/onboarding");
+        }
+        return;
+      }
+      navigate(auth.user.role === "CLIENT" && auth.user.companyId === null ? "/onboarding" : "/dashboard");
     } catch (err) {
       setErro(mensagemDeErro(err));
     } finally {
@@ -116,7 +130,7 @@ export function LoginPage() {
       </form>
 
       <p className="vx-login-register">
-        Não tem conta? <Link to="/register"><InteractiveLabel effect="glitch">Criar uma conta</InteractiveLabel> <ArrowRight size={14} aria-hidden="true" /></Link>
+        Precisa de acesso? <Link to="/request-access"><InteractiveLabel effect="glitch">Solicitar acesso</InteractiveLabel> <ArrowRight size={14} aria-hidden="true" /></Link>
       </p>
     </section>
   );
