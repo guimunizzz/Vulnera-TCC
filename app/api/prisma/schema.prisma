@@ -66,6 +66,9 @@ model User {
   companyId     String?
   companyRole   String?
   expoPushToken String? // Fase 7 — token do Expo Push Service; null até o app mobile registrar (POST /notifications/register-push)
+  deactivatedAt DateTime?
+  sessionVersion Int     @default(0)
+  legacyOnboardingAllowed Boolean @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -91,6 +94,7 @@ model User {
   threatMatchesTriaged     ThreatMatch[]          @relation("ThreatMatchTriagedBy") // ADR-053
   dastAuthorizations       Application[]          @relation("ApplicationDastAuthorizedBy") // ADR-056
   scanSchedulesCreated     ScanSchedule[]         @relation("ScanScheduleCreatedBy") // ADR-056
+  companyInvitationsIssued CompanyInvitation[]
 
   @@index([companyId])
 }
@@ -147,6 +151,7 @@ model AccessRequest {
   verificationToken EmailVerificationToken?
   invitation        AccessInvitation?
   events            AccessRequestEvent[]
+  enrollment        AccessRequestEnrollment?
 
   @@index([email, createdAt])
   @@index([status, createdAt])
@@ -203,6 +208,47 @@ model AccessRequestEvent {
   @@index([actorId])
 }
 
+// Condições comerciais do pedido, registradas no envio e preservadas na aprovação.
+// Pedidos anteriores à adesão unificada não possuem este registro.
+model AccessRequestEnrollment {
+  accessRequestId         String  @id
+  companyCnpj             String? @db.VarChar(14)
+  planId                  String
+  planName                String
+  planPrice               Decimal @db.Decimal(10, 2)
+  planMaxApplications     Int
+  planMaxProjects         Int
+  planIncludesRemediation Boolean
+
+  accessRequest AccessRequest @relation(fields: [accessRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  plan          Plan          @relation(fields: [planId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([planId])
+}
+
+// Convite para a equipe de uma empresa existente. O propósito é fixo e o
+// slot ativo é liberado no consumo/revogação; o hash nunca sai da persistência.
+model CompanyInvitation {
+  id          String    @id @default(cuid())
+  companyId   String
+  issuerId    String
+  name        String
+  email       String
+  activeEmail String?
+  tokenHash   String    @unique @db.Char(64)
+  issuedAt    DateTime  @default(now())
+  expiresAt   DateTime
+  usedAt      DateTime?
+  revokedAt   DateTime?
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  issuer  User    @relation(fields: [issuerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, activeEmail])
+  @@index([companyId, issuedAt])
+  @@index([issuerId])
+}
+
 // ============================================================================
 // COMERCIAL
 // ============================================================================
@@ -232,6 +278,7 @@ model Company {
   threatMatches   ThreatMatch[] // ADR-053 — CVEs que afetam o inventário
   dastScans       DastScan[] // ADR-056 — scans com tenant conhecido
   scanSchedules   ScanSchedule[] // ADR-056 — scans DAST agendados
+  invitations     CompanyInvitation[]
 
   @@index([planId])
 }
@@ -249,6 +296,7 @@ model Plan {
 
   companies     Company[]
   subscriptions Subscription[]
+  enrollments   AccessRequestEnrollment[]
 }
 
 // Subscription — vínculo Company ↔ Plan
