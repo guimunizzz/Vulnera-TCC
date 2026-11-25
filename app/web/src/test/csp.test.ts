@@ -37,9 +37,11 @@ describe("Content-Security-Policy (CP-5)", () => {
     expect(scriptSrc).toContain("'self'");
     expect(scriptSrc).not.toContain("'unsafe-inline'");
     expect(scriptSrc).not.toContain("'unsafe-eval'");
-    // Sem curinga: `*` ou `https:` em script-src anularia a diretiva.
+    // Só a origem oficial do Turnstile pode carregar script externo.
     expect(scriptSrc).not.toContain("*");
-    expect(scriptSrc).not.toContain("https:");
+    expect(scriptSrc.filter((value) => value.startsWith("https://"))).toEqual([
+      "https://challenges.cloudflare.com",
+    ]);
   });
 
   it("CSP-02 o hash corresponde ao script de tema do index.html real", () => {
@@ -70,7 +72,7 @@ describe("Content-Security-Policy (CP-5)", () => {
     expect(diretiva(csp, "default-src")).toEqual(["'self'"]);
     expect(diretiva(csp, "frame-ancestors")).toEqual(["'none'"]); // anti-clickjacking
     expect(diretiva(csp, "object-src")).toEqual(["'none'"]);
-    expect(diretiva(csp, "frame-src")).toEqual(["'none'"]);
+    expect(diretiva(csp, "frame-src")).toEqual(["https://challenges.cloudflare.com"]);
     expect(diretiva(csp, "base-uri")).toEqual(["'self'"]); // impede sequestro de URL relativa
     expect(diretiva(csp, "form-action")).toEqual(["'self'"]);
   });
@@ -100,5 +102,17 @@ describe("Content-Security-Policy (CP-5)", () => {
       .filter((p) => p.includes("'unsafe-inline'"))
       .map((p) => p.split(" ")[0]);
     expect(comUnsafe).toEqual(["style-src"]);
+  });
+
+  it("CSP-06 permite Turnstile apenas pela origem oficial de script e frame", () => {
+    const csp = buildCsp({ scriptHashes: hashesDosScriptsInline(indexHtml()) });
+    const script = diretiva(csp, "script-src");
+    const frame = diretiva(csp, "frame-src");
+
+    expect(script).toContain("https://challenges.cloudflare.com");
+    expect(frame).toEqual(["https://challenges.cloudflare.com"]);
+    expect(script).not.toContain("'unsafe-eval'");
+    expect(script).not.toContain("*");
+    expect(frame).not.toContain("*");
   });
 });

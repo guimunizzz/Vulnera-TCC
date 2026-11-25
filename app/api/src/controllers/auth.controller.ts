@@ -8,50 +8,8 @@
 import type { Request, Response } from "express";
 import type { AuthService } from "../services/auth.service";
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export class AuthController {
   constructor(private readonly service: AuthService) {}
-
-  register = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { name, email, password } = req.body ?? {};
-
-      // ---- validação manual ----
-      if (!name || typeof name !== "string" || name.trim().length < 3) {
-        res.status(400).json({ code: "INVALID_NAME", message: "Nome precisa ter pelo menos 3 caracteres" });
-        return;
-      }
-      if (!email || typeof email !== "string") {
-        res.status(400).json({ code: "MISSING_EMAIL", message: "Email é obrigatório" });
-        return;
-      }
-      if (!EMAIL_REGEX.test(email)) {
-        res.status(400).json({ code: "INVALID_EMAIL", message: "Formato de email inválido" });
-        return;
-      }
-      if (!password || typeof password !== "string") {
-        res.status(400).json({ code: "MISSING_PASSWORD", message: "Senha é obrigatória" });
-        return;
-      }
-      if (password.length < 8) {
-        res.status(400).json({ code: "WEAK_PASSWORD", message: "Senha precisa ter no mínimo 8 caracteres" });
-        return;
-      }
-      // ---- fim validação ----
-
-      const result = await this.service.register({ name: name.trim(), email, password });
-      res.status(201).json(result);
-    } catch (err) {
-      const msg = (err as Error).message;
-      if (msg === "EMAIL_ALREADY_EXISTS") {
-        res.status(409).json({ code: msg, message: "Email já cadastrado" });
-        return;
-      }
-      console.error("[auth.register] erro inesperado:", err);
-      res.status(500).json({ code: "INTERNAL_ERROR", message: "Erro interno" });
-    }
-  };
 
   login = async (req: Request, res: Response): Promise<void> => {
     try {

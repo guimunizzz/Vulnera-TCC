@@ -9,6 +9,7 @@ import { usersApi } from "../lib/api/users.api";
 import { getApiErrorCode, useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
 import type { Company } from "../types/company.types";
+import type { Subscription } from "../types/subscription.types";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/card";
@@ -44,6 +45,7 @@ export function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [company, setCompany] = useState<Company | null>(null);
+  const [pendingSubscription, setPendingSubscription] = useState<Subscription | null>(null);
   const [isCheckingCompany, setIsCheckingCompany] = useState(true);
   const [isCompanyReady, setIsCompanyReady] = useState(false);
   const sessionUser = useRef(useAuthStore.getState().user);
@@ -77,6 +79,19 @@ export function OnboardingPage() {
         setPlanId(existing.planId);
         setStep(2);
         if (!await syncProfile(existing.id, isActive)) return;
+
+        const status = await subscriptionsApi.onboardingStatus();
+        if (!isActive()) return;
+        if (status.status === "ACTIVE") {
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+        if (status.status === "PENDING_APPROVAL" && status.subscription) {
+          setPendingSubscription(status.subscription);
+          setPlanId(status.subscription.planId);
+          setDone(true);
+          return;
+        }
       }
       setIsCompanyReady(true);
     } catch (err) {
@@ -84,7 +99,7 @@ export function OnboardingPage() {
     } finally {
       if (isActive()) setIsCheckingCompany(false);
     }
-  }, [getErrorMessage, isCurrentSession, syncProfile]);
+  }, [getErrorMessage, isCurrentSession, navigate, syncProfile]);
 
   useEffect(() => {
     void restoreCompany();
@@ -105,8 +120,8 @@ export function OnboardingPage() {
 
   function goToConfirmation(): void {
     setError(null);
-    if (!planId) {
-      setError("Selecione um plano.");
+    if (!planId || !selectedPlan) {
+      setError("Selecione um plano disponível.");
       return;
     }
     setStep(3);
@@ -118,6 +133,7 @@ export function OnboardingPage() {
     const isActive = () => version === operationVersion.current && isCurrentSession();
     setError(null);
     setIsSubmitting(true);
+    let subscriptionRequestStarted = false;
     try {
       let savedCompany = company;
       if (!savedCompany) {
@@ -147,10 +163,31 @@ export function OnboardingPage() {
         setCompany(savedCompany);
       }
       if (!await syncProfile(savedCompany.id, isActive)) return;
-      await subscriptionsApi.request({ planId });
+      subscriptionRequestStarted = true;
+      const subscription = await subscriptionsApi.request({ planId });
       if (!isActive()) return;
+      setPendingSubscription(subscription);
       setDone(true);
     } catch (err) {
+      if (!isActive()) return;
+      if (subscriptionRequestStarted) {
+        try {
+          const status = await subscriptionsApi.onboardingStatus();
+          if (!isActive()) return;
+          if (status.status === "ACTIVE") {
+            navigate("/dashboard", { replace: true });
+            return;
+          }
+          if (status.status === "PENDING_APPROVAL" && status.subscription) {
+            setPendingSubscription(status.subscription);
+            setPlanId(status.subscription.planId);
+            setDone(true);
+            return;
+          }
+        } catch {
+          // Mantém o erro da operação original; o próximo retry continua idempotente no servidor.
+        }
+      }
       if (isActive()) setError(getErrorMessage(err));
     } finally {
       if (isActive()) setIsSubmitting(false);
@@ -165,7 +202,9 @@ export function OnboardingPage() {
           <CardHeader>
             <CardTitle>Empresa cadastrada!</CardTitle>
             <CardDescription>
-              Sua assinatura foi solicitada e está aguardando aprovação do time Vulnera.
+              {pendingSubscription?.status === "ACTIVE"
+                ? "Sua assinatura está ativa."
+                : `A solicitação do plano ${selectedPlan?.name ?? "selecionado"} está aguardando aprovação do time Vulnera.`}
             </CardDescription>
           </CardHeader>
           <Button onClick={() => navigate("/dashboard")}>Ir para o Dashboard</Button>

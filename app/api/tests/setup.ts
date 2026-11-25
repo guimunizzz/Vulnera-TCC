@@ -8,6 +8,17 @@ import * as path from "path";
 // testes (e ela vira screenshot de evidência do TCC).
 dotenv.config({ path: path.resolve(__dirname, "../.env.test"), quiet: true });
 
+// A suíte apaga registros: aceitar só o banco canônico de testes ou seu nome isolado.
+const testDatabase = new URL(process.env.DATABASE_URL ?? "invalid:");
+if (
+  process.env.NODE_ENV !== "test" ||
+  !/^\/vulnera_test(?:_[a-z0-9_]+)?$/.test(testDatabase.pathname)
+) {
+  throw new Error(
+    "UNSAFE_TEST_DATABASE: exige NODE_ENV=test e banco vulnera_test com sufixo descartável opcional",
+  );
+}
+
 import { prisma } from "../src/database/prisma.database";
 
 /**
@@ -15,10 +26,17 @@ import { prisma } from "../src/database/prisma.database";
  * (filhos antes dos pais). Chamar em beforeEach/afterEach pra isolar testes.
  */
 export async function cleanDatabase(): Promise<void> {
+  // Histórico e tokens antes do pedido; pedido/eventos antes dos Users revisores.
+  await prisma.accessRequestEvent.deleteMany();
+  await prisma.emailVerificationToken.deleteMany();
+  await prisma.accessInvitation.deleteMany();
+  await prisma.accessRequest.deleteMany();
   // DastFinding antes de DastScan (FK cascade cuidaria disso, mas explícito é
   // mais seguro); DastScan antes de User — requestedById é RESTRICT, não
   // CASCADE (deletar user com scan pendurado quebraria a constraint).
   await prisma.dastFinding.deleteMany();
+  await prisma.dastSensorRun.deleteMany();
+  await prisma.dastObservedAsset.deleteMany();
   await prisma.dastScan.deleteMany();
   // ScanSchedule (ADR-056) antes de Application/Project/User/Company: as FKs
   // para Application, Company e createdById são RESTRICT.

@@ -44,6 +44,8 @@ describe("Sidebar — SAST/SCA", () => {
   it("CLIENT não vê o item", () => {
     renderComo("CLIENT");
     expect(screen.queryByRole("link", { name: /SAST\/SCA/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Solicitações de acesso" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Aprovações de assinatura" })).not.toBeInTheDocument();
   });
 
   it("só os itens novos têm o selo (SAST/SCA, Threat Intel, Agendamentos, Filas e Triagem)", () => {
@@ -74,6 +76,16 @@ describe("Sidebar — SAST/SCA", () => {
       expect(screen.getByRole("link", { name: /Threat Intel/ })).toHaveAttribute("href", "/threat-intel");
       unmount();
     }
+  });
+
+  it("separa solicitações de acesso das aprovações de assinatura para ADMIN", () => {
+    renderComo("ADMIN");
+    expect(screen.getByRole("link", { name: "Solicitações de acesso" })).toHaveAttribute(
+      "href", "/admin/access-requests",
+    );
+    expect(screen.getByRole("link", { name: "Aprovações de assinatura" })).toHaveAttribute(
+      "href", "/admin/subscriptions",
+    );
   });
 
   it("Agendamentos (ADR-056) aparece para os três papéis, com o selo new, depois de SAST/SCA", () => {

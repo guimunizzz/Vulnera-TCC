@@ -35,7 +35,7 @@ const PLANS: Plan[] = [
     name: "BASIC",
     price: "R$ 499/mês",
     features: ["2 aplicações", "1 projeto simultâneo", "DAST, SAST/SCA e Threat Intel", "Relatórios PDF e Excel"],
-    cta: "Começar com Basic",
+    cta: "Solicitar acesso ao Basic",
     highlight: false,
     softAccent: false,
   },
@@ -48,7 +48,7 @@ const PLANS: Plan[] = [
       "Serviço de remediação incluso",
       "Tudo do Basic",
     ],
-    cta: "Começar com Pro",
+    cta: "Solicitar acesso ao Pro",
     highlight: true,
     softAccent: false,
   },
@@ -56,7 +56,7 @@ const PLANS: Plan[] = [
     name: "ENTERPRISE",
     price: "Sob consulta",
     features: ["Até 999 aplicações", "Até 999 projetos simultâneos", "Serviço de remediação incluso", "Tudo do Pro"],
-    cta: "Solicitar Enterprise",
+    cta: "Solicitar acesso ao Enterprise",
     highlight: false,
     softAccent: true,
   },
@@ -136,7 +136,7 @@ export default function Pricing() {
                 </ul>
 
                 <MotionLink
-                  to="/register"
+                  to="/request-access"
                   whileTap={{ scale: ESCALA_LANDING.toque }}
                   className={`mt-10 rounded-[6px] px-6 py-3 text-center font-mono text-sm font-bold tracking-wide transition-all duration-[300ms] ${
                     plan.highlight

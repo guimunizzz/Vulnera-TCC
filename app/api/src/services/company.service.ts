@@ -51,8 +51,14 @@ export class CompanyService {
       if (existing) throw new Error("COMPANY_ALREADY_EXISTS");
     }
 
-    const created = await this.repository.create(dto);
-    await this.userRepository.setCompanyOwnership(actor.userId, created.id, "OWNER");
+    const created = await this.repository.createWithOwner(actor.userId, dto).catch((error: unknown) => {
+      // A verificação prévia de CNPJ melhora a mensagem comum; a constraint
+      // única ainda precisa decidir corretamente duas criações concorrentes.
+      if (dto.cnpj && isUniqueConstraintViolation(error)) {
+        throw new Error("COMPANY_ALREADY_EXISTS");
+      }
+      throw error;
+    });
     return new CompanyEntity(created);
   }
 
@@ -85,4 +91,9 @@ export class CompanyService {
     const user = await this.userRepository.findById(actor.userId);
     if (!user?.companyId || user.companyId !== id) throw new Error("FORBIDDEN");
   }
+}
+
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return typeof error === "object" && error !== null
+    && "code" in error && (error as { code?: unknown }).code === "P2002";
 }
