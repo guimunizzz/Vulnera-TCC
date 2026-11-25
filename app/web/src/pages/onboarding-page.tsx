@@ -107,7 +107,8 @@ export function OnboardingPage() {
   }, [restoreCompany]);
 
   const { data: plans } = useQuery({ queryKey: ["plans"], queryFn: plansApi.list });
-  const selectedPlan = plans?.find((p) => p.id === planId);
+  const eligiblePlans = plans?.filter((plan) => plan.isActive) ?? [];
+  const selectedPlan = eligiblePlans.find((p) => p.id === planId);
 
   function goToPlan(): void {
     setError(null);
@@ -265,7 +266,7 @@ export function OnboardingPage() {
 
         {step === 2 && (
           <div className="flex flex-col gap-3">
-            {plans?.map((plan) => (
+            {eligiblePlans.map((plan) => (
               <button
                 key={plan.id}
                 type="button"

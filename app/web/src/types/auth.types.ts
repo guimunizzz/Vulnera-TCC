@@ -16,6 +16,8 @@ export interface User {
    * antes do CP-2 não tem o campo — ausente vale como "não é OWNER".
    */
   companyRole?: string | null;
+  /** True only for pre-wave accounts allowed to resume the legacy onboarding. */
+  legacyOnboardingAllowed?: boolean;
   createdAt: string;
 }
 

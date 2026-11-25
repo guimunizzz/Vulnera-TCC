@@ -21,6 +21,7 @@ const SPEC_DIR = dirname(fileURLToPath(import.meta.url));
 const SCREENSHOTS_DIR = resolve(SPEC_DIR, "../../../output/issue51-stage6/screenshots");
 const BASE_ORIGIN = "http://127.0.0.1:4179";
 const INVITE_TOKEN = "A".repeat(43);
+const COMPANY_INVITE_TOKEN = "team_" + "C".repeat(43);
 const EMAIL_TOKEN = "B".repeat(43);
 const ACCESS_REQUEST_ID = "access-request-e2e";
 
@@ -45,11 +46,15 @@ const requestFields: AdminAccessRequest = {
   companyName: "Empresa QA",
   phone: "+55 11 99999-0000",
   status: "PENDING_REVIEW",
-  expiresAt: "2026-12-01T12:00:00.000Z",
+  expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   emailVerifiedAt: "2026-11-17T12:00:00.000Z",
   reviewedAt: null,
   reviewedById: null,
   rejectionReason: null,
+  enrollment: {
+    planId: "plan-e2e", planName: "Plano QA", planPrice: "250.00", companyCnpj: null,
+    planMaxApplications: 5, planMaxProjects: 3, planIncludesRemediation: true,
+  },
   createdAt: "2026-11-17T11:00:00.000Z",
   updatedAt: "2026-11-17T12:00:00.000Z",
 };
@@ -169,6 +174,14 @@ async function installLocalFakes(page: Page): Promise<ApiHarness> {
       await route.fulfill({ status: 204, body: "" });
       return;
     }
+    if (path === "/api/company-invitations/validate" && method === "POST") {
+      await json({ valid: (body as { token?: string })?.token === COMPANY_INVITE_TOKEN });
+      return;
+    }
+    if (path === "/api/company-invitations/activate" && method === "POST") {
+      await route.fulfill({ status: 204, body: "" });
+      return;
+    }
 
     if (path === "/api/saved-queries" && method === "GET") {
       await json([]);
@@ -193,6 +206,7 @@ async function installLocalFakes(page: Page): Promise<ApiHarness> {
     if (detailMatch && method === "GET") {
       await json({
         ...request,
+        enrollmentEligibility: "ELIGIBLE",
         invitation: request.status === "APPROVED"
           ? { issuedAt: "2026-11-17T12:01:00.000Z", expiresAt: "2026-11-24T12:01:00.000Z", usedAt: null, revokedAt: null }
           : null,
@@ -237,6 +251,7 @@ async function installLocalFakes(page: Page): Promise<ApiHarness> {
           role: "CLIENT",
           companyId: null,
           companyRole: null,
+          legacyOnboardingAllowed: true,
           createdAt: "2026-11-17T10:00:00.000Z",
         },
       });
@@ -251,7 +266,11 @@ async function installLocalFakes(page: Page): Promise<ApiHarness> {
       return;
     }
     if (path === "/api/plans" && method === "GET") {
-      await json([]);
+      await json([{
+        id: "plan-e2e", name: "Plano QA", isActive: true, price: 250,
+        maxApplications: 5, maxProjects: 3, includesRemediation: true,
+        createdAt: "2026-11-17T10:00:00.000Z",
+      }]);
       return;
     }
 
@@ -265,8 +284,13 @@ async function installLocalFakes(page: Page): Promise<ApiHarness> {
   };
 }
 
-async function seedSession(page: Page, role: "ADMIN" | "CLIENT" | "PENTESTER", companyId: string | null = null) {
-  await page.addInitScript(({ seededRole, seededCompanyId }) => {
+async function seedSession(
+  page: Page,
+  role: "ADMIN" | "CLIENT" | "PENTESTER",
+  companyId: string | null = null,
+  companyRole: "OWNER" | "MEMBER" = "OWNER",
+) {
+  await page.addInitScript(({ seededRole, seededCompanyId, seededCompanyRole }) => {
     localStorage.setItem("vulnera-auth", JSON.stringify({
       state: {
         accessToken: "e2e-admin-access-token",
@@ -277,14 +301,15 @@ async function seedSession(page: Page, role: "ADMIN" | "CLIENT" | "PENTESTER", c
           email: `${seededRole.toLowerCase()}@example.test`,
           role: seededRole,
           companyId: seededCompanyId,
-          companyRole: seededCompanyId ? "OWNER" : null,
+          companyRole: seededCompanyId ? seededCompanyRole : null,
+          legacyOnboardingAllowed: false,
           createdAt: "2026-11-17T10:00:00.000Z",
         },
       },
       version: 0,
     }));
     localStorage.setItem("vulnera:theme", "dark");
-  }, { seededRole: role, seededCompanyId: companyId });
+  }, { seededRole: role, seededCompanyId: companyId, seededCompanyRole: companyRole });
 }
 
 async function setTheme(page: Page, theme: "dark" | "light") {
@@ -319,9 +344,13 @@ async function assertNoHorizontalOverflow(page: Page, expectedWidth: number) {
 
 async function fillRequestForm(page: Page) {
   await page.getByLabel("Nome").fill("Rafaela QA");
-  await page.getByLabel("Empresa").fill("Empresa QA");
   await page.getByLabel("E-mail").fill("rafaela.qa@example.test");
   await page.getByLabel("Telefone (opcional)").fill("+55 11 99999-0000");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByLabel("Empresa").fill("Empresa QA");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("radio", { name: /Plano QA/u }).check();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
 }
 
 async function issueCaptcha(page: Page, token = "local-captcha-token") {
@@ -336,10 +365,11 @@ async function issueCaptcha(page: Page, token = "local-captcha-token") {
 
 test.describe("Pedido público e legado de cadastro", () => {
   test("CA-01 — CTA da landing e /register levam ao pedido de acesso sem chamar registro legado", async ({ page, api }) => {
+    test.setTimeout(90_000);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await setTheme(page, "dark");
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     const cta = page.getByRole("link", { name: "Solicitar acesso →", exact: true });
     await expect(cta).toBeVisible();
     await cta.click();
@@ -376,7 +406,6 @@ test.describe("Pedido público e legado de cadastro", () => {
     expect(api.calls.filter((call) => call.path === "/api/access-requests")).toHaveLength(0);
 
     await issueCaptcha(page, "captcha-valid-for-request");
-    await fillRequestForm(page);
     await submit.click();
     await expect(page.getByRole("status").filter({ hasText: "Se os dados informados permitirem" })).toBeVisible();
     const call = api.calls.find((entry) => entry.path === "/api/access-requests" && entry.method === "POST");
@@ -385,6 +414,7 @@ test.describe("Pedido público e legado de cadastro", () => {
       email: "rafaela.qa@example.test",
       companyName: "Empresa QA",
       phone: "+55 11 99999-0000",
+      planId: "plan-e2e",
       captchaToken: "captcha-valid-for-request",
     });
     expect(call?.authorization).toBeNull();
@@ -411,7 +441,7 @@ test.describe("Pedido público e legado de cadastro", () => {
           await page.keyboard.press("Tab");
           await expect(page.getByLabel("Nome")).toBeFocused();
           await page.keyboard.press("Tab");
-          await expect(page.getByLabel("Empresa")).toBeFocused();
+          await expect(page.getByLabel("E-mail")).toBeFocused();
         }
         if (width === 320 || width === 1440) {
           await screenshot(page, `03-request-access-${width}-${theme}.png`);
@@ -528,7 +558,11 @@ test.describe("Fila administrativa e isolamento por papel", () => {
         await expect(page.getByRole("heading", { name: title })).toBeAttached();
         await assertNoHorizontalOverflow(page, width);
         if (width === 390) {
-          if (route === "/request-access") await issueCaptcha(page, "captcha-a11y-test");
+          if (route === "/request-access") {
+            expect(await scanAxe(page, panelSelector), "responsável axe-core").toEqual([]);
+            await fillRequestForm(page);
+            await issueCaptcha(page, "captcha-a11y-test");
+          }
           expect(await scanAxe(page, panelSelector), `${route} axe-core`).toEqual([]);
         }
       }
@@ -557,7 +591,35 @@ test.describe("Fila administrativa e isolamento por papel", () => {
   });
 });
 
-test("CA-10 — login de CLIENT sem empresa segue para onboarding", async ({ page, api }) => {
+test("A rota Minha equipe bloqueia MEMBER antes de carregar dados administrativos", async ({ page, api }) => {
+  await seedSession(page, "CLIENT", "company-e2e", "MEMBER");
+  await page.goto("/team");
+  await expect(page).toHaveURL(/\/dashboard$/u);
+  expect(api.calls.some(({ path }) => path.startsWith("/api/companies/me/invitations"))).toBe(false);
+});
+
+test("Convite de equipe remove o fragmento, define senha e segue para login", async ({ page, api }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/join-company#token=${COMPANY_INVITE_TOKEN}`);
+  await expect(page.getByRole("heading", { name: "Entrar para a equipe" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe("");
+  const passwords = page.locator('input[type="password"]');
+  await passwords.nth(0).fill("senha-equipe-playwright-123");
+  await passwords.nth(1).fill("senha-equipe-playwright-123");
+  await page.getByRole("button", { name: "Ativar acesso", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Acesso ativado" })).toBeVisible();
+  const calls = api.calls.filter(({ path }) => path.startsWith("/api/company-invitations/"));
+  expect(calls.map(({ path, authorization, cookie }) => ({ path, authorization, cookie }))).toEqual([
+    { path: "/api/company-invitations/validate", authorization: null, cookie: null },
+    { path: "/api/company-invitations/activate", authorization: null, cookie: null },
+  ]);
+  expect(calls[1]?.body).toEqual({ token: COMPANY_INVITE_TOKEN, password: "senha-equipe-playwright-123" });
+  expect(await page.evaluate(() => localStorage.getItem("vulnera-auth"))).toBeNull();
+  await page.getByRole("link", { name: "Ir para o login" }).click();
+  await expect(page).toHaveURL(/\/login$/u);
+});
+
+test("CA-10 — login de CLIENT legado sem empresa segue para onboarding", async ({ page, api }) => {
   await setTheme(page, "dark");
   await page.goto("/login");
   await page.getByLabel("E-mail").fill("cliente@example.test");

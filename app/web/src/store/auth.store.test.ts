@@ -62,6 +62,15 @@ describe("Cache de leitura por sessão", () => {
     expect(queryClient.getQueryData(["projects"])).toEqual(["Projeto da mesma empresa"]);
   });
 
+  it("invalida sessão de onboarding quando o backend atualiza a permissão legada", () => {
+    const auth = session("legacy");
+    auth.user.companyId = null;
+    useAuthStore.getState().setAuth(auth);
+    queryClient.setQueryData(["onboarding-status"], { status: "PENDING_APPROVAL" });
+    expect(useAuthStore.getState().updateUser({ ...auth.user, legacyOnboardingAllowed: false }, auth.user)).toBe(true);
+    expect(queryClient.getQueryData(["onboarding-status"])).toBeUndefined();
+  });
+
   it("recusa resposta de perfil de outra sessão, inclusive novo login da mesma pessoa", () => {
     const previous = session("owner");
     useAuthStore.getState().setAuth(previous);

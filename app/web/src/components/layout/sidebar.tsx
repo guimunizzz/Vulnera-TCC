@@ -20,7 +20,7 @@
 
 import { NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, Check, Clock3, FileCode2, FileText, Folder, LayoutDashboard, ListTodo, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, UserPlus, type LucideIcon } from "lucide-react";
+import { CalendarClock, Check, Clock3, FileCode2, FileText, Folder, LayoutDashboard, ListTodo, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { savedQueriesApi } from "../../lib/api/saved-queries.api";
@@ -33,6 +33,7 @@ interface ItemNav {
   icone: LucideIcon;
   /** Se definido, só esses papéis veem o item. */
   papeis?: UserRole[];
+  companyRoles?: Array<"OWNER" | "MEMBER">;
   /**
    * Selo "new" no canto do item. Fixo de propósito (decisão de 2026-11-13):
    * some quando alguém tirar daqui, não por visita — previsível na demo.
@@ -79,13 +80,18 @@ const GRUPOS: GrupoNav[] = [
       { para: "/admin/filas", rotulo: "Filas", papeis: ["ADMIN"], icone: ListTodo, novo: true },
     ],
   },
+  {
+    rotulo: "Empresa",
+    itens: [{ para: "/team", rotulo: "Minha equipe", papeis: ["CLIENT"], companyRoles: ["OWNER"], icone: Users }],
+  },
 ];
 
 export function Sidebar({ aoNavegar, embutida }: { aoNavegar?: () => void; embutida?: boolean }) {
   const papel = useAuthStore((s) => s.user?.role);
+  const companyRole = useAuthStore((s) => s.user?.companyRole);
   const grupos = GRUPOS.map((grupo) => ({
     ...grupo,
-    itens: grupo.itens.filter((item) => !item.papeis || (papel && item.papeis.includes(papel))),
+    itens: grupo.itens.filter((item) => (!item.papeis || (papel && item.papeis.includes(papel))) && (!item.companyRoles || (companyRole && item.companyRoles.includes(companyRole as "OWNER" | "MEMBER")))),
   })).filter((grupo) => grupo.itens.length > 0);
 
   return (

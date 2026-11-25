@@ -48,7 +48,7 @@ export function PlansPage() {
 
   // Menor para maior por CAPACIDADE — o preço sozinho não serve de ranking
   // porque o Enterprise usa 0 para "sob consulta".
-  const ordenados = [...(planos ?? [])].sort((a, b) => a.maxApplications - b.maxApplications);
+  const ordenados = (planos ?? []).filter((plano) => plano.isActive).sort((a, b) => a.maxApplications - b.maxApplications);
 
   return (
     <div className="min-h-dvh bg-canvas px-4 py-16">

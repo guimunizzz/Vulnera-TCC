@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
         // (até da mesma pessoa) invalida uma resposta antiga. Rotação de token
         // preserva a referência e os tokens atuais nunca são sobrescritos.
         if (get().user !== sessionUser || user.id !== sessionUser.id) return false;
-        if (user.companyId !== sessionUser.companyId || user.companyRole !== sessionUser.companyRole || user.role !== sessionUser.role) {
+        if (user.companyId !== sessionUser.companyId || user.companyRole !== sessionUser.companyRole || user.role !== sessionUser.role || user.legacyOnboardingAllowed !== sessionUser.legacyOnboardingAllowed) {
           queryClient.clear();
         }
         set({ user });

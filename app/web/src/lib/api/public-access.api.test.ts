@@ -14,9 +14,16 @@ afterEach(() => vi.clearAllMocks());
 
 describe("publicAccessApi", () => {
   it("envia solicitação com CAPTCHA e dados sem CNPJ", async () => {
-    const input = { name: "Pessoa", email: "pessoa@example.test", companyName: "Empresa", captchaToken: "captcha" };
+    const input = { name: "Pessoa", email: "pessoa@example.test", companyName: "Empresa", planId: "plan-1", captchaToken: "captcha" };
     vi.mocked(publicPost).mockResolvedValueOnce({ message: "ok" });
     await expect(publicAccessApi.request(input)).resolves.toEqual({ message: "ok" });
+    expect(publicPost).toHaveBeenCalledWith("/access-requests", input);
+  });
+
+  it("envia CNPJ opcional sem alterar os campos de responsável e plano", async () => {
+    const input = { name: "Pessoa", email: "pessoa@example.test", companyName: "Empresa", planId: "plan-1", companyCnpj: "12345678000199", captchaToken: "captcha" };
+    vi.mocked(publicPost).mockResolvedValueOnce({ message: "ok" });
+    await publicAccessApi.request(input);
     expect(publicPost).toHaveBeenCalledWith("/access-requests", input);
   });
 
