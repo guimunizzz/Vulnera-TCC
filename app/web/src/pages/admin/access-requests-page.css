@@ -1,0 +1,34 @@
+/*
+ * O que faz: estiliza a fila administrativa de solicitações de acesso.
+ * Por que existe: mantém hierarquia, leitura e responsividade no tema do produto.
+ * Quem consome: AccessRequestsPage, dentro do AppLayout autenticado.
+ */
+.access-requests-page { display: flex; flex-direction: column; gap: 1.25rem; color: oklch(var(--color-text-primary)); }
+.access-requests-header { padding: clamp(1rem, 3vw, 2rem); border: 1px solid oklch(var(--color-border-subtle)); border-radius: var(--radius-container); background: color-mix(in oklch, oklch(var(--color-bg-surface)) 82%, transparent); }
+.access-requests-header h1, .access-requests-detail h2 { margin: .25rem 0; font-size: clamp(1.45rem, 3vw, 2rem); font-weight: 700; }
+.access-requests-header > p:last-child { margin: 0; color: oklch(var(--color-text-muted)); }
+.access-requests-eyebrow { margin: 0; color: oklch(var(--color-accent-ink)); font: 600 .72rem/1.4 var(--font-mono, monospace); letter-spacing: .12em; text-transform: uppercase; }
+.access-requests-alert { margin-block: .25rem; }
+.access-requests-toolbar, .access-requests-pagination, .access-requests-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.access-requests-filter-label { font-size: .875rem; font-weight: 600; }
+.access-requests-toolbar > [role="combobox"], .access-requests-toolbar > button { min-width: min(100%, 18rem); }
+.access-requests-total, .access-requests-pagination span { color: oklch(var(--color-text-muted)); font-size: .875rem; }
+.access-requests-state { display: grid; justify-items: start; gap: .75rem; padding: 2rem; border: 1px dashed oklch(var(--color-border-strong)); border-radius: var(--radius-container); color: oklch(var(--color-text-secondary)); }
+.access-requests-table-scroll { overflow-x: auto; border: 1px solid oklch(var(--color-border-subtle)); border-radius: var(--radius-container); }
+.access-requests-table { width: 100%; min-width: 48rem; border-collapse: collapse; text-align: left; font-size: .875rem; }
+.access-requests-table th, .access-requests-table td { padding: .8rem 1rem; vertical-align: top; }
+.access-requests-person { display: grid; gap: .2rem; text-align: left; font-weight: 600; color: oklch(var(--color-text-primary)); }
+.access-requests-person span { color: oklch(var(--color-text-muted)); font-size: .8rem; font-weight: 400; }
+.access-requests-detail { display: grid; gap: 1.25rem; padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid oklch(var(--color-border-subtle)); border-radius: var(--radius-container); background: oklch(var(--color-bg-surface)); }
+.access-requests-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: .9rem; margin: 0; }
+.access-requests-facts div { min-width: 0; padding: .8rem; border-radius: var(--radius-control); background: oklch(var(--color-bg-inset)); }
+.access-requests-facts dt { color: oklch(var(--color-text-muted)); font-size: .75rem; }
+.access-requests-facts dd { margin: .25rem 0 0; overflow-wrap: anywhere; font-size: .9rem; }
+.access-requests-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+.access-requests-history { display: grid; gap: .75rem; border-top: 1px solid oklch(var(--color-border-subtle)); padding-top: 1rem; }
+.access-requests-history h3 { margin: 0; font-size: 1.1rem; }
+.access-requests-history ol { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
+.access-requests-history li { display: grid; gap: .3rem; padding: .85rem; border-left: 2px solid oklch(var(--color-accent)); background: oklch(var(--color-bg-inset)); }
+.access-requests-history li span, .access-requests-history li time { color: oklch(var(--color-text-muted)); font-size: .8rem; }
+.access-requests-history li p { margin: 0; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .access-requests-page *, .access-requests-page *::before, .access-requests-page *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }

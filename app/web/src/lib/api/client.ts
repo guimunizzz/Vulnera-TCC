@@ -15,7 +15,7 @@
 import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "../../store/auth.store";
 
-const AUTH_PATHS_WITHOUT_REFRESH = ["/auth/login", "/auth/register", "/auth/refresh"];
+const AUTH_PATHS_WITHOUT_REFRESH = ["/auth/login", "/auth/refresh"];
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,

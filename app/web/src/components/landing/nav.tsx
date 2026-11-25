@@ -188,10 +188,10 @@ export default function Nav() {
             className="hidden overflow-hidden md:block"
           >
             <Link
-              to="/register"
+              to="/request-access"
               className="block whitespace-nowrap rounded-[6px] border border-[var(--vx-accent)] px-5 py-[10px] font-mono text-sm font-bold tracking-wide text-[var(--vx-accent)] transition-all duration-[300ms] hover:bg-[var(--vx-accent)] hover:text-[var(--vx-on-accent)]"
             >
-              <InteractiveLabel>Começar →</InteractiveLabel>
+              <InteractiveLabel>Solicitar acesso →</InteractiveLabel>
             </Link>
           </motion.div>
         </div>

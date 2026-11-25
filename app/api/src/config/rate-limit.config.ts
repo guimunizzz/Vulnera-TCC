@@ -20,7 +20,6 @@ export type RateLimitScope =
   | "export"
   | "auth-login-ip"
   | "auth-login-account"
-  | "auth-register-ip"
   | "auth-refresh";
 
 export interface TokenBucketPolicy {
@@ -107,10 +106,6 @@ export function loadRateLimitConfig(): RateLimitConfig {
         ratePerSecond: optionalNumber(EnvKeys.RATE_LIMIT_LOGIN_ACCOUNT_MAX, 5, 1) / authWindowSeconds,
         burst: optionalNumber(EnvKeys.RATE_LIMIT_LOGIN_ACCOUNT_MAX, 5, 1),
       },
-      "auth-register-ip": {
-        ratePerSecond: optionalNumber(EnvKeys.RATE_LIMIT_REGISTER_IP_MAX, 5, 1) / authWindowSeconds,
-        burst: optionalNumber(EnvKeys.RATE_LIMIT_REGISTER_IP_MAX, 5, 1),
-      },
       "auth-refresh": perMinute(optionalNumber(EnvKeys.RATE_LIMIT_REFRESH_PER_MINUTE, 10, 1), 3),
     },
   });
@@ -136,7 +131,6 @@ export function createRateLimitConfig(overrides: RateLimitConfigOverrides = {}):
       export: perMinute(6, 2),
       "auth-login-ip": perMinute(4, 20),
       "auth-login-account": perMinute(1, 5),
-      "auth-register-ip": perMinute(1, 5),
       "auth-refresh": perMinute(10, 3),
     },
   };

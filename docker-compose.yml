@@ -54,6 +54,11 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_troque_em_producao_9876543210}
       JWT_REFRESH_TTL: 7d
       BCRYPT_COST: "12"
+      # Credenciais Turnstile ficam somente no runtime da API, nunca no build web.
+      # Sem segredo, o fluxo protegido permanece fail-closed.
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      TURNSTILE_EXPECTED_ACTION: ${TURNSTILE_EXPECTED_ACTION:-}
+      TURNSTILE_EXPECTED_HOSTNAME: ${TURNSTILE_EXPECTED_HOSTNAME:-}
       # Precisa ser o endereço que o NAVEGADOR usa (a porta de entrada, 8086),
       # não a porta interna do container `web` (3000) — é o header `Origin`
       # que o browser envia em toda requisição à API que o middleware `cors`
@@ -141,6 +146,9 @@ services:
         # endereço que o NAVEGADOR (no host) usa — não o nome do serviço Docker.
         # Vite embute isso no bundle em build time, não dá pra trocar depois.
         VITE_API_URL: http://localhost:3001/api
+        # Chave pública e action entram no build do web; sem chave, o widget bloqueia.
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
+        VITE_TURNSTILE_ACTION: ${VITE_TURNSTILE_ACTION:-access-request}
     container_name: vulnera-web
     ports:
       # host 8086 -> container 3000: 8086 é a PORTA DE ENTRADA do app inteiro
