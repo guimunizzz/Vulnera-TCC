@@ -16,7 +16,7 @@ Versões anteriores deste relatório e dos documentos relacionados registravam o
 
 ## Escopo e ownership
 
-- **E — documentação:** PRD, BACKLOG, ROADMAP, ADR-056, changelog e este
+- **E — documentação:** PRD, BACKLOG, ROADMAP, ADR-057, changelog e este
   relatório. Não altera fontes, testes ou artefatos de frontend.
 - **A — domínio/repositories (4 arquivos):** `models/account-activation.model.ts`,
   `services/account-activation.service.ts`, `repositories/access-request.repository.ts`,
@@ -35,7 +35,7 @@ Versões anteriores deste relatório e dos documentos relacionados registravam o
   `access-request.test.ts` para retirar o canário 404 que ficou obsoleto quando a
   rota da mesma Issue #51 passou a existir. A adaptação valida 400
   `INVALID_BODY` e ausência de consumo pelos contadores de ativação.
-- **E — documentação:** PRD, BACKLOG, ROADMAP, ADR-056, changelog, relatório do
+- **E — documentação:** PRD, BACKLOG, ROADMAP, ADR-057, changelog, relatório do
   merge e este relatório. Total: 27 arquivos no recorte.
 - Nesta etapa: validar convite e criar `User` CLIENT ao ativar, consumindo o
   convite uma única vez e encerrando `AccessRequest` atomicamente; o login já
@@ -134,7 +134,7 @@ services novos é 76,62% e fica registrada como ressalva, sem alegar meta de 80%
 1. Receber e registrar o resultado dos dois casos finais de domínio para
    `REJECTED` e `EXPIRED`; não inferir aprovação antes da execução focal.
 2. Após essa execução, marcar a etapa concluída no PRD/BACKLOG/ROADMAP/changelog
-   e atualizar este relatório/ADR-056 com as evidências finais. Não repetir a
+   e atualizar este relatório/ADR-057 com as evidências finais. Não repetir a
    suíte completa já executada.
 
 ## Matriz de estados a provar

@@ -52,6 +52,7 @@ const AccessRequestsPage = paginaLazy(
   () => import("./pages/admin/access-requests-page"),
   "AccessRequestsPage",
 );
+const FilasPage = paginaLazy(() => import("./pages/admin/filas-page"), "FilasPage");
 const ApplicationDashboardPage = paginaLazy(
   () => import("./pages/application-dashboard-page"),
   "ApplicationDashboardPage",
@@ -65,6 +66,7 @@ const DastScanDetailPage = paginaLazy(() => import("./pages/dast-scan-detail-pag
 const DastScanReportPage = paginaLazy(() => import("./pages/dast-scan-report-page"), "DastScanReportPage");
 const SastScaPage = paginaLazy(() => import("./pages/sast-sca-page"), "SastScaPage");
 const ThreatIntelPage = paginaLazy(() => import("./pages/threat-intel-page"), "ThreatIntelPage");
+const AgendamentosPage = paginaLazy(() => import("./pages/agendamentos-page"), "AgendamentosPage");
 const CodeImportDetailPage = paginaLazy(() => import("./pages/code-import-detail-page"), "CodeImportDetailPage");
 const SlaSettingsPage = paginaLazy(() => import("./pages/settings/sla-settings-page"), "SlaSettingsPage");
 const PlaybooksPage = paginaLazy(() => import("./pages/playbooks-page"), "PlaybooksPage");
@@ -130,6 +132,9 @@ export function App() {
             <Route path="/playbooks" element={<PlaybooksPage />} />
             {/* Threat Intel (ADR-053): os três papéis; empresa e permissões vêm da API. */}
             <Route path="/threat-intel" element={<ThreatIntelPage />} />
+            {/* Scans DAST agendados (ADR-056): os três papéis; CLIENT só lê a
+                própria empresa. Quem vê e quem muda o quê, a API decide. */}
+            <Route path="/agendamentos" element={<AgendamentosPage />} />
             <Route path="/playbooks/:id" element={<PlaybookDetailPage />} />
 
             {/* Varredura global de findings — ferramenta de quem analisa.
@@ -164,6 +169,8 @@ export function App() {
             <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
               <Route path="/admin/subscriptions" element={<PendingSubscriptionsPage />} />
               <Route path="/admin/access-requests" element={<AccessRequestsPage />} />
+              {/* ADR-056 — painel de filas: contagens, falhas e "Tentar de novo". Só ADMIN. */}
+              <Route path="/admin/filas" element={<FilasPage />} />
             </Route>
 
             {/* Módulo DAST — não existe pro CLIENT: nem item de menu, nem rota

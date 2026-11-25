@@ -38,6 +38,9 @@ export async function cleanDatabase(): Promise<void> {
   await prisma.dastSensorRun.deleteMany();
   await prisma.dastObservedAsset.deleteMany();
   await prisma.dastScan.deleteMany();
+  // ScanSchedule (ADR-056) antes de Application/Project/User/Company: as FKs
+  // para Application, Company e createdById são RESTRICT.
+  await prisma.scanSchedule.deleteMany();
   // RiskAcceptance (CP-4) antes de Vulnerability — FK Cascade cuidaria, mas
   // explícito é mais seguro e mantém a ordem legível de cima para baixo.
   await prisma.riskAcceptance.deleteMany();

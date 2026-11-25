@@ -13,7 +13,7 @@ status: parcial
 # Email SMTP
 
 > Esta nota contém a visão arquitetural anterior e o contrato específico atual em
-> [[SECURITY-AUTH-ETAPA-2]] e [[ADR-056 - Fundacao do acesso controlado]]. A
+> [[SECURITY-AUTH-ETAPA-2]] e [[ADR-057 - Fundacao do acesso controlado]]. A
 > implementação atual é limitada à verificação de e-mail de `AccessRequest`;
 > os eventos genéricos listados abaixo não significam que esses fluxos existam.
 

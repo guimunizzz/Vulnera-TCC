@@ -45,7 +45,7 @@ Consumidores: Rafael e agentes que revisam a integração.
 - `npm run check` permanece exit 1 somente pelos dois imports sem uso citados. O usuário escolheu mantê-los como ressalva, sem correção fora do escopo.
 - A execução da suíte API foi interrompida; 67 é o número de suítes descobertas, não um total executado/passando. Vitest também não tem resultado final confirmado; E2E não foi executado.
 - `/auth/register` continua ativo. Ativação, cutover do cadastro e outbox não existem neste merge; Etapa 5 não foi iniciada nesta execução.
-- Colisão ADR-047: o ADR-047 de exportação Excel existente em `dev` foi preservado; somente o ADR-047 de acesso controlado foi renumerado para ADR-056. Referências pertinentes apontam para ADR-056 e o histórico da colisão permanece documentado.
+- Colisão ADR-047: o ADR-047 de exportação Excel existente em `dev` foi preservado; somente o ADR-047 de acesso controlado foi renumerado para ADR-056 na ocasião; em 2026-11-25, nova colisão levou à numeração ADR-057. As referências atuais apontam para ADR-057 e o histórico permanece documentado.
 
 ## Riscos e desvios
 

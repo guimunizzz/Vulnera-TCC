@@ -9,6 +9,22 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-25 — Issue #51, Etapa 7: código implementado, integração pendente
+
+O código do cutover e retomada do onboarding foi implementado em `53d142e`.
+Está aberto o merge local com `origin/dev` em `effd32a`; não há merge commit ou
+push registrado neste checkpoint. Os resultados API, Web, Docker, canários,
+smokes e a prova manual descritos no relatório da Etapa 7 são pré-integração.
+A API teve 65/72 suítes e 1064/1110 testes na execução completa; o reteste teve
+6/7 suítes e 231/233 testes. Os dois timeouts `zap-runner` foram reproduzidos
+no baseline `e5e353c`; 71/72 suítes distintas passaram, sem somar testes das
+execuções sobrepostas. A Web teve 708/710; onboarding focal 11/11, ADMIN 6/6 e
+Playwright mock 9/11, com CA-01/CA-09 em execução separada 2/2. A prova manual
+na stack 8186 terminou com User CLIENT/OWNER, Company sem CNPJ e Subscription
+`PENDING_APPROVAL`. Permanecem pendentes validações pós-`dev`/remotas e revisão;
+este registro não é aceite da etapa nem fechamento da Issue #51. Ver
+[`SECURITY-AUTH-ETAPA-7.md`](../../../SECURITY-AUTH-ETAPA-7.md).
+
 ## 2026-11-19 — Issue #51, Etapa 7 iniciada (cutover em andamento)
 
 Registro preliminar do cutover: `/api/auth/register` retorna 404 e `/register`
@@ -66,7 +82,7 @@ final aguarda; etapa segue sem aceite. [Acompanhamento](../../../SECURITY-AUTH-E
 **✅ Merge local concluído em `44feabe9021ebf970b4388801687a15527b01230`**, pais `27d7b59` e `aafbc2b`; sem push. A validação documentada da Etapa 5 concluiu 100% do recorte com ressalvas. A validação global ampliada do merge foi cancelada a pedido e não equivale a aprovação integral do merge.
 Históricos de autenticação Etapas 0–4 e funcionalidades novas de `dev` foram
 preservados. Colisão entre ADR-047 Excel e ADR-047 de acesso resolvida pela
-renumeração somente do ADR de acesso para ADR-056. `/auth/register` continua
+renumeração do ADR de acesso para ADR-056 naquele marco; nova colisão em 2026-11-25 levou à numeração ADR-057. `/auth/register` continua
 ativo; ativação, cutover e outbox não foram implementados. Relatório preliminar:
 `docs/SECURITY-AUTH-INTEGRACAO-DEV-2026-11-17.md`.
 ## 2026-10-23 — Issue #51: Etapa 4 concluída
@@ -134,8 +150,9 @@ concluído posteriormente na Etapa 4 em `9f7e23a`. Limites:
 cadastro legado ainda ativo, corrida possível entre tabelas até cutover,
 latência não constante e envio SMTP síncrono sem outbox. Ownership, evidências e
 ressalvas em [relatório da Etapa 3](../../../SECURITY-AUTH-ETAPA-3.md); decisão
-em ADR-056. Naquele marco a colisão ADR-047 ainda estava registrada; a integração
-de 2026-11-17 resolveu-a renumerando somente a decisão de acesso.
+hoje em ADR-057 (foi ADR-056 após a integração de 2026-11-17). Naquele marco a
+colisão ADR-047 ainda estava registrada; a integração resolveu-a renumerando
+somente a decisão de acesso.
 
 ## 2026-10-22 — Issue #51: Etapa 2 concluída
 
@@ -167,7 +184,7 @@ superado pela conclusão documentada acima.
 
 **🚧 Validação pendente; não concluída.** Contratos de emissão, reenvio e
 confirmação de e-mail registrados em [relatório da Etapa 2](../../../SECURITY-AUTH-ETAPA-2.md)
-e ADR-056. Ownership exclusivo A/B/C/D/E/H. Nodemailer 10.2.0 e types 8.0.2
+e ADR-057. Ownership exclusivo A/B/C/D/E/H. Nodemailer 10.2.0 e types 8.0.2
 instalaram; build TypeScript passou duas vezes, regressões/domínio 144/144,
 testes novos 83/83 após revisão SQL, lint focal e Prisma validate/generate
 passaram. As 17 migrations aplicaram só no container descartável. Check global
@@ -209,20 +226,20 @@ Seis arquivos não rastreados anteriores preservados e fora da entrega.
 - Domínio final 112/112; regressões Auth/User/Company/Subscription 32/32.
   Prisma validate/generate, build, lint focal e diff aprovados. Check global
   permanece bloqueado pelos dois imports antigos; suíte global não reexecutada.
-- ADR-056, relatório, PRD, BACKLOG e ROADMAP sincronizados. Sem alterações de
+- ADR-057, relatório, PRD, BACKLOG e ROADMAP sincronizados. Sem alterações de
   Auth/register, Company/Subscription, permissões, tenants, seeds ou frontend.
   Sem novos endpoints, EmailSender, SMTP ou User via convite. Próximo: revisão
   desta entrega; orquestração de e-mail somente em execução posterior.
 
 O marco inicial abaixo conserva as decisões e resultados da entrega 0–1;
-o lifecycle vigente foi substituído pela Etapa 1.1, conforme ADR-056.
+o lifecycle vigente foi substituído pela Etapa 1.1, conforme ADR-057.
 
 ## 2026-10-22 — Issue #51: preflight e fundação de acesso controlado
 
 **✅ Etapas 0 e 1 concluídas — 100% deste recorte (2/2); épica em andamento.**
 Branch `refactor/security-auth-gated-access` sincronizada com `origin/dev` em
 `28c48ef` por fast-forward, sem novo commit/push/PR; seis arquivos não rastreados
-anteriores preservados. Decisão ADR-056.
+anteriores preservados. Decisão ADR-057.
 
 - Novas tabelas AccessRequest, EmailVerificationToken, AccessInvitation e
   AccessRequestEvent; User recebe só relações virtuais, sem coluna/default novo.

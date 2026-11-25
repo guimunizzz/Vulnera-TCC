@@ -40,6 +40,15 @@ export class ProjectMemberRepository {
     return !!found;
   }
 
+  /** ADR-056 — PENTESTER "da aplicação": membro de ao menos um projeto dela. */
+  async existsForUserInApplication(userId: string, applicationId: string): Promise<boolean> {
+    const found = await this.prisma.projectMember.findFirst({
+      where: { userId, project: { applicationId } },
+      select: { id: true },
+    });
+    return !!found;
+  }
+
   /** Companies whose projects the PENTESTER is assigned to. */
   async findCompanyIdsByUser(userId: string): Promise<string[]> {
     const memberships = await this.prisma.projectMember.findMany({

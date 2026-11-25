@@ -114,6 +114,8 @@ export class DastWatchdog {
   private readonly running = new Map<string, RunningSlot>();
   private readonly queue: QueuedSlot[] = [];
   private readonly alerts: WatchdogAlert[] = [];
+  /** ADR-056 — quem espera a vaga de cada scan ser liberada (executar). */
+  private readonly aoLiberar = new Map<string, () => void>();
   private monitor: NodeJS.Timeout | null = null;
 
   readonly maxConcurrent: number;
@@ -145,6 +147,24 @@ export class DastWatchdog {
     return this.queuePositionOf(job.scanId) ?? 0;
   }
 
+  /**
+   * ADR-056 — usado pelo worker do BullMQ: executa o scan sob a vigilância do
+   * watchdog (pulso, abort por travamento, alertas, banner) e só resolve
+   * quando ele termina, para o job da fila ocupar a vaga o tempo certo.
+   * A fila do BullMQ decide QUANDO começar (concorrência do worker =
+   * maxConcurrent), então aqui a fila interna fica vazia na prática.
+   * Scan que o watchdog já conhece não roda duas vezes: resolve na hora.
+   */
+  executar(job: WatchdogJob): Promise<void> {
+    if (this.queuePositionOf(job.scanId) !== null) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      // Resolve só DEPOIS de a vaga ser devolvida (no .finally de start): se
+      // resolvesse ao fim do run, o próximo job da fila ainda veria a vaga ocupada.
+      this.aoLiberar.set(job.scanId, resolve);
+      this.submit(job);
+    });
+  }
+
   /** 1 = próximo da fila; 0 = já está rodando; null = não conhecido pelo watchdog. */
   queuePositionOf(scanId: string): number | null {
     if (this.running.has(scanId)) return 0;
@@ -167,6 +187,9 @@ export class DastWatchdog {
     const index = this.queue.findIndex((q) => q.scanId === scanId);
     if (index !== -1) {
       this.queue.splice(index, 1);
+      // Nunca vai rodar: libera quem espera em executar() (job da fila BullMQ).
+      this.aoLiberar.get(scanId)?.();
+      this.aoLiberar.delete(scanId);
       return "queued";
     }
     return null;
@@ -215,6 +238,9 @@ export class DastWatchdog {
       })
       .finally(() => {
         this.running.delete(job.scanId);
+        const liberar = this.aoLiberar.get(job.scanId);
+        this.aoLiberar.delete(job.scanId);
+        liberar?.();
         this.pump();
       });
   }
@@ -301,6 +327,8 @@ export class DastWatchdog {
     this.running.clear();
     this.queue.length = 0;
     this.alerts.length = 0;
+    for (const liberar of this.aoLiberar.values()) liberar();
+    this.aoLiberar.clear();
   }
 }
 

@@ -26,6 +26,9 @@ export type CreateDastScanDTO = {
   targetUrl: string;
   mode: "REAL" | "SIMULATED";
   confirmedRealScan?: boolean;
+  /** ADR-056 — opcionais. O companyId nunca vem do body: é derivado da Application. */
+  applicationId?: string;
+  projectId?: string;
 };
 
 export type DastScanResponseDTO = {
@@ -46,6 +49,11 @@ export type DastScanResponseDTO = {
   alertsMedium: number;
   alertsLow: number;
   alertsInfo: number;
+  companyId: string | null;
+  applicationId: string | null;
+  projectId: string | null;
+  trigger: "MANUAL" | "SCHEDULED";
+  scheduleId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -93,6 +101,11 @@ export class DastScanEntity {
       alertsMedium: this.data.alertsMedium,
       alertsLow: this.data.alertsLow,
       alertsInfo: this.data.alertsInfo,
+      companyId: this.data.companyId,
+      applicationId: this.data.applicationId,
+      projectId: this.data.projectId,
+      trigger: this.data.trigger,
+      scheduleId: this.data.scheduleId,
       createdAt: this.data.createdAt.toISOString(),
       updatedAt: this.data.updatedAt.toISOString(),
     };

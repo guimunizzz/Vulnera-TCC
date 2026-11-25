@@ -6,14 +6,17 @@ Quem consome: Rafael e os responsáveis pela revisão da Issue #51.
 
 # Issue #51 — Etapa 7: cutover e retomada do onboarding
 
-**Estado: em andamento. Este documento é um rascunho de acompanhamento; não
-representa aprovação da Etapa 7, merge ou encerramento da Issue #51.**
+**Estado: código implementado; integração e aceite pendentes. Este registro
+documenta evidências pré-integração e não representa aprovação da Etapa 7,
+conclusão do merge ou encerramento da Issue #51.**
 
-Data do registro: 2026-11-19. Referência de trabalho: branch
-`refactor/security-auth-gated-access`, com base `e5e353c`. A matriz registra os
-resultados pré-integração, inclusive execuções não verdes e seus limites. Os
-canários foram aprovados pelos owners; integração e validações pós-`dev`/remotas
-seguem pendentes.
+Checkpoint documental: 2026-11-25. Código da Etapa 7 implementado em
+`53d142e`. O merge local com `origin/dev` em `effd32a` está aberto, sem merge
+commit ou push. `95f3252` foi o baseline observado antes, com três commits
+SAST/SCA que permanecem documentados no BACKLOG. A matriz abaixo registra
+evidências pré-integração, inclusive execuções não verdes e seus limites. Os
+canários foram aprovados pelos owners; validações pós-`dev`/remotas e revisão
+final seguem pendentes.
 
 ## Objetivo
 
@@ -49,7 +52,7 @@ somadas**.
 | Área | Resultado | Limite ou pendência |
 | --- | --- | --- |
 | API — TSC/lint | TSC PASS; lint termina nos dois imports antigos de `vulnerability.service.ts` | Os imports são preexistentes e ficaram fora do recorte |
-| API — execução completa | 72 suítes: 65 passaram e 7 falharam; 1064 testes passaram e 46 falharam; 967 s | Não é gate verde |
+| API — execução completa | 72 suítes: 65 passaram e 7 falharam; 1064 testes passaram e 46 falharam (1110 no total); 967 s | Não é gate verde |
 | API — reteste das sete suítes | 6/7 suítes e 231/233 testes passaram | As duas falhas do `zap-runner` reproduziram exatamente os mesmos dois casos e saídas no harness isolado de `e5e353c`; controle confirmou ser residual preexistente. Sem alteração DAST |
 | API — Auth+Company | 21/21 | Validação focal do recorte |
 | API — Docker isolado | PASS final | Não equivale à suíte completa |
@@ -71,11 +74,13 @@ passando, com o único resultado residual nos dois casos de timeout preexistente
 do `zap-runner`. Esta descrição das suítes distintas não altera nem soma os
 totais de testes das duas execuções, apresentados separadamente acima.
 
-O branch `origin/dev` estava em `95f3252`, com três commits SAST/SCA. O único
-arquivo do recorte que se sobrepõe é `docs/BACKLOG.md`; a integração/merge ainda
-não ocorreu. As validações foram feitas antes dela e não constituem revisão da
-base integrada. Canários aprovados pelos owners. Restam gates de integração e
-validação pós-`dev`/remota; nenhum PR ou merge é registrado aqui.
+O merge local com `origin/dev` em `effd32a` está aberto e ainda não foi
+concluído. `95f3252` é o baseline observado antes da atualização, com três
+commits SAST/SCA; esse histórico foi preservado no BACKLOG. As validações da
+matriz foram feitas antes da integração e não revisam a base integrada.
+Canários aprovados pelos owners. Restam gates de integração, validações
+pós-`dev`/remotas e revisão; não se declara merge concluído, PR, aceite ou
+encerramento da Issue #51.
 
 ### Evidência manual recebida
 
@@ -119,17 +124,23 @@ roteiros de exploração ou alegação de que esses itens foram corrigidos.
 - A rodada Web completa permanece 708/710 e não é declarada verde. Spec focal de
   onboarding passou 11/11 depois de sincronizar o clique; manter separada da
   contagem integral. Verificar pós-`dev` o finding Code Import preexistente.
-- Canários aprovados. Integrar com `origin/dev` e executar as validações
-  pós-`dev` e remotas. `origin/dev` observado em `95f3252`; sem PR/merge
-  registrado neste documento.
+- Canários aprovados antes da integração. O merge local com `origin/dev`
+  (`effd32a`) está aberto, sem merge commit/push. Resolver a integração e
+  executar validações pós-`dev`/remotas antes do aceite. `95f3252` permanece
+  como baseline histórico com três commits SAST/SCA; sem PR ou Issue fechada.
 - Preservar em separado o total API da execução completa e o reteste das sete
   suítes, sem somar contagens de testes.
-- Atualizar este relatório, PRD, BACKLOG, ROADMAP e ADR-056 com as provas finais.
+- Atualizar este relatório, PRD, BACKLOG, ROADMAP e ADR-057 com as provas finais.
 - Aguardar revisão e sinal do responsável antes de marcar a Etapa 7 aprovada,
   registrar merge ou encerrar a Issue #51.
 
 ## Histórico
 
+- 2026-11-25 — Código implementado em `53d142e`; integração local de
+  `origin/dev` (`effd32a`) aberta, sem merge commit/push. Registrado que a
+  evidência de teste e a prova manual acima são pré-integração. O estado da
+  execução API, reteste, Web, smoke e jornada manual foi mantido sem somar
+  contagens sobrepostas. Aguardam validações pós-`dev`/remotas e revisão.
 - 2026-11-19 — Incluídos resultados pré-integração da API, Web/Docker, canários,
   E2E focal, prova manual de ponta a ponta e smoke visual. Canários aprovados;
   spec focal de onboarding 11/11 e ADMIN 6/6 passaram. A rodada Web integral

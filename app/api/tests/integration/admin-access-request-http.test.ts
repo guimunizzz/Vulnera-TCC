@@ -529,6 +529,8 @@ describe("HTTP administrativo de AccessRequest", () => {
     }
 
     try {
+      // Este caso usa a factory real e seu relógio de sistema, então os fixtures também precisam ser atuais.
+      now = new Date();
       configureApp({ injectAdminDependencies: false });
       const admin = await seedAdmin("lazy-admin@empresa.local");
       const rejectedFixture = await createPendingReview("lazy-reject@empresa.local");

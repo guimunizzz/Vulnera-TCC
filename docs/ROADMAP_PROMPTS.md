@@ -68,18 +68,30 @@ evidência local desta etapa.
    Nenhum endereço, secret, token, usuário ou payload foi copiado. O owner
    aplicou padding 12–16 px a quatro inputs sem prefixo, preservando login;
    TSC e build Vite passaram.
-5. Canários aprovados pelos owners. Integrar com `origin/dev` e executar gates e
-   validações pós-`dev`/remotas. `origin/dev` observado em `95f3252`, com três
-   commits SAST/SCA; `docs/BACKLOG.md` é o único arquivo sobreposto. Ainda não
-   há integração, PR ou merge registrados. Não fechar Issue #51.
+5. O código da Etapa 7 foi implementado em `53d142e`; canários e provas
+   pré-integração foram aprovados pelos owners. Merge local de `origin/dev`
+   (`effd32a`) está aberto, sem merge commit ou push. O baseline anterior
+   `95f3252` continha três commits SAST/SCA, preservados no BACKLOG. Resolver a
+   integração e executar gates/validações pós-`dev` e remotas; não declarar a
+   Etapa aprovada nem fechar Issue #51 até revisão e sinal do responsável.
 
 ### Histórico — Issue #51, Etapa 7 (em andamento; checkpoint documental)
 
+- 2026-11-25: código de cutover/onboarding implementado em `53d142e`; integração
+  local de `origin/dev` (`effd32a`) aberta, sem merge commit/push. Evidências
+  registradas são pré-integração. A suíte API completa e o reteste têm
+  interseção: 65/72 suítes e 1064/1110 testes na primeira execução; reteste
+  6/7 suítes e 231/233 testes, com dois timeouts do `zap-runner` reproduzidos no
+  controle `e5e353c`; 71/72 suítes distintas PASS, sem somar testes. Web
+  708/710; onboarding 11/11, ADMIN 6/6, mock 9/11 e CA-01/CA-09 separados 2/2.
+  Smoke/Docker/canários e prova manual até Subscription PENDING_APPROVAL foram
+  confirmados antes da integração. Aguardam validações pós-`dev`/remotas e
+  revisão; sem aceite ou encerramento. [Registro](SECURITY-AUTH-ETAPA-7.md).
 - 2026-11-19: contrato de cutover, baseline parcial e prova manual até
   ativação/login/onboarding e resultados confirmados antes da integração
   registrados em [`SECURITY-AUTH-ETAPA-7.md`](SECURITY-AUTH-ETAPA-7.md).
   `origin/dev` observado em `95f3252` com três commits SAST/SCA; só BACKLOG
-  sobrepõe arquivos do recorte. Canários aprovados; sem integração/merge. Web
+  sobrepunha arquivos naquele marco. Canários aprovados; sem integração/merge. Web
   708/710; onboarding focal 11/11 e ADMIN 6/6; Playwright mock 9/11, com CA-01/
   CA-09 passando separados (2/2), não 11/11 agregado. Este marco não é aceite
   da etapa nem fechamento da issue.
@@ -136,7 +148,7 @@ Build, lint focal, 36/36 testes focais da etapa, matriz final de domínio 23/23 
 ### Histórico — Issue #51, Etapa 5 (concluída, 2026-11-17)
 
 - Branch/worktree de integração: commit local `44feabe` com pais `27d7b59` e
-  `aafbc2b`; sem push. Ownership de documentação: PRD, backlog, ADR-056,
+  `aafbc2b`; sem push. Ownership de documentação: PRD, backlog, ADR-057,
   changelog e relatório da Etapa 5.
 - Build/lint focal, 36/36 testes da etapa, domínio final 23/23 e 70/70 suítes/1152 testes completos passaram; a suíte completa antecedeu os dois casos adicionais. Branch/worktree de integração `integration/issue51-dev-20261117`; PR não aberta; data 2026-11-17.
 - Desvios/limites: uma asserção canário antiga da própria Issue #51 foi ajustada
@@ -194,7 +206,7 @@ Antes de código, registrar o Ownership Registry em
 validar SMTP por harness local autorizado, nunca inferir inbox real. Encerrar
 com testes HTTP/service/proteção, build/lint e banco descartável identificado;
 documentar os resultados observados, falhas ambientais e limites. Manter a
-colisão de numeração ADR-047 registrada e sem renumeração naquele marco histórico. Na integração de 2026-11-17, a decisão de acesso foi renumerada para ADR-056; o ADR-047 de exportação foi preservado.
+colisão de numeração ADR-047 registrada e sem renumeração naquele marco histórico. Na integração de 2026-11-17, a decisão de acesso passou a ADR-056 naquele marco e foi renumerada para ADR-057 em 2026-11-25; o ADR-047 de exportação foi preservado.
 
 ### Histórico — Issue #51, Etapa 3 (2026-10-23)
 
@@ -211,7 +223,8 @@ colisão de numeração ADR-047 registrada e sem renumeração naquele marco his
   Não houve chamada real à Cloudflare. Cadastro legado e corrida entre tabelas,
   tempo constante e outbox permanecem fora do recorte. Naquele marco a colisão
   ADR-047 permanecia sem renumeração; a integração posterior a resolveu movendo
-  a decisão de acesso para ADR-056. Etapa 4 não iniciada.
+  a decisão de acesso para ADR-056 naquela integração (hoje ADR-057 após a
+  renumeração de 2026-11-25). Etapa 4 não iniciada.
 
 ## Issue #51 — Etapa 2 · ✅ Concluída em 2026-10-22
 
@@ -259,7 +272,7 @@ dos tokens e concorrência transacional. Sem envio, endpoints ou ativação com 
 - Pendências: check global bloqueado pelos dois imports preexistentes de
   vulnerability.service.ts:45; suíte global não reexecutada nesta etapa.
   Expiração automática, envio e transação de ativação continuam futuros.
-- Decisões, contratos e falhas transitórias: ADR-056 e relatório da fundação.
+- Decisões, contratos e falhas transitórias: ADR-057 e relatório da fundação.
   Sem avanço para Etapa 2. O lifecycle inicial abaixo é histórico, substituído
   pela decisão vigente da Etapa 1.1; seus resultados não representam esta rodada.
 
@@ -277,7 +290,7 @@ serviços de fluxo ou mudança de register. Próximas etapas aguardam revisão.
 - Data: 2026-10-22. PR/commit/push: não realizados, por instrução explícita.
 - Migration: `20261022120000_add_access_request_foundation`, somente em MySQL
   descartável identificado; sem ALTER em tabelas anteriores ou backfill de User.
-- Decisões, validações e limites: ADR-056 e `docs/SECURITY-AUTH-ETAPAS-0-1.md`.
+- Decisões, validações e limites: ADR-057 e `docs/SECURITY-AUTH-ETAPAS-0-1.md`.
 - Validação: domínio 49/49; baseline 32/32; suíte completa 692/697, com cinco
   falhas DAST ambientais/configuração local aprovadas na repetição 104/104.
   Prisma validate/generate, migration isolada, build e lint focal aprovados.

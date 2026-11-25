@@ -2,14 +2,14 @@
 type: decisao
 tags: [decision, security, auth, access-request]
 status: vigente
-codigo: ADR-056
+codigo: ADR-057
 data: 2026-10-22
 ---
 
-# ADR-056 - Fundação do acesso controlado
+# ADR-057 - Fundação do acesso controlado
 
-> [!info] Renumeração na integração de 2026-11-17
-> A numeração original ADR-047 colidiu com o ADR de exportação Excel já presente na base `dev`. Para preservar ambos os históricos sem sobreposição, este ADR de acesso passou a ADR-056. O conteúdo decisório foi preservado.
+> [!info] Histórico de numeração
+> A numeração original ADR-047 colidiu com o ADR de exportação Excel presente na base `dev`; na integração de 2026-11-17, este ADR de acesso passou a ADR-056. Em 2026-11-25 surgiu nova colisão com o ADR-056 de BullMQ. Para preservar ambos, a decisão de acesso passou a ADR-057; o conteúdo decisório foi preservado.
 
 ## Contexto
 
@@ -349,8 +349,7 @@ validada para revisão, com as ressalvas registradas no [relatório da Etapa 3](
   síncrono sem garantia de tempo constante e ausência de outbox. Sem cutover do
   onboarding. Na conclusão desse marco, a Etapa 4 ainda não havia iniciado.
 - A versão integrada preserva o ADR-047 de exportação Excel já existente em `dev`.
-  Este ADR de acesso foi renumerado para ADR-056 durante a integração da Issue #51.
-  Referências históricas à numeração ADR-047 identificam este mesmo documento antes da integração.
+  Este ADR de acesso foi renumerado para ADR-056 durante a integração da Issue #51 e para ADR-057 em 2026-11-25, após colisão com o ADR de BullMQ. Referências históricas à numeração ADR-047 e ADR-056 identificam este mesmo documento antes dessas renumerações.
 
 ## Etapa 4 — revisão administrativa e convites (concluída, 2026-10-23)
 
@@ -519,6 +518,15 @@ ou merge. Canários aprovados; pendem integração e validação pós-`dev`/remo
 Consulte
 [`SECURITY-AUTH-ETAPA-7.md`](../../SECURITY-AUTH-ETAPA-7.md) para escopo,
 baseline e limites detalhados.
+
+### Atualização documental — 2026-11-25
+
+O código da Etapa 7 foi implementado em `53d142e`. A integração local de
+`origin/dev` (`effd32a`) está aberta, sem merge commit ou push. Os testes e a
+prova manual descritos acima são pré-integração; continuam pendentes os gates
+pós-`dev`/remotos e a revisão do responsável. Este checkpoint não aprova a
+etapa nem encerra a Issue #51. O histórico e os limites da evidência estão em
+[`SECURITY-AUTH-ETAPA-7.md`](../../SECURITY-AUTH-ETAPA-7.md).
 
 Follow-ups preexistentes ficam fora da decisão de cutover: concorrência de
 refresh e diferença entre `expiresAt` e TTL, concorrência entre decisões

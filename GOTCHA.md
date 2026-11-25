@@ -96,6 +96,26 @@
 
 ---
 
+## 🔴 Fila e jobs (ADR-056)
+
+❌ **G31 — Worker nunca no `app.ts`.** Só `server.ts` (com `QUEUE_DRIVER=bullmq` e `WORKER_IN_PROCESS` ≠ `false`) e `npm run worker` iniciam workers; os testes importam o `app`.
+
+❌ **G32 — Payload de job leva só ids.** Nada de URL, token ou segredo no Redis; o worker recarrega e reconfere tudo no banco.
+
+⚠️ **G33 — Autorização do alvo é conferida na execução.** Scan agendado reconfere autorização vigente, host, empresa, criador e alvo livre no disparo, não só no cadastro.
+
+⚠️ **G34 — Com `bullmq`, quem recupera órfãos é o worker.** O `recoverOrphanedScans` do `server.ts` só roda com `memory`; com worker em processo próprio, a API não pode marcar como FAILED um scan que ele ainda roda.
+
+⚠️ **G35 — BullMQ 6 não traz o `ioredis`.** É dependência opcional; sem `ioredis` no `package.json` a conexão falha só no Docker (localmente pode existir por tabela).
+
+⚠️ **G36 — Job scheduler `every` dispara na hora.** Criar ou alterar o intervalo gera uma execução imediata; reiniciar com o mesmo intervalo não.
+
+⚠️ **G37 — Job ativo não sai da fila.** O BullMQ recusa `remove()` em job ativo; cancelar scan em execução é abort do watchdog + `docker rm -f`, e a guarda atômica (`claimQueued`) impede CANCELLED de voltar a RUNNING.
+
+⚠️ **G38 — Rate limit do DAST: 2 scans/min por usuário.** Testes manuais em sequência levam 429; espere a janela de 60 s.
+
+---
+
 ## 🔴 Antes de declarar conclusão
 
 Execute quando aplicável:

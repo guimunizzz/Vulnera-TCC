@@ -23,6 +23,8 @@ import { codeScanRoutes } from "./code-scan.routes";
 import { threatIntelRoutes } from "./threat-intel.routes";
 import { makeAccountActivationRoutes } from "./account-activation.routes";
 import type { AccountActivationRouteDependencies } from "../factories/account-activation.factory";
+import { dastScheduleRoutes } from "./dast-schedules.routes";
+import { adminQueuesRoutes } from "./admin-queues.routes";
 
 export function makeApiRoutes(options: {
   accessRequestDependencies?: AccessRequestRouteDependencies;
@@ -47,6 +49,10 @@ export function makeApiRoutes(options: {
   router.use("/notifications", notificationRoutes);
   router.use("/maturity", maturityRoutes);
   router.use("/dast/scans", dastScanRoutes);
+  // ADR-056 — agendamentos DAST por URL e histórico por agendamento.
+  router.use("/dast-schedules", dastScheduleRoutes);
+  // ADR-056 — painel global de filas restrito a ADMIN.
+  router.use("/admin/queues", adminQueuesRoutes);
   // CP-4 — decisões sobre um aceite já existente (aprovar/rejeitar/revogar).
   // Solicitar e listar ficam aninhados em /vulnerabilities/:id/risk-acceptances.
   router.use("/risk-acceptances", riskAcceptanceRoutes);
