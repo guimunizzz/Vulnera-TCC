@@ -254,31 +254,49 @@ describe("Subscription (request/pending/current/approve/reject)", () => {
 
     const adminToken = await loginAs(app, admin.email, PASSWORD);
 
-    const approveA = await request(app)
-      .post(`/api/subscriptions/${subA.id}/approve`)
-      .set("Authorization", `Bearer ${adminToken}`);
-    expect(approveA.status).toBe(200);
-    expect(approveA.body.status).toBe("ACTIVE");
-    expect(approveA.body.startDate).not.toBeNull();
+    const approvals = await Promise.all([subA, subB].map(({ id }) =>
+      request(app).post(`/api/subscriptions/${id}/approve`).set("Authorization", `Bearer ${adminToken}`),
+    ));
+    expect(approvals.map(({ status }) => status).sort()).toEqual([200, 409]);
+    const approved = approvals.find(({ status }) => status === 200)!;
+    const blocked = approvals.find(({ status }) => status === 409)!;
+    expect(approved.body.status).toBe("ACTIVE");
+    expect(approved.body.startDate).not.toBeNull();
+    expect(blocked.body.error).toBe("ALREADY_HAS_ACTIVE_SUBSCRIPTION");
+    expect(await prisma.subscription.count({ where: { companyId: company.id, status: "ACTIVE" } })).toBe(1);
 
     const logApprove = await prisma.auditLog.findFirst({
-      where: { entityType: "Subscription", entityId: subA.id, action: "SUBSCRIPTION_APPROVED" },
+      where: { entityType: "Subscription", entityId: approved.body.id, action: "SUBSCRIPTION_APPROVED" },
     });
     expect(logApprove?.actorId).toBe(admin.id);
 
-    // regra de ouro revalidada no approve — subB não pode ser aprovada
-    const approveB = await request(app)
-      .post(`/api/subscriptions/${subB.id}/approve`)
-      .set("Authorization", `Bearer ${adminToken}`);
-    expect(approveB.status).toBe(409);
-    expect(approveB.body.error).toBe("ALREADY_HAS_ACTIVE_SUBSCRIPTION");
-
-    // reaprovar subA (já ACTIVE) é transição inválida
+    // Reaprovar uma assinatura já ativa é transição inválida.
     const reapproveA = await request(app)
-      .post(`/api/subscriptions/${subA.id}/approve`)
+      .post(`/api/subscriptions/${approved.body.id}/approve`)
       .set("Authorization", `Bearer ${adminToken}`);
     expect(reapproveA.status).toBe(400);
     expect(reapproveA.body.error).toBe("INVALID_STATUS_TRANSITION");
+  });
+
+  it("serializa aprovação e rejeição de uma mesma pendência com uma única auditoria", async () => {
+    const plan = await seedPlan({ name: "Decisão" });
+    const company = await seedCompany({ name: "Empresa", planId: plan.id });
+    const sub = await seedSubscription({ companyId: company.id, planId: plan.id });
+    const admin = await seedUser({ name: "Admin", email: "admin-decision@vulnera.local", password: PASSWORD, role: "ADMIN" });
+    const token = await loginAs(app, admin.email, PASSWORD);
+
+    const results = await Promise.all(["approve", "reject"].map((decision) =>
+      request(app).post(`/api/subscriptions/${sub.id}/${decision}`).set("Authorization", `Bearer ${token}`),
+    ));
+    expect(results.map(({ status }) => status).sort()).toEqual([200, 400]);
+    const winner = results.find(({ status }) => status === 200)!;
+    expect(await prisma.subscription.findUnique({ where: { id: sub.id } }))
+      .toMatchObject({ status: winner.body.status, approvedBy: admin.id });
+    const logs = await prisma.auditLog.findMany({ where: { entityType: "Subscription", entityId: sub.id } });
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({
+      actorId: admin.id, action: winner.body.status === "ACTIVE" ? "SUBSCRIPTION_APPROVED" : "SUBSCRIPTION_REJECTED",
+    });
   });
 
   // SUB-06

@@ -50,6 +50,8 @@ export interface UserResponseDTO {
    * um botão que vai dar 403.
    */
   companyRole: string | null;
+  /** Capability persistida para retomar somente o onboarding legado permitido. */
+  legacyOnboardingAllowed: boolean;
   createdAt: Date;
 }
 
@@ -74,6 +76,7 @@ export class UserEntity {
       role: u.role as UserRole,
       companyId: u.companyId,
       companyRole: u.companyRole,
+      legacyOnboardingAllowed: u.legacyOnboardingAllowed,
       createdAt: u.createdAt,
     };
   }

@@ -50,6 +50,7 @@ export class SlaMonitorRepository {
   async destinatariosDoAchado(companyId: string, projectId: string): Promise<string[]> {
     const linhas = await this.prisma.user.findMany({
       where: {
+        deactivatedAt: null,
         OR: [
           { role: "ADMIN" },
           { role: "CLIENT", companyId },

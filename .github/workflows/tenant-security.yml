@@ -44,10 +44,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install
+      - run: npm install -g npm@11 && npm install
       - run: npx prisma generate && npx prisma migrate deploy
         working-directory: app/api
       - run: npm run build --workspace=app/api
       - run: >-
           npm run test --workspace=app/api --
-          --testPathPattern='(auth|user|company|subscription|tenant|access-request|account-activation|turnstile|project-member)'
+          --testPathPattern='(auth|user|company|subscription|plans?\.test|tenant|tenancy|access-request|account-activation|turnstile|project-member|notification)'

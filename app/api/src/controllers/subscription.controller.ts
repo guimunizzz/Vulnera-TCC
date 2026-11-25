@@ -25,6 +25,9 @@ export class SubscriptionController {
       const subscription = await this.service.request(actor, { planId: body.planId });
       return res.status(201).json(subscription.toResponse());
     } catch (error: any) {
+      if (error.message === "FORBIDDEN") {
+        return res.status(403).json({ error: "FORBIDDEN" });
+      }
       if (error.message === "USER_HAS_NO_COMPANY") {
         return res.status(404).json({ error: "USER_HAS_NO_COMPANY" });
       }
@@ -106,6 +109,12 @@ export class SubscriptionController {
       const subscription = await this.service.approve(actor.userId, id);
       return res.status(200).json(subscription.toResponse());
     } catch (error: any) {
+      if (error.message === "FORBIDDEN") {
+        return res.status(403).json({ error: "FORBIDDEN" });
+      }
+      if (error.message === "PLAN_NOT_FOUND") {
+        return res.status(404).json({ error: "PLAN_NOT_FOUND" });
+      }
       if (error.message === "SUBSCRIPTION_NOT_FOUND") {
         return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
       }
@@ -127,6 +136,9 @@ export class SubscriptionController {
       const subscription = await this.service.reject(actor.userId, id);
       return res.status(200).json(subscription.toResponse());
     } catch (error: any) {
+      if (error.message === "FORBIDDEN") {
+        return res.status(403).json({ error: "FORBIDDEN" });
+      }
       if (error.message === "SUBSCRIPTION_NOT_FOUND") {
         return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
       }

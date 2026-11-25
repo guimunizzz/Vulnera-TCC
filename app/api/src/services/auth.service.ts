@@ -1,23 +1,14 @@
 /**
- * auth.service.ts
- *
- * Orquestra login/refresh/logout para usuários já provisionados ou ativados.
- *
- * Erros: lança Error com .message = SCREAMING_SNAKE. O controller traduz pra HTTP.
+ * Orquestra login, validação de sessão, rotação e logout.
+ * Claims de role servem apenas para compatibilidade; a autorização usa o User atual.
  */
 
+import type { User } from "@prisma/client";
 import type { UserRepository } from "../repositories/user.repository";
-import { RefreshTokenRepository } from "../repositories/refresh-token.repository";
+import { RefreshTokenRepository, type AuthTransactionRepositories } from "../repositories/refresh-token.repository";
 import { comparePassword } from "../utils/hash.util";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.util";
-import {
-  UserEntity,
-  type AuthResponseDTO,
-  type LoginDTO,
-  type UserRole,
-} from "../models/user.model";
-
-const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7d
+import { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken, type JwtPayload } from "../utils/jwt.util";
+import { UserEntity, type AuthResponseDTO, type LoginDTO, type UserRole } from "../models/user.model";
 
 export class AuthService {
   constructor(
@@ -26,67 +17,122 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDTO): Promise<AuthResponseDTO> {
-    const user = await this.userRepo.findByEmail(dto.email);
-    if (!user) throw new Error("INVALID_CREDENTIALS");
+    const candidate = await this.userRepo.findByEmail(dto.email);
+    if (!candidate || candidate.deactivatedAt) throw new Error("INVALID_CREDENTIALS");
 
-    const ok = await comparePassword(dto.password, user.password);
-    if (!ok) throw new Error("INVALID_CREDENTIALS");
+    const passwordMatches = await comparePassword(dto.password, candidate.password);
+    if (!passwordMatches) throw new Error("INVALID_CREDENTIALS");
 
-    return this.issueTokensFor(user);
+    return this.refreshRepo.transaction(async ({ users, refreshTokens }) => {
+      const user = await users.lockById(candidate.id);
+      if (!user || user.deactivatedAt || user.password !== candidate.password) {
+        throw new Error("INVALID_CREDENTIALS");
+      }
+      return this.issueTokensFor(user, refreshTokens, new Date());
+    });
   }
 
   async refresh(refreshTokenRaw: string): Promise<AuthResponseDTO> {
-    // 1. Validar assinatura/expiração
-    let payload;
+    let payload: JwtPayload;
     try {
       payload = verifyRefreshToken(refreshTokenRaw);
     } catch {
       throw new Error("INVALID_TOKEN");
     }
 
-    // 2. Validar que existe no DB e não foi revogado
     const tokenHash = RefreshTokenRepository.hash(refreshTokenRaw);
-    const stored = await this.refreshRepo.findByHash(tokenHash);
-    if (!stored || stored.revokedAt) throw new Error("INVALID_TOKEN");
+    const observed = await this.refreshRepo.findByHash(tokenHash);
+    if (!observed || observed.userId !== payload.userId) throw new Error("INVALID_TOKEN");
 
-    // 3. Revogar o atual (rotation)
-    await this.refreshRepo.revoke(stored.id);
+    return this.refreshRepo.transaction(async ({ users, refreshTokens }) => {
+      // A identidade é o primeiro lock; toda rotação e revogação usa essa ordem.
+      const user = await users.lockById(payload.userId);
+      const stored = await refreshTokens.findByHashForUpdate(tokenHash);
+      // O relógio é lido após a espera dos dois locks: um token pode vencer enquanto aguarda.
+      const now = new Date();
+      if (
+        !user || user.deactivatedAt || !stored || stored.userId !== user.id ||
+        stored.revokedAt !== null || stored.expiresAt.getTime() <= now.getTime() ||
+        typeof payload.exp !== "number" || payload.exp * 1000 <= now.getTime() ||
+        (payload.sessionVersion ?? 0) !== user.sessionVersion
+      ) {
+        throw new Error("INVALID_TOKEN");
+      }
 
-    // 4. Emitir par novo
-    const user = await this.userRepo.findById(payload.userId);
-    if (!user) throw new Error("INVALID_TOKEN");
-    return this.issueTokensFor(user);
+      await refreshTokens.revoke(stored.id, now);
+      return this.issueTokensFor(user, refreshTokens, now);
+    });
   }
 
   async logout(refreshTokenRaw: string): Promise<void> {
     const tokenHash = RefreshTokenRepository.hash(refreshTokenRaw);
-    const stored = await this.refreshRepo.findByHash(tokenHash);
-    if (stored && !stored.revokedAt) {
-      await this.refreshRepo.revoke(stored.id);
-    }
-    // logout idempotente: se token já estava revogado/inválido, segue 204
+    const observed = await this.refreshRepo.findByHash(tokenHash);
+    if (!observed) return;
+
+    const now = new Date();
+    await this.refreshRepo.transaction(async ({ users, refreshTokens }) => {
+      const user = await users.lockById(observed.userId);
+      if (!user) return;
+      const stored = await refreshTokens.findByHashForUpdate(tokenHash);
+      if (stored && stored.userId === user.id && !stored.revokedAt) {
+        await refreshTokens.revoke(stored.id, now);
+      }
+    });
+    // Logout é idempotente: valor desconhecido ou já revogado permanece 204.
   }
 
-  // ---------- privado ----------
+  /** Revalida assinatura, existência, estado e versão antes de aceitar qualquer request. */
+  async authenticateAccessToken(token: string): Promise<JwtPayload> {
+    let payload: JwtPayload;
+    try {
+      payload = verifyAccessToken(token);
+    } catch {
+      throw new Error("INVALID_TOKEN");
+    }
 
-  private async issueTokensFor(user: { id: string; role: string }): Promise<AuthResponseDTO> {
-    const payload = { userId: user.id, role: user.role as UserRole };
+    const user = await this.userRepo.findById(payload.userId);
+    if (
+      !user || user.deactivatedAt ||
+      (payload.sessionVersion ?? 0) !== user.sessionVersion ||
+      !isUserRole(user.role)
+    ) {
+      throw new Error("INVALID_TOKEN");
+    }
+
+    // O role assinado pode estar antigo; a identidade vigente vem do banco.
+    return { userId: user.id, role: user.role, sessionVersion: user.sessionVersion };
+  }
+
+  private async issueTokensFor(
+    user: User,
+    repositories: AuthTransactionRepositories["refreshTokens"],
+    now: Date,
+  ): Promise<AuthResponseDTO> {
+    if (user.deactivatedAt || !isUserRole(user.role)) throw new Error("INVALID_TOKEN");
+
+    const payload: JwtPayload = {
+      userId: user.id,
+      role: user.role,
+      sessionVersion: user.sessionVersion,
+    };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
+    const refreshClaims = verifyRefreshToken(refreshToken);
+    if (typeof refreshClaims.exp !== "number" || refreshClaims.exp * 1000 <= now.getTime()) {
+      throw new Error("INVALID_REFRESH_TOKEN_EXPIRY");
+    }
 
-    // persiste hash do refresh
-    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
-    await this.refreshRepo.create({
+    await repositories.create({
       userId: user.id,
       tokenHash: RefreshTokenRepository.hash(refreshToken),
-      expiresAt,
+      // A coluna guarda a mesma fronteira temporal assinada no JWT, incluindo TTL configurável.
+      expiresAt: new Date(refreshClaims.exp * 1000),
     });
 
-    const fullUser = await this.userRepo.findById(user.id);
-    return {
-      accessToken,
-      refreshToken,
-      user: UserEntity.toResponse(fullUser!),
-    };
+    return { accessToken, refreshToken, user: UserEntity.toResponse(user) };
   }
+}
+
+function isUserRole(role: string): role is UserRole {
+  return role === "ADMIN" || role === "CLIENT" || role === "PENTESTER";
 }

@@ -63,12 +63,27 @@ export class UserController {
     }
   };
 
+  reactivateOwner = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const actor = req.user!;
+      const user = await this.service.reactivateOwner(actor, req.params.id as string);
+      res.status(200).json(user);
+    } catch (err) {
+      this.handleError(err, res);
+    }
+  };
+
   private handleError(err: unknown, res: Response): void {
     const msg = (err as Error).message;
     const map: Record<string, number> = {
       USER_NOT_FOUND: 404,
+      OWNER_RECOVERY_NOT_AVAILABLE: 404,
       FORBIDDEN: 403,
       SELF_DELETE_FORBIDDEN: 403,
+      EMAIL_CHANGE_REQUIRES_VERIFICATION: 409,
+      LAST_ACTIVE_OWNER: 409,
+      COMPANY_ALREADY_HAS_ACTIVE_OWNER: 409,
+      USER_STATE_CHANGED: 409,
     };
     if (msg in map) {
       res.status(map[msg]).json({ code: msg });

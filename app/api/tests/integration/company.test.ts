@@ -10,6 +10,11 @@ import { loginAs } from "../fixtures/auth.fixture";
 
 const PASSWORD = "senha12345";
 
+async function seedLegacyClient(email: string) {
+  const client = await seedUser({ name: "Client", email, password: PASSWORD, role: "CLIENT" });
+  return prisma.user.update({ where: { id: client.id }, data: { legacyOnboardingAllowed: true } });
+}
+
 describe("Company (me/list/getById/create/update/delete)", () => {
   beforeEach(async () => {
     await cleanDatabase();
@@ -18,7 +23,7 @@ describe("Company (me/list/getById/create/update/delete)", () => {
   // COMP-01
   it("POST /api/companies: quem cria vira dono (User.companyId + companyRole=OWNER)", async () => {
     const plan = await seedPlan({ name: "BASIC" });
-    const client = await seedUser({ name: "Client", email: "client@vulnera.local", password: PASSWORD, role: "CLIENT" });
+    const client = await seedLegacyClient("client@vulnera.local");
     const token = await loginAs(app, client.email, PASSWORD);
 
     const res = await request(app)
@@ -32,27 +37,28 @@ describe("Company (me/list/getById/create/update/delete)", () => {
     const updatedUser = await prisma.user.findUnique({ where: { id: client.id } });
     expect(updatedUser?.companyId).toBe(res.body.id);
     expect(updatedUser?.companyRole).toBe("OWNER");
+    expect(updatedUser?.legacyOnboardingAllowed).toBe(false);
 
     const me = await request(app).get("/api/companies/me").set("Authorization", `Bearer ${token}`);
     expect(me.status).toBe(200);
     expect(me.body.id).toBe(res.body.id);
   });
 
-  it("CompanyRepository reverte a empresa se o compare-and-set do OWNER falhar", async () => {
+  it("CompanyRepository não cria empresa para uma identidade ausente", async () => {
     const plan = await seedPlan({ name: "BASIC" });
     const repository = new CompanyRepository(prisma);
 
     await expect(repository.createWithOwner("missing-user", {
       name: "Empresa sem responsável",
       planId: plan.id,
-    })).rejects.toThrow("USER_ALREADY_HAS_COMPANY");
+    })).rejects.toThrow("FORBIDDEN");
 
     expect(await prisma.company.count()).toBe(0);
   });
 
   it("POST /api/companies serializa abas concorrentes e vincula uma única empresa ao OWNER", async () => {
     const plan = await seedPlan({ name: "BASIC" });
-    const client = await seedUser({ name: "Client", email: "client-race@vulnera.local", password: PASSWORD, role: "CLIENT" });
+    const client = await seedLegacyClient("client-race@vulnera.local");
     const token = await loginAs(app, client.email, PASSWORD);
     const payload = { name: "Empresa única", planId: plan.id };
 
@@ -96,7 +102,7 @@ describe("Company (me/list/getById/create/update/delete)", () => {
   // COMP-03
   it("POST /api/companies valida formato de CNPJ (400) e unicidade (409)", async () => {
     const plan = await seedPlan({ name: "BASIC" });
-    const client = await seedUser({ name: "Client", email: "client@vulnera.local", password: PASSWORD, role: "CLIENT" });
+    const client = await seedLegacyClient("client@vulnera.local");
     const token = await loginAs(app, client.email, PASSWORD);
 
     const invalidFormat = await request(app)
@@ -106,7 +112,7 @@ describe("Company (me/list/getById/create/update/delete)", () => {
     expect(invalidFormat.status).toBe(400);
     expect(invalidFormat.body.error).toBe("INVALID_CNPJ");
 
-    await seedCompany({ name: "Taken Co", cnpj: "12345678000199", planId: plan.id });
+    await seedCompany({ name: "Taken Co", cnpj: "12.345.678/0001-99", planId: plan.id });
 
     const duplicateCnpj = await request(app)
       .post("/api/companies")
@@ -306,7 +312,7 @@ describe("Company (me/list/getById/create/update/delete)", () => {
     expect(await prisma.company.findUnique({ where: { id: company.id } })).toEqual(company);
   });
 
-  it("PUT Company preserva atualização legítima parcial e completa dos três campos", async () => {
+  it("OWNER atualiza o perfil e ADMIN administra a referência comercial", async () => {
     const plan = await seedPlan({ name: "BASIC" });
     const nextPlan = await seedPlan({ name: "PRO" });
     const company = await seedCompany({ name: "Empresa QA", cnpj: "12345678000199", planId: plan.id });
@@ -315,16 +321,23 @@ describe("Company (me/list/getById/create/update/delete)", () => {
       role: "CLIENT", companyId: company.id, companyRole: "OWNER",
     });
     const token = await loginAs(app, owner.email, PASSWORD);
+    const admin = await seedUser({ name: "Admin", email: "company-admin@vulnera.local", password: PASSWORD, role: "ADMIN" });
+    const adminToken = await loginAs(app, admin.email, PASSWORD);
     const partial = await request(app).put(`/api/companies/${company.id}`)
       .set("Authorization", `Bearer ${token}`).send({ name: "Empresa renomeada" });
     expect(partial.status).toBe(200);
     expect(partial.body).toMatchObject({ name: "Empresa renomeada", cnpj: company.cnpj, planId: plan.id });
 
-    const complete = await request(app).put(`/api/companies/${company.id}`)
+    const denied = await request(app).put(`/api/companies/${company.id}`)
       .set("Authorization", `Bearer ${token}`)
+      .send({ planId: nextPlan.id });
+    expect(denied.status).toBe(403);
+
+    const complete = await request(app).put(`/api/companies/${company.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
       .send({ name: "Empresa atualizada", cnpj: "98.765.432/0001-00", planId: nextPlan.id });
     expect(complete.status).toBe(200);
-    expect(complete.body).toMatchObject({ name: "Empresa atualizada", cnpj: "98.765.432/0001-00", planId: nextPlan.id });
+    expect(complete.body).toMatchObject({ name: "Empresa atualizada", cnpj: "98765432000100", planId: nextPlan.id });
     expect(await prisma.user.findUnique({ where: { id: owner.id } })).toEqual(owner);
   });
 
@@ -340,7 +353,7 @@ describe("Company (me/list/getById/create/update/delete)", () => {
       name: "Atualização permitida", id: "id-fora-do-contrato", createdAt: new Date(0),
       users: { updateMany: { where: { id: owner.id }, data: { name: "Escrita aninhada indevida" } } },
     };
-    const updated = await new CompanyRepository(prisma).update(company.id, contaminated);
+    const updated = await new CompanyRepository(prisma).update(company.id, owner.id, contaminated);
     expect(updated).toMatchObject({ id: company.id, name: "Atualização permitida", createdAt: company.createdAt });
     expect(await prisma.user.findUnique({ where: { id: owner.id } })).toEqual(owner);
   });

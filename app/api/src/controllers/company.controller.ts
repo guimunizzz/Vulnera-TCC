@@ -2,9 +2,7 @@ import type { Request, Response } from "express";
 import type { CompanyService } from "../services/company.service";
 import type { CreateCompanyDTO, UpdateCompanyDTO } from "../models/company.model";
 
-// 14 dígitos crus OU máscara NN.NNN.NNN/NNNN-NN — sem dígito verificador
-// (fora de escopo desta fase, ver CLAUDE.md §15).
-const CNPJ_REGEX = /^(\d{14}|\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})$/;
+import { normalizeCompanyCnpj } from "../utils/cnpj.util";
 
 export class CompanyController {
   constructor(private readonly service: CompanyService) {}
@@ -56,7 +54,8 @@ export class CompanyController {
       if (!body.name || typeof body.name !== "string") {
         return res.status(400).json({ error: "INVALID_NAME" });
       }
-      if (body.cnpj !== undefined && !CNPJ_REGEX.test(body.cnpj)) {
+      const cnpj = typeof body.cnpj === "string" ? normalizeCompanyCnpj(body.cnpj) : null;
+      if (body.cnpj !== undefined && !cnpj) {
         return res.status(400).json({ error: "INVALID_CNPJ" });
       }
       if (!body.planId || typeof body.planId !== "string") {
@@ -65,7 +64,7 @@ export class CompanyController {
 
       const dto: CreateCompanyDTO = {
         name: body.name,
-        cnpj: body.cnpj,
+        cnpj: cnpj ?? undefined,
         planId: body.planId,
       };
 
@@ -73,6 +72,9 @@ export class CompanyController {
       const company = await this.service.create(actor, dto);
       return res.status(201).json(company.toResponse());
     } catch (error: any) {
+      if (error.message === "FORBIDDEN") {
+        return res.status(403).json({ error: "FORBIDDEN" });
+      }
       if (error.message === "PLAN_NOT_FOUND") {
         return res.status(404).json({ error: "PLAN_NOT_FOUND" });
       }
@@ -106,7 +108,8 @@ export class CompanyController {
       ) {
         return res.status(400).json({ error: "INVALID_NAME" });
       }
-      if (body.cnpj !== undefined && (typeof body.cnpj !== "string" || !CNPJ_REGEX.test(body.cnpj))) {
+      const cnpj = typeof body.cnpj === "string" ? normalizeCompanyCnpj(body.cnpj) : null;
+      if (body.cnpj !== undefined && !cnpj) {
         return res.status(400).json({ error: "INVALID_CNPJ" });
       }
       if (
@@ -118,7 +121,7 @@ export class CompanyController {
 
       const dto: UpdateCompanyDTO = {
         name: body.name as string | undefined,
-        cnpj: body.cnpj as string | undefined,
+        cnpj: cnpj ?? undefined,
         planId: body.planId as string | undefined,
       };
       const actor = req.user!;
@@ -133,6 +136,9 @@ export class CompanyController {
       }
       if (error.message === "COMPANY_ALREADY_EXISTS") {
         return res.status(409).json({ error: "COMPANY_ALREADY_EXISTS" });
+      }
+      if (error.message === "ALREADY_HAS_ACTIVE_SUBSCRIPTION") {
+        return res.status(409).json({ error: "ALREADY_HAS_ACTIVE_SUBSCRIPTION" });
       }
       if (error.message === "FORBIDDEN") {
         return res.status(403).json({ error: "FORBIDDEN" });
@@ -149,6 +155,9 @@ export class CompanyController {
     } catch (error: any) {
       if (error.message === "COMPANY_NOT_FOUND") {
         return res.status(404).json({ error: "COMPANY_NOT_FOUND" });
+      }
+      if (error.message === "COMPANY_HAS_HISTORY") {
+        return res.status(409).json({ error: "COMPANY_HAS_HISTORY" });
       }
       console.error("CompanyController.delete", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });

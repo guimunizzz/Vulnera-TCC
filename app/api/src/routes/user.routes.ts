@@ -12,6 +12,7 @@ router.get("/me", controller.me);
 router.get("/", controller.list);
 router.get("/:id", controller.getById);
 router.patch("/:id", controller.update);
+router.post("/:id/reactivate-owner", controller.reactivateOwner);
 router.delete("/:id", controller.delete);
 
 export { router as userRoutes };

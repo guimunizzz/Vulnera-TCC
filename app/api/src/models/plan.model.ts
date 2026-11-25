@@ -12,7 +12,7 @@ export type CreatePlanDTO = {
   price: number;
 };
 
-export type UpdatePlanDTO = Partial<CreatePlanDTO>;
+export type UpdatePlanDTO = Partial<CreatePlanDTO> & { isActive?: boolean };
 
 export type PlanResponseDTO = {
   id: string;

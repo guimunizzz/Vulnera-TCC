@@ -7,8 +7,8 @@
 // PROBLEMA QUE RESOLVE:
 //   Sem factory, a rota teria que fazer:
 //     const repository = new CompanyRepository(prisma);
-//     const planRepository = new PlanRepository(prisma);
-//     const service = new CompanyService(repository, planRepository);
+//     const userRepository = new UserRepository(prisma);
+//     const service = new CompanyService(repository, userRepository);
 //     const controller = new CompanyController(service);
 //   Isso (1) embola responsabilidades (rota não monta dependências),
 //   (2) repete código toda rota nova e (3) torna mock pra teste difícil.
@@ -18,9 +18,6 @@
 //   2. Centraliza injeção do PrismaClient
 //   3. Permite factory irmã pra teste com mock
 //
-// NOTA: CompanyService depende também de PlanRepository — validação de
-// negócio "company só pode referenciar plano existente" (PLAN_NOT_FOUND).
-//
 // CONVENÇÕES:
 //   - Nome do arquivo: `<recurso>.factory.ts`
 //   - Nome da função:  `make<Recurso>Controller`
@@ -29,7 +26,6 @@
 
 import { prisma } from "../database/prisma.database";
 import { CompanyRepository } from "../repositories/company.repository";
-import { PlanRepository } from "../repositories/plan.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { CompanyService } from "../services/company.service";
 import { CompanyController } from "../controllers/company.controller";
@@ -37,9 +33,8 @@ import { CompanyController } from "../controllers/company.controller";
 export function makeCompanyController(): CompanyController {
   // Ordem: mais interno (Repository) → mais externo (Controller)
   const repository = new CompanyRepository(prisma);
-  const planRepository = new PlanRepository(prisma);
   const userRepository = new UserRepository(prisma);
-  const service = new CompanyService(repository, planRepository, userRepository);
+  const service = new CompanyService(repository, userRepository);
   const controller = new CompanyController(service);
   return controller;
 }
