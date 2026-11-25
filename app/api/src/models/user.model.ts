@@ -17,13 +17,6 @@ export type UserRole = "ADMIN" | "CLIENT" | "PENTESTER";
 
 // ---------- DTOs ----------
 
-/** Body do POST /api/auth/register */
-export interface RegisterDTO {
-  name: string;
-  email: string;
-  password: string;
-}
-
 /** Body do POST /api/auth/login */
 export interface LoginDTO {
   email: string;
@@ -35,7 +28,7 @@ export interface RefreshDTO {
   refreshToken: string;
 }
 
-/** O que sai da API depois de register/login/refresh */
+/** O que sai da API depois de login/refresh */
 export interface AuthResponseDTO {
   accessToken: string;
   refreshToken: string;

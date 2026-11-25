@@ -25,6 +25,13 @@ import { ThemeProvider } from "./design/theme-provider";
 vi.mock("./pages/landing-page", () => ({
   LandingPage: () => <div data-testid="landing-stub">landing</div>,
 }));
+vi.mock("./components/auth/turnstile-challenge", async () => {
+  const react = await import("react");
+  const Challenge = react.forwardRef(function Challenge() {
+    return react.createElement("div", { "data-testid": "turnstile-mock" });
+  });
+  return { TurnstileChallenge: Challenge };
+});
 
 function limparAuth(): void {
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
@@ -69,6 +76,7 @@ beforeAll(async () => {
     import("./pages/auth/auth-layout"),
     import("./pages/auth/login-page"),
     import("./pages/auth/register-page"),
+    import("./pages/auth/request-access-page"),
     import("./pages/dashboard-page"),
   ]);
 }, 60_000);
@@ -76,21 +84,16 @@ beforeAll(async () => {
 afterEach(limparAuth);
 
 describe("Roteamento de App", () => {
-  it("permite alternar entre login e cadastro mantendo o cenário de acesso", async () => {
+  it("leva do login à solicitação de acesso mantendo o cenário", async () => {
     limparAuth();
     renderApp("/login");
     // Cenário e páginas de acesso são lazy (um lote só): espera o primeiro paint.
     const logo = await screen.findByRole("link", { name: "Vulnera — página inicial" });
 
-    fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
-    expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: /Solicitar acesso/ }));
+    expect(await screen.findByRole("heading", { name: "Solicitar acesso" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Nome" })).toBeRequired();
     expect(screen.getByRole("link", { name: "Vulnera — página inicial" })).toBe(logo);
-
-    fireEvent.click(screen.getByRole("link", { name: "Entrar" }));
-    expect(await screen.findByRole("heading", { name: "Entrar" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Criar conta" })).not.toBeInTheDocument();
   });
 
   it("ROTA-01 — '/' sem sessão renderiza a landing, sem redirecionar pro login", () => {

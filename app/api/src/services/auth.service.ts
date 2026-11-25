@@ -1,20 +1,19 @@
 /**
  * auth.service.ts
  *
- * Orquestra register/login/refresh/logout.
+ * Orquestra login/refresh/logout para usuários já provisionados ou ativados.
  *
  * Erros: lança Error com .message = SCREAMING_SNAKE. O controller traduz pra HTTP.
  */
 
 import type { UserRepository } from "../repositories/user.repository";
 import { RefreshTokenRepository } from "../repositories/refresh-token.repository";
-import { hashPassword, comparePassword } from "../utils/hash.util";
+import { comparePassword } from "../utils/hash.util";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.util";
 import {
   UserEntity,
   type AuthResponseDTO,
   type LoginDTO,
-  type RegisterDTO,
   type UserRole,
 } from "../models/user.model";
 
@@ -25,21 +24,6 @@ export class AuthService {
     private readonly userRepo: UserRepository,
     private readonly refreshRepo: RefreshTokenRepository,
   ) {}
-
-  async register(dto: RegisterDTO): Promise<AuthResponseDTO> {
-    const existing = await this.userRepo.findByEmail(dto.email);
-    if (existing) throw new Error("EMAIL_ALREADY_EXISTS");
-
-    const passwordHash = await hashPassword(dto.password);
-    const user = await this.userRepo.create({
-      name: dto.name,
-      email: dto.email,
-      password: passwordHash,
-      role: "CLIENT", // default no MVP
-    });
-
-    return this.issueTokensFor(user);
-  }
 
   async login(dto: LoginDTO): Promise<AuthResponseDTO> {
     const user = await this.userRepo.findByEmail(dto.email);

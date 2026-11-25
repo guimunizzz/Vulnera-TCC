@@ -2,11 +2,12 @@
  * user.repository.ts
  *
  * Acesso ao DB para a entidade User. Sem lógica de negócio aqui — só CRUD.
- * PrismaClient injetado por construtor (DI manual via factory).
+ * Cliente Prisma ou transacional injetado por construtor (DI manual via factory).
  */
 
-import type { Prisma, PrismaClient, User } from "@prisma/client";
+import type { Prisma, User } from "@prisma/client";
 import type { AssigneeCandidateDTO, UserRole } from "../models/user.model";
+import type { AccessDatabaseClient } from "./access-transaction.repository";
 
 export interface CreateUserData {
   name: string;
@@ -14,10 +15,11 @@ export interface CreateUserData {
   password: string;
   role?: UserRole;
   companyId?: string | null;
+  companyRole?: string | null;
 }
 
 export class UserRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: AccessDatabaseClient) {}
 
   findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { email } });
@@ -74,16 +76,28 @@ export class UserRepository {
     return this.prisma.user.findMany({ where: { id: { in: ids } } });
   }
 
-  create(data: CreateUserData): Promise<User> {
-    return this.prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        password: data.password,
-        role: data.role ?? "CLIENT",
-        companyId: data.companyId ?? null,
-      },
-    });
+  async create(
+    data: CreateUserData,
+    options: { uniqueEmailConflictCode?: string } = {},
+  ): Promise<User> {
+    try {
+      return await this.prisma.user.create({
+        data: {
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          role: data.role ?? "CLIENT",
+          companyId: data.companyId ?? null,
+          ...(data.companyRole !== undefined ? { companyRole: data.companyRole } : {}),
+        },
+      });
+    } catch (error) {
+      // O fluxo de ativação só grava campos sem outras chaves únicas além de User.email.
+      if (options.uniqueEmailConflictCode && isUniqueConstraintViolation(error)) {
+        throw new Error(options.uniqueEmailConflictCode);
+      }
+      throw error;
+    }
   }
 
   update(id: string, data: Partial<{ name: string; email: string }>): Promise<User> {
@@ -113,4 +127,9 @@ export class UserRepository {
   delete(id: string): Promise<User> {
     return this.prisma.user.delete({ where: { id } });
   }
+}
+
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return typeof error === "object" && error !== null
+    && "code" in error && (error as { code?: unknown }).code === "P2002";
 }

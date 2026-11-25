@@ -1,0 +1,28 @@
+# Perfil local opt-in para testar o Turnstile real sem publicar serviços fora
+# do loopback. Use somente sobre docker-compose.yml, nunca junto do perfil dummy.
+services:
+  api:
+    environment:
+      # A API mantém NODE_ENV=development para o SMTP local/MailHog. Mesmo
+      # assim, Siteverify precisa retornar action e hostname esperados.
+      NODE_ENV: development
+      TURNSTILE_SECRET_KEY: ${LOCAL_TURNSTILE_SECRET_KEY:?Defina LOCAL_TURNSTILE_SECRET_KEY no arquivo local do Turnstile}
+      TURNSTILE_EXPECTED_ACTION: access-request
+      TURNSTILE_EXPECTED_HOSTNAME: localhost
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+      SMTP_REQUIRE_TLS: "false"
+      SMTP_FROM: noreply@localhost.test
+      PUBLIC_WEB_URL: http://localhost:8086
+    ports: !override
+      - "127.0.0.1:3001:3001"
+
+  web:
+    build:
+      args:
+        # Site key é pública e só entra no bundle de produção do frontend.
+        VITE_TURNSTILE_SITE_KEY: ${LOCAL_TURNSTILE_SITE_KEY:?Defina LOCAL_TURNSTILE_SITE_KEY no arquivo local do Turnstile}
+        VITE_TURNSTILE_ACTION: access-request
+    ports: !override
+      - "127.0.0.1:8086:3000"

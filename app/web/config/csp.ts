@@ -107,11 +107,11 @@ export function buildCsp({ apiUrl, scriptHashes = [] }: OpcoesCsp = {}): string 
     ["img-src", ["'self'", "data:", "blob:"]],
     ["font-src", ["'self'", "data:"]],
     ["style-src", ["'self'", "'unsafe-inline'"]],
-    ["script-src", ["'self'", ...scriptHashes]],
+    ["script-src", ["'self'", ...scriptHashes, "https://challenges.cloudflare.com"]],
     ["connect-src", connect],
     // O produto não embute nada e não abre worker de outra origem.
     ["worker-src", ["'self'", "blob:"]],
-    ["frame-src", ["'none'"]],
+    ["frame-src", ["https://challenges.cloudflare.com"]],
   ];
 
   return diretivas.map(([nome, valores]) => `${nome} ${valores.join(" ")}`).join("; ");
