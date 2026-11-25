@@ -48,4 +48,16 @@ describe("agregação do quadro de remediação", () => {
     expect(resultado.pagination.total).toBe(205);
     expect(resultado.pagination.totalPages).toBe(1);
   });
+
+  it("no 429 espera o Retry-After e continua; outro erro sobe", async () => {
+    let tentativas = 0;
+    const resultado = await buscarTodosFindings(async (params) => {
+      const page = Number(params.get("page"));
+      if (page === 2 && tentativas++ === 0) throw { response: { status: 429, data: { retryAfterSeconds: 0.01 } } };
+      return resposta(page, 150, page === 1 ? 100 : 50);
+    }, new URLSearchParams("status=OPEN"));
+    expect(resultado.data).toHaveLength(150);
+
+    await expect(buscarTodosFindings(async () => Promise.reject({ response: { status: 500 } }), new URLSearchParams())).rejects.toEqual({ response: { status: 500 } });
+  });
 });

@@ -73,6 +73,9 @@ SAST/SCA na importação e casamentos do Threat Intel na aba "Afeta". O SLA
    do quadro e o recorte (projeto e responsável), que fica acima das abas e
    vale para as duas vistas. Duas paginações da busca de achados ao mesmo
    tempo estouravam o rate limit, e isso foi visto na validação no navegador.
+   Mesmo sozinha, a paginação pode passar do burst do bucket `expensive` (3
+   por usuário), então `buscarTodosFindings` espera o `Retry-After` do 429 e
+   tenta de novo. A tela demora mais, mas não quebra.
 
 ## Alternativas descartadas
 
