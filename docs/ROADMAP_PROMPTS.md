@@ -8,7 +8,7 @@
 
 ---
 
-## Issue #51 — Etapa 7 · 🚧 Em andamento desde 2026-11-19
+## Issue #51 — Etapa 7 · ✅ Validada localmente com ressalvas em 2026-11-25
 
 ### Objetivo e contrato do cutover
 
@@ -69,24 +69,56 @@ evidência local desta etapa.
    aplicou padding 12–16 px a quatro inputs sem prefixo, preservando login;
    TSC e build Vite passaram.
 5. O código da Etapa 7 foi implementado em `53d142e`; canários e provas
-   pré-integração foram aprovados pelos owners. Merge local de `origin/dev`
-   (`effd32a`) está aberto, sem merge commit ou push. O baseline anterior
-   `95f3252` continha três commits SAST/SCA, preservados no BACKLOG. Resolver a
-   integração e executar gates/validações pós-`dev` e remotas; não declarar a
-   Etapa aprovada nem fechar Issue #51 até revisão e sinal do responsável.
+   pré-integração foram aprovados pelos owners. Merge local concluído em
+   `822fa21` (pais `828ec6a` + `effd32a`); branch publicada e
+   Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+   Este registro não afirma merge remoto ou fechamento da Issue.
+   O baseline anterior `95f3252` continha três commits SAST/SCA, preservados no BACKLOG. Web
+   pós-`dev`: Docker build, TSC, lint focal e contraste 132/132 PASS; Vitest 17
+   arquivos, 122/125 na rodada inicial e 124/125 distintos após dois timeouts
+   aprovados isoladamente. A falha Code Import/Security Graph foi reproduzida
+   na base pura `effd32a` (7/8), com os arquivos iguais byte a byte à `dev`.
+   Compose DEV/real PASS; secret somente na API, sem literal no diff. Lint API
+   focal PASS; global conserva dois args unused herdados de `memory-job-queue.ts`
+   (igual à `dev`). API pós-`dev`: Docker build, TSC, Prisma generate, lint focal
+   e migrate deploy 23/23 em schema novo restrito passaram; `prisma validate`
+   passou e `migrate status` indicou 23 atualizadas. Jest inicial 20/21 suítes,
+   338/339; reteste final 1/1 suíte, 9/9 testes, exit explícito Jest 0/Docker 0.
+   Asserções distintas finais: 21/21 suítes, 339/339 testes. Lint global mantém
+   dois args unused herdados de `memory-job-queue.ts`; `npm install` reportou
+   12 advisories (8 moderate/4 high), sem `audit fix`. SMTP externo, Turnstile
+   em produção e deploy não foram exercitados. Não há fechamento remoto
+   registrado.
 
-### Histórico — Issue #51, Etapa 7 (em andamento; checkpoint documental)
+### Histórico — Issue #51, Etapa 7 (validação local com ressalvas)
 
-- 2026-11-25: código de cutover/onboarding implementado em `53d142e`; integração
-  local de `origin/dev` (`effd32a`) aberta, sem merge commit/push. Evidências
+- 2026-11-25: código de cutover/onboarding implementado em `53d142e`; merge local
+  concluído em `822fa21` (pais `828ec6a` + `effd32a`); branch publicada e
+  Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+  Evidências
   registradas são pré-integração. A suíte API completa e o reteste têm
   interseção: 65/72 suítes e 1064/1110 testes na primeira execução; reteste
   6/7 suítes e 231/233 testes, com dois timeouts do `zap-runner` reproduzidos no
   controle `e5e353c`; 71/72 suítes distintas PASS, sem somar testes. Web
   708/710; onboarding 11/11, ADMIN 6/6, mock 9/11 e CA-01/CA-09 separados 2/2.
   Smoke/Docker/canários e prova manual até Subscription PENDING_APPROVAL foram
-  confirmados antes da integração. Aguardam validações pós-`dev`/remotas e
-  revisão; sem aceite ou encerramento. [Registro](SECURITY-AUTH-ETAPA-7.md).
+  confirmados antes da integração. Validação local concluída com ressalvas. O
+  registro de abertura da PR e o estado remoto são consultáveis em [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+  [Registro](SECURITY-AUTH-ETAPA-7.md).
+- 2026-11-25, atualização Web pós-`dev`: Docker build, TSC, lint focal e
+  contraste 132/132 passaram. Vitest em 17 arquivos/125 testes: 122/125 na
+  rodada inicial; dois timeouts passaram isoladamente, total 124/125 distintos.
+  A falha Code Import/Security Graph reproduziu em `effd32a` puro (7/8); os
+  arquivos CodeImport/grafo são byte a byte iguais à `dev`. Compose config
+  DEV/real passou, secret somente na API, sem literal no diff. Lint API focal
+  passou; global falha nos dois args unused de `memory-job-queue.ts`, iguais à
+  `dev`. API build/TSC/Prisma generate/lint focal/migrate 23/23 e `prisma
+  validate` passaram; `migrate status` indicou 23 atualizadas. Jest inicial
+  20/21 suítes, 338/339; reteste final 1/1 suíte, 9/9 testes, exit explícito
+  Jest 0/Docker 0. Total distinto: 21/21 suítes, 339/339 testes. `npm install`
+  reportou 12 advisories (8 moderate/4 high), sem `audit fix`; SMTP externo,
+  Turnstile em produção e deploy não foram exercitados. Sem fechamento remoto
+  registrado.
 - 2026-11-19: contrato de cutover, baseline parcial e prova manual até
   ativação/login/onboarding e resultados confirmados antes da integração
   registrados em [`SECURITY-AUTH-ETAPA-7.md`](SECURITY-AUTH-ETAPA-7.md).

@@ -513,20 +513,39 @@ terminou `ACTIVATED`, com convite usado; uma sessão, um User CLIENT/OWNER,
 Company sem CNPJ e Subscription `PENDING_APPROVAL` foram confirmados por leitura
 agregada; ativação, login e retomada concluídos pela UI. Smoke HTTP separado
 observou register 404, rotas admin/da empresa anônimas 401 e CAPTCHA ausente
-400. `origin/dev` observado em `95f3252` (três commits SAST/SCA); sem integração
-ou merge. Canários aprovados; pendem integração e validação pós-`dev`/remota.
+400. Snapshot pré-integração de 2026-11-25: `origin/dev` observado em
+`95f3252` (três commits SAST/SCA), antes da integração e das validações
+pós-`dev`. Os resultados posteriores estão registrados abaixo.
 Consulte
 [`SECURITY-AUTH-ETAPA-7.md`](../../SECURITY-AUTH-ETAPA-7.md) para escopo,
 baseline e limites detalhados.
 
 ### Atualização documental — 2026-11-25
 
-O código da Etapa 7 foi implementado em `53d142e`. A integração local de
-`origin/dev` (`effd32a`) está aberta, sem merge commit ou push. Os testes e a
-prova manual descritos acima são pré-integração; continuam pendentes os gates
-pós-`dev`/remotos e a revisão do responsável. Este checkpoint não aprova a
-etapa nem encerra a Issue #51. O histórico e os limites da evidência estão em
+O código da Etapa 7 foi implementado em `53d142e`. Merge local concluído em
+`822fa21` (pais `828ec6a` + `effd32a`); branch publicada. Rastreabilidade remota:
+[PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83). Os testes e a prova
+manual descritos acima são pré-integração. A validação local foi concluída com
+ressalvas; este registro não afirma merge remoto ou fechamento da Issue #51.
+O histórico e limites estão em
 [`SECURITY-AUTH-ETAPA-7.md`](../../SECURITY-AUTH-ETAPA-7.md).
+
+Validação Web/Compose pós-`dev`: build Docker Web com tag exclusiva, TSC, lint
+focal, contraste 132/132 e `docker compose ... config --quiet` nos perfis DEV e
+real passaram; nenhum container foi criado. Vitest 17 arquivos/125 testes teve
+122/125 na primeira rodada; dois timeouts passaram isoladamente, totalizando
+124/125 distintos. A falha Code Import/Security Graph reproduziu na base pura
+`effd32a` (7/8), com arquivos CodeImport/grafo byte a byte iguais à `dev`.
+Secret apenas na API, sem literal no diff. Lint API focal passou; lint global
+retém dois args unused em `memory-job-queue.ts`, iguais à `dev`. API pós-`dev`:
+Docker build, TSC, Prisma generate e migrate deploy 23/23 em schema novo
+restrito passaram. Jest inicial 21 suítes, 20/21 e 338/339 em 131,6 s; única
+falha em `admin-access-request-http` por fixture fixa de 23/10/2026 vencida em
+25/11 e DI real ausente. Reteste final de 1/1 suíte e 9/9 testes passou com exit
+explícito Jest 0/Docker 0; asserções distintas: 21/21 suítes e 339/339 testes.
+`npm install` reportou 12 advisories (8 moderate/4 high), sem
+`audit fix`. Dependências Prisma/BullMQ do host estão desatualizadas; o ensaio
+usa infraestrutura descartável existente.
 
 Follow-ups preexistentes ficam fora da decisão de cutover: concorrência de
 refresh e diferença entre `expiresAt` e TTL, concorrência entre decisões

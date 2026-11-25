@@ -6,17 +6,17 @@ Quem consome: Rafael e os responsáveis pela revisão da Issue #51.
 
 # Issue #51 — Etapa 7: cutover e retomada do onboarding
 
-**Estado: código implementado; integração e aceite pendentes. Este registro
-documenta evidências pré-integração e não representa aprovação da Etapa 7,
-conclusão do merge ou encerramento da Issue #51.**
+**Estado: validada localmente com ressalvas.** Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+Este relatório não afirma merge remoto nem fechamento da Issue #51.
 
 Checkpoint documental: 2026-11-25. Código da Etapa 7 implementado em
-`53d142e`. O merge local com `origin/dev` em `effd32a` está aberto, sem merge
-commit ou push. `95f3252` foi o baseline observado antes, com três commits
+`53d142e`. Merge local concluído em `822fa21` (pais `828ec6a` + `effd32a`); branch
+publicada. Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+`95f3252` foi o baseline observado antes, com três commits
 SAST/SCA que permanecem documentados no BACKLOG. A matriz abaixo registra
 evidências pré-integração, inclusive execuções não verdes e seus limites. Os
-canários foram aprovados pelos owners; validações pós-`dev`/remotas e revisão
-final seguem pendentes.
+canários foram aprovados pelos owners; os resultados pós-`dev` estão registrados
+abaixo, com as ressalvas correspondentes.
 
 ## Objetivo
 
@@ -60,7 +60,7 @@ somadas**.
 | Web — runtime de produção servido | Docker final PASS; Rollup 4.68.5; CSS scoped servido | Verificação de artefato em stack isolada |
 | Web — Playwright real de projeto | 1/1 PASS após corrigir seletor de senha | CLIENT provisionado exclusivamente; sem regressão de role observada |
 | Web — Vitest focal `/register` | 2/2 PASS | Não substitui a suíte Web completa |
-| Web — suíte completa, baixa concorrência | 87 arquivos: 85 passaram, 2 falharam; 708/710 testes passaram | Finding de nome acessível em Code Import é preexistente e será conferido pós-`dev`; não declarar a contagem integral verde |
+| Web — suíte completa pré-integração, baixa concorrência | 87 arquivos: 85 passaram, 2 falharam; 708/710 testes passaram | Finding de nome acessível foi reproduzido depois na base pura `effd32a`; ver resultados pós-`dev` |
 | Web — Playwright mockado | Rodada original 9/11; CA-01 e CA-09 passaram depois em execução separada (2/2) | CA-01 = CTA do cabeçalho; CA-09 = nome acessível do seletor com a opção atual. Como a execução foi separada, não converter 9/11 em 11/11 |
 | Web — spec focal de onboarding | 11/11 PASS após sincronizar o clique; ADMIN focal 6/6 PASS | Canários aprovados; não substitui a suíte integral 708/710 |
 | Web — escala visual | `min-h-touch` de 44 px passou a escala | Padding 12–16 px aplicado a quatro inputs sem prefixo; login preservado |
@@ -74,13 +74,43 @@ passando, com o único resultado residual nos dois casos de timeout preexistente
 do `zap-runner`. Esta descrição das suítes distintas não altera nem soma os
 totais de testes das duas execuções, apresentados separadamente acima.
 
-O merge local com `origin/dev` em `effd32a` está aberto e ainda não foi
-concluído. `95f3252` é o baseline observado antes da atualização, com três
-commits SAST/SCA; esse histórico foi preservado no BACKLOG. As validações da
-matriz foram feitas antes da integração e não revisam a base integrada.
-Canários aprovados pelos owners. Restam gates de integração, validações
-pós-`dev`/remotas e revisão; não se declara merge concluído, PR, aceite ou
-encerramento da Issue #51.
+O merge local com `origin/dev` foi concluído em `822fa21` (pais `828ec6a` e
+`effd32a`); a branch foi publicada. Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+`95f3252` é o baseline observado
+antes da atualização, com três commits SAST/SCA; esse histórico foi preservado
+no BACKLOG. A matriz acima é pré-integração. Resultados Web/API/Compose pós-`dev`
+estão registrados abaixo, com as ressalvas do lint global, teste Web herdado e
+avisos do npm. Não se declara PR, merge remoto ou encerramento da Issue #51.
+
+## Validação pós-`dev` — Web, Compose e lint focal
+
+- Build Docker do Web com tag exclusiva: PASS; nenhum container foi criado.
+- TSC, lint Web focal e contraste: PASS, 132/132.
+- Vitest: 17 arquivos/125 testes; rodada inicial 122/125. Dois timeouts em
+  arquivos de rotas/navegação passaram isoladamente (16 testes nesses
+  arquivos), para 124/125 testes distintos observados.
+- A falha de nome acessível Code Import/Security Graph foi reproduzida na base
+  pura `effd32a` (7/8 no mesmo harness). Os arquivos CodeImport/grafo foram
+  conferidos byte a byte iguais à `dev`; a falha não foi atribuída ao diff da
+  Issue #51.
+- `docker compose ... config --quiet` dos perfis DEV e real: PASS. A secret
+  está somente na API e nenhum literal de secret aparece no diff.
+- Lint API focal da Issue #51: PASS. Lint global ainda falha em dois argumentos
+  não usados em `memory-job-queue.ts`, arquivo byte a byte igual a `origin/dev`;
+  os imports antigos de VulnerabilityService foram removidos pela base nova.
+- API pós-`dev`: Docker build, TSC, Prisma generate, lint focal e migration
+  deploy 23/23 em schema novo restrito no container MySQL existente passaram;
+  `prisma validate` passou e `migrate status` confirmou 23 atualizadas.
+- Jest inicial: 21 suítes, 20/21 e 338/339 testes (131,6 s). A única falha é
+  `admin-access-request-http`: DI real ausente e fixture fixa de 23/10/2026 já
+  expirada em 25/11. O owner alinhou o relógio só no teste; reteste final de
+  1/1 suíte e 9/9 testes passou, com exit explícito Jest 0 e Docker 0. O gate
+  Jest focal foi aprovado com as demais ressalvas registradas.
+- Contando as asserções distintas após o reteste, observam-se 21/21 suítes e
+  339/339 testes PASS; primeira rodada permaneceu em 20/21 e 338/339.
+- `npm install` reportou 12 advisories (8 moderate/4 high), sem `audit fix`.
+  Dependências Prisma/BullMQ do host estão desatualizadas; os testes isolados
+  usam infraestrutura descartável existente.
 
 ### Evidência manual recebida
 
@@ -119,20 +149,20 @@ Há três itens preexistentes registrados para acompanhamento posterior:
 São follow-ups independentes do cutover. Este registro não inclui payloads,
 roteiros de exploração ou alegação de que esses itens foram corrigidos.
 
-## Pendências para a revisão final
+## Ressalvas e rastreabilidade
 
-- A rodada Web completa permanece 708/710 e não é declarada verde. Spec focal de
-  onboarding passou 11/11 depois de sincronizar o clique; manter separada da
-  contagem integral. Verificar pós-`dev` o finding Code Import preexistente.
-- Canários aprovados antes da integração. O merge local com `origin/dev`
-  (`effd32a`) está aberto, sem merge commit/push. Resolver a integração e
-  executar validações pós-`dev`/remotas antes do aceite. `95f3252` permanece
-  como baseline histórico com três commits SAST/SCA; sem PR ou Issue fechada.
-- Preservar em separado o total API da execução completa e o reteste das sete
-  suítes, sem somar contagens de testes.
-- Atualizar este relatório, PRD, BACKLOG, ROADMAP e ADR-057 com as provas finais.
-- Aguardar revisão e sinal do responsável antes de marcar a Etapa 7 aprovada,
-  registrar merge ou encerrar a Issue #51.
+- A rodada Web completa pré-integração permanece 708/710. A validação pós-`dev`
+  teve 124/125 testes distintos; a falha de acessibilidade foi reproduzida na
+  base pura e atribuída a arquivos iguais à `dev`. A evidência não transforma a
+  suíte em verde.
+- Canários aprovados antes da integração. Merge local concluído em `822fa21`
+  (pais `828ec6a` + `effd32a`); branch publicada. Rastreabilidade remota:
+  [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83). Web, API e Compose
+  passaram com as ressalvas acima. `95f3252` permanece como baseline histórico
+  com três commits SAST/SCA. Este relatório não afirma merge remoto nem
+  fechamento da Issue #51.
+- Os totais da execução API completa e do reteste são reportados em separado;
+  não somar contagens de testes sobrepostas.
 
 ## Histórico
 
@@ -141,6 +171,23 @@ roteiros de exploração ou alegação de que esses itens foram corrigidos.
   evidência de teste e a prova manual acima são pré-integração. O estado da
   execução API, reteste, Web, smoke e jornada manual foi mantido sem somar
   contagens sobrepostas. Aguardam validações pós-`dev`/remotas e revisão.
+- 2026-11-25 — Atualização Web pós-`dev`: build Docker Web, TSC, lint focal,
+  contraste 132/132 e Compose config DEV/real passaram. Vitest em 17 arquivos,
+  122/125 na primeira rodada e 124/125 distintos após dois timeouts aprovados
+  isoladamente. A falha de nome acessível reproduziu em `effd32a` puro; arquivos
+  CodeImport/grafo são byte a byte iguais à `dev`. Lint API focal passou; global
+  falha nos dois args unused herdados.
+- 2026-11-25 — Atualização API pós-`dev`: Docker build, TSC, Prisma generate,
+  lint focal e migration deploy 23/23 em schema novo restrito passaram. Jest
+  inicial 20/21 suítes, 338/339 em 131,6 s; única falha em fixture vencida de
+  `admin-access-request-http`, sem DI real. Reteste final 1/1 suíte, 9/9 testes,
+  exit explícito Jest 0/Docker 0; asserções distintas 21/21 suítes, 339/339.
+  `prisma validate` passou e `migrate status` confirmou 23 atualizadas.
+  `npm install` reportou 12 advisories (8 moderate/4 high), sem `audit fix`.
+- 2026-11-25 — Atualização posterior: merge local `822fa21` publicado na branch;
+  rastreabilidade remota em [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+  Validação local com ressalvas registrada. Este registro não afirma merge remoto
+  ou fechamento da Issue #51.
 - 2026-11-19 — Incluídos resultados pré-integração da API, Web/Docker, canários,
   E2E focal, prova manual de ponta a ponta e smoke visual. Canários aprovados;
   spec focal de onboarding 11/11 e ADMIN 6/6 passaram. A rodada Web integral

@@ -9,11 +9,12 @@ status: ativo
 
 # Changelog do Projeto
 
-## 2026-11-25 — Issue #51, Etapa 7: código implementado, integração pendente
+## 2026-11-25 — Issue #51, Etapa 7: validada localmente com ressalvas
 
 O código do cutover e retomada do onboarding foi implementado em `53d142e`.
-Está aberto o merge local com `origin/dev` em `effd32a`; não há merge commit ou
-push registrado neste checkpoint. Os resultados API, Web, Docker, canários,
+Merge local concluído em `822fa21` (pais `828ec6a` + `effd32a`); branch publicada.
+Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+Este registro não afirma merge remoto nem fechamento da Issue. Os resultados API, Web, Docker, canários,
 smokes e a prova manual descritos no relatório da Etapa 7 são pré-integração.
 A API teve 65/72 suítes e 1064/1110 testes na execução completa; o reteste teve
 6/7 suítes e 231/233 testes. Os dois timeouts `zap-runner` foram reproduzidos
@@ -21,8 +22,26 @@ no baseline `e5e353c`; 71/72 suítes distintas passaram, sem somar testes das
 execuções sobrepostas. A Web teve 708/710; onboarding focal 11/11, ADMIN 6/6 e
 Playwright mock 9/11, com CA-01/CA-09 em execução separada 2/2. A prova manual
 na stack 8186 terminou com User CLIENT/OWNER, Company sem CNPJ e Subscription
-`PENDING_APPROVAL`. Permanecem pendentes validações pós-`dev`/remotas e revisão;
-este registro não é aceite da etapa nem fechamento da Issue #51. Ver
+`PENDING_APPROVAL`. Pós-`dev`, o build Docker Web com tag exclusiva, TSC, lint
+focal e contraste 132/132 passaram; nenhum container foi criado. Vitest em 17
+arquivos teve 122/125 na rodada inicial; dois timeouts passaram isoladamente,
+resultando em 124/125 testes distintos. A falha de nome acessível
+Code Import/Security Graph foi reproduzida na base `effd32a` pura (7/8), e os
+arquivos correspondentes são byte a byte iguais à `dev`. Compose config DEV/real
+passou; segredo somente na API e sem literal no diff. Lint API focal passou; o
+global conserva dois args unused herdados de `memory-job-queue.ts`, igual à
+`dev`; imports antigos de VulnerabilityService saíram. API pós-`dev`: Docker
+build, TSC, Prisma generate, lint focal e migrate deploy 23/23 em schema novo
+restrito passaram. Jest inicial 21 suítes, 20/21 e 338/339 (131,6 s); única
+falha em `admin-access-request-http`, por fixture fixa de 23/10/2026 vencida em
+25/11 e DI real ausente. `prisma validate` passou e `migrate status` indicou 23
+atualizadas. Reteste final 1/1 suíte, 9/9 testes, exit explícito Jest 0/Docker
+0; asserções distintas 21/21 suítes e 339/339 testes. `npm install` reportou
+12 advisories (8 moderate/4 high), sem `audit fix`; Prisma/BullMQ do host estão
+desatualizados e a execução usa infraestrutura descartável existente. A
+validação local está concluída com ressalvas. Rastreabilidade remota:
+[`PR #83`](https://github.com/guimunizzz/Vulnera-TCC/pull/83). Este registro não
+afirma merge remoto ou fechamento da Issue. Ver
 [`SECURITY-AUTH-ETAPA-7.md`](../../../SECURITY-AUTH-ETAPA-7.md).
 
 ## 2026-11-19 — Issue #51, Etapa 7 iniciada (cutover em andamento)
