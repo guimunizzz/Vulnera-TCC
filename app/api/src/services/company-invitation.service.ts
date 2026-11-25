@@ -253,8 +253,7 @@ export class CompanyInvitationService {
 
   async deactivateMember(actor: Actor, userId: string): Promise<void> {
     const companyId = await this.ownerCompanyId(actor.userId);
-    const before = await this.users.findById(userId);
-    assertCompanyInvitationRateLimit(this.rateLimiter.consumeManagement(actor.userId, companyId, before?.email));
+    assertCompanyInvitationRateLimit(this.rateLimiter.consumeManagement(actor.userId, companyId));
 
     await this.invitations.transactionWithRetry(async tx => {
       const company = await tx.invitations.lockCompany(companyId);

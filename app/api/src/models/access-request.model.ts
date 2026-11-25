@@ -23,7 +23,7 @@ export type AccessRequestStatus = (typeof ACCESS_REQUEST_STATUSES)[number];
 export const ACCESS_REQUEST_TRANSITIONS: Readonly<Record<AccessRequestStatus, readonly AccessRequestStatus[]>> = {
   PENDING_EMAIL_VERIFICATION: ["PENDING_REVIEW", "EXPIRED"],
   PENDING_REVIEW: ["APPROVED", "REJECTED", "EXPIRED"],
-  APPROVED: ["ACTIVATED", "EXPIRED", "REJECTED"],
+  APPROVED: ["ACTIVATED", "EXPIRED"],
   REJECTED: [],
   EXPIRED: [],
   ACTIVATED: [],
@@ -101,7 +101,10 @@ export class AccessRequestEntity {
     now: Date = new Date(),
   ): AccessRequestTransitionDTO {
     const fromStatus = this.data.status as AccessRequestStatus;
-    if (!ACCESS_REQUEST_TRANSITIONS[fromStatus]?.includes(toStatus)) {
+    const approvalInvalidation = fromStatus === "APPROVED"
+      && toStatus === "REJECTED"
+      && Boolean(reason?.trim());
+    if (!ACCESS_REQUEST_TRANSITIONS[fromStatus]?.includes(toStatus) && !approvalInvalidation) {
       throw new Error("INVALID_STATUS_TRANSITION");
     }
     if (toStatus === "EXPIRED") {

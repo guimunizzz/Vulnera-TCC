@@ -2,6 +2,7 @@
 // O centralizador registra cada router; ownership é revalidado no service.
 import { Router, type Application, type NextFunction, type Request, type RequestHandler, type Response } from "express";
 import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
+import { accountActivationJsonBodyParser } from "../middlewares/account-activation-body.middleware";
 import { CompanyInvitationController } from "../controllers/company-invitation.controller";
 import {
   makeDefaultCompanyInvitationRouteDependencies,
@@ -50,12 +51,14 @@ export function makeCompanyInvitationActivationRoutes(dependencies?: CompanyInvi
   router.post(
     "/validate",
     withPublicRateLimit("validate", "ip", injectedRuntime),
+    accountActivationJsonBodyParser,
     withPublicRateLimit("validate", "token", injectedRuntime),
     invoke("validate", injectedRuntime),
   );
   router.post(
     "/activate",
     withPublicRateLimit("activate", "ip", injectedRuntime),
+    accountActivationJsonBodyParser,
     withPublicRateLimit("activate", "token", injectedRuntime),
     invoke("activate", injectedRuntime),
   );

@@ -153,7 +153,12 @@ describe("adesão unificada AccessRequest → aprovação → ativação", () =>
       "COMPANY_ENROLLED",
       "SUBSCRIPTION_APPROVED",
     ]);
-    expect(await prisma.auditLog.count({ where: { entityId: request!.id } })).toBe(4);
+    expect((await prisma.auditLog.findMany({ where: { entityId: request!.id } }))
+      .map(event => event.action).sort()).toEqual([
+      "ACCESS_INVITATION_ISSUED",
+      "ACCESS_INVITATION_USED",
+      "ACCOUNT_ACTIVATED",
+    ].sort());
   });
 
   it("mostra snapshot incompatível ao ADMIN e encerra aprovação com motivo, revogando o convite", async () => {

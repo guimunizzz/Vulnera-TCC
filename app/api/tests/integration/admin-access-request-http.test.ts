@@ -202,15 +202,15 @@ describe("HTTP administrativo de AccessRequest", () => {
     await prisma.user.update({ where: { id: admin.user.id }, data: { role: "CLIENT" } });
     await authorized(request(app).get("/api/admin/access-requests"), admin.token)
       .expect(403)
-      .expect(({ body }) => expect(body).toEqual({ code: "FORBIDDEN" }));
+      .expect(({ body }) => expect(body).toEqual({ error: "FORBIDDEN" }));
     expect(listSpy).not.toHaveBeenCalled();
     expect(approveSpy).not.toHaveBeenCalled();
 
     const removedAdmin = await seedAdmin("removed-admin@empresa.local");
     await prisma.user.delete({ where: { id: removedAdmin.user.id } });
     await authorized(request(app).get("/api/admin/access-requests"), removedAdmin.token)
-      .expect(403)
-      .expect(({ body }) => expect(body).toEqual({ code: "FORBIDDEN" }));
+      .expect(401)
+      .expect(({ body }) => expect(body.code).toBe("INVALID_TOKEN"));
     expect(listSpy).not.toHaveBeenCalled();
     expect(approveSpy).not.toHaveBeenCalled();
     listSpy.mockRestore();

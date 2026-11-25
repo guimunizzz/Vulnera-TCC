@@ -34,7 +34,7 @@ vi.mock("../lib/api/threat-intel.api", () => ({ threatIntelApi: api, notificatio
 
 const TODAS: PermissoesThreatIntel = { editarInventario: true, triar: true, promover: true, sincronizar: true };
 
-function resumo(permissoes: PermissoesThreatIntel = TODAS): ResumoTI {
+function resumo(permissoes: PermissoesThreatIntel = TODAS, over: Partial<ResumoTI> = {}): ResumoTI {
   return {
     companyId: "c1",
     permissoes,
@@ -42,6 +42,7 @@ function resumo(permissoes: PermissoesThreatIntel = TODAS): ResumoTI {
     casamentos: { porTriagem: { NEW: 2 }, kevAbertos: 1, criticosAbertos: 2, novosSemana: 1, abertosPorSeveridade: { CRITICAL: 1, HIGH: 1 }, tecnologiasAfetadas: 1 },
     ultimaExecucao: null,
     sincronizando: false,
+    ...over,
   };
 }
 
@@ -183,5 +184,43 @@ describe("Threat Intel", () => {
     renderPage("/threat-intel?empresa=c1&aba=afeta&match=m2");
     const linha = (await screen.findByText("CVE-2026-0001")).closest("tr")!;
     expect(within(linha).getByRole("button", { name: "Detalhes" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("papéis operacionais veem só disponibilidade e horário; não buscam histórico global", async () => {
+    useAuthStore.setState({ user: { id: "u", name: "Membro", email: "m@a", role: "CLIENT" } as never });
+    api.overview.mockResolvedValue(resumo(
+      { editarInventario: false, triar: false, promover: false, sincronizar: false },
+      {
+        ultimaExecucao: {
+          id: "nao-visivel",
+          trigger: "MANUAL",
+          status: "PARTIAL",
+          startedAt: "2026-11-25T10:00:00.000Z",
+          finishedAt: "2026-11-25T10:00:10.000Z",
+          sources: { NVD_FEED: { ok: false, itens: 0, erro: "Indisponível" }, OSV: { ok: true, itens: 0 } },
+          newAdvisories: 0,
+          newMatches: 0,
+          notifications: 0,
+          errorMessage: null,
+        },
+      },
+    ));
+    api.syncStatus.mockResolvedValue({ sincronizando: false, execucoes: [] });
+
+    renderPage("/threat-intel?empresa=c1&aba=fontes");
+
+    expect(await screen.findByText(/Última sincronização/)).toBeInTheDocument();
+    expect(screen.getByText("NVD: Indisponível")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Sincronizar agora/ })).not.toBeInTheDocument();
+    expect(api.syncStatus).not.toHaveBeenCalled();
+    expect(screen.queryByText(/nao-visivel|PARTIAL|HTTP 503/)).not.toBeInTheDocument();
+  });
+
+  it("ADMIN mantém o histórico detalhado de sincronizações", async () => {
+    api.syncStatus.mockResolvedValue({ sincronizando: false, execucoes: [] });
+    renderPage("/threat-intel?empresa=c1&aba=fontes");
+
+    expect(await screen.findByText("Nenhuma sincronização ainda")).toBeInTheDocument();
+    await waitFor(() => expect(api.syncStatus).toHaveBeenCalledWith("c1"));
   });
 });
