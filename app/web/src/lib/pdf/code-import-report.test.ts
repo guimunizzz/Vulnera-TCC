@@ -14,7 +14,7 @@ function achado(over: Partial<CodeFinding>): CodeFinding {
     severity: "MEDIUM", cweId: null, filePath: "src/a.js", startLine: 3, endLine: 3, snippet: "eval(req.query.x) → 💥",
     packageName: null, packageVersion: null, purl: null, fixedVersion: null, advisoryId: null, cvssScore: null, cvssVector: null,
     description: "Uso de eval com entrada do usuário ✓", recommendation: "Não use eval.", helpUri: "https://semgrep.dev/r/x",
-    triageStatus: "NEW", triageNote: null, triagedByName: null, triagedAt: null, triageInherited: false, promotedVulnerability: null, ...over,
+    triageStatus: "NEW", triageNote: null, triagedByName: null, triagedAt: null, triageInherited: false, promotedVulnerability: null, preTriagem: { contexto: "PRODUCAO", sinais: [], sugestao: null }, ...over,
   };
 }
 
