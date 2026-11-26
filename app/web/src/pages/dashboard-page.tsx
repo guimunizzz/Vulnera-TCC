@@ -17,6 +17,7 @@ import { AdminDashboard } from "../components/dashboard/admin-dashboard";
 import { DashboardHeader } from "../components/dashboard/dashboard-header";
 import { DashboardAtalhos } from "../components/dashboard/dashboard-atalhos";
 import { DashboardAtmosphere } from "../components/dashboard/hero/dashboard-atmosphere";
+import { CalendarioDePrazos } from "../components/sla/calendario-de-prazos";
 
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -32,6 +33,9 @@ export function DashboardPage() {
           {user?.role === "PENTESTER" && <PentesterDashboard />}
           {user?.role === "ADMIN" && <AdminDashboard />}
         </div>
+
+        {/* Calendário de prazos de SLA (ADR-062): o mesmo para os três papéis; o escopo é o da busca. */}
+        <CalendarioDePrazos compacto semanas={17} />
 
         <DashboardAtalhos role={user?.role} />
       </div>

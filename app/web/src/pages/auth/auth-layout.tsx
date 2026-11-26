@@ -84,8 +84,8 @@ export function AuthLayout() {
   const { pathname } = useLocation();
   const outlet = useOutlet();
   const reducedMotion = useMovimentoReduzido();
-  const isRegister = pathname.replace(/\/+$/, "").toLowerCase() === "/register";
-  const direction = isRegister ? 1 : -1;
+  const isRequestAccess = pathname.replace(/\/+$/, "").toLowerCase() === "/request-access";
+  const direction = isRequestAccess ? 1 : -1;
 
   useEffect(() => {
     const hover = window.matchMedia("(hover: none)");
@@ -184,7 +184,12 @@ export function AuthLayout() {
   }
 
   return (
-    <main ref={loginRef} className={isRegister ? "vx-login vx-register" : "vx-login"} onPointerMove={revelarFundo} onPointerLeave={ocultarFundo}>
+    <main
+      ref={loginRef}
+      className={isRequestAccess ? "vx-login vx-request-access" : "vx-login"}
+      onPointerMove={revelarFundo}
+      onPointerLeave={ocultarFundo}
+    >
       <div ref={glowRef} className="vx-login-glow" aria-hidden="true" />
       <div ref={backgroundRef} className="vx-login-background" aria-hidden="true">
         <AuthCircuit patternId={patternId} svgRef={circuitRef} />

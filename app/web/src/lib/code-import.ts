@@ -9,6 +9,7 @@ import {
   CODE_SEVERITY_LABELS,
   CODE_SEVERITY_ORDER,
   type CodeCategory,
+  type CodeContext,
   type CodeFinding,
   type CodeScanImport,
   type CodeSeverity,
@@ -28,7 +29,8 @@ export function tamanhoLegivel(bytes: number): string {
 export function validarArquivo(file: Pick<File, "name" | "size">): string | null {
   const nome = file.name.toLowerCase();
   if (!EXTENSOES.some((ext) => nome.endsWith(ext))) return "Envie o arquivo .sarif ou .json gerado pela ferramenta.";
-  if (file.size === 0) return "O arquivo está vazio.";
+  if (file.size === 0)
+    return "O arquivo está vazio: a ferramenta falhou antes de gravar. Veja o erro no terminal e rode de novo — no Windows, o Semgrep precisa de $env:PYTHONUTF8=1 antes do comando.";
   if (file.size > LIMITE_IMPORTACAO_BYTES) return `O arquivo tem ${tamanhoLegivel(file.size)}; o limite é 10 MB.`;
   return null;
 }
@@ -55,9 +57,34 @@ export interface FiltrosAchados {
   categoria: CodeCategory | "";
   triagem: DastTriageStatus | "";
   soNovos: boolean;
+  /** Recorte da pré-triagem: prováveis vulnerabilidades, achados fora de produção, ou só código de produção. */
+  preTriagem: "" | "PROVAVEL" | "FORA_PRODUCAO" | "PRODUCAO";
 }
 
-export const FILTROS_INICIAIS: FiltrosAchados = { busca: "", severidades: [], categoria: "", triagem: "", soNovos: false };
+export const FILTROS_INICIAIS: FiltrosAchados = { busca: "", severidades: [], categoria: "", triagem: "", soNovos: false, preTriagem: "" };
+
+function casaPreTriagem(f: CodeFinding, recorte: FiltrosAchados["preTriagem"]): boolean {
+  if (!recorte) return true;
+  if (recorte === "PROVAVEL") return f.preTriagem.sugestao?.tipo === "PROVAVEL_VULNERABILIDADE";
+  if (recorte === "FORA_PRODUCAO") return f.preTriagem.contexto !== "PRODUCAO";
+  return f.preTriagem.contexto === "PRODUCAO";
+}
+
+/** Resumo para o painel de pré-triagem: quantos prováveis e quantas sugestões de falso-positivo pendentes, por contexto. */
+export function resumoPreTriagem(findings: CodeFinding[]): { provaveis: number; foraDeProducao: number; porContexto: Partial<Record<CodeContext, number>> } {
+  const porContexto: Partial<Record<CodeContext, number>> = {};
+  let provaveis = 0;
+  let foraDeProducao = 0;
+  for (const f of findings) {
+    const s = f.preTriagem.sugestao;
+    if (s?.tipo === "PROVAVEL_VULNERABILIDADE") provaveis++;
+    if (s?.tipo === "FALSO_POSITIVO") {
+      foraDeProducao++;
+      porContexto[f.preTriagem.contexto] = (porContexto[f.preTriagem.contexto] ?? 0) + 1;
+    }
+  }
+  return { provaveis, foraDeProducao, porContexto };
+}
 
 export function filtrarAchados(findings: CodeFinding[], filtros: FiltrosAchados, novos: Set<string>): CodeFinding[] {
   const termo = filtros.busca.trim().toLowerCase();
@@ -67,6 +94,7 @@ export function filtrarAchados(findings: CodeFinding[], filtros: FiltrosAchados,
       (!filtros.categoria || f.category === filtros.categoria) &&
       (!filtros.triagem || f.triageStatus === filtros.triagem) &&
       (!filtros.soNovos || novos.has(f.fingerprint)) &&
+      casaPreTriagem(f, filtros.preTriagem) &&
       (!termo ||
         [f.title, f.ruleId, f.filePath, f.packageName, f.advisoryId, f.cweId ? `cwe-${f.cweId}` : null]
           .filter((campo): campo is string => !!campo)

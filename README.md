@@ -11,7 +11,7 @@
     <img alt="OWASP ZAP" src="https://img.shields.io/badge/OWASP-ZAP-00549E?style=flat-square" />
     <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" />
   </p>
-  <p><a href="#executar-localmente">Executar</a> · <a href="#fluxo-do-produto">Funcionalidades</a> · <a href="#dast-e-descoberta-de-endpoints">DAST</a> · <a href="#sastsca-relatórios-de-código-e-dependências">SAST/SCA</a> · <a href="#evidências-da-interface">Evidências</a> · <a href="#documentação">Documentação</a></p>
+  <p><a href="#executar-localmente">Executar</a> · <a href="#fluxo-do-produto">Funcionalidades</a> · <a href="#dast-e-descoberta-de-endpoints">DAST</a> · <a href="#fila-e-agendamentos">Fila</a> · <a href="#sastsca-relatórios-de-código-e-dependências">SAST/SCA</a> · <a href="#evidências-da-interface">Evidências</a> · <a href="#documentação">Documentação</a></p>
 </div>
 
 Projeto de TCC. O Vulnera reúne inventário de aplicações, projetos de análise,
@@ -241,6 +241,80 @@ Zero achados ou conclusão do Spider não comprovam ausência de vulnerabilidade
 nem cobertura completa. O PDF identifica o perfil registrado por execução;
 scans históricos sem metadados não recebem a metodologia nova retroativamente.
 
+## Fila e agendamentos
+
+A fila de jobs tem dois motores, escolhidos por `QUEUE_DRIVER`
+([ADR-056](docs/Vulnera/07-Decisoes/ADR-056%20-%20Fila%20BullMQ%20com%20worker%20desacoplavel%20e%20scans%20DAST%20agendados.md),
+status **proposta**):
+
+<table>
+  <thead><tr><th><code>memory</code> (padrão)</th><th><code>bullmq</code></th></tr></thead>
+  <tbody><tr>
+    <td>Comportamento de sempre: fila DAST no watchdog em memória e <code>setInterval</code> da Threat Intel. Num restart, scans na fila viram FAILED. Não há scan agendado.</td>
+    <td>Fila persistente no Redis. Scan na fila sobrevive a restart; Threat Intel vira job scheduler <code>threat-intel-sync</code>; scans DAST agendados por aplicação disparam pelo worker.</td>
+  </tr></tbody>
+</table>
+
+```mermaid
+flowchart LR
+  API["API Express<br/>POST /dast/scans · sync manual<br/>CRUD de agendamentos"] -- "job { scanId } / { scheduleId }" --> R[("Redis 8.8<br/>só rede interna, com senha")]
+  DB[("MySQL<br/>ScanSchedule = fonte da verdade")] -- "reconciliador<br/>dast-schedule:&lt;id&gt;" --> R
+  R --> W["worker.ts<br/>(no processo da API por padrão)"]
+  W -- "recarrega tudo pelo id<br/>e reconfere a autorização" --> DB
+  W -- "docker run (DooD)" --> Z["ZAP por scan"]
+```
+
+- **DAST:** `jobId = scanId`, concorrência `DAST_MAX_CONCURRENT_SCANS`, sem retry
+  automático contra o alvo. O worker só roda scan ainda `QUEUED` (tomada
+  atômica), então job repetido ou scan cancelado não executa. Redis fora do ar:
+  `POST /dast/scans` responde **503 `QUEUE_UNAVAILABLE`** em até 5 s e o scan
+  fica guardado no banco para voltar à fila.
+- **Threat Intel:** agendamento de id fixo (piso de 15 min), concorrência 1,
+  retry com backoff só para falha transitória; "Sincronizar agora" vira job
+  `MANUAL`.
+- **Scans agendados:** diário ou semanal, modo REAL ou SIMULADO fixo, só com
+  autorização do alvo registrada na aplicação (quem, até quando, host). A
+  autorização, a empresa, o criador e o alvo livre são conferidos **na hora de
+  rodar**; se algo falhar, o scan não roda e o motivo fica em `lastOutcome`.
+  API: `/api/applications/:id/dast-authorization` e
+  `/api/applications/:id/dast-schedules` (ADMIN e PENTESTER membro escrevem;
+  CLIENT da empresa só lê). A tela web ainda não existe.
+
+> [!IMPORTANT]
+> **O Redis não é exposto.** O serviço `redis` do compose não publica porta no
+> host, só a rede `vulnera-net` o alcança, e toda conexão exige senha. O payload
+> dos jobs leva apenas ids; o worker recarrega e reconfere tudo no banco.
+
+> [!TIP]
+> **Voltar para `QUEUE_DRIVER=memory`:** defina `QUEUE_DRIVER=memory` (ou
+> remova a variável) e rode `docker compose up -d api`. Não há migration a
+> desfazer. Com `memory`, o cadastro de agendamentos continua funcionando, mas
+> nada dispara.
+
+> [!WARNING]
+> Pendente: o scan **REAL** pela fila `bullmq` ainda não foi validado e a troca
+> do padrão para `bullmq` não foi decidida. Até lá, o padrão segue `memory`.
+
+<details>
+<summary>Variáveis de ambiente e worker separado</summary>
+
+| Variável | Padrão | Uso |
+|---|---|---|
+| `QUEUE_DRIVER` | `memory` | `memory` ou `bullmq` |
+| `REDIS_URL` | (compose monta a partir da senha) | `redis://:<senha>@redis:6379`; obrigatória só com `bullmq` |
+| `REDIS_PASSWORD` | default de dev no compose | senha do Redis; troque fora da máquina local |
+| `WORKER_IN_PROCESS` | `true` | `false` tira os workers da API |
+| `THREAT_INTEL_SYNC_ENABLED` | `true` | `false` remove o agendamento da Threat Intel |
+| `THREAT_INTEL_SYNC_INTERVAL_MIN` | `360` | intervalo em minutos, mínimo 15 |
+| `DAST_MAX_CONCURRENT_SCANS` | `1` | scans simultâneos (= concorrência do worker DAST) |
+
+Para rodar o worker como processo próprio: `WORKER_IN_PROCESS=false` na API e
+um processo com `npm run worker` (na imagem da API, `node dist/worker.js`), com
+as mesmas variáveis. Fora do Docker, o Redis do compose não é alcançável
+porque não publica porta.
+
+</details>
+
 ## SAST/SCA: relatórios de código e dependências
 
 O Vulnera **não executa** os scanners de código: ele importa o relatório que a
@@ -370,7 +444,7 @@ mantêm suas próprias datas e limites. Relatório desta atualização:
   <tr><td>SAST/SCA</td><td>Importa relatórios, não executa scanners nem confirma exploração; sem ingestão direta pela CI nem consulta própria a OSV/NVD para SBOM sem CVEs.</td></tr>
   <tr><td>DAST</td><td>Sem autenticação no alvo, execução JavaScript/AJAX ou exploração ativa. Queries e caminhos sensíveis são excluídos; não garante descoberta completa.</td></tr>
   <tr><td>Rede e execução</td><td>Sem bloqueio SSRF por faixa de endereço, conforme ADR-045. Contas de scan alcançam serviços HTTP acessíveis ao ZAP. Socket Docker é adequado à demonstração local.</td></tr>
-  <tr><td>Fila e rate limiting</td><td>Estado em memória por instância; não há cotas distribuídas nem retomada de scans após restart.</td></tr>
+  <tr><td>Fila e rate limiting</td><td>Padrão <code>memory</code>: fila em memória por instância, sem retomada após restart. Com <code>QUEUE_DRIVER=bullmq</code> a fila persiste no Redis (ADR-056), mas o scan REAL por ela ainda não foi validado. Rate limiting segue em memória, sem cotas distribuídas.</td></tr>
   <tr><td>Builds</td><td>Dockerfiles resolvem ranges com npm install; a árvore não é totalmente fixada pelo lockfile do workspace. Split web é parcial e o bundle principal ainda é grande.</td></tr>
   <tr><td>Qualidade</td><td>Lint API preexistente pendente, alertas SAST em revisão e revisão de dependências no backlog. CWE/WASC -1 ainda aparecem como sentinelas no PDF.</td></tr>
   <tr><td>Produto</td><td>Sem exclusão de Evidence; pagamento e aprovação comercial não integram cobrança real; push em celular físico não validado nesta rodada.</td></tr>

@@ -26,6 +26,7 @@ import { ThreatIntelService } from "../services/threat-intel/threat-intel.servic
 import { TechSuggestionService } from "../services/threat-intel/tech-suggestion.service";
 import { ThreatIntelController } from "../controllers/threat-intel.controller";
 import { makeSlaPolicyService } from "./sla-policy.factory";
+import { makeJobQueue } from "./job-queue.factory";
 
 let fontes: FontesDeAvisos | null = null;
 let sync: ThreatIntelSyncService | null = null;
@@ -52,7 +53,8 @@ export function makeThreatIntelService(): ThreatIntelService {
     makeSlaPolicyService(),
     new ApplicationRepository(prisma),
     fontesPublicas(),
-    makeThreatIntelSyncService(),
+    // ADR-056: manual e backfill passam pela fila (memory = mesmo disparo de antes).
+    makeJobQueue(),
   );
 }
 

@@ -11,6 +11,7 @@ router.use(authRateLimitMiddleware);
 // rotas literais ANTES de paramétricas
 router.get("/pending", requireRole("ADMIN"), (req, res) => controller.listPending(req, res));
 router.get("/active", requireRole("ADMIN"), (req, res) => controller.listActive(req, res));
+router.get("/onboarding-status", requireRole("CLIENT"), (req, res) => controller.onboardingStatus(req, res));
 router.get("/current", (req, res) => controller.current(req, res));
 
 router.post("/", (req, res) => controller.request(req, res));

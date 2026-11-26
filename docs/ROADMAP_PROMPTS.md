@@ -8,6 +8,328 @@
 
 ---
 
+## Issue #51 — Etapa 7 · ✅ Validada localmente com ressalvas em 2026-11-25
+
+### Objetivo e contrato do cutover
+
+Substituir o cadastro público direto pelo pedido de acesso e permitir a retomada
+do onboarding por usuários ativados sem Company/assinatura. `/api/auth/register`
+foi removido (404) e `/register` direciona para `/request-access`. Preservar
+login, refresh, logout, ativação transacional, autorização e catálogo de planos.
+Company e OWNER são criados com CAS na mesma transação; pedido PENDING do mesmo
+plano é reaproveitado, plano diferente recebe 409, e pedido e auditoria ficam
+juntos. `GET /api/subscriptions/onboarding-status` é exclusivo do CLIENT OWNER
+da própria empresa; `/current` continua disponível apenas para assinatura ACTIVE.
+O login deve retomar sem Company/assinatura, com estado PENDING apresentado na
+interface. CNPJ continua opcional; aprovação da assinatura é uma decisão
+separada da aprovação de acesso.
+
+Exigir hostname e action reais no Siteverify; production agora exige ambos e a
+secret fica somente no runtime da API. SMTP externo é trabalho de deploy, não
+evidência local desta etapa.
+
+### Checkpoints e gates de evidência
+
+1. Revisar diff da Etapa 7 e preservar os contratos acima; mudanças de código
+   pertencem aos owners de API/Web, sem ampliar este recorte por defeitos fora
+   de escopo.
+2. Fechar validações API/Web focais e regressões, registrando os avisos/falhas
+   que permanecerem. API TSC PASS, lint retém dois imports antigos; Auth+Company
+   21/21. Full API: 72 suítes, 65 PASS/7 FAIL; 1064 testes PASS/46 FAIL em
+   967 s. Reteste das 7: 6/7 suítes e 231/233 testes PASS; em `e5e353c`, o
+   harness isolado reproduziu os mesmos dois timeouts de `zap-runner`, sem
+   alteração DAST. São 71/72 suítes distintas PASS; não somar contagens de
+   testes sobrepostas. Web TSC+Vite PASS, lint 0 erros/9 warnings, contraste
+   132/132. Docker Web/API PASS final; Rollup 4.68.5 e CSS scoped servidos.
+   Web completa, baixa concorrência: 87 arquivos, 85 PASS/2 FAIL e 708/710
+   testes. O finding de nome acessível Code Import é preexistente da `dev`
+   antiga e será verificado pós-`dev`; onboarding focal passou 11/11 após
+   sincronizar o clique e ADMIN focal 6/6. Playwright mock 9/11 original; CA-01
+   e CA-09 passaram separados (2/2), sem transformar a execução original em
+   11/11. E2E real de
+   projeto 1/1; Vitest focal `/register` 2/2; `min-h-touch` 44 px passou escala.
+3. Stack Docker isolada API/Web PASS final; smoke HTTP separado confirma
+   registro legado 404, acesso anônimo às rotas admin/empresa 401 e CAPTCHA
+   ausente 400. Smoke Chrome de produção isolada confirmou CTA e
+   `/register` → `/request-access`, sem POST observado. Padding dos quatro
+   inputs sem prefixo computou 12 px em viewport 390 px e 16 px em 1440 px;
+   login preservou prefixo e altura 42 px. O E2E real de projeto passou 1/1
+   após ajuste do seletor de senha; CLIENT foi provisionado exclusivamente, sem
+   regressão de role.
+4. Prova manual do widget Turnstile real em stack isolada nova registrada. Prova
+   recebida na porta 8186: interface mostrou widget em sucesso e solicitação
+   recebida; MySQL agregado indicou `PENDING_EMAIL_VERIFICATION`,
+   `VERIFICATION_ISSUED` e zero Users; MailHog recebeu uma verificação.
+   Confirmação de e-mail respondeu 200, pedido entrou na fila elegível e
+   aprovação ADMIN respondeu 200/`APPROVED`; MailHog recebeu um convite. A
+   ativação, login e retomada do onboarding foram concluídos pela UI. Estado
+   agregado: `ACTIVATED`, convite usado, uma sessão, um User CLIENT/OWNER, uma
+   Company sem CNPJ e Subscription `PENDING_APPROVAL` para o plano escolhido.
+   Nenhum endereço, secret, token, usuário ou payload foi copiado. O owner
+   aplicou padding 12–16 px a quatro inputs sem prefixo, preservando login;
+   TSC e build Vite passaram.
+5. O código da Etapa 7 foi implementado em `53d142e`; canários e provas
+   pré-integração foram aprovados pelos owners. Merge local concluído em
+   `822fa21` (pais `828ec6a` + `effd32a`); branch publicada e
+   Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+   Este registro não afirma merge remoto ou fechamento da Issue.
+   O baseline anterior `95f3252` continha três commits SAST/SCA, preservados no BACKLOG. Web
+   pós-`dev`: Docker build, TSC, lint focal e contraste 132/132 PASS; Vitest 17
+   arquivos, 122/125 na rodada inicial e 124/125 distintos após dois timeouts
+   aprovados isoladamente. A falha Code Import/Security Graph foi reproduzida
+   na base pura `effd32a` (7/8), com os arquivos iguais byte a byte à `dev`.
+   Compose DEV/real PASS; secret somente na API, sem literal no diff. Lint API
+   focal PASS; global conserva dois args unused herdados de `memory-job-queue.ts`
+   (igual à `dev`). API pós-`dev`: Docker build, TSC, Prisma generate, lint focal
+   e migrate deploy 23/23 em schema novo restrito passaram; `prisma validate`
+   passou e `migrate status` indicou 23 atualizadas. Jest inicial 20/21 suítes,
+   338/339; reteste final 1/1 suíte, 9/9 testes, exit explícito Jest 0/Docker 0.
+   Asserções distintas finais: 21/21 suítes, 339/339 testes. Lint global mantém
+   dois args unused herdados de `memory-job-queue.ts`; `npm install` reportou
+   12 advisories (8 moderate/4 high), sem `audit fix`. SMTP externo, Turnstile
+   em produção e deploy não foram exercitados. Não há fechamento remoto
+   registrado.
+
+### Histórico — Issue #51, Etapa 7 (validação local com ressalvas)
+
+- 2026-11-25: código de cutover/onboarding implementado em `53d142e`; merge local
+  concluído em `822fa21` (pais `828ec6a` + `effd32a`); branch publicada e
+  Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+  Evidências
+  registradas são pré-integração. A suíte API completa e o reteste têm
+  interseção: 65/72 suítes e 1064/1110 testes na primeira execução; reteste
+  6/7 suítes e 231/233 testes, com dois timeouts do `zap-runner` reproduzidos no
+  controle `e5e353c`; 71/72 suítes distintas PASS, sem somar testes. Web
+  708/710; onboarding 11/11, ADMIN 6/6, mock 9/11 e CA-01/CA-09 separados 2/2.
+  Smoke/Docker/canários e prova manual até Subscription PENDING_APPROVAL foram
+  confirmados antes da integração. Validação local concluída com ressalvas. O
+  registro de abertura da PR e o estado remoto são consultáveis em [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83).
+  [Registro](SECURITY-AUTH-ETAPA-7.md).
+- 2026-11-25, atualização Web pós-`dev`: Docker build, TSC, lint focal e
+  contraste 132/132 passaram. Vitest em 17 arquivos/125 testes: 122/125 na
+  rodada inicial; dois timeouts passaram isoladamente, total 124/125 distintos.
+  A falha Code Import/Security Graph reproduziu em `effd32a` puro (7/8); os
+  arquivos CodeImport/grafo são byte a byte iguais à `dev`. Compose config
+  DEV/real passou, secret somente na API, sem literal no diff. Lint API focal
+  passou; global falha nos dois args unused de `memory-job-queue.ts`, iguais à
+  `dev`. API build/TSC/Prisma generate/lint focal/migrate 23/23 e `prisma
+  validate` passaram; `migrate status` indicou 23 atualizadas. Jest inicial
+  20/21 suítes, 338/339; reteste final 1/1 suíte, 9/9 testes, exit explícito
+  Jest 0/Docker 0. Total distinto: 21/21 suítes, 339/339 testes. `npm install`
+  reportou 12 advisories (8 moderate/4 high), sem `audit fix`; SMTP externo,
+  Turnstile em produção e deploy não foram exercitados. Sem fechamento remoto
+  registrado.
+- 2026-11-19: contrato de cutover, baseline parcial e prova manual até
+  ativação/login/onboarding e resultados confirmados antes da integração
+  registrados em [`SECURITY-AUTH-ETAPA-7.md`](SECURITY-AUTH-ETAPA-7.md).
+  `origin/dev` observado em `95f3252` com três commits SAST/SCA; só BACKLOG
+  sobrepunha arquivos naquele marco. Canários aprovados; sem integração/merge. Web
+  708/710; onboarding focal 11/11 e ADMIN 6/6; Playwright mock 9/11, com CA-01/
+  CA-09 passando separados (2/2), não 11/11 agregado. Este marco não é aceite
+  da etapa nem fechamento da issue.
+
+---
+
+## Issue #51 — Etapa 6 · ✅ Concluída em 2026-11-18 (aprovada com ressalvas)
+
+Integrar à interface web os fluxos de ativação e revisão ADMIN. Abrange
+componentes e páginas, rotas, CTAs, sidebar e onboarding, seguindo as APIs
+existentes. O cadastro `/auth/register` e o cutover legado não fazem parte deste
+recorte. As evidências de Playwright com mocks validam a UI isoladamente e não
+devem ser apresentadas como teste full-stack.
+
+Validação focal recebida: 101/101 testes distintos em 19 suítes — A 32/32 em 7
+suítes (primeira rodada 30/32; repetição somente das três afetadas 14/14 em
+25 s), clientes HTTP ADMIN+ativação 6/6 em 2, ativação UI 9/9, ADMIN UI 6/6 e
+integração central D 48/48 em 8 suítes (59,29 s). Não houve suíte global/API.
+Lint A16, B/C10, D16 e E2 PASS; contraste 132 pares, zero falhas, 77 primitivos;
+21 hashes do backend comparados sem diferenças. `npm run build` falhou com
+TS2688 ambiental por tipos herdados incompletos. TSC focal com
+`--typeRoots ./node_modules/@types` passou após correção do fixture E e `vite
+build` passou (2.892 módulos, 1m32s). Playwright iniciou 11 casos no Chrome
+instalado contra Vite isolado, com APIs mockadas e sem backend real; as duas
+tentativas anteriores foram interrompidas por defeitos das fixtures, já
+corrigidos. Resultado E2E final pendente. Trusted RPC do Chrome não conectou.
+Playwright só comprova UI, não full-stack. Não concluir antes do resultado E2E.
+
+### Histórico — Issue #51, Etapa 6 (concluída em 2026-11-18; iniciada em 17/11)
+
+- Owners A/B/C: validações focais acima recebidas; correções de teste A reportadas completas.
+- Owner D integrou rotas, CTAs, sidebar, login/onboarding; testes centrais 48/48.
+- Owner E executou E2E mockado de UI: 8/11 PASS, três casos sem PASS final após rerun interrompida.
+- [Acompanhamento e limites](SECURITY-AUTH-ETAPA-6.md).
+
+---
+
+## Issue #51 — Etapa 5 · ✅ Concluída em 2026-11-17
+
+Validar publicamente convites aprovados e ativar a conta consumindo o convite
+uma única vez, criando o `User` e encerrando `AccessRequest` na mesma transação.
+Endpoints públicos `POST /api/account-activation/validate` e
+`POST /api/account-activation/activate`; sem PII na validação, com `no-store`,
+limites independentes por operação/IP/hash de token, e respostas neutras para
+convites sem elegibilidade. A validação é consultiva; somente a ativação decide
+sob locks e hora atual. Sem migration/schema, alteração de `AuthService`,
+`Company`, `Subscription`, JWT ou sessão nesta etapa. `/auth/register` segue
+ativo; cutover e UI ficam fora do escopo. Login, refresh e logout existentes
+após ativação passaram na suíte HTTP. Contratos e evidências em
+[`SECURITY-AUTH-ETAPA-5.md`](SECURITY-AUTH-ETAPA-5.md).
+
+Build, lint focal, 36/36 testes focais da etapa, matriz final de domínio 23/23 e execução completa API (70/70 suítes, 1152/1152 testes) passaram. A suíte completa foi executada antes dos dois casos finais; 1152 é o total da execução completa, sem somar os casos focais adicionais. Cobertura dos dois services: 84,68% statements, 76,62% branches, 93,33% functions e 94,25% lines. A etapa está concluída no recorte, aprovada com ressalvas.
+
+### Histórico — Issue #51, Etapa 5 (concluída, 2026-11-17)
+
+- Branch/worktree de integração: commit local `44feabe` com pais `27d7b59` e
+  `aafbc2b`; sem push. Ownership de documentação: PRD, backlog, ADR-057,
+  changelog e relatório da Etapa 5.
+- Build/lint focal, 36/36 testes da etapa, domínio final 23/23 e 70/70 suítes/1152 testes completos passaram; a suíte completa antecedeu os dois casos adicionais. Branch/worktree de integração `integration/issue51-dev-20261117`; PR não aberta; data 2026-11-17.
+- Desvios/limites: uma asserção canário antiga da própria Issue #51 foi ajustada
+  em teste; full API usou override process-local de timeout DAST; lint global
+  conserva dois imports antigos; sem UI/cutover. [Relatório](SECURITY-AUTH-ETAPA-5.md).
+
+---
+
+## Issue #51 — Etapa 4 · ✅ Concluída em 2026-10-23
+
+Implementar fila administrativa de `AccessRequest`, decisões de aprovação/rejeição
+e reenvio de convite. Rotas somente para ADMIN com JWT, limiter autenticado,
+`requireRole("ADMIN")` e revalidação do papel persistido. Factory Method e
+`routes/routes.ts` como único ponto de registro. Sanitizar todos os DTOs; nunca
+retornar token/hash. Aprovação e preparo do convite devem compartilhar a
+transação; SMTP ocorre após commit. Consultas/rejeição não podem exigir env SMTP.
+
+Não criar User/JWT/Company/Subscription, não consumir convite nem migrar o
+cadastro legado. Sem schema/migration: registrar transições de estado em
+`AccessRequestEvent` e eventos `ISSUED`/`REISSUED`/`DELIVERY_FAILED` no AuditLog,
+pois o CHECK de `AccessRequestEvent` não permite os eventos de convite. Validar
+com suites de consulta/autorização, decisões, convite e HTTP, build/lint e banco
+descartável identificado conforme ownership. Relatório inicial e contratos em
+`SECURITY-AUTH-ETAPA-4.md`; build, lint focal, Prisma e Jest completo passaram:
+57/57 suítes, 995/995 testes, 454,05 s. Coverage dos quatro services: 88,26%
+statements, 68,49% branches, 96,77% functions e 95,03% lines.
+
+### Histórico — Issue #51, Etapa 4 (2026-10-23)
+
+- Branch: `refactor/security-auth-gated-access`; PR não aberta. Merge de
+  `origin/dev` concluído em `9f7e23a` (pais `c9f731f` e `44f9c58`); Etapas 2–4
+  reunidas em commit local separado, sem push. Os três outputs das Issues #19/#20
+  ficaram fora da consolidação.
+- Ownership, contratos e desvios: [relatório](SECURITY-AUTH-ETAPA-4.md).
+- Validação: 57/57 suítes, 995/995 testes, exit 0; build, lint focal e Prisma
+  validate/generate também aprovados. `npm run check` continua exit 1 por dois
+  imports anteriores antes de Jest; a suíte passou separadamente.
+- Ressalvas: branches dos quatro services 68,49%; sem outbox; cadastro legado
+  permanece ativo e cutover/ativação estão na Etapa 5+.
+
+---
+
+## Issue #51 — Etapa 3 · ✅ Concluída em 2026-10-23
+
+Expor o fluxo de solicitação pública por `POST /api/access-requests`, reenvio
+por `POST /api/access-requests/resend-verification` e confirmação por
+`POST /api/access-requests/verify-email`. Usar Factory Method e o centralizador
+de rotas; exigir Turnstile fail-closed em solicitação/reenvio e limites próprios
+que continuem ativos com o limiter global desligado. Pedido/reenvio precisam
+ter status/corpo neutros idênticos; confirmação nunca retorna detalhes do pedido.
+Não alterar cadastro/login existentes, schema ou endpoints admin/ativação.
+
+Antes de código, registrar o Ownership Registry em
+`SECURITY-AUTH-ETAPA-3.md`. Conferir schema e contratos dos services existentes;
+validar SMTP por harness local autorizado, nunca inferir inbox real. Encerrar
+com testes HTTP/service/proteção, build/lint e banco descartável identificado;
+documentar os resultados observados, falhas ambientais e limites. Manter a
+colisão de numeração ADR-047 registrada e sem renumeração naquele marco histórico. Na integração de 2026-11-17, a decisão de acesso passou a ADR-056 naquele marco e foi renumerada para ADR-057 em 2026-11-25; o ADR-047 de exportação foi preservado.
+
+### Histórico — Issue #51, Etapa 3 (2026-10-23)
+
+- Branch: `refactor/security-auth-gated-access`; no encerramento da Etapa 3,
+  merge local de `origin/dev` permanecia aberto (`MERGE_HEAD=44f9c58`). Foi
+  concluído posteriormente na Etapa 4 em `9f7e23a`; sem push ou PR.
+- Ownership exclusivo, decisões e limitações: [relatório da Etapa 3](SECURITY-AUTH-ETAPA-3.md).
+- Validação: build aprovado; Jest completo **53/53 suítes, 960/960 testes**.
+  Coverage dos três services do recorte: 91,52% statements, 80% branches,
+  93,33% functions e 94,87% lines. Smoke MailHog executado duas vezes,
+  11/11 por rodada e 24 mensagens confirmadas.
+- Desvios/limites: `npm run check` para no lint por dois imports antigos em
+  `vulnerability.service.ts:46` e não executa Jest; a suíte passou separada.
+  Não houve chamada real à Cloudflare. Cadastro legado e corrida entre tabelas,
+  tempo constante e outbox permanecem fora do recorte. Naquele marco a colisão
+  ADR-047 permanecia sem renumeração; a integração posterior a resolveu movendo
+  a decisão de acesso para ADR-056 naquela integração (hoje ADR-057 após a
+  renumeração de 2026-11-25). Etapa 4 não iniciada.
+
+## Issue #51 — Etapa 2 · ✅ Concluída em 2026-10-22
+
+Recorte atual: emissão/reenvio e confirmação de e-mail de `AccessRequest`, com
+configuração SMTP, adapter e eventos de entrega. Não inclui endpoints HTTP,
+frontend, revisão administrativa, convite/ativação, criação de User/JWT, nem
+mudança no cadastro público. Consulte [relatório e ownership](SECURITY-AUTH-ETAPA-2.md).
+
+Emissão inicial, reenvio e confirmação de e-mail de `AccessRequest`, com
+configuração e adapter SMTP. Não inclui endpoints HTTP, frontend, revisão
+administrativa, convite/ativação, criação de User/JWT nem mudança do cadastro
+público. Suíte completa API **46/46 suítes, 844/844 testes PASS**; build,
+lint focal, Prisma e migrations também aprovados em banco descartável. `npm run
+check` continua bloqueado por dois imports antigos; o Jest desse script não
+rodou. Veja [relatório e ownership](SECURITY-AUTH-ETAPA-2.md).
+
+## Histórico — Issue #51, Etapa 2 (2026-10-22)
+
+- Branch: `refactor/security-auth-gated-access`, HEAD inicial `0e0c59b`.
+- PR/commit/push: não realizados; pronta para revisão e consolidação.
+- Ownership exclusivo por agente, contratos, resultados e limites:
+  `docs/SECURITY-AUTH-ETAPA-2.md`.
+- Validação: 46/46 suítes, 844/844 testes, exit 0; instalação inicial resolvida
+  pelo diagnóstico do Arborist e `--prefer-dedupe`.
+- Desvios/limites: check global ainda aponta dois imports anteriores; SMTP
+  exercitado apenas por fixture local, sem provedor externo ou inbox real.
+
+---
+
+## Issue #51 — Etapa 1.1 · ✅ Concluída em 2026-10-22
+
+Hardening limitado ao domínio/persistência: lifecycle com EXPIRED/ACTIVATED,
+prazos e recuperação, reserva Unicode compatível com User, rotação/revogação
+dos tokens e concorrência transacional. Sem envio, endpoints ou ativação com User.
+
+## Histórico — Issue #51, Etapa 1.1 (2026-10-22)
+
+- Branch: `refactor/security-auth-gated-access`; base `28c48ef`.
+- Data: 2026-10-22. PR/commit/push: não realizados por instrução explícita.
+- Migration incremental `20261022160000_harden_access_request_lifecycle`;
+  inicial intacta. Upgrade, pré-check de collation e preservação de dados
+  comprovados somente em MySQL descartável identificado, sem reset/seed.
+- Domínio final 112/112; regressões Auth/User/Company/Subscription 32/32.
+  Prisma validate/generate, build, lint focal e diff do schema aprovados.
+- Pendências: check global bloqueado pelos dois imports preexistentes de
+  vulnerability.service.ts:45; suíte global não reexecutada nesta etapa.
+  Expiração automática, envio e transação de ativação continuam futuros.
+- Decisões, contratos e falhas transitórias: ADR-057 e relatório da fundação.
+  Sem avanço para Etapa 2. O lifecycle inicial abaixo é histórico, substituído
+  pela decisão vigente da Etapa 1.1; seus resultados não representam esta rodada.
+
+## Issue #51 — Etapas 0 e 1 · ✅ Concluída em 2026-10-22
+
+Recorte adicional ao cronograma original: preflight/baseline e fundação do
+domínio de acesso controlado. Máquina de quatro estados, reserva de e-mail
+protegida no MySQL, tokens por hash e trilha anônima própria. Sem endpoints,
+serviços de fluxo ou mudança de register. Próximas etapas aguardam revisão.
+
+## Histórico — Issue #51 (2026-10-22)
+
+- Branch: `refactor/security-auth-gated-access`; base `origin/dev` em `28c48ef`,
+  atualizada por fast-forward durante o preflight a pedido do usuário.
+- Data: 2026-10-22. PR/commit/push: não realizados, por instrução explícita.
+- Migration: `20261022120000_add_access_request_foundation`, somente em MySQL
+  descartável identificado; sem ALTER em tabelas anteriores ou backfill de User.
+- Decisões, validações e limites: ADR-057 e `docs/SECURITY-AUTH-ETAPAS-0-1.md`.
+- Validação: domínio 49/49; baseline 32/32; suíte completa 692/697, com cinco
+  falhas DAST ambientais/configuração local aprovadas na repetição 104/104.
+  Prisma validate/generate, migration isolada, build e lint focal aprovados.
+- Desvios/pendências: lint global anterior ainda falha em dois imports não usados
+  de `vulnerability.service.ts:45`; testes globais executados separadamente.
+  Nenhuma Etapa 2 iniciada e nenhuma promessa de jornada completa concorrente.
+
 ## Cronograma
 
 | Fase  | Escopo                                         | Semanas | Período       | Status         |
@@ -1145,7 +1467,7 @@ partindo de `dev`, com espera visual fluida quando necessária.
 
 > **Revisão PR #77 — ✅ Concluída em 2026-11-16 na feature.** Catálogo ampliado para 29 tópicos exclusivamente de domínio/produto; artefatos retirados do índice e configuração concreta mantida privada. API 922/922, Web 659/659, contraste 132/132, builds e smoke de três perfis aprovados; chamada Gemini real HTTP 200. [Matriz dos oito pedidos e limites](REVISAO_PR77_2026-11-16.md). A propagação à branch visual é registrada separadamente no fechamento.
 
-> **Identificação atual da decisão:** ADR-054; criada como ADR-048 na feature em 23/10/2026. A ADR-048 da dev pertence ao grafo DAST. Os marcos numéricos abaixo preservam o histórico original; links atuais e integração em [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
+> **Identificação atual da decisão:** ADR-064; criada como ADR-048 na feature em 23/10/2026. A ADR-048 da dev pertence ao grafo DAST. Os marcos numéricos abaixo preservam o histórico original; links atuais e integração em [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
 
 Este plano tem numeração própria de 0 a 6; não renumera as fases originais do MVP. A Fase 0 seguiu a pausa de AGENTS §0.2 S1; na continuação de 23/10/2026 o usuário autorizou executar todas as fases sem pausas, mantendo relatórios de checkpoint em atualizações. Os guias protegidos não foram editados. Preservar o escopo detalhado e as fronteiras registradas no [plano](ASSISTENTE_VULNERA_PLANO.md) e no ADR-048.
 
@@ -1182,7 +1504,7 @@ Resolução e validação na própria feature, sem alterar os marcos das fases o
 - **PR:** nenhuma aberta nesta tarefa; feature preparada para comparação com dev. Merge na dev e deploy são posteriores.
 - **Validação:** check API Node 22 com lint sem erros e 905/905 testes; check Web 659/659, contraste 132/132; builds aprovados. Chrome: 12/12 originais e 11 verificações com login/API reais, sem erros de página/CSP.
 - **Preservação/desvios:** backups só locais; sem schema, migrations, dependências declaradas, mobile ou guias protegidos alterados. Bancos novos temporários por indisponibilidade do Docker; execução completa Node 24 sem relatório, integração validada no Node 22. Gemini ao vivo não executado.
-- **Relatório:** [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md); registros antigos com ADR-048 do assistente correspondem à atual ADR-054, sem substituir a ADR-048 do grafo DAST.
+- **Relatório:** [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md); registros antigos com ADR-048 do assistente correspondem à atual ADR-064, sem substituir a ADR-048 do grafo DAST.
 
 ### Complemento Docker — ✅ Concluído em 2026-11-15
 
@@ -1191,3 +1513,36 @@ Resolução e validação na própria feature, sem alterar os marcos das fases o
 - **Achados e autorização:** dois nomes acessíveis divergentes do texto visível; descrições e separador textual corrigidos após explicação e aprovação, preservando visual/ações. Asserção do portal estabilizada somente no teste.
 - **Validação final:** Web 659/659, focal Linux 36/36, e2e acessibilidade/Exposure Graph 7/7; smoke real de três perfis e seis etapas de importação/triagem/grafo/PDF.
 - **Histórico e limites:** relato anterior de Docker indisponível preservado como primeira rodada; não é mais bloqueio. Sem Gemini ao vivo ou scans externos. [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).
+
+## 2026-11-17 — Integração Issue #51 com `dev` (em andamento)
+
+Merge local aberto em `integration/issue51-dev-20261117`. A conciliação documental
+preserva o histórico das Etapas 0–4 e as funcionalidades novas de `dev`; não
+representa o fechamento de uma fase de produto. Validações API e frontend e
+revisão final ainda pendem. `/auth/register` permanece ativo; ativação, cutover e
+outbox seguem ausentes. A renumeração do ADR de acesso de 047 para 056 resolve a
+colisão com o ADR-047 de exportação Excel já existente em `dev`.
+
+### Histórico — integração (2026-11-17, preliminar)
+
+- Branch: `integration/issue51-dev-20261117`; sem commit, push ou PR.
+- HEAD `27d7b5912be026403d6c78a23fc27641fbf99d89`, `origin/dev`
+  `aafbc2ba769efa67be366d209e5f4286407bac9f`, base
+  `44f9c58f969125927d6bd379335f2cfa0b84d5e6`.
+- Ver [relatório técnico preliminar](SECURITY-AUTH-INTEGRACAO-DEV-2026-11-17.md).
+### Atualização de escopo — 2026-11-17
+
+O objetivo desta execução foi reduzido pelo usuário ao diagnóstico do merge. Os
+cinco conflitos (`PRD_VIVO.md`, schema, `EnvKeys`, routes e `docs/BACKLOG.md`)
+foram resolvidos e staged; `git ls-files -u` está vazio. O merge segue aberto,
+sem commit. A validação ampliada foi cancelada a pedido do usuário; resultados
+parciais e limites estão no relatório, sem declaração de aprovação integral.
+
+
+## Resolução dos conflitos do PR #77 — ✅ Concluída em 2026-11-26
+
+### Histórico
+
+- Branch `feature/agent-ai`, partindo de `4193c00`, com a base `dev` em `65a792d`. [PR #77](https://github.com/guimunizzz/Vulnera-TCC/pull/77).
+- Oito conflitos resolvidos. O roteador da dev com injeção de dependências monta também o assistente e o layout autenticado da feature envolve as rotas da dev respeitando seus controles de acesso.
+- A decisão do assistente passou a ADR-064. A decisão da pintura da landing mantém ADR-054.

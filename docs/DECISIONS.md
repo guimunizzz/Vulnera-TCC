@@ -217,7 +217,7 @@ src/
 8. Maturidade + Polimento + Apresentação
 
 > **Histórico de escopo:** a IA acima era sugestão de findings, retirada em
-> 03/08/2026 (ADR-017). Em 23/10/2026, ADR-054 (originalmente ADR-048 na branch do assistente) introduziu exclusivamente o
+> 03/08/2026 (ADR-017). Em 23/10/2026, ADR-064 (originalmente ADR-048 na branch do assistente) introduziu exclusivamente o
 > Assistente Vulnera de orientação na web, com Gemini opcional e ajuda local;
 > não reativou o recurso antigo nem IA no mobile. Ver `ASSISTENTE_VULNERA.md`.
 
@@ -1061,3 +1061,109 @@ da empresa veem; o PENTESTER vê as empresas dos projetos de que é membro.
 Decorrência registrada no ADR-053 §7: CLIENT OWNER e PENTESTER membro triam;
 promover é de ADMIN e PENTESTER membro do projeto de destino (a regra de
 escrita de Vulnerability); "Sincronizar agora" é só do ADMIN.
+
+## D20 — Atmosferas 3D por seção: decisões de produto (2026-11-23)
+
+Respostas do Rafael durante o laboratório `/lab-3d` (branch
+`feat/atmosfera-3d`). Arquitetura em
+[ADR-060](Vulnera/07-Decisoes/ADR-060%20-%20Atmosferas%20por%20secao%20na%20area%20autenticada.md).
+
+**D20.1 — Linhas visuais:** relevo e nebulosa, aproveitando o radar e os
+pings da landing. *Descartadas:* constelação e cidade.
+
+**D20.2 — Atmosfera por papel da seção, não sorteada.** O ASCII continua no
+trabalho técnico. Mapeamento aprovado: nebulosa no Dashboard; relevo em
+Aplicações, Projetos, Threat Intel e Remediação; ASCII em Findings, DAST,
+SAST/SCA, Playbooks e Agendamentos; nada em administração e no Exposure
+Graph.
+
+**D20.3 — Dentro da plataforma, mais calma:** opacidade menor (o mesmo teto do
+ASCII), sem bloom. O mouse acompanha sem atraso.
+
+**D20.4 — Troca de seção com crossfade de 0,8 s.**
+
+**D20.5 — Risco com dado real**, perceptível também na nebulosa.
+
+**D20.6 — Tela imersiva = modo apresentação do Dashboard** (tela cheia por
+botão).
+
+**D20.7 — Pôster por linguagem** com movimento reduzido e no celular, com
+capricho nos detalhes.
+
+## D21 — Atmosferas: pendências da primeira entrega (2026-11-23)
+
+Respostas do Rafael na segunda rodada de perguntas (branch
+`feat/atmosfera-3d`). Arquitetura em
+[ADR-060 §Atualização](Vulnera/07-Decisoes/ADR-060%20-%20Atmosferas%20por%20secao%20na%20area%20autenticada.md).
+
+**D21.1 — Fundo das telas que ficaram sem cena:** escolha delegada ao agente.
+Formulários (SLA, Aprovações, Filas, Maturidade) recebem o ASCII **parado**
+(pôster). O Exposure Graph recebe o relevo.
+
+**D21.2 — Na aba Mapa 3D do Exposure Graph, o mapa assume:** a atmosfera
+some.
+
+**D21.3 — O mapa 3D não é refeito.** O 2D vira o principal, "trabalhado bem",
+e o fundo acompanha de forma sutil.
+
+**D21.4 — Risco:** Aplicações pela superfície de exposição (contexto de
+negócio); Projetos continua neutro.
+
+**D21.5 — Tema claro:** teto maior (0,32) e um pouco mais de traço.
+
+**D21.6 — FPS medido na GPU do Rafael** com o Chrome visível (evidências em
+`docs/evidencias/atmosfera-3d/`).
+
+**D21.7 — Commits por bloco**, na mesma branch, sem push.
+
+
+## D22 — Pacote de funcionalidades inspiradas em outras ferramentas (2026-11-23)
+
+Respostas do Rafael à rodada de perguntas sobre as funcionalidades
+escolhidas (1, 2, 4, 5, 8, 9, 10, 11 e 13 da lista). Três branches a partir da
+`feat/atmosfera-3d`, agrupadas por tema para facilitar a integração. Este
+bloco é **idêntico** nas três, para o merge não conflitar.
+
+| Branch | Funcionalidades | ADR |
+|---|---|---|
+| `feat/grafo-postura` | combinações tóxicas · raio de impacto · máquina do tempo · comentários no grafo | [ADR-061](Vulnera/07-Decisoes/ADR-061%20-%20Analises%20do%20Exposure%20Graph%20e%20comentarios%20no%20grafo.md) |
+| `feat/produtividade` | paleta Ctrl+K · triagem por teclado · calendário de prazos | [ADR-062](Vulnera/07-Decisoes/ADR-062%20-%20Paleta%20de%20comandos%20triagem%20unica%20e%20calendario%20de%20prazos.md) |
+| `feat/conformidade-correcao` | conformidade (LGPD, ISO 27001, NIST CSF) · correção sugerida | [ADR-063](Vulnera/07-Decisoes/ADR-063%20-%20Conformidade%20e%20correcao%20sugerida.md) |
+
+**D22.1 — Branches:** três por tema, cada uma com PR próprio para a `dev`.
+
+**D22.2 — Combinações tóxicas:** a regra é fixa e explicável. Internet +
+gravidade alta ou crítica + pelo menos mais um agravante (KEV ou EPSS alto,
+dado sensível, produção). O nome é "combinação tóxica", nunca "caminho de
+ataque" (D8). Manual e DAST entram sem o fator de ameaça.
+
+**D22.3 — Raio de impacto:** por pacote, CVE e categoria OWASP. Só relações
+comprovadas: o inventário do Threat Intel é da empresa e não entra (D9).
+
+**D22.4 — Máquina do tempo:** reconstruída do AuditLog (`STATUS_CHANGE`) e de
+`createdAt`, sem tabela nova. O seed garante o histórico, e o SBOM real foi
+importado em três aplicações da TechNova.
+
+**D22.5 — Conformidade:** LGPD, ISO/IEC 27001:2022 e NIST CSF 2.0 (sem PCI).
+O mapeamento fica num arquivo versionado no código e a tela mostra o que está
+em risco pelas vulnerabilidades abertas. Nunca afirma "conforme".
+
+**D22.6 — Correção sugerida sem IA** (o ADR-017 continua): comando de
+atualização por ecossistema, trecho do manifesto e link do advisory; no SAST,
+o local, o trecho e a recomendação da regra.
+
+**D22.7 — Paleta de comandos:** navegação, ações e busca de aplicações,
+projetos e vulnerabilidades pelas APIs que já existem (sem endpoint novo de
+busca).
+
+**D22.8 — Triagem:** uma caixa única para DAST, SAST/SCA e Threat Intel, com
+um endpoint agregador que reaproveita a autorização de cada fonte. A decisão
+continua nos PATCH de cada módulo.
+
+**D22.9 — Comentários no grafo:** em qualquer nó, inclusive no grafo do scan
+DAST. Ainda sem `@`. O comentário novo notifica pelo sino quem já comentou no
+nó. Todos os papéis com acesso ao grafo comentam.
+
+**D22.10 — Calendário de prazos:** no Dashboard e como aba da Remediação. O
+clique no dia lista o que vence nele ali mesmo, porque a busca de achados não
+tem filtro por data de vencimento.

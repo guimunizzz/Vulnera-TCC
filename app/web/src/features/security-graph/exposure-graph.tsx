@@ -5,7 +5,8 @@
  * Grafo 2D da empresa (Exposure Graph): barra com seletor de layout, filtro
  * "só expostas à Internet", Recentralizar, Restaurar layout e Exportar PNG;
  * o palco com zoom e minimapa. A seleção vem de fora (a página divide com o
- * mapa 3D e com o painel).
+ * mapa 3D e com o painel), assim como as análises (ADR-061): a barra da
+ * análise ativa, os nós em destaque e a contagem de comentários por nó.
  *
  * POR QUE EXISTE
  * Responde "onde está o risco da empresa e o que ele tem em comum": a mesma
@@ -16,7 +17,7 @@
  * `exposure-graph-page.tsx`.
  */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { Download, LocateFixed, Map as MapIcon, Minus, Plus, RotateCcw, Scan } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Switch } from "../../components/ui/switch";
@@ -35,11 +36,18 @@ export function ExposureGraph2D({
   nomeEmpresa,
   selecionadoId,
   aoSelecionar,
+  barraDeAnalise,
+  destaque,
+  comentarios,
 }: {
   dados: ExposureGraph;
   nomeEmpresa: string;
   selecionadoId: string | null;
   aoSelecionar(id: string | null): void;
+  /** Linha da análise ativa (modo, seletor do raio de impacto, linha do tempo). */
+  barraDeAnalise?: ReactNode;
+  destaque?: ReadonlySet<string> | null;
+  comentarios?: ReadonlyMap<string, number>;
 }) {
   // Estrela por padrão: com uma empresa no centro, as aplicações viram hubs e as categorias se repetem em volta.
   const [layout, setLayout] = useLayoutSalvo("vulnera:exposure-graph-layout", "organico");
@@ -123,7 +131,8 @@ export function ExposureGraph2D({
         <div className="flex flex-wrap items-center gap-2 border-b border-subtle bg-surface px-3 py-2">
           <SeletorDeLayout valor={layout} aoMudar={trocarLayout} />
         </div>
-        <div className="cg-palco relative">
+        {barraDeAnalise && <div className="border-b border-subtle bg-surface px-3 py-2">{barraDeAnalise}</div>}
+        <div className="cg-palco cg-palco--radar relative">
           <CyberGraph2D
             ref={ref}
             visao={visao}
@@ -135,6 +144,8 @@ export function ExposureGraph2D({
             aoLimpar={() => aoSelecionar(null)}
             aoMover={mover}
             minimapa={minimapa}
+            destaque={destaque}
+            comentarios={comentarios}
           />
           <div role="group" aria-label="Zoom" className="absolute bottom-3 right-3 flex flex-col gap-1">
             <Button variant="secundario" size="sm" rotulo="Aproximar" onClick={() => ref.current?.aproximar(1.25)}>

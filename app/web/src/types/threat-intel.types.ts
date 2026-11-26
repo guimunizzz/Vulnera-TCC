@@ -99,7 +99,8 @@ export interface AvisoTI {
 export interface CasamentoTI {
   id: string;
   advisory: AvisoTI;
-  asset: { id: string; displayName: string; kind: string; version: string | null };
+  /** `ecosystem` e `packageName` (ADR-063) montam o comando da correção sugerida. */
+  asset: { id: string; displayName: string; kind: string; version: string | null; ecosystem: string | null; packageName: string | null };
   versionConfirmed: boolean;
   preexisting: boolean;
   fixedVersion: string | null;

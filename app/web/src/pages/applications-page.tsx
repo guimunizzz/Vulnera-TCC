@@ -25,6 +25,8 @@ import { StaggerItem, StaggerList } from "../motion/components";
 import { ENVIRONMENTS, ENVIRONMENT_LABELS, type Application, type CreateApplicationInput, type Environment } from "../types/application.types";
 import "./applications-page.css";
 import { TABELA } from "../components/ui/table-estilos";
+import { riscoDasAplicacoes } from "../features/atmosfera-3d/risco";
+import { usePublicarRisco } from "../features/atmosfera-3d/atmosfera.store";
 
 export function ApplicationsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -49,6 +51,8 @@ export function ApplicationsPage() {
   const companyName = useCompanyName(undefined);
 
   const { data: applications, isLoading, isError, refetch } = useQuery({ queryKey: ["applications"], queryFn: applicationsApi.list });
+  // O relevo da atmosfera sobe com a superfície de exposição (contexto de negócio das aplicações).
+  usePublicarRisco(applications ? riscoDasAplicacoes(applications) : undefined);
   const companiesQuery = useQuery({
     queryKey: ["companies"],
     queryFn: companiesApi.list,

@@ -34,6 +34,9 @@ export class SubscriptionController {
       if (error.message === "ALREADY_HAS_ACTIVE_SUBSCRIPTION") {
         return res.status(409).json({ error: "ALREADY_HAS_ACTIVE_SUBSCRIPTION" });
       }
+      if (error.message === "SUBSCRIPTION_REQUEST_ALREADY_PENDING") {
+        return res.status(409).json({ error: "SUBSCRIPTION_REQUEST_ALREADY_PENDING" });
+      }
       console.error("SubscriptionController.request", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
@@ -73,6 +76,25 @@ export class SubscriptionController {
         return res.status(404).json({ error: "SUBSCRIPTION_NOT_FOUND" });
       }
       console.error("SubscriptionController.current", error);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
+    }
+  }
+
+  async onboardingStatus(req: Request, res: Response): Promise<Response> {
+    try {
+      const status = await this.service.getOnboardingStatus(req.user!);
+      return res.status(200).json({
+        status: status.status,
+        subscription: status.subscription?.toResponse() ?? null,
+      });
+    } catch (error: any) {
+      if (error.message === "USER_HAS_NO_COMPANY") {
+        return res.status(404).json({ error: "USER_HAS_NO_COMPANY" });
+      }
+      if (error.message === "FORBIDDEN") {
+        return res.status(403).json({ error: "FORBIDDEN" });
+      }
+      console.error("SubscriptionController.onboardingStatus", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
   }

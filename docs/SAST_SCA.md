@@ -19,10 +19,40 @@ por humano, SLA, VRS, remediação e relatório.
 
    | Ferramenta | Comando | Formato |
    |---|---|---|
-   | Semgrep | `semgrep scan --config p/default --sarif --output semgrep.sarif` | SARIF |
-   | CodeQL | `codeql database analyze db --format=sarif-latest --output=codeql.sarif` | SARIF |
-   | Trivy (dependências) | `trivy fs --scanners vuln --format cyclonedx --output sbom.cdx.json .` | CycloneDX |
-   | Trivy (dependências) | `trivy fs --scanners vuln --format sarif --output trivy.sarif .` | SARIF |
+   | Semgrep | `semgrep scan --config p/default --exclude "node_modules" … --exclude ".env*" --sarif --output semgrep.sarif` | SARIF |
+   | CodeQL | `codeql database create db --language=javascript --source-root . --codescanning-config=codeql-config.yml` e depois `codeql database analyze db --format=sarif-latest --output=codeql.sarif` | SARIF |
+   | Trivy (dependências) | `trivy fs --scanners vuln --skip-dirs "**/node_modules" … --skip-files "**/.env*" --format cyclonedx --output sbom.cdx.json .` | CycloneDX |
+   | Trivy (dependências) | idem, com `--format sarif --output trivy.sarif` | SARIF |
+
+   **Somente o necessário para a análise.** Os comandos do guia (botão **?**)
+   ignoram `node_modules`, `vendor`, `.venv`, `venv`, `dist`, `build`,
+   `coverage`, `.next`, `.env*` e `*.min.js`: por `--exclude` no Semgrep,
+   `--skip-dirs`/`--skip-files` no Trivy e `paths-ignore` num
+   `codeql-config.yml` no CodeQL. A lista fica em `PASTAS_IGNORADAS` e
+   `ARQUIVOS_IGNORADOS` (`app/web/src/lib/code-import-receitas.ts`) e alimenta
+   todos os comandos. Os **lockfiles continuam** no scan, porque o SCA depende
+   deles. Validado em 2026-11-17 contra este repositório: Semgrep sem nenhum
+   achado em `node_modules` ou `.env`, e Trivy lendo os 3 lockfiles.
+
+   **Guia passo a passo (botão ?).** Como a análise depende de ferramentas de
+   terceiros rodando na máquina do usuário, o guia não mostra uma lista de
+   comandos soltos: a pessoa escolhe **o que analisar** (código → Semgrep,
+   dependências → Trivy), o **sistema** (detectado pelo navegador) e **como
+   rodar** (Semgrep: instalando, sem instalar via `pipx`, ou Docker; Trivy:
+   Docker ou instalando, já que não há pipx/npx para ele). O guia monta **um**
+   bloco pronto para colar, com a instalação e as correções daquele sistema
+   (`$env:PYTHONUTF8=1` no Windows, aviso de lentidão do Docker no Windows),
+   explica como abrir o terminal na pasta, diz qual arquivo deve aparecer e o
+   que fazer se ele vier vazio. CodeQL e GitHub Actions ficam em "Outras
+   ferramentas". A montagem é a função pura `montarReceita`, testada para as
+   15 combinações. O diálogo de importação aponta para o guia, e o erro de
+   arquivo vazio explica a causa provável.
+
+   **Windows:** o Semgrep nativo grava o SARIF em `cp1252` e quebra com
+   `UnicodeEncodeError` (arquivo vazio) quando algum achado tem caractere fora
+   dessa tabela. Rode antes `$env:PYTHONUTF8=1`. Medido neste repositório
+   (1.398 arquivos versionados): nativo com `PYTHONUTF8=1` levou de 1min36s a 3min46s; por Docker, com a
+   pasta do Windows montada, cerca de 9 min, com ou sem exclusões extras.
 
    Qualquer ferramenta que emita **SARIF 2.1.0** ou **CycloneDX ≥ 1.4 com a
    seção `vulnerabilities`** funciona (SonarQube, Bandit, ESLint, Grype...).
@@ -30,9 +60,8 @@ por humano, SLA, VRS, remediação e relatório.
 2. No menu, abra **SAST/SCA** (selo *new*), clique em **Importar relatório**,
    escolha o projeto e solte o arquivo. Também dá para importar pela aba
    **SAST/SCA** do projeto. Na dúvida, o botão **?** ao lado de "Importar
-   relatório" abre o guia: o fluxo em 5 passos, os comandos prontos para copiar
-   (Semgrep, Trivy, CodeQL e GitHub Actions; instalado ou por Docker) e o que é
-   bom saber antes de importar.
+   relatório" abre o guia passo a passo descrito acima, que termina em
+   "Já tenho o arquivo — importar".
 3. A tela de detalhe mostra os números, a distribuição por severidade e a lista
    de achados com filtros (severidade, origem, triagem, busca e "só novos").
 4. Em cada achado: **triar** (confirmado / falso-positivo / risco aceito, com
@@ -108,6 +137,57 @@ NodeGoat sumiam.
   só a importação **mais recente** da ferramenta sugere (uma mais nova pode já
   não ter o achado) e a data comparada é a do **último** `→ FIXED` da trilha.
   Nada é reaberto sozinho.
+
+### Pré-triagem (2026-11-17)
+
+Num relatório real do próprio Vulnera (Semgrep, 207 achados), **175 estavam
+fora do código de produção**: 119 em relatórios HTML de evidência, 34 em
+artefatos gerados, 13 em testes, 6 em seeds e 3 em fixtures. Os 4 "Altos" eram
+todos de fixture ou de saída gerada. A pré-triagem separa isso e cruza o achado
+com as outras fontes do Vulnera. **Sugere; não decide** (ADR-032/052, RN10).
+
+- **Contexto pelo caminho** (`utils/code-pretriage.util.ts`, função pura):
+  `GERADO` (output, dist, build, coverage, vendor, node_modules, `*.min.js`),
+  `FIXTURE` (fixtures, testdata, mocks), `TESTE` (tests, `__tests__`, e2e,
+  `*.test.*`, `*.spec.*`, `test_*.py`, `*_test.go`), `DOCUMENTACAO` (docs,
+  examples), `SCRIPT` (scripts, seeds, `seed*`/`backfill*`). O primeiro que casa
+  vence; o resto é `PRODUCAO`. SCA não tem caminho e conta como produção.
+- **Sinais de outras fontes:**
+  - **KEV** (forte): a CVE do SCA está no catálogo CISA KEV do Threat Intel.
+  - **EPSS ≥ 10%** (forte): alta probabilidade de exploração em 30 dias.
+  - **DAST confirmado** (forte): existe `Vulnerability` de origem
+    `DAST_IMPORT` **na mesma aplicação** cujo achado DAST tem o mesmo CWE.
+    Só vulnerabilidades promovidas (já confirmadas por humano) e só da
+    aplicação do projeto: nada de outra empresa entra no sinal.
+  - **Threat Intel** (fraco): a mesma CVE foi casada no inventário da empresa.
+  - O id do SCA casa pelo id da advisory ou pelos `aliases` (GHSA ↔ CVE).
+- **Sugestão** (só para achado ainda *por triar*): fora de produção →
+  *falso-positivo* com o motivo; produção com sinal forte → *provável
+  vulnerabilidade*. Triagem já feita não recebe sugestão.
+- **Calculada na leitura**, não gravada: o contexto é função do caminho e os
+  sinais mudam depois da importação (CVE entra no KEV, alguém promove uma
+  vulnerabilidade DAST). Uma importação antiga ganha o sinal novo sem
+  migration nem reprocessamento.
+- **Tela:** painel no topo da aba Achados ("N prováveis vulnerabilidades" com
+  *Ver só esses*; "N achados fora do código de produção" com o detalhamento por
+  contexto, **Aceitar sugestões** e *Revisar antes*), filtro *Pré-triagem*,
+  selos na linha (*provável vulnerabilidade*, contexto) e os sinais no detalhe,
+  com link para a vulnerabilidade DAST relacionada.
+- **Aceitar sugestões** (`POST /:id/accept-suggestions`): marca como
+  falso-positivo, numa transação, só os achados **ainda NEW** com essa
+  sugestão. Se alguém triou um deles entre a tela e o clique, a decisão humana
+  vence. Quem clicou é o autor; a nota diz "Pré-triagem aceita: fora do código
+  de produção (…)"; uma entrada de AuditLog por lote, com os ids. Na
+  reimportação, a triagem aceita é herdada como qualquer outra.
+- **Promoção:** o rascunho traz os sinais (também na descrição) e, quando o
+  relatório não tem vetor, usa o **vetor do NVD** da advisory
+  (`cvssVectorSource: "NVD"`), marcado como sugestão. Continua 1 a 1, com o
+  humano revisando o vetor.
+- **Caminho normalizado:** `\` vira `/` antes do fingerprint. O Semgrep no
+  Windows grava `app\src\x.ts`; sem isso, o mesmo arquivo escaneado na CI
+  (Linux) virava um achado "novo" e a triagem herdada se perdia. Importações
+  feitas no Windows antes desta mudança mostram tudo como novo **uma vez** na
+  próxima reimportação (decisão aceita em 2026-11-17).
 
 ### Promoção para vulnerabilidade
 
@@ -188,14 +268,15 @@ verificada no service.
 | `POST /api/code-imports` | multipart: `projectId` + `file` (≤ 10 MB). Importa e compara. Limite de taxa *expensive* |
 | `GET /api/code-imports[?projectId=]` | importações do projeto, ou de todos os projetos visíveis ao usuário |
 | `GET /api/code-imports/:id` | cabeçalho com `severityCounts` |
-| `GET /api/code-imports/:id/findings` | achados, do mais grave ao menos grave, com triagem e promoção |
+| `GET /api/code-imports/:id/findings` | achados, do mais grave ao menos grave, com triagem, promoção e `preTriagem` (contexto, sinais, sugestão) |
+| `POST /api/code-imports/:id/accept-suggestions` | `{ contexts? }`: aceita as sugestões de falso-positivo por contexto dos achados ainda NEW. Devolve `{ accepted, byContext }` |
 | `GET /api/code-imports/:id/compare` | novos, continuam e resolvidos em relação à anterior |
 | `GET /api/code-imports/:id/report/data` | dados do PDF. Limite de taxa *report* |
 | `PATCH /api/code-imports/findings/:findingId/triage` | `{ triageStatus, note }` |
-| `GET /api/code-imports/findings/:findingId/promotion-draft` | rascunho (vetor sugerido e origem) |
+| `GET /api/code-imports/findings/:findingId/promotion-draft` | rascunho (vetor sugerido e origem: `TOOL`, `NVD` ou `SEVERITY`) e `sinais` |
 | `POST /api/code-imports/findings/:findingId/promote` | `{ title, description, owaspCategory, cvssVector, impact?, recommendation? }` |
 
-Erros: `MISSING_FILE`/`MISSING_PROJECT_ID`/`INVALID_FILE_FORMAT` (400),
+Erros: `MISSING_FILE`/`MISSING_PROJECT_ID`/`INVALID_FILE_FORMAT`/`INVALID_CONTEXTS` (400),
 `UNSUPPORTED_REPORT_FORMAT`/`UNSUPPORTED_SARIF_VERSION`/`IMPORT_TOO_LARGE`
 (422), `FORBIDDEN` (403), `PROJECT_NOT_FOUND`/`IMPORT_NOT_FOUND`/`FINDING_NOT_FOUND`
 (404), `FINDING_ALREADY_PROMOTED` (409).

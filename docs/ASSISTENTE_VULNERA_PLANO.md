@@ -2,7 +2,7 @@
 
 # Assistente Vulnera — plano e investigação
 
-> **Integração em 2026-11-15:** este plano é histórico. A decisão do assistente foi renumerada de ADR-048 para ADR-054 para preservar a ADR-048 do grafo DAST da dev. As referências numéricas antigas abaixo registram o nome usado na criação; os links atuais apontam à ADR-054. A adaptação autorizada inclui SAST/SCA, detalhe da importação, Threat Intel e Exposure Graph, sem ampliar permissões. Ver [relatório da integração](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
+> **Integração em 2026-11-15:** este plano é histórico. A decisão do assistente foi renumerada de ADR-048 para ADR-054 para preservar a ADR-048 do grafo DAST da dev. As referências numéricas antigas abaixo registram o nome usado na criação; os links atuais apontam à ADR-064. A adaptação autorizada inclui SAST/SCA, detalhe da importação, Threat Intel e Exposure Graph, sem ampliar permissões. Ver [relatório da integração](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
 
 **Data:** 2026-10-23 · **Branch:** `feature/agent-ai` · **Base:** `44f9c58`.
 **Estado deste registro histórico:** Fase 0 concluída; Fases 1–6 ainda pendentes naquele checkpoint. O restante deste documento preserva a investigação e a solução planejada.
@@ -13,7 +13,7 @@
 
 Assistente de orientação em PT-BR nas rotas protegidas da web, com mascote SVG/CSS pequeno, movimento suave, painel estável e atalhos acionados pelo usuário. Contexto externo restrito à pergunta, histórico curto, identificador conhecido de tela, perfil autenticado e ajuda versionada. Sem leitura de registros de negócio pelo assistente, escrita de dados, geração de findings, cálculo de severidade, scans ou integração mobile.
 
-A solicitação de 23/10/2026 reintroduz IA somente nesse escopo. O corte de 03/08/2026 permanece como histórico; a geração de findings continua excluída. A decisão está no [ADR-054](<Vulnera/07-Decisoes/ADR-054 - Assistente contextual com Gemini e ajuda local.md>). `AGENTS.md`, `CLAUDE.md` e `GOTCHA.md` foram lidos e permanecem preservados; a autorização específica do pedido atual delimita esta exceção de escopo.
+A solicitação de 23/10/2026 reintroduz IA somente nesse escopo. O corte de 03/08/2026 permanece como histórico; a geração de findings continua excluída. A decisão está no [ADR-064](<Vulnera/07-Decisoes/ADR-064 - Assistente contextual com Gemini e ajuda local.md>). `AGENTS.md`, `CLAUDE.md` e `GOTCHA.md` foram lidos e permanecem preservados; a autorização específica do pedido atual delimita esta exceção de escopo.
 
 ## Evidências do checkout
 

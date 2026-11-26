@@ -30,7 +30,7 @@ O assistente também reconhece SAST/SCA, detalhe da importação, Threat Intel e
 
 O contêiner do assistente envolve todas as rotas protegidas, mantendo lazy loading, limites de carregamento/erro, acessibilidade, transições e guards da dev. Onboarding e relatório DAST continuam cobertos; o HTML original do ZAP permanece isolado. O menu de movimento reduzido e o sistema seguem usando o hook central.
 
-A decisão atual é **ADR-054**, originalmente criada como ADR-048 na branch do assistente. A ADR-048 da dev pertence ao grafo DAST e foi preservada. Validação da integração: [relatório de 15/11/2026](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
+A decisão atual é **ADR-064**, originalmente criada como ADR-048 na branch do assistente. A ADR-048 da dev pertence ao grafo DAST e foi preservada. Validação da integração: [relatório de 15/11/2026](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
 
 O contexto externo contém a pergunta, até seis mensagens anteriores, uma tela conhecida sem parâmetros/query string, o perfil autenticado e trechos da ajuda. Não consulta registros, formulários ou DOM para construir o prompt. Perguntas com padrões reconhecíveis de e-mail, URL, identificador ou credencial recebem orientação local, sem envio ao provedor. Isso não é um detector infalível de informação confidencial: use somente documentação e dados fictícios.
 
@@ -190,4 +190,4 @@ Os resultados da rodada final são registrados em `docs/VALIDACAO_ASSISTENTE_202
 
 **Gemini ao vivo permanece pendente:** na validação de 23/10/2026, a configuração runtime da API indicou ausência de chave e modelo, sem revelar valores. A integração REST está implementada e testável por gateway; isso não comprova o acesso de uma conta específica. Não foi solicitada ou exposta chave em conversa.
 
-Referências de implementação: [plano e investigação](ASSISTENTE_VULNERA_PLANO.md), [ADR-054](<Vulnera/07-Decisoes/ADR-054 - Assistente contextual com Gemini e ajuda local.md>). A decisão do corte de IA de 03/08/2026 permanece como histórico; sugestões de findings, leitura de registros reais, cálculo por IA, automação de dados e mobile continuam fora desta entrega.
+Referências de implementação: [plano e investigação](ASSISTENTE_VULNERA_PLANO.md), [ADR-064](<Vulnera/07-Decisoes/ADR-064 - Assistente contextual com Gemini e ajuda local.md>). A decisão do corte de IA de 03/08/2026 permanece como histórico; sugestões de findings, leitura de registros reais, cálculo por IA, automação de dados e mobile continuam fora desta entrega.

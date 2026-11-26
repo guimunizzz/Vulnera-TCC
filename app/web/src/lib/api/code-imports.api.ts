@@ -7,6 +7,8 @@
 
 import { apiClient } from "./client";
 import type {
+  CodeAcceptSuggestionsResult,
+  CodeContext,
   CodeFinding,
   CodeImportComparison,
   CodeImportReportData,
@@ -47,6 +49,10 @@ export const codeImportsApi = {
   /* Rotas sob /code-imports/findings/... — literal antes do "/:id" no backend. */
   triage: (findingId: string, triageStatus: DastTriageStatus, note: string | null) =>
     apiClient.patch<CodeFinding>(`/code-imports/findings/${findingId}/triage`, { triageStatus, note }).then((res) => res.data),
+
+  /** Aceita em lote as sugestões de falso-positivo por contexto (teste, docs, gerado...). Sem `contexts`, todas. */
+  acceptSuggestions: (id: string, contexts?: CodeContext[]) =>
+    apiClient.post<CodeAcceptSuggestionsResult>(`/code-imports/${id}/accept-suggestions`, contexts ? { contexts } : {}).then((res) => res.data),
 
   getPromotionDraft: (findingId: string) =>
     apiClient.get<CodePromotionDraft>(`/code-imports/findings/${findingId}/promotion-draft`).then((res) => res.data),

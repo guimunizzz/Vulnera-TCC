@@ -8,23 +8,31 @@ import { Check, X } from "lucide-react";
 import { Reveal, TituloDecodificado } from "../ui";
 import { InteractiveLabel } from "../../ui/interactive-label";
 
+// Cada linha da coluna VULNERA foi conferida no código em 2026-11-15. Saíram
+// "em até 1 dia útil" (não há prazo no produto) e "fluxo de revalidação" (a
+// máquina de status tem 4 estados, sem revalidação — ADR-021).
 const ROWS = [
-  { aspect: "Tempo pra abrir um projeto", vulnera: "Em até 1 dia útil", old: "2-4 semanas de proposta" },
-  { aspect: "Escopo do teste", vulnera: "Definido na própria plataforma", old: "Várias calls de alinhamento" },
+  { aspect: "Pedido de um projeto", vulnera: "Solicitado e aprovado na plataforma", old: "Proposta trocada por e-mail" },
+  { aspect: "Escopo do teste", vulnera: "Dentro e fora do escopo, no projeto", old: "Combinado em várias reuniões" },
   { aspect: "Evidências", vulnera: "Anexadas a cada finding", old: "Prints soltos em pastas" },
+  {
+    aspect: "Origem dos achados",
+    vulnera: "Pentest, DAST, SAST e SCA na mesma tela",
+    old: "Um relatório por ferramenta",
+  },
   {
     aspect: "Auditoria",
     vulnera: "Toda mudança de severidade registrada",
-    old: "Zero rastro de quem alterou o quê",
+    old: "Sem rastro de quem alterou o quê",
   },
   {
-    aspect: "Reteste de correções",
-    vulnera: "Fluxo de revalidação incluso",
-    old: "Cobrado à parte, sem processo formal",
+    aspect: "Prazo de correção",
+    vulnera: "SLA por severidade, com reabertura registrada",
+    old: "Sem prazo e sem histórico",
   },
   {
     aspect: "Relatório final",
-    vulnera: "PDF executivo + técnico, no navegador",
+    vulnera: "PDF executivo e técnico, mais planilha Excel",
     old: "Documento estático",
   },
 ];

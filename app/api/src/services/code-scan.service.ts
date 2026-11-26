@@ -53,6 +53,14 @@ import {
   type CodePromotionDraft,
   type CodeSeverity,
 } from "../utils/code-import.util";
+import {
+  notaDaSugestaoAceita,
+  preTriar,
+  type CodeContext,
+  type CodeSignal,
+  type DastConfirmadoInput,
+  type SignalSources,
+} from "../utils/code-pretriage.util";
 import { owaspCategoryForCwe } from "../utils/dast-promotion.util";
 import { calculateCvss } from "../utils/cvss.util";
 import { computeSlaCycle } from "../utils/sla.util";
@@ -221,14 +229,15 @@ export class CodeScanService {
     return (await this.withSeverityCounts([await this.getAccessibleImport(actor, importId)]))[0];
   }
 
-  /** Achados da importação, do mais grave ao menos grave. */
+  /** Achados da importação, do mais grave ao menos grave, cada um com a sua pré-triagem. */
   async listFindings(actor: Actor, importId: string): Promise<CodeFindingResponseDTO[]> {
     const imp = await this.getAccessibleImport(actor, importId);
     const findings = await this.repository.listFindingsByImport(imp.id);
     const promotions = await this.promotionsByFingerprint(imp.projectId, findings.map((f) => f.fingerprint));
+    const fontes = await this.signalSources(imp.projectId, findings);
 
     return findings
-      .map((f) => toFindingResponse(f, promotions.get(f.fingerprint)))
+      .map((f) => toFindingResponse(f, preTriar(f, fontes), promotions.get(f.fingerprint)))
       .sort(
         (a, b) =>
           CODE_SEVERITY_ORDER[a.severity] - CODE_SEVERITY_ORDER[b.severity] ||
@@ -282,7 +291,54 @@ export class CodeScanService {
     });
 
     const promotions = await this.promotionsByFingerprint(updated.projectId, [updated.fingerprint]);
-    return toFindingResponse(updated, promotions.get(updated.fingerprint));
+    const fontes = await this.signalSources(updated.projectId, [updated]);
+    return toFindingResponse(updated, preTriar(updated, fontes), promotions.get(updated.fingerprint));
+  }
+
+  /**
+   * Aceita, de uma vez, as sugestões de falso-positivo por contexto (teste,
+   * fixture, documentação, artefato gerado, script) dos achados ainda NEW da
+   * importação. É uma decisão humana em lote — quem clicou fica como autor de
+   * cada triagem e a nota diz de onde ela veio. `contextos` restringe a quais
+   * contextos aceitar; vazio = todos os sugeridos.
+   */
+  async acceptSuggestions(actor: Actor, importId: string, contextos?: unknown): Promise<{ accepted: number; byContext: Partial<Record<CodeContext, number>> }> {
+    const imp = await this.getAccessibleImport(actor, importId);
+    const validos: CodeContext[] = ["TESTE", "FIXTURE", "DOCUMENTACAO", "GERADO", "SCRIPT"];
+    let filtro: CodeContext[] | null = null;
+    if (contextos !== undefined) {
+      if (!Array.isArray(contextos) || contextos.some((c) => !validos.includes(c as CodeContext))) throw new Error("INVALID_CONTEXTS");
+      filtro = contextos as CodeContext[];
+    }
+
+    const findings = await this.repository.listFindingsByImport(imp.id);
+    const fontes = await this.signalSources(imp.projectId, findings);
+    const porContexto = new Map<CodeContext, string[]>();
+    for (const f of findings) {
+      const pt = preTriar(f, fontes);
+      if (pt.sugestao?.tipo !== "FALSO_POSITIVO") continue;
+      if (filtro && !filtro.includes(pt.contexto)) continue;
+      porContexto.set(pt.contexto, [...(porContexto.get(pt.contexto) ?? []), f.id]);
+    }
+    if (porContexto.size === 0) return { accepted: 0, byContext: {} };
+
+    const accepted = await this.repository.triageMany(
+      imp.id,
+      [...porContexto].map(([contexto, ids]) => ({ ids, triageNote: notaDaSugestaoAceita(contexto) })),
+      { triageStatus: "FALSE_POSITIVE", triagedById: actor.userId, triagedAt: new Date() },
+    );
+    const byContext = Object.fromEntries([...porContexto].map(([c, ids]) => [c, ids.length])) as Partial<Record<CodeContext, number>>;
+
+    // Uma entrada por lote (não 150): o diff diz quantos, de que contextos e quais ids.
+    await this.auditLogRepository.create({
+      actorId: actor.userId,
+      companyId: imp.companyId,
+      entityType: "CodeScanImport",
+      entityId: imp.id,
+      action: "STATUS_CHANGE",
+      diffJson: JSON.stringify({ acceptedSuggestions: accepted, to: "FALSE_POSITIVE", byContext, findingIds: [...porContexto.values()].flat() }),
+    });
+    return { accepted, byContext };
   }
 
   // ==========================================================================
@@ -292,11 +348,16 @@ export class CodeScanService {
   async getPromotionDraft(
     actor: Actor,
     findingId: string,
-  ): Promise<CodePromotionDraft & { alreadyPromotedTo: string | null }> {
+  ): Promise<Omit<CodePromotionDraft, "cvssVectorSource"> & { cvssVectorSource: CodePromotionDraft["cvssVectorSource"] | "NVD"; alreadyPromotedTo: string | null; sinais: CodeSignal[] }> {
     const finding = await this.getAccessibleFinding(actor, findingId);
     const imp = await this.repository.findImportById(finding.importId);
+    const fontes = await this.signalSources(finding.projectId, [finding]);
+    const advisory = finding.advisoryId ? fontes.advisories.get(finding.advisoryId.toUpperCase()) : undefined;
+    // Sem vetor no relatório, o do NVD (via Threat Intel) é melhor ponto de partida que a faixa de severidade.
+    // Continua sendo sugestão: o humano revisa antes de promover (RN10).
+    const vetorNvd = !finding.cvssVector && advisory?.cvssVector ? advisory.cvssVector : null;
     const draft = buildCodePromotionDraft(
-      finding as Parameters<typeof buildCodePromotionDraft>[0],
+      { ...(finding as Parameters<typeof buildCodePromotionDraft>[0]), cvssVector: finding.cvssVector ?? vetorNvd },
       { toolName: imp?.toolName ?? "ferramenta", fileName: imp?.fileName ?? "relatório" },
       owaspCategoryForCwe,
       (vector) => {
@@ -309,7 +370,16 @@ export class CodeScanService {
       },
     );
     const promotion = await this.existingPromotion(finding);
-    return { ...draft, alreadyPromotedTo: promotion?.id ?? null };
+    const sinais = preTriar(finding, fontes).sinais;
+    // Os sinais vão para a descrição: quem ler a Vulnerability depois sabe por que ela foi priorizada.
+    const description = sinais.length > 0 ? `${draft.description}\n\n--- Sinais de outras fontes ---\n${sinais.map((s) => `• ${s.detalhe}`).join("\n")}` : draft.description;
+    return {
+      ...draft,
+      description,
+      cvssVectorSource: vetorNvd && draft.cvssVectorSource === "TOOL" ? "NVD" : draft.cvssVectorSource,
+      alreadyPromotedTo: promotion?.id ?? null,
+      sinais,
+    };
   }
 
   async promote(actor: Actor, findingId: string, dto: CodePromoteDTO): Promise<Vulnerability> {
@@ -509,6 +579,29 @@ export class CodeScanService {
       byImport.set(r.importId, counts);
     }
     return imports.map((i) => toImportResponse(i, byImport.get(i.id)));
+  }
+
+  /**
+   * Dados de outras fontes que a pré-triagem cruza: advisories do Threat Intel
+   * (KEV/EPSS, globais) e Vulnerabilities DAST da MESMA aplicação do projeto.
+   * Duas consultas por chamada, não por achado.
+   */
+  private async signalSources(projectId: string, findings: Array<{ advisoryId: string | null; cweId: string | null }>): Promise<SignalSources> {
+    const project = await this.projectRepository.findById(projectId);
+    if (!project) return { advisories: new Map(), dastPorCwe: new Map() };
+    const advisoryIds = findings.flatMap((f) => (f.advisoryId ? [f.advisoryId] : []));
+    const temCwe = findings.some((f) => f.cweId);
+    const [advisories, dast] = await Promise.all([
+      this.repository.findAdvisorySignals(project.companyId, advisoryIds),
+      temCwe ? this.repository.findDastConfirmedByApplication(project.applicationId) : Promise.resolve([]),
+    ]);
+    const dastPorCwe = new Map<string, DastConfirmadoInput[]>();
+    for (const d of dast) {
+      // CWE do DAST vem como "89" ou "CWE-89"; o do achado de código, como "89".
+      const cwe = d.cweId.replace(/^CWE-/i, "");
+      dastPorCwe.set(cwe, [...(dastPorCwe.get(cwe) ?? []), { ...d, cweId: cwe }]);
+    }
+    return { advisories, dastPorCwe };
   }
 
   private async promotionsByFingerprint(projectId: string, fingerprints: string[]): Promise<Map<string, PromotedVulnerabilityRef>> {

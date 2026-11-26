@@ -31,6 +31,18 @@ vi.mock("./pages/sast-sca-page", () => ({ SastScaPage: () => <h1>SAST/SCA de tes
 vi.mock("./pages/code-import-detail-page", () => ({ CodeImportDetailPage: () => <h1>Importação de teste</h1> }));
 vi.mock("./pages/threat-intel-page", () => ({ ThreatIntelPage: () => <h1>Threat Intel de teste</h1> }));
 vi.mock("./pages/exposure-graph-page", () => ({ ExposureGraphPage: () => <h1>Exposure Graph de teste</h1> }));
+vi.mock("./pages/triage-page", () => ({ TriagePage: () => <h1>Triagem de teste</h1> }));
+vi.mock("./pages/agendamentos-page", () => ({ AgendamentosPage: () => <h1>Agendamentos de teste</h1> }));
+vi.mock("./pages/conformidade-page", () => ({ ConformidadePage: () => <h1>Conformidade de teste</h1> }));
+vi.mock("./pages/admin/access-requests-page", () => ({ AccessRequestsPage: () => <h1>Solicitações de teste</h1> }));
+vi.mock("./pages/admin/filas-page", () => ({ FilasPage: () => <h1>Filas de teste</h1> }));
+vi.mock("./components/auth/turnstile-challenge", async () => {
+  const react = await import("react");
+  const Challenge = react.forwardRef(function Challenge() {
+    return react.createElement("div", { "data-testid": "turnstile-mock" });
+  });
+  return { TurnstileChallenge: Challenge };
+});
 
 function limparAuth(): void {
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
@@ -75,6 +87,7 @@ beforeAll(async () => {
     import("./pages/auth/auth-layout"),
     import("./pages/auth/login-page"),
     import("./pages/auth/register-page"),
+    import("./pages/auth/request-access-page"),
     import("./pages/dashboard-page"),
   ]);
 }, 60_000);
@@ -87,6 +100,11 @@ describe("Roteamento de App", () => {
     ["/sast-sca/imports/ficticio", "Importação de teste", ["ADMIN", "PENTESTER"]],
     ["/threat-intel", "Threat Intel de teste", ["ADMIN", "CLIENT", "PENTESTER"]],
     ["/exposure-graph", "Exposure Graph de teste", ["ADMIN", "CLIENT"]],
+    ["/triagem", "Triagem de teste", ["ADMIN", "CLIENT", "PENTESTER"]],
+    ["/agendamentos", "Agendamentos de teste", ["ADMIN", "CLIENT", "PENTESTER"]],
+    ["/conformidade", "Conformidade de teste", ["ADMIN", "CLIENT"]],
+    ["/admin/access-requests", "Solicitações de teste", ["ADMIN"]],
+    ["/admin/filas", "Filas de teste", ["ADMIN"]],
   ] as const)("preserva os guards da dev e uma instancia do assistente em %s", async (route, heading, roles) => {
     for (const role of ["ADMIN", "CLIENT", "PENTESTER"] as const) {
       logar(role);
@@ -99,23 +117,19 @@ describe("Roteamento de App", () => {
     }
   });
 
-  it("permite alternar entre login e cadastro mantendo o cenário de acesso", async () => {
+  it("leva do login à solicitação de acesso mantendo o cenário", async () => {
     limparAuth();
     renderApp("/login");
     // Cenário e páginas de acesso são lazy (um lote só): espera o primeiro paint.
     const logo = await screen.findByRole("link", { name: "Vulnera Security — página inicial" });
     expect(logo).toHaveTextContent("VULNERA SECURITY");
 
-    fireEvent.click(screen.getByRole("link", { name: "Criar uma conta" }));
-    expect(await screen.findByRole("heading", { name: "Criar conta" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: /Solicitar acesso/ }));
+    expect(await screen.findByRole("heading", { name: "Solicitar acesso" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("assistant-root")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Nome" })).toBeRequired();
     expect(screen.getByRole("link", { name: "Vulnera Security — página inicial" })).toBe(logo);
-
-    fireEvent.click(screen.getByRole("link", { name: "Entrar" }));
-    expect(await screen.findByRole("heading", { name: "Entrar" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Criar conta" })).not.toBeInTheDocument();
   });
 
   it("ROTA-01 — '/' sem sessão renderiza a landing, sem redirecionar pro login", () => {

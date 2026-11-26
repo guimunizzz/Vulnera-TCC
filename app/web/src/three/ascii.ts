@@ -38,16 +38,24 @@ export interface AtlasAscii {
  * Desenha os glifos numa fileira, brancos sobre transparente. Espera a fonte
  * carregar: desenhar antes faria o atlas sair na fonte de fallback.
  */
-export async function criarAtlasAscii(glifos: string, tamanhoPx = 48): Promise<AtlasAscii> {
-  const fonte = `${tamanhoPx}px ${FONTE_ASCII}`;
+export async function criarAtlasAscii(
+  glifos: string,
+  tamanhoPx = 48,
+  /**
+   * Célula em múltiplos do tamanho da fonte (o padrão é a largura do "M" ×
+   * 1,3) e peso da fonte (o padrão é o regular).
+   */
+  opcoes: { largura?: number; altura?: number; peso?: number } = {},
+): Promise<AtlasAscii> {
+  const fonte = `${opcoes.peso ?? 400} ${tamanhoPx}px ${FONTE_ASCII}`;
   await document.fonts?.load(fonte).catch(() => undefined);
   const caracteres = Array.from(glifos);
   const canvas = document.createElement("canvas");
   const contexto = canvas.getContext("2d");
   if (!contexto) throw new Error("Canvas 2D indisponível para o atlas ASCII");
   contexto.font = fonte;
-  const largura = Math.ceil(contexto.measureText("M").width);
-  const altura = Math.ceil(tamanhoPx * 1.3);
+  const largura = Math.ceil(opcoes.largura ? tamanhoPx * opcoes.largura : contexto.measureText("M").width);
+  const altura = Math.ceil(tamanhoPx * (opcoes.altura ?? 1.3));
   canvas.width = largura * caracteres.length;
   canvas.height = altura;
   // Redimensionar o canvas zera o estado do contexto.
@@ -83,7 +91,7 @@ float hashCelula(vec2 p) {
 }
 
 // Cobertura (0 a 1) do glifo "indice" no ponto "pos" (px) da sua célula. A
-// versão com posição existe para a onda das gotas, que lê a grade deslocada.
+// versão com posição serve a quem lê a grade deslocada.
 float coberturaDoGlifoEm(float indice, vec2 pos) {
   vec2 local = fract(pos / uCelula);
   vec2 uv = vec2((floor(indice) + local.x) / uTotalGlifos, local.y);

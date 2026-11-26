@@ -10,22 +10,29 @@
  * durante carregamento, falha de GPU ou perda de contexto.
  *
  * QUEM USA
- * `dashboard-atmosphere.tsx`, exclusivamente via React.lazy().
+ * `dashboard-atmosphere.tsx` e `features/atmosfera-3d/atmosfera-da-plataforma.tsx`
+ * (a camada ASCII das atmosferas por seção), exclusivamente via React.lazy().
  */
 
 import { useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useDashboardScene } from "./use-dashboard-scene";
 
-function DashboardAmbientCanvas() {
+function DashboardAmbientCanvas({ aoPronta, aoFalhar }: { aoPronta?: () => void; aoFalhar?: () => void } = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pronto, setPronto] = useState(false);
   // O canvas vive no layout e sobrevive à troca de página; a rota só dispara
   // a varredura de transição. A troca de tema é observada pelo kit.
   const { pathname } = useLocation();
   useDashboardScene(canvasRef, {
-    onReady: () => setPronto(true),
-    onLost: () => setPronto(false),
+    onReady: () => {
+      setPronto(true);
+      aoPronta?.();
+    },
+    onLost: () => {
+      setPronto(false);
+      aoFalhar?.();
+    },
     chaveDeRota: pathname,
   });
 

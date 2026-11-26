@@ -35,7 +35,7 @@ import type { ApplicationRepository } from "../../repositories/application.repos
 import type { SlaPolicyService } from "../sla-policy.service";
 import type { UserRole } from "../../models/user.model";
 import type { FontesDeAvisos } from "./fontes";
-import type { ThreatIntelSyncService } from "./threat-intel-sync.service";
+import type { JobQueue } from "../queue/job-queue";
 import {
   toAtivoDTO,
   toAvisoDTO,
@@ -104,7 +104,8 @@ export class ThreatIntelService {
     private readonly slaPolicy: SlaPolicyService,
     private readonly applications: ApplicationRepository,
     private readonly fontes: FontesDeAvisos,
-    private readonly sync: ThreatIntelSyncService,
+    /** ADR-056 — manual e backfill viram job; memory dispara no próprio processo, como antes. */
+    private readonly fila: Pick<JobQueue, "enfileirarThreatIntel" | "threatIntelEmAndamento">,
   ) {}
 
   // ==========================================================================
@@ -151,7 +152,7 @@ export class ThreatIntelService {
       inventario: { confirmados: inventario.CONFIRMED ?? 0, sugeridos: inventario.SUGGESTED ?? 0, descartados: inventario.DISMISSED ?? 0 },
       casamentos,
       ultimaExecucao: ultima ? toExecucaoDTO(ultima) : null,
-      sincronizando: this.sync.emAndamento(),
+      sincronizando: await this.fila.threatIntelEmAndamento(),
     };
   }
 
@@ -414,14 +415,18 @@ export class ThreatIntelService {
 
   async execucoes(actor: Actor, companyId: string | undefined): Promise<{ sincronizando: boolean; execucoes: ExecucaoDTO[] }> {
     await this.escopo(actor, companyId);
-    return { sincronizando: this.sync.emAndamento(), execucoes: (await this.repository.ultimasExecucoes(10)).map(toExecucaoDTO) };
+    return { sincronizando: await this.fila.threatIntelEmAndamento(), execucoes: (await this.repository.ultimasExecucoes(10)).map(toExecucaoDTO) };
   }
 
-  /** "Sincronizar agora" (ADMIN): dispara em segundo plano, como o scan do DAST (ADR-030). */
+  /**
+   * "Sincronizar agora" (ADMIN): em segundo plano. Com memory, dispara no
+   * processo (ADR-030); com bullmq, vira job MANUAL na fila (ADR-056) — o
+   * ThreatSyncRun guarda o gatilho do mesmo jeito.
+   */
   async sincronizarAgora(actor: Actor): Promise<{ iniciada: boolean }> {
     if (actor.role !== "ADMIN") throw new Error("FORBIDDEN");
-    if (this.sync.emAndamento()) return { iniciada: false };
-    this.sync.executar("MANUAL").catch((e) => console.error("Threat Intel: a sincronização manual falhou", e));
+    if (await this.fila.threatIntelEmAndamento()) return { iniciada: false };
+    await this.fila.enfileirarThreatIntel({ trigger: "MANUAL" });
     return { iniciada: true };
   }
 
@@ -430,8 +435,9 @@ export class ThreatIntelService {
   // ==========================================================================
 
   private backfill(ids: string[]): void {
-    // Em segundo plano: confirmar não espera o NVD (até 6,5 s por produto sem chave).
-    this.sync.executar("ASSET", ids).catch((e) => console.error("Threat Intel: backfill do inventário falhou", e));
+    // Em segundo plano: confirmar não espera o NVD (até 6,5 s por produto sem
+    // chave) nem o Redis — uma falha ao enfileirar não desfaz a confirmação.
+    this.fila.enfileirarThreatIntel({ trigger: "ASSET", assetIds: ids }).catch((e) => console.error("Threat Intel: backfill do inventário falhou", e));
   }
 
   private async ativoDoEscopo(actor: Actor, id: string, permissao: keyof PermissoesThreatIntel) {
