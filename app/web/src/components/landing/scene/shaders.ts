@@ -2,12 +2,14 @@
  * components/landing/scene/shaders.ts
  *
  * O QUE FAZ
- * GLSL da cena narrativa ASCII, em duas passadas:
+ * GLSL da cena narrativa, em duas passadas:
  *   1. FRAGMENT_CELULAS roda uma vez por célula de caractere (textura do
  *      tamanho da grade, `src/three/grade-celulas.ts`) e decide, pelo
- *      progresso (0 a 5, um por ato), glifo, cor e alfa.
- *   2. FRAGMENT_TELA roda por pixel: lê a célula, aplica a onda da gota e
- *      carimba o glifo do atlas (`src/three/ascii.ts`), com scanlines.
+ *      progresso (0 a 5, um por ato), glifo, cor e alfa. A partir da virada
+ *      (ato 3, ADR-055) cada célula esmaece e o terreno nasce no lugar.
+ *   2. FRAGMENT_TELA roda por pixel: lê a célula, carimba o glifo do atlas
+ *      (`src/three/ascii.ts`) com scanlines e compõe a camada 3D do terreno
+ *      (`terreno.ts`) e os halos dos montes.
  * Estética de terminal hacker (ASCII, scanlines, glitch raro, acentos neon),
  * sem logos nem assets de terceiros.
  *
@@ -15,13 +17,16 @@
  * Nenhum vértice por caractere, nenhuma geometria por ato. As duas passadas
  * existem por desempenho: a lógica só muda por célula e, por pixel, custava
  * ~250× mais do que precisa (rolagem a 31 fps na GPU integrada, 2026-11-03).
- * Movimento contínuo (uTempo, 60 fps): o campo respira, o alerta pulsa em
- * curva suave e a gota do clique (`src/three/gotas.ts`) ondula. Só a troca
- * de glifo e o glitch seguem em "tiques" — trocar caractere é discreto por
- * natureza.
+ * Movimento contínuo (uTempo, 60 fps): o campo respira e o alerta pulsa em
+ * curva suave. Só a troca de glifo e o glitch seguem em "tiques" — trocar
+ * caractere é discreto por natureza.
+ * O clique no fundo é um ping de scanner (`src/three/pings.ts`): um anel de
+ * glifos se abre a partir do ponto e, por onde passa, a falha escondida
+ * aparece na cor da severidade por um instante.
  *
- * Os atos seguem `docs/LANDING_NARRATIVA.md` §3; o espelho sem animação está
- * em `estadoDaCelula` (layout.ts), usado pelo pôster.
+ * Os atos seguem `docs/LANDING_NARRATIVA.md` §3. O espelho sem animação está
+ * em `estadoDaCelula` (layout.ts), usado pelo pôster — que continua contando
+ * os atos 3–5 em ASCII (grupos e "✓"); aqui eles são do terreno.
  * Não use crase dentro destes templates: fecha a string JS (ADR-026).
  *
  * QUEM USA
@@ -29,12 +34,11 @@
  */
 
 import { GLSL_ASCII } from "../../../three/ascii";
-import { GLSL_GOTAS, GOTA } from "../../../three/gotas";
+import { glslDoPing } from "../../../three/pings";
 import { GLSL_LER_CELULAS } from "../../../three/grade-celulas";
-import { CENTRO_DOS_GRUPOS } from "./layout";
+import { PROPORCAO_FALHAS } from "./layout";
 import { GLIFO, TRANSICAO_CENA, VINHETA } from "./config";
-
-const vec2 = ([x, y]: readonly [number, number]) => `vec2(${x.toFixed(3)}, ${y.toFixed(3)})`;
+import { GLSL_VIRADA } from "./terreno-shaders";
 
 /** Ids de cor gravados na textura de células (canal g). */
 export const COR = { base: 0, neon: 1, glitch: 2, baixa: 3, media: 4, alta: 5, critica: 6, resolvido: 7 } as const;
@@ -48,17 +52,18 @@ ${GLSL_ASCII}
 uniform float uProgresso;
 uniform float uTique;
 uniform float uTempo;
-uniform float uRaioDoGrupo;
+uniform float uVirada;
+// Ping de scanner: pontos em px do buffer; sem ping vivo o laço nem roda.
+uniform float uPingsAtivos;
+uniform float uDpr;
+${glslDoPing({ funcao: "pingNaTela", uniforme: "uPings", pxPorUnidade: "uDpr" })}
 uniform float uAlfaSaudavel;
 uniform float uAlfaDestaque;
 uniform float uAlfaFeixe;
 uniform float uTransicaoInicio;
 uniform float uTransicaoSentido;
 
-const vec2 GRUPO_BAIXA = ${vec2(CENTRO_DOS_GRUPOS[1])};
-const vec2 GRUPO_MEDIA = ${vec2(CENTRO_DOS_GRUPOS[2])};
-const vec2 GRUPO_ALTA = ${vec2(CENTRO_DOS_GRUPOS[3])};
-const vec2 GRUPO_CRITICA = ${vec2(CENTRO_DOS_GRUPOS[4])};
+${GLSL_VIRADA}
 
 float glifoDaSeveridade(float s) {
   if (s < 1.5) return ${GLIFO.baixa}.0;
@@ -69,11 +74,6 @@ float glifoDaSeveridade(float s) {
 
 // Severidade 1..4 -> id de cor (baixa..crítica).
 float corDaSeveridade(float s) { return ${COR.baixa - 1}.0 + s; }
-
-// Distância em px do centro da célula ao centro de um grupo (recorte -> px).
-float distanciaPx(vec2 clip, vec2 centro) {
-  return length((clip - centro) * 0.5 * uResolucao);
-}
 
 void main() {
   // Cada texel desta passada é uma célula.
@@ -110,15 +110,9 @@ void main() {
   float respira = 0.78 + 0.22 * sin(uTempo * 0.8 + r * 6.2832);
   float alfa = presente * uAlfaSaudavel * mix(0.55, 1.0, r) * mix(0.6, 1.0, lateral) * respira;
 
-  // Saudáveis apagam enquanto o foco está nos grupos.
-  float apagado = smoothstep(2.15, 2.85, p) * (1.0 - smoothstep(3.6, 4.4, p));
-  alfa *= 1.0 - 0.5 * apagado;
-
   // --- Falhas espalhadas na grade (≈ 4,5% das células).
-  float falha = step(rFalha, 0.045);
+  float falha = step(rFalha, ${PROPORCAO_FALHAS.toFixed(3)});
   float sev = 1.0 + floor(rSev * 4.0);
-  float corrigivel = step(2.5, sev) + step(1.5, sev) * step(sev, 2.5) * step(0.5, hashCelula(celula + 83.0));
-  corrigivel = min(corrigivel, 1.0);
 
   // Ato 1 (Mas tem falhas): "!" pulsando devagar, ainda sem cor de severidade.
   float pisca = 0.5 + 0.5 * sin((uTempo * 0.9 + r) * 6.2832);
@@ -127,50 +121,42 @@ void main() {
   float trecho = clamp(p - 1.0, 0.0, 1.0);
   float feixeX = mix(-1.15, 1.15, trecho);
   float revelado = falha * smoothstep(clip.x, clip.x + 0.1, feixeX);
-  // Ato 3 (Organizar): a falha sai da grade...
-  float saiu = falha * smoothstep(2.15, 2.85, p);
-  // Ato 4 (Corrigir): ...e a corrigida volta como "✓" no mesmo lugar.
-  float atraso = (4.0 - sev) * 0.12;
-  float voltou = falha * corrigivel * smoothstep(3.25 + atraso, 3.85 + atraso, p);
 
+  // A falha revelada fica no lugar até a virada alcançar a célula (ato 3):
+  // ali o glifo esmaece e o mesmo glifo se ergue do terreno (terreno.ts).
   if (falha > 0.5) {
-    if (voltou > 0.01) {
-      indice = ${GLIFO.ok}.0;
-      cor = ${COR.resolvido}.0;
-      alfa = mix(uAlfaSaudavel, uAlfaDestaque, voltou) * voltou;
-    } else if (revelado > 0.01) {
+    if (revelado > 0.01) {
       indice = glifoDaSeveridade(sev);
       cor = corDaSeveridade(sev);
-      alfa = uAlfaDestaque * revelado * (1.0 - saiu);
+      alfa = uAlfaDestaque * revelado;
     } else if (alerta > 0.01) {
       indice = ${GLIFO.alerta}.0;
       alfa = mix(uAlfaSaudavel, uAlfaDestaque, alerta * pisca);
     }
   }
 
-  // --- Grupos nas laterais (fora da coluna de texto).
-  float dBaixa = distanciaPx(clip, GRUPO_BAIXA);
-  float dMedia = distanciaPx(clip, GRUPO_MEDIA);
-  float dAlta = distanciaPx(clip, GRUPO_ALTA);
-  float dCritica = distanciaPx(clip, GRUPO_CRITICA);
-  float sevGrupo = 1.0;
-  float dGrupo = dBaixa;
-  if (dMedia < dGrupo) { dGrupo = dMedia; sevGrupo = 2.0; }
-  if (dAlta < dGrupo) { dGrupo = dAlta; sevGrupo = 3.0; }
-  if (dCritica < dGrupo) { dGrupo = dCritica; sevGrupo = 4.0; }
-  float noGrupo = step(dGrupo, uRaioDoGrupo) * step(0.4, hashCelula(celula + 97.0));
-  // Cada célula do grupo chega num momento: o grupo "se forma".
-  float chegada = smoothstep(2.15 + r * 0.45, 2.45 + r * 0.45, p);
-  float grupoCorrigido = step(2.5, sevGrupo) + step(1.5, sevGrupo) * step(sevGrupo, 2.5) * step(0.5, hashCelula(celula + 83.0));
-  float atrasoGrupo = (4.0 - sevGrupo) * 0.12;
-  float dissolve = min(grupoCorrigido, 1.0) * smoothstep(3.15 + atrasoGrupo + r * 0.3, 3.55 + atrasoGrupo + r * 0.3, p);
-  float grupo = noGrupo * chegada * (1.0 - dissolve);
-  if (grupo > 0.01) {
-    // Pouco antes de dissolver, a célula corrigida mostra "✓".
-    float virando = min(grupoCorrigido, 1.0) * smoothstep(3.0 + atrasoGrupo, 3.2 + atrasoGrupo, p);
-    indice = virando > 0.5 ? ${GLIFO.ok}.0 : glifoDaSeveridade(sevGrupo);
-    cor = virando > 0.5 ? ${COR.resolvido}.0 : corDaSeveridade(sevGrupo);
-    alfa = uAlfaDestaque * grupo;
+  // --- Ping de scanner (clique no fundo): o anel é feito de glifos da rampa,
+  // em neon, e o que ele toca responde — a falha escondida aparece na cor da
+  // severidade e some com o eco. Nunca passa do alfa de destaque, o limite
+  // que o teste de contraste garante.
+  if (uPingsAtivos > 0.5) {
+    vec2 ping = pingNaTela((celula + 0.5) * uCelula);
+    float eco = max(ping.x, ping.y);
+    float alfaDoAnel = uAlfaDestaque * ping.x;
+    if (alfaDoAnel > alfa) {
+      // Os glifos mais cheios da rampa (":" a "="): o anel precisa ler de longe.
+      indice = ${GLIFO.rampaInicio + 2}.0 + floor(ping.x * ${(GLIFO.rampaTotal - 2.01).toFixed(2)});
+      cor = ${COR.neon}.0;
+      alfa = alfaDoAnel;
+    }
+    if (falha > 0.5 && uAlfaDestaque * eco >= alfa * 0.6) {
+      indice = glifoDaSeveridade(sev);
+      cor = corDaSeveridade(sev);
+      alfa = max(alfa, uAlfaDestaque * eco);
+    } else {
+      // O campo calmo só acende um pouco quando o anel passa.
+      alfa = min(alfa * (1.0 + 0.8 * eco), max(alfa, uAlfaDestaque));
+    }
   }
 
   // --- Varredura (ato 2): blocos neon com franja magenta logo atrás.
@@ -206,18 +192,20 @@ void main() {
     }
   }
 
+  // --- Virada (ato 3): onda da esquerda para a direita; o glifo esmaece onde
+  // o terreno nasce. A conta é a mesma do fragmento do terreno.
+  float xTela = (celula.x + 0.5) * uCelula.x / uResolucao.x;
+  alfa *= 1.0 - viradaLocal(uVirada, xTela, hashCelula(celula + 113.0));
+
   gl_FragColor = vec4(indice / 255.0, cor / 255.0, clamp(alfa, 0.0, 1.0), 1.0);
 }
 `;
 
-/** Passada 2: por pixel — onda da gota, glifo do atlas, cor e scanlines. */
+/** Passada 2: por pixel — glifo do atlas, scanlines e a camada do terreno. */
 export const FRAGMENT_TELA = /* glsl */ `
 ${GLSL_ASCII}
-${GLSL_GOTAS}
 ${GLSL_LER_CELULAS}
 
-uniform float uGotasAtivas;
-uniform float uAlfaDestaque;
 uniform vec3 uCorBase;
 uniform vec3 uCorNeon;
 uniform vec3 uCorGlitch;
@@ -226,6 +214,15 @@ uniform vec3 uCorMedia;
 uniform vec3 uCorAlta;
 uniform vec3 uCorCritica;
 uniform vec3 uCorResolvido;
+// Terreno (atos 3–5): camada 3D em sRGB com alfa pré-multiplicado.
+uniform sampler2D uCamada;
+uniform float uCamadaAtiva;
+uniform float uVirada;
+uniform float uTetoDaCamada;
+uniform vec3 uHalos[4];
+uniform vec3 uCorDoHalo[4];
+uniform float uRaioDoHalo;
+uniform float uAlfaDoHalo;
 
 vec3 corPorId(float id) {
   if (id < ${COR.neon}.5) return id < ${COR.base}.5 ? uCorBase : uCorNeon;
@@ -238,31 +235,34 @@ vec3 corPorId(float id) {
 }
 
 void main() {
-  // Água: a onda das gotas desloca a leitura da grade (refração). Sem gota
-  // viva, o laço das gotas nem roda (uniform: o desvio é coerente na GPU).
-  vec4 onda = uGotasAtivas > 0.5 ? ondaDasGotas(gl_FragCoord.xy) : vec4(0.0);
-  vec2 pos = gl_FragCoord.xy - onda.xy * uCelula.x * ${GOTA.deslocamentoCelulas.toFixed(2)};
-  vec4 dado = lerCelula(celulaEm(pos));
-  float indice = byte(dado.r);
-  vec3 cor = corPorId(byte(dado.g));
-  float alfa = dado.b;
+  // Saída em sRGB com alfa pré-multiplicado.
+  vec4 saida = vec4(0.0);
 
-  // Crista da onda: um anel de glifos da rampa, puxado para o neon. Nunca passa
-  // do alfa de destaque — o limite que o teste de contraste garante.
-  // A altura raramente passa de 0,5 longe do centro: normaliza para o anel aparecer.
-  float crista = smoothstep(0.04, 0.45, onda.z);
-  float alfaOnda = uAlfaDestaque * crista;
-  if (alfaOnda > alfa) {
-    indice = ${GLIFO.rampaInicio}.0 + floor(crista * ${(GLIFO.rampaTotal - 0.01).toFixed(2)});
-    cor = mix(uCorBase, uCorNeon, crista);
-    alfa = alfaOnda;
+  // Depois da virada completa não há glifo: pula a leitura do atlas.
+  if (uVirada < 0.999) {
+    vec4 dado = lerCelula(celulaDaTela());
+    // Scanlines: uma linha de pixel a cada três, mais escura.
+    float scanline = 1.0 - 0.18 * step(2.0, mod(floor(gl_FragCoord.y), 3.0));
+    float cobertura = coberturaDoGlifo(byte(dado.r)) * dado.b * scanline;
+    saida = vec4(linearToOutputTexel(vec4(corPorId(byte(dado.g)), 1.0)).rgb * cobertura, cobertura);
   }
-  alfa = max(alfa, min(alfa * (1.0 + 0.6 * onda.w), uAlfaDestaque));
 
-  // Scanlines: uma linha de pixel a cada três, mais escura.
-  float scanline = 1.0 - 0.18 * step(2.0, mod(floor(gl_FragCoord.y), 3.0));
+  if (uCamadaAtiva > 0.5) {
+    // Um grão fino por pixel quebra o degradê liso do preenchimento (8 bits).
+    float grao = hashCelula(floor(gl_FragCoord.xy)) - 0.5;
+    vec4 camada = texture2D(uCamada, gl_FragCoord.xy / uResolucao) * uTetoDaCamada * (1.0 + 0.05 * grao);
 
-  gl_FragColor = vec4(cor, coberturaDoGlifoEm(indice, pos) * alfa * scanline);
-  #include <colorspace_fragment>
+    // Halos: luz suave atrás de cada monte, proporcional ao risco que resta.
+    vec4 halo = vec4(0.0);
+    for (int i = 0; i < 4; i++) {
+      vec2 d = (gl_FragCoord.xy - uHalos[i].xy) / uRaioDoHalo;
+      float brilho = exp(-dot(d, d)) * uHalos[i].z * uAlfaDoHalo;
+      halo += vec4(uCorDoHalo[i] * brilho, brilho);
+    }
+    vec4 fundo = camada + halo * (1.0 - camada.a);
+    saida += fundo * (1.0 - saida.a);
+  }
+
+  gl_FragColor = saida;
 }
 `;

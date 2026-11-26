@@ -58,7 +58,7 @@ export interface AvisoDTO {
 export interface CasamentoDTO {
   id: string;
   advisory: AvisoDTO;
-  asset: { id: string; displayName: string; kind: string; version: string | null };
+  asset: { id: string; displayName: string; kind: string; version: string | null; ecosystem: string | null; packageName: string | null };
   versionConfirmed: boolean;
   preexisting: boolean;
   fixedVersion: string | null;
@@ -134,7 +134,8 @@ export function toCasamentoDTO(m: CasamentoCompleto): CasamentoDTO {
   return {
     id: m.id,
     advisory: toAvisoDTO(m.advisory),
-    asset: { id: m.asset.id, displayName: m.asset.displayName, kind: m.asset.kind, version: m.asset.version },
+    // ADR-063 — ecossistema e pacote para a correção sugerida (o comando de atualização depende deles).
+    asset: { id: m.asset.id, displayName: m.asset.displayName, kind: m.asset.kind, version: m.asset.version, ecosystem: m.asset.ecosystem, packageName: m.asset.packageName },
     versionConfirmed: m.versionConfirmed,
     preexisting: m.preexisting,
     fixedVersion: m.fixedVersion,

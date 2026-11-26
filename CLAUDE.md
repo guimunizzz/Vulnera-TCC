@@ -181,6 +181,13 @@ Rotas como `/me`, `/current` e `/pending` devem preceder `/:id` quando compartil
 
 Se o padrão atual continuar usando `app.ts` + `server.ts`, preserve a separação: `app.ts` configura e exporta a aplicação sem `listen()`, enquanto `server.ts` inicia o servidor. Isso mantém integração com Supertest e outros testes sem abrir porta real.
 
+### 🎯 A7 — Fila de jobs (ADR-056)
+
+- O motor é escolhido por `QUEUE_DRIVER` (`memory` padrão, `bullmq`) via `makeJobQueue()`; não instancie `Queue`/`Worker` fora de `services/queue/`.
+- Workers só em `worker.ts` (chamado pelo `server.ts` ou por `npm run worker`), nunca no `app.ts`.
+- Payload de job leva só ids; o worker recarrega e reconfere no banco (inclusive a autorização do alvo, no disparo).
+- Contrato `JobQueue` só ganha método que os dois motores cumprem de verdade.
+
 ---
 
 ## 5. Multi-tenancy, ownership e segurança

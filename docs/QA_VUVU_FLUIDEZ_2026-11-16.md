@@ -13,7 +13,7 @@ Data: 2026-11-16. Branch `refactor/assistant-ui`, base `9504cd9`. O usuário del
 
 Sem backend, schema, permissões, dependências ou chave alterados. Reações não enviam dados ao Gemini nem geram chamadas extras. O sinal transporta apenas um dos dois tipos; não contém nomes, IDs, mensagens de erro, registros ou payloads. Captura da sessão no início da ação descarta resposta após logout/troca de sessão, inclusive novo login da mesma pessoa. Reações decorativas não rejeitam a operação de origem, não roubam foco e não abrem chat. Modo discreto/contextos restritivos têm precedência, sem fila para depois.
 
-Uma reação de erro também impede repetir a expressão de uma resposta antiga ao terminar. Com conversa aberta, envio pendente, arraste ou dança, as expressões atuais têm precedência. Decisão em [ADR-055](Vulnera/07-Decisoes/ADR-055%20-%20Reacoes%20locais%20e%20modo%20discreto%20da%20Vuvu.md).
+Uma reação de erro também impede repetir a expressão de uma resposta antiga ao terminar. Com conversa aberta, envio pendente, arraste ou dança, as expressões atuais têm precedência. Decisão em [ADR-065](Vulnera/07-Decisoes/ADR-065%20-%20Reacoes%20locais%20e%20modo%20discreto%20da%20Vuvu.md).
 
 ## Validação
 

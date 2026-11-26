@@ -8,10 +8,10 @@
  * e quando a cena monta, não o shader (validado no navegador).
  *
  *   LAND-01  a navbar da landing renderiza (marca "VULNERA")
- *   LAND-02  o CTA principal do hero leva pra /register
+ *   LAND-02  o CTA principal do hero leva pra /request-access
  *   LAND-03  as seções-âncora renderizam (como funciona, recursos, planos, time)
  *   LAND-04  o toggle de tema usa o ThemeProvider do app (estampa data-theme)
- *   LAND-05  os CTAs de plano levam pra /register
+ *   LAND-05  os CTAs de plano levam pra /request-access
  *   LAND-06  os links de LinkedIn do time abrem em nova aba com rel seguro
  *   LAND-08  sem WebGL2: pôster estático, nenhum canvas, nenhuma intro
  *   LAND-09  com WebGL2: um canvas da cena (lazy); movimento reduzido: pôster
@@ -101,16 +101,16 @@ describe("LandingPage", () => {
     expect(marcas.length).toBeGreaterThan(0);
   });
 
-  it("LAND-02 — o CTA principal do hero leva pra /register", async () => {
+  it("LAND-02 — o CTA principal do hero solicita acesso", async () => {
     renderLanding();
-    const cta = await screen.findByRole("link", { name: /INICIAR ANÁLISE/ }, ESPERA);
-    expect(cta).toHaveAttribute("href", "/register");
+    const cta = await screen.findByRole("link", { name: "SOLICITAR ACESSO →" }, ESPERA);
+    expect(cta).toHaveAttribute("href", "/request-access");
   });
 
   it("LAND-03 — as seções renderizam", async () => {
     renderLanding();
     expect(await screen.findByRole("heading", { name: "Como funciona" }, ESPERA)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Killer features" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "O que o Vulnera faz hoje" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Planos que cabem na sua empresa." }),
     ).toBeInTheDocument();
@@ -130,13 +130,15 @@ describe("LandingPage", () => {
     expect(document.documentElement.getAttribute("data-theme")).not.toBe(antes);
   });
 
-  it("LAND-05 — os CTAs de plano levam pra /register", async () => {
+  it("LAND-05 — os CTAs de plano levam pra solicitação de acesso", async () => {
     renderLanding();
-    const pro = await screen.findByRole("link", { name: "Começar com Pro" }, ESPERA);
-    expect(pro).toHaveAttribute("href", "/register");
-    expect(screen.getByRole("link", { name: "Começar com Basic" })).toHaveAttribute(
-      "href",
-      "/register",
+    const pro = await screen.findByRole("link", { name: "Solicitar acesso ao Pro" }, ESPERA);
+    expect(pro).toHaveAttribute("href", "/request-access");
+    expect(screen.getByRole("link", { name: "Solicitar acesso ao Basic" })).toHaveAttribute(
+      "href", "/request-access",
+    );
+    expect(screen.getByRole("link", { name: "Solicitar acesso ao Enterprise" })).toHaveAttribute(
+      "href", "/request-access",
     );
   });
 

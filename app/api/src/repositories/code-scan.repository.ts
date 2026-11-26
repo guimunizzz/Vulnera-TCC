@@ -137,6 +137,81 @@ export class CodeScanRepository {
     return this.prisma.codeFinding.findMany({ where: { importId }, select: SUMMARY_SELECT });
   }
 
+  // ==========================================================================
+  // Pré-triagem: sinais de outras fontes (lidos, nunca escritos por aqui)
+  // ==========================================================================
+
+  /**
+   * Advisories do Threat Intel para os ids dos achados SCA, chaveados pelo id
+   * que o ACHADO usa. O id do relatório pode ser o CVE (Trivy) ou o GHSA (npm
+   * audit, Grype): o que não casa pelo id é procurado nos aliases.
+   * `noInventario`: a empresa tem a mesma advisory casada num ThreatMatch.
+   */
+  async findAdvisorySignals(
+    companyId: string,
+    advisoryIds: string[],
+  ): Promise<Map<string, { id: string; kev: boolean; kevRansomware: boolean; epssScore: number | null; cvssVector: string | null; noInventario: boolean }>> {
+    const ids = [...new Set(advisoryIds.map((i) => i.toUpperCase()))].slice(0, 1000);
+    const out = new Map<string, { id: string; kev: boolean; kevRansomware: boolean; epssScore: number | null; cvssVector: string | null; noInventario: boolean }>();
+    if (ids.length === 0) return out;
+
+    const select = { id: true, aliases: true, kev: true, kevRansomware: true, epssScore: true, cvssVector: true } satisfies Prisma.ThreatAdvisorySelect;
+    const diretos = await this.prisma.threatAdvisory.findMany({ where: { id: { in: ids } }, select });
+    const achados = new Map<string, (typeof diretos)[number]>(diretos.map((a) => [a.id.toUpperCase(), a]));
+    const faltam = ids.filter((i) => !achados.has(i)).slice(0, 200);
+    if (faltam.length > 0) {
+      const porAlias = await this.prisma.threatAdvisory.findMany({ where: { OR: faltam.map((i) => ({ aliases: { array_contains: [i] } })) }, select });
+      for (const a of porAlias) {
+        const aliases = Array.isArray(a.aliases) ? a.aliases.map((x) => String(x).toUpperCase()) : [];
+        for (const i of faltam) if (aliases.includes(i) && !achados.has(i)) achados.set(i, a);
+      }
+    }
+
+    const casadas = await this.prisma.threatMatch.findMany({
+      where: { companyId, advisoryId: { in: [...new Set([...achados.values()].map((a) => a.id))] } },
+      select: { advisoryId: true },
+    });
+    const noInventario = new Set(casadas.map((m) => m.advisoryId));
+    for (const [pedido, a] of achados) {
+      out.set(pedido, { id: a.id, kev: a.kev, kevRansomware: a.kevRansomware, epssScore: a.epssScore, cvssVector: a.cvssVector, noInventario: noInventario.has(a.id) });
+    }
+    return out;
+  }
+
+  /**
+   * Vulnerabilities que o DAST confirmou na aplicação (promovidas por humano,
+   * ADR-032), com o CWE do achado DAST de origem. Recorte por applicationId:
+   * nada de outra aplicação — nem de outra empresa — entra no sinal.
+   */
+  async findDastConfirmedByApplication(applicationId: string): Promise<Array<{ vulnerabilityId: string; title: string; cweId: string }>> {
+    const rows = await this.prisma.vulnerability.findMany({
+      where: { applicationId, sourceType: "DAST_IMPORT", sourceDastFinding: { cweId: { not: null } } },
+      select: { id: true, title: true, sourceDastFinding: { select: { cweId: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    });
+    return rows.flatMap((r) => (r.sourceDastFinding?.cweId ? [{ vulnerabilityId: r.id, title: r.title, cweId: r.sourceDastFinding.cweId }] : []));
+  }
+
+  /**
+   * Grava a mesma triagem em vários achados de UMA importação, numa transação.
+   * Só toca quem ainda está NEW: se alguém triou um deles entre a tela e o
+   * clique, a decisão humana vence.
+   */
+  async triageMany(importId: string, groups: Array<{ ids: string[]; triageNote: string }>, input: { triageStatus: DastTriageStatus; triagedById: string; triagedAt: Date }): Promise<number> {
+    const results = await this.prisma.$transaction(
+      groups
+        .filter((g) => g.ids.length > 0)
+        .map((g) =>
+          this.prisma.codeFinding.updateMany({
+            where: { importId, id: { in: g.ids }, triageStatus: "NEW" },
+            data: { ...input, triageNote: g.triageNote, triageInherited: false },
+          }),
+        ),
+    );
+    return results.reduce((n, r) => n + r.count, 0);
+  }
+
   /**
    * Vulnerabilities já promovidas, no projeto, a partir de QUALQUER importação
    * com um destes fingerprints. É o que faz a dedup valer entre importações:

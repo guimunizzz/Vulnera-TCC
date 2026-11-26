@@ -14,19 +14,25 @@ import { paginaLazy } from "./lib/lazy-page";
  * página — `AppLayout` e `ProtectedRoute` — e a `LandingPage`, que já faz o
  * próprio `lazy()` da landing inteira.
  *
- * O cenário de acesso anima a troca login ↔ cadastro e foca o título no fim da
- * animação. Layout e as duas páginas vêm num só lote para que essa troca nunca
- * espere download (o que piscaria o cenário ou perderia o foco).
+ * O cenário de acesso anima a troca entre login, solicitação e confirmação, e
+ * foca o título no fim da animação. Layout e páginas públicas vêm num só lote
+ * para preservar o fundo e o foco durante a navegação entre esses formulários.
  */
 const carregarAcesso = () =>
   Promise.all([
     import("./pages/auth/auth-layout"),
     import("./pages/auth/login-page"),
     import("./pages/auth/register-page"),
+    import("./pages/auth/request-access-page"),
+    import("./pages/auth/verify-email-page"),
+    import("./pages/auth/activate-account-page"),
   ]);
 const AuthLayout = paginaLazy(() => carregarAcesso().then(([layout]) => layout), "AuthLayout");
 const LoginPage = paginaLazy(() => carregarAcesso().then(([, login]) => login), "LoginPage");
 const RegisterPage = paginaLazy(() => carregarAcesso().then(([, , cadastro]) => cadastro), "RegisterPage");
+const RequestAccessPage = paginaLazy(() => carregarAcesso().then(([, , , pagina]) => pagina), "RequestAccessPage");
+const VerifyEmailPage = paginaLazy(() => carregarAcesso().then(([, , , , pagina]) => pagina), "VerifyEmailPage");
+const ActivateAccountPage = paginaLazy(() => carregarAcesso().then(([, , , , , pagina]) => pagina), "ActivateAccountPage");
 
 const PlansPage = paginaLazy(() => import("./pages/plans-page"), "PlansPage");
 const OnboardingPage = paginaLazy(() => import("./pages/onboarding-page"), "OnboardingPage");
@@ -34,6 +40,7 @@ const DashboardPage = paginaLazy(() => import("./pages/dashboard-page"), "Dashbo
 const ApplicationsPage = paginaLazy(() => import("./pages/applications-page"), "ApplicationsPage");
 const ExposureGraphPage = paginaLazy(() => import("./pages/exposure-graph-page"), "ExposureGraphPage");
 const NewAnalysisPage = paginaLazy(() => import("./pages/new-analysis-page"), "NewAnalysisPage");
+const ConformidadePage = paginaLazy(() => import("./pages/conformidade-page"), "ConformidadePage");
 const ProjectsPage = paginaLazy(() => import("./pages/projects-page"), "ProjectsPage");
 const ProjectDetailPage = paginaLazy(() => import("./pages/project-detail-page"), "ProjectDetailPage");
 const FindingEditorPage = paginaLazy(() => import("./pages/finding-editor-page"), "FindingEditorPage");
@@ -43,6 +50,11 @@ const PendingSubscriptionsPage = paginaLazy(
   () => import("./pages/admin/pending-subscriptions-page"),
   "PendingSubscriptionsPage",
 );
+const AccessRequestsPage = paginaLazy(
+  () => import("./pages/admin/access-requests-page"),
+  "AccessRequestsPage",
+);
+const FilasPage = paginaLazy(() => import("./pages/admin/filas-page"), "FilasPage");
 const ApplicationDashboardPage = paginaLazy(
   () => import("./pages/application-dashboard-page"),
   "ApplicationDashboardPage",
@@ -56,6 +68,8 @@ const DastScanDetailPage = paginaLazy(() => import("./pages/dast-scan-detail-pag
 const DastScanReportPage = paginaLazy(() => import("./pages/dast-scan-report-page"), "DastScanReportPage");
 const SastScaPage = paginaLazy(() => import("./pages/sast-sca-page"), "SastScaPage");
 const ThreatIntelPage = paginaLazy(() => import("./pages/threat-intel-page"), "ThreatIntelPage");
+const TriagePage = paginaLazy(() => import("./pages/triage-page"), "TriagePage");
+const AgendamentosPage = paginaLazy(() => import("./pages/agendamentos-page"), "AgendamentosPage");
 const CodeImportDetailPage = paginaLazy(() => import("./pages/code-import-detail-page"), "CodeImportDetailPage");
 const SlaSettingsPage = paginaLazy(() => import("./pages/settings/sla-settings-page"), "SlaSettingsPage");
 const PlaybooksPage = paginaLazy(() => import("./pages/playbooks-page"), "PlaybooksPage");
@@ -66,6 +80,10 @@ const RemediationPage = paginaLazy(() => import("./pages/remediation-page"), "Re
 // ramo vira `null`, o `import()` some e o styleguide nem é empacotado.
 const StyleguidePage = import.meta.env.DEV
   ? paginaLazy(() => import("./pages/styleguide-page"), "StyleguidePage")
+  : null;
+// Mesmo regime do styleguide: laboratório de atmosferas 3D, fora do build de produção.
+const Lab3dPage = import.meta.env.DEV
+  ? paginaLazy(() => import("./pages/lab-3d-page"), "Lab3dPage")
   : null;
 import { ComMenuAcessibilidade } from "./design/accessibility-menu";
 
@@ -86,6 +104,9 @@ export function App() {
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/request-access" element={<RequestAccessPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/activate-account" element={<ActivateAccountPage />} />
           </Route>
           <Route path="/plans" element={<PlansPage />} />
 
@@ -94,6 +115,7 @@ export function App() {
               no bundle de produção o Vite elimina o ramo inteiro, e a página nem
               sequer é empacotada. */}
           {import.meta.env.DEV && StyleguidePage && <Route path="/styleguide" element={<StyleguidePage />} />}
+          {import.meta.env.DEV && Lab3dPage && <Route path="/lab-3d" element={<Lab3dPage />} />}
         </Route>
 
         <Route element={<ProtectedRoute />}>
@@ -119,6 +141,11 @@ export function App() {
               <Route path="/playbooks" element={<PlaybooksPage />} />
               {/* Threat Intel (ADR-053): os três papéis; empresa e permissões vêm da API. */}
               <Route path="/threat-intel" element={<ThreatIntelPage />} />
+              {/* Caixa de triagem única (ADR-062): os três papéis; cada um vê só o que pode triar em cada fonte (a API decide). */}
+              <Route path="/triagem" element={<TriagePage />} />
+              {/* Scans DAST agendados (ADR-056): os três papéis; CLIENT só lê a
+                  própria empresa. Quem vê e quem muda o quê, a API decide. */}
+              <Route path="/agendamentos" element={<AgendamentosPage />} />
               <Route path="/playbooks/:id" element={<PlaybookDetailPage />} />
 
               {/* Varredura global de findings — ferramenta de quem analisa.
@@ -135,9 +162,11 @@ export function App() {
               <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/applications/:id/dashboard" element={<ApplicationDashboardPage />} />
-              {/* Exposure Graph (CP-8): a empresa de quem está logado; o backend deriva do token. */}
-              <Route path="/exposure-graph" element={<ExposureGraphPage />} />
+                {/* Exposure Graph (CP-8): a empresa de quem está logado; o backend deriva do token. */}
+                <Route path="/exposure-graph" element={<ExposureGraphPage />} />
                 <Route path="/new-analysis" element={<NewAnalysisPage />} />
+                {/* Conformidade (ADR-063): mesmos papéis do Exposure Graph. */}
+                <Route path="/conformidade" element={<ConformidadePage />} />
                 {/* SLA (CP-2): governança da empresa — ADMIN e CLIENT (OWNER edita,
                     MEMBER lê; o backend reforça). PENTESTER não chega aqui. */}
                 <Route path="/settings/sla" element={<SlaSettingsPage />} />
@@ -152,6 +181,9 @@ export function App() {
 
               <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
                 <Route path="/admin/subscriptions" element={<PendingSubscriptionsPage />} />
+                <Route path="/admin/access-requests" element={<AccessRequestsPage />} />
+                {/* ADR-056 — painel de filas restrito a ADMIN. */}
+                <Route path="/admin/filas" element={<FilasPage />} />
               </Route>
 
               {/* Módulo DAST — não existe pro CLIENT: nem item de menu, nem rota

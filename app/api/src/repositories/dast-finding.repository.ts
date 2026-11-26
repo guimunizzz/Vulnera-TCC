@@ -61,4 +61,16 @@ export class DastFindingRepository {
       select: { id: true, fingerprint: true, title: true, risk: true, url: true, param: true },
     });
   }
+
+  /**
+   * Fingerprints de VÁRIOS scans numa consulta só: o histórico de um agendamento
+   * compara uma execução com a anterior sem uma consulta por scan (N+1).
+   */
+  async findFingerprintsByScanIds(scanIds: string[]): Promise<Array<{ scanId: string; fingerprint: string }>> {
+    if (scanIds.length === 0) return [];
+    return this.prisma.dastFinding.findMany({
+      where: { scanId: { in: scanIds } },
+      select: { scanId: true, fingerprint: true },
+    });
+  }
 }

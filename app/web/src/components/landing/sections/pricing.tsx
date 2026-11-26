@@ -7,6 +7,10 @@
  * branch). Quando for ligar na API, trocar `PLANS` por `plansApi.list()` +
  * `useQuery(["plans"])` — a mesma queryKey de `plans-page.tsx` — e formatar
  * preço/limites a partir do `Plan`.
+ *
+ * Preços e limites espelham `app/api/prisma/seed.ts` (conferido em
+ * 2026-11-15). Saíram "Sugestões por IA (em breve)" (ADR-017) e os itens de
+ * suporte/SLA comercial, que o produto não implementa.
  */
 
 import { Link } from "react-router-dom";
@@ -30,8 +34,8 @@ const PLANS: Plan[] = [
   {
     name: "BASIC",
     price: "R$ 499/mês",
-    features: ["2 aplicações", "1 projeto simultâneo", "Suporte por e-mail", "Relatórios PDF"],
-    cta: "Começar com Basic",
+    features: ["2 aplicações", "1 projeto simultâneo", "DAST, SAST/SCA e Threat Intel", "Relatórios PDF e Excel"],
+    cta: "Solicitar acesso ao Basic",
     highlight: false,
     softAccent: false,
   },
@@ -42,19 +46,17 @@ const PLANS: Plan[] = [
       "5 aplicações",
       "3 projetos simultâneos",
       "Serviço de remediação incluso",
-      "Sugestões por IA (em breve)",
-      "Relatórios PDF",
-      "Suporte prioritário",
+      "Tudo do Basic",
     ],
-    cta: "Começar com Pro",
+    cta: "Solicitar acesso ao Pro",
     highlight: true,
     softAccent: false,
   },
   {
     name: "ENTERPRISE",
     price: "Sob consulta",
-    features: ["Aplicações ilimitadas", "Projetos ilimitados", "SLA dedicado", "Tudo do Pro"],
-    cta: "Falar com vendas",
+    features: ["Até 999 aplicações", "Até 999 projetos simultâneos", "Serviço de remediação incluso", "Tudo do Pro"],
+    cta: "Solicitar acesso ao Enterprise",
     highlight: false,
     softAccent: true,
   },
@@ -91,7 +93,9 @@ export default function Pricing() {
           <TituloDecodificado className="text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
             Planos que cabem na sua empresa.
           </TituloDecodificado>
-          <p className="mt-4 text-[var(--vx-text-2)]">Comece pelo Basic, escale quando precisar.</p>
+          <p className="mt-4 text-[var(--vx-text-2)]">
+            Você solicita o plano na plataforma e um administrador aprova. Sem pagamento online nesta versão.
+          </p>
         </Reveal>
 
         <div className="mt-16 grid grid-cols-1 items-stretch gap-8 md:grid-cols-3">
@@ -132,7 +136,7 @@ export default function Pricing() {
                 </ul>
 
                 <MotionLink
-                  to="/register"
+                  to="/request-access"
                   whileTap={{ scale: ESCALA_LANDING.toque }}
                   className={`mt-10 rounded-[6px] px-6 py-3 text-center font-mono text-sm font-bold tracking-wide transition-all duration-[300ms] ${
                     plan.highlight

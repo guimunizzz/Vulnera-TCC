@@ -1,0 +1,129 @@
+/**
+ * dast-schedule.types.ts — scans DAST agendados (ADR-056), espelho dos DTOs
+ * de `dast-schedule.service.ts`. O cron nunca chega aqui: a tela fala em
+ * frequência, dia e horário, e o servidor gera o padrão.
+ */
+
+export type ModoAgendamento = "REAL" | "SIMULATED";
+export type FrequenciaAgendamento = "DAILY" | "WEEKLY";
+
+/** Por que a autorização não vale (null = vigente). */
+export type ProblemaAutorizacao = "AUTHORIZATION_MISSING" | "AUTHORIZATION_EXPIRED" | "HOST_MISMATCH" | "APPLICATION_WITHOUT_URL";
+
+export interface AutorizacaoDast {
+  applicationId: string;
+  authorizedAt: string | null;
+  authorizedById: string | null;
+  until: string | null;
+  host: string | null;
+  currentHost: string | null;
+  problem: ProblemaAutorizacao | null;
+  canEdit: boolean;
+}
+
+export interface Agendamento {
+  id: string;
+  /** null nos agendamentos só por URL. */
+  applicationId: string | null;
+  companyId: string | null;
+  /** Preenchido só nos agendamentos por URL. */
+  targetUrl: string | null;
+  projectId: string | null;
+  mode: ModoAgendamento;
+  frequency: FrequenciaAgendamento;
+  hour: number;
+  minute: number;
+  /** 0 = domingo … 6 = sábado; só em WEEKLY. */
+  dayOfWeek: number | null;
+  timezone: string;
+  enabled: boolean;
+  createdById: string;
+  lastRunAt: string | null;
+  lastScanId: string | null;
+  /** STARTED, SCAN_FAILED ou o motivo de não ter rodado (AUTHORIZATION_EXPIRED, TARGET_BUSY…). */
+  lastOutcome: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgendamentoVisivel extends Agendamento {
+  /** APPLICATION: URL da aplicação, autorização conferida a cada execução. URL: alvo solto, visível ao time. */
+  kind: "APPLICATION" | "URL";
+  /** URL que vai ser escaneada. */
+  url: string | null;
+  application: { id: string; name: string; url: string | null; companyName: string; active: boolean } | null;
+  projectName: string | null;
+  /** null nos agendamentos por URL: lá vale a confirmação de quem criou. */
+  authorization: { until: string | null; host: string | null; problem: ProblemaAutorizacao | null } | null;
+  nextRunAt: string | null;
+  canEdit: boolean;
+}
+
+export interface PainelAgendamentos {
+  /** false = QUEUE_DRIVER=memory: o cadastro funciona, mas nada dispara sozinho. */
+  runsSchedules: boolean;
+  canCreate: boolean;
+  schedules: AgendamentoVisivel[];
+}
+
+export interface AlvoDast {
+  applicationId: string;
+  name: string;
+  url: string | null;
+  companyName: string;
+  authorization: AutorizacaoDast;
+  projects: { id: string; name: string }[];
+  projectRequired: boolean;
+}
+
+/** Campos editáveis de "quando". */
+export interface QuandoAgendamento {
+  frequency: FrequenciaAgendamento;
+  hour: number;
+  minute: number;
+  dayOfWeek: number | null;
+  timezone: string;
+}
+
+export interface NovoAgendamentoPorUrlInput extends QuandoAgendamento {
+  targetUrl: string;
+  mode: ModoAgendamento;
+  /** A pessoa confirma que tem autorização para testar a URL (vai para o AuditLog). */
+  confirmedAuthorization: true;
+}
+
+export interface NovoAgendamentoInput extends QuandoAgendamento {
+  mode: ModoAgendamento;
+  projectId?: string | null;
+  enabled?: boolean;
+}
+
+export type EdicaoAgendamentoInput = Partial<QuandoAgendamento> & { enabled?: boolean };
+
+/** "Rodar agora": o desfecho (o mesmo código de lastOutcome) e o scan criado, quando houve. */
+export interface ResultadoRodarAgora {
+  outcome: string;
+  scanId: string | null;
+}
+
+/** Diff por fingerprint contra a execução COMPLETED anterior do agendamento. */
+export interface DiffExecucao {
+  novos: number;
+  resolvidos: number;
+  persistentes: number;
+}
+
+/** Uma execução do agendamento, no histórico. */
+export interface ExecucaoAgendamento {
+  id: string;
+  status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+  simulated: boolean;
+  createdAt: string;
+  finishedAt: string | null;
+  alertsHigh: number;
+  alertsMedium: number;
+  alertsLow: number;
+  alertsInfo: number;
+  /** null quando a execução não é COMPLETED ou não há COMPLETED anterior. */
+  diff: DiffExecucao | null;
+}

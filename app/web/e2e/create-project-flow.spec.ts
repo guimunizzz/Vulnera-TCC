@@ -7,6 +7,7 @@
  *
  * ⚠️ Os registros de setup usam um marcador exclusivo e ficam preservados no banco.
  * Não há reset nem cleanup: AuditLog é append-only e a stack alvo pode conter dados do usuário.
+ * O CLIENT de E2E é vinculado à empresa; reprovisione-o ao recriar o banco descartável antes de outra execução.
  */
 
 import { expect, test, type APIRequestContext, type APIResponse, type Locator, type Page } from "@playwright/test";
@@ -51,13 +52,13 @@ type Project = { id: string; name: string; applicationId: string; companyId: str
 
 type Setup = {
   marker: string;
-  clientEmail: string;
-  clientPassword: string;
   companyId: string;
   applicationA: Application;
   applicationB: Application;
   adminToken: string;
 };
+
+type ProjectOwnerFixture = { email: string; password: string };
 
 type RateLimitObservation = { path: string; retryAfterMs: number };
 const rateLimitObservations = new WeakMap<Page, RateLimitObservation[]>();
@@ -165,21 +166,39 @@ async function apiLogin(
   password: string,
 ): Promise<AuthResult> {
   const response = await request.post(`${API_URL}/auth/login`, { data: { email, password } });
-  return jsonResponse<AuthResult>(response);
+  if (!response.ok()) {
+    throw new Error(`Login da conta E2E provisionada falhou (HTTP ${response.status()}); credenciais omitidas.`);
+  }
+  try {
+    return JSON.parse(await response.text()) as AuthResult;
+  } catch {
+    throw new Error("Login da conta E2E provisionada retornou uma resposta inválida; credenciais omitidas.");
+  }
 }
 
-async function criarDadosIsolados(request: APIRequestContext): Promise<Setup> {
+function credenciaisDoOwnerE2E(): ProjectOwnerFixture {
+  const email = process.env.E2E_PROJECT_OWNER_EMAIL?.trim();
+  const password = process.env.E2E_PROJECT_OWNER_PASSWORD;
+  if (!email || !password || password.trim().length === 0) {
+    throw new Error(
+      "Fixture obrigatória ausente: configure E2E_PROJECT_OWNER_EMAIL e E2E_PROJECT_OWNER_PASSWORD para um CLIENT exclusivo do banco descartável, ainda sem empresa; credenciais omitidas.",
+    );
+  }
+  return { email, password };
+}
+
+async function criarDadosIsolados(
+  request: APIRequestContext,
+  ownerFixture: ProjectOwnerFixture,
+): Promise<Setup> {
   const marker = marcador();
   const applicationBUrl = `https://vulnera.test/${"a".repeat(130)}`;
-  const clientEmail = `${marker.toLowerCase()}@vulnera.test`;
-  const clientPassword = `Vulnera-${Math.random().toString(36).slice(2, 10)}-20!`;
-
-  const registered = await request.post(`${API_URL}/auth/register`, {
-    data: { name: `${marker} Owner`, email: clientEmail, password: clientPassword },
-  });
-  const client = await jsonResponse<AuthResult>(registered);
+  const client = await apiLogin(request, ownerFixture.email, ownerFixture.password);
   expect(client.user.role).toBe("CLIENT");
-  expect(client.user.companyId).toBeNull();
+  expect(
+    client.user.companyId,
+    "CLIENT de E2E deve começar sem empresa; reprovisione-o ao recriar o banco descartável antes de outra execução",
+  ).toBeNull();
 
   const plansResponse = await request.get(`${API_URL}/plans`);
   const plans = await jsonResponse<Plan[]>(plansResponse);
@@ -223,13 +242,13 @@ async function criarDadosIsolados(request: APIRequestContext): Promise<Setup> {
   expect(applicationA.companyId).toBe(company.id);
   expect(applicationB.companyId).toBe(company.id);
 
-  return { marker, clientEmail, clientPassword, companyId: company.id, applicationA, applicationB, adminToken: admin.accessToken };
+  return { marker, companyId: company.id, applicationA, applicationB, adminToken: admin.accessToken };
 }
 
 async function loginPelaInterface(page: Page, email: string, password: string): Promise<void> {
   await page.goto(new URL("/login", BASE_URL).toString());
   await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(password);
+  await page.locator('input[name="password"]').fill(password);
   await page.getByRole("button", { name: "Entrar" }).click();
   await page.waitForURL(/\/dashboard|\/onboarding/, { timeout: 30_000 });
 }
@@ -293,7 +312,8 @@ test("E2E-ISSUE20 — ADMIN e CLIENT criam pela mesma stack; origem, cancelament
   browser,
   request,
 }) => {
-  const setup = await criarDadosIsolados(request);
+  const ownerFixture = credenciaisDoOwnerE2E();
+  const setup = await criarDadosIsolados(request, ownerFixture);
   const projectNameAdmin = `${setup.marker} Project via Projetos`;
   const projectNameClient = `${setup.marker} Project via Aplicações`;
   const adminPage = await browser.newPage({ baseURL: BASE_URL, viewport: { width: 1440, height: 1000 } });
@@ -406,7 +426,7 @@ test("E2E-ISSUE20 — ADMIN e CLIENT criam pela mesma stack; origem, cancelament
     await expect(adminPage.getByRole("link", { name: projectNameAdmin })).toBeVisible();
 
     // CLIENT isolado: cancelar em todas as quatro etapas não envia POST.
-    await loginPelaInterface(clientPage, setup.clientEmail, setup.clientPassword);
+    await loginPelaInterface(clientPage, ownerFixture.email, ownerFixture.password);
     await expect(clientPage).toHaveURL(/\/dashboard|\/onboarding/);
     for (let passo = 1; passo <= 4; passo++) {
       await abrirNovaAnaliseDeAplicacoes(clientPage, setup.applicationB.name);

@@ -41,7 +41,7 @@ Vulnera. Fontes: identidade autorizada e descrição de produto vigente. Intenç
 completas são tratadas localmente; abreviações são normalizadas por palavra.
 Um pedido que começa com saudação continua passando pela seleção de ajuda.
 Perguntas não reconhecidas pedem esclarecimento, sem botões operacionais alheios.
-Regras de privacidade/perfis continuam anteriores à geração. ADR-056 registra a
+Regras de privacidade/perfis continuam anteriores à geração. ADR-066 registra a
 separação entre proteção HTTP e orçamento de geração, sem aumentar cotas.
 
 ## Ampliação da Vuvu — 2026-11-16

@@ -1,4 +1,5 @@
-/* CyberGraph 2D: grade de pontos do palco e fluxo nas arestas do caminho selecionado.
+/* CyberGraph 2D: grade de pontos do palco, fluxo nas arestas do caminho selecionado,
+   halo/ping/pacotes do acabamento e o palco com radar do Exposure Graph.
    Cores só por token, para os dois temas. */
 .cg-palco {
   background-color: oklch(var(--color-bg-canvas));
@@ -29,9 +30,68 @@
   opacity: 1;
 }
 
+/* Halo do nó crítico: respira devagar (o alto brilha parado). */
+@keyframes cg-pulso {
+  0%, 100% { opacity: 0.55; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+.cg-pulso {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cg-pulso 3.2s ease-in-out infinite;
+}
+
+/* Ping de radar na seleção: o anel abre a partir do nó e some. */
+@keyframes cg-ping {
+  from { opacity: 0.85; transform: scale(1); }
+  to { opacity: 0; transform: scale(2.8); }
+}
+.cg-ping {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cg-ping 2.4s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+}
+.cg-ping-atraso {
+  animation-delay: 1.2s;
+}
+
+/* Palco do Exposure Graph: o fundo acompanha (D21.3). Levemente translúcido,
+   deixa o relevo da atmosfera aparecer por trás; por cima dele, anéis de
+   alcance e uma varredura lenta de radar. Tudo atrás do SVG (isolation). */
+.cg-palco--radar {
+  isolation: isolate;
+  overflow: hidden;
+  background-color: oklch(var(--color-bg-canvas) / 0.86);
+}
+.cg-palco--radar::before,
+.cg-palco--radar::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+.cg-palco--radar::after {
+  inset: 0;
+  background: repeating-radial-gradient(circle at 50% 50%, transparent 0 7.4rem, oklch(var(--color-ambient-ink) / 0.14) 7.4rem 7.47rem);
+  mask-image: radial-gradient(circle at 50% 50%, black 0, black 40%, transparent 75%);
+}
+/* Quadrado maior que o palco: girar não expõe os cantos. */
+.cg-palco--radar::before {
+  inset: -60%;
+  background: conic-gradient(from 0deg, oklch(var(--color-ambient-cyan) / 0.11), oklch(var(--color-ambient-cyan) / 0.02) 14%, transparent 22%);
+  mask-image: radial-gradient(circle at 50% 50%, black 0, black 22%, transparent 38%);
+  animation: cg-varredura 16s linear infinite;
+}
+@keyframes cg-varredura {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cg-fluxo,
-  .cg-entrar {
+  .cg-entrar,
+  .cg-pulso,
+  .cg-ping,
+  .cg-palco--radar::before {
     animation: none;
   }
 }

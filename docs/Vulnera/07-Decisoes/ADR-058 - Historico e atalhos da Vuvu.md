@@ -48,6 +48,6 @@ alheio também pode ser reconhecido antes da recuperação de ajuda.
 
 ## Relacionado
 
-- ADR-056 — Conversa básica e cota de geração da Vuvu.
-- ADR-057 — Prioridade do Gemini na conversa da Vuvu.
+- ADR-066 — Conversa básica e cota de geração da Vuvu.
+- ADR-067 — Prioridade do Gemini na conversa da Vuvu.
 - `docs/ASSISTENTE_VULNERA.md`.

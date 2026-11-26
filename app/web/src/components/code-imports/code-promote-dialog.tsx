@@ -103,6 +103,8 @@ export function CodePromoteDialog({
   const jaPromovido = finding.promotedVulnerability ?? (draftQuery.data?.alreadyPromotedTo ? { id: draftQuery.data.alreadyPromotedTo } : null);
   const previa = previaDoScore(cvssVector);
   const doFerramenta = draftQuery.data?.cvssVectorSource === "TOOL";
+  const doNvd = draftQuery.data?.cvssVectorSource === "NVD";
+  const sinais = draftQuery.data?.sinais ?? [];
   const podeSalvar = !!title.trim() && !!description.trim() && !!previa;
 
   return (
@@ -138,6 +140,17 @@ export function CodePromoteDialog({
         >
           {erro && <Alert tom="perigo">{erro}</Alert>}
 
+          {sinais.length > 0 && (
+            <Alert tom="perigo" titulo="Outras fontes confirmam o risco">
+              <ul className="list-disc pl-5">
+                {sinais.map((s) => (
+                  <li key={s.tipo}>{s.detalhe}</li>
+                ))}
+              </ul>
+              <span className="mt-1 block text-xs">Os sinais já estão na descrição abaixo.</span>
+            </Alert>
+          )}
+
           <Field rotulo="Título" obrigatorio>
             {(attrs) => <Input {...attrs} value={title} maxLength={191} onChange={(e) => setTitle(e.target.value)} />}
           </Field>
@@ -151,7 +164,12 @@ export function CodePromoteDialog({
             {(attrs) => <Input {...attrs} value={cvssVector} onChange={(e) => setCvssVector(e.target.value)} className="font-mono text-xs" />}
           </Field>
 
-          {doFerramenta ? (
+          {doNvd ? (
+            <Alert tom="info" titulo="Vetor do NVD (via Threat Intel)">
+              O relatório não trouxe vetor; este é o que o NVD publicou para a CVE. Ele descreve a CVE em geral, não o seu contexto:
+              ajuste se o componente não está exposto ou se o trecho vulnerável não é usado.
+            </Alert>
+          ) : doFerramenta ? (
             <Alert tom="info" titulo="Vetor informado pela ferramenta">
               Este vetor veio do relatório (ex.: NVD via Trivy). Ele descreve a CVE em geral, não o seu contexto: ajuste se o
               componente não está exposto ou se o trecho vulnerável não é usado.

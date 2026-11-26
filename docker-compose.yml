@@ -1,7 +1,7 @@
 # Stack completa (banco + API + web + Mailhog) sobe junta com um comando:
 #   docker compose up --build
 # Acesso: web http://localhost:8086 (ENTRADA DO APP) · API http://localhost:3001/api ·
-# MySQL localhost:3307 · Mailhog http://localhost:8025
+# MySQL localhost:3307 · Mailhog http://localhost:8025 · Redis: só na rede interna
 #
 # ⚠️ Porta de entrada é 8086, não 3000 (decisão de 2026-09-06, ver ADR-022 §
 # atualização). Só o mapeamento HOST do serviço `web` mudou — internamente o
@@ -54,6 +54,11 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_troque_em_producao_9876543210}
       JWT_REFRESH_TTL: 7d
       BCRYPT_COST: "12"
+      # Credenciais Turnstile ficam somente no runtime da API, nunca no build web.
+      # Sem segredo, o fluxo protegido permanece fail-closed.
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      TURNSTILE_EXPECTED_ACTION: ${TURNSTILE_EXPECTED_ACTION:-}
+      TURNSTILE_EXPECTED_HOSTNAME: ${TURNSTILE_EXPECTED_HOSTNAME:-}
       # Precisa ser o endereço que o NAVEGADOR usa (a porta de entrada, 8086),
       # não a porta interna do container `web` (3000) — é o header `Origin`
       # que o browser envia em toda requisição à API que o middleware `cors`
@@ -99,6 +104,21 @@ services:
       DAST_ZAP_STARTUP_TIMEOUT_MS: "${DAST_ZAP_STARTUP_TIMEOUT_MS:-180000}"
       DAST_FORCE_SIMULATE: "false"
       NVD_API_KEY: "${NVD_API_KEY:-}"
+      # Threat Intel (ADR-053): liga/desliga e intervalo (mínimo 15 min). Com
+      # QUEUE_DRIVER=bullmq viram o job scheduler `threat-intel-sync` (ADR-056).
+      THREAT_INTEL_SYNC_ENABLED: "${THREAT_INTEL_SYNC_ENABLED:-true}"
+      THREAT_INTEL_SYNC_INTERVAL_MIN: "${THREAT_INTEL_SYNC_INTERVAL_MIN:-360}"
+      # ---------------------------------------------------------------------
+      # Fila de jobs (ADR-056). memory = comportamento de sempre (watchdog em
+      # memória + setInterval da Threat Intel); bullmq = fila no Redis abaixo.
+      # Voltar atrás: QUEUE_DRIVER=memory e `docker compose up -d api`.
+      # ---------------------------------------------------------------------
+      QUEUE_DRIVER: "${QUEUE_DRIVER:-memory}"
+      # Mesma senha do serviço redis. Só é lida com QUEUE_DRIVER=bullmq.
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-dev_redis_troque_em_producao_0123456789}@redis:6379"
+      # false = a API não sobe os workers; eles rodam num serviço próprio com
+      # `command: npm run worker` (mesma imagem, sem mudar código).
+      WORKER_IN_PROCESS: "${WORKER_IN_PROCESS:-true}"
       # Alvos HTTP/HTTPS internos e públicos são aceitos. O endereço precisa
       # ser alcançável pela rede do container do ZAP (ver docs/DAST.md).
     ports:
@@ -118,6 +138,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      # Com bullmq a API conecta no boot; esperar o Redis saudável evita um
+      # erro de conexão inútil no log. Com memory o Redis só fica parado.
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
       interval: 5s
@@ -132,6 +156,9 @@ services:
         # endereço que o NAVEGADOR (no host) usa — não o nome do serviço Docker.
         # Vite embute isso no bundle em build time, não dá pra trocar depois.
         VITE_API_URL: http://localhost:3001/api
+        # Chave pública e action entram no build do web; sem chave, o widget bloqueia.
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
+        VITE_TURNSTILE_ACTION: ${VITE_TURNSTILE_ACTION:-access-request}
     container_name: vulnera-web
     ports:
       # host 8086 -> container 3000: 8086 é a PORTA DE ENTRADA do app inteiro
@@ -141,6 +168,32 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+  # Fila de jobs do BullMQ (ADR-056). Redis 8.8 (licença escolhida: AGPLv3,
+  # dentre RSALv2/SSPLv1/AGPLv3), sem modificação, como serviço separado.
+  #   - SEM `ports:` de propósito: só a rede interna vulnera-net alcança.
+  #   - Senha obrigatória (REDIS_PASSWORD, default de dev no padrão dos JWT_*).
+  #   - noeviction: única política com que o BullMQ funciona corretamente
+  #     (https://docs.bullmq.io/guide/going-to-production) — com memória cheia
+  #     o Redis recusa escrita em vez de apagar job em silêncio.
+  #   - appendonly: a fila sobrevive a restart do container.
+  redis:
+    image: redis:8.8.4-alpine
+    container_name: vulnera-redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-dev_redis_troque_em_producao_0123456789}
+      # redis-cli lê a senha daqui: o healthcheck não precisa de -a na linha de comando.
+      REDISCLI_AUTH: ${REDIS_PASSWORD:-dev_redis_troque_em_producao_0123456789}
+    # $$ = o compose passa "$" literal e o shell do container expande a
+    # variável, então a senha não aparece no `command` do `docker inspect`.
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction"]
+    volumes:
+      - vulnera-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   mailhog:
     image: mailhog/mailhog:v1.0.1
@@ -153,6 +206,7 @@ volumes:
   vulnera-db-data:
   vulnera-api-uploads:
   vulnera-api-dast-reports:
+  vulnera-redis-data:
 
 # Rede com NOME FIXO (sem isso o compose geraria "vulnera-tcc_default", que
 # depende do nome da pasta do projeto). O nome precisa ser previsível porque a

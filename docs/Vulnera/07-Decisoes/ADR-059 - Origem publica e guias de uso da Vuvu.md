@@ -36,6 +36,6 @@ separação de dados e o controle de permissões são as fronteiras de acesso.
 
 ## Relacionado
 
-- ADR-057 — Prioridade do Gemini na conversa da Vuvu.
+- ADR-067 — Prioridade do Gemini na conversa da Vuvu.
 - ADR-058 — Histórico e atalhos da Vuvu.
 - `docs/ASSISTENTE_CONTEUDO_PRODUTO.md`.

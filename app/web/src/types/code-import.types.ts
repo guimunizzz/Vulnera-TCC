@@ -61,6 +61,38 @@ export interface CodeFinding {
   triagedAt: string | null;
   triageInherited: boolean;
   promotedVulnerability: PromotedVulnerability | null;
+  /** Calculada pela API na leitura: contexto do arquivo, sinais de outras fontes e sugestão (só para NEW). */
+  preTriagem: PreTriagem;
+}
+
+/** Onde o achado está. Tudo que não é PRODUCAO recebe sugestão de falso-positivo. */
+export type CodeContext = "PRODUCAO" | "TESTE" | "FIXTURE" | "DOCUMENTACAO" | "GERADO" | "SCRIPT";
+
+export const CODE_CONTEXT_LABELS: Record<CodeContext, string> = {
+  PRODUCAO: "produção",
+  TESTE: "teste",
+  FIXTURE: "fixture",
+  DOCUMENTACAO: "documentação",
+  GERADO: "artefato gerado",
+  SCRIPT: "script/seed",
+};
+
+export interface CodeSignal {
+  tipo: "KEV" | "EPSS" | "DAST_CONFIRMADO" | "THREAT_INTEL";
+  forte: boolean;
+  detalhe: string;
+  vulnerabilityId?: string;
+}
+
+export interface PreTriagem {
+  contexto: CodeContext;
+  sinais: CodeSignal[];
+  sugestao: { tipo: "FALSO_POSITIVO" | "PROVAVEL_VULNERABILIDADE"; motivo: string } | null;
+}
+
+export interface CodeAcceptSuggestionsResult {
+  accepted: number;
+  byContext: Partial<Record<CodeContext, number>>;
 }
 
 export interface CodePromotionDraft {
@@ -68,7 +100,9 @@ export interface CodePromotionDraft {
   description: string;
   owaspCategory: string;
   cvssVector: string;
-  cvssVectorSource: "TOOL" | "SEVERITY";
+  /** NVD: o relatório não trouxe vetor e ele veio do Threat Intel. */
+  cvssVectorSource: "TOOL" | "SEVERITY" | "NVD";
+  sinais: CodeSignal[];
   recommendation: string | null;
   impact: string | null;
   alreadyPromotedTo: string | null;

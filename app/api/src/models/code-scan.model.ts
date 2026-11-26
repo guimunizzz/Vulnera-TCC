@@ -8,6 +8,7 @@
 import type { DastTriageStatus } from "@prisma/client";
 import type { CodeFindingWithRelations, CodeScanImportWithUploader } from "../repositories/code-scan.repository";
 import type { CodeCategory, CodeReportFormat, CodeSeverity } from "../utils/code-import.util";
+import type { PreTriagem } from "../utils/code-pretriage.util";
 
 export type PromotedVulnerabilityRef = { id: string; projectId: string; severityFinal: string; status: string };
 
@@ -69,6 +70,8 @@ export interface CodeFindingResponseDTO {
    * anterior do projeto) já virou. null = ainda não promovido.
    */
   promotedVulnerability: PromotedVulnerabilityRef | null;
+  /** Contexto do arquivo, sinais de outras fontes e sugestão (só para NEW). Calculado na leitura. */
+  preTriagem: PreTriagem;
 }
 
 export function emptySeverityCounts(): Record<CodeSeverity, number> {
@@ -102,7 +105,11 @@ export function toImportResponse(
   };
 }
 
-export function toFindingResponse(f: CodeFindingWithRelations, promotedElsewhere?: PromotedVulnerabilityRef): CodeFindingResponseDTO {
+export function toFindingResponse(
+  f: CodeFindingWithRelations,
+  preTriagem: PreTriagem,
+  promotedElsewhere?: PromotedVulnerabilityRef,
+): CodeFindingResponseDTO {
   return {
     id: f.id,
     importId: f.importId,
@@ -133,5 +140,6 @@ export function toFindingResponse(f: CodeFindingWithRelations, promotedElsewhere
     triagedAt: f.triagedAt?.toISOString() ?? null,
     triageInherited: f.triageInherited,
     promotedVulnerability: f.promotedVulnerability ?? promotedElsewhere ?? null,
+    preTriagem,
   };
 }

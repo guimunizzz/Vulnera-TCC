@@ -35,7 +35,7 @@ Código: `7388ba0`, autor e committer `iannxz`.
   largura disponível e ações separadas. Evita quebrar as palavras do contexto
   em fragmentos no tamanho 200%, preservando foco, contraste e alvos de 44px.
 
-ADR-056 registra a substituição parcial da política original da ADR-054.
+ADR-066 registra a substituição parcial da política original da ADR-064.
 Não há schema, dependências, credencial ou permissão nova; atlas e animações
 preservados. Não aumentados valores de geração nem tokens. O aproveitamento da
 cota pode aumentar porque ajuda local deixa de consumi-la; não é promessa de

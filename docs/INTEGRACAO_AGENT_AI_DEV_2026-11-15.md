@@ -37,7 +37,7 @@ O assistente agora reconhece `sast-sca`, `code-import-detail`, `threat-intel` e 
 - Threat Intel: atalho para os três perfis; escrita, promoção e sincronização continuam sujeitas à API. Somente ADMIN sincroniza; CLIENT OWNER/MEMBER mantêm suas diferenças.
 - Exposure Graph: atalho somente para ADMIN/CLIENT; é necessário vínculo com empresa. PENTESTER recebe orientação sobre a restrição.
 - `vulnerability.service.ts`: removidos apenas `UserEntity` e `UserResponseDTO`, não usados. **O JavaScript compilado desse arquivo continuou idêntico (SHA-256 antes/depois)**; nenhum método ou resposta mudou.
-- A ADR do assistente passou de ADR-048 para **ADR-054**, com links corrigidos. A ADR-048 do grafo DAST da dev ficou intacta. As menções numéricas antigas do assistente são registros históricos da identificação original.
+- A ADR do assistente passou de ADR-048 para **ADR-054**, com links corrigidos. A ADR-048 do grafo DAST da dev ficou intacta. As menções numéricas antigas registram o histórico. Desde a integração de 26/11, a decisão do assistente é ADR-064.
 
 ## Provas de preservação
 

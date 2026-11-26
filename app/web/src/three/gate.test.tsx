@@ -7,6 +7,8 @@
  *   KIT-15  abaixo da largura mínima configurável não monta
  *   KIT-16  sem WebGL2 não monta (o chunk de three nem é pedido)
  *   KIT-17  alto contraste do menu de acessibilidade não monta (texto AAA)
+ *   KIT-18  useModoDeCena: pôster no lugar da cena (movimento reduzido, tela
+ *           estreita, sem WebGL2) e nenhuma decoração com alto contraste
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,7 +19,7 @@ import { definirPreferencias, restaurarPreferencias } from "../design/accessibil
 const preferencia = vi.hoisted(() => ({ reduzido: false }));
 vi.mock("../motion/use-motion", () => ({ useMotion: () => ({ reduzido: preferencia.reduzido }) }));
 
-import { useCenaPermitida } from "./gate";
+import { useCenaPermitida, useModoDeCena } from "./gate";
 
 function definirLargura(largura: number): void {
   Object.defineProperty(window, "innerWidth", { configurable: true, value: largura });
@@ -62,5 +64,21 @@ describe("useCenaPermitida", () => {
   it("KIT-17 — alto contraste do menu de acessibilidade bloqueia", () => {
     definirPreferencias({ altoContraste: true });
     expect(renderHook(() => useCenaPermitida()).result.current).toBe(false);
+  });
+
+  it("KIT-18 — useModoDeCena troca a cena por pôster e só some com alto contraste", () => {
+    expect(renderHook(() => useModoDeCena()).result.current).toBe("animada");
+    preferencia.reduzido = true;
+    expect(renderHook(() => useModoDeCena()).result.current).toBe("poster");
+    preferencia.reduzido = false;
+    definirLargura(375);
+    instalarMatchMedia(["max-width: 767px"]);
+    expect(renderHook(() => useModoDeCena()).result.current).toBe("poster");
+    definirLargura(1440);
+    instalarMatchMedia();
+    vi.unstubAllGlobals();
+    expect(renderHook(() => useModoDeCena()).result.current).toBe("poster");
+    definirPreferencias({ altoContraste: true });
+    expect(renderHook(() => useModoDeCena()).result.current).toBe("nenhuma");
   });
 });

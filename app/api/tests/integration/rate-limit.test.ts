@@ -37,7 +37,6 @@ function makeLimitedApp(policies: Partial<Record<string, TokenBucketPolicy>> = {
       dast: HIGH,
       "auth-login-ip": HIGH,
       "auth-login-account": HIGH,
-      "auth-register-ip": HIGH,
       "auth-refresh": HIGH,
       ...policies,
     },
@@ -212,18 +211,14 @@ describe("Rate limiting HTTP multi-tenant", () => {
     expect((await request(setup.app).get("/api/vulnerabilities/export.xlsx").set("Authorization", bearer(outro.id, "ADMIN"))).status).toBe(200);
   });
 
-  it("limita register, refresh rotativo e reembolsa login bem-sucedido", async () => {
+  it("limita refresh rotativo e reembolsa login bem-sucedido", async () => {
     const actor = await seedUser({ name: "Sessão", email: "session@limit.local", password: "senha12345", role: "CLIENT" });
     const setup = makeLimitedApp({
-      "auth-register-ip": { ratePerSecond: 0.001, burst: 1 },
       "auth-refresh": { ratePerSecond: 0.001, burst: 1 },
       "auth-login-ip": { ratePerSecond: 0.001, burst: 1 },
       "auth-login-account": { ratePerSecond: 0.001, burst: 1 },
     });
     service = setup.service;
-
-    expect((await request(setup.app).post("/api/auth/register").send({})).status).toBe(400);
-    expect((await request(setup.app).post("/api/auth/register").send({})).status).toBe(429);
 
     const firstLogin = await request(setup.app).post("/api/auth/login").send({ email: actor.email, password: "senha12345" });
     const secondLogin = await request(setup.app).post("/api/auth/login").send({ email: actor.email, password: "senha12345" });

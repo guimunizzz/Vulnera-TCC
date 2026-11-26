@@ -52,6 +52,7 @@ import type { ApplicationRepository } from "../repositories/application.reposito
 import { buildPromotionDraft, type PromotionDraft } from "../utils/dast-promotion.util";
 import { DastFindingEntity } from "../models/dast-finding.model";
 import type { UserRole } from "../models/user.model";
+import { scanDeAgendamentoPorUrl } from "./dast-scan.service";
 
 interface Actor {
   userId: string;
@@ -336,7 +337,7 @@ export class DastTriageService {
   async listComparableScans(actor: Actor, scanId: string): Promise<Array<{ id: string; finishedAt: string | null; total: number }>> {
     const scan = await this.getOwnedScan(actor, scanId);
     if (scan.simulated) return [];
-    const todos = actor.role === "ADMIN" ? await this.scanRepository.findAll() : await this.scanRepository.findByRequester(actor.userId);
+    const todos = actor.role === "ADMIN" ? await this.scanRepository.findAll() : await this.scanRepository.findVisibleToPentester(actor.userId);
 
     return todos
       .filter((s) => s.id !== scan.id && s.targetUrl === scan.targetUrl && s.status === "COMPLETED" && !s.simulated)
@@ -354,7 +355,8 @@ export class DastTriageService {
   private async getOwnedScan(actor: Actor, scanId: string) {
     const scan = await this.scanRepository.findById(scanId);
     if (!scan) throw new Error("SCAN_NOT_FOUND");
-    if (actor.role !== "ADMIN" && scan.requestedById !== actor.userId) throw new Error("FORBIDDEN");
+    // Mesma regra do DastScanService: scan de agendamento só por URL é do time (2026-11-19).
+    if (actor.role !== "ADMIN" && scan.requestedById !== actor.userId && !scanDeAgendamentoPorUrl(scan)) throw new Error("FORBIDDEN");
     return scan;
   }
 

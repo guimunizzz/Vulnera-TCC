@@ -688,6 +688,36 @@ async function cenarioDeCodigo(technovaId: string) {
   if (dev) await service.triage(camila, dev.id, { triageStatus: "ACCEPTED_RISK", note: "Dependência só de desenvolvimento; não vai para a imagem de produção." });
 }
 
+/**
+ * Raio de impacto (ADR-061): o mesmo SBOM real (Trivy sobre o NodeGoat) em mais
+ * duas aplicações da TechNova, como acontece quando times copiam o mesmo
+ * `package.json` de base. Assim "onde mais este pacote aparece?" tem resposta.
+ * Na aplicação exposta e em produção, a CVE mais grave vira vulnerabilidade —
+ * candidata a combinação tóxica. KEV/EPSS NÃO são inventados aqui: o fator de
+ * ameaça ativa só aparece se a sincronização real do Threat Intel trouxer.
+ */
+async function scaCompartilhadoDaTechnova(technovaId: string) {
+  const camila = comoActor("camila.pentester@vulnera.local", "PENTESTER");
+  const service = makeCodeScanService();
+  for (const nome of ["Portal E-commerce", "API B2B Integração"]) {
+    const app = await prisma.application.findFirst({ where: { companyId: technovaId, name: nome } });
+    if (!app) continue;
+    const { projeto, novo } = await garantirProjeto(
+      technovaId,
+      app.id,
+      { name: `Análise de dependências — ${nome}`, analysisType: "SAST", analysisLevel: "BASIC", hasRemediation: true, status: "IN_PROGRESS", scopeIn: "SBOM CycloneDX gerado pelo Trivy no pipeline" },
+      ["camila.pentester@vulnera.local"],
+    );
+    if (!novo) continue;
+    const sca = await importar(camila, projeto.id, "nodegoat-trivy.cdx.json");
+    if (app.internetFacing && app.environment === "PROD") {
+      const achados = await service.listFindings(camila, sca.id);
+      const maisGrave = [...achados].sort((x, y) => (y.cvssScore ?? 0) - (x.cvssScore ?? 0))[0];
+      if (maisGrave) await promoverCodigo(camila, maisGrave.id);
+    }
+  }
+}
+
 async function scaDoBanco(auroraId: string) {
   const ib = await prisma.application.findFirst({ where: { companyId: auroraId, name: "Internet Banking Aurora" } });
   if (!ib) return;
@@ -918,8 +948,9 @@ async function main() {
 
   // --- Ferramentas -----------------------------------------------------------
   await cenarioDeCodigo(technova.id);
+  await scaCompartilhadoDaTechnova(technova.id);
   if (auroraId) await scaDoBanco(auroraId);
-  console.log("  ✓ SAST/SCA: Semgrep e Trivy reais (NodeGoat) e SBOM do Internet Banking");
+  console.log("  ✓ SAST/SCA: Semgrep e Trivy reais (NodeGoat, em três aplicações da TechNova) e SBOM do Internet Banking");
   await cenarioDast(technova.id);
   console.log("  ✓ DAST: 2 scans reais do ZAP na loja da TechNova, com triagem e promoções");
   await cenarioThreatIntel(empresasTi);

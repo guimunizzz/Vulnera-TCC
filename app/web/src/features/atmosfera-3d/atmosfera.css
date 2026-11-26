@@ -1,0 +1,42 @@
+/**
+ * atmosfera.css
+ *
+ * Camadas das atmosferas por seção (`atmosfera-da-plataforma.tsx`) e o modo
+ * apresentação. A camada ocupa o topo da área de conteúdo — a mesma faixa da
+ * atmosfera ASCII antiga —, termina num degradê em vez de um corte seco e
+ * entra/sai por opacidade (o crossfade da troca de seção).
+ */
+
+.atmosfera-camada {
+  position: absolute;
+  inset: 0 0 auto;
+  height: min(100dvh, 60rem);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 800ms var(--ease-out);
+  mask-image: linear-gradient(to bottom, black 58%, transparent);
+}
+
+/* O teto vem do componente (TETO_DA_CAMADA / OPACIDADE_ATMOSFERA): é o limite de AA. */
+.atmosfera-camada[data-visivel="true"] {
+  opacity: var(--atmosfera-teto, 1);
+}
+
+/* Modo apresentação: o <main> em tela cheia rola sozinho e a cena cobre a tela toda. */
+#conteudo:fullscreen {
+  overflow-y: auto;
+  background-color: oklch(var(--color-bg-canvas));
+}
+
+#conteudo:fullscreen > .atmosfera-camada {
+  position: fixed;
+  height: 100dvh;
+  mask-image: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atmosfera-camada {
+    transition: none;
+  }
+}

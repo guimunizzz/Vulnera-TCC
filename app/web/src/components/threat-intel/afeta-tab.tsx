@@ -29,6 +29,7 @@ import { cn } from "../../lib/cn";
 import { linkSeguro, pct } from "../../lib/threat-intel";
 import { DAST_TRIAGE_LABELS, DAST_TRIAGE_TONES } from "../../types/dast.types";
 import type { CasamentoTI, PermissoesThreatIntel } from "../../types/threat-intel.types";
+import { CorrecaoSugerida } from "../findings/correcao-sugerida";
 
 const CLASSE_SELECT = "h-touch rounded-control border border-default bg-surface px-3 text-sm text-fg";
 
@@ -226,6 +227,19 @@ function LinhaCasamento({
                       Promover para vulnerabilidade
                     </Button>
                   )
+                )}
+                {/* ADR-063 — pacote do inventário: o comando para a versão corrigida. */}
+                {m.asset.kind === "PACKAGE" && (
+                  <CorrecaoSugerida
+                    origem={{
+                      tipo: "THREAT_INTEL",
+                      ecossistema: m.asset.ecosystem,
+                      pacote: m.asset.packageName ?? m.asset.displayName,
+                      versao: m.asset.version,
+                      versaoCorrigida: m.fixedVersion,
+                      advisoryId: a.id,
+                    }}
+                  />
                 )}
               </div>
               <dl className="grid grid-cols-2 gap-3 text-sm">

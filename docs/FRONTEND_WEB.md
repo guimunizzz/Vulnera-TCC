@@ -154,7 +154,7 @@ flowchart TB
 
   subgraph landing["Landing pública"]
     gsap["GSAP + ScrollTrigger<br/>components/landing/motion"]
-    cena["Cena ASCII narrativa<br/>components/landing/scene"]
+    cena["Cena narrativa: ASCII (atos 0–2)<br/>e terreno 3D (atos 3–5)<br/>components/landing/scene"]
     poster["Pôster ASCII estático"]
   end
 
@@ -186,12 +186,117 @@ flowchart TB
 
 | Situação | Landing | Plataforma |
 |---|---|---|
-| WebGL2, tela ≥ 768 px, sem preferência | cena ASCII a 60 fps | atmosfera ASCII a 60 fps |
+| WebGL2, tela ≥ 768 px, sem preferência | cena a 60 fps: ASCII nos atos 0–2, terreno 3D nos atos 3–5 | atmosfera ASCII a 60 fps |
 | Movimento reduzido (sistema ou menu) | pôster do ato atual, troca por fade | fundo CSS parado |
 | Alto contraste do menu | fundo liso, sem pôster | fundo CSS |
 | Tela < 768 px, sem WebGL2 ou falha do chunk | pôster | fundo CSS |
 
-## Fundo único da área autenticada
+### Landing: do ASCII para o terreno 3D (2026-11-16, ADR-055)
+
+A cena da landing troca de material no ato 3: a grade de caracteres ganha
+relevo e vira um terreno topográfico. O roteiro, o canvas fixo, o
+ScrollTrigger único e os `data-ato` das seções não mudaram.
+
+| O que mudou | Onde |
+|---|---|
+| Atos 0–2 mais densos: célula 12 × 18 px, fonte a 13 px, peso 600 (antes 12 × 26 px, glifo a ~20 px) | `scene/config.ts`, `three/ascii.ts` (o atlas aceita tamanho de célula e peso) |
+| Atos 3–5 em terreno 3D: malha deslocada por uma função de altura, quatro montes por severidade, sombra, curvas de nível e os glifos de falha como cartazes | `scene/terreno.ts`, `scene/terreno-shaders.ts`, `scene/terreno-logica.ts` |
+| Composição: a passada de tela lê o alvo do terreno (alfa pré-multiplicado, `highp`) e soma os halos | `scene/shaders.ts`, `scene/use-landing-scene.ts` |
+| Epílogo: o progresso segue de 5 a 6 até o fim da rolagem (rede de monitoramento, órbita da câmera, horizonte que amanhece); grafo como camada do terreno; pulsos, sonar e varredura de luz contínuos | `scene/use-landing-scene.ts` (marco do fim da página), `scene/terreno*.ts` |
+| Clique no fundo: **ping de scanner** no lugar da gota d'água — anel de glifos que revela as falhas escondidas nos atos ASCII, anel de luz que corre pelo relevo a partir da virada | `three/pings.ts` (substitui `three/gotas.ts`), `scene/shaders.ts`, `scene/terreno*.ts` |
+| Token novo da paleta da landing: `--vx-indigo` (sombra e neblina do terreno) | `landing.css` |
+| Pôster com a mesma célula da cena (12 × 18 px, fonte a 13 px); continua ASCII nos seis atos | `scene/landing-poster.tsx` |
+| Contraste: o teste cobre o terreno (cores × tom claro × teto de alfa × halo) | `scene/scene-contrast.test.ts` (CTR-04) |
+
+> [!NOTE]
+> A atmosfera da área autenticada (`components/dashboard/hero/`) não foi
+> tocada. No kit `src/three/` só entraram dois parâmetros opcionais
+> do `criarAtlasAscii` (célula e peso), e `gotas.ts` deu lugar a `pings.ts`,
+> que só a landing usa.
+
+> [!WARNING]
+> **A câmera do terreno se move**, presa ao scroll (inclina 46° durante a
+> virada). É a única cena do web com câmera em movimento; com "reduzir
+> animações" ela nem monta. Ver ADR-055 §3.
+
+O alvo do terreno é a única parte que pode passar do teto de DPR 1,5 do kit
+(vai até 2). Se a máquina não segura a cadência, o terreno desce de degrau
+sozinho (`TERRENO.qualidade`). Explicação para iniciantes em
+[COMO_FUNCIONA_O_FUNDO.md](COMO_FUNCIONA_O_FUNDO.md); roteiro e medições em
+[LANDING_NARRATIVA.md](LANDING_NARRATIVA.md) §12. Antes do terreno a branch
+passou por uma versão em pintura (ADR-054) e por uma comparação de três
+materiais; o histórico está nas §10 e §11 do roteiro.
+
+**Conteúdo da landing (mesma entrega).** As seções passaram a afirmar só o que
+o código faz: saiu o card "IA para Findings" (ADR-017), entraram DAST com
+OWASP ZAP (com o limite dito na página), importação SAST/SCA, Threat Intel,
+visão unificada e Exposure Graph. A lista do que foi removido e por quê está
+em `output/landing-pintura/RELATORIO.md`.
+
+## Atmosferas por seção (2026-11-23, ADR-060)
+
+Desde o ADR-060 o `AppLayout` monta `AtmosferaDaPlataforma`
+(`features/atmosfera-3d/`) no lugar da `DashboardAtmosphere`. A atmosfera
+depende da seção (`rotas.ts`):
+
+- **Nebulosa:** Dashboard.
+- **Relevo com radar:** Aplicações, Projetos, Threat Intel e Remediação.
+- **ASCII:** Findings, DAST, SAST/SCA, Playbooks, Agendamentos e Nova análise.
+- **ASCII parado (pôster):** SLA, Aprovações, Filas e Maturidade (D21.1).
+- O Exposure Graph usa o relevo e o fundo acompanha o grafo: risco das
+  abertas, ping a cada seleção, e a atmosfera some na aba **Mapa 3D**
+  (`atmosfera.store.ts`: `usePublicarRisco`, `useSuprimirAtmosfera`,
+  `pingarAtmosfera`).
+
+A troca de seção faz crossfade de 0,8 s. A camada nova aparece depois do
+primeiro quadro, e a anterior apaga e sai do DOM.
+
+- **Teto de AA na camada (CSS):** 0,30/0,32 na plataforma e 0,32/0,40 no
+  modo apresentação (`config.ts`, teste `atmosfera-3d-contrast.test.ts`). A
+  cena desenha cheia por dentro. O ASCII animado continua com o teto próprio,
+  aplicado no shader.
+- **Modo plataforma:** sem bloom, DPR ≤ 1,25, metade das partículas e da
+  malha. O efeito sob o cursor segue em cerca de 40 ms e só a câmera é lenta.
+- **Modo apresentação:** botão "Apresentar" no cabeçalho do Dashboard. O
+  `#conteudo` vai para tela cheia e a cena fica imersiva (bloom, e o clique
+  no fundo dispara ping). Sai com Esc ou pelo mesmo botão.
+- **Risco real:** Dashboard, Remediação, Threat Intel, Exposure Graph e
+  Aplicações publicam o seu risco (`risco.ts`, `usePublicarRisco`) a partir
+  do que já carregaram. Projetos continua neutro. A cena
+  persegue o valor: mais pings e alertas magenta, relevo mais alto, mais
+  estrelas quentes.
+- **Pôster (`posteres.ts`):** canvas 2D, sem three e sem imagem. Entra com
+  movimento reduzido, tela estreita, sem WebGL2, "Pausar animações" ou falha
+  da cena. Com alto contraste não há decoração.
+- **Laboratório `/lab-3d`** (só em desenvolvimento): compara as linhas, os
+  modos, o tema, o risco e o pôster com a mesma opacidade do produto.
+
+O texto abaixo descreve o fundo anterior a 2026-11-23. Ele continua valendo
+para a camada ASCII, para a base CSS e para a pausa de Findings.
+
+### Grafo 2D: acabamento (2026-11-23, D21.3)
+
+O `CyberGraph2D` (scan, código e Exposure Graph) recebeu:
+
+- corpo do nó com degradê do token e anel interno;
+- halo de severidade nos críticos e altos (o crítico pulsa com
+  `.cg-pulso`);
+- ping de radar na seleção (`.cg-ping`);
+- arestas calmas, com halo só para o que leva ao grave;
+- até 14 pacotes de luz (`animateMotion`) correndo até os nós mais graves;
+- rótulos com contorno da cor do palco (`paint-order: stroke`).
+
+Halo e ping ficam numa camada `aria-hidden` **fora** do `g[role=button]` do
+nó. Dentro dele, a animação mudaria a caixa do nó e o clique ficaria
+"instável" (o Playwright recusava o clique). Com movimento reduzido nada
+disso anima. Pacotes e ping levam `data-decoracao` e saem do PNG exportado
+(`serializarSemDecoracao`).
+
+O palco do Exposure Graph (`.cg-palco--radar`) é levemente translúcido,
+mostra o relevo da atmosfera por trás e tem anéis de alcance e uma varredura
+de 16 s.
+
+### Fundo único da área autenticada (até 2026-11-22)
 
 `AppLayout` monta `operations-backdrop.css` e `DashboardAtmosphere` uma vez,
 como camadas sem interação sob `operations-content`. A base CSS desenha uma
@@ -356,7 +461,7 @@ mistura breve de poses; RAF encerra ao estabilizar. `lib/assistant-feedback.ts`
 recebe somente dois tipos de resultado, com assinante capturado no início da
 ação e isolamento após troca de sessão. Integra os três fluxos PDF e falhas
 finais de mutations, preservando callbacks/erros/retries. Nada é enviado ao
-Gemini por esses sinais. Ver ADR-055 e `QA_VUVU_FLUIDEZ_2026-11-16.md`.
+Gemini por esses sinais. Ver ADR-065 e `QA_VUVU_FLUIDEZ_2026-11-16.md`.
 
 Personalidade autorizada aplicada também ao Gemini, preservando as fronteiras
 do backend. Visual e nova voz foram aplicados ao Docker local após autorização,

@@ -6,10 +6,13 @@
  *   POS-02  decorativo (aria-hidden) e escondido quando a cena WebGL está pronta
  *   POS-03  o ato "Encontrar" tem a varredura em blocos e severidades coloridas;
  *           o "Corrigir" tem "✓" na cor de resolvido
+ *   POS-04  o bloco do ato usa a mesma fonte e a mesma altura de célula da cena
+ *           WebGL (13 px e 18 px), para a troca pôster → cena não mudar a grade
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render } from "@testing-library/react";
+import { ALTURA_CELULA_LANDING_PX, FONTE_LANDING_PX } from "./config";
 import { LandingPoster } from "./landing-poster";
 
 afterEach(() => vi.useRealTimers());
@@ -50,5 +53,13 @@ describe("LandingPoster", () => {
     const ok = Array.from(container.querySelectorAll<HTMLSpanElement>('[data-poster-ato="4"] span')).filter((s) => s.textContent === "✓");
     expect(ok.length).toBeGreaterThan(0);
     ok.forEach((s) => expect(s.dataset.tom).toBe("resolvido"));
+  });
+
+  it("POS-04 — fonte e altura de célula iguais às da cena WebGL", () => {
+    const { container } = render(<LandingPoster ato={0} oculto={false} />);
+    const bloco = container.querySelector<HTMLElement>('[data-poster-ato="0"]')!;
+    expect(bloco.tagName).toBe("PRE");
+    expect(bloco.style.fontSize).toBe(`${FONTE_LANDING_PX}px`);
+    expect(bloco.style.lineHeight).toBe(`${ALTURA_CELULA_LANDING_PX}px`);
   });
 });

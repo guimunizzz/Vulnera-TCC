@@ -45,6 +45,7 @@ const MESSAGES: Record<string, string> = {
   // subscription
   SUBSCRIPTION_NOT_FOUND: "Assinatura não encontrada.",
   ALREADY_HAS_ACTIVE_SUBSCRIPTION: "Esta empresa já tem uma assinatura ativa.",
+  SUBSCRIPTION_REQUEST_ALREADY_PENDING: "Já existe uma solicitação pendente para outro plano. Aguarde a decisão antes de solicitar outro.",
 
   // application
   APPLICATION_NOT_FOUND: "Aplicação não encontrada.",
@@ -138,6 +139,16 @@ const MESSAGES: Record<string, string> = {
   COMMENT_NOT_FOUND: "Comentário não encontrado.",
   INVALID_CONTENT: "Escreva algo antes de comentar.",
 
+  // comentários no grafo e análises do Exposure Graph (ADR-061)
+  MISSING_COMMENT_BODY: "Escreva algo antes de comentar.",
+  INVALID_COMMENT_BODY: "O comentário passou do limite de 2.000 caracteres.",
+  MISSING_NODE_ID: "Selecione um nó do grafo para comentar.",
+  INVALID_NODE_ID: "Este nó não pode receber comentários.",
+  INVALID_GRAPH_KIND: "Grafo inválido.",
+  MISSING_SCOPE: "Abra o grafo de uma análise para comentar.",
+  INVALID_IMPACT_TYPE: "Escolha um pacote, uma CVE ou uma categoria.",
+  INVALID_IMPACT_VALUE: "Alvo do raio de impacto inválido.",
+
   // report
   MISSING_PROJECT_ID: "Selecione um projeto válido.",
   INVALID_TYPE: "Tipo de relatório inválido.",
@@ -149,10 +160,32 @@ const MESSAGES: Record<string, string> = {
   REAL_SCAN_CONFIRMATION_REQUIRED: "Marque que você tem autorização para testar este alvo.",
   MISSING_TARGET_URL: "Informe a URL do alvo.",
   INVALID_TARGET_URL: "URL inválida. Use http:// ou https://, sem usuário e senha (ex.: https://exemplo.com).",
+  // agendamentos DAST (ADR-056)
+  AUTHORIZATION_MISSING: "Este alvo ainda não tem autorização de teste registrada. Registre a autorização antes de agendar.",
+  AUTHORIZATION_EXPIRED: "A autorização de teste deste alvo venceu. Renove a autorização para continuar.",
+  HOST_MISMATCH: "O endereço da aplicação mudou depois da autorização. Autorize de novo para o endereço atual.",
+  APPLICATION_WITHOUT_URL: "A aplicação não tem URL cadastrada. Cadastre a URL antes de agendar.",
+  SCHEDULE_NOT_FOUND: "Agendamento não encontrado. Ele pode ter sido removido.",
+  INVALID_LIMIT: "Quantidade de execuções inválida. Use um número inteiro maior que zero.",
+  INVALID_UNTIL: "Escolha uma data de validade futura, de no máximo um ano.",
+  INVALID_TIMEZONE: "Fuso horário inválido.",
+  INVALID_DAY_OF_WEEK: "Escolha o dia da semana.",
+  INVALID_HOUR: "Horário inválido.",
+  INVALID_MINUTE: "Horário inválido.",
+  MODE_IS_IMMUTABLE: "O modo (Real ou Simulado) não muda depois de criado. Crie outro agendamento.",
+  PROJECT_IS_IMMUTABLE: "O projeto não muda depois de criado. Crie outro agendamento.",
+  QUEUE_UNAVAILABLE: "A fila de execução está fora do ar. O pedido ficou registrado e será processado quando ela voltar.",
   SCAN_ALREADY_RUNNING_FOR_TARGET: "Já existe uma análise em andamento para esse alvo. Acompanhe a que está rodando ou espere ela terminar.",
   SCAN_NOT_FOUND: "Análise não encontrada. Ela pode ter sido removida ou pertencer a outra pessoa.",
   REPORT_NOT_FOUND: "Relatório ainda não disponível para este scan.",
   FINDING_ALREADY_PROMOTED: "Este achado já virou uma vulnerabilidade e não pode ser promovido de novo.",
+
+  // painel de filas (ADR-056)
+  INVALID_QUEUE: "Fila desconhecida. Atualize a tela e tente de novo.",
+  JOB_NOT_FOUND: "Job não encontrado. Ele pode ter sido removido da fila.",
+  JOB_NOT_FAILED: "Só um job com falha pode ser tentado de novo. Ele já mudou de estado; atualize a tela.",
+  RETRY_NOT_SUPPORTED: "Um scan DAST com falha não é reprocessado pela fila. Dispare um scan novo na tela de DAST.",
+  QUEUE_DRIVER_MEMORY: "O motor de filas está em memória e não há job com falha para reprocessar.",
 
   // importação SAST/SCA (ADR-052)
   INVALID_FILE_FORMAT: "O arquivo não é um JSON válido. Envie o relatório SARIF ou CycloneDX gerado pela ferramenta.",

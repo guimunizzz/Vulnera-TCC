@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { makeApplicationController } from "../factories/application.factory";
 import { makeMetricsController } from "../factories/metrics.factory";
+import { makeDastScheduleController } from "../factories/dast-schedule.factory";
 import { authRateLimitMiddleware, endpointRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 
 const router = Router();
@@ -20,6 +21,17 @@ router.get("/", (req, res) => controller.list(req, res));
 router.get("/:id/metrics/summary", endpointRateLimitMiddleware("expensive"), (req, res) => metricsController.summary(req, res));
 router.get("/:id/metrics/timeseries", endpointRateLimitMiddleware("expensive"), (req, res) => metricsController.timeseries(req, res));
 router.get("/:id/metrics/insights", endpointRateLimitMiddleware("expensive"), (req, res) => metricsController.insights(req, res));
+
+// ADR-056 — autorização de DAST e scans agendados da aplicação. Permissão fina
+// (ADMIN, PENTESTER membro, CLIENT só leitura) mora no service.
+const dastSchedule = makeDastScheduleController();
+router.get("/:id/dast-authorization", dastSchedule.getAuthorization);
+router.put("/:id/dast-authorization", dastSchedule.authorize);
+router.delete("/:id/dast-authorization", dastSchedule.revoke);
+router.get("/:id/dast-schedules", dastSchedule.list);
+router.post("/:id/dast-schedules", dastSchedule.create);
+router.put("/:id/dast-schedules/:scheduleId", dastSchedule.update);
+router.delete("/:id/dast-schedules/:scheduleId", dastSchedule.remove);
 
 router.get("/:id", (req, res) => controller.getById(req, res));
 router.post("/", (req, res) => controller.create(req, res));

@@ -94,8 +94,11 @@ export default function Demo() {
         <Reveal variante="fade">
           <p className="font-mono text-sm tracking-widest text-[var(--vx-accent)]">{"// VEJA EM AÇÃO"}</p>
           <TituloDecodificado className="mt-4 text-3xl font-bold text-[var(--vx-text)] md:text-4xl">
-            A plataforma da TechNova Solutions, de perto.
+            A plataforma, de perto.
           </TituloDecodificado>
+          <p className="mx-auto mt-4 max-w-xl text-[var(--vx-text-2)]">
+            Uma prévia interativa com uma empresa e dados fictícios. Clique à vontade: nada é salvo.
+          </p>
         </Reveal>
         <Reveal ordem={1}>
           <div className="vx-demo-tabs" role="group" aria-label="Visualizações do dashboard">

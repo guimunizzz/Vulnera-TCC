@@ -83,10 +83,15 @@ model User {
   riskAcceptancesReviewed  RiskAcceptance[]       @relation("RiskAcceptanceReviewer") // CP-4
   riskAcceptancesRevoked   RiskAcceptance[]       @relation("RiskAcceptanceRevoker") // CP-4
   savedQueries             SavedQuery[] // CP-6 — buscas salvas e watchlists
+  accessRequestsReviewed   AccessRequest[]      @relation("AccessRequestReviewer")
+  accessRequestEvents      AccessRequestEvent[]
   codeScanImports          CodeScanImport[]       @relation("CodeScanImportUploader") // ADR-052
   codeTriagedFindings      CodeFinding[]          @relation("CodeFindingTriagedBy") // ADR-052
   techAssetsCreated        TechAsset[]            @relation("TechAssetCreatedBy") // ADR-053
   threatMatchesTriaged     ThreatMatch[]          @relation("ThreatMatchTriagedBy") // ADR-053
+  dastAuthorizations       Application[]          @relation("ApplicationDastAuthorizedBy") // ADR-056
+  scanSchedulesCreated     ScanSchedule[]         @relation("ScanScheduleCreatedBy") // ADR-056
+  graphComments            GraphComment[] // ADR-061
 
   @@index([companyId])
 }
@@ -120,6 +125,85 @@ model PasswordResetToken {
   @@index([userId])
 }
 
+// Solicitação pública não é identidade autenticada. Não tem vínculo com Company.
+// CHECKs da migration protegem estado, normalização e activeEmail; não usar db push.
+model AccessRequest {
+  id              String    @id @default(cuid())
+  name            String
+  email           String
+  companyName     String
+  phone           String?
+  status          String    @default("PENDING_EMAIL_VERIFICATION")
+  // NULL em REJECTED, EXPIRED e ACTIVATED; CHECK garante consistência.
+  activeEmail     String?   @unique
+  expiresAt       DateTime // prazo da etapa atual, independente dos tokens
+  emailVerifiedAt DateTime?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  rejectionReason String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  reviewedBy        User?                    @relation("AccessRequestReviewer", fields: [reviewedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  verificationToken EmailVerificationToken?
+  invitation        AccessInvitation?
+  events            AccessRequestEvent[]
+
+  @@index([email, createdAt])
+  @@index([status, createdAt])
+  @@index([reviewedById])
+  @@index([status, expiresAt])
+}
+
+// Um slot por pedido: futura reemissão rotaciona o hash, invalidando o anterior.
+// O token bruto nunca é persistido. Consumidores: repositório e futura verificação.
+model EmailVerificationToken {
+  id              String    @id @default(cuid())
+  accessRequestId String    @unique
+  tokenHash       String    @unique @db.Char(64)
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  issuedAt        DateTime  @default(now()) // emissão atual; createdAt é o slot original
+  createdAt       DateTime  @default(now())
+
+  accessRequest AccessRequest @relation(fields: [accessRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+// Convite separado da verificação; aprovação não cria User.
+// O consumo atômico é uma primitiva interna, ainda sem fluxo de ativação.
+model AccessInvitation {
+  id              String    @id @default(cuid())
+  accessRequestId String    @unique
+  tokenHash       String    @unique @db.Char(64)
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  issuedAt        DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+
+  accessRequest AccessRequest @relation(fields: [accessRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+// Trilha própria permite visitante (actorId NULL), sem enfraquecer AuditLog.
+// Append-only nos repositories; FKs RESTRICT preservam pedido e ator históricos.
+model AccessRequestEvent {
+  id              String   @id @default(cuid())
+  accessRequestId String
+  eventType       String   @default("STATUS_TRANSITION")
+  actorId         String?
+  fromStatus      String?
+  toStatus        String
+  reason          String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  accessRequest AccessRequest @relation(fields: [accessRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor         User?         @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([accessRequestId, createdAt])
+  @@index([actorId])
+}
+
 // ============================================================================
 // COMERCIAL
 // ============================================================================
@@ -147,6 +231,8 @@ model Company {
   savedQueries    SavedQuery[] // CP-6 — buscas compartilhadas com a empresa
   techAssets      TechAsset[] // ADR-053 — inventário de tecnologias (Threat Intel)
   threatMatches   ThreatMatch[] // ADR-053 — CVEs que afetam o inventário
+  dastScans       DastScan[] // ADR-056 — scans com tenant conhecido
+  scanSchedules   ScanSchedule[] // ADR-056 — scans DAST agendados
 
   @@index([planId])
 }
@@ -233,12 +319,29 @@ model Application {
   businessOwner   String? // texto livre — o dono de negócio quase nunca tem conta no Vulnera
   technicalOwner  String?
 
+  // ---------------------------------------------------------------------
+  // Autorização de DAST (ADR-056). Scan agendado só roda com autorização
+  // vigente (agora < dastAuthorizedUntil) e com o host da `url` igual a
+  // dastAuthorizedHost — conferido NA EXECUÇÃO, não só no cadastro. Guarda só
+  // o host normalizado (minúsculo, sem porta padrão), nunca a URL inteira:
+  // mudar o caminho da aplicação não deve invalidar a autorização; mudar o
+  // host deve. Quem registra/revoga: ADMIN ou PENTESTER membro de um projeto
+  // da aplicação. Toda mudança gera AuditLog.
+  // ---------------------------------------------------------------------
+  dastAuthorizedAt    DateTime?
+  dastAuthorizedById  String?
+  dastAuthorizedUntil DateTime?
+  dastAuthorizedHost  String?   @db.VarChar(255)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company         Company         @relation(fields: [companyId], references: [id])
-  projects        Project[]
-  vulnerabilities Vulnerability[]
+  company          Company         @relation(fields: [companyId], references: [id])
+  dastAuthorizedBy User?           @relation("ApplicationDastAuthorizedBy", fields: [dastAuthorizedById], references: [id])
+  projects         Project[]
+  vulnerabilities  Vulnerability[]
+  dastScans        DastScan[] // ADR-056
+  scanSchedules    ScanSchedule[] // ADR-056
 
   @@index([companyId])
   @@index([companyId, isActive])
@@ -277,6 +380,8 @@ model Project {
   members         ProjectMember[]
   vulnerabilities Vulnerability[]
   codeScanImports CodeScanImport[] // ADR-052 — importações SARIF/CycloneDX
+  dastScans       DastScan[] // ADR-056
+  scanSchedules   ScanSchedule[] // ADR-056
 
   @@index([companyId])
   @@index([applicationId])
@@ -870,6 +975,26 @@ enum DastScanStatus {
   CANCELLED
 }
 
+// ADR-056 — quem originou o scan: a tela (MANUAL) ou um ScanSchedule (SCHEDULED).
+enum DastScanTrigger {
+  MANUAL
+  SCHEDULED
+}
+
+// ADR-056 — modo de um agendamento, fixado na criação. REAL que falha vira
+// FAILED, nunca SIMULATED (ADR-042).
+enum DastScanMode {
+  REAL
+  SIMULATED
+}
+
+// ADR-056 — frequências aceitas. Não há cron livre vindo do usuário: o padrão
+// cron é gerado no servidor a partir de frequency/hour/minute/dayOfWeek.
+enum ScanScheduleFrequency {
+  DAILY
+  WEEKLY
+}
+
 enum DastRisk {
   HIGH
   MEDIUM
@@ -933,9 +1058,10 @@ model DastScan {
   // ACTIVE, REPORT, DONE, SIMULATED). String e não enum nativo de propósito:
   // é rótulo de UI, não máquina de estados — status já é a máquina.
   phase          String?
-  // true quando o resultado veio do gerador simulado (Docker indisponível ou
-  // scan real falhou e caiu no fallback). Antes de 2026-09-09 essa informação
-  // existia só dentro do report.json e era invisível na aplicação inteira.
+  // true quando o scan foi criado em modo SIMULATED (ADR-042: o modo é
+  // escolhido na criação e uma falha real vira FAILED, nunca simulado). O
+  // fallback descrito no ADR-031 não existe mais. Antes de 2026-09-09 essa
+  // informação existia só dentro do report.json.
   simulated      Boolean        @default(false)
   // Aviso amigável quando o scan CONCLUIU mas com ressalva (tipicamente o
   // fallback simulado). Distinto de errorMessage, que só existe em FAILED.
@@ -944,16 +1070,34 @@ model DastScan {
   alertsMedium   Int            @default(0)
   alertsLow      Int            @default(0)
   alertsInfo     Int            @default(0)
+  // ADR-056 — tenant e origem do scan. Opcionais de propósito: scans criados
+  // antes de 2026-11-18 não têm aplicação conhecida e ficam null (sem backfill
+  // inventado a partir do host). Quando preenchido, companyId é DERIVADO da
+  // Application (SEC2), nunca lido do body.
+  companyId      String?
+  applicationId  String?
+  projectId      String?
+  trigger        DastScanTrigger @default(MANUAL)
+  scheduleId     String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   requestedBy User                @relation(fields: [requestedById], references: [id])
+  company     Company?            @relation(fields: [companyId], references: [id])
+  application Application?        @relation(fields: [applicationId], references: [id])
+  project     Project?            @relation(fields: [projectId], references: [id])
+  // SetNull: apagar um agendamento não apaga o histórico de scans que ele gerou.
+  schedule    ScanSchedule?       @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   findings    DastFinding[]
   sensorRuns  DastSensorRun[]
   assets      DastObservedAsset[]
 
   @@index([requestedById])
   @@index([status])
+  @@index([companyId])
+  @@index([applicationId])
+  @@index([projectId])
+  @@index([scheduleId])
   // Índice composto pro lock "1 scan por alvo de cada vez": WHERE status IN
   // (QUEUED,RUNNING) AND targetUrl = ?. Prefixo de 191 chars — targetUrl é
   // VarChar(2048), índice completo estouraria o teto de bytes por índice do
@@ -1018,6 +1162,64 @@ model CveRecord {
   publishedAt DateTime?
   references  Json?
   fetchedAt   DateTime  @default(now())
+}
+
+// ScanSchedule — scan DAST agendado por aplicação (ADR-056).
+//
+// O MySQL é a FONTE DA VERDADE do agendamento: a tela edita esta tabela (com
+// AuditLog) e o worker reconcilia o Redis a partir dela, criando ou removendo
+// o job scheduler `dast-schedule:<id>`. Apagar o Redis não perde nada.
+//
+// Não existe expressão cron vinda do usuário: o servidor gera o padrão a
+// partir de frequency/hour/minute/dayOfWeek, já validados. companyId é
+// derivado da Application (SEC2). projectId é obrigatório para PENTESTER
+// (precisa ser membro) e opcional para ADMIN — regra no service.
+//
+// lastScanId é uma referência informativa, sem FK: o histórico completo está
+// em DastScan.scheduleId, e esta coluna só evita uma consulta para desenhar
+// "última execução" na tela.
+//
+// DOIS TIPOS (2026-11-19, decisão do Rafael): por APLICAÇÃO (applicationId e
+// companyId preenchidos, autorização do alvo na Application, conferida a cada
+// execução) ou só por URL (targetUrl preenchido, sem aplicação, empresa nem
+// projeto; a autorização é só a confirmação de quem criou, registrada no
+// AuditLog, sem prazo e sem nova checagem). Exatamente um dos dois — regra no
+// service. Agendamento por URL é visível e editável por todo ADMIN/PENTESTER.
+model ScanSchedule {
+  id            String                @id @default(cuid())
+  companyId     String?
+  applicationId String?
+  targetUrl     String?               @db.VarChar(2048)
+  projectId     String?
+  mode          DastScanMode
+  frequency     ScanScheduleFrequency
+  hour          Int // 0..23, no fuso `timezone`
+  minute        Int // 0..59
+  dayOfWeek     Int? // 0..6 (0 = domingo), obrigatório só em WEEKLY
+  timezone      String                @default("America/Sao_Paulo") @db.VarChar(64)
+  enabled       Boolean               @default(true)
+  createdById   String
+  lastRunAt     DateTime?
+  lastScanId    String?
+  // Código curto do último desfecho: STARTED, ou o motivo de não ter rodado
+  // (ex.: AUTHORIZATION_EXPIRED, HOST_MISMATCH, TARGET_BUSY). String e não
+  // enum: é rótulo de tela que cresce com as checagens da execução.
+  lastOutcome   String?               @db.VarChar(64)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  // Restrict (como antes de ficarem opcionais): apagar a aplicação não pode
+  // deixar um agendamento sem aplicação e sem URL.
+  company     Company?     @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  project     Project?     @relation(fields: [projectId], references: [id])
+  createdBy   User         @relation("ScanScheduleCreatedBy", fields: [createdById], references: [id])
+  scans       DastScan[]
+
+  @@index([companyId])
+  @@index([applicationId])
+  @@index([projectId])
+  @@index([enabled])
 }
 
 // DastFinding — um alerta do ZAP já normalizado (1 instance = 1 finding).
@@ -1320,3 +1522,39 @@ model ThreatSyncRun {
 
   @@index([startedAt])
 }
+
+// ============================================================================
+// COMENTÁRIOS NO GRAFO (ADR-061)
+// ============================================================================
+//
+// Comentário fixado num NÓ de grafo: o Exposure Graph da company ou o
+// CyberGraph de um scan DAST. O grafo é uma projeção (não há tabela de nó),
+// então o nó é identificado pelo mesmo id que o front desenha (`app:<id>`,
+// `cat:A03`, id de asset/finding do scan) — `nodeId`, texto curto.
+//
+// ESCOPO
+//   graphKind  EXPOSURE  → scopeId = companyId (a company do autor, do banco)
+//              DAST_SCAN → scopeId = id do scan (acesso pela regra do scan)
+//   companyId  o tenant, para auditoria e limpeza; null em scan DAST sem
+//              company (ADR-056 permite scan só por URL)
+//
+// Sem edição: comentário é registro (como VulnerabilityComment). O autor (ou
+// ADMIN) pode apagar.
+
+model GraphComment {
+  id        String   @id @default(cuid())
+  graphKind String   @db.VarChar(16) // EXPOSURE | DAST_SCAN
+  scopeId   String   @db.VarChar(64)
+  companyId String?
+  nodeId    String   @db.VarChar(200)
+  authorId  String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([graphKind, scopeId, nodeId])
+  @@index([companyId])
+  @@index([authorId])
+}
+
