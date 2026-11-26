@@ -26,6 +26,7 @@ import type { AccountActivationRouteDependencies } from "../factories/account-ac
 import { dastScheduleRoutes } from "./dast-schedules.routes";
 import { adminQueuesRoutes } from "./admin-queues.routes";
 import { graphCommentRoutes } from "./graph-comment.routes";
+import { triageInboxRoutes } from "./triage-inbox.routes";
 
 export function makeApiRoutes(options: {
   accessRequestDependencies?: AccessRequestRouteDependencies;
@@ -70,6 +71,8 @@ export function makeApiRoutes(options: {
   router.use("/threat-intel", threatIntelRoutes);
   // ADR-061 — comentários fixados nos nós do Exposure Graph e do grafo do scan DAST.
   router.use("/graph-comments", graphCommentRoutes);
+  // ADR-062 — caixa de triagem única (DAST, SAST/SCA e Threat Intel).
+  router.use("/triage", triageInboxRoutes);
 
   return router;
 }

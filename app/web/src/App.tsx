@@ -66,6 +66,7 @@ const DastScanDetailPage = paginaLazy(() => import("./pages/dast-scan-detail-pag
 const DastScanReportPage = paginaLazy(() => import("./pages/dast-scan-report-page"), "DastScanReportPage");
 const SastScaPage = paginaLazy(() => import("./pages/sast-sca-page"), "SastScaPage");
 const ThreatIntelPage = paginaLazy(() => import("./pages/threat-intel-page"), "ThreatIntelPage");
+const TriagePage = paginaLazy(() => import("./pages/triage-page"), "TriagePage");
 const AgendamentosPage = paginaLazy(() => import("./pages/agendamentos-page"), "AgendamentosPage");
 const CodeImportDetailPage = paginaLazy(() => import("./pages/code-import-detail-page"), "CodeImportDetailPage");
 const SlaSettingsPage = paginaLazy(() => import("./pages/settings/sla-settings-page"), "SlaSettingsPage");
@@ -137,6 +138,8 @@ export function App() {
             <Route path="/playbooks" element={<PlaybooksPage />} />
             {/* Threat Intel (ADR-053): os três papéis; empresa e permissões vêm da API. */}
             <Route path="/threat-intel" element={<ThreatIntelPage />} />
+            {/* Caixa de triagem única (ADR-062): os três papéis; cada um vê só o que pode triar em cada fonte (a API decide). */}
+            <Route path="/triagem" element={<TriagePage />} />
             {/* Scans DAST agendados (ADR-056): os três papéis; CLIENT só lê a
                 própria empresa. Quem vê e quem muda o quê, a API decide. */}
             <Route path="/agendamentos" element={<AgendamentosPage />} />
