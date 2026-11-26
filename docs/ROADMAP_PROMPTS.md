@@ -1546,3 +1546,4 @@ parciais e limites estão no relatório, sem declaração de aprovação integra
 - Branch `feature/agent-ai`, partindo de `4193c00`, com a base `dev` em `65a792d`. [PR #77](https://github.com/guimunizzz/Vulnera-TCC/pull/77).
 - Oito conflitos resolvidos. O roteador da dev com injeção de dependências monta também o assistente e o layout autenticado da feature envolve as rotas da dev respeitando seus controles de acesso.
 - A decisão do assistente passou a ADR-064. A decisão da pintura da landing mantém ADR-054.
+- Validação final com o merge `d048eaf`: API 1.393/1.393 (90 suítes), Web 865/865 (104 arquivos), contraste 132/132 e builds API/Web aprovados. O lint integral da API continua com quatro erros herdados da dev, e o lint dos 16 arquivos da integração passou.
