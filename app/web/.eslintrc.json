@@ -61,7 +61,11 @@
         "src/components/landing/scene/shaders.ts",
         "src/components/landing/scene/terreno.ts",
         "src/components/landing/scene/terreno-shaders.ts",
-        "src/features/security-graph/exposure-map-scene.ts"
+        "src/features/security-graph/exposure-map-scene.ts",
+        "src/features/atmosfera-3d/variantes/**",
+        "src/features/atmosfera-3d/tipos.ts",
+        "src/features/atmosfera-3d/use-cena-3d.ts",
+        "src/features/atmosfera-3d/cena-3d-canvas.tsx"
       ],
       "rules": { "no-restricted-imports": "off" }
     },

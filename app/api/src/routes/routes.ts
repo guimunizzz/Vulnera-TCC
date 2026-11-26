@@ -25,6 +25,7 @@ import { makeAccountActivationRoutes } from "./account-activation.routes";
 import type { AccountActivationRouteDependencies } from "../factories/account-activation.factory";
 import { dastScheduleRoutes } from "./dast-schedules.routes";
 import { adminQueuesRoutes } from "./admin-queues.routes";
+import { graphCommentRoutes } from "./graph-comment.routes";
 
 export function makeApiRoutes(options: {
   accessRequestDependencies?: AccessRequestRouteDependencies;
@@ -67,6 +68,8 @@ export function makeApiRoutes(options: {
   router.use("/code-imports", codeScanRoutes);
   // Threat Intel (ADR-053) — inventário, CVEs que afetam a empresa, feed e sincronização.
   router.use("/threat-intel", threatIntelRoutes);
+  // ADR-061 — comentários fixados nos nós do Exposure Graph e do grafo do scan DAST.
+  router.use("/graph-comments", graphCommentRoutes);
 
   return router;
 }

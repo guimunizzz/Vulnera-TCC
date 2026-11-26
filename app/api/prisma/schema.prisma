@@ -91,6 +91,7 @@ model User {
   threatMatchesTriaged     ThreatMatch[]          @relation("ThreatMatchTriagedBy") // ADR-053
   dastAuthorizations       Application[]          @relation("ApplicationDastAuthorizedBy") // ADR-056
   scanSchedulesCreated     ScanSchedule[]         @relation("ScanScheduleCreatedBy") // ADR-056
+  graphComments            GraphComment[] // ADR-061
 
   @@index([companyId])
 }
@@ -1521,3 +1522,39 @@ model ThreatSyncRun {
 
   @@index([startedAt])
 }
+
+// ============================================================================
+// COMENTÁRIOS NO GRAFO (ADR-061)
+// ============================================================================
+//
+// Comentário fixado num NÓ de grafo: o Exposure Graph da company ou o
+// CyberGraph de um scan DAST. O grafo é uma projeção (não há tabela de nó),
+// então o nó é identificado pelo mesmo id que o front desenha (`app:<id>`,
+// `cat:A03`, id de asset/finding do scan) — `nodeId`, texto curto.
+//
+// ESCOPO
+//   graphKind  EXPOSURE  → scopeId = companyId (a company do autor, do banco)
+//              DAST_SCAN → scopeId = id do scan (acesso pela regra do scan)
+//   companyId  o tenant, para auditoria e limpeza; null em scan DAST sem
+//              company (ADR-056 permite scan só por URL)
+//
+// Sem edição: comentário é registro (como VulnerabilityComment). O autor (ou
+// ADMIN) pode apagar.
+
+model GraphComment {
+  id        String   @id @default(cuid())
+  graphKind String   @db.VarChar(16) // EXPOSURE | DAST_SCAN
+  scopeId   String   @db.VarChar(64)
+  companyId String?
+  nodeId    String   @db.VarChar(200)
+  authorId  String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([graphKind, scopeId, nodeId])
+  @@index([companyId])
+  @@index([authorId])
+}
+

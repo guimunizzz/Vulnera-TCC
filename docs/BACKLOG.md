@@ -16,6 +16,25 @@
 
 ## Status
 
+**🚧 2026-11-23 — Atmosferas 3D por seção (ADR-060, D20).** Branch `feat/atmosfera-3d` a partir da `dev` @ `effd32a`.
+
+- Nebulosa no Dashboard, relevo com radar e pings no monitoramento, ASCII no trabalho técnico e nada em formulários. Crossfade de 0,8 s.
+- Modo apresentação do Dashboard.
+- Risco real (Dashboard, Remediação, Threat Intel).
+- Pôster em canvas 2D com movimento reduzido, no celular, sem WebGL2 e em "Pausar animações".
+- Laboratório `/lab-3d` só em desenvolvimento.
+
+Validado na stack Docker (:8086) logado como ADMIN: atmosfera certa em cada seção, crossfade com a camada anterior removida, apresentação em tela cheia com teto de 0,32, pôsteres com movimento reduzido e tema claro.
+
+Segunda rodada (D21): web **725/727**. As 2 falhas são do `findings-table.test.tsx`, que estava fora do git antes desta branch e não entra nela. Lint 0 erros, contraste OK, build OK (three só em chunk lazy). E2E `exposure-graph` 3/3. `cybergraph` passa caso a caso, com a instabilidade ATM-FUT-06 que já existia.
+
+- [ ] ATM-FUT-01 — ✅ parcial (2026-11-23): na RTX 3060 Ti do Rafael a página fica a 240 fps em todos os cenários (p95 4,3 ms; `docs/evidencias/atmosfera-3d/`). **Falta** medir numa GPU integrada (Iris Xe).
+- [x] ATM-FUT-02 — ✅ 2026-11-23 (D21.5): teto do claro de 0,24 para 0,32 e traço/partícula mais grossos.
+- [x] ATM-FUT-03 — ✅ 2026-11-23, substituída (D21.3): o mapa 3D não é refeito. O grafo 2D recebeu acabamento (halos, ping, pacotes, palco com radar) e a atmosfera some na aba do mapa. ~~Refazer o mapa 3D na linguagem nova.~~
+- [x] ATM-FUT-04 — ✅ 2026-11-23 (D21.4): Aplicações publica a superfície de exposição; Projetos fica neutro por decisão.
+- [x] ATM-FUT-05 — ✅ 2026-11-23 (D21.1): Exposure Graph, SLA, Aprovações e Filas tinham ficado sem fundo. Formulários ganham o ASCII parado e o Exposure Graph o relevo.
+- [ ] ATM-FUT-06 — E2E `cybergraph.spec.ts` instável (CG-02/CG-06 alternam): o scan simulado chega a COMPLETED mas os sensores seguem acrescentando nós (16 → 33 durante o teste). Passam isolados. Esperar a contagem estabilizar antes de medir. Existia antes desta branch; não foi corrigido aqui.
+
 **✅ 2026-10-23 — Issue #51: Etapa 4 concluída (100% do recorte; aprovada com ressalvas).** Merge `origin/dev` em `9f7e23a`; Etapas 2–4 consolidadas em um commit local separado, sem push. Os três outputs das Issues #19/#20 ficaram fora. Fila administrativa, autorização ADMIN atual, decisões e convites concluídos. Build, lint focal, Prisma validate/generate e Jest completo passaram: **57/57 suítes, 995/995 testes, 454,05 s**. Coverage dos quatro services: 88,26% statements, 68,49% branches, 96,77% functions, 95,03% lines. `npm run check` ainda falha no lint por dois imports anteriores antes do Jest; execução completa separada passou. [Ownership e ressalvas](SECURITY-AUTH-ETAPA-4.md).
 
 **✅ 2026-10-23 — Issue #51: Etapa 3 concluída (100% do recorte).** Endpoints públicos, Turnstile fail-closed, limites independentes e wiring lazy concluídos. Build aprovado; Jest completo **53/53 suítes, 960/960 testes**. Cobertura agregada dos três services do recorte: 91,52% statements, 80% branches, 93,33% functions e 94,87% lines. `npm run check` ainda para antes do Jest por dois imports antigos em `vulnerability.service.ts:46`; suíte completa passou separadamente. Smoke MailHog 11/11 em duas rodadas, total de 24 mensagens confirmado. Cloudflare real não exercitada. No fechamento da Etapa 3, merge ainda aberto; concluído depois na Etapa 4 em `9f7e23a`. [Relatório/ownership](SECURITY-AUTH-ETAPA-3.md).
@@ -39,6 +58,7 @@
 - [x] **SEC-AUTH-6 / ORQUESTRACAO:** integrar solicitação/verificação, ativação e revisão ADMIN na interface web; concluída em 2026-11-18, aprovada com ressalvas. [Relatório](SECURITY-AUTH-ETAPA-6.md).
 - [x] **SEC-AUTH-7:** implementação e validação local com ressalvas concluídas em 2026-11-25. API final: reteste HTTP 1/1 suíte, 9/9, Jest exit 0/Docker 0; 21/21 suítes e 339/339 testes distintos; build/TSC/Prisma/lint focal/migrations 23/23 passaram. Web pós-`dev` 124/125, falha reproduzida na base pura igual à `dev`; Compose DEV/real PASS. Ressalvas: lint global com dois args unused herdados e 12 npm advisories; SMTP externo, Turnstile em produção e deploy não executados. Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83). [Registro](SECURITY-AUTH-ETAPA-7.md).
 - [ ] **SEC-AUTH-7+:** trabalho operacional remanescente e follow-ups após avaliação da Etapa 7.
+
 **🚧 2026-11-18 — Fila BullMQ com worker desacoplável e scans DAST agendados (ADR-056, issue #76).** Branches `feat/fila-fase0-adr` a `feat/fila-fase6-docs`, empilhadas a partir da `dev` @ `95f3252`. O padrão continua `QUEUE_DRIVER=memory` (comportamento de antes); `bullmq` é opt-in.
 
 - [x] FILA-00 — ADR-056 e texto revisado da issue #76 (fora do git). Investigação: fila DAST em memória, findings idempotentes por `@@unique`, visibilidade de scans por requester, simulado fora das métricas só pela promoção.

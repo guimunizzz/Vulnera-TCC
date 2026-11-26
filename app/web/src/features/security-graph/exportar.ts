@@ -35,8 +35,19 @@ export function resolverVariaveis(texto: string, estilo: Pick<CSSStyleDeclaratio
  * Renderiza um SVG (já com a caixa de visão do conteúdo inteiro) num PNG.
  * `escala` 2 dá nitidez de tela retina para colar em documento.
  */
+/**
+ * O SVG como texto, sem a decoração animada (`[data-decoracao]`: pacotes nas
+ * arestas, ping da seleção) — num quadro parado ela sairia como ponto solto na
+ * origem. O SVG da tela não é tocado: trabalha numa cópia.
+ */
+export function serializarSemDecoracao(svg: SVGSVGElement): string {
+  const copia = svg.cloneNode(true) as SVGSVGElement;
+  copia.querySelectorAll("[data-decoracao]").forEach((el) => el.remove());
+  return new XMLSerializer().serializeToString(copia);
+}
+
 export async function svgParaPng(svg: SVGSVGElement, largura: number, altura: number, escala = 2): Promise<Blob | null> {
-  const texto = resolverVariaveis(new XMLSerializer().serializeToString(svg), getComputedStyle(document.documentElement));
+  const texto = resolverVariaveis(serializarSemDecoracao(svg), getComputedStyle(document.documentElement));
   const url = URL.createObjectURL(new Blob([texto], { type: "image/svg+xml;charset=utf-8" }));
   try {
     const imagem = new Image();

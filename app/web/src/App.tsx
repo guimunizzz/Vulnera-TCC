@@ -78,6 +78,10 @@ const RemediationPage = paginaLazy(() => import("./pages/remediation-page"), "Re
 const StyleguidePage = import.meta.env.DEV
   ? paginaLazy(() => import("./pages/styleguide-page"), "StyleguidePage")
   : null;
+// Mesmo regime do styleguide: laboratório de atmosferas 3D, fora do build de produção.
+const Lab3dPage = import.meta.env.DEV
+  ? paginaLazy(() => import("./pages/lab-3d-page"), "Lab3dPage")
+  : null;
 import { ComMenuAcessibilidade } from "./design/accessibility-menu";
 
 export function App() {
@@ -108,6 +112,7 @@ export function App() {
               no bundle de produção o Vite elimina o ramo inteiro, e a página nem
               sequer é empacotada. */}
           {import.meta.env.DEV && StyleguidePage && <Route path="/styleguide" element={<StyleguidePage />} />}
+          {import.meta.env.DEV && Lab3dPage && <Route path="/lab-3d" element={<Lab3dPage />} />}
         </Route>
 
         <Route element={<ProtectedRoute />}>

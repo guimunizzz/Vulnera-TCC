@@ -8,6 +8,12 @@ data: 2026-09-23
 
 # ADR-041 - Atmosfera única no layout autenticado
 
+> [!info] Atualizada pelo ADR-060 (2026-11-23)
+> O `AppLayout` continua dono da decoração, mas ela passa a depender da
+> seção: nebulosa no Dashboard, relevo com radar no monitoramento, ASCII no
+> trabalho técnico, nada em formulários. Troca por crossfade de 0,8 s.
+> Ver [[ADR-060 - Atmosferas por secao na area autenticada]].
+
 > [!info] Atualizada pelo ADR-050 (2026-11-04)
 > Continua valendo: um canvas, montado pelo `AppLayout`, com o mesmo contrato
 > de decoração. Mudou o conteúdo e o ritmo: ondas e órbitas deram lugar a uma

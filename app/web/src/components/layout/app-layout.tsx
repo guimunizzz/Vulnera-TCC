@@ -35,7 +35,8 @@ import { AccessibilityMenu } from "../../design/accessibility-menu";
 import { TransicaoDeRota } from "../../motion/components";
 import { useAuthStore } from "../../store/auth.store";
 import { authApi } from "../../lib/api/auth.api";
-import { DashboardAtmosphere } from "../dashboard/hero/dashboard-atmosphere";
+import { AtmosferaDaPlataforma } from "../../features/atmosfera-3d/atmosfera-da-plataforma";
+import { ID_DA_AREA_DE_CONTEUDO } from "../../features/atmosfera-3d/apresentacao";
 import { AmbientHostContext } from "../dashboard/hero/ambient-host-context";
 import { QueryLoadingIndicator } from "./query-loading-indicator";
 import { LimiteDeRota } from "./route-boundary";
@@ -139,9 +140,10 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main id="conteudo" tabIndex={-1} className="operations-main relative isolate flex-1 p-4 focus-visible:outline-none lg:p-6">
+        <main id={ID_DA_AREA_DE_CONTEUDO} tabIndex={-1} className="operations-main relative isolate flex-1 p-4 focus-visible:outline-none lg:p-6">
           <div aria-hidden="true" className="operations-backdrop pointer-events-none absolute inset-0" />
-          <DashboardAtmosphere pausado={ambientePausado} />
+          {/* A atmosfera depende da seção (nebulosa, relevo, ASCII ou nada) — ver features/atmosfera-3d/rotas.ts. */}
+          <AtmosferaDaPlataforma pausado={ambientePausado} />
           {/* A chave é o caminho: o crossfade dispara na troca de rota, não a
               cada re-render da mesma rota. */}
           <div className="operations-content relative">

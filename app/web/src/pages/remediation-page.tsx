@@ -56,6 +56,8 @@ import type { FindingListItem } from "../types/vulnerability.types";
 import type { AssigneeCandidate, User } from "../types/auth.types";
 import { NumeroAnimado } from "../motion/components";
 import { useMotion } from "../motion/use-motion";
+import { riscoDaRemediacao } from "../features/atmosfera-3d/risco";
+import { usePublicarRisco } from "../features/atmosfera-3d/atmosfera.store";
 import "./remediation-page.css";
 
 /** As colunas do quadro. `CLOSED` fica de fora — ver o cabeçalho. */
@@ -147,6 +149,9 @@ export function RemediationPage() {
   useEffect(() => {
     if (busca.isSuccess) jaMostrouQuadro.current = true;
   }, [busca.isSuccess]);
+
+  // O relevo da atmosfera baixa conforme o quadro anda para "corrigido".
+  usePublicarRisco(busca.data ? riscoDaRemediacao(busca.data.data) : undefined);
 
   const totalNoQuadro = busca.data?.data.length;
   const movimentoConfirmado = ultimaMovimentacao && busca.data?.data.some(

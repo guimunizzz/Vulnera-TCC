@@ -12,6 +12,14 @@
  * Em layout "livre" (radial, estrela, orgânico, clusters) as arestas ligam os
  * centros e as ilhas de clusters aparecem atrás dos nós.
  *
+ * ACABAMENTO (2026-11-23, D21.3 — o 2D é a visão principal)
+ * Corpo do nó com profundidade (degradê do token), halo de severidade nos
+ * críticos e altos (o crítico pulsa devagar), rótulo com contorno da cor do
+ * fundo para não sumir sob as arestas, arestas mais calmas com halo só para o
+ * que é grave, pacotes de luz correndo até os nós mais graves e, na seleção,
+ * um ping de radar — a mesma linguagem da atmosfera. Movimento reduzido:
+ * nada disso anima. Pacotes e ping têm `data-decoracao` e saem do PNG.
+ *
  * POR QUE EXISTE
  * É a visão de trabalho do grafo: lê bem em qualquer tamanho, não depende de
  * WebGL e cada nó é um botão focável.
@@ -72,6 +80,14 @@ interface Props {
   animarTroca?: string;
   /** O que o grafo mostra, para leitor de tela. */
   descricao?: string;
+  /**
+   * Nós em destaque sem seleção (combinações tóxicas, raio de impacto): o resto
+   * apaga, como na seleção, e as arestas entre dois nós destacados ficam acesas.
+   * A seleção, quando há, vence o destaque.
+   */
+  destaque?: ReadonlySet<string> | null;
+  /** Quantos comentários cada nó tem (selo de balão no nó). */
+  comentarios?: ReadonlyMap<string, number>;
 }
 
 const RAIO: Record<Kind2D, number> = {
@@ -127,6 +143,12 @@ const NOME_DO_TOTAL: Partial<Record<Kind2D, string>> = {
   PACKAGE: "CVEs",
 };
 const MINIMAPA = { w: 168, h: 108 };
+/** Pacotes de luz nas arestas: só para os nós graves, e poucos (é sinal, não chuva). */
+const MAX_PACOTES = 14;
+const GRAVE: ReadonlySet<Risco> = new Set<Risco>(["CRITICAL", "HIGH"]);
+const ORDEM_RISCO: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 };
+/** Id de `<defs>` a partir de um token (`--color-severity-high` → `colorseverityhigh`). */
+const idDoToken = (token: string) => token.replace(/[^a-z0-9]/gi, "");
 
 function subtitulo(no: No2D): string {
   if (no.subtitulo) return no.subtitulo;
@@ -226,7 +248,7 @@ const ZOOM_MAX = 2.5;
 const limitarZoom = (k: number) => Math.min(Math.max(k, ZOOM_MIN), ZOOM_MAX);
 
 export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function CyberGraph2D(
-  { visao, selecionadoId, aoClicar, aoAbrir, aoLimpar, aoMover, minimapa, animarTroca, descricao = "da Internet até os findings" },
+  { visao, selecionadoId, aoClicar, aoAbrir, aoLimpar, aoMover, minimapa, animarTroca, descricao = "da Internet até os findings", destaque = null, comentarios },
   ref,
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -342,11 +364,26 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
     };
   }, []);
 
-  const contexto = useMemo(
-    () => (selecionadoId && visao.nodes.some((n) => n.id === selecionadoId) ? contextoDoNo(visao, selecionadoId) : null),
-    [visao, selecionadoId],
-  );
+  const contexto = useMemo(() => {
+    if (selecionadoId && visao.nodes.some((n) => n.id === selecionadoId)) return contextoDoNo(visao, selecionadoId);
+    if (!destaque || destaque.size === 0) return null;
+    const arestas = new Set(visao.edges.filter((e) => destaque.has(e.source) && destaque.has(e.target)).map(chaveDaAresta));
+    return { nos: new Set(destaque), arestas };
+  }, [visao, selecionadoId, destaque]);
   const porId = useMemo(() => new Map(visao.nodes.map((n) => [n.id, n])), [visao]);
+
+  // Tokens presentes no desenho: um degradê de corpo e um de halo por token, nos <defs>.
+  const tokensDoDesenho = useMemo(() => [...new Set(desenho.nodes.map((n) => tokenDoNo(n)))], [desenho]);
+  // As arestas que levam pacote de luz: as que chegam aos nós mais graves, no máximo MAX_PACOTES.
+  const arestasComPacote = useMemo(() => {
+    if (reduzido) return new Set<string>();
+    const nos = new Map(visao.nodes.map((n) => [n.id, n]));
+    const graves = visao.edges
+      .map((edge) => ({ edge, risco: nos.get(edge.target)?.risk }))
+      .filter((a): a is { edge: typeof a.edge; risco: Risco } => !!a.risco && GRAVE.has(a.risco))
+      .sort((a, b) => ORDEM_RISCO[a.risco] - ORDEM_RISCO[b.risco]);
+    return new Set(graves.slice(0, MAX_PACOTES).map((a) => chaveDaAresta(a.edge)));
+  }, [visao, reduzido]);
 
   // Um só ponto de Tab no grafo (roving tabindex): 300 nós em sequência de Tab seriam uma maratona.
   const tabulavel = (focoId && porId.has(focoId) ? focoId : null) ?? (selecionadoId && porId.has(selecionadoId) ? selecionadoId : null) ?? visao.nodes[0]?.id;
@@ -436,6 +473,21 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
           <filter id="cg-sombra" x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="black" floodOpacity="0.25" />
           </filter>
+          {tokensDoDesenho.map((token) => (
+            <g key={token}>
+              {/* Corpo: luz do token no alto do nó, sumindo para a borda — volume, não disco chapado. */}
+              <radialGradient id={`cg-corpo-${idDoToken(token)}`} cx="50%" cy="36%" r="64%">
+                <stop offset="0%" stopColor={cor(token, 0.36)} />
+                <stop offset="60%" stopColor={cor(token, 0.12)} />
+                <stop offset="100%" stopColor={cor(token, 0.05)} />
+              </radialGradient>
+              <radialGradient id={`cg-halo-${idDoToken(token)}`}>
+                <stop offset="0%" stopColor={cor(token, 0.34)} />
+                <stop offset="55%" stopColor={cor(token, 0.1)} />
+                <stop offset="100%" stopColor={cor(token, 0)} />
+              </radialGradient>
+            </g>
+          ))}
           {desenho.edges.map((edge, i) => {
             const de = porIdDesenho.get(edge.source);
             const para = porIdDesenho.get(edge.target);
@@ -471,21 +523,57 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
             const x2 = para.x - RAIO[para.kind];
             const meio = (x1 + x2) / 2;
             const d = livre ? arestaLivre(de, para) : `M ${x1} ${de.y} C ${meio} ${de.y}, ${meio} ${para.y}, ${x2} ${para.y}`;
-            const noCaminho = contexto?.arestas.has(chaveDaAresta(edge)) ?? false;
+            const chave = chaveDaAresta(edge);
+            const noCaminho = contexto?.arestas.has(chave) ?? false;
+            const grave = !!para.risk && GRAVE.has(para.risk);
             return (
-              <g key={chaveDaAresta(edge)} className="cg-entrar" opacity={para.opacidade}>
+              <g key={chave} className="cg-entrar" opacity={para.opacidade}>
+                {/* Halo só para o que leva ao grave: o resto da malha fica calmo. */}
+                {grave && !contexto && <path d={d} fill="none" stroke={cor(tokenDoNo(para), 0.1)} strokeWidth={7} strokeLinecap="round" />}
                 <path
                   d={d}
                   fill="none"
                   stroke={`url(#cg-g-${i})`}
-                  strokeWidth={noCaminho ? 3 : 2}
-                  strokeOpacity={contexto ? (noCaminho ? 1 : 0.14) : 0.75}
+                  strokeWidth={noCaminho ? 3 : grave ? 1.8 : 1.4}
+                  strokeOpacity={contexto ? (noCaminho ? 1 : 0.12) : grave ? 0.7 : 0.42}
                   strokeLinecap="round"
                 />
                 {noCaminho && <path d={d} fill="none" stroke={cor("--color-text-primary", 0.55)} strokeWidth={1.4} className="cg-fluxo" />}
+                {!contexto && arestasComPacote.has(chave) && !para.saindo && (
+                  // Pacote de luz correndo até o nó grave; tempos defasados para não andarem em bloco.
+                  <circle r={2.6} fill={cor(tokenDoNo(para))} className="cg-pacote" data-decoracao aria-hidden="true">
+                    <animateMotion dur={`${2.8 + (i % 5) * 0.45}s`} begin={`${(i * 0.53) % 2.6}s`} repeatCount="indefinite" path={d} />
+                  </circle>
+                )}
               </g>
             );
           })}
+
+          {/* Camada de efeitos, fora dos botões dos nós: halo de severidade (o
+              crítico respira) e o ping de radar da seleção. Fora do botão, a
+              animação não mexe na caixa do nó — clicar continua estável — e a
+              decoração não entra na árvore de acessibilidade. */}
+          <g aria-hidden="true" pointerEvents="none">
+            {desenho.nodes.map((no) => {
+              if (no.saindo || (contexto && !contexto.nos.has(no.id))) return null;
+              const raio = RAIO[no.kind];
+              const token = tokenDoNo(no);
+              const grave = !!no.risk && GRAVE.has(no.risk);
+              const selecionado = no.id === selecionadoId;
+              if (!grave && !selecionado) return null;
+              return (
+                <g key={no.id} transform={`translate(${no.x} ${no.y})`}>
+                  {grave && <circle r={raio + 18} fill={`url(#cg-halo-${idDoToken(token)})`} className={no.risk === "CRITICAL" ? "cg-pulso" : undefined} />}
+                  {selecionado && !reduzido && (
+                    <g data-decoracao>
+                      <circle r={raio} fill="none" stroke={cor(token)} strokeWidth={1.5} className="cg-ping" />
+                      <circle r={raio} fill="none" stroke={cor(token)} strokeWidth={1.5} className="cg-ping cg-ping-atraso" />
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+          </g>
 
           {desenho.nodes.map((no) => {
             const raio = RAIO[no.kind];
@@ -513,7 +601,7 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                 tabIndex={no.id === tabulavel ? 0 : -1}
                 aria-pressed={selecionado}
                 aria-expanded={no.kind === "GROUP" || no.expandivel ? no.expandido : undefined}
-                aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${ROTULO_RISCO[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} ${NOME_DO_TOTAL[no.kind] ?? "findings"}` : ""}`}
+                aria-label={`${ROTULO_TIPO[no.kind]}: ${no.label}${no.risk ? `, risco ${ROTULO_RISCO[no.risk].toLowerCase()}` : ""}${no.total ? `, ${no.total} ${NOME_DO_TOTAL[no.kind] ?? "findings"}` : ""}${comentarios?.get(no.id) ? `, ${comentarios.get(no.id)} comentário${comentarios.get(no.id) === 1 ? "" : "s"}` : ""}`}
                 className="cg-no cg-entrar cursor-grab outline-none active:cursor-grabbing"
                 opacity={apagado ? 0.28 : 1}
                 onFocus={() => setFocoId(no.id)}
@@ -539,7 +627,8 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                 <circle className="cg-foco" r={raio + 5} fill="none" stroke={cor("--color-focus-ring")} strokeWidth={2} opacity={0} />
                 {(no.kind === "GROUP" || no.expandivel) && <circle r={raio + 4} fill="none" stroke={cor(token, 0.55)} strokeWidth={1.5} />}
                 <circle r={raio} fill={cor("--color-bg-surface")} stroke={cor(token)} strokeWidth={2} filter="url(#cg-sombra)" />
-                <circle r={raio - 5} fill={cor(token, internet ? 0.22 : 0.14)} />
+                <circle r={raio - 1.5} fill={`url(#cg-corpo-${idDoToken(token)})`} />
+                <circle r={raio - 4.5} fill="none" stroke={cor(token, 0.22)} strokeWidth={1} />
                 <Icone
                   x={-tamIcone / 2}
                   y={-tamIcone / 2}
@@ -549,6 +638,20 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                   strokeWidth={internet ? 1.4 : 1.8}
                   aria-hidden="true"
                 />
+                {/* Selo de comentários: balão no canto oposto ao do contador do grupo. */}
+                {!!comentarios?.get(no.id) && (
+                  <g transform={`translate(${-raio * 0.78} ${-raio * 0.78})`} aria-hidden="true">
+                    <path
+                      d="M -9 -7 h 18 a 3 3 0 0 1 3 3 v 7 a 3 3 0 0 1 -3 3 h -9 l -5 4 v -4 h -4 a 3 3 0 0 1 -3 -3 v -7 a 3 3 0 0 1 3 -3 z"
+                      fill={cor("--color-bg-surface")}
+                      stroke={cor("--color-accent-ink")}
+                      strokeWidth={1.3}
+                    />
+                    <text textAnchor="middle" y={-0.5} dy="0.35em" fontSize={9} fontWeight={700} fill={cor("--color-accent-ink")}>
+                      {Math.min(comentarios.get(no.id)!, 99)}
+                    </text>
+                  </g>
+                )}
                 {(no.kind === "GROUP" || no.expandivel) && (
                   <g transform={`translate(${raio * 0.75} ${-raio * 0.75})`}>
                     {/* Só os tokens de severidade têm -surface/-ink; o resto usa a superfície neutra. */}
@@ -564,10 +667,24 @@ export const CyberGraph2D = forwardRef<CyberGraph2DHandle, Props>(function Cyber
                   fontSize={internet ? 17 : 13}
                   fontWeight={internet ? 700 : 600}
                   fill={cor("--color-text-primary")}
+                  // Contorno da cor do palco: o rótulo continua legível quando passa sobre arestas.
+                  stroke={cor("--color-bg-canvas", 0.9)}
+                  strokeWidth={4}
+                  strokeLinejoin="round"
+                  paintOrder="stroke"
                 >
                   {encurtar(no.label, internet ? 20 : livre ? 22 : 26)}
                 </text>
-                <text y={raio + (internet ? 38 : 32)} textAnchor="middle" fontSize={11} fill={cor("--color-text-muted")}>
+                <text
+                  y={raio + (internet ? 38 : 32)}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fill={cor("--color-text-muted")}
+                  stroke={cor("--color-bg-canvas", 0.9)}
+                  strokeWidth={3.5}
+                  strokeLinejoin="round"
+                  paintOrder="stroke"
+                >
                   {subtitulo(no)}
                 </text>
               </g>

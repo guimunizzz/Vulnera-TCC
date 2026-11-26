@@ -20,6 +20,10 @@
 import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import { Download, LocateFixed, Map as MapIcon, Minus, Plus, RotateCcw, Route, Scan, Search } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { graphCommentsApi } from "../../lib/api/graph-comments.api";
+import { ComentariosDoNo } from "./comentarios-do-no";
+import { chaveDosComentarios, contarPorNo } from "./comentarios";
 import { cn } from "../../lib/cn";
 import {
   DAST_RISK_LABELS,
@@ -59,12 +63,18 @@ function hostDe(url: string): string {
 }
 
 export default function CyberGraph({
+  scanId,
+  noInicial = null,
   targetUrl,
   findings,
   sensores,
   ativos = [],
   aoVerNaLista,
 }: {
+  /** Com ele, o grafo mostra e aceita comentários por nó (ADR-061). */
+  scanId?: string;
+  /** Nó já selecionado ao abrir (link da notificação de comentário). */
+  noInicial?: string | null;
   targetUrl: string;
   findings: DastFinding[];
   sensores: DastSensorRun[];
@@ -82,7 +92,14 @@ export default function CyberGraph({
     return c;
   }, [findings]);
   const [layout, setLayout] = useLayoutSalvo("vulnera:cybergraph-layout");
-  const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
+  const [selecionadoId, setSelecionadoId] = useState<string | null>(noInicial);
+  // Comentários do grafo deste scan: o selo nos nós e o fio no painel.
+  const comentarios = useQuery({
+    queryKey: chaveDosComentarios("DAST_SCAN", scanId),
+    queryFn: () => graphCommentsApi.listar("DAST_SCAN", scanId),
+    enabled: !!scanId,
+  });
+  const comentariosPorNo = useMemo(() => contarPorNo(comentarios.data), [comentarios.data]);
   const [expandidos, setExpandidos] = useState<ReadonlySet<string>>(() => new Set());
   const [modalAberto, setModalAberto] = useState(false);
   const [busca, setBusca] = useState("");
@@ -343,6 +360,7 @@ export default function CyberGraph({
               aoLimpar={() => setSelecionadoId(null)}
               aoMover={mover2d}
               minimapa={minimapa}
+              comentarios={comentariosPorNo}
             />
             {/* Zoom por botões: a roda só funciona com o grafo em foco, e no celular não há roda. */}
             <div role="group" aria-label="Zoom" className="absolute bottom-3 right-3 flex flex-col gap-1">
@@ -384,6 +402,11 @@ export default function CyberGraph({
         aoExpandir={() => setModalAberto(true)}
         certificado={sensores.find((s) => s.sensorKey === "ssl")?.message ?? null}
         aoVerNaLista={verNaLista}
+        rodape={
+          scanId && detalhe && comentarios.data ? (
+            <ComentariosDoNo grafo="DAST_SCAN" escopo={scanId} noId={detalhe.id} rotulo={detalhe.label} comentarios={comentarios.data} />
+          ) : null
+        }
       />
 
       <ModalDoNo
