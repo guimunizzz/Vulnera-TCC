@@ -5,10 +5,10 @@ import type { UserRole } from "../../types/auth.types";
 interface ProtectedRouteProps {
   /** Se informado, só libera a rota pra esses roles — senão, qualquer autenticado passa. */
   roles?: UserRole[];
-  requireCompanyOwner?: boolean;
+  companyRoles?: Array<"OWNER" | "MEMBER">;
 }
 
-export function ProtectedRoute({ roles, requireCompanyOwner }: ProtectedRouteProps) {
+export function ProtectedRoute({ roles, companyRoles }: ProtectedRouteProps) {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const sessionVersion = useAuthStore((s) => s.sessionVersion);
@@ -20,7 +20,7 @@ export function ProtectedRoute({ roles, requireCompanyOwner }: ProtectedRoutePro
   if (roles && !roles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
-  if (requireCompanyOwner && (user.role !== "CLIENT" || !user.companyId || user.companyRole !== "OWNER")) {
+  if (companyRoles && (user.role !== "CLIENT" || !user.companyId || !companyRoles.some((role) => role === user.companyRole))) {
     return <Navigate to="/dashboard" replace />;
   }
 

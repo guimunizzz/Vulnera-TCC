@@ -1,6 +1,6 @@
 /** Valida ownership visual, gestão segura de convites e eventos da equipe. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { companyInvitationsApi } from "../lib/api/company-invitations.api";
@@ -8,7 +8,7 @@ import { useAuthStore } from "../store/auth.store";
 import { CompanyTeamPage } from "./company-team-page";
 
 vi.mock("../lib/api/company-invitations.api", () => ({ companyInvitationsApi: {
-  listMembers: vi.fn(), list: vi.fn(), history: vi.fn(), create: vi.fn(), resend: vi.fn(), revoke: vi.fn(), deactivateMember: vi.fn(),
+  readTeam: vi.fn(), listMembers: vi.fn(), list: vi.fn(), history: vi.fn(), create: vi.fn(), resend: vi.fn(), revoke: vi.fn(), deactivateMember: vi.fn(),
 } }));
 const api = vi.mocked(companyInvitationsApi);
 const members = [
@@ -19,6 +19,8 @@ const pending = { id: "invite-id", name: "Caio", email: "caio@example.test", sta
 beforeEach(() => {
   vi.clearAllMocks();
   useAuthStore.setState({ user: { id: "owner-id", name: "Ana Owner", email: "ana@example.test", role: "CLIENT", companyId: "company-a", companyRole: "OWNER", createdAt: "2026-01-01" } });
+  api.readTeam.mockResolvedValue({ company: { id: "company-a", name: "Empresa Alpha" },
+    members: members.map(({ id, name, companyRole }) => ({ id, name, companyRole })) });
   api.listMembers.mockResolvedValue(members);
   api.list.mockResolvedValue([pending]);
   api.history.mockResolvedValue([{ id: "event-1", invitationId: "invite-id", action: "DELIVERY_FAILED", email: "caio@example.test", actorName: "Ana Owner", createdAt: "2026-11-01T00:00:00Z" }]);
@@ -67,11 +69,81 @@ describe("CompanyTeamPage", () => {
     expect(screen.queryByText("COMPANY_INVITATION_NOT_AVAILABLE")).not.toBeInTheDocument();
   });
 
-  it("não carrega dados nem mostra controles para MEMBER", async () => {
+  it("MEMBER consulta empresa, integrantes e responsável sem controles nem dados administrativos", async () => {
     useAuthStore.setState({ user: { id: "member", name: "Membro", email: "m@example.test", role: "CLIENT", companyId: "company-a", companyRole: "MEMBER", createdAt: "2026-01-01" } });
     renderPage();
-    expect(await screen.findByText("A gestão da equipe está disponível somente para o OWNER da empresa.")).toBeInTheDocument();
+    expect(await screen.findByText("Empresa Alpha")).toBeInTheDocument();
+    expect(screen.getByText("Ana Owner")).toBeInTheDocument();
+    expect(screen.getByText("Bea Membro")).toBeInTheDocument();
+    expect(screen.getByText("Responsável")).toBeInTheDocument();
+    expect(screen.getByText(/Acesso somente para consulta/)).toBeInTheDocument();
+    expect(screen.queryByText("ana@example.test")).not.toBeInTheDocument();
+    expect(screen.queryByText("bea@example.test")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Convites|Histórico de eventos|Convidar membro/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Enviar convite|Reenviar|Revogar|Desativar/ })).not.toBeInTheDocument();
+    expect(api.readTeam).toHaveBeenCalledTimes(1);
     expect(api.listMembers).not.toHaveBeenCalled();
     expect(api.list).not.toHaveBeenCalled();
+    expect(api.history).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { role: "ADMIN" as const, companyId: "company-a", companyRole: "OWNER" },
+    { role: "PENTESTER" as const, companyId: "company-a", companyRole: "MEMBER" },
+    { role: "CLIENT" as const, companyId: null, companyRole: "MEMBER" },
+    { role: "CLIENT" as const, companyId: "company-a", companyRole: null },
+  ])("não consulta a API para identidade fora da equipe: %j", async scope => {
+    useAuthStore.setState({ user: { id: "outsider", name: "Fictício", email: "f@example.test", createdAt: "2026-01-01", ...scope } });
+    renderPage();
+    expect(screen.getByText("A consulta da equipe está disponível somente para integrantes de uma empresa.")).toBeInTheDocument();
+    expect(api.readTeam).not.toHaveBeenCalled();
+    expect(api.listMembers).not.toHaveBeenCalled();
+    expect(api.list).not.toHaveBeenCalled();
+    expect(api.history).not.toHaveBeenCalled();
+  });
+
+  it("mostra erro recuperável e estado vazio ao MEMBER", async () => {
+    useAuthStore.setState({ user: { ...useAuthStore.getState().user!, companyRole: "MEMBER" } });
+    api.readTeam.mockRejectedValueOnce(new Error("fixture-unavailable"));
+    renderPage();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar a equipe.");
+    api.readTeam.mockResolvedValueOnce({ company: { id: "company-a", name: "Empresa Alpha" }, members: [] });
+    await userEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(await screen.findByText("Nenhum integrante ativo.")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("troca OWNER Alpha por MEMBER Beta sem reutilizar dados, formulário ou consultas administrativas", async () => {
+    renderPage();
+    await screen.findByText("Ana Owner");
+    await userEvent.type(screen.getByRole("textbox", { name: /Nome/ }), "Rascunho Alpha");
+    const calls = { members: api.listMembers.mock.calls.length, invitations: api.list.mock.calls.length, history: api.history.mock.calls.length };
+    let completeBeta!: (value: Awaited<ReturnType<typeof companyInvitationsApi.readTeam>>) => void;
+    api.readTeam.mockReturnValueOnce(new Promise(resolve => { completeBeta = resolve; }));
+    act(() => useAuthStore.setState({ user: { id: "beta-member", name: "Membro Beta", email: "beta@example.test", role: "CLIENT", companyId: "company-b", companyRole: "MEMBER", createdAt: "2026-01-01" }, sessionVersion: useAuthStore.getState().sessionVersion + 1 }));
+    expect(screen.queryByText("Ana Owner")).not.toBeInTheDocument();
+    expect(screen.queryByText("Empresa Alpha")).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Rascunho Alpha")).not.toBeInTheDocument();
+    await act(async () => completeBeta({ company: { id: "company-b", name: "Empresa Beta" }, members: [{ id: "beta-owner", name: "Responsável Beta", companyRole: "OWNER" }] }));
+    expect(await screen.findByText("Empresa Beta")).toBeInTheDocument();
+    expect(screen.getByText("Responsável Beta")).toBeInTheDocument();
+    expect(screen.queryByText("Ana Owner")).not.toBeInTheDocument();
+    expect(api.listMembers).toHaveBeenCalledTimes(calls.members);
+    expect(api.list).toHaveBeenCalledTimes(calls.invitations);
+    expect(api.history).toHaveBeenCalledTimes(calls.history);
+  });
+
+  it("descarta conclusão atrasada da leitura de Alpha após iniciar sessão Beta", async () => {
+    let completeAlpha!: (value: Awaited<ReturnType<typeof companyInvitationsApi.readTeam>>) => void;
+    api.readTeam.mockReturnValueOnce(new Promise(resolve => { completeAlpha = resolve; }));
+    useAuthStore.setState({ user: { ...useAuthStore.getState().user!, companyRole: "MEMBER" } });
+    renderPage();
+    api.readTeam.mockResolvedValueOnce({ company: { id: "company-b", name: "Empresa Beta" }, members: [{ id: "beta-member", name: "Membro Beta", companyRole: "MEMBER" }] });
+    act(() => useAuthStore.setState({ user: { id: "beta-member", name: "Membro Beta", email: "beta@example.test", role: "CLIENT", companyId: "company-b", companyRole: "MEMBER", createdAt: "2026-01-01" }, sessionVersion: useAuthStore.getState().sessionVersion + 1 }));
+    await screen.findByText("Empresa Beta");
+    await act(async () => completeAlpha({ company: { id: "company-a", name: "Empresa Alpha" }, members: [{ id: "alpha-member", name: "Membro Alpha", companyRole: "MEMBER" }] }));
+    expect(screen.queryByText("Empresa Alpha")).not.toBeInTheDocument();
+    expect(screen.queryByText("Membro Alpha")).not.toBeInTheDocument();
+    expect(screen.getByText("Membro Beta")).toBeInTheDocument();
   });
 });

@@ -81,16 +81,21 @@ const GRUPOS: GrupoNav[] = [
   },
   {
     rotulo: "Empresa",
-    itens: [{ para: "/team", rotulo: "Minha equipe", papeis: ["CLIENT"], companyRoles: ["OWNER"], icone: Users }],
+    itens: [{ para: "/team", rotulo: "Minha equipe", papeis: ["CLIENT"], companyRoles: ["OWNER", "MEMBER"], icone: Users }],
   },
 ];
 
 export function Sidebar({ aoNavegar, embutida }: { aoNavegar?: () => void; embutida?: boolean }) {
   const papel = useAuthStore((s) => s.user?.role);
   const companyRole = useAuthStore((s) => s.user?.companyRole);
+  const companyId = useAuthStore((s) => s.user?.companyId);
   const grupos = GRUPOS.map((grupo) => ({
     ...grupo,
-    itens: grupo.itens.filter((item) => (!item.papeis || (papel && item.papeis.includes(papel))) && (!item.companyRoles || (companyRole && item.companyRoles.includes(companyRole as "OWNER" | "MEMBER")))),
+    itens: grupo.itens.filter((item) => {
+      const papelPermitido = !item.papeis || (papel && item.papeis.includes(papel));
+      const empresaPermitida = !item.companyRoles || (companyId && item.companyRoles.some((role) => role === companyRole));
+      return papelPermitido && empresaPermitida;
+    }),
   })).filter((grupo) => grupo.itens.length > 0);
 
   return (

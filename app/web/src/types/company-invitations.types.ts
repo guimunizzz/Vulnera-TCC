@@ -1,6 +1,11 @@
 /** DTOs públicos e autenticados do ciclo de convite para membros de empresa. */
 export type CompanyInvitationStatus = "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
 
+export interface CompanyTeam {
+  company: { id: string; name: string };
+  members: Array<{ id: string; name: string; companyRole: "OWNER" | "MEMBER" }>;
+}
+
 export interface CompanyMember {
   id: string;
   name: string;

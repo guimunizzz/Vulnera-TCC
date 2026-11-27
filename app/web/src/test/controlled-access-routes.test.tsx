@@ -44,6 +44,10 @@ vi.mock("../lib/api/threat-intel.api", () => ({
 vi.mock("../lib/api/saved-queries.api", () => ({
   savedQueriesApi: { list: api.savedQueries },
 }));
+vi.mock("../pages/company-team-page", () => ({
+  CompanyTeamPage: () => <h1>Minha equipe</h1>,
+}));
+
 vi.mock("../components/auth/turnstile-challenge", async () => {
   const react = await import("react");
   const Challenge = react.forwardRef(function Challenge() {
@@ -138,6 +142,24 @@ describe("Rotas do acesso controlado", () => {
     expect(screen.queryByRole("heading", { name: "Central de solicitações" })).not.toBeInTheDocument();
     expect(api.adminList).not.toHaveBeenCalled();
     expect(api.pendingSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it.each(["OWNER", "MEMBER"] as const)("abre Minha equipe para CLIENT %s vinculado", async (companyRole) => {
+    autenticar("CLIENT", companyRole);
+    renderApp("/team");
+
+    expect(await screen.findByRole("heading", { name: "Minha equipe" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Minha equipe/ })).toHaveAttribute("href", "/team");
+    expect(screen.getByTestId("rota-atual")).toHaveTextContent("/team");
+  });
+
+  it.each(["ADMIN", "PENTESTER", "CLIENT"] as const)("restringe a rota de equipe sem vínculo válido para %s", async (role) => {
+    autenticar(role);
+    renderApp("/team");
+
+    await waitFor(() => expect(screen.getByTestId("rota-atual")).toHaveTextContent("/dashboard"));
+    expect(screen.queryByRole("heading", { name: "Minha equipe" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Minha equipe/ })).not.toBeInTheDocument();
   });
 
   it("abre a fila dentro do AppLayout para ADMIN", async () => {

@@ -120,7 +120,7 @@ export function App() {
 
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route element={<ProtectedRoute requireCompanyOwner />}>
+            <Route element={<ProtectedRoute roles={["CLIENT"]} companyRoles={["OWNER", "MEMBER"]} />}>
               <Route path="/team" element={<CompanyTeamPage />} />
             </Route>
             <Route path="/projects" element={<ProjectsPage />} />

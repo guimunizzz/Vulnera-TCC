@@ -10,12 +10,14 @@ import type {
   CompanyInvitationHistoryEvent,
   CompanyInvitationMutationResult,
   CompanyMember,
+  CompanyTeam,
 } from "../../types/company-invitations.types";
 
 const root = "/companies/me/invitations";
 const idPath = (id: string) => encodeURIComponent(id);
 
 export const companyInvitationsApi = {
+  readTeam: () => apiClient.get<CompanyTeam>("/companies/me/team").then((res) => res.data),
   listMembers: () => apiClient.get<CompanyMember[]>("/companies/me/members").then((res) => res.data),
   list: () => apiClient.get<CompanyInvitation[]>(root).then((res) => res.data),
   history: () => apiClient.get<CompanyInvitationHistoryEvent[]>(`${root}/history`).then((res) => res.data),

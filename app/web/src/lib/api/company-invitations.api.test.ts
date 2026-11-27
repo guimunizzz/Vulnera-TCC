@@ -7,6 +7,12 @@ import { companyInvitationsApi } from "./company-invitations.api";
 
 beforeEach(() => vi.clearAllMocks());
 describe("companyInvitationsApi", () => {
+  it("consulta a equipe mínima sem receber identificador de empresa", async () => {
+    const team = { company: { id: "alpha", name: "Alpha" }, members: [] };
+    get.mockResolvedValue({ data: team });
+    await expect(companyInvitationsApi.readTeam()).resolves.toEqual(team);
+    expect(get).toHaveBeenCalledWith("/companies/me/team");
+  });
   it("lista membros, convites e histórico append-only", async () => {
     get.mockResolvedValue({ data: [] });
     await companyInvitationsApi.listMembers();

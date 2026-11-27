@@ -1,9 +1,9 @@
 /**
- * Gestão de pessoas, convites e trilha de eventos da empresa do OWNER autenticado.
+ * Consulta de equipe para OWNER/MEMBER e gestão exclusiva do OWNER autenticado.
  * A API define tenant e autorização; esta página só apresenta ações permitidas.
  * Consumida pela rota protegida /team.
  */
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Card, Field, Input } from "../components/ui";
 import { useApiError } from "../hooks/use-api-error";
@@ -29,16 +29,33 @@ function responseStatus(error: unknown): number | undefined {
 
 export function CompanyTeamPage() {
   const user = useAuthStore((state) => state.user);
+  const sessionVersion = useAuthStore((state) => state.sessionVersion);
+  const sessionScope = JSON.stringify([sessionVersion, user?.id, user?.companyId, user?.role, user?.companyRole]);
+  // Reinicia formulários, mensagens e observadores ao trocar sessão ou autorização.
+  return <CompanyTeamSession key={sessionScope} sessionScope={sessionScope} />;
+}
+
+function CompanyTeamSession({ sessionScope }: { sessionScope: string }) {
+  const user = useAuthStore((state) => state.user);
   const owner = user?.role === "CLIENT" && user.companyRole === "OWNER" && Boolean(user.companyId);
-  const sessionScope = `${user?.id ?? "anonymous"}:${user?.companyId ?? "none"}`;
-  const activeScope = useRef(sessionScope);
-  activeScope.current = sessionScope;
+  const canReadTeam = user?.role === "CLIENT" && Boolean(user.companyId)
+    && (user.companyRole === "OWNER" || user.companyRole === "MEMBER");
+  const activeScope = useRef<string | null>(sessionScope);
+  useEffect(() => {
+    activeScope.current = sessionScope;
+    return () => { activeScope.current = null; };
+  }, [sessionScope]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [notice, setNotice] = useState<Notice>(null);
   const queryClient = useQueryClient();
   const getErrorMessage = useApiError();
-  const teamKey = ["company-team", user?.id, user?.companyId] as const;
+  const teamKey = ["company-team", sessionScope] as const;
+  const team = useQuery({
+    queryKey: [...teamKey, "summary"],
+    queryFn: companyInvitationsApi.readTeam,
+    enabled: canReadTeam,
+  });
   const members = useQuery({
     queryKey: [...teamKey, "members"],
     queryFn: companyInvitationsApi.listMembers,
@@ -57,6 +74,7 @@ export function CompanyTeamPage() {
 
   async function refresh(): Promise<void> {
     await Promise.all([
+      queryClient.invalidateQueries({ queryKey: [...teamKey, "summary"] }),
       queryClient.invalidateQueries({ queryKey: [...teamKey, "members"] }),
       queryClient.invalidateQueries({ queryKey: [...teamKey, "invitations"] }),
       queryClient.invalidateQueries({ queryKey: [...teamKey, "history"] }),
@@ -121,18 +139,18 @@ export function CompanyTeamPage() {
     create.mutate({ name: name.trim(), email: email.trim() });
   }
   function confirmRevoke(invitation: CompanyInvitation) {
-    if (window.confirm(`Revogar o convite enviado para ${invitation.email}?`)) revoke.mutate(invitation.id);
+    if (owner && window.confirm(`Revogar o convite enviado para ${invitation.email}?`)) revoke.mutate(invitation.id);
   }
   function confirmDeactivate(member: { id: string; name: string }) {
-    if (window.confirm(`Desativar o acesso de ${member.name}? As sessões dessa pessoa serão encerradas.`)) deactivate.mutate(member.id);
+    if (owner && window.confirm(`Desativar o acesso de ${member.name}? As sessões dessa pessoa serão encerradas.`)) deactivate.mutate(member.id);
   }
 
-  if (!owner) {
+  if (!canReadTeam) {
     return (
       <section className="mx-auto max-w-5xl p-6" aria-labelledby="team-title">
         <h1 id="team-title" className="text-2xl font-bold text-fg">Minha equipe</h1>
         <Alert className="mt-5" tom="perigo">
-          A gestão da equipe está disponível somente para o OWNER da empresa.
+          A consulta da equipe está disponível somente para integrantes de uma empresa.
         </Alert>
       </section>
     );
@@ -145,7 +163,17 @@ export function CompanyTeamPage() {
       <header>
         <p className="font-mono text-xs uppercase tracking-wider text-accent-ink">Empresa</p>
         <h1 id="team-title" className="mt-1 text-3xl font-bold text-fg">Minha equipe</h1>
-        <p className="mt-2 text-fg-muted">Convide pessoas como membros e acompanhe as alterações realizadas.</p>
+        <p className="mt-2 text-fg-muted">
+          {owner ? "Convide pessoas como membros e acompanhe as alterações realizadas." : "Consulte os integrantes ativos e o responsável pela sua empresa."}
+        </p>
+        {team.data && <p className="mt-2 font-medium text-fg">{team.data.company.name}</p>}
+        {team.isLoading && <p className="mt-2" role="status">Carregando empresa…</p>}
+        {team.isError && (
+          <Alert className="mt-3" tom="perigo">
+            Não foi possível carregar a equipe.
+            <Button className="ml-3" variant="secundario" onClick={() => void team.refetch()}>Tentar novamente</Button>
+          </Alert>
+        )}
       </header>
       {notice && (
         <Alert
@@ -156,7 +184,9 @@ export function CompanyTeamPage() {
         </Alert>
       )}
 
-      <Card className="space-y-4">
+      {!owner && <Alert tom="info">Acesso somente para consulta. A gestão da equipe é realizada pelo responsável da empresa.</Alert>}
+
+      {owner && <Card className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold text-fg">Convidar membro</h2>
           <p className="text-sm text-fg-muted">O convite dá acesso operacional como MEMBER.</p>
@@ -172,8 +202,32 @@ export function CompanyTeamPage() {
             Enviar convite
           </Button>
         </form>
-      </Card>
+      </Card>}
 
+      {!owner && team.data && (
+        <Card>
+          <h2 className="mb-4 text-xl font-semibold text-fg">Pessoas</h2>
+          {team.data.members.length === 0 ? <p className="text-sm text-fg-muted">Nenhum integrante ativo.</p> : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <caption className="sr-only">Integrantes ativos da empresa</caption>
+                <thead><tr className="border-b border-subtle text-fg-muted">
+                  <th scope="col" className="p-3">Nome</th>
+                  <th scope="col" className="p-3">Papel empresarial</th>
+                </tr></thead>
+                <tbody>{team.data.members.map((member) => (
+                  <tr key={member.id} className="border-b border-subtle">
+                    <th scope="row" className="p-3 font-medium text-fg">{member.name}</th>
+                    <td className="p-3">{member.companyRole === "OWNER" ? "Responsável" : "Membro"}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {owner && <>
       <Card>
         <h2 className="mb-4 text-xl font-semibold text-fg">Pessoas</h2>
         {members.isLoading && <p role="status">Carregando equipe…</p>}
@@ -305,6 +359,7 @@ export function CompanyTeamPage() {
           </ol>
         )}
       </Card>
+      </>}
     </section>
   );
 }
