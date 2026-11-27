@@ -11,6 +11,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ roles, requireCompanyOwner }: ProtectedRouteProps) {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
+  const sessionVersion = useAuthStore((s) => s.sessionVersion);
 
   if (!accessToken || !user) {
     return <Navigate to="/login" replace />;
@@ -23,5 +24,6 @@ export function ProtectedRoute({ roles, requireCompanyOwner }: ProtectedRoutePro
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <Outlet />;
+  // Descarta a árvore anterior, inclusive conteúdo mantido pela animação de saída.
+  return <Outlet key={sessionVersion} />;
 }

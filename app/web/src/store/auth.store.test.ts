@@ -35,6 +35,15 @@ describe("Cache de leitura por sessão", () => {
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });
 
+  it("limpa o cache e troca a versão ao autenticar novamente a mesma pessoa", () => {
+    useAuthStore.getState().setAuth(session("company-a"));
+    const previous = useAuthStore.getState().sessionVersion;
+    queryClient.setQueryData(["projects"], ["Leitura da sessão antiga"]);
+    useAuthStore.getState().setAuth(session("company-a"));
+    expect(queryClient.getQueryData(["projects"])).toBeUndefined();
+    expect(useAuthStore.getState().sessionVersion).not.toBe(previous);
+  });
+
   it("preserva leituras da mesma sessão durante a rotação dos tokens", () => {
     useAuthStore.getState().setAuth(session("company-a"));
     queryClient.setQueryData(["projects"], ["Projeto da empresa A"]);

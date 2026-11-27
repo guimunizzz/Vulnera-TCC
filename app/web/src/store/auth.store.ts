@@ -15,6 +15,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   user: User | null;
+  sessionVersion: number;
   setAuth: (auth: AuthResponse) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   updateUser: (user: User, sessionUser: User) => boolean;
@@ -27,11 +28,11 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       user: null,
+      sessionVersion: 0,
       setAuth: (auth) => {
-        // Leituras recentes pertencem à sessão: outro usuário precisa buscar
-        // seu próprio escopo, mesmo que visite a mesma rota dentro de 30 s.
-        if (get().user?.id !== auth.user.id) queryClient.clear();
-        set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user });
+        // Um novo login pode ter outro escopo mesmo para a mesma pessoa.
+        queryClient.clear();
+        set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user, sessionVersion: get().sessionVersion + 1 });
       },
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
       updateUser: (user, sessionUser) => {
@@ -39,17 +40,17 @@ export const useAuthStore = create<AuthState>()(
         // (até da mesma pessoa) invalida uma resposta antiga. Rotação de token
         // preserva a referência e os tokens atuais nunca são sobrescritos.
         if (get().user !== sessionUser || user.id !== sessionUser.id) return false;
-        if (user.companyId !== sessionUser.companyId || user.companyRole !== sessionUser.companyRole || user.role !== sessionUser.role || user.legacyOnboardingAllowed !== sessionUser.legacyOnboardingAllowed) {
-          queryClient.clear();
-        }
-        set({ user });
+        const scopeChanged = user.companyId !== sessionUser.companyId || user.companyRole !== sessionUser.companyRole
+          || user.role !== sessionUser.role || user.legacyOnboardingAllowed !== sessionUser.legacyOnboardingAllowed;
+        if (scopeChanged) queryClient.clear();
+        set({ user, sessionVersion: get().sessionVersion + Number(scopeChanged) });
         return true;
       },
       clearAuth: () => {
         queryClient.clear();
-        set({ accessToken: null, refreshToken: null, user: null });
+        set({ accessToken: null, refreshToken: null, user: null, sessionVersion: get().sessionVersion + 1 });
       },
     }),
-    { name: "vulnera-auth" },
+    { name: "vulnera-auth", partialize: ({ accessToken, refreshToken, user }) => ({ accessToken, refreshToken, user }) },
   ),
 );
