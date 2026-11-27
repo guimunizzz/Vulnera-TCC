@@ -243,6 +243,39 @@ MÉDIA até a triagem (comportamento documentado no SAST/SCA).
   importados num projeto do banco de desenvolvimento, para não misturar o SBOM
   do Vulnera com os dados da demonstração.
 
+## Correções aplicadas (2026-11-27, branch `fix/sbom-criticas-altas`, em andamento)
+
+> [!IMPORTANT]
+> Os arquivos em `docs/evidencias/sbom/` e as tabelas acima continuam sendo o
+> retrato **antes** das correções. Regenerar os três SBOMs e atualizar este
+> documento quando a branch for concluída.
+
+| Frente | O que mudou | Validação |
+|---|---|---|
+| Alpine (API e web) | `apk upgrade --no-cache` nos dois Dockerfiles; build com a base `node:22-alpine` nova | Imagem da API: Alpine 3.24.4, `docker-cli` 29.9.3, `python3` 3.14.10, `zlib` 1.4, `libssl3`/`libcrypto3` 3.5.9-r1, `libexpat` 2.11.0 |
+| Web | `vite` 5.4.21 → **6.4.6** (`esbuild` 0.21.5 → 0.25.12). O Vite 6 grava o config compilado em `node_modules/.vite-temp/`: o Dockerfile passou a dar `chown` nessa pasta (sem isso o container caía com `EACCES` como usuário `vulnera`) | `tsc`, lint (0 erros, 9 avisos de antes), contraste, `vite build` OK. Vitest 860/865 com Vite 6 e **também 860/865 com Vite 5** (instabilidade sob carga já existente: os testes que falham mudam a cada rodada e passam isolados). Container: 200, CSP presente, LP e login sem erro de console |
+| API | `overrides` `effect` 3.22.1 e `deepmerge-ts` 8.0.0 (o `prisma` 6.19.3, última 6.x, fixa as vulneráveis), na raiz e em `app/api` | `prisma generate`/`validate`, build, Jest unitário 34/34 suítes e 456/456 testes; lint com os 4 erros já registrados em 26/11. Container saudável, 24 migrações conferidas, login, listagem e `export.xlsx` (XLSX válido) |
+| API | `overrides` `exceljs` → `uuid` 11.1.1 (o `exceljs` 4.4.0, última, pede `uuid` ^8; usa só `require('uuid').v4`, que o `uuid` 11 mantém em CommonJS) | **Só instalação conferida** (`npm ls`). Falta a prova funcional (planilha com formatação condicional `dataBar`, único ponto que chama `uuidv4`) e rebuild da imagem |
+| Mobile | `npm update` no lockfile (`shell-quote` 1.12.0, `source-map-js` 1.2.4, `node-forge` 1.4.4, `brace-expansion` 5.1.0, `follow-redirects` 1.16.3, `compression` 1.8.2) e `overrides` com escopo: `xcode` → `uuid` 11.1.1; `@expo/fingerprint` e `glob@13` → `minimatch` 11.0.1 | `npm ci` limpo, `npm ls` sem erro, lint OK, `expo export` web e android OK. Typecheck falha só em `app/mobile/output/**` (cópias de páginas do web versionadas ali), **igual na versão anterior** — pré-existente |
+
+Reescaneamento parcial (antes do override do `uuid`), críticas + altas pela
+regra do parser do Vulnera: API **26 → 3**, web **82 → 60**, mobile **21 → 2**.
+
+O que ainda falta:
+
+- **Web, 60 achados no binário do `esbuild` 0.25.12**, compilado com Go
+  1.23.12. Caminho: um `esbuild` compilado com Go ≥ 1.27.4 via override com
+  escopo no `vite` (sem afetar o `esbuild` do `tsx`). Não iniciado de fato.
+- **`minimatch@9.0.9`** (API e web): vem do `@typescript-eslint` 7.18 (lint).
+  A 8.74 usa `minimatch ^11.0.1` e aceita o ESLint 8.57; falta subir e
+  ajustar a config de lint. Não iniciado de fato.
+- **Aceito, sem correção possível agora:** `minimatch@10.2.5` e `glob@13.0.6`
+  embutidos no próprio npm das imagens (npm 11 e 12 trazem as mesmas
+  versões; tirar o npm quebra o `npx` do `CMD` e os seeds via `docker compose
+  exec`); `decode-uri-component` 0.2.2 no mobile (a 0.5 é só ESM e o
+  `query-string` faz `require` dela: quebra com `decodeComponent is not a
+  function`).
+
 ## Limites
 
 - É uma foto de 2026-11-27. Sem geração na CI, envelhece a cada dia (a
