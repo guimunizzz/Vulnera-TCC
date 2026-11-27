@@ -1,5 +1,7 @@
 # BACKLOG.md — Vulnera
 
+**🚧 2026-11-27 — Issue #84, checkpoint de preservação.** QA-01 pluralização, QA-02 leitura da equipe por MEMBER e QA-03 atalhos Findings foram mantidos em commits separados na branch `feat/unified-onboarding-tenant-security`. A branch remota de feature será criada por push normal; não foi feita integração da `dev`, PR ou suíte integral. Próximos gates: recuperar evidência do runner `vulnera-qa-api-runner.cjs`, revisar falha do Vitest integral, obter parecer final de segurança, integrar a `dev` em tarefa separada, retestar os três QA no Chrome e validar focalmente. [Handoff](UNIFIED-B2B-HANDOFF.md).
+
 **✅ 2026-11-27 — Central administrativa e tratamento de acesso direto concluídos na wave B2B.** Seções de adesão e comercial sob proteção ADMIN, redirecionamento compatível e neutralidade de acesso no frontend. A próxima rodada testa no Chrome adesão, convites, revogação, permissão de equipe, isolamento e recuperação legada. [Evidências e roteiro](UNIFIED-B2B-TENANT-SECURITY.md#refinamentos-finais-de-2026-11-27).
 
 **✅ 2026-11-25 — Adesão B2B, equipes e segurança de tenants implementadas.** Ativação empresarial, delegação de MEMBER, revogação de sessão e gate de PRs à `dev` concluídos na branch local. Revisão das jornadas reais e decisão de publicação pendentes. [Validações e ressalvas](UNIFIED-B2B-TENANT-SECURITY.md).
