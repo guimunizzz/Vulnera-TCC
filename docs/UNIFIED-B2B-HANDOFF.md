@@ -9,9 +9,8 @@ Atualizado em 2026-11-27 para transferir o estado da Issue #84 sem iniciar nova 
 - HEAD de partida desta preservação: `8c8a9b86589ae86322ac481f1c154a6499cdee18` (`docs: registra refinamentos finais da wave B2B`).
 - Base usada pela wave: `db91b70e37ab121dc1d87c071e95620d38bb8bd9`.
 - `origin/dev` observado nesta sessão: `54c6f3613420163c9d95bc23cd4f5413d7cb17d7`. A wave ainda não foi integrada à `dev` atual; nenhuma integração foi feita nesta sessão.
-- A branch remota `feat/unified-onboarding-tenant-security` não existia no GitHub durante a inspeção. O upstream local estava configurado incorretamente como `origin/dev`; esta contagem não deve ser usada para estimar divergência da branch de feature.
-- Commits locais desta preservação: `0fabfd6b028cc42932891ff0f0cf50e44790fd3f` (API/equipe MEMBER), `12e6e7f68319dfc4715a5af51402937dfc908d96` (VUL-QA-01), `289a1ce05c509e455c8f47d91791f11149983ada` (VUL-QA-02) e `563c8a2b507412c2d6118bf7153179d502e32ff8` (VUL-QA-03). O commit documental e o SHA remoto devem ser acrescentados após a consolidação/publicação.
-- A preservação publica a branch de feature com push normal, sem force, merge ou rebase. O SHA final deve ser confirmado após o push.
+- A branch remota `feat/unified-onboarding-tenant-security` não existia no GitHub durante a inspeção e foi criada por push normal, sem force, merge ou rebase. O upstream local foi corrigido para rastrear `origin/feat/unified-onboarding-tenant-security`; a antiga contagem contra `origin/dev` não estimava a divergência da feature.
+- Commits de preservação: `0fabfd6b028cc42932891ff0f0cf50e44790fd3f` (API/equipe MEMBER), `12e6e7f68319dfc4715a5af51402937dfc908d96` (VUL-QA-01), `289a1ce05c509e455c8f47d91791f11149983ada` (VUL-QA-02), `563c8a2b507412c2d6118bf7153179d502e32ff8` (VUL-QA-03) e `ba5b1c04b2bcf2f475c97f8fa94ef39b0183839c` (primeiro commit do handoff/PRD/backlog). Esse primeiro push foi verificado com SHA local e remoto iguais; esta atualização documental posterior também será enviada por fast-forward normal.
 - Nenhum agente estava ativo durante o inventário.
 
 ## Trabalho preservado
