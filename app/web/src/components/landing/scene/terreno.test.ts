@@ -22,7 +22,8 @@
  *   TER-11  depois da virada desenha no próprio alvo e devolve o renderer
  *   TER-12  o halo fica dentro da tela, do lado certo, com o risco do grupo
  *   TER-13  o ping do clique nasce no ponto do plano embaixo do cursor
- *   TER-14  aquecer e descartar não lançam nem deixam a camada ligada
+ *   TER-14  preparar compila em segundo plano, no alvo do terreno, sem
+ *           desenhar; até ficar pronto a virada não acontece (o ASCII segue)
  *   TER-15  epílogo: com o marco do fim da página o progresso vai de 5 a 6;
  *           a rede nasce nesse trecho e o horizonte amanhece só no fim
  *   TER-16  câmera: de frente antes da virada (a célula cai sobre o glifo),
@@ -206,8 +207,28 @@ function rendererFalso() {
     getRenderTarget: () => alvo,
     setRenderTarget: (novo: THREE.WebGLRenderTarget | null) => { alvo = novo; },
     render: vi.fn(() => { desenhos.push(alvo); }),
+    // Registra o alvo corrente na hora da compilação: é parte da chave do programa.
+    compileAsync: vi.fn(() => {
+      alvosDaCompilacao.push(alvo);
+      return new Promise<void>((resolve) => { terminarCompilacao = resolve; });
+    }),
   };
-  return { renderer: renderer as unknown as THREE.WebGLRenderer, desenhos, alvoAtual: () => alvo };
+  const alvosDaCompilacao: (THREE.WebGLRenderTarget | null)[] = [];
+  let terminarCompilacao: () => void = () => {};
+  return {
+    renderer: renderer as unknown as THREE.WebGLRenderer,
+    desenhos,
+    alvoAtual: () => alvo,
+    alvosDaCompilacao,
+    terminarCompilacao: () => terminarCompilacao(),
+  };
+}
+
+/** Prepara o terreno com o renderer falso, já com a compilação concluída. */
+async function preparar(terreno: ReturnType<typeof montar>, falso: ReturnType<typeof rendererFalso>) {
+  const pronto = terreno.preparar(falso.renderer);
+  falso.terminarCompilacao();
+  await pronto;
 }
 
 function montar() {
@@ -228,9 +249,11 @@ describe("Montagem do terreno", () => {
     expect(terreno.uniformesDaTela.uVirada.value).toBe(0);
   });
 
-  it("TER-11 — depois da virada desenha no próprio alvo e devolve o renderer", () => {
+  it("TER-11 — depois da virada desenha no próprio alvo e devolve o renderer", async () => {
     const terreno = montar();
-    const { renderer, desenhos, alvoAtual } = rendererFalso();
+    const falso = rendererFalso();
+    const { renderer, desenhos, alvoAtual } = falso;
+    await preparar(terreno, falso);
     terreno.desenhar(renderer, 2, 1 / 60, 3.6);
     // Um desenho por quadro, num alvo fora da tela — nada direto no canvas.
     expect(desenhos).toHaveLength(1);
@@ -241,9 +264,11 @@ describe("Montagem do terreno", () => {
     expect(terreno.uniformesDaTela.uCamada.value).toBeInstanceOf(THREE.Texture);
   });
 
-  it("TER-12 — o halo fica dentro da tela, do lado certo, com o risco do grupo", () => {
+  it("TER-12 — o halo fica dentro da tela, do lado certo, com o risco do grupo", async () => {
     const terreno = montar();
-    const { renderer } = rendererFalso();
+    const falso = rendererFalso();
+    const { renderer } = falso;
+    await preparar(terreno, falso);
     const progresso = 3.6;
     terreno.desenhar(renderer, 2, 1 / 60, progresso);
     const halos = terreno.uniformesDaTela.uHalos.value;
@@ -260,9 +285,11 @@ describe("Montagem do terreno", () => {
     expect(Math.min(alta.x, critica.x)).toBeGreaterThan(LARGURA / 2);
   });
 
-  it("TER-13 — o ping do clique nasce no ponto do plano embaixo do cursor", () => {
+  it("TER-13 — o ping do clique nasce no ponto do plano embaixo do cursor", async () => {
     const terreno = montar();
-    const { renderer } = rendererFalso();
+    const falso = rendererFalso();
+    const { renderer } = falso;
+    await preparar(terreno, falso);
     // Antes da virada a câmera olha de frente: o centro da tela é a origem do plano.
     terreno.desenhar(renderer, 0, 1 / 60, 0);
     const malha = (renderer.render as ReturnType<typeof vi.fn>);
@@ -284,9 +311,11 @@ describe("Montagem do terreno", () => {
     expect(uniformes.uPingsAtivos.value).toBe(1);
   });
 
-  it("TER-18 — o grafo entra no desenho: instâncias para a rede, as falhas e os montes", () => {
+  it("TER-18 — o grafo entra no desenho: instâncias para a rede, as falhas e os montes", async () => {
     const terreno = montar();
-    const { renderer } = rendererFalso();
+    const falso = rendererFalso();
+    const { renderer } = falso;
+    await preparar(terreno, falso);
     terreno.desenhar(renderer, 1, 1 / 60, 5.5);
     const cena = (renderer.render as ReturnType<typeof vi.fn>).mock.calls[0][0] as THREE.Scene;
     // Ordem de desenho: malha, arestas, hastes, nós, glifos.
@@ -308,13 +337,30 @@ describe("Montagem do terreno", () => {
     expect(uniformes.uFormado.value).toBe(1);
   });
 
-  it("TER-14 — aquecer e descartar não lançam nem deixam a camada ligada", () => {
+  it("TER-14 — preparar compila em segundo plano, no alvo do terreno, sem desenhar", async () => {
     const terreno = montar();
-    const { renderer, desenhos } = rendererFalso();
-    expect(() => terreno.aquecer(renderer)).not.toThrow();
-    expect(desenhos).toHaveLength(1);
+    const falso = rendererFalso();
+    const { renderer, desenhos, alvosDaCompilacao, alvoAtual } = falso;
+    const pronto = terreno.preparar(renderer);
+    // Compila no alvo em que o terreno desenha (não no canvas) e devolve o anterior.
+    expect(alvosDaCompilacao).toHaveLength(1);
+    expect(alvosDaCompilacao[0]).not.toBeNull();
+    expect(alvoAtual()).toBeNull();
+    expect(desenhos).toHaveLength(0);
+    // Chamado de novo (quadros seguintes), não recompila.
+    expect(terreno.preparar(renderer)).toBe(pronto);
+    expect(renderer.compileAsync).toHaveBeenCalledTimes(1);
+    // Ainda compilando: mesmo depois da virada, nada usa os programas.
+    terreno.desenhar(renderer, 2, 1 / 60, 3.6);
+    expect(desenhos).toHaveLength(0);
     expect(terreno.uniformesDaTela.uCamadaAtiva.value).toBe(0);
     expect(terreno.uniformesDaTela.uVirada.value).toBe(0);
+    // Pronto: o próximo quadro já vira.
+    falso.terminarCompilacao();
+    await pronto;
+    terreno.desenhar(renderer, 2.1, 1 / 60, 3.6);
+    expect(desenhos).toHaveLength(1);
+    expect(terreno.uniformesDaTela.uVirada.value).toBe(1);
     expect(() => terreno.descartar()).not.toThrow();
   });
 });
