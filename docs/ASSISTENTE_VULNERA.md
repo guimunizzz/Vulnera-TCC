@@ -116,15 +116,19 @@ GEMINI_API_KEY=
 GEMINI_MODEL=
 ASSISTANT_TIMEOUT_MS=15000
 ASSISTANT_MAX_OUTPUT_TOKENS=500
+ASSISTANT_THINKING_LEVEL=MINIMAL
+ASSISTANT_API_REPLICAS=1
 RATE_LIMIT_ASSISTANT_USER_PER_HOUR=10
-RATE_LIMIT_ASSISTANT_USER_BURST=20
+RATE_LIMIT_ASSISTANT_USER_BURST=5
 RATE_LIMIT_ASSISTANT_GLOBAL_PER_HOUR=30
 RATE_LIMIT_ASSISTANT_GLOBAL_BURST=20
 ```
 
 Para ensaiar sem chamadas externas, use `ASSISTANT_MODE=local`. Para Gemini, use `ASSISTANT_MODE=gemini` com chave e modelo preenchidos no ambiente privado. Chave/modelo ausentes, modo inválido, falha externa ou resposta inválida preservam a ajuda local; não impedem a API de iniciar.
 
-O gateway chama somente `generativelanguage.googleapis.com`, por `fetch`, sem seguir redirecionamentos, em uma tentativa por pergunta. Para o modelo recomendado, usa saída limitada e thinking mínimo, sem parâmetros de amostragem incompatíveis. `store:false` não altera os termos de uso de dados do Free Tier.
+O gateway chama somente `generativelanguage.googleapis.com`, sem seguir redirecionamentos, em uma tentativa por pergunta. O padrão é `MINIMAL`. Para ensaiar com raciocínio acima do mínimo, defina `ASSISTANT_THINKING_LEVEL=LOW` no ambiente privado com um modelo textual compatível, como o Gemini 3.5 Flash-Lite. O Free Tier desse modelo inclui tokens de raciocínio na saída gratuita, dentro das cotas do projeto. O limite de 500 tokens de saída e o timeout continuam válidos. Respostas truncadas ou atrasadas acionam a ajuda local. Consulte o [guia de raciocínio](https://ai.google.dev/gemini-api/docs/thinking), os [preços](https://ai.google.dev/gemini-api/docs/pricing#gemini-3.5-flash-lite) e a [cota ativa do projeto](https://aistudio.google.com/rate-limit).
+
+No Gemini 2.5 Flash e Flash-Lite, `MINIMAL` é enviado como orçamento de zero tokens de raciocínio. Modelos sem política de raciocínio validada e combinações incompatíveis usam ajuda local. `store:false` não altera os termos de uso de dados do Free Tier.
 
 ### Docker
 
@@ -169,26 +173,25 @@ npm run dev --workspace=app/web
 | Pergunta | Até 1.000 caracteres, sem texto vazio |
 | Histórico transmitido | Até seis mensagens `user/assistant`, 1.000 caracteres cada e 4.000 no total |
 | Ajuda recuperada | Até três tópicos e 6.000 caracteres |
-| Saída externa | Até 500 tokens; resposta aceita até 4.000 caracteres |
+| Saída externa | Até 500 tokens, corpo de até 32.000 bytes e mensagem de até 4.000 caracteres |
 | Timeout | 15 segundos por padrão; configuração de 100 a 15.000 ms |
 | Tokens de saída configuráveis | 64 a 500; valor inválido volta ao padrão |
-| Cota pessoal da aplicação | Inicia com 20 gerações e repõe 10 por hora |
+| Cota pessoal da aplicação | Inicia com 5 gerações e repõe 10 por hora |
 | Cota global do assistente | Inicia com 20 gerações compartilhadas e repõe 30 por hora |
 
-Com ambas as cotas cheias, uma pessoa pode obter até 20 respostas geradas
-antes de usar a ajuda local. O limite compartilhado também é consumido pelas
-outras pessoas e a cota externa continua independente. As proteções gerais
-de frequência HTTP permanecem ativas.
+Em processo único e com ambas as cotas cheias, cada pessoa tem até 5 tentativas iniciais. Os contadores de geração continuam ativos com `RATE_LIMIT_ENABLED=false` e em testes. Instalações com o valor antigo `RATE_LIMIT_ASSISTANT_USER_BURST=20` devem ajustar a variável privada para 5 ou removê-la para usar o padrão. A API valida que a rajada pessoal é menor que a compartilhada.
 
-Os buckets repõem continuamente: não são limites de uma janela civil exata. São controles da aplicação para **tentativas de geração externa**, separados das cotas Google e dos limitadores gerais HTTP já existentes. Saudações, apresentações e perguntas sem correspondência passam a usar esse orçamento ao chamar o Gemini. Conteúdo sensível barrado pela API e modo local não gastam esses buckets. Tentativas negadas pela cota global não consomem a reserva pessoal; tentativa externa falha continua contando. Os budgets não são descartados antes do tempo necessário à reposição nem expulsos para abrir espaço a novas chaves. Os valores configurados foram preservados.
+Os buckets repõem continuamente e controlam **tentativas de geração externa**. Saudações, apresentações e perguntas sem correspondência usam esse orçamento ao chamar o Gemini. Conteúdo sensível barrado pela API e modo local ficam fora dessa contagem. Tentativas negadas pela cota global devolvem o token pessoal. Uma tentativa externa que falha continua contando. Os contadores ficam na memória até o prazo de reposição e são protegidos contra descarte sob pressão de chaves.
 
 Quando a cota de geração da aplicação acaba, retorna **Ajuda local, HTTP 200**, com `providerRetryAfterSeconds`. O painel mostra **Nova tentativa em N segundos. A ajuda local continua disponível.** É possível continuar perguntando. Os limitadores **HTTP gerais** respondem HTTP 429, `code: RATE_LIMITED`, `retryAfterSeconds` e `Retry-After`: nesse caso há contagem regressiva, rascunho preservado e bloqueio temporário do envio. A retomada é manual. Timeout, indisponibilidade, cota externa e resposta vazia, bloqueada ou inválida também resultam em ajuda local. Quando o catálogo não reconhece um tópico, a Vuvu pede esclarecimento sem oferecer atalhos alheios. A prioridade de geração segue a ADR-067 e os limites seguem a ADR-066.
 
-Para diagnosticar **Ajuda local**, procure `assistant.local_response` no log da API. O evento traz somente o motivo, a versão do pacote da API e a revisão do assistente. Motivos distinguem privacidade, modo local, configuração ausente, cota da aplicação, cota do provedor, timeout, bloqueio e erro ou resposta inválida. Pergunta, histórico, resposta, identidade e credenciais ficam fora do evento. Ver ADR-058.
+Para diagnosticar **Ajuda local**, procure `assistant.local_response` no log da API. O evento traz somente o motivo, a versão do pacote da API e a revisão do assistente. Motivos distinguem privacidade, tela restrita, modo local, configuração ausente, cota da aplicação, cota do provedor, timeout, bloqueio e erro ou resposta inválida. Pergunta, histórico, resposta, identidade e credenciais ficam fora do evento. Ver ADR-058.
 
 **Conversa e teclado (16/11):** “OI”, “OQ E O VULNERA” e “quem e vc” ganharam respostas próprias, usadas como alternativa local a partir da ADR-067. Abreviações `oq`, `q`, `vc`, `vcs`, `pq`, `pfv` e `tb` são normalizadas por palavra inteira; pedidos como “Oi, como faço uma análise?” continuam sendo pedidos. Enter envia somente fora de composição de texto e sem repetição de tecla; Shift+Enter insere linha. Tab alcança o botão; instruções visíveis/descritivas e avisos estáveis acompanham o campo. Contagem por segundo não usa anúncio contínuo ao leitor de tela; a retomada é manual. Relatório histórico: `docs/QA_VUVU_CONVERSA_2026-11-16.md`.
 
-Os contadores reiniciam com o processo e não são coordenados entre várias instâncias. Fechar a aba ou recarregar termina a conversa; outra aba possui memória própria. Sem internet externa, a demonstração pressupõe que a **API local continue funcionando**. Ajuda local não equivale a Gemini ao vivo.
+Em múltiplos processos, configure `ASSISTANT_API_REPLICAS` com o total máximo simultâneo em todos eles, incluindo a sobreposição durante uma atualização. A API divide as taxas e arredonda as rajadas para baixo. Cada processo repõe sua parcela e restaura o saldo inicial ao reiniciar. A [ADR-068](Vulnera/07-Decisoes/ADR-068%20-%20Orcamento%20e%20fronteiras%20da%20Vuvu.md) detalha a escolha.
+
+Fechar a aba, recarregar a página ou mudar a empresa da sessão encerra a conversa. Outra aba tem sua própria conversa em memória.
 
 Na branch visual, a Vuvu fica onde você a coloca: arraste por mouse/toque ou use as setas com o botão focado; Home volta ao canto. Não há passeio, inércia, flutuação contínua ou botão de pausa. O arraste tem expressão própria e não abre a conversa ao soltar. Duplo clique, ou Shift+Enter com foco, faz o “six seven” uma vez (2,88 s), sem envio externo. Movimento reduzido, alto contraste, modal e aba oculta interrompem quadros animados; a posição continua controlável por interação. O painel compacto mantém contexto, selos genéricos de origem, atalhos, Escape, retorno de foco, rolagem e alvos de 44px. Sugestões ficam recolhidas durante a conversa; contador aparece próximo do limite. A plataforma continua utilizável durante uma falha externa. Evolução de 2026-11-16, posterior ao PR #77; os marcos históricos do passeio original permanecem documentados.
 

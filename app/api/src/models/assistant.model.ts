@@ -25,6 +25,7 @@ export interface AssistantTopic {
   keywords: readonly string[];
   screens: readonly AssistantScreen[];
   guidance: string;
+  restrictedGuidance?: string;
   byRole?: Partial<Record<UserRole, string>>;
   roles: readonly UserRole[];
   actions: readonly AssistantActionId[];

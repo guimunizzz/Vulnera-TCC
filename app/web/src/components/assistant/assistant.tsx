@@ -14,16 +14,16 @@ import { subscribeAssistantFeedback, type AssistantFeedback } from "../../lib/as
 import type { UserRole } from "../../types/auth.types";
 import { AssistantMascot } from "./assistant-mascot";
 import { AssistantPanel } from "./assistant-panel";
-import { useAssistantConversation } from "./use-assistant-conversation";
+import { assistantSessionKey, useAssistantConversation } from "./use-assistant-conversation";
 import { ASSISTANT_FOOTPRINT, useAssistantMotion } from "./use-assistant-motion";
 import { VUVU_SIX_SEVEN } from "./vuvu-sprite";
 import "./assistant.css";
 
 export function Assistant() {
   const user = useAuthStore((state) => state.user);
-  const sessionVersion = useAuthStore((state) => state.sessionVersion);
+  const sessionKey = useAuthStore(assistantSessionKey);
   if (!user) return null;
-  return <AssistantSession key={`${sessionVersion}:${user.id}:${user.role}`} role={user.role} />;
+  return <AssistantSession key={sessionKey} role={user.role} />;
 }
 
 function AssistantSession({ role }: { role: UserRole }) {

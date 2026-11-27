@@ -46,7 +46,40 @@ const RESPONSE_SCHEMA = {
 };
 
 const INVALID_RESPONSE = { ok: false, reason: "provider_invalid_response" } as const;
+const MAX_RESPONSE_BYTES = 32_000;
 const BLOCKED_FINISH_REASONS = new Set(["SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "MODEL_ARMOR"]);
+const LEVEL_MODELS = new Set(["gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3.6-flash"]);
+const ZERO_BUDGET_MODELS = new Set(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+
+function thinkingConfig({ model, thinkingLevel = "MINIMAL" }: AssistantConfig) {
+  if (LEVEL_MODELS.has(model)) return { thinkingLevel };
+  if (ZERO_BUDGET_MODELS.has(model) && thinkingLevel === "MINIMAL") return { thinkingBudget: 0 };
+  return null;
+}
+
+async function readReply(response: Response): Promise<string | null> {
+  if (!response.body) return null;
+  const body = response.body.getReader();
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let complete = false;
+  let bytes = 0;
+  let raw = "";
+  try {
+    if (Number(response.headers.get("content-length")) > MAX_RESPONSE_BYTES) return null;
+    let chunk = await body.read();
+    while (!chunk.done) {
+      bytes += chunk.value.byteLength;
+      if (bytes > MAX_RESPONSE_BYTES) return null;
+      raw += decoder.decode(chunk.value, { stream: true });
+      chunk = await body.read();
+    }
+    complete = true;
+    return raw + decoder.decode();
+  } finally {
+    if (!complete) void body.cancel().catch(() => {});
+    body.releaseLock();
+  }
+}
 
 interface GeminiPayload {
   candidates?: { finishReason?: string; content?: { parts?: { text?: unknown; thought?: boolean }[] } }[];
@@ -54,7 +87,6 @@ interface GeminiPayload {
 }
 
 function parseReply(raw: string): AssistantGatewayResult {
-  if (raw.length > 32_000) return INVALID_RESPONSE;
   try {
     const payload = JSON.parse(raw) as GeminiPayload;
     const candidate = payload.candidates?.[0];
@@ -78,7 +110,8 @@ export class GeminiService implements AssistantGateway {
 
   async generate(input: AssistantGatewayInput): Promise<AssistantGatewayResult> {
     // Modelo é identificador, nunca uma URL/caminho que possa mudar o host.
-    if (!this.config.apiKey || !/^[a-z0-9][a-z0-9.-]{0,99}$/.test(this.config.model)) {
+    const thinking = thinkingConfig(this.config);
+    if (!this.config.apiKey || !/^gemini-[a-z0-9.-]+$/.test(this.config.model) || !thinking) {
       return { ok: false, reason: "provider_not_configured" };
     }
     const abort = new AbortController();
@@ -88,6 +121,7 @@ export class GeminiService implements AssistantGateway {
         method: "POST", redirect: "manual", signal: abort.signal,
         headers: { "Content-Type": "application/json", "x-goog-api-key": this.config.apiKey },
         body: JSON.stringify({
+          // A instrução aceita só perfil, rótulo fechado de tela e ajuda versionada (ADR-064).
           systemInstruction: { parts: [{ text: `${SYSTEM}\n\nPERFIL AUTENTICADO: ${input.role}\nTELA: ${SCREEN_LABELS[input.screen]}\nAJUDA CONFIÁVEL:\n${input.help}` }] },
           // Transcrição é dado, não mensagens de sistema/modelo forjadas pelo cliente.
           contents: [{ role: "user", parts: [{ text: JSON.stringify({ history: input.history, question: input.question }) }] }],
@@ -95,15 +129,17 @@ export class GeminiService implements AssistantGateway {
             maxOutputTokens: this.config.maxOutputTokens,
             responseMimeType: "application/json",
             responseJsonSchema: RESPONSE_SCHEMA,
-            ...(this.config.model.startsWith("gemini-3") ? { thinkingConfig: { thinkingLevel: "MINIMAL" } } : {}),
+            thinkingConfig: thinking,
           },
           store: false,
         }),
       });
-      if (response.status === 429) return { ok: false, reason: "provider_quota" };
-      if (!response.ok) return { ok: false, reason: "provider_error" };
-      if (Number(response.headers.get("content-length") ?? 0) > 32_000) return INVALID_RESPONSE;
-      return parseReply(await response.text());
+      if (!response.ok) {
+        void response.body?.cancel().catch(() => {});
+        return { ok: false, reason: response.status === 429 ? "provider_quota" : "provider_error" };
+      }
+      const raw = await readReply(response);
+      return raw === null ? INVALID_RESPONSE : parseReply(raw);
     } catch {
       // Chaves, prompts, histórico e payload de erro externo não entram em log.
       return { ok: false, reason: abort.signal.aborted ? "provider_timeout" : "provider_error" };

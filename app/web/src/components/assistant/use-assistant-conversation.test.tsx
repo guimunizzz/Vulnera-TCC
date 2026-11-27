@@ -21,6 +21,15 @@ beforeEach(() => {
 afterEach(() => { cleanup(); useAuthStore.getState().clearAuth(); vi.useRealTimers(); });
 
 describe("Espera manual do assistente", () => {
+  it.each([["generated", 4_000, true], ["generated", 4_001, false], ["local", 4_000, true], ["local", 4_001, false]] as const)(
+    "valida resposta %s de %i caracteres pelo limite da API", async (source, length, accepted) => {
+      vi.mocked(assistantApi.chat).mockResolvedValueOnce({ ...response, source, message: "a".repeat(length) });
+      const { result } = renderHook(() => useAssistantConversation("CLIENT"));
+      await act(async () => { expect(await result.current.send("OI", "dashboard")).toBe(accepted); });
+      expect(result.current.messages).toHaveLength(accepted ? 2 : 0);
+    },
+  );
+
   it("libera após Retry-After e nunca envia por timer, inclusive depois de limpar a conversa", async () => {
     vi.mocked(assistantApi.chat).mockRejectedValueOnce({ isAxiosError: true, response: { status: 429, data: { retryAfterSeconds: 12 }, headers: {} } });
     const { result } = renderHook(() => useAssistantConversation("CLIENT"));

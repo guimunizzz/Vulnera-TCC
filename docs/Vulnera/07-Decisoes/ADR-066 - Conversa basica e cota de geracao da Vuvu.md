@@ -11,6 +11,8 @@ data: 2026-11-16
 
 > Em 20/11/2026, a capacidade inicial pessoal e compartilhada passou para 20 gerações. As taxas de reposição e a proteção HTTP continuam vigentes.
 
+> Em 27/11/2026, a [ADR-068](ADR-068%20-%20Orcamento%20e%20fronteiras%20da%20Vuvu.md) substituiu a configuração das rajadas e definiu contadores próprios e divisão por processo.
+
 ## Contexto
 
 O usuário relatou que “OI”, “OQ E O VULNERA” e “quem e vc” recebiam uma resposta

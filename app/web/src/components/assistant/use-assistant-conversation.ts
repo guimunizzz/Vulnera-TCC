@@ -10,14 +10,13 @@ import { useAuthStore } from "../../store/auth.store";
 import type { AssistantChatResponse, AssistantMessage, AssistantScreen } from "../../types/assistant.types";
 import type { UserRole } from "../../types/auth.types";
 
-export function assistantSessionKey(): string {
-  const { sessionVersion, user } = useAuthStore.getState();
-  return `${sessionVersion}:${user?.id ?? ""}:${user?.role ?? ""}`;
+export function assistantSessionKey({ sessionVersion, user } = useAuthStore.getState()): string {
+  return JSON.stringify([sessionVersion, user?.id, user?.role, user?.companyId]);
 }
 
 function responseIsValid(response: AssistantChatResponse): boolean {
   return !!response && typeof response.message === "string" && response.message.trim().length > 0
-    && response.message.length <= 8_000 && ["generated", "local"].includes(response.source) && Array.isArray(response.actions)
+    && response.message.length <= 4_000 && ["generated", "local"].includes(response.source) && Array.isArray(response.actions)
     && (response.providerRetryAfterSeconds === undefined || (typeof response.providerRetryAfterSeconds === "number" && Number.isFinite(response.providerRetryAfterSeconds) && response.providerRetryAfterSeconds > 0));
 }
 

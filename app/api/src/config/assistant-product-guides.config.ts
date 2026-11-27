@@ -52,9 +52,8 @@ export const ASSISTANT_PRODUCT_GUIDES: readonly AssistantTopic[] = [
   {
     id: "finding-revalidation-steps", title: "Revalidar um achado corrigido",
     keywords: ["como revalidar", "revalidar um finding", "revalidar um achado", "revalidar uma correcao", "depois de marcar corrigido", "correcao reprovada", "validar correcao no finding"],
-    screens: ["finding-detail", "remediation", "project-detail"], roles: ALL, actions: ["findings", "projects"],
+    screens: ["finding-detail", "remediation", "project-detail"], roles: ANALYSTS, actions: ["findings", "projects"],
     guidance: "1. Abra o finding autorizado que está Corrigido. 2. Confira a recomendação e as evidências, e registre o resultado da revalidação no contexto do finding. 3. Se a correção for validada, o responsável autorizado pode fechar o achado. Se a correção falhar, ele pode voltar para Em andamento, iniciando um novo ciclo de SLA. Confira o estado exibido depois da mudança. A revalidação faz parte do trabalho da equipe; ela não é outro status.",
-    byRole: { CLIENT: "CLIENT pode acompanhar e comentar no achado autorizado. Para fechar ou devolver a uma etapa anterior, fale com ADMIN ou PENTESTER responsável." },
   },
   {
     id: "dast-comparison-workflow", title: "Comparar execuções DAST do mesmo alvo",

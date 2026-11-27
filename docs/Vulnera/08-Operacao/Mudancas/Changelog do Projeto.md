@@ -9,6 +9,10 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-27 — Hardening da Vuvu no PR #88
+
+H1–H12 atendidos em `refactor/assistant-ui`. Cota de geração independente da proteção HTTP, com rajadas de 5/20 e divisão conservadora entre processos. Gateway com limite de corpo e raciocínio explícito por modelo. Guias operacionais filtrados por papel, com aviso local para telas restritas. Web encerra a conversa ao trocar de empresa, alinha a saída a 4.000 caracteres e testa a paridade dos 12 atalhos com os guards reais. `MINIMAL` segue como padrão e `LOW` é configurável nos modelos compatíveis. Ver ADR-064 e ADR-068.
+
 ## 2026-11-26 — Integração do PR #88
 
 **✅ 2026-11-26 — Integração do PR #88 concluída (5/5 conflitos, 100%).** A refactor/assistant-ui incorporou a resolução do PR #77 em `31f5c06`, que já integra a dev em `65a792d`. As rotas e permissões da dev foram preservadas junto com o atlas da Vuvu, a ajuda com 56 tópicos e o contrato público do chat. Os históricos dos dois lados foram preservados. As decisões da Vuvu sobre reações e modo discreto, conversa e cotas, e prioridade do Gemini passaram respectivamente para ADR-065, ADR-066 e ADR-067. Na integração, passaram 1.492/1.492 testes da API em 90 suítes, 903/903 testes Web em 107 arquivos, 132/132 checks de contraste, builds API/Web e validação do Compose. O smoke do build Web em Chrome com API simulada validou login público, atlas, envio por teclado, foco e bloqueio de CLIENT na rota administrativa. O lint de 15 arquivos da API alterados pela Vuvu passou. O lint integral conserva quatro erros preexistentes em `graph-comment.model.ts` e `memory-job-queue.ts`. O cenário Web de redirecionamento foi estabilizado ajustando o tempo de espera do teste pela rota carregada sob demanda.

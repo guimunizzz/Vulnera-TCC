@@ -19,14 +19,14 @@ export const ASSISTANT_WORKFLOW_TOPICS: readonly AssistantTopic[] = [
   {
     id: "onboarding-subscription", title: "Empresa e aprovação da assinatura",
     keywords: ["onboarding", "primeiro acesso", "assinatura pendente", "assinatura esta pendente", "aguardar aprovacao", "empresa plano confirmacao", "cadastro interrompido"],
-    screens: ["onboarding", "subscriptions", "dashboard"], roles: ALL, actions: ["dashboard", "applications"],
+    screens: ["onboarding", "subscriptions", "dashboard"], roles: ["ADMIN", "CLIENT"], actions: ["dashboard", "applications"],
     guidance: "Depois de criar a conta CLIENT, o onboarding autenticado tem as etapas Empresa, Plano e Confirmação. O cliente informa os dados pedidos da empresa, escolhe um plano e solicita a assinatura. Se a empresa já foi salva e uma etapa posterior falhou, o fluxo retoma essa empresa; não crie outra por impulso. A assinatura começa Pendente de aprovação; ADMIN aprova ou rejeita. Somente aprovação leva a Ativa. Existe no máximo uma assinatura ativa por empresa. Estar cadastrado ou ter solicitado um plano não significa já poder solicitar projetos: confira a situação da assinatura. Não há promessa de aprovação imediata, cobrança real, convite ou e-mail de confirmação por este fluxo.",
-    byRole: { CLIENT: "Se sua assinatura já está pendente, confira o status no Dashboard e aguarde a aprovação do ADMIN. Evite criar outra empresa ou reenviar o pedido enquanto o primeiro estiver em análise.", PENTESTER: "PENTESTER não faz onboarding de empresa contratante; peça ao responsável CLIENT/ADMIN para verificar a situação comercial." },
+    byRole: { CLIENT: "Se sua assinatura já está pendente, confira o status no Dashboard e aguarde a aprovação do ADMIN. Evite criar outra empresa ou reenviar o pedido enquanto o primeiro estiver em análise." },
   },
   {
     id: "plan-capacity", title: "Limites do plano e remediação contratada",
     keywords: ["limite do plano", "limites do plano", "capacidade do plano", "plano esgotado", "remediacao inclusa", "cota de aplicacoes"],
-    screens: ["applications", "new-analysis", "subscriptions"], roles: ALL, actions: ["applications", "projects"],
+    screens: ["applications", "new-analysis", "subscriptions"], roles: ["ADMIN", "CLIENT"], actions: ["applications", "projects"],
     guidance: "O plano define capacidade de aplicações, projetos e se inclui remediação. Assinatura ativa, aplicação ativa, capacidade e elegibilidade são condições diferentes; resolver uma não elimina as demais. O produto também permite somente um projeto por aplicação já vinculada, inclusive quando o anterior foi concluído. Ao encontrar um limite, confira os registros e a assinatura com o responsável autorizado, sem excluir dados para contornar a regra. Ter remediação inclusa permite contratar esse escopo no projeto; não transforma CLIENT em analista nem dá permissão para editar findings. A Vuvu não consulta consumo real, muda plano ou libera cotas.",
   },
   {

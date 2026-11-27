@@ -11,10 +11,11 @@ import { AssistantHelpService, normalizeAssistantText } from "./assistant-help.s
 import { assistantRuleTarget, containsInternalDetails, containsSensitiveContent, historyForAssistant, outsideProductTopic, requestsCapabilityList, requestsProductNavigation } from "./assistant-input.service";
 
 const { version: apiVersion } = createRequire(__filename)("../../package.json") as { version: string };
-const ASSISTANT_REVISION = "AI-CHAT-11";
+const ASSISTANT_REVISION = "AI-CHAT-12";
 const PRIVACY = "Para proteger os dados, esta pergunta ficou na ajuda local. Envie só a dúvida sobre o Vulnera, sem URLs, identificadores, credenciais ou dados reais.";
+const MARKUP_IN_GENERATED_REPLY = /<|\]\s*\(|javascript\s*:/i;
 
-type LocalReason = AssistantGatewayFailure | "local_mode" | "local_quota" | "privacy" | "internal_request";
+type LocalReason = AssistantGatewayFailure | "local_mode" | "local_quota" | "privacy" | "internal_request" | "restricted_screen";
 
 function localResponse(reason: LocalReason, message: string, actions: AssistantResponseDTO["actions"] = [], retryAfterSeconds?: number): AssistantResponseDTO {
   // Campos fechados permitem diagnosticar a queda sem guardar documentos, texto ou identidade.
@@ -37,6 +38,9 @@ export class AssistantService {
       return localResponse("privacy", refusal ?? PRIVACY);
     }
     if (target === "private_instructions" || target === "private_credentials") return localResponse("internal_request", ASSISTANT_REFUSALS[target]);
+
+    const restricted = this.help.restriction(dto.screen, actor.role);
+    if (restricted && !target) return localResponse("restricted_screen", restricted);
 
     const history = historyForAssistant(dto.history);
     const outside = target ? null : outsideProductTopic(dto.question);
@@ -80,7 +84,9 @@ export class AssistantService {
     const repeatedJoke = result.kind === "off_topic" && (/\b(?:dashboard|tela de projetos|prefiro ficar|prefiro me manter|seria como tentar)\b/.test(normalizedMessage)
       || (outside && /\b(?:estou por aqui|e so me chamar|se quiser falar sobre|se a sua duvida for|quer ver alguma funcao por aqui|novos dados na sua tela)\b/.test(normalizedMessage))
       || history.some((turn) => turn.role === "assistant" && normalizeAssistantText(turn.content) === normalizedMessage));
-    if (!message || message.length > 4_000 || privateValue || containsSensitiveContent(message) || containsInternalDetails(message) || (expectedKind && result.kind !== expectedKind) || incompleteInventory || missedChoice || repeatedJoke) {
+    if (!message || message.length > 4_000 || MARKUP_IN_GENERATED_REPLY.test(message) || privateValue
+      || containsSensitiveContent(message) || containsInternalDetails(message) || (expectedKind && result.kind !== expectedKind)
+      || incompleteInventory || missedChoice || repeatedJoke) {
       return local("provider_invalid_response");
     }
     return { message, source: "generated", actions: result.kind === "navigation" ? actions : [] };

@@ -5,7 +5,7 @@
 import { ASSISTANT_SCREENS, type AssistantHistoryMessage } from "../models/assistant.model";
 import { normalizeAssistantText } from "./assistant-help.service";
 
-/** Barreiras reconhecíveis, sem alegar detectar todo dado sensível em texto livre. */
+/** Heurística para texto livre em contents. A origem de systemInstruction é regida pelo ADR-064. */
 export function containsSensitiveContent(text: string): boolean {
   return /https?:\/\/|www\.|\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b|\b(?:bearer\s+\S+|AIza[\w-]{20,}|eyJ[\w-]+\.[\w-]+\.[\w-]+)|\b[a-z][a-z0-9]{23,}\b|\b[0-9a-f]{8}-[0-9a-f-]{27,}\b|(?:senha|password|api[_ -]?key|token|segredo)\s*[:=]\s*\S+/i.test(text);
 }

@@ -50,19 +50,21 @@ export class AssistantHelpService {
   }
 
   guidance(topic: AssistantTopic, role: UserRole): string {
-    if (role === "PENTESTER" && ["applications", "new-analysis"].includes(topic.id)) return topic.byRole?.[role] ?? topic.guidance;
-    if (role === "CLIENT" && ["dast-reports", "sast-sca"].includes(topic.id)) return topic.byRole?.[role] ?? topic.guidance;
-    if (role === "PENTESTER" && topic.id === "exposure-graph") return topic.byRole?.[role] ?? topic.guidance;
-    // A restrição aparece antes dos passos para não orientar acesso impossível.
+    if (!topic.roles.includes(role)) return "";
     return [topic.byRole?.[role], topic.guidance].filter(Boolean).join("\n\n");
   }
 
+  restriction(screen: AssistantScreen, role: UserRole): string | undefined {
+    return ASSISTANT_TOPICS.find((topic) => topic.restrictedGuidance && topic.screens.includes(screen)
+      && !topic.roles.includes(role))?.restrictedGuidance;
+  }
+
   context(topics: AssistantTopic[], role: UserRole): string {
-    return topics.map((topic) => `${topic.title}\n${this.guidance(topic, role)}`).join("\n\n").slice(0, 6_000);
+    return topics.filter((topic) => topic.roles.includes(role)).map((topic) => `${topic.title}\n${this.guidance(topic, role)}`).join("\n\n").slice(0, 6_000);
   }
 
   actions(topics: AssistantTopic[], role: UserRole): AssistantActionDTO[] {
-    const ids = [...new Set(topics.flatMap((topic) => [...topic.actions]))];
+    const ids = [...new Set(topics.filter((topic) => topic.roles.includes(role)).flatMap((topic) => [...topic.actions]))];
     return ids.filter((id) => ASSISTANT_ACTIONS[id].roles.includes(role)).slice(0, 3)
       .map((id) => ({ id, label: ASSISTANT_ACTIONS[id].label }));
   }

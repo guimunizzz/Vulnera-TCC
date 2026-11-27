@@ -9,7 +9,7 @@ import { createAssistantRoutes } from "../../src/routes/assistant.routes";
 import { makeAssistantController } from "../../src/factories/assistant.factory";
 import type { AssistantConfig } from "../../src/config/assistant.config";
 import { loadAssistantConfig } from "../../src/config/assistant.config";
-import { createRateLimitConfig, type RateLimitScope, type TokenBucketPolicy } from "../../src/config/rate-limit.config";
+import { createRateLimitConfig, loadRateLimitConfig, type RateLimitScope, type TokenBucketPolicy } from "../../src/config/rate-limit.config";
 import { ASSISTANT_ACTIONS, ASSISTANT_TOPICS } from "../../src/config/assistant-help.config";
 import { AssistantHelpService } from "../../src/services/assistant-help.service";
 import { containsInternalDetails } from "../../src/services/assistant-input.service";
@@ -21,7 +21,7 @@ import type { UserRepository } from "../../src/repositories/user.repository";
 import type { AssistantChatDTO, AssistantGatewayInput, AssistantGatewayResult, AssistantReplyKind, AssistantResponseDTO } from "../../src/models/assistant.model";
 import type { UserRole } from "../../src/models/user.model";
 
-const GEMINI: AssistantConfig = { mode: "gemini", apiKey: "synthetic-test-key", model: "gemini-3-test-fixture", timeoutMs: 15000, maxOutputTokens: 500 };
+const GEMINI: AssistantConfig = { mode: "gemini", apiKey: "synthetic-test-key", model: "gemini-3.5-flash-lite", timeoutMs: 15000, maxOutputTokens: 500 };
 const QUESTION: AssistantChatDTO = { question: "Como solicito uma análise?", screen: "dashboard", history: [] };
 const INPUT: AssistantGatewayInput = { ...QUESTION, role: "CLIENT", help: "A análise cria um projeto." };
 const HIGH: TokenBucketPolicy = { ratePerSecond: 1000, burst: 1000 };
@@ -37,12 +37,12 @@ function makeApp(options: {
   generate?: jest.Mock;
   policies?: Partial<Record<RateLimitScope, TokenBucketPolicy>>;
   clock?: { now: number };
+  httpLimitEnabled?: boolean;
 } = {}) {
   const generate = options.generate ?? jest.fn().mockResolvedValue(reply("Abra Solicitar análise e selecione uma aplicação ativa.", "navigation"));
-  const config = createRateLimitConfig({ policies: { global: HIGH, user: HIGH, tenant: HIGH, write: HIGH, ...options.policies } });
+  const config = createRateLimitConfig({ enabled: options.httpLimitEnabled ?? true, policies: { global: HIGH, user: HIGH, tenant: HIGH, write: HIGH, ...options.policies } });
   const resolver = new TenantRateLimitResolver({ findCompanyIdById: jest.fn().mockResolvedValue(null) } as unknown as UserRepository, 60_000, 100);
-  const store = new TokenBucketStore({ ttlMs: 600_000, maxKeys: 100, nowMs: () => options.clock?.now ?? 0 });
-  const limiter = new RateLimitService(config, resolver, store);
+  const limiter = new RateLimitService(config, resolver, { ttlMs: 600_000, maxKeys: 100, nowMs: () => options.clock?.now ?? 0 });
   disposers.push(() => limiter.dispose());
   const app = express();
   app.locals.rateLimitService = limiter;
@@ -97,12 +97,13 @@ describe("Compatibilidade com os modulos atuais da dev", () => {
     ["CLIENT", "code-import-detail", "O que posso fazer nesta tela?", "SAST/SCA é restrito", "sast-sca"],
     ["PENTESTER", "exposure-graph", "O que representa o Exposure Graph?", "Exposure Graph é restrito", "exposure-graph"],
   ] as const)("mantem a restricao de %s em %s", async (role, screen, question, text, forbiddenAction) => {
-    const { app } = makeApp({ config: { ...GEMINI, mode: "local" } });
+    const { app, generate } = makeApp();
     const res = await request(app).post("/api/assistant/chat").set("Authorization", bearer(role))
       .send({ question, screen, history: [] });
     expect(res.status).toBe(200);
     expect(res.body.message).toContain(text);
     expect(res.body.actions.map((item: { id: string }) => item.id)).not.toContain(forbiddenAction);
+    expect(generate).not.toHaveBeenCalled();
   });
 
   it.each<UserRole>(["ADMIN", "CLIENT", "PENTESTER"])("orienta Threat Intel para %s sem conceder permissoes", async (role) => {
@@ -216,7 +217,7 @@ describe("Assistente HTTP", () => {
   it("não cria atalho quando o modelo classifica uma pergunta de conceito como navegação", async () => {
     const generate = jest.fn().mockResolvedValue(reply("Orientação sobre DAST.", "navigation"));
     const { app } = makeApp({ generate });
-    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("CLIENT")).send({ ...QUESTION, screen: "dast", question: "Como funciona o DAST?" });
+    const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer("ADMIN")).send({ ...QUESTION, screen: "dast", question: "Como funciona o DAST?" });
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({ source: "generated", actions: [] });
   });
@@ -250,7 +251,10 @@ describe("Assistente HTTP", () => {
     "A rota interna é /api/private/demo.",
     "A configuração fica em DATABASE_URL.",
     "Abra a tela finding-editor para alterar a severidade.",
-  ])("descarta detalhes internos gerados (caso %#)", async (message) => {
+    "Saída com <marcação>.",
+    "Saída com [link](destino).",
+    "Saída com JAVASCRIPT:.",
+  ])("descarta detalhes internos ou marcação gerados (caso %#)", async (message) => {
     const { app } = makeApp({ generate: jest.fn().mockResolvedValue(reply(message)) });
     const response = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send(QUESTION);
     expect(response.body).toMatchObject({ source: "local", message: expect.stringContaining("Criar projeto") });
@@ -300,7 +304,7 @@ describe("Assistente HTTP", () => {
     expect(first.body.source).toBe("local");
     expect(first.body.message).not.toContain("private");
     const [log] = jest.mocked(console.info).mock.calls[0];
-    expect(JSON.parse(log)).toEqual({ event: "assistant.local_response", reason: "provider_error", apiVersion: "1.0.0", assistantRevision: "AI-CHAT-11" });
+    expect(JSON.parse(log)).toEqual({ event: "assistant.local_response", reason: "provider_error", apiVersion: "1.0.0", assistantRevision: "AI-CHAT-12" });
     const second = await request(app).post("/api/assistant/chat").set("Authorization", bearer()).send({ ...QUESTION, question: "Qual a previsão do tempo amanhã?" });
     expect(second.body.source).toBe("local");
     expect(second.body.message).toContain("Você quer entender um conceito");
@@ -349,7 +353,7 @@ describe("Assistente HTTP", () => {
     expect(console.info).toHaveBeenCalledWith(expect.stringContaining('"reason":"local_quota"'));
   });
 
-  it("gera as 20 primeiras respostas com as cotas padrão e usa ajuda local na 21ª", async () => {
+  it("limita a rajada padrão a cinco por pessoa e vinte por processo", async () => {
     jest.spyOn(console, "warn").mockImplementation(() => {});
     const clock = { now: 0 };
     const { app, generate } = makeApp({ clock, policies: createRateLimitConfig().policies });
@@ -358,19 +362,39 @@ describe("Assistente HTTP", () => {
     for (let attempt = 0; attempt < 20; attempt += 1) {
       // A cadência simula o tempo entre respostas e mantém a proteção HTTP ativa.
       clock.now = attempt * 2_000;
-      const response = await send("first-user");
+      const response = await send(`user-${Math.floor(attempt / 5)}`);
       expect(response.status).toBe(200);
       expect(response.body.source).toBe("generated");
+      if (attempt === 4) {
+        const personalLimit = await send("user-0");
+        expect(personalLimit.body).toMatchObject({ source: "local", providerRetryAfterSeconds: expect.any(Number) });
+      }
     }
 
     clock.now = 40_000;
-    for (const userId of ["first-user", "second-user"]) {
+    for (const userId of ["user-0", "user-4"]) {
       const response = await send(userId);
       expect(response.status).toBe(200);
       expect(response.body.source).toBe("local");
       expect(response.body.providerRetryAfterSeconds).toBeGreaterThan(0);
     }
     expect(generate).toHaveBeenCalledTimes(20);
+  });
+
+  it("aplica a cota de geração mesmo com proteção HTTP desligada no ambiente de teste", async () => {
+    expect(loadRateLimitConfig().enabled).toBe(false);
+    const { app, generate } = makeApp({
+      httpLimitEnabled: false,
+      policies: { "assistant-user": { ratePerSecond: 1 / 3600, burst: 1 }, "assistant-global": { ratePerSecond: 1 / 3600, burst: 2 } },
+    });
+    const send = (userId: string) => request(app).post("/api/assistant/chat").set("Authorization", bearer("CLIENT", userId)).send(QUESTION);
+    expect((await send("first")).body.source).toBe("generated");
+    expect((await send("first")).body.source).toBe("local");
+    expect((await send("second")).body.source).toBe("generated");
+    const limited = await send("third");
+    expect(limited.status).toBe(200);
+    expect(limited.body).toMatchObject({ source: "local", providerRetryAfterSeconds: 3600 });
+    expect(generate).toHaveBeenCalledTimes(2);
   });
 
   it("limita por usuário sem gastar o global em tentativas pessoais negadas", async () => {
@@ -699,9 +723,10 @@ describe("Ajuda e orçamento determinísticos", () => {
 
   it("normaliza português, usa continuação e não oferece ações vedadas", () => {
     const help = new AssistantHelpService();
-    const topics = help.select({ question: "E depois?", screen: "dashboard", history: [{ role: "user", content: "Como solicito uma ANÁLISE?" }] }, "PENTESTER");
+    const dto: AssistantChatDTO = { question: "E depois?", screen: "dashboard", history: [{ role: "user", content: "Como solicito uma ANÁLISE?" }] };
+    const topics = help.select(dto, "CLIENT");
     expect(topics.some((topic) => topic.id === "new-analysis")).toBe(true);
-    expect(help.actions(topics, "PENTESTER").map((action) => action.id)).not.toContain("new-analysis");
+    expect(help.actions(help.select(dto, "PENTESTER"), "PENTESTER").map((action) => action.id)).not.toContain("new-analysis");
     expect(help.context(topics, "PENTESTER").length).toBeLessThanOrEqual(6000);
   });
 
@@ -722,9 +747,41 @@ describe("Ajuda e orçamento determinísticos", () => {
     expect(project[0].id).toBe("maturity-reports");
     expect(help.guidance(project[0], "CLIENT")).toContain("Em revisão ou Concluído");
     expect(project.map((topic) => topic.id)).not.toContain("dast-reports");
-    expect(help.guidance(dast[0], "CLIENT")).toContain("restritos a ADMIN e PENTESTER");
+    expect(help.guidance(dast[0], "CLIENT")).toBe("");
+    expect(help.context(dast, "CLIENT")).not.toContain("Baixar PDF");
     expect(help.actions([dast[0]], "CLIENT")).toEqual([]);
   });
+
+  it.each([
+    ["CLIENT", "dast-detail", "Como funciona a triagem do DAST?", ["dast", "dast-reports", "dast-promotion"]],
+    ["CLIENT", "code-import-detail", "Como importo um relatório SAST/SCA?", ["sast-sca", "code-import-formats"]],
+    ["PENTESTER", "new-analysis", "Como solicito uma análise?", ["applications", "new-analysis"]],
+    ["PENTESTER", "sla-settings", "Como salvar e reaplicar uma política?", ["sla-policy-lifecycle"]],
+    ["PENTESTER", "exposure-graph", "Como uso o Exposure Graph?", ["exposure-graph"]],
+  ] as const)("exclui passos restritos da seleção, da ajuda da tela e do contexto de %s", (role, screen, question, forbiddenIds) => {
+    const help = new AssistantHelpService();
+    const topics = ASSISTANT_TOPICS.filter((topic) => (forbiddenIds as readonly string[]).includes(topic.id));
+    expect(topics).toHaveLength(forbiddenIds.length);
+    expect(help.context(topics, role)).toBe("");
+    expect(help.actions(topics, role)).toEqual([]);
+    const selected = [...help.select({ question, screen, history: [] }, role), ...help.related(screen, role)];
+    for (const topic of topics) expect(selected).not.toContain(topic);
+  });
+
+  it("reparte a taxa e a rajada entre réplicas sem arredondar para cima", () => {
+    jest.replaceProperty(process, "env", { ...process.env, ASSISTANT_API_REPLICAS: "3", RATE_LIMIT_ASSISTANT_USER_BURST: "5", RATE_LIMIT_ASSISTANT_GLOBAL_BURST: "20" });
+    const { policies } = loadRateLimitConfig();
+    expect(policies["assistant-user"]).toEqual({ ratePerSecond: 10 / 10_800, burst: 1 });
+    expect(policies["assistant-global"]).toEqual({ ratePerSecond: 30 / 10_800, burst: 6 });
+    expect(3 * policies["assistant-global"].burst).toBeLessThanOrEqual(20);
+  });
+
+  it.each([["2", "20", "20", "INVALID_ASSISTANT_BURST"], ["0", "5", "20", "INVALID_ASSISTANT_API_REPLICAS"], ["6", "5", "20", "INVALID_ASSISTANT_API_REPLICAS"]])(
+    "valida réplica e rajadas na configuração (%s, %s, %s)", (replicas, userBurst, globalBurst, error) => {
+      jest.replaceProperty(process, "env", { ...process.env, ASSISTANT_API_REPLICAS: replicas, RATE_LIMIT_ASSISTANT_USER_BURST: userBurst, RATE_LIMIT_ASSISTANT_GLOBAL_BURST: globalBurst });
+      expect(() => loadRateLimitConfig()).toThrow(error);
+    },
+  );
 
   it("não renova orçamento lento no TTL nem por pressão de memória", () => {
     let now = 0;
@@ -747,8 +804,9 @@ describe("Ajuda e orçamento determinísticos", () => {
     const previous = { ...process.env };
     try {
       delete process.env.GEMINI_API_KEY; delete process.env.GEMINI_MODEL;
+      process.env.ASSISTANT_THINKING_LEVEL = "invalid";
       process.env.ASSISTANT_MODE = "invalid"; process.env.ASSISTANT_TIMEOUT_MS = "Infinity"; process.env.ASSISTANT_MAX_OUTPUT_TOKENS = "50000";
-      expect(loadAssistantConfig()).toEqual({ mode: "local", apiKey: "", model: "", timeoutMs: 15000, maxOutputTokens: 500 });
+      expect(loadAssistantConfig()).toEqual({ mode: "local", apiKey: "", model: "", timeoutMs: 15000, maxOutputTokens: 500, thinkingLevel: "MINIMAL" });
     } finally { process.env = previous; }
   });
 });
@@ -772,7 +830,7 @@ describe("Gateway Gemini real com transporte simulado", () => {
     expect(await gateway.generate(INPUT)).toEqual(reply("Orientação validada."));
     expect(fetcher).toHaveBeenCalledTimes(1);
     const [url, options] = fetcher.mock.calls[0];
-    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3-test-fixture:generateContent");
+    expect(url).toBe(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI.model}:generateContent`);
     expect(options.redirect).toBe("manual");
     expect(options.headers["x-goog-api-key"]).toBe("synthetic-test-key");
     const body = JSON.parse(options.body);
@@ -791,6 +849,35 @@ describe("Gateway Gemini real com transporte simulado", () => {
     expect(body).not.toHaveProperty("tools");
     expect(body).not.toHaveProperty("userId");
     expect(body.store).toBe(false);
+  });
+
+  it.each([
+    ["gemini-3.5-flash-lite", "LOW", { thinkingLevel: "LOW" }],
+    ["gemini-3-flash-preview", "LOW", { thinkingLevel: "LOW" }],
+    ["gemini-2.5-flash", "MINIMAL", { thinkingBudget: 0 }],
+    ["gemini-2.5-flash-lite", "MINIMAL", { thinkingBudget: 0 }],
+  ] as const)("aplica controle explícito de raciocínio a %s", async (model, thinkingLevel, expected) => {
+    const fetcher = jest.fn().mockResolvedValue(textResponse());
+    const gateway = new GeminiService({ ...GEMINI, model, thinkingLevel }, fetcher as unknown as typeof fetch);
+    expect(await gateway.generate(INPUT)).toEqual(reply("Orientação validada."));
+    expect(JSON.parse(fetcher.mock.calls[0][1].body).generationConfig.thinkingConfig).toEqual(expected);
+  });
+
+  it.each([undefined, "300"])("cancela o corpo quando ultrapassa 32.000 bytes, com Content-Length %s", async (length) => {
+    const cancel = jest.fn();
+    let requested = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        requested += 1;
+        controller.enqueue(new TextEncoder().encode("é".repeat(8_001)));
+      },
+      cancel,
+    }, { highWaterMark: 0 });
+    const fetcher = jest.fn().mockResolvedValue(new Response(body, { headers: length ? { "Content-Length": length } : {} }));
+    const gateway = new GeminiService(GEMINI, fetcher as unknown as typeof fetch);
+    expect(await gateway.generate(INPUT)).toEqual({ ok: false, reason: "provider_invalid_response" });
+    expect(requested).toBe(2);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -819,7 +906,11 @@ describe("Gateway Gemini real com transporte simulado", () => {
 
   it("não chama rede sem chave/modelo ou com modelo tentando trocar caminho", async () => {
     const fetcher = jest.fn();
-    for (const config of [{ ...GEMINI, apiKey: "" }, { ...GEMINI, model: "" }, { ...GEMINI, model: "../../external.example" }]) {
+    for (const config of [
+      { ...GEMINI, apiKey: "" }, { ...GEMINI, model: "" }, { ...GEMINI, model: "../../external.example" },
+      { ...GEMINI, model: "other-model" }, { ...GEMINI, model: "gemini-unknown" },
+      { ...GEMINI, model: "gemini-2.5-flash", thinkingLevel: "LOW" as const },
+    ]) {
       expect(await new GeminiService(config, fetcher as unknown as typeof fetch).generate(INPUT)).toEqual({ ok: false, reason: "provider_not_configured" });
     }
     expect(fetcher).not.toHaveBeenCalled();

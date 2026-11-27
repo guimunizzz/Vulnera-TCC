@@ -17,6 +17,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
 import { useAuthStore } from "./store/auth.store";
 import { ThemeProvider } from "./design/theme-provider";
+import { ASSISTANT_ACTIONS as WEB_ASSISTANT_ACTIONS, assistantDestination } from "./lib/assistant-context";
+import type { AssistantActionId, AssistantDestination } from "./types/assistant.types";
+
+type ApiActionCatalog = Record<AssistantActionId, Pick<AssistantDestination, "path" | "roles">>;
+const apiCatalogPath = "../../api/src/config/assistant-help.config.ts";
+const apiAssistantActions = import.meta.glob<ApiActionCatalog>("../../api/src/config/assistant-help.config.ts", {
+  eager: true,
+  import: "ASSISTANT_ACTIONS",
+})[apiCatalogPath];
 
 // A landing pública carrega `gsap` e, por lazy, a cena `three` (nada roda em
 // jsdom) atrás de um `lazy()`. Estes testes cobrem a ÁRVORE DE ROTAS, não o
@@ -34,6 +43,14 @@ vi.mock("./pages/exposure-graph-page", () => ({ ExposureGraphPage: () => <h1>Exp
 vi.mock("./pages/triage-page", () => ({ TriagePage: () => <h1>Triagem de teste</h1> }));
 vi.mock("./pages/agendamentos-page", () => ({ AgendamentosPage: () => <h1>Agendamentos de teste</h1> }));
 vi.mock("./pages/conformidade-page", () => ({ ConformidadePage: () => <h1>Conformidade de teste</h1> }));
+vi.mock("./pages/projects-page", () => ({ ProjectsPage: () => <h1>Projetos de teste</h1> }));
+vi.mock("./pages/applications-page", () => ({ ApplicationsPage: () => <h1>Aplicações de teste</h1> }));
+vi.mock("./pages/new-analysis-page", () => ({ NewAnalysisPage: () => <h1>Nova análise de teste</h1> }));
+vi.mock("./pages/findings-page", () => ({ FindingsPage: () => <h1>Findings de teste</h1> }));
+vi.mock("./pages/dast-page", () => ({ DastPage: () => <h1>DAST de teste</h1> }));
+vi.mock("./pages/remediation-page", () => ({ RemediationPage: () => <h1>Remediação de teste</h1> }));
+vi.mock("./pages/playbooks-page", () => ({ PlaybooksPage: () => <h1>Playbooks de teste</h1> }));
+vi.mock("./pages/settings/sla-settings-page", () => ({ SlaSettingsPage: () => <h1>SLA de teste</h1> }));
 vi.mock("./pages/admin/access-requests-page", () => ({ AccessRequestsPage: () => <h1>Solicitações de teste</h1> }));
 vi.mock("./pages/admin/filas-page", () => ({ FilasPage: () => <h1>Filas de teste</h1> }));
 vi.mock("./components/auth/turnstile-challenge", async () => {
@@ -95,6 +112,35 @@ beforeAll(async () => {
 afterEach(limparAuth);
 
 describe("Roteamento de App", () => {
+  it("preserva as mesmas ações nos catálogos da API e da Web", () => {
+    expect(Object.keys(WEB_ASSISTANT_ACTIONS).sort()).toEqual(Object.keys(apiAssistantActions).sort());
+  });
+
+  // Renderiza os guards reais de App.tsx. Só o conteúdo das páginas é trocado.
+  const headings: Record<string, string> = {
+    "/dashboard": "Olá, Rafael", "/projects": "Projetos de teste", "/applications": "Aplicações de teste",
+    "/new-analysis": "Nova análise de teste", "/findings": "Findings de teste", "/dast": "DAST de teste",
+    "/remediation": "Remediação de teste", "/playbooks": "Playbooks de teste", "/settings/sla": "SLA de teste",
+    "/sast-sca": "SAST/SCA de teste", "/threat-intel": "Threat Intel de teste", "/exposure-graph": "Exposure Graph de teste",
+  };
+  it.each(Object.entries(apiAssistantActions))("alinha a ação %s nos catálogos e no guard da rota", async (id, action) => {
+    const heading = headings[action.path];
+    expect(heading).toBeDefined();
+    for (const role of ["ADMIN", "CLIENT", "PENTESTER"] as const) {
+      const allowed = action.roles.includes(role);
+      expect(assistantDestination(id, role)?.path).toBe(allowed ? action.path : undefined);
+      logar(role);
+      const view = renderApp(action.path);
+      expect(await screen.findByRole(
+        "heading",
+        { name: allowed ? heading : "Olá, Rafael" },
+        { timeout: 5_000 },
+      )).toBeInTheDocument();
+      if (!allowed) expect(screen.queryByRole("heading", { name: heading })).not.toBeInTheDocument();
+      view.unmount();
+    }
+  }, 20_000);
+
   it.each([
     ["/sast-sca", "SAST/SCA de teste", ["ADMIN", "PENTESTER"]],
     ["/sast-sca/imports/ficticio", "Importação de teste", ["ADMIN", "PENTESTER"]],

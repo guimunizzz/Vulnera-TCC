@@ -11,6 +11,7 @@ export interface AssistantConfig {
   model: string;
   timeoutMs: number;
   maxOutputTokens: number;
+  thinkingLevel?: "MINIMAL" | "LOW";
 }
 export function loadAssistantConfig(): AssistantConfig {
   const timeout = Number(EnvVar.getOptional(EnvKeys.ASSISTANT_TIMEOUT_MS, "15000"));
@@ -21,5 +22,6 @@ export function loadAssistantConfig(): AssistantConfig {
     model: EnvVar.getOptional(EnvKeys.GEMINI_MODEL, "").trim(),
     timeoutMs: Number.isFinite(timeout) && timeout >= 100 && timeout <= 15000 ? Math.floor(timeout) : 15000,
     maxOutputTokens: Number.isFinite(output) && output >= 64 && output <= 500 ? Math.floor(output) : 500,
+    thinkingLevel: EnvVar.getOptional(EnvKeys.ASSISTANT_THINKING_LEVEL, "MINIMAL").trim().toUpperCase() === "LOW" ? "LOW" : "MINIMAL",
   };
 }

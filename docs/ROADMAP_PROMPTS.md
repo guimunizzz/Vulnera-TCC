@@ -1654,3 +1654,12 @@ parciais e limites estão no relatório, sem declaração de aprovação integra
 - Branch `refactor/assistant-ui` em `07dcb5c` e integração da `dev` em `65a792d` pela resolução já validada no [PR #77](https://github.com/guimunizzz/Vulnera-TCC/pull/77), commit `31f5c06`. [PR #88](https://github.com/guimunizzz/Vulnera-TCC/pull/88).
 - Cinco conflitos de documentação resolvidos. ADR-065, ADR-066 e ADR-067 identificam as decisões da Vuvu que usavam ADR-055, ADR-056 e ADR-057 na branch visual.
 - API 1.492/1.492, Web 903/903, contraste 132/132, builds, Compose e smoke com API simulada aprovados. O lint integral da API mantém quatro erros herdados da dev.
+
+## Hardening da Vuvu — ✅ Concluída em 2026-11-27
+
+### Histórico
+
+- Branch `refactor/assistant-ui`, a partir de `4b1dac0`. [PR #88](https://github.com/guimunizzz/Vulnera-TCC/pull/88).
+- H1–H12 entregues. Cotas em memória divididas pelo máximo configurado de processos. `LOW` fica disponível como opção nos modelos compatíveis. A ADR-064 explicita a fronteira de privacidade e a ADR-068 registra a política de operação.
+- Testes focais aprovados em 199/199 na API e 103/103 na Web. Builds da API e da Web, lint dos arquivos de API alterados, contraste e Compose aprovados. O lint integral da API ainda aponta quatro erros preexistentes. O gateway foi validado com transporte simulado.
+- H13 permanece no backlog para avaliação de Docker secrets.

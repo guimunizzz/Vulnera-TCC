@@ -169,7 +169,7 @@ describe("Assistente autenticado", () => {
     expect(!!screen.queryByRole("button", { name: "Abrir DAST" })).toBe(role !== "CLIENT");
   });
 
-  it.each(["logout", "switch", "same-login"] as const)("cancela e descarta resposta tardia após %s", async (change) => {
+  it.each(["logout", "switch", "same-login", "company"] as const)("cancela e descarta resposta tardia após %s", async (change) => {
     let resolve!: (response: AssistantChatResponse) => void;
     vi.mocked(assistantApi.chat).mockReturnValue(new Promise((done) => { resolve = done; }));
     mount();
@@ -177,8 +177,10 @@ describe("Assistente autenticado", () => {
     submit();
     const signal = vi.mocked(assistantApi.chat).mock.calls[0][1];
     act(() => {
-      if (change === "logout") useAuthStore.getState().clearAuth();
-      else useAuthStore.getState().setAuth(session(change === "switch" ? "client-b" : "client-a"));
+      const auth = useAuthStore.getState();
+      if (change === "logout") auth.clearAuth();
+      else if (change === "company") auth.updateUser({ ...auth.user!, companyId: "company-b" }, auth.user!);
+      else auth.setAuth(session(change === "switch" ? "client-b" : "client-a"));
     });
     expect(signal.aborted).toBe(true);
     await act(async () => resolve(localResponse));
