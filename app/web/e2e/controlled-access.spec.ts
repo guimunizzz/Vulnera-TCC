@@ -516,7 +516,7 @@ test.describe("Fila administrativa e isolamento por papel", () => {
     await seedSession(page, "ADMIN");
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/admin/access-requests");
-    await expect(page.getByRole("heading", { name: "Solicitações de acesso" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Central de solicitações" })).toBeVisible();
     const row = page.getByRole("row").filter({ hasText: "rafaela.qa@example.test" });
     await expect(row).toBeVisible();
     await row.getByRole("button", { name: "Ver detalhes" }).click();
@@ -584,7 +584,7 @@ test.describe("Fila administrativa e isolamento por papel", () => {
     await seedSession(page, "ADMIN");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/admin/access-requests");
-    await expect(page.getByRole("heading", { name: "Solicitações de acesso" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Central de solicitações" })).toBeVisible();
     await assertNoHorizontalOverflow(page, 390);
     expect(await scanAxe(page, ".access-requests-page"), "fila ADMIN axe-core").toEqual([]);
     await screenshot(page, "08-admin-access-requests-mobile-390.png");

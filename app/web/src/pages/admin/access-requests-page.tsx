@@ -1,10 +1,12 @@
 ﻿/**
- * O que faz: permite consultar e decidir solicitações de acesso recebidas.
- * Por que existe: oferece triagem administrativa auditável sem alterar assinatura comercial.
+ * O que faz: centraliza adesões empresariais e solicitações comerciais para o ADMIN.
+ * Por que existe: reúne a navegação administrativa preservando os dois domínios de aprovação.
  * Quem consome: rota protegida de administração e equipe ADMIN.
  */
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useSearchParams } from "react-router-dom";
+import { PendingSubscriptionsPage } from "./pending-subscriptions-page";
 import { Alert } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogDescription, DialogFooter, DialogTitle } from "../../components/ui/dialog";
@@ -40,6 +42,29 @@ const ENROLLMENT_LABELS = {
 } as const;
 
 export function AccessRequestsPage() {
+  const isAdmin = useAuthStore((state) => state.user?.role === "ADMIN");
+  const [searchParams] = useSearchParams();
+  const isCommercial = searchParams.get("section") === "commercial";
+
+  if (!isAdmin) return <section className="access-requests-page"><h1>Central de solicitações</h1><Alert tom="perigo">Acesso restrito a administradores.</Alert></section>;
+
+  return (
+    <section className="access-requests-page" data-ops-hero="governance" aria-labelledby="access-requests-title">
+      <header className="access-requests-header">
+        <p className="access-requests-eyebrow">Administração</p>
+        <h1 id="access-requests-title">Central de solicitações</h1>
+        <p>Revise adesões empresariais e solicitações comerciais em um só lugar.</p>
+      </header>
+      <nav className="access-requests-sections" aria-label="Seções da central de solicitações">
+        <Link to="/admin/access-requests" aria-current={!isCommercial ? "page" : undefined}>Adesões empresariais</Link>
+        <Link to="/admin/access-requests?section=commercial" aria-current={isCommercial ? "page" : undefined}>Solicitações comerciais</Link>
+      </nav>
+      {isCommercial ? <PendingSubscriptionsPage /> : <BusinessEnrollmentRequestsPanel />}
+    </section>
+  );
+}
+
+function BusinessEnrollmentRequestsPanel() {
   const role = useAuthStore((state) => state.user?.role);
   const isAdmin = role === "ADMIN";
   const [status, setStatus] = useState<AdminAccessRequestStatus | "ALL">("PENDING_REVIEW");
@@ -162,11 +187,10 @@ export function AccessRequestsPage() {
 
   const pages = Math.max(1, Math.ceil((listQuery.data?.total ?? 0) / PAGE_SIZE));
   return (
-    <section className="access-requests-page" data-ops-hero="governance" aria-labelledby="access-requests-title">
-      <header className="access-requests-header">
-        <p className="access-requests-eyebrow">Administração</p>
-        <h1 id="access-requests-title">Solicitações de acesso</h1>
-        <p>Revise os pedidos de criação de conta e acompanhe o histórico de decisões.</p>
+    <section className="access-requests-panel" aria-labelledby="business-enrollments-title">
+      <header className="access-requests-panel-heading">
+        <h2 id="business-enrollments-title">Adesões empresariais</h2>
+        <p>Aprove responsável, empresa e plano em uma única decisão. Pedidos de acesso legados e seus históricos continuam disponíveis nesta fila.</p>
       </header>
 
       {error && <Alert className="access-requests-alert" tom="perigo" aoFechar={() => setError(null)}>{error}</Alert>}
@@ -230,7 +254,7 @@ export function AccessRequestsPage() {
 
       <Dialog aberto={Boolean(action)} aoFechar={() => { if (!isBusy) setAction(null); }} tamanho={action?.type === "reject" ? "md" : "sm"}>
         <DialogTitle>{action?.type === "approve" ? "Aprovar solicitação?" : action?.type === "reject" ? "Rejeitar solicitação?" : "Reenviar convite?"}</DialogTitle>
-        <DialogDescription>{action?.type === "approve" ? "A pessoa receberá um convite para concluir a criação da conta." : action?.type === "reject" ? rejectionReasonRequired ? "A aprovação será encerrada porque as condições analisadas não são mais compatíveis. Informe o motivo para registrar a decisão." : "A solicitação será marcada como rejeitada. O motivo é opcional." : "Um novo convite será enviado para o e-mail cadastrado."}</DialogDescription>
+        <DialogDescription>{action?.type === "approve" ? action.request.enrollment ? "Esta decisão aprova o responsável, a empresa e o plano solicitado. A assinatura inicial não exige outra aprovação; o responsável receberá um convite para ativar a conta." : "A pessoa receberá um convite para concluir a criação da conta." : action?.type === "reject" ? rejectionReasonRequired ? "A aprovação será encerrada porque as condições analisadas não são mais compatíveis. Informe o motivo para registrar a decisão." : "A solicitação será marcada como rejeitada. O motivo é opcional." : "Um novo convite será enviado para o e-mail cadastrado."}</DialogDescription>
         {action?.type === "reject" && <Field rotulo={rejectionReasonRequired ? "Motivo obrigatório" : "Motivo (opcional)"} obrigatorio={rejectionReasonRequired} dica="Até 2.000 caracteres.">{(attrs) => <Input {...attrs} value={reason} maxLength={2000} onChange={(event) => setReason(event.target.value)} />}</Field>}
         <DialogFooter><Button variant="secundario" onClick={() => setAction(null)} disabled={isBusy}>Cancelar</Button><Button variant={action?.type === "reject" ? "destrutivo" : "primario"} onClick={confirm} disabled={isBusy || (action?.type === "resend" && cooldownUntil > Date.now())}>{isBusy ? "Processando…" : "Confirmar"}</Button></DialogFooter>
       </Dialog>

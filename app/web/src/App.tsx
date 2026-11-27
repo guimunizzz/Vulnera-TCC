@@ -46,10 +46,6 @@ const ProjectDetailPage = paginaLazy(() => import("./pages/project-detail-page")
 const FindingEditorPage = paginaLazy(() => import("./pages/finding-editor-page"), "FindingEditorPage");
 const FindingDetailPage = paginaLazy(() => import("./pages/finding-detail-page"), "FindingDetailPage");
 const FindingsPage = paginaLazy(() => import("./pages/findings-page"), "FindingsPage");
-const PendingSubscriptionsPage = paginaLazy(
-  () => import("./pages/admin/pending-subscriptions-page"),
-  "PendingSubscriptionsPage",
-);
 const AccessRequestsPage = paginaLazy(
   () => import("./pages/admin/access-requests-page"),
   "AccessRequestsPage",
@@ -118,6 +114,10 @@ export function App() {
             <Route path="/onboarding" element={<OnboardingPage />} />
           </Route>
 
+          <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
+            <Route path="/admin/subscriptions" element={<Navigate to="/admin/access-requests?section=commercial" replace />} />
+          </Route>
+
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route element={<ProtectedRoute requireCompanyOwner />}>
@@ -173,7 +173,6 @@ export function App() {
             </Route>
 
             <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
-              <Route path="/admin/subscriptions" element={<PendingSubscriptionsPage />} />
               <Route path="/admin/access-requests" element={<AccessRequestsPage />} />
               {/* ADR-056 — painel de filas: contagens, falhas e "Tentar de novo". Só ADMIN. */}
               <Route path="/admin/filas" element={<FilasPage />} />

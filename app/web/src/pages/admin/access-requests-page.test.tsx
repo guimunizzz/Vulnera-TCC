@@ -6,6 +6,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import { subscriptionsApi } from "../../lib/api/subscriptions.api";
+import { companiesApi } from "../../lib/api/companies.api";
+import { plansApi } from "../../lib/api/plans.api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AccessRequestsPage } from "./access-requests-page";
 import { useAuthStore } from "../../store/auth.store";
@@ -14,13 +18,16 @@ import type { AdminAccessRequest, AdminAccessRequestDetail } from "../../types/a
 vi.mock("../../lib/api/admin-access-requests.api", () => ({ adminAccessRequestsApi: {
   list: vi.fn(), get: vi.fn(), events: vi.fn(), approve: vi.fn(), reject: vi.fn(), resendInvitation: vi.fn(),
 } }));
+vi.mock("../../lib/api/subscriptions.api", () => ({ subscriptionsApi: { listPending: vi.fn(), approve: vi.fn(), reject: vi.fn() } }));
+vi.mock("../../lib/api/companies.api", () => ({ companiesApi: { list: vi.fn() } }));
+vi.mock("../../lib/api/plans.api", () => ({ plansApi: { list: vi.fn() } }));
 const api = vi.mocked(adminAccessRequestsApi);
 const record: AdminAccessRequest = { id: "request-001", name: "Ana Silva", email: "ana@example.com", companyName: "Empresa A", phone: null, status: "PENDING_REVIEW", expiresAt: "2026-12-01T00:00:00.000Z", emailVerifiedAt: "2026-11-01T00:00:00.000Z", reviewedAt: null, reviewedById: null, rejectionReason: null, createdAt: "2026-11-01T00:00:00.000Z", updatedAt: "2026-11-01T00:00:00.000Z", enrollment: null, enrollmentEligibility: "LEGACY" };
 const detail: AdminAccessRequestDetail = { ...record, invitation: null, enrollmentEligibility: "LEGACY" };
-function renderPage(role: "ADMIN" | "CLIENT" | "PENTESTER" = "ADMIN") {
-  useAuthStore.setState({ user: { id: "u1", name: "Admin", email: "admin@example.com", role, companyId: null, createdAt: "2026-01-01" } });
+function renderPage(role: "ADMIN" | "CLIENT" | "PENTESTER" = "ADMIN", entry = "/admin/access-requests", companyRole: "OWNER" | "MEMBER" | null = null) {
+  useAuthStore.setState({ user: { id: "u1", name: "Admin", email: "admin@example.com", role, companyId: null, companyRole, createdAt: "2026-01-01" } });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}><AccessRequestsPage /></QueryClientProvider>);
+  return render(<QueryClientProvider client={queryClient}><MemoryRouter initialEntries={[entry]}><AccessRequestsPage /></MemoryRouter></QueryClientProvider>);
 }
 async function openDetail(name = "Ana Silva") {
   await userEvent.click(await screen.findByRole("button", { name: new RegExp(name) }, { timeout: 5000 }));
@@ -30,6 +37,61 @@ async function openDetail(name = "Ana Silva") {
 }
 afterEach(() => { vi.clearAllMocks(); useAuthStore.setState({ user: null }); });
 describe("AccessRequestsPage", () => {
+  it("navega pelo teclado entre seções e só carrega o domínio ativo", async () => {
+    api.list.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+    vi.mocked(subscriptionsApi.listPending).mockResolvedValue([]);
+    vi.mocked(companiesApi.list).mockResolvedValue([]);
+    vi.mocked(plansApi.list).mockResolvedValue([]);
+    renderPage();
+    expect(screen.getByRole("heading", { level: 1, name: "Central de solicitações" })).toBeInTheDocument();
+    const enrollmentLink = screen.getByRole("link", { name: "Adesões empresariais" });
+    const commercialLink = screen.getByRole("link", { name: "Solicitações comerciais" });
+    expect(enrollmentLink).toHaveAttribute("aria-current", "page");
+    await waitFor(() => expect(api.list).toHaveBeenCalledTimes(1));
+    expect(subscriptionsApi.listPending).not.toHaveBeenCalled();
+    expect(companiesApi.list).not.toHaveBeenCalled();
+    expect(plansApi.list).not.toHaveBeenCalled();
+    enrollmentLink.focus();
+    await userEvent.tab();
+    expect(commercialLink).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    expect(await screen.findByRole("region", { name: "Solicitações comerciais" })).toBeInTheDocument();
+    expect(commercialLink).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("region", { name: "Adesões empresariais" })).not.toBeInTheDocument();
+    expect(await screen.findByText("Nenhuma assinatura pendente no momento.")).toBeInTheDocument();
+    expect(subscriptionsApi.listPending).toHaveBeenCalledTimes(1);
+    expect(api.list).toHaveBeenCalledTimes(1);
+  });
+
+  it("abre link comercial direto sem buscar adesões", async () => {
+    vi.mocked(subscriptionsApi.listPending).mockResolvedValue([]);
+    vi.mocked(companiesApi.list).mockResolvedValue([]);
+    vi.mocked(plansApi.list).mockResolvedValue([]);
+    renderPage("ADMIN", "/admin/access-requests?section=commercial");
+    expect(await screen.findByText("Nenhuma assinatura pendente no momento.")).toBeInTheDocument();
+    expect(api.list).not.toHaveBeenCalled();
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.events).not.toHaveBeenCalled();
+  });
+
+  it("aprova adesão unificada uma vez sem iniciar aprovação comercial", async () => {
+    const enrollment = { companyCnpj: "12345678000199", planId: "plan-1", planName: "Essencial", planPrice: "99.00", planMaxApplications: 3, planMaxProjects: 2, planIncludesRemediation: false };
+    const unified = { ...record, enrollment, enrollmentEligibility: "ELIGIBLE" as const };
+    api.list.mockResolvedValue({ items: [unified], total: 1, page: 1, pageSize: 20 });
+    api.get.mockResolvedValueOnce({ ...unified, invitation: null }).mockResolvedValue({ ...unified, status: "APPROVED", invitation: null });
+    api.events.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+    api.approve.mockResolvedValue({ request: { ...unified, status: "APPROVED" }, invitationDelivery: "SENT" });
+    renderPage();
+    await openDetail();
+    expect(await screen.findByText("Essencial · R$ 99,00", { exact: false })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Aprovar" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/assinatura inicial não exige outra aprovação/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Confirmar" }));
+    await waitFor(() => expect(api.approve).toHaveBeenCalledExactlyOnceWith("request-001"));
+    expect(subscriptionsApi.approve).not.toHaveBeenCalled();
+    expect(subscriptionsApi.listPending).not.toHaveBeenCalled();
+  });
   it("lista no filtro padrão, abre detalhe e busca histórico paginado", async () => {
     api.list.mockResolvedValue({ items: [record], total: 21, page: 1, pageSize: 20 });
     api.get.mockResolvedValue(detail);
@@ -41,10 +103,17 @@ describe("AccessRequestsPage", () => {
     expect(api.list).toHaveBeenCalledWith({ page: 1, pageSize: 20, status: "PENDING_REVIEW" });
     expect(api.events).toHaveBeenCalledWith("request-001", { page: 1, pageSize: 20 });
   });
-  it.each(["CLIENT", "PENTESTER"] as const)("nega UI e queries a %s", async (role) => {
-    renderPage(role);
+  it.each([
+    ["CLIENT", "OWNER"], ["CLIENT", "MEMBER"], ["PENTESTER", null],
+  ] as const)("nega UI e queries a %s/%s nas duas seções", async (role, companyRole) => {
+    const first = renderPage(role, "/admin/access-requests", companyRole);
+    expect(screen.getByText("Acesso restrito a administradores.")).toBeInTheDocument();
+    first.unmount();
+    renderPage(role, "/admin/access-requests?section=commercial", companyRole);
     expect(await screen.findByText("Acesso restrito a administradores.")).toBeInTheDocument();
     expect(api.list).not.toHaveBeenCalled(); expect(api.get).not.toHaveBeenCalled();
+    expect(subscriptionsApi.listPending).not.toHaveBeenCalled();
+    expect(companiesApi.list).not.toHaveBeenCalled(); expect(plansApi.list).not.toHaveBeenCalled();
     expect(api.approve).not.toHaveBeenCalled(); expect(api.reject).not.toHaveBeenCalled(); expect(api.resendInvitation).not.toHaveBeenCalled();
   });
   it("confirma aprovação e trata falha de entrega como aprovado com opção de reenvio", async () => {

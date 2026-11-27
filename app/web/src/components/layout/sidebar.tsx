@@ -20,7 +20,7 @@
 
 import { NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, Check, Clock3, FileCode2, FileText, Folder, LayoutDashboard, ListTodo, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
+import { CalendarClock, Clock3, FileCode2, FileText, Folder, LayoutDashboard, ListTodo, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { savedQueriesApi } from "../../lib/api/saved-queries.api";
@@ -74,8 +74,7 @@ const GRUPOS: GrupoNav[] = [
     rotulo: "Administração",
     itens: [
       { para: "/settings/sla", rotulo: "Políticas de SLA", papeis: ["ADMIN", "CLIENT"], icone: Clock3 },
-      { para: "/admin/access-requests", rotulo: "Solicitações de acesso", papeis: ["ADMIN"], icone: UserPlus },
-      { para: "/admin/subscriptions", rotulo: "Aprovações de assinatura", papeis: ["ADMIN"], icone: Check },
+      { para: "/admin/access-requests", rotulo: "Central de solicitações", papeis: ["ADMIN"], icone: UserPlus },
       // ADR-056 — painel de filas (contagens e falhas do BullMQ). Só ADMIN, como a rota.
       { para: "/admin/filas", rotulo: "Filas", papeis: ["ADMIN"], icone: ListTodo, novo: true },
     ],

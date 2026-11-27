@@ -1,5 +1,5 @@
 /*
- * O que faz: estiliza a fila administrativa de solicitações de acesso.
+ * O que faz: estiliza a central administrativa e a fila de adesões empresariais.
  * Por que existe: mantém hierarquia, leitura e responsividade no tema do produto.
  * Quem consome: AccessRequestsPage, dentro do AppLayout autenticado.
  */
@@ -32,3 +32,12 @@
 .access-requests-history li span, .access-requests-history li time { color: oklch(var(--color-text-muted)); font-size: .8rem; }
 .access-requests-history li p { margin: 0; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { .access-requests-page *, .access-requests-page *::before, .access-requests-page *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+.access-requests-sections { display: flex; flex-wrap: wrap; gap: .5rem; padding: .35rem; border: 1px solid oklch(var(--color-border-subtle)); border-radius: var(--radius-container); background: oklch(var(--color-bg-surface)); }
+.access-requests-sections a { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: .65rem 1rem; border-radius: var(--radius-control); color: oklch(var(--color-text-secondary)); font-size: .875rem; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.access-requests-sections a:hover { background: oklch(var(--color-bg-inset)); color: oklch(var(--color-text-primary)); }
+.access-requests-sections a[aria-current="page"] { background: oklch(var(--color-bg-inset)); color: oklch(var(--color-accent-ink)); box-shadow: inset 0 -2px 0 oklch(var(--color-accent)); }
+.access-requests-panel { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.access-requests-panel-heading h2 { margin: 0; color: oklch(var(--color-text-primary)); font-size: 1.25rem; font-weight: 700; }
+.access-requests-panel-heading p { margin: .4rem 0 0; color: oklch(var(--color-text-muted)); }
+@media (max-width: 480px) { .access-requests-sections a { flex: 1 1 100%; } }

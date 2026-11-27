@@ -44,7 +44,7 @@ describe("Sidebar — SAST/SCA", () => {
   it("CLIENT não vê o item", () => {
     renderComo("CLIENT");
     expect(screen.queryByRole("link", { name: /SAST\/SCA/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Solicitações de acesso" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Central de solicitações" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Aprovações de assinatura" })).not.toBeInTheDocument();
   });
 
@@ -77,14 +77,12 @@ describe("Sidebar — SAST/SCA", () => {
     }
   });
 
-  it("separa solicitações de acesso das aprovações de assinatura para ADMIN", () => {
+  it("mostra apenas a Central de solicitações para ADMIN", () => {
     renderComo("ADMIN");
-    expect(screen.getByRole("link", { name: "Solicitações de acesso" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Central de solicitações" })).toHaveAttribute(
       "href", "/admin/access-requests",
     );
-    expect(screen.getByRole("link", { name: "Aprovações de assinatura" })).toHaveAttribute(
-      "href", "/admin/subscriptions",
-    );
+    expect(screen.queryByRole("link", { name: "Aprovações de assinatura" })).not.toBeInTheDocument();
   });
 
   it("Agendamentos (ADR-056) aparece para os três papéis, com o selo new, depois de SAST/SCA", () => {
