@@ -476,6 +476,7 @@ Gemini ainda depende de chave/modelo e validação no projeto da demonstração.
   <tr><td><a href="docs/ASSISTENTE_VULNERA.md">Assistente Vulnera</a></td><td>Orientação contextual, Gemini/local, limites e roteiro de três minutos</td></tr>
   <tr><td><a href="docs/DAST.md">DAST</a></td><td>Modos, execução, configuração e diagnóstico</td></tr>
   <tr><td><a href="docs/SAST_SCA.md">SAST/SCA</a></td><td>Importação de SARIF e CycloneDX, regras de reimportação, API, segurança e validação com Semgrep/Trivy reais</td></tr>
+  <tr><td><a href="docs/SBOM.md">SBOM</a></td><td>Inventário de componentes do próprio Vulnera (API, web, mobile): como gerar, vulnerabilidades por origem, licenças e limites</td></tr>
   <tr><td><a href="docs/EXPOSURE_REMEDIATION.md">Exposure &amp; Remediation</a></td><td>SLA, VRS, aceite de risco, playbooks e quadro</td></tr>
   <tr><td><a href="docs/FINDINGS_QUERY.md">Findings query</a> / <a href="docs/DESIGN_SYSTEM.md">Design system</a></td><td>Busca, componentes e acessibilidade</td></tr>
   <tr><td><a href="docs/FINDINGS_EXCEL_EXPORT.md">Exportação Excel</a></td><td>Como usar, limites, segurança, decisões e validação</td></tr>
