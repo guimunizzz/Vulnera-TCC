@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectsApi } from "../lib/api/projects.api";
+import { getResourceFailure } from "../lib/resource-failure";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
 import { applicationsApi } from "../lib/api/applications.api";
 import { projectMembersApi } from "../lib/api/project-members.api";
 import { usersApi } from "../lib/api/users.api";
@@ -83,28 +85,30 @@ export function ProjectDetailPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: project, isLoading } = useQuery({
+  const projectQuery = useQuery({
     queryKey: ["projects", id],
     queryFn: () => projectsApi.getById(id!),
     enabled: !!id,
   });
+  const project = projectQuery.data;
+  const authorized = projectQuery.isSuccess && Boolean(project);
 
   const { data: application } = useQuery({
     queryKey: ["applications", project?.applicationId],
     queryFn: () => applicationsApi.getById(project!.applicationId),
-    enabled: !!project?.applicationId && role !== "PENTESTER",
+    enabled: authorized && !!project?.applicationId && role !== "PENTESTER",
   });
 
   const { data: members } = useQuery({
     queryKey: ["projects", id, "members"],
     queryFn: () => projectMembersApi.list(id!),
-    enabled: !!id,
+    enabled: authorized,
   });
 
   const { data: users } = useQuery({
     queryKey: ["users"],
     queryFn: usersApi.list,
-    enabled: role === "ADMIN",
+    enabled: authorized && role === "ADMIN",
   });
 
   // O contador de críticos em aberto no cabeçalho aparece em TODAS as abas,
@@ -116,10 +120,10 @@ export function ProjectDetailPage() {
     if (id) params.set("projectId", id);
     return params;
   }, [id]);
-  const criticos = useFindings(paramsCriticos, Boolean(id));
+  const criticos = useFindings(paramsCriticos, authorized);
   const criticalOpenCount = criticos.dados?.pagination.total ?? 0;
 
-  const companyName = useCompanyName(project?.companyId);
+  const companyName = useCompanyName(authorized ? project?.companyId : undefined, authorized);
 
   const userName = (userId: string): string => users?.find((u) => u.id === userId)?.name ?? userId;
   const pentesterCandidates = (users ?? []).filter(
@@ -154,11 +158,12 @@ export function ProjectDetailPage() {
 
   const projectReady = !!project && REPORT_READY_STATUSES.includes(project.status);
 
-  const { data: reportHistory } = useQuery({
+  const reportHistoryQuery = useQuery({
     queryKey: ["reports", "byProject", id],
     queryFn: () => reportsApi.listByProject(id!),
-    enabled: !!id && tab === "reports",
+    enabled: authorized && tab === "reports",
   });
+  const reportHistory = reportHistoryQuery.data;
 
   // Fluxo client-side (ADR-003): busca o JSON consolidado → desenha o PDF
   // com pdf-lib inteiramente no browser → baixa via Blob → só DEPOIS
@@ -180,7 +185,18 @@ export function ProjectDetailPage() {
     onSettled: () => setGeneratingType(null),
   });
 
-  if (isLoading || !project) {
+  const projectFailure = getResourceFailure(projectQuery.error);
+  const failure = projectFailure ?? (tab === "reports" ? getResourceFailure(reportHistoryQuery.error) : null);
+  if (failure === "unavailable" || !id) {
+    return <ResourceUnavailable backTo="/projects" backLabel="Voltar para projetos" />;
+  }
+  if (failure) {
+    return <ResourceLoadError failure={failure} onRetry={() => {
+      if (projectFailure) void projectQuery.refetch();
+      else void reportHistoryQuery.refetch();
+    }} />;
+  }
+  if (!authorized || !project) {
     return <p className="text-fg-muted">Carregando...</p>;
   }
 
@@ -392,7 +408,8 @@ export function ProjectDetailPage() {
               </p>
 
               <h2 className="mt-8 mb-3 font-semibold text-fg">Histórico de gerações</h2>
-              {(!reportHistory || reportHistory.length === 0) && (
+              {reportHistoryQuery.isLoading && <p className="text-sm text-fg-muted">Carregando relatórios...</p>}
+              {!reportHistoryQuery.isLoading && (!reportHistory || reportHistory.length === 0) && (
                 <p className="text-sm text-fg-muted">Nenhum relatório gerado ainda.</p>
               )}
               {reportHistory && reportHistory.length > 0 && (

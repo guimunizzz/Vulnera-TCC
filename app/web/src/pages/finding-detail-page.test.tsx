@@ -17,15 +17,15 @@ import { useAuthStore } from "../store/auth.store";
 import type { Vulnerability } from "../types/vulnerability.types";
 import { FindingDetailPage } from "./finding-detail-page";
 
-const api = vi.hoisted(() => ({ getById: vi.fn() }));
+const api = vi.hoisted(() => ({ getById: vi.fn(), panels: vi.fn(() => null) }));
 vi.mock("../lib/api/vulnerabilities.api", () => ({ vulnerabilitiesApi: { getById: api.getById } }));
 
 // Estes painéis têm consultas próprias; aqui importa a recuperação do finding.
-vi.mock("../components/findings/risk-acceptance-panel", () => ({ RiskAcceptancePanel: () => null }));
-vi.mock("../components/findings/how-to-fix-panel", () => ({ HowToFixPanel: () => null }));
-vi.mock("../components/findings/evidence-uploader", () => ({ EvidenceUploader: () => null }));
-vi.mock("../components/findings/comment-timeline", () => ({ CommentTimeline: () => null }));
-vi.mock("../components/findings/audit-trail", () => ({ AuditTrail: () => null }));
+vi.mock("../components/findings/risk-acceptance-panel", () => ({ RiskAcceptancePanel: api.panels }));
+vi.mock("../components/findings/how-to-fix-panel", () => ({ HowToFixPanel: api.panels }));
+vi.mock("../components/findings/evidence-uploader", () => ({ EvidenceUploader: api.panels }));
+vi.mock("../components/findings/comment-timeline", () => ({ CommentTimeline: api.panels }));
+vi.mock("../components/findings/audit-trail", () => ({ AuditTrail: api.panels }));
 vi.mock("../components/findings/override-severity-dialog", () => ({ OverrideSeverityDialog: () => null }));
 
 const clients: QueryClient[] = [];
@@ -56,11 +56,12 @@ afterEach(() => {
 describe("Recuperação do detalhe de finding", () => {
   it("FIND-RETRY-01 — Tentar novamente refaz o GET e permanece no detalhe", async () => {
     const initialError = new AxiosError("Falha inicial", AxiosError.ERR_BAD_RESPONSE, undefined, undefined, {
-      status: 404, statusText: "Not Found", data: { error: "VULNERABILITY_NOT_FOUND" },
+      status: 500, statusText: "Internal Server Error", data: { error: "INTERNAL_ERROR" },
       headers: {}, config: { headers: new AxiosHeaders() },
     });
     api.getById.mockRejectedValueOnce(initialError).mockResolvedValue(finding);
     const client = createQueryClient();
+    client.setDefaultOptions({ queries: { retry: false } });
     clients.push(client);
     render(
       <QueryClientProvider client={client}>
@@ -73,7 +74,7 @@ describe("Recuperação do detalhe de finding", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível abrir este finding");
+    expect(await screen.findByRole("heading", { name: "Não foi possível carregar o recurso" })).toBeInTheDocument();
     expect(api.getById).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
 
@@ -82,5 +83,27 @@ describe("Recuperação do detalhe de finding", () => {
     expect(api.getById).toHaveBeenNthCalledWith(1, "finding-1");
     expect(api.getById).toHaveBeenNthCalledWith(2, "finding-1");
     expect(screen.queryByText("Página anterior de projetos")).not.toBeInTheDocument();
+  });
+
+  it.each([403, 404])("FIND-ACCESS-01 — HTTP %s usa mensagem neutra sem retry ou painéis do finding", async (status) => {
+    api.getById.mockRejectedValue(new AxiosError("Recusado", AxiosError.ERR_BAD_RESPONSE, undefined, undefined, {
+      status, statusText: "Error", data: { error: "FORBIDDEN", title: "Finding de outro tenant" },
+      headers: {}, config: { headers: new AxiosHeaders() },
+    }));
+    const client = createQueryClient();
+    clients.push(client);
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/findings/finding-1"]}>
+          <Routes><Route path="/findings/:id" element={<FindingDetailPage />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("heading", { name: "Recurso indisponível" });
+    expect(screen.getByRole("link", { name: "Voltar para findings" })).toHaveAttribute("href", "/findings");
+    expect(screen.queryByRole("button", { name: "Tentar novamente" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Finding de outro tenant")).not.toBeInTheDocument();
+    expect(api.getById).toHaveBeenCalledTimes(1);
+    expect(api.panels).not.toHaveBeenCalled();
   });
 });

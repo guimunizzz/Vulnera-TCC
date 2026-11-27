@@ -25,6 +25,8 @@ import { Button } from "../components/ui/button";
 import { Card, CardHeader, CardTitle } from "../components/ui/card";
 import { Textarea } from "../components/ui/textarea";
 import { Alert } from "../components/ui/alert";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
+import { getResourceFailure } from "../lib/resource-failure";
 import { EmptyState } from "../components/ui/empty-state";
 import { Badge } from "../components/ui/badge";
 import { ScoreSelector } from "../components/maturity/score-selector";
@@ -44,20 +46,24 @@ export function MaturityAssessmentPage() {
   const { companyId } = useParams<{ companyId: string }>();
   const role = useAuthStore((s) => s.user?.role);
   const canEdit = role === "ADMIN";
-  const companyName = useCompanyName(companyId);
   const getErrorMessage = useApiError();
   const queryClient = useQueryClient();
 
-  const { data: catalog, isLoading: loadingCatalog } = useQuery({
-    queryKey: ["maturity", "catalog"],
-    queryFn: maturityApi.getCatalog,
-  });
-
-  const { data: assessment, isLoading: loadingAssessment } = useQuery({
+  const assessmentQuery = useQuery({
     queryKey: ["maturity", "latest", companyId],
     queryFn: () => maturityApi.getLatestByCompany(companyId!),
     enabled: !!companyId,
   });
+  const { data: assessment } = assessmentQuery;
+  // Uma avaliação ausente (null) também confirma a leitura autorizada da empresa.
+  const accessConfirmed = assessmentQuery.isSuccess;
+  const companyName = useCompanyName(companyId, accessConfirmed);
+  const catalogQuery = useQuery({
+    queryKey: ["maturity", "catalog"],
+    queryFn: maturityApi.getCatalog,
+    enabled: accessConfirmed,
+  });
+  const { data: catalog } = catalogQuery;
 
   const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null);
   const [respostas, setRespostas] = useState<EdicaoRespostas>({});
@@ -146,7 +152,14 @@ export function MaturityAssessmentPage() {
     saveMutation.mutate(scores);
   }
 
-  if (loadingCatalog || loadingAssessment) return <p className="text-fg-muted">Carregando...</p>;
+  const assessmentFailure = getResourceFailure(assessmentQuery.error);
+  if (assessmentFailure === "unavailable" || !companyId) return <ResourceUnavailable backTo="/dashboard" backLabel="Voltar ao painel" />;
+  if (assessmentFailure) return <ResourceLoadError failure={assessmentFailure} onRetry={() => void assessmentQuery.refetch()} />;
+
+  const catalogFailure = getResourceFailure(catalogQuery.error);
+  // O catálogo é compartilhado: sua falha não indica uma negativa sobre a empresa.
+  if (catalogFailure) return <ResourceLoadError failure={catalogFailure === "unavailable" ? "operational" : catalogFailure} onRetry={() => void catalogQuery.refetch()} />;
+  if (assessmentQuery.isLoading || catalogQuery.isLoading) return <p role="status" className="text-fg-muted">Carregando...</p>;
 
   const activeDomain = catalog?.find((d) => d.id === selectedDomainId);
 

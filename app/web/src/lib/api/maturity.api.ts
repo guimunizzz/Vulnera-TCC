@@ -1,8 +1,8 @@
 /**
  * maturity.api.ts
  *
- * getLatestByCompany devolve null (em vez de propagar o 404) quando a
- * company ainda não tem nenhuma avaliação — é um estado normal da tela
+ * getLatestByCompany devolve null apenas quando o servidor confirma que a
+ * empresa ainda não tem avaliação — é um estado normal da tela
  * (empresa nova / admin ainda não preencheu), não um erro a tratar no
  * componente.
  */
@@ -27,7 +27,9 @@ export const maturityApi = {
       const res = await apiClient.get<MaturityAssessment>(`/maturity/assessments/${companyId}/latest`);
       return res.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+      if (axios.isAxiosError(error) && error.response?.status === 404 && error.response.data?.error === "ASSESSMENT_NOT_FOUND") {
+        return null;
+      }
       throw error;
     }
   },

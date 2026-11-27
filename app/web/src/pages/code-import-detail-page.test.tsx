@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AxiosError, type AxiosResponse } from "axios";
 import { ThemeProvider } from "../design/theme-provider";
 import { CodeImportDetailPage } from "./code-import-detail-page";
 import type { CodeFinding, CodeScanImport } from "../types/code-import.types";
@@ -84,6 +85,17 @@ beforeEach(() => {
 });
 
 describe("Detalhe da importação SAST/SCA", () => {
+  it.each([403, 404])("encerra a leitura com mensagem neutra após HTTP %s", async (status) => {
+    const response = { status, data: { message: "Dados internos" } } as AxiosResponse;
+    api.getById.mockRejectedValueOnce(new AxiosError("Falha HTTP", undefined, undefined, undefined, response));
+    renderPage();
+    expect(await screen.findByRole("heading", { name: "Recurso indisponível" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Voltar para SAST/SCA" })).toHaveAttribute("href", "/sast-sca");
+    expect(screen.queryByText("Dados internos")).not.toBeInTheDocument();
+    expect(api.listFindings).not.toHaveBeenCalled();
+    expect(api.compare).not.toHaveBeenCalled();
+  });
+
   it("mostra cabeçalho, contadores e o selo novo só no achado que apareceu desde a anterior", async () => {
     renderPage();
     expect(await screen.findByRole("heading", { level: 1, name: /Semgrep OSS/ })).toBeInTheDocument();

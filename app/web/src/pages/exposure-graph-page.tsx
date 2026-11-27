@@ -20,13 +20,15 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pause, Play } from "lucide-react";
 import { exposureGraphApi } from "../lib/api/exposure-graph.api";
+import { getResourceFailure } from "../lib/resource-failure";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
 import { companiesApi } from "../lib/api/companies.api";
-import { getApiErrorCode, useApiError } from "../hooks/use-api-error";
+import { getApiErrorCode } from "../hooks/use-api-error";
 import { Breadcrumb } from "../components/ui/navigation";
 import { Skeleton } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Tabs } from "../components/ui/tabs";
-import { EmptyState, ErrorState } from "../components/ui/empty-state";
+import { EmptyState } from "../components/ui/empty-state";
 import { useMotion } from "../motion/use-motion";
 import { idDaAplicacao } from "../features/security-graph/exposure-graph-model";
 import { PainelExposicao } from "../features/security-graph/painel-exposicao";
@@ -125,7 +127,6 @@ function MapaComApresentacao({
 }
 
 export function ExposureGraphPage() {
-  const getErrorMessage = useApiError();
   const consulta = useQuery({
     queryKey: ["exposure-graph"],
     queryFn: exposureGraphApi.obter,
@@ -133,10 +134,18 @@ export function ExposureGraphPage() {
   const empresa = useQuery({
     queryKey: ["companies", "me"],
     queryFn: companiesApi.me,
+    enabled: consulta.isSuccess && Boolean(consulta.data),
     retry: false,
   });
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
-  const semEmpresa = getApiErrorCode(consulta.error) === "COMPANY_NOT_FOUND";
+  const failure = getResourceFailure(consulta.error);
+  const semEmpresa = failure === "unavailable" && getApiErrorCode(consulta.error) === "COMPANY_NOT_FOUND";
+  if (!semEmpresa) {
+    if (failure === "unavailable") {
+      return <ResourceUnavailable backTo="/applications" backLabel="Voltar para aplicações" />;
+    }
+    if (failure) return <ResourceLoadError failure={failure} onRetry={() => void consulta.refetch()} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -168,11 +177,8 @@ export function ExposureGraphPage() {
           titulo="Sua conta não está vinculada a uma empresa"
           descricao="O Exposure Graph mostra as aplicações da empresa de quem está logado."
         />
-      ) : consulta.isError || !consulta.data ? (
-        <ErrorState
-          descricao={getErrorMessage(consulta.error)}
-          aoTentarNovamente={() => consulta.refetch()}
-        />
+      ) : !consulta.data ? (
+        <ResourceUnavailable backTo="/applications" backLabel="Voltar para aplicações" />
       ) : consulta.data.aplicacoes.length === 0 ? (
         <EmptyState
           titulo="Nenhuma aplicação ativa"

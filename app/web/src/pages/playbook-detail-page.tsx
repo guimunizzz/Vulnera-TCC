@@ -33,7 +33,8 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Field } from "../components/ui/field";
 import { Alert } from "../components/ui/alert";
-import { ErrorState } from "../components/ui/empty-state";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
+import { getResourceFailure } from "../lib/resource-failure";
 import { BadgeOrigem, PlaybookViewer } from "../components/playbooks/playbook-viewer";
 import { SECOES_PLAYBOOK, type Playbook, type PlaybookInput } from "../types/playbook.types";
 
@@ -124,15 +125,10 @@ export function PlaybookDetailPage() {
     );
   }
 
-  if (consulta.isError || !playbook) {
-    return (
-      <ErrorState
-        titulo="Playbook indisponível"
-        descricao={getErrorMessage(consulta.error)}
-        aoTentarNovamente={() => void consulta.refetch()}
-      />
-    );
-  }
+  const failure = getResourceFailure(consulta.error);
+  if (failure === "unavailable") return <ResourceUnavailable backTo="/playbooks" backLabel="Voltar para playbooks" />;
+  if (failure) return <ResourceLoadError failure={failure} onRetry={() => void consulta.refetch()} />;
+  if (!playbook) return <ResourceUnavailable backTo="/playbooks" backLabel="Voltar para playbooks" />;
 
   return (
     <div className="space-y-6">

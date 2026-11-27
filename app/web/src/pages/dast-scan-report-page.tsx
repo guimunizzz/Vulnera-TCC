@@ -20,7 +20,8 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { dastApi } from "../lib/api/dast.api";
-import { ErrorState } from "../components/ui/empty-state";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
+import { getResourceFailure } from "../lib/resource-failure";
 import { Skeleton } from "../components/ui/card";
 
 export function DastScanReportPage() {
@@ -42,17 +43,10 @@ export function DastScanReportPage() {
     );
   }
 
-  if (htmlQuery.isError || !htmlQuery.data) {
-    return (
-      <div className="p-6">
-        <ErrorState
-          titulo="Não foi possível carregar o relatório"
-          descricao="O scan pode ainda não ter terminado, ou o relatório não está mais disponível."
-          aoTentarNovamente={() => htmlQuery.refetch()}
-        />
-      </div>
-    );
-  }
+  const failure = getResourceFailure(htmlQuery.error);
+  if (failure === "unavailable") return <ResourceUnavailable backTo="/dast" backLabel="Voltar para DAST" />;
+  if (failure) return <ResourceLoadError failure={failure} onRetry={() => void htmlQuery.refetch()} />;
+  if (!htmlQuery.data) return <ResourceUnavailable backTo="/dast" backLabel="Voltar para DAST" />;
 
   return (
     <iframe

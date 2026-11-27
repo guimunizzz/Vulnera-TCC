@@ -29,6 +29,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { vulnerabilitiesApi } from "../lib/api/vulnerabilities.api";
+import { getResourceFailure } from "../lib/resource-failure";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
 import { useApiError } from "../hooks/use-api-error";
 import { useAuthStore } from "../store/auth.store";
 import { decomporVetor } from "../lib/cvss";
@@ -36,7 +38,6 @@ import { Breadcrumb } from "../components/ui/navigation";
 import { Button, LinkButton } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Alert } from "../components/ui/alert";
-import { ErrorState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/card";
 import { Badge, SeverityBadge, StatusBadge } from "../components/ui/badge";
 import { RiskContextChips } from "../components/applications/risk-context-chips";
@@ -91,17 +92,13 @@ export function FindingDetailPage() {
     onError: (err: unknown) => setErro(getErrorMessage(err)),
   });
 
-  if (isLoading) return <EsqueletoDaPagina />;
-
-  if (error || !finding) {
-    return (
-      <ErrorState
-        titulo="Não foi possível abrir este finding"
-        descricao="Ele pode ter sido removido, ou você não tem acesso a ele."
-        aoTentarNovamente={() => void refetch()}
-      />
-    );
+  const failure = getResourceFailure(error);
+  if (failure === "unavailable" || !id) {
+    return <ResourceUnavailable backTo="/findings" backLabel="Voltar para findings" />;
   }
+  if (failure) return <ResourceLoadError failure={failure} onRetry={() => void refetch()} />;
+  if (isLoading) return <EsqueletoDaPagina />;
+  if (!finding) return <ResourceUnavailable backTo="/findings" backLabel="Voltar para findings" />;
 
   const owaspLabel = OWASP_LABELS[finding.owaspCategory as OwaspCategory] ?? finding.owaspCategory;
   const metricas = decomporVetor(finding.cvssVector);

@@ -29,6 +29,8 @@ import { useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { applicationsApi } from "../lib/api/applications.api";
+import { getResourceFailure } from "../lib/resource-failure";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
 import { RiskContextChips } from "../components/applications/risk-context-chips";
 import { metricsApi, montarQuery } from "../lib/api/metrics.api";
 import { useFiltrosMetricas } from "../hooks/use-filtros-metricas";
@@ -78,11 +80,13 @@ export function ApplicationDashboardPage() {
     queryFn: () => applicationsApi.getById(id),
     enabled: Boolean(id),
   });
+  // Só a leitura autorizada do recurso libera métricas e metadados dependentes.
+  const autorizada = aplicacao.isSuccess && Boolean(aplicacao.data);
 
   const summary = useQuery({
     queryKey: ["metrics", "summary", id, chave],
     queryFn: () => metricsApi.summary(id, paraApi),
-    enabled: Boolean(id),
+    enabled: autorizada,
     placeholderData: keepPreviousData,
   });
 
@@ -90,14 +94,14 @@ export function ApplicationDashboardPage() {
     queryKey: ["metrics", "timeseries", id, chave],
     queryFn: () => metricsApi.timeseries(id, paraApi),
     // Sparklines da postura e gráficos da evolução compartilham a série.
-    enabled: Boolean(id) && (aba === "postura" || aba === "evolucao"),
+    enabled: autorizada && (aba === "postura" || aba === "evolucao"),
     placeholderData: keepPreviousData,
   });
 
   const insights = useQuery({
     queryKey: ["metrics", "insights", id, chave],
     queryFn: () => metricsApi.insights(id, paraApi),
-    enabled: Boolean(id) && aba === "insights",
+    enabled: autorizada && aba === "insights",
     placeholderData: keepPreviousData,
   });
 
@@ -105,7 +109,7 @@ export function ApplicationDashboardPage() {
     queryKey: ["metrics", "comparison", chave],
     queryFn: () => metricsApi.comparison(paraApi),
     // Abas fechadas não gastam o burst compartilhado de consultas caras.
-    enabled: Boolean(id) && aba === "comparativo",
+    enabled: autorizada && aba === "comparativo",
     placeholderData: keepPreviousData,
   });
 
@@ -124,22 +128,31 @@ export function ApplicationDashboardPage() {
   );
 
   const carregando = summary.isLoading;
-  const erro = summary.isError;
+  const consultasAtivas = [summary, ...(aba === "postura" || aba === "evolucao" ? [timeseries] : []),
+    ...(aba === "insights" ? [insights] : []), ...(aba === "comparativo" ? [comparison] : [])];
+  const falhaAplicacao = getResourceFailure(aplicacao.error);
+  const falhasMetricas = consultasAtivas.filter((consulta) => consulta.isError).map((consulta) => getResourceFailure(consulta.error));
+  // Uma negativa de acesso encerra o painel mesmo se outra métrica falhar por infraestrutura.
+  const falhaMetricas = falhasMetricas.find((failure) => failure === "unauthorized")
+    ?? falhasMetricas.find((failure) => failure === "unavailable") ?? falhasMetricas[0];
+  const falha = falhaAplicacao ?? (autorizada ? falhaMetricas : null);
 
   /* ------------------------------------------------------------------ */
 
-  if (erro && !s) {
+  if (falha === "unavailable" || !id) {
+    return <ResourceUnavailable backTo="/applications" backLabel="Voltar para aplicações" />;
+  }
+
+  if (falha) {
     return (
-      <div className="flex flex-col gap-6">
-        <Breadcrumb itens={[{ rotulo: "Aplicações", para: "/applications" }, { rotulo: "Painel" }]} />
-        <ErrorState
-          titulo="Não foi possível carregar o painel"
-          descricao="As métricas não responderam. O restante da aplicação continua funcionando."
-          aoTentarNovamente={() => summary.refetch()}
-        />
-      </div>
+      <ResourceLoadError failure={falha} onRetry={() => {
+        if (falhaAplicacao) void aplicacao.refetch();
+        else consultasAtivas.filter((consulta) => consulta.isError).forEach((consulta) => void consulta.refetch());
+      }} />
     );
   }
+
+  if (!autorizada) return <Skeleton className="h-64 w-full" />;
 
   return (
     <div className="flex flex-col gap-6">

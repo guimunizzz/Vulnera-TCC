@@ -5,9 +5,11 @@
  * QUEM CONSOME: suíte Vitest do frontend.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AxiosError, AxiosHeaders } from "axios";
+import { createQueryClient } from "../lib/query-client";
 import { ThemeProvider } from "../design/theme-provider";
 import { useAuthStore } from "../store/auth.store";
 import type { Project } from "../types/project.types";
@@ -16,6 +18,8 @@ import { ProjectDetailPage } from "./project-detail-page";
 const api = vi.hoisted(() => ({
   project: vi.fn(), application: vi.fn(), members: vi.fn(), users: vi.fn(),
   addMember: vi.fn(), removeMember: vi.fn(),
+  findings: vi.fn(), companyName: vi.fn(),
+  reports: vi.fn(), reportData: vi.fn(),
 }));
 vi.mock("../lib/api/projects.api", () => ({ projectsApi: { getById: api.project } }));
 vi.mock("../lib/api/applications.api", () => ({ applicationsApi: { getById: api.application } }));
@@ -23,8 +27,9 @@ vi.mock("../lib/api/project-members.api", () => ({
   projectMembersApi: { list: api.members, add: api.addMember, remove: api.removeMember },
 }));
 vi.mock("../lib/api/users.api", () => ({ usersApi: { list: api.users } }));
-vi.mock("../hooks/use-company-name", () => ({ useCompanyName: () => "TechNova" }));
-vi.mock("../hooks/use-findings", () => ({ useFindings: () => ({ dados: undefined }) }));
+vi.mock("../lib/api/reports.api", () => ({ reportsApi: { listByProject: api.reports, getReportData: api.reportData } }));
+vi.mock("../hooks/use-company-name", () => ({ useCompanyName: api.companyName }));
+vi.mock("../hooks/use-findings", () => ({ useFindings: api.findings }));
 
 const PROJECT: Project = {
   id: "project-hash", name: "Avaliação do portal", description: null,
@@ -47,8 +52,9 @@ function enterAs(role: "ADMIN" | "CLIENT" | "PENTESTER") {
   });
 }
 
-function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const clients: QueryClient[] = [];
+function renderPage(client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
+  clients.push(client);
   return render(
     <ThemeProvider>
       <QueryClientProvider client={client}>
@@ -66,11 +72,85 @@ beforeEach(() => {
   api.application.mockResolvedValue({ id: "app-1", name: "Portal" });
   api.members.mockResolvedValue(MEMBERS);
   api.users.mockResolvedValue([]);
+  api.reports.mockResolvedValue([]);
+  api.findings.mockReturnValue({ dados: undefined });
+  api.companyName.mockReturnValue("TechNova");
 });
 
-afterEach(() => useAuthStore.setState({ accessToken: null, refreshToken: null, user: null }));
+afterEach(() => {
+  clients.splice(0).forEach((client) => client.clear());
+  useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
+});
 
 describe("ProjectDetailPage — nomes dos pentesters", () => {
+  it("PROJ-ACCESS-01 — consulta membros e contexto somente após autorizar o projeto", async () => {
+    enterAs("ADMIN");
+    let authorize!: (project: Project) => void;
+    api.project.mockReturnValue(new Promise((resolve) => { authorize = resolve; }));
+    renderPage();
+    for (const request of [api.application, api.members, api.users]) expect(request).not.toHaveBeenCalled();
+    expect(api.reports).not.toHaveBeenCalled();
+    expect(api.findings).toHaveBeenLastCalledWith(expect.any(URLSearchParams), false);
+    expect(api.companyName).toHaveBeenLastCalledWith(undefined, false);
+    await act(async () => authorize(PROJECT));
+    await screen.findByRole("heading", { name: PROJECT.name });
+    await waitFor(() => expect(api.members).toHaveBeenCalledTimes(1));
+    expect(api.findings).toHaveBeenLastCalledWith(expect.any(URLSearchParams), true);
+    expect(api.companyName).toHaveBeenLastCalledWith(PROJECT.companyId, true);
+  });
+
+  it.each([403, 404])("PROJ-ACCESS-02 — HTTP %s encerra Carregando e não solicita dados dependentes", async (status) => {
+    enterAs("ADMIN");
+    api.project.mockRejectedValue(new AxiosError("Recusado", AxiosError.ERR_BAD_RESPONSE, undefined, undefined, {
+      status, statusText: "Error", data: { error: "FORBIDDEN", name: "Projeto de outro tenant" },
+      headers: {}, config: { headers: new AxiosHeaders() },
+    }));
+    renderPage(createQueryClient());
+    await screen.findByRole("heading", { name: "Recurso indisponível" });
+    expect(screen.getByRole("link", { name: "Voltar para projetos" })).toHaveAttribute("href", "/projects");
+    expect(screen.queryByText("Carregando...")).not.toBeInTheDocument();
+    expect(screen.queryByText("Projeto de outro tenant")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tentar novamente" })).not.toBeInTheDocument();
+    expect(api.project).toHaveBeenCalledTimes(1);
+    for (const request of [api.application, api.members, api.users]) expect(request).not.toHaveBeenCalled();
+    expect(api.reports).not.toHaveBeenCalled();
+    expect(api.findings).toHaveBeenLastCalledWith(expect.any(URLSearchParams), false);
+  });
+
+  it.each([403, 404])("PROJ-REPORT-01 — HTTP %s no histórico é indisponibilidade, sem apresentar lista vazia", async (status) => {
+    enterAs("CLIENT");
+    api.project.mockResolvedValue({ ...PROJECT, status: "IN_REVIEW" });
+    api.reports.mockRejectedValue(new AxiosError("Recusado", AxiosError.ERR_BAD_RESPONSE, undefined, undefined, {
+      status, statusText: "Error", data: { error: "FORBIDDEN", title: "Relatório de outro tenant" },
+      headers: {}, config: { headers: new AxiosHeaders() },
+    }));
+    renderPage(createQueryClient());
+    await screen.findByRole("heading", { name: PROJECT.name });
+    expect(api.reports).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Relatórios" }));
+    await screen.findByRole("heading", { name: "Recurso indisponível" });
+    expect(screen.queryByText("Nenhum relatório gerado ainda.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Relatório de outro tenant")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tentar novamente" })).not.toBeInTheDocument();
+    expect(api.reports).toHaveBeenCalledTimes(1);
+    expect(api.reportData).not.toHaveBeenCalled();
+  });
+
+  it("PROJ-REPORT-02 — falha operacional permite repetir somente o histórico", async () => {
+    enterAs("CLIENT");
+    api.project.mockResolvedValue({ ...PROJECT, status: "IN_REVIEW" });
+    api.reports.mockRejectedValueOnce(new AxiosError("Network Error", AxiosError.ERR_NETWORK)).mockResolvedValue([]);
+    renderPage();
+    await screen.findByRole("heading", { name: PROJECT.name });
+    fireEvent.click(screen.getByRole("button", { name: "Relatórios" }));
+    await screen.findByRole("heading", { name: "Falha de comunicação" });
+    expect(screen.queryByText("Nenhum relatório gerado ainda.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    await screen.findByText("Nenhum relatório gerado ainda.");
+    expect(api.reports).toHaveBeenCalledTimes(2);
+    expect(api.project).toHaveBeenCalledTimes(1);
+  });
+
   it.each(["CLIENT", "PENTESTER", "ADMIN"] as const)(
     "PROJ-MEMBER-01 — %s vê os nomes retornados pelos membros sem depender do catálogo",
     async (role) => {

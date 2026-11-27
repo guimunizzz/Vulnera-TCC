@@ -18,6 +18,8 @@ import { vulnerabilitiesApi } from "../lib/api/vulnerabilities.api";
 import { projectsApi } from "../lib/api/projects.api";
 import { useApiError } from "../hooks/use-api-error";
 import { useCompanyName } from "../hooks/use-company-name";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
+import { getResourceFailure } from "../lib/resource-failure";
 import { calculateCvss } from "../lib/cvss";
 import { acharCaracteresNaoRenderizaveis } from "../lib/font-safety";
 import { Breadcrumb } from "../components/ui/navigation";
@@ -57,19 +59,21 @@ export function FindingEditorPage() {
   const getErrorMessage = useApiError();
   const queryClient = useQueryClient();
 
-  const { data: existing, isLoading } = useQuery({
+  const findingQuery = useQuery({
     queryKey: ["vulnerabilities", id],
     queryFn: () => vulnerabilitiesApi.getById(id!),
     enabled: isEditMode,
   });
+  const existing = findingQuery.isSuccess ? findingQuery.data : undefined;
 
   const projectId = isEditMode ? existing?.projectId : newProjectId;
-  const { data: project } = useQuery({
+  const projectQuery = useQuery({
     queryKey: ["projects", projectId],
     queryFn: () => projectsApi.getById(projectId!),
     enabled: !!projectId,
   });
-  const companyName = useCompanyName(project?.companyId);
+  const project = projectQuery.isSuccess ? projectQuery.data : undefined;
+  const companyName = useCompanyName(project?.companyId, Boolean(project));
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -149,7 +153,12 @@ export function FindingEditorPage() {
     onError: (err: unknown) => setFormError(getErrorMessage(err)),
   });
 
-  if (isEditMode && isLoading) return <p className="text-fg-muted">Carregando...</p>;
+  const parentQuery = isEditMode ? findingQuery : projectQuery;
+  if (parentQuery.isLoading) return <p className="text-fg-muted" role="status">Carregando...</p>;
+  const failure = getResourceFailure(parentQuery.error);
+  if (failure === "unavailable") return <ResourceUnavailable backTo="/projects" backLabel="Voltar para projetos" />;
+  if (failure) return <ResourceLoadError failure={failure} onRetry={() => void parentQuery.refetch()} />;
+  if (!parentQuery.data) return <ResourceUnavailable backTo="/projects" backLabel="Voltar para projetos" />;
 
   const transitions = existing ? ALLOWED_TRANSITIONS[existing.status] : [];
 

@@ -29,6 +29,8 @@ import { Badge, StatusBadge, SeverityBadge } from "../components/ui/badge";
 import { Progress } from "../components/ui/progress";
 import { useDastStatus } from "../components/dast/dast-status-banner";
 import { EmptyState, ErrorState } from "../components/ui/empty-state";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
+import { getResourceFailure } from "../lib/resource-failure";
 import { Skeleton } from "../components/ui/card";
 import { downloadBlob } from "../lib/pdf/base";
 import { generateDastReportPdf } from "../lib/pdf/dast-report";
@@ -269,16 +271,19 @@ export function DastScanDetailPage() {
     queryFn: () => dastApi.getById(id!),
     enabled: !!id,
     // 3s: mesma cadência com que o runner atualiza o percentual no banco.
-    refetchInterval: (query) =>
-      query.state.data && ACTIVE_DAST_STATUSES.includes(query.state.data.status) ? 3000 : false,
+    refetchInterval: (query) => {
+      const failure = getResourceFailure(query.state.error);
+      if (failure === "unavailable" || failure === "unauthorized") return false;
+      return query.state.data && ACTIVE_DAST_STATUSES.includes(query.state.data.status) ? 3000 : false;
+    },
   });
 
-  const scan = scanQuery.data;
+  const scan = scanQuery.isSuccess ? scanQuery.data : undefined;
   const isActive = !!scan && ACTIVE_DAST_STATUSES.includes(scan.status);
 
   // Só pra descobrir a posição na fila deste scan — quando ele ainda não
   // ganhou vaga, "5%" não explica nada e "2º da fila" explica tudo.
-  const statusQuery = useDastStatus();
+  const statusQuery = useDastStatus(isActive);
   const posicaoNaFila = statusQuery.data?.queued.find((q) => q.scanId === id)?.position ?? null;
 
   const findingsQuery = useQuery({
@@ -392,19 +397,10 @@ export function DastScanDetailPage() {
     );
   }
 
-  if (scanQuery.isError || !scan) {
-    return (
-      <div>
-        <Breadcrumb itens={[{ rotulo: "DAST", para: "/dast" }, { rotulo: "Scan" }]} />
-        <ErrorState
-          className="mt-6"
-          titulo="Não foi possível carregar este scan"
-          descricao="Ele pode ter sido removido, ou você não tem acesso a ele."
-          aoTentarNovamente={() => scanQuery.refetch()}
-        />
-      </div>
-    );
-  }
+  const failure = getResourceFailure(scanQuery.error);
+  if (failure === "unavailable") return <ResourceUnavailable backTo="/dast" backLabel="Voltar para DAST" />;
+  if (failure) return <ResourceLoadError failure={failure} onRetry={() => void scanQuery.refetch()} />;
+  if (!scan) return <ResourceUnavailable backTo="/dast" backLabel="Voltar para DAST" />;
 
   return (
     <div>
