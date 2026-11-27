@@ -91,6 +91,15 @@ export class CompanyInvitationRepository {
     });
   }
 
+  // Projeção separada impede que a consulta MEMBER carregue dados de gestão.
+  listActiveTeamMembers(companyId: string): Promise<Array<Pick<CompanyMemberRow, "id" | "name" | "companyRole">>> {
+    return this.prisma.user.findMany({
+      where: { companyId, role: "CLIENT", companyRole: { in: ["OWNER", "MEMBER"] }, deactivatedAt: null },
+      select: { id: true, name: true, companyRole: true },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
   listActiveMembers(companyId: string): Promise<CompanyMemberRow[]> {
     return this.prisma.user.findMany({
       where: { companyId, role: "CLIENT", companyRole: { in: ["OWNER", "MEMBER"] }, deactivatedAt: null },

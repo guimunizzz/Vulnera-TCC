@@ -9,6 +9,7 @@ import { CompanyInvitationCooldownError } from "../services/company-invitation.s
 import { CompanyInvitationRateLimitError } from "../services/company-invitation-rate-limit.service";
 
 export type CompanyInvitationControllerService = Pick<CompanyInvitationService,
+  | "readTeam"
   | "listMembers"
   | "listInvitations"
   | "listInvitationHistory"
@@ -26,6 +27,14 @@ const MAX_NAME_LENGTH = 191;
 
 export class CompanyInvitationController {
   constructor(private readonly service: CompanyInvitationControllerService) {}
+
+  async readTeam(req: Request, res: Response): Promise<Response> {
+    try {
+      return res.status(200).json(await this.service.readTeam(actor(req)));
+    } catch (error) {
+      return sendServiceError("readTeam", error, res);
+    }
+  }
 
   async listMembers(req: Request, res: Response): Promise<Response> {
     try {

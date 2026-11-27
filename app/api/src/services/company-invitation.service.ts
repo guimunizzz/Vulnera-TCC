@@ -13,6 +13,7 @@ import {
   type CompanyInvitationResponseDTO,
   type CompanyInvitationHistoryDTO,
   type CompanyMemberResponseDTO,
+  type CompanyTeamResponseDTO,
   type CreateCompanyInvitationDTO,
   type PreparedCompanyInvitation,
 } from "../models/company-invitation.model";
@@ -55,6 +56,29 @@ export class CompanyInvitationService {
   ) {
     this.clock = options.clock ?? (() => new Date());
     this.passwordHasher = options.passwordHasher ?? hashPassword;
+  }
+
+  async readTeam(actor: Actor): Promise<CompanyTeamResponseDTO> {
+    const identity = await this.users.findById(actor.userId);
+    if (!isEligibleTeamReader(identity)) throw new Error("FORBIDDEN");
+    const companyId = identity.companyId;
+
+    return this.invitations.transactionWithRetry(async tx => {
+      const company = await tx.invitations.lockCompany(companyId);
+      if (!company) throw new Error("COMPANY_NOT_FOUND");
+      const current = await tx.users.lockById(actor.userId);
+      if (!isEligibleTeamReader(current) || current.companyId !== companyId) throw new Error("FORBIDDEN");
+
+      const members = await tx.invitations.listActiveTeamMembers(companyId);
+      return {
+        company: { id: company.id, name: company.name },
+        members: members.map(member => ({
+          id: member.id,
+          name: member.name,
+          companyRole: member.companyRole === "OWNER" ? "OWNER" : "MEMBER",
+        })),
+      };
+    });
   }
 
   async listMembers(actor: Actor): Promise<CompanyMemberResponseDTO[]> {
@@ -472,6 +496,16 @@ export class CompanyInvitationService {
     if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new Error("INVALID_COMPANY_INVITATION_TIME");
     return now;
   }
+}
+
+// Esta política concede apenas leitura; isEligibleIssuer continua exclusiva do OWNER.
+function isEligibleTeamReader(user: User | null | undefined): user is User & { companyId: string } {
+  return !!user
+    && user.deactivatedAt === null
+    && user.role === "CLIENT"
+    && (user.companyRole === "OWNER" || user.companyRole === "MEMBER")
+    && typeof user.companyId === "string"
+    && user.companyId.length > 0;
 }
 
 function isEligibleIssuer(user: User | null | undefined, companyId: string): user is User {

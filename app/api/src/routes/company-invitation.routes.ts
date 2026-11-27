@@ -12,6 +12,7 @@ import type { CompanyInvitationRouteDependencies } from "../factories/company-in
 import type { CompanyInvitationPublicAction, CompanyInvitationRateLimitService } from "../services/company-invitation-rate-limit.service";
 
 type ControllerMethod =
+  | "readTeam"
   | "listMembers"
   | "listInvitations"
   | "listInvitationHistory"
@@ -30,7 +31,14 @@ export function makeCompanyTeamRoutes(dependencies?: CompanyInvitationRouteDepen
   const router = Router();
   const injectedRuntime = dependencies ? createRuntime(dependencies) : undefined;
 
+  // Dados autenticados de equipe não devem ser reutilizados pelo cache HTTP.
+  router.use(["/me/team", "/me/members", "/me/invitations"], (_req, res, next) => {
+    res.setHeader("Cache-Control", "no-store");
+    next();
+  });
+
   // Root mounts this router under /companies. CompanyId is never a path/body input.
+  router.get("/me/team", authRateLimitMiddleware, invoke("readTeam", injectedRuntime));
   router.get("/me/members", authRateLimitMiddleware, invoke("listMembers", injectedRuntime));
   router.get("/me/invitations/history", authRateLimitMiddleware, invoke("listInvitationHistory", injectedRuntime));
   router.get("/me/invitations", authRateLimitMiddleware, invoke("listInvitations", injectedRuntime));

@@ -36,6 +36,12 @@ export type CompanyInvitationHistoryDTO = {
   createdAt: string;
 };
 
+// Consulta compartilhada entre OWNER/MEMBER: somente identificação e papéis.
+export type CompanyTeamResponseDTO = {
+  company: { id: string; name: string };
+  members: Array<{ id: string; name: string; companyRole: "OWNER" | "MEMBER" }>;
+};
+
 export type CompanyMemberResponseDTO = {
   id: string;
   name: string;

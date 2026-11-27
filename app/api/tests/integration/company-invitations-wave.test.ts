@@ -131,6 +131,33 @@ afterEach(() => {
 });
 
 describe("canários independentes de convite empresarial", () => {
+  it("OWNER e MEMBER consultam equipe mínima do próprio tenant e desativação revoga a leitura", async () => {
+    const identities = [wave.ownerA, wave.memberA, wave.ownerB, wave.memberB];
+    const tokens = new Map<string, string>();
+    for (const identity of identities) {
+      const token = await loginAs(app, identity.email, TENANT_SECURITY_WAVE_PASSWORD);
+      tokens.set(identity.id, token);
+      const response = await request(app).get("/api/companies/me/team").set("Authorization", `Bearer ${token}`);
+      const company = identity.companyId === wave.companyA.id ? wave.companyA : wave.companyB;
+      const members = identities.filter(user => user.companyId === company.id);
+      expect(response.status).toBe(200);
+      expect(response.headers["cache-control"]).toBe("no-store");
+      expect(response.body.company).toEqual({ id: company.id, name: company.name });
+      expect(Object.keys(response.body).sort()).toEqual(["company", "members"]);
+      expect(response.body.members).toHaveLength(2);
+      expect(response.body.members).toEqual(expect.arrayContaining(members.map(user => ({ id: user.id, name: user.name, companyRole: user.companyRole }))));
+      for (const member of response.body.members) expect(Object.keys(member).sort()).toEqual(["companyRole", "id", "name"]);
+    }
+    const deactivation = await request(app).delete(`/api/companies/me/members/${wave.memberA.id}`)
+      .set("Authorization", `Bearer ${tokens.get(wave.ownerA.id)}`);
+    expect(deactivation.status).toBe(204);
+    const disabled = await request(app).get("/api/companies/me/team").set("Authorization", `Bearer ${tokens.get(wave.memberA.id)}`);
+    expect(disabled.status).toBe(401);
+    const remaining = await request(app).get("/api/companies/me/team").set("Authorization", `Bearer ${tokens.get(wave.ownerA.id)}`);
+    expect(remaining.status).toBe(200);
+    expect(remaining.body.members).toEqual([{ id: wave.ownerA.id, name: wave.ownerA.name, companyRole: "OWNER" }]);
+  });
+
   it("deriva empresa e papel do OWNER, grava histórico e ativa um MEMBER sem emitir sessão", async () => {
     const [ownerAToken, ownerBToken, memberAToken, adminToken, legacyToken] = await Promise.all([
       loginAs(app, wave.ownerA.email, TENANT_SECURITY_WAVE_PASSWORD),
