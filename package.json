@@ -10,5 +10,9 @@
     "api": "npm run dev --workspace=app/api",
     "seed:all": "npm run db:seed:all --workspace=app/api",
     "seed:all:docker": "docker compose exec api npm run db:seed:all"
+  },
+  "overrides": {
+    "effect": "3.22.1",
+    "deepmerge-ts": "8.0.0"
   }
 }

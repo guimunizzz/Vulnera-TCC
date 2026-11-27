@@ -1,0 +1,4 @@
+# SBOMs versionados como evidência (docs/SBOM.md): os hashes SHA-256 publicados
+# em docs/evidencias/sbom/README.md só batem se o arquivo sair do git byte a
+# byte. Sem isto, `core.autocrlf=true` no Windows troca LF por CRLF no checkout.
+docs/evidencias/sbom/*.cdx.json -text

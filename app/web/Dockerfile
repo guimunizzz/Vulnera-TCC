@@ -14,6 +14,11 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# Pacotes do Alpine com as correções publicadas depois da base (2026-11-27,
+# docs/SBOM.md: `zlib` crítica, `libssl3`/`libcrypto3`). Mesmo motivo e mesma
+# linha do app/api/Dockerfile.
+RUN apk upgrade --no-cache
+
 # npm 10.9.8 (a versão que vem junto do node:22-alpine) tem um bug conhecido no
 # resolvedor de dependências (Arborist): `npm install` SEM lockfile aborta com
 # "Cannot read properties of null (reading 'edgesOut')". O projeto inteiro
@@ -59,8 +64,13 @@ COPY src ./src
 # Sem o `tsc --noEmit` do `npm run build`: pesa em RAM e não muda o bundle. Typecheck: `npm run build` fora do Docker.
 RUN npx vite build
 
-# chown só da pasta (não -R): o preview grava ali o vite.config compilado; `-R` duplicava o node_modules (~450 MB).
-RUN addgroup -S vulnera && adduser -S vulnera -G vulnera && chown vulnera:vulnera /app
+# chown só das pastas onde o preview grava (não -R): `-R` duplicava o node_modules (~450 MB).
+# Vite 5 gravava o vite.config compilado em /app; o Vite 6 grava em
+# node_modules/.vite-temp/ — sem o chown dela o preview cai com EACCES na subida
+# (2026-11-27, atualização do Vite pelas CVEs, docs/SBOM.md).
+RUN addgroup -S vulnera && adduser -S vulnera -G vulnera \
+  && mkdir -p node_modules/.vite-temp \
+  && chown vulnera:vulnera /app node_modules/.vite-temp
 USER vulnera
 
 EXPOSE 3000

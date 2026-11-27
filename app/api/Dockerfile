@@ -19,7 +19,14 @@ WORKDIR /app
 # fallback simulado — a "Causa 1" de docs/DAST-DOCKER-GAP.md §3. É só o
 # CLIENTE: quem executa os containers é o daemon do HOST, alcançado pelo
 # socket montado no docker-compose.yml (padrão DooD, ADR-028).
-RUN apk add --no-cache python3 make g++ docker-cli
+#
+# `apk upgrade` (2026-11-27, docs/SBOM.md): a base `node:22-alpine` é
+# publicada com os pacotes do dia em que foi gerada, e esta camada fica em
+# cache. O SBOM achou `zlib`, `libssl3`/`libcrypto3` e o próprio `docker-cli`
+# com CVE crítica/alta já corrigida no repositório do Alpine. Atualizar aqui
+# traz as correções a cada build sem cache; combine com `docker compose build
+# --pull` para a base também vir nova.
+RUN apk upgrade --no-cache && apk add --no-cache python3 make g++ docker-cli
 
 # npm 10.9.8 (versão que vem junto do node:22-alpine) tem um bug conhecido no
 # resolvedor de dependências (Arborist) que quebra `npm install` sem lockfile
