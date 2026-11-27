@@ -62,7 +62,7 @@ function dashboardLayout() {
   );
 }
 
-function renderDashboard(role: UserRole) {
+function renderDashboard(role: UserRole, companyRole?: "OWNER" | "MEMBER") {
   useAuthStore.setState({
     accessToken: "token-teste",
     refreshToken: "refresh-teste",
@@ -71,6 +71,7 @@ function renderDashboard(role: UserRole) {
       name: "Rafael",
       email: `${role.toLowerCase()}@vulnera.test`,
       role,
+      companyRole,
       companyId: role === "ADMIN" ? null : "company-1",
       createdAt: new Date().toISOString(),
     },
@@ -246,11 +247,32 @@ describe("DashboardPage", () => {
     );
   });
 
-  it("DASH-VIS-11 — sem crítico: mensagem calma e atalho para a triagem geral", () => {
-    renderDashboard("CLIENT");
+  it.each(["ADMIN", "PENTESTER"] as const)("DASH-VIS-11 — %s sem crítico mantém atalho para a triagem geral", (role) => {
+    renderDashboard(role);
 
     expect(screen.getByText("Nenhum finding crítico em aberto no seu escopo.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Explorar findings" })).toHaveAttribute("href", "/findings");
+  });
+
+  it.each([
+    ["OWNER", 0], ["OWNER", 1], ["OWNER", 2],
+    ["MEMBER", 0], ["MEMBER", 1], ["MEMBER", 2],
+  ] as const)("VUL-QA-03 — CLIENT/%s com %i críticos tem destinos autorizados", (companyRole, criticos) => {
+    resumo.criticosAbertos = criticos;
+    renderDashboard("CLIENT", companyRole);
+
+    expect(screen.getByRole("link", { name: "Ver projetos" })).toHaveAttribute("href", "/projects");
+    const nav = screen.getByRole("navigation", { name: "Continue seu trabalho" });
+    expect(within(nav).getByRole("link", { name: "Projetos" })).toHaveAttribute("href", "/projects");
+    expect(within(nav).getAllByRole("link")).toHaveLength(2);
+    expect(screen.getAllByRole("link").some((link) => link.getAttribute("href")?.startsWith("/findings"))).toBe(false);
+  });
+
+  it.each(["ADMIN", "PENTESTER"] as const)("VUL-QA-03 — %s mantém triagem de críticos", (role) => {
+    resumo.criticosAbertos = 2;
+    renderDashboard(role);
+    expect(screen.getByRole("link", { name: "Revisar críticos" })).toHaveAttribute("href", "/findings?severity=CRITICAL&status=OPEN,IN_PROGRESS,FIXED");
+    expect(screen.getByRole("link", { name: "Findings" })).toHaveAttribute("href", "/findings");
   });
 
   it("DASH-VIS-12 — atalhos só para as rotas que o papel pode abrir", () => {
@@ -263,7 +285,7 @@ describe("DashboardPage", () => {
     };
 
     expect(atalhos("ADMIN")).toEqual(["Aplicações", "Projetos", "Findings"]);
-    expect(atalhos("CLIENT")).toEqual(["Aplicações", "Projetos", "Findings"]);
+    expect(atalhos("CLIENT")).toEqual(["Aplicações", "Projetos"]);
     // /applications é ADMIN/CLIENT; o pentester ganha DAST no lugar.
     expect(atalhos("PENTESTER")).toEqual(["Projetos", "Findings", "DAST"]);
   });
