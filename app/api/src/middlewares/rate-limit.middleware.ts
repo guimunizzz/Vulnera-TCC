@@ -127,6 +127,18 @@ export function endpointRateLimitMiddleware(scope: "expensive" | "report" | "das
   };
 }
 
+/** Orçamentos do chat são compartilhados pela instância, sem afetar outros módulos. */
+export function assistantRateLimitMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const actor = req.user;
+  if (!actor || !consume(req, res, "assistant-user", actor.userId)) return;
+  if (!consume(req, res, "assistant-global", "all")) {
+    // Uma tentativa negada pela instância não gasta a cota pessoal reservada.
+    serviceFor(req).refund("assistant-user", actor.userId);
+    return;
+  }
+  next();
+}
+
 /** Login reserva a conta, mas devolve o token do bucket se a autenticação for bem-sucedida. */
 export function loginRateLimitMiddleware(req: Request, res: Response, next: NextFunction): void {
   const ipKey = clientFingerprint(req);

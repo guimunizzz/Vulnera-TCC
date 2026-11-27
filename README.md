@@ -110,6 +110,27 @@ docker compose up -d --build
 docker compose ps
 ```
 
+O assistente inicia com ajuda local. Para habilitar Gemini no Docker, copie
+[`.env.example`](.env.example) para `.env` **na raiz**, ao lado de
+`docker-compose.yml`, e preencha a chave somente nesse arquivo privado:
+
+```dotenv
+ASSISTANT_MODE=gemini
+GEMINI_API_KEY=COLE_SUA_CHAVE_SOMENTE_NO_ENV_LOCAL
+GEMINI_MODEL=
+```
+
+Preencha `GEMINI_MODEL` com o identificador permitido no seu projeto somente no
+`.env` privado; o exemplo público deixa esse valor vazio.
+Se já existir `.env`, acrescente ou ajuste apenas essas variáveis, preservando
+as demais. O `.env` é ignorado pelo Git; o exemplo versionado mantém a chave
+vazia. Cada instalação precisa receber sua credencial privadamente; clonar ou
+fazer pull não baixa segredos. `app/api/.env` é usado na execução pelo host e
+não substitui o `.env` da raiz para o Compose. Confira o Free Tier no AI Studio
+antes de usar. Para aplicar mudanças nas variáveis de uma stack existente,
+recrie somente a API **sem scans ativos**, conforme o
+[guia do assistente](docs/ASSISTENTE_VULNERA.md#configuração).
+
 Quando a API estiver saudável, prepare os dados de demonstração em uma
 instalação nova:
 
@@ -432,12 +453,19 @@ mantêm suas próprias datas e limites. Relatório desta atualização:
 <details>
 <summary>Fora do MVP / trabalho futuro</summary>
 
-IA, chat em tempo real, tickets de suporte, e-mail transacional, pagamento
+Geração de findings ou cálculo de severidade por IA, chat em tempo real, tickets de suporte, e-mail transacional, pagamento
 real, reset de senha, i18n, filas distribuídas e deploy de produção ficam
 fora do MVP. Exposure Graph e pesos de VRS por empresa permanecem planejados.
 Consulte o [backlog](docs/BACKLOG.md) antes de iniciar novas features.
 
 </details>
+
+O **Assistente Vulnera**, introduzido em 23/10/2026, oferece orientação nas
+telas protegidas da web, com mascote, atalhos permitidos, Gemini opcional e
+ajuda local identificada. Não consulta registros nem executa alterações.
+Configuração segura, condições do Free Tier e roteiro de três minutos em
+[ASSISTENTE_VULNERA.md](docs/ASSISTENTE_VULNERA.md). A integração ao vivo com
+Gemini ainda depende de chave/modelo e validação no projeto da demonstração.
 
 ## Documentação
 
@@ -445,6 +473,7 @@ Consulte o [backlog](docs/BACKLOG.md) antes de iniciar novas features.
   <tr><th>Documento</th><th>Conteúdo</th></tr>
   <tr><td><a href="AGENTS.md">AGENTS.md</a> / <a href="PRD_VIVO.md">PRD_VIVO.md</a></td><td>Convenções e estado de implementação</td></tr>
   <tr><td><a href="docs/DEMO.md">Demo</a></td><td>Credenciais e roteiro de apresentação</td></tr>
+  <tr><td><a href="docs/ASSISTENTE_VULNERA.md">Assistente Vulnera</a></td><td>Orientação contextual, Gemini/local, limites e roteiro de três minutos</td></tr>
   <tr><td><a href="docs/DAST.md">DAST</a></td><td>Modos, execução, configuração e diagnóstico</td></tr>
   <tr><td><a href="docs/SAST_SCA.md">SAST/SCA</a></td><td>Importação de SARIF e CycloneDX, regras de reimportação, API, segurança e validação com Semgrep/Trivy reais</td></tr>
   <tr><td><a href="docs/EXPOSURE_REMEDIATION.md">Exposure &amp; Remediation</a></td><td>SLA, VRS, aceite de risco, playbooks e quadro</td></tr>

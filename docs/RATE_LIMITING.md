@@ -20,6 +20,15 @@ o estado é limitado por TTL e quantidade máxima de chaves.
 | Escopo | Onde | Padrão | Variável |
 |---|---|---|---|
 | `export` | `GET /api/vulnerabilities/export.xlsx` (exportação Excel de findings), **por usuário** | 6/min, rajada de 2 | `RATE_LIMIT_EXPORT_PER_MINUTE` |
+| `assistant-user` | `POST /api/assistant/chat`, por usuário autenticado | Reposição 10/h, rajada de 5 | `RATE_LIMIT_ASSISTANT_USER_PER_HOUR`, `RATE_LIMIT_ASSISTANT_USER_BURST` |
+| `assistant-global` | `POST /api/assistant/chat`, compartilhado pela instância | Reposição 30/h, rajada de 10 | `RATE_LIMIT_ASSISTANT_GLOBAL_PER_HOUR`, `RATE_LIMIT_ASSISTANT_GLOBAL_BURST` |
+
+Os budgets do assistente repõem continuamente, sem teto de janela civil; são
+limites da aplicação separados das cotas Google. O store os retém pelo maior
+entre TTL e tempo de reposição completa da rajada, e impede sua evicção por
+outros escopos. Negação global devolve a reserva pessoal. Não há repetição
+automática após 429, e os contadores reiniciam com o processo. Detalhes em
+[ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
 
 > A resposta `429` traz `Retry-After`, e a API o **expõe por CORS** para a web mostrar quantos segundos
 > esperar. O carregamento de uma página como `/findings` já consome o bucket geral por usuário (1 req/s,

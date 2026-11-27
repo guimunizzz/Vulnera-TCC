@@ -2,8 +2,9 @@
  * app-layout.tsx
  *
  * O QUE FAZ
- * A moldura de toda tela autenticada: navegação lateral, barra superior com
- * usuário e tema, e a área de conteúdo.
+ * A moldura das telas autenticadas com navegação lateral, barra superior e
+ * conteúdo. Onboarding e relatório DAST usam somente AuthenticatedLayout,
+ * que também mantém a instância do assistente fora das transições de página.
  *
  * O QUE MUDOU NA FASE 6.5
  * - Navegação vira `Drawer` abaixo de `lg` — antes a sidebar de 224px roubava
@@ -22,7 +23,7 @@
  *     `aria-controls`.
  *
  * QUEM USA
- * `App.tsx`, envolvendo todas as rotas autenticadas.
+ * `App.tsx`, dentro do contêiner autenticado compartilhado.
  */
 
 import { useEffect, useState } from "react";

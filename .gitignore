@@ -51,7 +51,20 @@ Thumbs.db
 .turbo/
 
 # Testing
-coverage/
+# Fontes de testes e fixtures continuam versionadas; somente artefatos gerados.
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+lcov.info
+*.lcov
+junit.xml
+junit-*.xml
+uploads-test/
+dast-reports-test/
+
+# Saidas locais de QA, capturas, resultados e uploads temporarios (PR #77).
+/output/
 
 # Expo
 apps/mobile/.expo/

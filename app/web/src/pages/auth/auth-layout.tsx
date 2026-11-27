@@ -198,10 +198,12 @@ export function AuthLayout() {
       <div className="vx-login-stage">
         <div className="vx-auth-card">
           <header className="vx-login-header">
-            <Link to="/" className="vx-login-brand" aria-label="Vulnera — página inicial">
+            <Link to="/" className="vx-login-brand" aria-label="Vulnera Security — página inicial">
               <span className="vx-login-wordmark">
                 VULNERA<span className="vx-login-cursor" aria-hidden="true" />
               </span>
+              {/* Separa as palavras para acessibilidade sem alterar o layout em coluna. */}
+              {" "}
               <span className="vx-login-brand-security">SECURITY</span>
             </Link>
           </header>
