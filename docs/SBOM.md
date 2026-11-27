@@ -2,6 +2,86 @@
 
 # SBOM — a lista de materiais do próprio Vulnera
 
+> [!WARNING]
+> **TRABALHO EM ANDAMENTO — leia esta seção primeiro se você é uma sessão nova.**
+> Interrompido em 2026-11-27 (o Rafael precisou desligar). Branch
+> **`fix/sbom-criticas-altas`** (já no GitHub, **sem PR**), criada a partir da
+> `dev` @ `54c6f36`.
+
+## Retomada — o que foi feito e o que falta
+
+**Pedido do Rafael:** gerar e documentar o SBOM do próprio Vulnera e depois
+"arrumar as críticas e altas sem quebrar o projeto".
+
+### Commits na branch
+
+| Commit | Conteúdo | Estado |
+|---|---|---|
+| `d1acb5e` | Este documento + `docs/evidencias/sbom/` (3 SBOMs **de antes** das correções) + BACKLOG SBOM-FUT-01..05 + link no README | ✅ |
+| `d67aff3` | `apk upgrade` nos Dockerfiles; Vite 5.4.21 → 6.4.6 + `chown node_modules/.vite-temp` no Dockerfile do web; overrides `effect` 3.22.1 / `deepmerge-ts` 8.0.0 (raiz e `app/api`); lockfile do mobile + overrides com escopo; `.gitattributes` | ✅ validado (ver "Correções aplicadas" no fim) |
+| `20e7a06` | Override `exceljs → uuid 11.1.1` (raiz e `app/api`) + registro do estado | ⚠️ só a instalação foi conferida |
+
+### Próximos passos, em ordem
+
+1. **Provar o `uuid` do `exceljs`.** `npm install` na raiz; gerar uma planilha
+   com formatação condicional `dataBar` (único ponto do `exceljs` que chama
+   `uuidv4`, em `lib/xlsx/xform/sheet/cf-ext/cf-rule-ext-xform.js`), gravar e
+   reler. Depois `docker compose up -d --build api` e testar
+   `GET /api/vulnerabilities/export.xlsx` logado (credenciais em
+   `docs/DEMO.md`). Se quebrar, remova o override `exceljs` dos dois
+   `package.json`.
+2. **`esbuild` do web com Go recente.** O `esbuild` 0.25.12 (o que o Vite 6
+   aceita) vem compilado com Go 1.23.12 e gera 60 achados (4 críticos e 56
+   altos). Descobrir que versão do `esbuild` é compilada com Go ≥ 1.27.4:
+   `npm pack @esbuild/linux-x64@<v>`, extrair e escanear com
+   `trivy rootfs`. Aplicar com override **com escopo** `"vite": { "esbuild":
+   "<v>" }` na raiz E em `app/web/package.json`, sem mexer no `esbuild` do
+   `tsx` (API). Validar `vite build`, `vite preview` (CSP), dev server e
+   Vitest.
+3. **`minimatch@9.0.9`** (API e web) vem do `@typescript-eslint` 7.18 (lint). Subir
+   `@typescript-eslint/parser` e `eslint-plugin` para `^8.74.0` em `app/api` e
+   `app/web` (usa `minimatch ^11.0.1`, aceita ESLint 8.57). O lint não pode
+   piorar: a API tem 4 erros pré-existentes (`graph-comment.model.ts` e
+   `memory-job-queue.ts`), o web tem 0 erros e 9 avisos. Se a v8 trouxer erros
+   novos, ajustar a config para manter o comportamento da v7.
+4. **Regenerar os 3 SBOMs** (comandos em "Como regenerar"), atualizar as tabelas
+   deste documento e os hashes de `docs/evidencias/sbom/README.md`, e trocar
+   esta seção por um resumo do resultado final.
+5. **Abrir a PR** de `fix/sbom-criticas-altas` para a `dev`.
+
+### Armadilhas desta tarefa
+
+- **O npm 10 local quebra** com `Cannot read properties of null (reading
+  'edgesOut')` em alguns installs: use `npx -y npm@11 install`. Overrides
+  novos sobre pacotes já travados no lock da raiz (que não é versionado) só
+  pegam com `npm update <pacote>` depois do `npm install`.
+- **Os `overrides` precisam estar em dois lugares:** no `package.json` da raiz
+  (o workspace local) e no `package.json` de cada app, porque os Dockerfiles
+  usam `app/api` e `app/web` como raiz do npm, sem lockfile.
+- **Subagents com `isolation: worktree` nasceram num commit antigo**
+  (`3c69181`, de outubro). Mande `git reset --hard <commit atual da branch>`
+  no prompt e revalide tudo no código atual.
+- **Vitest do web:** 5 de 865 falham sob carga, os testes que falham mudam a
+  cada rodada e passam isolados. O número é igual com Vite 5 e Vite 6. Não é
+  regressão.
+- **Typecheck do mobile** falha em `app/mobile/output/**` (cópias de páginas
+  do web versionadas ali). É pré-existente (SBOM-FUT-07).
+- **A severidade** nas contas deste documento é a do parser do Vulnera, que
+  usa a maior nota entre GHSA, NVD etc. O `--severity` do Trivy usa só uma
+  fonte e mostra menos altas.
+- A imagem da API carrega fixtures `*.cdx.json` do seed: sempre escanear com
+  `--skip-dirs app/prisma/seeds`.
+
+### Aceitos sem correção (documentar no PR)
+
+- `minimatch@10.2.5` e `glob@13.0.6` embutidos no próprio npm das imagens:
+  npm 11 e 12 trazem as mesmas versões; tirar o npm quebra o `npx` do `CMD` e
+  os seeds via `docker compose exec`.
+- `decode-uri-component` 0.2.2 no mobile: a 0.5 é só ESM e o `query-string`
+  faz `require` dela, o que quebra com `decodeComponent is not a function`.
+
+---
+
 > **Evidências:** [`docs/evidencias/sbom/`](evidencias/sbom/README.md) ·
 > **Gerado em:** 2026-11-27, sobre a `dev` em `54c6f36` ·
 > **Branch:** `docs/sbom`
