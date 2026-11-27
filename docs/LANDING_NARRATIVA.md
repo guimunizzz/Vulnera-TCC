@@ -310,6 +310,7 @@ Regras que continuam valendo:
 | 2026-11-16 | **Terreno escolhido como material final** (ADR-055): pintura, grafo e `?cena=` removidos. Terreno com erosão, sombra projetada, luz de contorno, neblina com cor, correção em varredura e onda sísmica no clique; regra de câmera do §2 revista (§12). |
 | 2026-11-16 | **Epílogo e grafo sobre o terreno** (pedido do Rafael: o fundo parava depois de Maturidade): o progresso segue de 5 a 6 até o fim da página, com rede de monitoramento, órbita da câmera e horizonte que amanhece; nó sobre cada monte ligado aos glifos; pulsos, sonar e varredura de luz animam com a página parada (§12.7). |
 | 2026-11-16 | **Ping de scanner no lugar da gota** (o Rafael achou a gota sem sentido): o clique dispara um anel de radar que revela as falhas escondidas no ASCII e corre pelo relevo e pela rede no terreno (§5.1). Engasgo de ~200 ms na virada diagnosticado como custo de primeira passada do navegador; medição passa a aquecer (§12.8). |
+| 2026-11-27 | **Travamento na primeira visita corrigido** (relato do Rafael: a LP travava o navegador inteiro): os shaders do terreno eram compilados de forma síncrona no primeiro quadro; no Windows (ANGLE → Direct3D, Iris Xe) isso levava de 6,6 s a 28,8 s com o cache de shaders frio. Agora compilam em segundo plano (`Terreno.preparar`) e a virada espera ficarem prontos (§12.9). |
 
 ### Boas práticas consultadas (2026-10-27)
 
@@ -744,6 +745,55 @@ Medição final, **aquecida** (RTX 3060 Ti, 1440 × 900, build de produção):
 Long tasks: **0** em todos os trechos. Na primeira passada (sem aquecer) a
 virada mede 54 fps, com os dois intervalos acima dentro. Continua valendo o
 aviso da §12.3: **não medido em Iris Xe**.
+
+### 12.9 Travamento na primeira visita (2026-11-27)
+
+**Sintoma.** Na primeira vez que a landing abria, o navegador inteiro
+congelava (todas as abas). A partir da segunda visita, normal.
+
+**Causa (medida, Chrome no Windows, Intel Iris Xe, ANGLE → Direct3D 11).** O
+primeiro quadro da cena chamava `terreno.aquecer()`, que desenhava o terreno
+fora da vista para compilar os shaders na carga (§12.8). Desenhar compila de
+forma **síncrona**, e o compilador HLSL do Direct3D inlina cada chamada de
+`altura()` dos vertex shaders do relevo: cada programa leva segundos. O
+processo de GPU é compartilhado por todas as abas, por isso tudo travava. Na
+segunda visita o Chrome usa o cache de shaders em disco, e o custo some — por
+isso as medições **aquecidas** da §12.3/§12.8, feitas numa RTX 3060 Ti, não o
+pegavam.
+
+| Programa (só o vertex, compilado isolado, cache frio) | Tempo |
+|---|---|
+| `VERTEX_ARESTA` | 4,8 s |
+| `VERTEX_TERRENO` | 1,6 s |
+| `VERTEX_NO` | 1,0 s |
+| `VERTEX_HASTE` / `VERTEX_GLIFO` | 0,5 s cada |
+| fragmentos (todos) | < 0,1 s cada |
+
+**Correção.** `aquecer` virou `preparar`: `renderer.compileAsync()` com o alvo
+do terreno ativo (a chave do programa depende do alvo; compilar com outro faria
+o primeiro desenho recompilar tudo de forma síncrona). Com
+`KHR_parallel_shader_compile` a compilação sai da thread principal. Até ela
+terminar, `desenhar` trata a virada como 0: quem rola rápido até os atos 3–5
+vê o ASCII por alguns segundos e o terreno entra quando fica pronto — usar um
+programa ainda compilando bloquearia de novo.
+
+**Medição (cache frio forçado com um `#define` descartável nos shaders).**
+
+| Cenário | Antes | Depois |
+|---|---|---|
+| Vite dev, primeiro quadro da cena | 28.538 ms num só quadro | 171 ms |
+| Build de produção no container (`:8086`) | quadro de 6,6 s | nenhum quadro > 231 ms (montagem do React); maior intervalo em 12 s: 40 ms |
+| Cache quente (segunda visita) | 97 ms | maior intervalo 30 ms |
+
+No Vite dev, com cache frio, ainda aparecem intervalos de até ~1,9 s durante a
+compilação (quadros sem script, GPU ocupada); no build de produção não
+apareceram. Sem `KHR_parallel_shader_compile` o three marca o programa como
+pronto na hora e o primeiro desenho compila de forma síncrona, como antes:
+nesse navegador o engasgo cai na virada, não na carga.
+
+**Em aberto.** O custo total de compilação continua alto (≈ 8 s somados em
+Iris Xe). Reduzir as chamadas de `altura()` nos vertex shaders do grafo baixaria
+esse tempo, mas mexe no GLSL e pede conferência visual: não foi feito.
 
 ### 12.6 O que foi descartado
 

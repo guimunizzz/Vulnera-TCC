@@ -84,11 +84,20 @@ export interface Terreno {
    */
   redimensionar(larguraCss: number, alturaCss: number, dprDaTela: number, gradeAscii: THREE.Vector2, celulaPx: THREE.Vector2): void;
   /**
-   * Desenha o terreno uma vez, fora da vista: os shaders são compilados no
-   * carregamento. Sem isso a compilação caía no primeiro quadro da virada
-   * (167 ms de engasgo medido no build de produção, 2026-11-15).
+   * Compila os programas do terreno em segundo plano (`compileAsync`, com
+   * `KHR_parallel_shader_compile`). Até a promessa resolver, `desenhar` trata
+   * a virada como 0: a cena segue no ASCII e nada usa um programa que ainda
+   * está compilando — usar um programa nesse estado bloqueia até ele ficar
+   * pronto.
+   *
+   * Histórico: antes era `aquecer`, um quadro desenhado no carregamento para
+   * tirar a compilação do meio da virada (167 ms de engasgo, 2026-11-15). Só
+   * que desenhar compila de forma SÍNCRONA, e no Windows (ANGLE → Direct3D)
+   * os vertex shaders do relevo levam segundos: com o cache de shaders do
+   * navegador frio, o primeiro quadro da landing travou 28,8 s e o processo
+   * de GPU — o navegador inteiro — junto (medido em 2026-11-27, Intel Iris Xe).
    */
-  aquecer(renderer: THREE.WebGLRenderer): void;
+  preparar(renderer: THREE.WebGLRenderer): Promise<void>;
   /** Um quadro. Antes da virada não desenha nada. */
   desenhar(renderer: THREE.WebGLRenderer, tempo: number, delta: number, progresso: number): void;
   /**
@@ -202,6 +211,8 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
     cena.add(objeto);
   });
 
+  let preparo: Promise<void> | null = null;
+  let preparado = false;
   let qualidade: Qualidade = { nivel: 0, lentos: 0 };
   let ritmo = 0;
   let proximoPing = 0;
@@ -314,15 +325,26 @@ export function criarTerreno(atlas: { uAtlas: THREE.IUniform; uTotalGlifos: THRE
       uniformes.uGradeAscii.value.copy(gradeAscii);
       ajustar();
     },
-    aquecer(renderer) {
-      // Um quadro com a virada completa compila os três programas no carregamento.
-      uniformes.uVirada.value = 1;
-      apontarCamera(TERRENO.virada[1]);
-      renderizar(renderer);
-      uniformes.uVirada.value = 0;
+    preparar(renderer) {
+      if (!preparo) {
+        // A chave do programa depende do alvo corrente (espaço de cor de
+        // saída): compila com o MESMO alvo em que `renderizar` desenha, senão
+        // o primeiro desenho recompilaria tudo de forma síncrona.
+        const anterior = renderer.getRenderTarget();
+        renderer.setRenderTarget(alvo);
+        let compilando: Promise<unknown>;
+        try {
+          compilando = renderer.compileAsync(cena, camera);
+        } finally {
+          renderer.setRenderTarget(anterior);
+        }
+        preparo = compilando.then(() => { preparado = true; });
+      }
+      return preparo;
     },
     desenhar(renderer, tempo, delta, progresso) {
-      const virada = viradaGlobal(progresso);
+      // Programas ainda compilando: fica antes da virada (o ASCII segue).
+      const virada = preparado ? viradaGlobal(progresso) : 0;
       uniformes.uVirada.value = virada;
       if (virada <= 0) {
         uniformesDaTela.uCamadaAtiva.value = 0;
