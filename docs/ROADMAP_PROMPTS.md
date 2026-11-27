@@ -16,6 +16,8 @@ A mesma aprovação habilita a criação da empresa, do OWNER e da assinatura in
 
 2026-11-25 · Branch `feat/unified-onboarding-tenant-security` a partir de `db91b70`, fundação local `fd4f7a0`. Integração local por commits de responsabilidade. A publicação e as jornadas reais aguardam revisão. Contratos, evidências e desvios da validação no [relatório da wave](UNIFIED-B2B-TENANT-SECURITY.md).
 
+✅ Refinamento local concluído em 2026-11-27 na mesma branch. Central de solicitações, isolamento de sessão e tratamento de acesso direto conferidos em testes focais. A rodada completa no Chrome segue no [roteiro da wave](UNIFIED-B2B-TENANT-SECURITY.md#roteiro-para-a-rodada-autorizada-no-chrome). Publicação e PR aguardam autorização.
+
 ## Issue #51 — Etapa 7 · ✅ Validada localmente com ressalvas em 2026-11-25
 
 ### Objetivo e contrato do cutover

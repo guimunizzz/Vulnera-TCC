@@ -9,6 +9,10 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-27 — Refinamentos finais da wave B2B
+
+A Central de solicitações reúne adesão e decisões comerciais para ADMIN. Páginas protegidas apresentam uma mensagem neutra para recursos indisponíveis, e as consultas dependentes aguardam a leitura principal. O frontend descarta dados e refresh da sessão anterior. Os testes focais e a preparação da rodada no Chrome constam no [relatório da wave](../../../UNIFIED-B2B-TENANT-SECURITY.md#refinamentos-finais-de-2026-11-27).
+
 ## 2026-11-25 — Adesão B2B, equipes e segurança de tenants
 
 Registrada a decisão [[ADR-058 - Adesao B2B, equipes e revogacao de sessoes]]. A primeira migration acrescenta condições comerciais da adesão, convites próprios de equipe e estado de sessão. A segunda permite registrar o encerramento administrativo de uma adesão aprovada e incompatível. Ambas foram aplicadas em MySQL isolado. O gate local foi aprovado com ressalvas após a revisão independente. Build, resultados e roteiro manual em [Adesão B2B, equipes e segurança de tenants](../../../UNIFIED-B2B-TENANT-SECURITY.md).

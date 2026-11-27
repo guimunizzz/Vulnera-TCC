@@ -41,6 +41,21 @@ todas usam `AppLayout`, que fornece navegação, cabeçalho, alternância de tem
 tela inteira. `/dast/scans/:id/report` também é uma tela cheia separada do
 layout.
 
+A **Central de solicitações** usa `/admin/access-requests` e tem acesso
+exclusivo de ADMIN. A seção de adesões empresariais reúne dados do
+responsável, empresa, plano, verificação e histórico. `?section=commercial`
+abre as solicitações comerciais legadas. O endereço `/admin/subscriptions`
+redireciona para essa seção sob a mesma proteção. Cada seção mantém seus
+endpoints e suas decisões.
+
+Nas páginas protegidas revisadas, HTTP 403 e 404 apresentam **Recurso
+indisponível**, com retorno ao módulo e sem expor o corpo retornado pela API.
+O dashboard de uma aplicação só busca métricas depois de autorizar a leitura
+da aplicação. Falhas de sessão, limite de requisições, comunicação e serviço
+têm tratamento próprio. Novo login, logout e mudança de escopo descartam
+o cache e a árvore protegida. O cliente HTTP descarta respostas de sessões
+anteriores, inclusive resultados de refresh.
+
 `/sast-sca` e `/sast-sca/imports/:id` (ADR-052) têm os papéis do DAST (ADMIN e
 PENTESTER). O item do menu tem o selo **new** (`novo: true` em `sidebar.tsx`),
 que é fixo e só sai quando alguém o remove do código (D17.3). A página do

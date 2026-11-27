@@ -4,6 +4,38 @@ Branch `feat/unified-onboarding-tenant-security`, base `db91b70e37ab121dc1d87c07
 
 O gate independente validou os canários de autorização, efeitos persistidos, rejeição de replay e concorrência nos domínios alterados. A revisão dirigida ficou sem achados altos ou críticos confirmados em aberto no recorte. O CI aguardará publicação autorizada e as quatro jornadas com Turnstile real e MailHog permanecem para validação manual.
 
+## Refinamentos finais de 2026-11-27
+
+A validação manual relatada confirmou o formulário em etapas, o Turnstile real, a ativação de conta, os convites empresariais, a associação de colaboradores e a separação visual de aplicações entre empresas. A rodada completa no Chrome fica para a próxima autorização.
+
+- **Central administrativa.** A rota ADMIN-only `/admin/access-requests` concentra Adesões empresariais e Solicitações comerciais. A primeira mantém responsável, empresa, plano, verificação, decisão e histórico. A segunda reaproveita a fila comercial e suas decisões. `/admin/subscriptions` redireciona sob o mesmo guard para `/admin/access-requests?section=commercial`. O menu tem um único item e o atalho comercial do dashboard aponta para a seção correspondente. A adesão mantém uma única aprovação, com domínio comercial e recuperação legada preservados.
+- **Acesso direto.** O dashboard iniciava a aplicação e as métricas em paralelo. A UI ignorava o erro da aplicação e dependia de `summary` para encerrar o carregamento, exibindo falha de métricas mesmo após negativa de acesso. O TanStack Query já recusava retry de 401, 403 e 404. O Axios só tentava renovar a sessão em 401. Retentativas de rede, 5xx selecionados e 429 poderiam estender a espera se uma dessas falhas ocorresse. O tempo da navegação manual anterior não foi capturado.
+- **Consultas e respostas.** O dashboard lê a aplicação antes de pedir resumo, séries, insights ou comparação. Uma negativa definitiva apresenta a mesma mensagem para 403 e 404 e oferece retorno ao módulo. A interface diferencia sessão, limitação, rede/timeout e falha operacional. A revisão aplicou a regra a projetos e histórico de relatórios, findings (incluindo edição), Exposure Graph, importações, detalhes e relatórios DAST, playbooks e maturidade. Evidências seguem subordinadas à autorização do finding, e a proteção do iframe de relatório foi preservada.
+- **Sessão e papéis.** Novo login, logout ou mudança de escopo invalidam cache e conteúdo protegido. Respostas e refresh iniciados em outra sessão são descartados. O menu de conta identifica Cliente · Responsável ou Cliente · Membro conforme o papel empresarial. Minha equipe mantém as permissões existentes, com listagem e gestão de membros pelo OWNER.
+- **Limite da neutralidade.** A mensagem 403/404 é idêntica na interface. A API mantém seus envelopes e status distintos para recursos fora do escopo e inexistentes. Essa diferença continua observável por um cliente HTTP autorizado, embora o corpo da negativa não inclua dados do tenant.
+
+Luna 1 (High) fez a Central e os estados de relatório DAST e maturidade. Luna 2 (XHigh) tratou dashboard, projeto, finding e Exposure Graph, além da regressão de leitura da API. Sol integrou navegação e estado de sessão, manteve os arquivos compartilhados e executou a validação. Houve até dois agentes em paralelo, com ownership exclusivo por arquivo.
+
+### Evidência focal
+
+O Jest passou 26/26 em três suítes da wave. A versão final da regressão de leituras passou 18/18, com 62 GETs, sem somar o reteste ao total. Os testes usaram o schema descartável `vulnera_test_wave_refine_20261127` no MySQL habitual, com 25 migrations. Os usuários foram autenticados pelo fluxo normal da API com fixtures sintéticas. As contas Alpha e Beta da jornada manual ficaram fora dessas execuções.
+
+| Requisição em Supertest | Resultado | Tempo na execução final |
+|---|---|---|
+| Aplicação, resumo, séries e insights no tenant do OWNER ou MEMBER | HTTP 200. Identificadores e totais do próprio tenant | 10,3–38,6 ms |
+| Aplicação ou métricas fora do escopo | HTTP 403, corpo `{"error":"FORBIDDEN"}` | 8,9–21,6 ms |
+| Identificador inexistente | HTTP 404, corpo `{"error":"APPLICATION_NOT_FOUND"}` | 6,7–12,2 ms |
+| Aplicação e métricas sem sessão | HTTP 401, envelope de autorização sem dados do recurso | 3,2–4,6 ms |
+| Comparação e Exposure Graph do próprio tenant | HTTP 200. A fixture confere ausência de IDs, nomes e achados alheios e verifica os totais esperados | 8,9–18,7 ms |
+
+Os canários também preservaram acessos legítimos de ADMIN e PENTESTER atribuído e verificaram o bloqueio de mutações fora do escopo. Os tempos são exclusivos do runner local e não representam a navegação anterior do usuário.
+
+O Vitest passou 128 cenários focais distintos, incluindo seções administrativas, guard de rota, cache, refresh, páginas protegidas e ausência de consultas dependentes após 403/404. O lint focal passou sem erros. O aviso de Fast Refresh em `dast-status-banner.tsx` já existia com o hook exportado. A checagem TypeScript passou ao declarar os tipos Web explicitamente. O comando padrão no host encontra declarações incompletas no diretório ancestral e retorna TS2688. A verificação de contraste passou 132/132 nos temas testados. A bateria integral e o Chrome aguardam a próxima etapa.
+
+Código local em `da4394a` (Central), `954b610` (sessão) e `7240030` (estados protegidos e canários de leitura). Nenhuma alteração de código de produção na API, schema ou migrations nesta etapa.
+
+O build Docker do Web passou com Rollup 4.68.5. Somente `vulnera-web` foi recriado, com imagem local `vulnera-tcc-web:wave-7240030`. A API permaneceu na imagem de `b0e0833`, e API, MySQL, Redis e MailHog mantiveram os mesmos IDs de container. O schema manual `vulnera_wave_20261127` conservou 3 empresas, 8 usuários, 6 aplicações e 3 assinaturas. Rede, volumes, perfil real do Turnstile e portas do ambiente habitual foram preservados.
+
 ## Autorização
 
 | Operação | ADMIN ativo | CLIENT OWNER ativo | CLIENT MEMBER ativo | PENTESTER ativo |
@@ -28,38 +60,23 @@ Duas entradas concedem identidade externa, a aprovação administrativa direta e
 
 ## Jornada manual
 
-Use dados fictícios em schema isolado e o perfil Turnstile real local, com as chaves configuradas no arquivo ignorado. Use a caixa local do MailHog para verificação e convites. As operações de teste devem apontar ao schema da wave. Mantenha a stack de desenvolvimento e suas credenciais locais separadas da validação.
+Desde 2026-11-27, a validação usa a própria stack `vulnera-tcc`, Web em `http://localhost:8086`, API em `http://localhost:3001` e MailHog em `http://localhost:8025`. A estratégia anterior de execução paralela foi substituída. O perfil real carrega as chaves do arquivo local ignorado `.env.turnstile-real.local`. A API manual aponta a `vulnera_wave_20261127` no MySQL existente, com conta limitada ao schema. Preserve os dados fictícios já cadastrados e dispense novo seed. As suítes que limpam registros usam um schema descartável separado.
 
-Para rodar em paralelo à stack local, use o MySQL e o MailHog existentes na rede `vulnera-net`. Prepare um schema manual, por exemplo `vulnera_wave_manual`, e uma conta com acesso apenas a esse schema. Em um arquivo de ambiente fora do repositório, configure `DATABASE_URL` para essa conta e as chaves JWT de teste. Use `NODE_ENV=development`, `PORT=3001`, `CORS_ORIGIN=http://localhost:8186`, `PUBLIC_WEB_URL=http://localhost:8186`, `SMTP_HOST=mailhog`, `SMTP_PORT=1025`, `SMTP_FROM=noreply@localhost.test`, `SMTP_SECURE=false`, `SMTP_REQUIRE_TLS=false`, `QUEUE_DRIVER=memory`, `DAST_FORCE_SIMULATE=true` e `THREAT_INTEL_SYNC_ENABLED=false`. Use `TURNSTILE_SECRET_KEY` real somente nesse arquivo da API, `TURNSTILE_EXPECTED_HOSTNAME=localhost` e `TURNSTILE_EXPECTED_ACTION=access-request`.
+### Roteiro para a rodada autorizada no Chrome
 
-Na raiz do worktree, a imagem local da API aplica as migrations ao schema indicado na inicialização. O seed é opcional para criar a conta ADMIN e os planos fictícios no schema manual.
-
-```powershell
-$waveApiEnvPath = Join-Path $env:LOCALAPPDATA 'Vulnera/wave-api.env'
-docker run --rm --name vulnera-wave-api-manual --network vulnera-net --env-file $waveApiEnvPath -p 127.0.0.1:3101:3001 vulnera-wave-api:validation
-```
-
-Após a API ficar pronta, rode o seed em outro terminal para criar os dados fictícios.
-
-```powershell
-docker exec vulnera-wave-api-manual npm run db:seed
-```
-
-Em outro terminal, na pasta `app/web`, forneça a Site Key pública pela variável local exportada `LOCAL_TURNSTILE_SITE_KEY`.
-
-```powershell
-$env:VITE_API_URL = 'http://localhost:3101/api'
-$env:VITE_TURNSTILE_SITE_KEY = $env:LOCAL_TURNSTILE_SITE_KEY
-$env:VITE_TURNSTILE_ACTION = 'access-request'
-npm run dev -- --host 127.0.0.1 --port 8186 --strictPort
-```
-
-Abra `http://localhost:8186/request-access` e use o MailHog local em `http://localhost:8025`.
-
-1. Solicite acesso escolhendo um plano ativo. Confirme o e-mail, aprove no painel ADMIN, siga o convite e entre com a senha nova. Confirme acesso como OWNER e assinatura ACTIVE.
-2. Como OWNER, convide um colaborador em Minha equipe. Abra o link de convite recebido no MailHog, ative e entre como CLIENT/MEMBER da mesma empresa. Confira o evento de aceitação no histórico do OWNER.
-3. Verifique as restrições administrativas na sessão MEMBER. Como OWNER, revogue um convite pendente e desative um colaborador. Refaça a navegação autenticada na sessão desativada e confirme o encaminhamento para login.
-4. Repita com duas empresas e dados fictícios distintos. Confira a separação de recursos na interface OWNER/MEMBER e a visibilidade esperada para ADMIN e PENTESTER atribuído.
+| Exercício | Resultado a conferir |
+|---|---|
+| Adesão | Completar os quatro passos com um plano ativo e Turnstile real. Confirmar o e-mail pelo MailHog e conferir o pedido na Central. |
+| Administração | Como ADMIN, consultar histórico e decidir a adesão. Na ativação do convite, conferir criação de empresa, OWNER e assinatura inicial ativa após uma única aprovação. |
+| Comercial legado | Abrir a URL antiga e conferir o redirecionamento à seção comercial. Exercitar aprovação e rejeição somente com solicitações legadas reservadas para a rodada. |
+| Convite empresarial | Como OWNER, emitir e reenviar convites de teste. Conferir que o link anterior deixa de funcionar e que o novo abre a ativação. Revogar outro convite pendente e conferir a negativa do link revogado. |
+| Ativação de colaborador | Confirmar o vínculo com a empresa do emissor e a identificação como Cliente · Membro após login. |
+| Permissões de equipe | Conferir que OWNER pode gerir a equipe e que MEMBER não consegue convidar, reenviar, revogar, desativar ou alterar privilégios. |
+| Desativação e sessão | Usar um membro fictício reservado para esse caso. Desativar como OWNER e confirmar que a sessão anterior perde acesso e volta ao login. |
+| Isolamento e URL direta | Com as contas Alpha e Beta já existentes, comparar aplicações próprias. Verificar a resposta neutra de recurso indisponível para endereços fora do escopo e inexistentes. Alternar sessões no mesmo navegador e conferir ausência de dados da sessão anterior. |
+| ADMIN e PENTESTER | Conferir acesso administrativo e os recursos autorizados ao PENTESTER atribuído. Conferir que PENTESTER, OWNER e MEMBER não abrem a Central. |
+| Recuperação legada | Usar uma identidade fictícia elegível para retomada. Confirmar que apenas esse fluxo pede a decisão comercial separada. |
+| Estados de interface | Conferir teclado, retorno ao módulo, temas e largura reduzida. Uma falha de comunicação deve permanecer distinguível de uma negativa de acesso. |
 
 ## Evidências dos checkpoints
 
