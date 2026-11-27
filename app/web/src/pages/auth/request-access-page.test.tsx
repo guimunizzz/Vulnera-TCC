@@ -47,6 +47,16 @@ async function stepToReview(withCnpj = true): Promise<void> {
 }
 
 describe("RequestAccessPage", () => {
+  it.each([
+    [0, "aplicações", "projetos"], [1, "aplicação", "projeto"], [2, "aplicações", "projetos"],
+  ] as const)("VUL-QA-01 — flexiona limites de %i no formulário de adesão", async (count, applications, projects) => {
+    vi.mocked(plansApi.list).mockResolvedValue([{ ...plans[0]!, maxApplications: count, maxProjects: count }]);
+    renderPage();
+    await stepToReview();
+    fireEvent.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(await screen.findByRole("radio", { name: new RegExp(`até ${count} ${applications} · ${count} ${projects}`) })).toBeInTheDocument();
+  });
+
   it("revisa responsável, empresa/CNPJ e plano ativo antes de enviar com Turnstile", async () => {
     vi.mocked(publicAccessApi.request).mockResolvedValueOnce({ message: "private detail" });
     renderPage();

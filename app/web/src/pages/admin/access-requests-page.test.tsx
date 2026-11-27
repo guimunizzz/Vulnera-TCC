@@ -37,6 +37,24 @@ async function openDetail(name = "Ana Silva") {
 }
 afterEach(() => { vi.clearAllMocks(); useAuthStore.setState({ user: null }); });
 describe("AccessRequestsPage", () => {
+  it.each([[0, "solicitações"], [1, "solicitação"], [2, "solicitações"]] as const)("VUL-QA-01 — flexiona total de %i na central", async (count, label) => {
+    api.list.mockResolvedValue({ items: [], total: count, page: 1, pageSize: 20 });
+    renderPage();
+    expect(await screen.findByText(`${count} ${label}`)).toBeInTheDocument();
+  });
+
+  it.each([
+    [0, "aplicações", "projetos"], [1, "aplicação", "projeto"], [2, "aplicações", "projetos"],
+  ] as const)("VUL-QA-01 — flexiona limites de %i nos detalhes administrativos", async (count, applications, projects) => {
+    const enrollment = { companyCnpj: null, planId: "plan-1", planName: "Essencial", planPrice: "99.00", planMaxApplications: count, planMaxProjects: count, planIncludesRemediation: false };
+    api.list.mockResolvedValue({ items: [record], total: 1, page: 1, pageSize: 20 });
+    api.get.mockResolvedValue({ ...detail, enrollment });
+    api.events.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+    renderPage();
+    const panel = await openDetail();
+    expect(await within(panel).findByText(`${count} ${applications} · ${count} ${projects} · sem remediação`)).toBeInTheDocument();
+  });
+
   it("navega pelo teclado entre seções e só carrega o domínio ativo", async () => {
     api.list.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
     vi.mocked(subscriptionsApi.listPending).mockResolvedValue([]);

@@ -85,6 +85,16 @@ beforeEach(() => {
 afterEach(() => useAuthStore.getState().clearAuth());
 
 describe("Onboarding — QA-02 e QA-03", () => {
+  it.each([
+    [0, "aplicações", "projetos"], [1, "aplicação", "projeto"], [2, "aplicações", "projetos"],
+  ] as const)("VUL-QA-01 — flexiona limites de %i no onboarding legado", async (count, applications, projects) => {
+    api.plans.mockResolvedValue([{ id: "plan-qa", name: "Plano QA", maxApplications: count, maxProjects: count, isActive: true }]);
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Nome da empresa"), { target: { value: "Empresa QA" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(await screen.findByRole("button", { name: new RegExp(`Até ${count} ${applications} · ${count} ${projects}`) })).toBeInTheDocument();
+  });
+
   it("atualiza o perfil autoritativo antes de solicitar assinatura e concluir, preservando tokens", async () => {
     const profile = deferred<User>();
     api.userMe.mockReturnValue(profile.promise);

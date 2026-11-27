@@ -160,7 +160,7 @@ export function RequestAccessPage() {
           {plansQuery.isError && <div><p role="alert">Não foi possível carregar os planos.</p><Button type="button" variant="secundario" onClick={() => void plansQuery.refetch()}>Tentar novamente</Button></div>}
           {!plansQuery.isLoading && !plansQuery.isError && plans.length === 0 && <p>Nenhum plano está disponível neste momento. Tente novamente mais tarde.</p>}
           {plans.map((plan: Plan) => <label key={plan.id} className={`cursor-pointer rounded-control border p-4 transition-colors ${planId === plan.id ? "border-accent bg-accent/10" : "border-subtle hover:border-accent"}`}>
-            <span className="flex items-start gap-3"><input type="radio" name="planId" value={plan.id} checked={planId === plan.id} onChange={() => setPlanId(plan.id)} className="mt-1 accent-accent" /><span><strong className="block text-fg">{plan.name}</strong><span className="block text-sm text-fg-muted">{priceLabel(plan.price)} · até {plan.maxApplications} aplicações · {plan.maxProjects} projetos{plan.includesRemediation ? " · remediação incluída" : ""}</span></span></span>
+            <span className="flex items-start gap-3"><input type="radio" name="planId" value={plan.id} checked={planId === plan.id} onChange={() => setPlanId(plan.id)} className="mt-1 accent-accent" /><span><strong className="block text-fg">{plan.name}</strong><span className="block text-sm text-fg-muted">{priceLabel(plan.price)} · até {plan.maxApplications} {plan.maxApplications === 1 ? "aplicação" : "aplicações"} · {plan.maxProjects} {plan.maxProjects === 1 ? "projeto" : "projetos"}{plan.includesRemediation ? " · remediação incluída" : ""}</span></span></span>
           </label>)}
         </div>}
         {mode === "request" && step === 4 && <>

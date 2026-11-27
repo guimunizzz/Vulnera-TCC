@@ -201,7 +201,7 @@ function BusinessEnrollmentRequestsPanel() {
       <section className="access-requests-toolbar" aria-label="Filtros da fila">
         <label className="access-requests-filter-label" htmlFor="access-status-filter">Filtrar solicitações por estado</label>
         <Select id="access-status-filter" aria-label={`Filtrar solicitações por estado, ${LABELS[status]}`} opcoes={statusOptions} valor={status} aoMudar={(next) => { setStatus(next as AdminAccessRequestStatus | "ALL"); setPage(1); setSelectedId(null); setDeliveryFailed(false); }} />
-        <span className="access-requests-total">{listQuery.data?.total ?? 0} solicitações</span>
+        <span className="access-requests-total">{listQuery.data?.total ?? 0} {listQuery.data?.total === 1 ? "solicitação" : "solicitações"}</span>
       </section>
 
       {listQuery.isLoading ? <p role="status" className="access-requests-state">Carregando solicitações…</p> : null}
@@ -233,7 +233,7 @@ function BusinessEnrollmentRequestsPanel() {
         {selected && <>
           <dl className="access-requests-facts"><div><dt>Responsável</dt><dd>{selected.name}</dd></div><div><dt>E-mail</dt><dd>{selected.email}</dd></div><div><dt>Empresa</dt><dd>{selected.companyName}</dd></div><div><dt>Telefone</dt><dd>{selected.phone ?? "Não informado"}</dd></div><div><dt>Estado</dt><dd>{LABELS[selected.status]}</dd></div><div><dt>E-mail verificado</dt><dd>{selected.emailVerifiedAt ? new Date(selected.emailVerifiedAt).toLocaleString("pt-BR") : "Ainda não"}</dd></div><div><dt>Expira em</dt><dd>{new Date(selected.expiresAt).toLocaleString("pt-BR")}</dd></div><div><dt>Motivo da recusa</dt><dd>{selected.rejectionReason ?? "—"}</dd></div>
             <div><dt>Adesão</dt><dd>{selected.enrollment ? "Solicitação unificada" : "Solicitação legada"}</dd></div>
-            {selected.enrollment && <><div><dt>CNPJ</dt><dd>{selected.enrollment.companyCnpj ?? "Não informado"}</dd></div><div><dt>Plano analisado</dt><dd>{selected.enrollment.planName} · {formatPrice(selected.enrollment.planPrice)}</dd></div><div><dt>Limites do plano</dt><dd>{selected.enrollment.planMaxApplications} aplicações · {selected.enrollment.planMaxProjects} projetos · {selected.enrollment.planIncludesRemediation ? "com remediação" : "sem remediação"}</dd></div></>}
+            {selected.enrollment && <><div><dt>CNPJ</dt><dd>{selected.enrollment.companyCnpj ?? "Não informado"}</dd></div><div><dt>Plano analisado</dt><dd>{selected.enrollment.planName} · {formatPrice(selected.enrollment.planPrice)}</dd></div><div><dt>Limites do plano</dt><dd>{selected.enrollment.planMaxApplications} {selected.enrollment.planMaxApplications === 1 ? "aplicação" : "aplicações"} · {selected.enrollment.planMaxProjects} {selected.enrollment.planMaxProjects === 1 ? "projeto" : "projetos"} · {selected.enrollment.planIncludesRemediation ? "com remediação" : "sem remediação"}</dd></div></>}
             <div><dt>Compatibilidade atual</dt><dd>{ENROLLMENT_LABELS[selected.enrollmentEligibility]}</dd></div>
           </dl>
           {selected.enrollmentEligibility !== "ELIGIBLE" && selected.enrollmentEligibility !== "LEGACY" && <Alert className="access-requests-alert" tom="atencao">As condições desta adesão mudaram ou não estão disponíveis. Revise os dados antes de decidir. A solicitação aprovada pode ser rejeitada com um motivo.</Alert>}

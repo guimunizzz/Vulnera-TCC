@@ -363,7 +363,7 @@ export function OnboardingPage() {
               >
                 <p className="font-medium text-fg">{plan.name}</p>
                 <p className="text-sm text-fg-muted">
-                  Até {plan.maxApplications} aplicações · {plan.maxProjects} projetos
+                  Até {plan.maxApplications} {plan.maxApplications === 1 ? "aplicação" : "aplicações"} · {plan.maxProjects} {plan.maxProjects === 1 ? "projeto" : "projetos"}
                 </p>
               </button>
             ))}
