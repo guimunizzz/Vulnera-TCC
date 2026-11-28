@@ -35,17 +35,15 @@ export async function seedTenantSecurityWaveFixture(now: Date = new Date()) {
     })),
   });
 
-  const [ownerA, memberA, ownerB, memberB, admin, pentesterAssigned, pentesterUnassigned, legacyClient] =
-    await Promise.all([
-      seedUser({ name: "Owner Wave A", email: "owner-a@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT", companyId: companyA.id, companyRole: "OWNER" }),
-      seedUser({ name: "Member Wave A", email: "member-a@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT", companyId: companyA.id, companyRole: "MEMBER" }),
-      seedUser({ name: "Owner Wave B", email: "owner-b@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT", companyId: companyB.id, companyRole: "OWNER" }),
-      seedUser({ name: "Member Wave B", email: "member-b@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT", companyId: companyB.id, companyRole: "MEMBER" }),
-      seedUser({ name: "Admin Tenant Wave", email: "admin@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "ADMIN" }),
-      seedUser({ name: "Assigned Pentester Wave", email: "assigned@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "PENTESTER" }),
-      seedUser({ name: "Unassigned Pentester Wave", email: "unassigned@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "PENTESTER" }),
-      seedUser({ name: "Legacy Client Wave", email: "legacy@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT" }),
-    ]);
+  // Inserções concorrentes já produziram P2034 intermitente no MySQL de teste.
+  const ownerA = await seedUser({ name: "Owner Wave A", email: "owner-a@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT", companyId: companyA.id, companyRole: "OWNER" });
+  const memberA = await seedUser({ name: "Member Wave A", email: "member-a@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT", companyId: companyA.id, companyRole: "MEMBER" });
+  const ownerB = await seedUser({ name: "Owner Wave B", email: "owner-b@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT", companyId: companyB.id, companyRole: "OWNER" });
+  const memberB = await seedUser({ name: "Member Wave B", email: "member-b@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT", companyId: companyB.id, companyRole: "MEMBER" });
+  const admin = await seedUser({ name: "Admin Tenant Wave", email: "admin@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "ADMIN" });
+  const pentesterAssigned = await seedUser({ name: "Assigned Pentester Wave", email: "assigned@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "PENTESTER" });
+  const pentesterUnassigned = await seedUser({ name: "Unassigned Pentester Wave", email: "unassigned@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "PENTESTER" });
+  const legacyClient = await seedUser({ name: "Legacy Client Wave", email: "legacy@tenant-wave.local", password: TENANT_SECURITY_WAVE_PASSWORD, role: "CLIENT" });
 
   await prisma.user.update({
     where: { id: legacyClient.id },
