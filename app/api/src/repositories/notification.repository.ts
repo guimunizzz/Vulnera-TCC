@@ -20,14 +20,14 @@ export interface NovaNotificacao {
 export class NotificationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async criarVarias(notificacoes: NovaNotificacao[]): Promise<number> {
+  async criarVarias(notificacoes: NovaNotificacao[], companyId?: string): Promise<number> {
     if (notificacoes.length === 0) return 0;
     return this.prisma.$transaction(async (tx) => {
       const locks = new TenantLockRepository(tx);
       const userIds = [...new Set(notificacoes.map(({ userId }) => userId))];
       await locks.lockUsers(userIds);
       const active = await tx.user.findMany({
-        where: { id: { in: userIds }, deactivatedAt: null },
+        where: { id: { in: userIds }, deactivatedAt: null, companyId },
         select: { id: true },
       });
       const activeIds = new Set(active.map(({ id }) => id));

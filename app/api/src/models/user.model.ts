@@ -68,6 +68,10 @@ export interface AssigneeCandidateDTO {
  * Sempre que for retornar User na API, use UserEntity.toResponse(user).
  */
 export class UserEntity {
+  static toDirectoryEntry({ id, name }: User): AssigneeCandidateDTO {
+    return { id, name };
+  }
+
   static toResponse(u: User): UserResponseDTO {
     return {
       id: u.id,

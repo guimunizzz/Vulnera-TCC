@@ -88,6 +88,26 @@ describe("Comentários em nós de grafo (ADR-061)", () => {
     expect(avisos[0].message).toContain('em "Portal"');
   });
 
+  it("não entrega notificações do Exposure Graph a ex-integrantes ativos", async () => {
+    const alpha = await empresa("Alpha");
+    const beta = await empresa("Beta");
+    const colega = await usuario({ role: "CLIENT", companyId: alpha.id, companyRole: "MEMBER" });
+    const exIntegrante = await usuario({ role: "CLIENT", companyId: alpha.id, companyRole: "MEMBER" });
+    const responsavel = await usuario({ role: "CLIENT", companyId: alpha.id, companyRole: "OWNER" });
+    const no = { grafo: "EXPOSURE", noId: "app:portal" };
+
+    expect((await comentar(colega.token, { ...no, texto: "Primeiro comentário" })).status).toBe(201);
+    expect((await comentar(exIntegrante.token, { ...no, texto: "Comentário anterior à saída" })).status).toBe(201);
+    await prisma.user.update({ where: { id: exIntegrante.user.id }, data: { companyId: beta.id } });
+
+    expect((await comentar(responsavel.token, { ...no, texto: "Atualização", rotulo: "Portal Alpha" })).status).toBe(201);
+    const avisos = await prisma.notification.findMany({
+      where: { message: { contains: "Portal Alpha" } },
+      select: { userId: true },
+    });
+    expect(avisos).toEqual([{ userId: colega.user.id }]);
+  });
+
   it("GCO-03 — só o autor ou o ADMIN apaga", async () => {
     const a = await empresa("TechNova");
     const dona = await usuario({ role: "CLIENT", companyId: a.id, companyRole: "OWNER" });

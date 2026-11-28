@@ -4,7 +4,7 @@
  */
 
 import type { User } from "@prisma/client";
-import { UserEntity, type UserResponseDTO, type UserRole } from "../models/user.model";
+import { UserEntity, type AssigneeCandidateDTO, type UserResponseDTO, type UserRole } from "../models/user.model";
 import type { UserRepository } from "../repositories/user.repository";
 import type { RefreshTokenRepository } from "../repositories/refresh-token.repository";
 
@@ -19,7 +19,7 @@ export class UserService {
     private readonly refreshRepo: RefreshTokenRepository,
   ) {}
 
-  async getById(actor: Actor, id: string): Promise<UserResponseDTO> {
+  async getById(actor: Actor, id: string): Promise<UserResponseDTO | AssigneeCandidateDTO> {
     const target = await this.userRepo.findById(id);
     if (!target || (target.deactivatedAt && actor.role !== "ADMIN")) throw new Error("USER_NOT_FOUND");
 
@@ -27,11 +27,12 @@ export class UserService {
     if (actor.role === "CLIENT" && actor.userId !== target.id) {
       const me = await this.userRepo.findById(actor.userId);
       if (!me?.companyId || me.deactivatedAt || me.companyId !== target.companyId) throw new Error("FORBIDDEN");
+      if (me.companyRole !== "OWNER") return UserEntity.toDirectoryEntry(target);
     }
     return UserEntity.toResponse(target);
   }
 
-  async list(actor: Actor): Promise<UserResponseDTO[]> {
+  async list(actor: Actor): Promise<(UserResponseDTO | AssigneeCandidateDTO)[]> {
     if (actor.role === "ADMIN") {
       const all = await this.userRepo.findAll({ includeDeactivated: true });
       return all.map(UserEntity.toResponse);
@@ -40,7 +41,7 @@ export class UserService {
       const me = await this.userRepo.findById(actor.userId);
       if (!me?.companyId || me.deactivatedAt) return [];
       const filtered = await this.userRepo.findAll({ companyId: me.companyId });
-      return filtered.map(UserEntity.toResponse);
+      return filtered.map(me.companyRole === "OWNER" ? UserEntity.toResponse : UserEntity.toDirectoryEntry);
     }
     const me = await this.userRepo.findById(actor.userId);
     return me && !me.deactivatedAt ? [UserEntity.toResponse(me)] : [];

@@ -74,6 +74,113 @@ describe("User (me/list/getById/update/delete)", () => {
     expect(getAdminByPentester.body.code).toBe("FORBIDDEN");
   });
 
+  // SEC-12: MEMBER recebe somente o diretório mínimo; o OWNER preserva a visão de gestão.
+  it("minimiza diretório do CLIENT MEMBER, inclui a si mesmo, preserva /me e detalhes do OWNER", async () => {
+    const plan = await seedPlan({ name: "MEMBER-DIRECTORY" });
+    const companyA = await seedCompany({ name: "Member Directory Alpha", planId: plan.id });
+    const companyB = await seedCompany({ name: "Member Directory Beta", planId: plan.id });
+    const ownerA = await seedUser({
+      name: "Owner Alpha",
+      email: "owner-alpha@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "OWNER",
+    });
+    const memberA = await seedUser({
+      name: "Member Alpha",
+      email: "member-alpha@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+    });
+    const colleagueA = await seedUser({
+      name: "Colleague Alpha",
+      email: "colleague-alpha@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+    });
+    const inactiveA = await seedUser({
+      name: "Inactive Alpha",
+      email: "inactive-alpha@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+    });
+    const memberB = await seedUser({
+      name: "Member Beta",
+      email: "member-beta@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyB.id,
+      companyRole: "MEMBER",
+    });
+    await prisma.user.update({ where: { id: inactiveA.id }, data: { deactivatedAt: new Date() } });
+
+    const memberToken = await loginAs(app, memberA.email, PASSWORD);
+    const memberList = await request(app).get("/api/users").set("Authorization", `Bearer ${memberToken}`);
+    expect(memberList.status).toBe(200);
+    expect(memberList.body.map((user: { id: string }) => user.id).sort()).toEqual([ownerA.id, memberA.id, colleagueA.id].sort());
+    expect(memberList.body.some((user: { id: string }) => user.id === memberA.id)).toBe(true);
+    for (const user of memberList.body) {
+      expect(Object.keys(user).sort()).toEqual(["id", "name"]);
+    }
+
+    const colleague = await request(app)
+      .get(`/api/users/${colleagueA.id}`)
+      .set("Authorization", `Bearer ${memberToken}`);
+    expect(colleague.status).toBe(200);
+    expect(colleague.body).toEqual({ id: colleagueA.id, name: colleagueA.name });
+
+    const me = await request(app).get("/api/users/me").set("Authorization", `Bearer ${memberToken}`);
+    expect(me.status).toBe(200);
+    expect(Object.keys(me.body).sort()).toEqual([
+      "companyId", "companyRole", "createdAt", "email", "id", "legacyOnboardingAllowed", "name", "role",
+    ]);
+    expect(me.body).toMatchObject({
+      id: memberA.id,
+      email: memberA.email,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+      legacyOnboardingAllowed: false,
+    });
+    expect(me.body.password).toBeUndefined();
+
+    const ownerToken = await loginAs(app, ownerA.email, PASSWORD);
+    const ownerDetails = await request(app)
+      .get(`/api/users/${colleagueA.id}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(ownerDetails.status).toBe(200);
+    expect(Object.keys(ownerDetails.body).sort()).toEqual([
+      "companyId", "companyRole", "createdAt", "email", "id", "legacyOnboardingAllowed", "name", "role",
+    ]);
+    expect(ownerDetails.body).toMatchObject({
+      id: colleagueA.id,
+      email: colleagueA.email,
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+    });
+    const ownerList = await request(app).get("/api/users").set("Authorization", `Bearer ${ownerToken}`);
+    expect(ownerList.status).toBe(200);
+    expect(ownerList.body.map((user: { id: string }) => user.id).sort()).toEqual([ownerA.id, memberA.id, colleagueA.id].sort());
+    for (const user of ownerList.body) {
+      expect(Object.keys(user).sort()).toEqual([
+        "companyId", "companyRole", "createdAt", "email", "id", "legacyOnboardingAllowed", "name", "role",
+      ]);
+    }
+
+    const betaDetails = await request(app)
+      .get(`/api/users/${memberB.id}`)
+      .set("Authorization", `Bearer ${memberToken}`);
+    expect(betaDetails.status).toBe(403);
+    expect(betaDetails.body.code).toBe("FORBIDDEN");
+  });
+
   // USR-03
   it("PATCH/DELETE: usuário atualiza a si mesmo, não pode se autodeletar, e só ADMIN deleta outros", async () => {
     const admin = await seedUser({ name: "Admin", email: "admin@vulnera.local", password: PASSWORD, role: "ADMIN" });
