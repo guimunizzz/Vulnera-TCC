@@ -106,7 +106,8 @@ export class RateLimitService {
     return this.store.consume(`${scope}:${key}`, this.config.policies[scope], {
       // Ao lotar a memória, fingerprints novos de autenticação são recusados
       // em vez de expulsar uma conta já bloqueada e permitir brute force.
-      rejectNewAtCapacity: scope.startsWith("auth-"),
+      rejectNewAtCapacity: scope.startsWith("auth-") || scope.startsWith("assistant-"),
+      preserveBudget: scope.startsWith("assistant-"),
     });
   }
 

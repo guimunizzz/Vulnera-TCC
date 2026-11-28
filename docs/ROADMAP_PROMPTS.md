@@ -353,6 +353,11 @@ serviços de fluxo ou mudança de register. Próximas etapas aguardam revisão.
 | 8     | Maturidade (checklist) + fechamento TCC        | 12      | 16/10 → 25/10 | 📋             |
 
 **Cortado do escopo:** IA / Gemini · chat · tickets · e-mail transacional · Prometheus/Grafana.
+
+> **Evolução de escopo — 2026-10-23 (registro da Fase 0):** o pedido do Assistente Vulnera reintroduz exclusivamente orientação contextual na web protegida, com Gemini opcional e ajuda local. A Fase 0 desse novo plano está concluída; implementação pendente. A lista de corte acima permanece como registro do planejamento original, incluindo sugestão de findings/IA mobile, que continuam fora do escopo. Ver ADR-048 e a seção Assistente Vulnera ao fim deste documento.
+
+> **Fechamento da continuação — 2026-10-23:** Fases 1–6 também entregues e aplicadas localmente. O guia atual é `docs/ASSISTENTE_VULNERA.md`; Gemini ao vivo depende de configuração privada e permanece não validado. Ressalvas das verificações estão registradas no relatório final.
+
 **Enxugado:** mobile (só o essencial pra demo) · maturidade (checklist de perguntas, não SAMM completo).
 
 > ⚠️ Sem buffer. Se acumular mais de uma semana de atraso até o fim da Fase 6, **a Fase 7 encolhe primeiro** — mobile vira demonstração de telas com dados de seed, sem push funcional.
@@ -1459,6 +1464,66 @@ partindo de `dev`, com espera visual fluida quando necessária.
 - As menções antigas a testar push no Expo Go Android são históricas: o código atual trata esse ambiente como indisponível. O teste de push exige um build compatível e aparelho.
 - Evidências e limites: `app/mobile/output/mobile-refactor-report.md`.
 
+---
+
+# Assistente Vulnera — orientação contextual (pedido de 2026-10-23)
+
+### Histórico da revisão PR #77 — ✅ Concluída em 2026-11-16
+
+- **Branches/PR:** `feature/agent-ai` → [#77](https://github.com/guimunizzz/Vulnera-TCC/pull/77), base dev `e6a445c`; propagação separada para `refactor/assistant-ui` por `f31b678`, sem visual novo no PR #77.
+- **Resultado:** oito comentários conferidos; 29 tópicos de domínio/produto, artefatos fora do índice e configuração concreta privada. Histórico e fontes de testes preservados.
+- **Validação:** feature API 922/922 e Web 659/659; Vuvu API 923/923 e Web 671/671; contraste 132/132, builds e smoke aprovados; chamada Gemini real HTTP 200.
+- **Desvios/limites:** permissão de diretório temporário ajustada apenas na imagem local de QA; uma espera Web intermitente passou isolada e na repetição completa com dois processos. Sem schema, dependências, guias protegidos, seed/reset ou deploy. Aprovação do revisor permanece pendente. [Relatório](REVISAO_PR77_2026-11-16.md).
+
+> **Revisão PR #77 — ✅ Concluída em 2026-11-16 na feature.** Catálogo ampliado para 29 tópicos exclusivamente de domínio/produto; artefatos retirados do índice e configuração concreta mantida privada. API 922/922, Web 659/659, contraste 132/132, builds e smoke de três perfis aprovados; chamada Gemini real HTTP 200. [Matriz dos oito pedidos e limites](REVISAO_PR77_2026-11-16.md). A propagação à branch visual é registrada separadamente no fechamento.
+
+> **Identificação atual da decisão:** ADR-064; criada como ADR-048 na feature em 23/10/2026. A ADR-048 da dev pertence ao grafo DAST. Os marcos numéricos abaixo preservam o histórico original; links atuais e integração em [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
+
+Este plano tem numeração própria de 0 a 6; não renumera as fases originais do MVP. A Fase 0 seguiu a pausa de AGENTS §0.2 S1; na continuação de 23/10/2026 o usuário autorizou executar todas as fases sem pausas, mantendo relatórios de checkpoint em atualizações. Os guias protegidos não foram editados. Preservar o escopo detalhado e as fronteiras registradas no [plano](ASSISTENTE_VULNERA_PLANO.md) e no ADR-048.
+
+| Fase | Prompt de execução / resultado exigido | Status |
+| --- | --- | --- |
+| 0 — Investigar | Ler documentos/schema, preservar Git, conferir scripts, mapear rotas/perfis/overlays/tokens e propor integração sem persistência nova | ✅ Concluída em 2026-10-23 |
+| 1 — Ajuda e contratos | 14 tópicos versionados, recuperação por termos/tela/continuação limitada, DTOs e nove ações fechadas por perfil | ✅ Concluída em 2026-10-23 |
+| 2 — Backend e Gemini | Endpoint por factory, gateway `fetch`, configuração opcional, fallback local e limites de usuário/instância com 429 vigente; 47 focais | ✅ Concluída em 2026-10-23 |
+| 3 — Mascote e painel | Instância autenticada única, SVG/CSS/Motion, pausas, reduced motion, painel estável, teclado, foco, inert e impressão | ✅ Concluída em 2026-10-23 |
+| 4 — Contexto e sessão | POST explícito sem retry de geração, screen capturado, atalhos por clique, memória e descarte de sessão encerrada; 45 focais web | ✅ Concluída em 2026-10-23 |
+| 5 — Validação e demo | Web 400/400, builds host/Docker, navegador produção 12/12, HTTP/UI locais e ressalvas API registradas; Gemini ao vivo pendente de configuração | ✅ Concluída em 2026-10-23 |
+| 6 — Documentação e entrega | Guia Free Tier/Docker/local, limites/dados fictícios/roteiro, docs vivos, ADR e diff local revisável | ✅ Concluída em 2026-10-23 |
+
+## Histórico
+
+- **Branch/base:** `feature/agent-ai`, `44f9c58`.
+- **PR:** não aberta; sem commit/push neste checkpoint.
+- **Continuação/fechamento:** 2026-10-23, fases 1–6 entregues; 7/7 fases, 100% da implementação e validação local previstas. Autorização do usuário substituiu as pausas nesta execução; checkpoints relatados durante o trabalho.
+- **Validação final:** API focal 47/47 e 100% de linhas nos serviços novos; web 400/400, contraste 66/66, builds host/Docker; navegador produção 12/12 sem erros/CSP; 13/13 HTTP sintético, três perfis autenticados reais e CLIENT UI sem fixtures. API combinado Node 22/CVSS 772/773, assertion anterior Excel falha; check API mantém dois imports anteriores de lint. Detalhes, ajustes de ambiente e limites em `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`.
+- **Aplicação/guia:** `http://localhost:8086`, modo local, dados/volumes anteriores preservados. `docs/ASSISTENTE_VULNERA.md`, ADR-048 vigente e ADR-006/011/017 com evolução histórica. Sem chave/modelo no runtime consultado, sem chamada Google; prova Gemini ao vivo explicitamente pendente.
+- **Data/checkpoint:** 2026-10-23, Fase 0 concluída; 1/7 fases, 14% do plano. Fases 1–6 pendentes, sem código de produto novo.
+- **Entrega:** `docs/ASSISTENTE_VULNERA_PLANO.md`, ADR-048, PRD/BACKLOG/ROADMAP/Changelog e nota de evolução no Contexto Mestre. Nove ações confirmadas; onboarding e relatório DAST ficam fora de AppLayout, exigindo contêiner autenticado compartilhado.
+- **Validação:** web e health API HTTP 200. Lint API, builds API/web e check web bloqueados por dependências npm ausentes no host (`eslint`/`tsc`); testes não executados. Conta Free Tier e integração ao vivo com Gemini não validadas.
+- **Decisões/desvios:** retorno da IA restrito à orientação por pedido explícito, modelo recomendado conforme documentação oficial atual, ajuda local padrão e nenhuma migration/dependência nova planejada. Riscos de TTL/evicção do limiter e banco de teste registrados. Histórico do corte de IA e alterações anteriores preservados; nenhum arquivo protegido, `.env`, schema, container ou dado alterado.
+
+## Integração com a dev — ✅ Concluída em 2026-11-15
+
+Resolução e validação na própria feature, sem alterar os marcos das fases originais. Contexto das telas novas e remoção dos dois imports não usados autorizados explicitamente. Todas as rotas e funcionalidades dos dois lados preservadas; decisão do assistente identificada agora como ADR-054.
+
+### Histórico da integração
+
+- **Branch/base:** `feature/agent-ai`, original `69af46c`, dev incorporada `ac96859`.
+- **Commits de código:** `2e2ead6`, `da21fc7`, `05735a7`; autor/committer `iannxz`.
+- **PR:** nenhuma aberta nesta tarefa; feature preparada para comparação com dev. Merge na dev e deploy são posteriores.
+- **Validação:** check API Node 22 com lint sem erros e 905/905 testes; check Web 659/659, contraste 132/132; builds aprovados. Chrome: 12/12 originais e 11 verificações com login/API reais, sem erros de página/CSP.
+- **Preservação/desvios:** backups só locais; sem schema, migrations, dependências declaradas, mobile ou guias protegidos alterados. Bancos novos temporários por indisponibilidade do Docker; execução completa Node 24 sem relatório, integração validada no Node 22. Gemini ao vivo não executado.
+- **Relatório:** [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md); registros antigos com ADR-048 do assistente correspondem à atual ADR-064, sem substituir a ADR-048 do grafo DAST.
+
+### Complemento Docker — ✅ Concluído em 2026-11-15
+
+- **Branch/base:** `feature/agent-ai`, rodada iniciada em `be93212`; publicação somente da feature com identidade `iannxz`, sem merge na dev ou deploy existente.
+- **Validação Linux:** API 905/905, Web 659/659, lint/contraste e builds reais aprovados em stack isolada.
+- **Achados e autorização:** dois nomes acessíveis divergentes do texto visível; descrições e separador textual corrigidos após explicação e aprovação, preservando visual/ações. Asserção do portal estabilizada somente no teste.
+- **Validação final:** Web 659/659, focal Linux 36/36, e2e acessibilidade/Exposure Graph 7/7; smoke real de três perfis e seis etapas de importação/triagem/grafo/PDF.
+- **Histórico e limites:** relato anterior de Docker indisponível preservado como primeira rodada; não é mais bloqueio. Sem Gemini ao vivo ou scans externos. [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).
+
 ## 2026-11-17 — Integração Issue #51 com `dev` (em andamento)
 
 Merge local aberto em `integration/issue51-dev-20261117`. A conciliação documental
@@ -1482,3 +1547,13 @@ cinco conflitos (`PRD_VIVO.md`, schema, `EnvKeys`, routes e `docs/BACKLOG.md`)
 foram resolvidos e staged; `git ls-files -u` está vazio. O merge segue aberto,
 sem commit. A validação ampliada foi cancelada a pedido do usuário; resultados
 parciais e limites estão no relatório, sem declaração de aprovação integral.
+
+
+## Resolução dos conflitos do PR #77 — ✅ Concluída em 2026-11-26
+
+### Histórico
+
+- Branch `feature/agent-ai`, partindo de `4193c00`, com a base `dev` em `65a792d`. [PR #77](https://github.com/guimunizzz/Vulnera-TCC/pull/77).
+- Oito conflitos resolvidos. O roteador da dev com injeção de dependências monta também o assistente e o layout autenticado da feature envolve as rotas da dev respeitando seus controles de acesso.
+- A decisão do assistente passou a ADR-064. A decisão da pintura da landing mantém ADR-054.
+- Validação final com o merge `d048eaf`: API 1.393/1.393 (90 suítes), Web 865/865 (104 arquivos), contraste 132/132 e builds API/Web aprovados. O lint integral da API continua com quatro erros herdados da dev, e o lint dos 16 arquivos da integração passou.

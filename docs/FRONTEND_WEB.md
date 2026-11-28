@@ -248,7 +248,70 @@ OWASP ZAP (com o limite dito na página), importação SAST/SCA, Threat Intel,
 visão unificada e Exposure Graph. A lista do que foi removido e por quê está
 em `output/landing-pintura/RELATORIO.md`.
 
-## Fundo único da área autenticada
+## Atmosferas por seção (2026-11-23, ADR-060)
+
+Desde o ADR-060 o `AppLayout` monta `AtmosferaDaPlataforma`
+(`features/atmosfera-3d/`) no lugar da `DashboardAtmosphere`. A atmosfera
+depende da seção (`rotas.ts`):
+
+- **Nebulosa:** Dashboard.
+- **Relevo com radar:** Aplicações, Projetos, Threat Intel e Remediação.
+- **ASCII:** Findings, DAST, SAST/SCA, Playbooks, Agendamentos e Nova análise.
+- **ASCII parado (pôster):** SLA, Aprovações, Filas e Maturidade (D21.1).
+- O Exposure Graph usa o relevo e o fundo acompanha o grafo: risco das
+  abertas, ping a cada seleção, e a atmosfera some na aba **Mapa 3D**
+  (`atmosfera.store.ts`: `usePublicarRisco`, `useSuprimirAtmosfera`,
+  `pingarAtmosfera`).
+
+A troca de seção faz crossfade de 0,8 s. A camada nova aparece depois do
+primeiro quadro, e a anterior apaga e sai do DOM.
+
+- **Teto de AA na camada (CSS):** 0,30/0,32 na plataforma e 0,32/0,40 no
+  modo apresentação (`config.ts`, teste `atmosfera-3d-contrast.test.ts`). A
+  cena desenha cheia por dentro. O ASCII animado continua com o teto próprio,
+  aplicado no shader.
+- **Modo plataforma:** sem bloom, DPR ≤ 1,25, metade das partículas e da
+  malha. O efeito sob o cursor segue em cerca de 40 ms e só a câmera é lenta.
+- **Modo apresentação:** botão "Apresentar" no cabeçalho do Dashboard. O
+  `#conteudo` vai para tela cheia e a cena fica imersiva (bloom, e o clique
+  no fundo dispara ping). Sai com Esc ou pelo mesmo botão.
+- **Risco real:** Dashboard, Remediação, Threat Intel, Exposure Graph e
+  Aplicações publicam o seu risco (`risco.ts`, `usePublicarRisco`) a partir
+  do que já carregaram. Projetos continua neutro. A cena
+  persegue o valor: mais pings e alertas magenta, relevo mais alto, mais
+  estrelas quentes.
+- **Pôster (`posteres.ts`):** canvas 2D, sem three e sem imagem. Entra com
+  movimento reduzido, tela estreita, sem WebGL2, "Pausar animações" ou falha
+  da cena. Com alto contraste não há decoração.
+- **Laboratório `/lab-3d`** (só em desenvolvimento): compara as linhas, os
+  modos, o tema, o risco e o pôster com a mesma opacidade do produto.
+
+O texto abaixo descreve o fundo anterior a 2026-11-23. Ele continua valendo
+para a camada ASCII, para a base CSS e para a pausa de Findings.
+
+### Grafo 2D: acabamento (2026-11-23, D21.3)
+
+O `CyberGraph2D` (scan, código e Exposure Graph) recebeu:
+
+- corpo do nó com degradê do token e anel interno;
+- halo de severidade nos críticos e altos (o crítico pulsa com
+  `.cg-pulso`);
+- ping de radar na seleção (`.cg-ping`);
+- arestas calmas, com halo só para o que leva ao grave;
+- até 14 pacotes de luz (`animateMotion`) correndo até os nós mais graves;
+- rótulos com contorno da cor do palco (`paint-order: stroke`).
+
+Halo e ping ficam numa camada `aria-hidden` **fora** do `g[role=button]` do
+nó. Dentro dele, a animação mudaria a caixa do nó e o clique ficaria
+"instável" (o Playwright recusava o clique). Com movimento reduzido nada
+disso anima. Pacotes e ping levam `data-decoracao` e saem do PNG exportado
+(`serializarSemDecoracao`).
+
+O palco do Exposure Graph (`.cg-palco--radar`) é levemente translúcido,
+mostra o relevo da atmosfera por trás e tem anéis de alcance e uma varredura
+de 16 s.
+
+### Fundo único da área autenticada (até 2026-11-22)
 
 `AppLayout` monta `operations-backdrop.css` e `DashboardAtmosphere` uma vez,
 como camadas sem interação sob `operations-content`. A base CSS desenha uma
@@ -346,7 +409,10 @@ paint correto em checkout Windows. `src/test/csp.test.ts` cobre a regra.
 
 ## Como manter e verificar
 
-Ao criar uma tela autenticada, registre a rota sob `AppLayout` em `App.tsx`,
+Ao criar uma tela autenticada, registre a rota sob `AuthenticatedLayout` em
+`App.tsx`. Use `AppLayout` para as telas com navegação lateral; onboarding e
+relatório DAST permanecem fora dele e dentro do contêiner autenticado. Assim,
+o assistente mantém uma única instância fora das transições de página. Depois,
 use componentes de `src/components/ui/`, tokens semânticos, dados da API e as
 variantes de `useMotion()`. A página não deve montar outra atmosfera. Uma cena
 three.js nova entra pelo kit: `useCenaPermitida` antes do `lazy()`, cor lida
@@ -363,3 +429,21 @@ demonstração estão em [DEMO.md](DEMO.md). Em `app/web/`, rode
 `npm run build`. O resultado específico desta entrega, inclusive limites
 observados no navegador, está em
 [`output/frontend-visual-overhaul-report.md`](../output/frontend-visual-overhaul-report.md).
+
+## Assistente de orientação — 2026-10-23
+
+`components/layout/authenticated-layout.tsx` mantém `Outlet` e uma instância
+de `components/assistant/assistant.tsx`. Portal persistente respeita inert e
+modais; Motion percorre bordas sem renderizar React a cada quadro, com pausas
+e posição estática em tela pequena/movimento reduzido. O painel tem posição
+própria, texto seguro, origem real e atalhos fechados. Somente envio explícito
+faz POST; sugestões, rota, digitação e movimento não geram texto.
+
+`lib/assistant-context.ts` normaliza telas e filtra destinos; conversa fica
+em memória e usa `sessionVersion` não persistido para cancelar respostas de
+sessão encerrada, inclusive novo login da mesma pessoa. Rotação de token e
+atualização de perfil preservam a conversa. Nenhum código é inserido no HTML
+ZAP, PDF ou Excel; impressão oculta o portal.
+
+Guia: [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md). Evidências de testes,
+navegador, integração local e limites: [VALIDACAO.md](VALIDACAO_ASSISTENTE_2026-10-23.md).

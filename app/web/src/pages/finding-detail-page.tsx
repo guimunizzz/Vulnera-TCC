@@ -51,6 +51,7 @@ import { EvidenceUploader } from "../components/findings/evidence-uploader";
 import { CommentTimeline } from "../components/findings/comment-timeline";
 import { AuditTrail } from "../components/findings/audit-trail";
 import { OverrideSeverityDialog } from "../components/findings/override-severity-dialog";
+import { CorrecaoSugerida } from "../components/findings/correcao-sugerida";
 import {
   ALLOWED_TRANSITIONS,
   OWASP_LABELS,
@@ -313,6 +314,9 @@ export function FindingDetailPage() {
               <p className="whitespace-pre-wrap text-sm text-fg">{finding.recommendation}</p>
             </Card>
           )}
+
+          {/* ADR-063 — da origem SCA/SAST/Threat Intel: o comando e o manifesto, ou o ponto do código. */}
+          {finding.origemDaCorrecao && <CorrecaoSugerida origem={finding.origemDaCorrecao} />}
 
           <Card>
             <h2 className="mb-3 font-semibold text-fg">Trilha de auditoria</h2>

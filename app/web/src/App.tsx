@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { LandingPage } from "./pages/landing-page";
 import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/layout/protected-route";
+import { AuthenticatedLayout } from "./components/layout/authenticated-layout";
 import { LimiteDeRota } from "./components/layout/route-boundary";
 import { paginaLazy } from "./lib/lazy-page";
 
@@ -41,6 +42,7 @@ const DashboardPage = paginaLazy(() => import("./pages/dashboard-page"), "Dashbo
 const ApplicationsPage = paginaLazy(() => import("./pages/applications-page"), "ApplicationsPage");
 const ExposureGraphPage = paginaLazy(() => import("./pages/exposure-graph-page"), "ExposureGraphPage");
 const NewAnalysisPage = paginaLazy(() => import("./pages/new-analysis-page"), "NewAnalysisPage");
+const ConformidadePage = paginaLazy(() => import("./pages/conformidade-page"), "ConformidadePage");
 const ProjectsPage = paginaLazy(() => import("./pages/projects-page"), "ProjectsPage");
 const ProjectDetailPage = paginaLazy(() => import("./pages/project-detail-page"), "ProjectDetailPage");
 const FindingEditorPage = paginaLazy(() => import("./pages/finding-editor-page"), "FindingEditorPage");
@@ -64,6 +66,7 @@ const DastScanDetailPage = paginaLazy(() => import("./pages/dast-scan-detail-pag
 const DastScanReportPage = paginaLazy(() => import("./pages/dast-scan-report-page"), "DastScanReportPage");
 const SastScaPage = paginaLazy(() => import("./pages/sast-sca-page"), "SastScaPage");
 const ThreatIntelPage = paginaLazy(() => import("./pages/threat-intel-page"), "ThreatIntelPage");
+const TriagePage = paginaLazy(() => import("./pages/triage-page"), "TriagePage");
 const AgendamentosPage = paginaLazy(() => import("./pages/agendamentos-page"), "AgendamentosPage");
 const CodeImportDetailPage = paginaLazy(() => import("./pages/code-import-detail-page"), "CodeImportDetailPage");
 const SlaSettingsPage = paginaLazy(() => import("./pages/settings/sla-settings-page"), "SlaSettingsPage");
@@ -75,6 +78,10 @@ const RemediationPage = paginaLazy(() => import("./pages/remediation-page"), "Re
 // ramo vira `null`, o `import()` some e o styleguide nem é empacotado.
 const StyleguidePage = import.meta.env.DEV
   ? paginaLazy(() => import("./pages/styleguide-page"), "StyleguidePage")
+  : null;
+// Mesmo regime do styleguide: laboratório de atmosferas 3D, fora do build de produção.
+const Lab3dPage = import.meta.env.DEV
+  ? paginaLazy(() => import("./pages/lab-3d-page"), "Lab3dPage")
   : null;
 import { ComMenuAcessibilidade } from "./design/accessibility-menu";
 
@@ -107,94 +114,101 @@ export function App() {
               no bundle de produção o Vite elimina o ramo inteiro, e a página nem
               sequer é empacotada. */}
           {import.meta.env.DEV && StyleguidePage && <Route path="/styleguide" element={<StyleguidePage />} />}
+          {import.meta.env.DEV && Lab3dPage && <Route path="/lab-3d" element={<Lab3dPage />} />}
         </Route>
 
         <Route element={<ProtectedRoute />}>
-          <Route element={<ComMenuAcessibilidade />}>
-            <Route path="/onboarding" element={<OnboardingPage />} />
-          </Route>
-
-          <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
-            <Route path="/admin/subscriptions" element={<Navigate to="/admin/access-requests?section=commercial" replace />} />
-          </Route>
-
-          <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route element={<ProtectedRoute roles={["CLIENT"]} companyRoles={["OWNER", "MEMBER"]} />}>
-              <Route path="/team" element={<CompanyTeamPage />} />
-            </Route>
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/projects/:id" element={<ProjectDetailPage />} />
-            <Route path="/findings/:id" element={<FindingDetailPage />} />
-
-            {/* Leitura liberada pros 3 roles (RN19 — ADMIN/CLIENT da própria
-                company/PENTESTER atribuído); a distinção ESCREVE-vs-LÊ é feita
-                dentro da própria página (canEdit) e reforçada pelo backend. */}
-            <Route path="/companies/:companyId/maturity" element={<MaturityAssessmentPage />} />
-
-            {/* Catálogo de remediação (CP-5). Leitura para os três papéis: o
-                CLIENT precisa entender o que foi pedido para corrigir. A
-                ESCRITA é barrada no backend (D5) e a tela não a oferece. */}
-            <Route path="/playbooks" element={<PlaybooksPage />} />
-            {/* Threat Intel (ADR-053): os três papéis; empresa e permissões vêm da API. */}
-            <Route path="/threat-intel" element={<ThreatIntelPage />} />
-            {/* Scans DAST agendados (ADR-056): os três papéis; CLIENT só lê a
-                própria empresa. Quem vê e quem muda o quê, a API decide. */}
-            <Route path="/agendamentos" element={<AgendamentosPage />} />
-            <Route path="/playbooks/:id" element={<PlaybookDetailPage />} />
-
-            {/* Varredura global de findings — ferramenta de quem analisa.
-                O CLIENT é barrado aqui e não vê o item na Sidebar; o backend
-                continua servindo os findings da própria empresa a ele (RN16),
-                que é o que o dashboard e o app mobile consomem. */}
-            <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
-              <Route path="/findings" element={<FindingsPage />} />
-              {/* Quadro de remediação (CP-7). Mesmo recorte da listagem global:
-                  mover e atribuir são escrita em finding, e o CLIENT não escreve. */}
-              <Route path="/remediation" element={<RemediationPage />} />
-            </Route>
-
-            <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
-              <Route path="/applications" element={<ApplicationsPage />} />
-              <Route path="/applications/:id/dashboard" element={<ApplicationDashboardPage />} />
-            {/* Exposure Graph (CP-8): a empresa de quem está logado; o backend deriva do token. */}
-            <Route path="/exposure-graph" element={<ExposureGraphPage />} />
-              <Route path="/new-analysis" element={<NewAnalysisPage />} />
-              {/* SLA (CP-2): governança da empresa — ADMIN e CLIENT (OWNER edita,
-                  MEMBER lê; o backend reforça). PENTESTER não chega aqui. */}
-              <Route path="/settings/sla" element={<SlaSettingsPage />} />
-            </Route>
-
-            {/* Escrita de finding (create/update/transition/override) é ADMIN
-                ou PENTESTER-membro — CLIENT é sempre read-only (FindingDetailPage). */}
-            <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
-              <Route path="/projects/:projectId/findings/new" element={<FindingEditorPage />} />
-              <Route path="/findings/:id/edit" element={<FindingEditorPage />} />
+          <Route element={<AuthenticatedLayout />}>
+            <Route element={<ComMenuAcessibilidade />}>
+              <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>
 
             <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
-              <Route path="/admin/access-requests" element={<AccessRequestsPage />} />
-              {/* ADR-056 — painel de filas: contagens, falhas e "Tentar de novo". Só ADMIN. */}
-              <Route path="/admin/filas" element={<FilasPage />} />
+              <Route path="/admin/subscriptions" element={<Navigate to="/admin/access-requests?section=commercial" replace />} />
             </Route>
 
-            {/* Módulo DAST — não existe pro CLIENT: nem item de menu, nem rota
-                acessível (403 se forçar a URL, ver ProtectedRoute). */}
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route element={<ProtectedRoute roles={["CLIENT"]} companyRoles={["OWNER", "MEMBER"]} />}>
+                <Route path="/team" element={<CompanyTeamPage />} />
+              </Route>
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/projects/:id" element={<ProjectDetailPage />} />
+              <Route path="/findings/:id" element={<FindingDetailPage />} />
+
+              {/* Leitura liberada pros 3 roles (RN19 — ADMIN/CLIENT da própria
+                  company/PENTESTER atribuído); a distinção ESCREVE-vs-LÊ é feita
+                  dentro da própria página (canEdit) e reforçada pelo backend. */}
+              <Route path="/companies/:companyId/maturity" element={<MaturityAssessmentPage />} />
+
+              {/* Catálogo de remediação (CP-5). Leitura para os três papéis: o
+                  CLIENT precisa entender o que foi pedido para corrigir. A
+                  ESCRITA é barrada no backend (D5) e a tela não a oferece. */}
+              <Route path="/playbooks" element={<PlaybooksPage />} />
+              {/* Threat Intel (ADR-053): os três papéis; empresa e permissões vêm da API. */}
+              <Route path="/threat-intel" element={<ThreatIntelPage />} />
+              {/* Caixa de triagem única (ADR-062): os três papéis; cada um vê só o que pode triar em cada fonte (a API decide). */}
+              <Route path="/triagem" element={<TriagePage />} />
+              {/* Scans DAST agendados (ADR-056): os três papéis; CLIENT só lê a
+                  própria empresa. Quem vê e quem muda o quê, a API decide. */}
+              <Route path="/agendamentos" element={<AgendamentosPage />} />
+              <Route path="/playbooks/:id" element={<PlaybookDetailPage />} />
+
+              {/* Varredura global de findings — ferramenta de quem analisa.
+                  O CLIENT é barrado aqui e não vê o item na Sidebar; o backend
+                  continua servindo os findings da própria empresa a ele (RN16),
+                  que é o que o dashboard e o app mobile consomem. */}
+              <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+                <Route path="/findings" element={<FindingsPage />} />
+                {/* Quadro de remediação (CP-7). Mesmo recorte da listagem global:
+                    mover e atribuir são escrita em finding, e o CLIENT não escreve. */}
+                <Route path="/remediation" element={<RemediationPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute roles={["ADMIN", "CLIENT"]} />}>
+                <Route path="/applications" element={<ApplicationsPage />} />
+                <Route path="/applications/:id/dashboard" element={<ApplicationDashboardPage />} />
+                {/* Exposure Graph (CP-8): a empresa de quem está logado; o backend deriva do token. */}
+                <Route path="/exposure-graph" element={<ExposureGraphPage />} />
+                <Route path="/new-analysis" element={<NewAnalysisPage />} />
+                {/* Conformidade (ADR-063): mesmos papéis do Exposure Graph. */}
+                <Route path="/conformidade" element={<ConformidadePage />} />
+                {/* SLA (CP-2): governança da empresa — ADMIN e CLIENT (OWNER edita,
+                    MEMBER lê; o backend reforça). PENTESTER não chega aqui. */}
+                <Route path="/settings/sla" element={<SlaSettingsPage />} />
+              </Route>
+
+              {/* Escrita de finding (create/update/transition/override) é ADMIN
+                  ou PENTESTER-membro — CLIENT é sempre read-only (FindingDetailPage). */}
+              <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+                <Route path="/projects/:projectId/findings/new" element={<FindingEditorPage />} />
+                <Route path="/findings/:id/edit" element={<FindingEditorPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
+                <Route path="/admin/access-requests" element={<AccessRequestsPage />} />
+                {/* ADR-056 — painel de filas restrito a ADMIN. */}
+                <Route path="/admin/filas" element={<FilasPage />} />
+              </Route>
+
+              {/* Módulo DAST — não existe pro CLIENT: nem item de menu, nem rota
+                  acessível (403 se forçar a URL, ver ProtectedRoute). */}
+              <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
+                <Route path="/dast" element={<DastPage />} />
+                <Route path="/dast/scans/:id" element={<DastScanDetailPage />} />
+                {/* SAST/SCA (ADR-052) — mesmos papéis do DAST; a API repete a checagem. */}
+                <Route path="/sast-sca" element={<SastScaPage />} />
+                <Route path="/sast-sca/imports/:id" element={<CodeImportDetailPage />} />
+              </Route>
+            </Route>
+
+            {/* Relatório do ZAP fora do AppLayout — tela cheia, sem sidebar, é
+                aberta em nova aba a partir do detalhe do scan. Sem menu de
+                acessibilidade: o relatório é um iframe isolado de terceiros, onde
+                nossas preferências não chegam (o zoom do navegador chega). */}
             <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
-              <Route path="/dast" element={<DastPage />} />
-              <Route path="/dast/scans/:id" element={<DastScanDetailPage />} />
-              {/* SAST/SCA (ADR-052) — mesmos papéis do DAST; a API repete a checagem. */}
-              <Route path="/sast-sca" element={<SastScaPage />} />
-              <Route path="/sast-sca/imports/:id" element={<CodeImportDetailPage />} />
+              <Route path="/dast/scans/:id/report" element={<DastScanReportPage />} />
             </Route>
-          </Route>
-
-          {/* Relatório do ZAP fora do AppLayout — tela cheia, sem sidebar, é
-              aberta em nova aba a partir do detalhe do scan. Sem menu de
-              acessibilidade: o relatório é um iframe isolado de terceiros, onde
-              nossas preferências não chegam (o zoom do navegador chega). */}
-          <Route element={<ProtectedRoute roles={["ADMIN", "PENTESTER"]} />}>
-            <Route path="/dast/scans/:id/report" element={<DastScanReportPage />} />
           </Route>
         </Route>
 

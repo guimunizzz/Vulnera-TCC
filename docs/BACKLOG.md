@@ -4,6 +4,10 @@
 
 **✅ 2026-11-27 — Central administrativa e tratamento de acesso direto concluídos na wave B2B.** Seções de adesão e comercial sob proteção ADMIN, redirecionamento compatível e neutralidade de acesso no frontend. A próxima rodada testa no Chrome adesão, convites, revogação, permissão de equipe, isolamento e recuperação legada. [Evidências e roteiro](UNIFIED-B2B-TENANT-SECURITY.md#refinamentos-finais-de-2026-11-27).
 
+**✅ 2026-11-26 — Conflitos do PR #77 resolvidos (8/8, 100%).** A feature/agent-ai integrou a dev em `65a792d`, com o assistente autenticado, o fluxo de acesso controlado e as permissões de triagem, agendamentos, conformidade e administração. Conferidas 26 montagens da API, 39 rotas Web e 92 chaves de configuração. As 27 combinações de rota e perfil exercitadas verificam permissões e uma instância do assistente. Builds API/Web, check Web (865/865 testes e 132/132 pares de contraste) e lint de 16 arquivos da API da integração aprovados. Os 112 testes focais de assistente, solicitação, ativação e administração de acesso passaram no MySQL descartável. A primeira execução integral do Jest foi interrompida pelo processo Node no Windows (código 3221226505). A segunda execução, com um worker reciclado por limite de memória, passou em 1.393/1.393 testes (90/90 suítes). O lint integral da API aponta quatro erros herdados de `graph-comment.model.ts` e `memory-job-queue.ts`. A decisão do assistente passou a ADR-064 para preservar o número da decisão da landing na dev.
+
+- [x] INT-AI-03 — Resolver os oito conflitos da dev atual e validar a integração na branch do PR #77.
+
 **✅ 2026-11-25 — Adesão B2B, equipes e segurança de tenants implementadas.** Ativação empresarial, delegação de MEMBER, revogação de sessão e gate de PRs à `dev` concluídos na branch local. Revisão das jornadas reais e decisão de publicação pendentes. [Validações e ressalvas](UNIFIED-B2B-TENANT-SECURITY.md).
 
 **✅ 2026-11-25 — Issue #51, Etapa 7 validada localmente com ressalvas.** O código foi implementado em `53d142e`; merge local concluído em `822fa21` (pais `828ec6a` + `effd32a`) e branch publicada. A prova manual pré-integração na stack 8186 terminou ACTIVATED, convite usado, uma sessão, User CLIENT/OWNER, Company sem CNPJ e Subscription PENDING_APPROVAL. API pré-integração: 72 suítes (65 PASS/7 FAIL), 1064/1110 testes; reteste 6/7 e 231/233, com os mesmos timeouts `zap-runner` reproduzidos no baseline `e5e353c`; 71/72 suítes distintas PASS, sem somar contagens. Web pré-integração: 87 arquivos, 708/710; onboarding 11/11, ADMIN 6/6, Playwright mock 9/11 com CA-01/CA-09 separados 2/2, E2E real 1/1. Pós-`dev`, Web Docker/TSC/lint focal/contraste 132/132 PASS; Vitest 17 arquivos, 122/125 inicial e 124/125 distintos. Falha Code Import/Security Graph reproduzida na base pura `effd32a` (7/8), arquivos iguais à `dev`. Compose DEV/real PASS; secret só API, sem literal no diff. API pós-`dev`: Docker build/TSC/Prisma generate/lint focal/migrate deploy 23/23, `prisma validate` e `migrate status` com 23 atualizadas. Jest inicial 20/21 suítes, 338/339; reteste final da suíte afetada 1/1, 9/9, exit explícito Jest 0 e Docker 0; total distinto 21/21 suítes, 339/339. Lint global mantém dois args unused herdados de `memory-job-queue.ts`; `npm install` reportou 12 advisories (8 moderate/4 high), sem `audit fix`. Testes isolados reutilizaram container MySQL existente com schema/conta próprios e runners descartáveis; não houve stack nova. SMTP externo, Turnstile em produção e deploy não foram exercitados. [Registro e ressalvas](SECURITY-AUTH-ETAPA-7.md); rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83). Este registro não afirma merge remoto nem fechamento da Issue.
@@ -16,11 +20,36 @@
 **✅ 2026-11-17 — Issue #51, Etapa 5 concluída (100% do recorte; aprovada com ressalvas).** Build/lint focal, focais 36/36, domínio final 23/23 e suíte completa 70/70 suítes, 1152/1152 passaram. A suíte completa antecedeu os dois casos adicionais; total da full API permanece 1152. Cadastro legado ativo; a integração web está em andamento na Etapa 6 e cutover permanece futuro. [Resultados e ressalvas](SECURITY-AUTH-ETAPA-5.md).
 **✅ 2026-11-17 — Diagnóstico do merge Issue #51 + `dev`: conflitos resolvidos (5/5).** `PRD_VIVO.md`, schema, `EnvKeys`, routes e este BACKLOG tiveram os conflitos resolvidos. Merge concluído localmente em `44feabe` (pais `27d7b59` e `aafbc2b`), sem push; worktree original preservado. Validação ampliada cancelada a pedido, sem aprovação integral. [Relatório](SECURITY-AUTH-INTEGRACAO-DEV-2026-11-17.md).
 
+**✅ 2026-11-16 — PR #77 e propagação visual concluídos (100%; 4/4 entregas).** Oito comentários conferidos; API/Web na feature 922/659 e na Vuvu 923/671, contraste 132/132 e builds aprovados. Merge visual `f31b678` mantém atlas, código visual e personalidade, com as novas regras de produto/privacidade. Duas branches publicadas como iannxz; dev e ambiente principal preservados. Nova aprovação humana permanece pendente. Histórico intermediário abaixo preservado; matriz em `docs/REVISAO_PR77_2026-11-16.md`.
+
+- [ ] PR77-FUT-01 — Acompanhar a espera intermitente no teste de Security Graph do detalhe SAST/SCA sob execução concorrente: uma falha inicial; focal 7/7 e repetição completa com dois processos 671/671, sem alterar fonte ou teste.
+
+**✅ 2026-11-16 — Pedidos do PR #77 implementados, validados e publicados na feature (100% das correções; propagação visual em fechamento).** Oito comentários conferidos em `docs/REVISAO_PR77_2026-11-16.md`: 29 tópicos de produto, 74 artefatos fora do índice com cópias locais preservadas, configuração concreta privada. API check 922/922 (58 suítes), Web check 659/659 e contraste 132/132; builds e smoke por três perfis aprovados. Uma chamada Gemini real HTTP 200 confirmou governança de aceite/SLA. Dev e6a445c incorporada sem conflitos; sem seed/reset, schema, dependências, guias protegidos ou deploy no ambiente principal. EACCES inicial do QA resolvido exclusivamente na imagem local de testes. Histórico anterior de execução abaixo preservado.
+
 > **v4 · 2026-08-03.** Substitui a versão por sprints com divisão por pessoa (Rafael/Guilherme/Iann). Agora é **fase e checkpoint**, execução solo-delegada.
 > Estimativas em horas-equivalentes — servem para dimensionar risco e revisão, não para prever o tempo do agente.
 > **Entrega: 25/10/2026.**
 
 ## Status
+
+**🚧 2026-11-23 — Atmosferas 3D por seção (ADR-060, D20).** Branch `feat/atmosfera-3d` a partir da `dev` @ `effd32a`.
+
+- Nebulosa no Dashboard, relevo com radar e pings no monitoramento, ASCII no trabalho técnico e nada em formulários. Crossfade de 0,8 s.
+- Modo apresentação do Dashboard.
+- Risco real (Dashboard, Remediação, Threat Intel).
+- Pôster em canvas 2D com movimento reduzido, no celular, sem WebGL2 e em "Pausar animações".
+- Laboratório `/lab-3d` só em desenvolvimento.
+
+Validado na stack Docker (:8086) logado como ADMIN: atmosfera certa em cada seção, crossfade com a camada anterior removida, apresentação em tela cheia com teto de 0,32, pôsteres com movimento reduzido e tema claro.
+
+Segunda rodada (D21): web **725/727**. As 2 falhas são do `findings-table.test.tsx`, que estava fora do git antes desta branch e não entra nela. Lint 0 erros, contraste OK, build OK (three só em chunk lazy). E2E `exposure-graph` 3/3. `cybergraph` passa caso a caso, com a instabilidade ATM-FUT-06 que já existia.
+
+- [ ] ATM-FUT-01 — ✅ parcial (2026-11-23): na RTX 3060 Ti do Rafael a página fica a 240 fps em todos os cenários (p95 4,3 ms; `docs/evidencias/atmosfera-3d/`). **Falta** medir numa GPU integrada (Iris Xe).
+- [x] ATM-FUT-02 — ✅ 2026-11-23 (D21.5): teto do claro de 0,24 para 0,32 e traço/partícula mais grossos.
+- [x] ATM-FUT-03 — ✅ 2026-11-23, substituída (D21.3): o mapa 3D não é refeito. O grafo 2D recebeu acabamento (halos, ping, pacotes, palco com radar) e a atmosfera some na aba do mapa. ~~Refazer o mapa 3D na linguagem nova.~~
+- [x] ATM-FUT-04 — ✅ 2026-11-23 (D21.4): Aplicações publica a superfície de exposição; Projetos fica neutro por decisão.
+- [x] ATM-FUT-05 — ✅ 2026-11-23 (D21.1): Exposure Graph, SLA, Aprovações e Filas tinham ficado sem fundo. Formulários ganham o ASCII parado e o Exposure Graph o relevo.
+- [ ] ATM-FUT-06 — E2E `cybergraph.spec.ts` instável (CG-02/CG-06 alternam): o scan simulado chega a COMPLETED mas os sensores seguem acrescentando nós (16 → 33 durante o teste). Passam isolados. Esperar a contagem estabilizar antes de medir. Existia antes desta branch; não foi corrigido aqui.
 
 **✅ 2026-10-23 — Issue #51: Etapa 4 concluída (100% do recorte; aprovada com ressalvas).** Merge `origin/dev` em `9f7e23a`; Etapas 2–4 consolidadas em um commit local separado, sem push. Os três outputs das Issues #19/#20 ficaram fora. Fila administrativa, autorização ADMIN atual, decisões e convites concluídos. Build, lint focal, Prisma validate/generate e Jest completo passaram: **57/57 suítes, 995/995 testes, 454,05 s**. Coverage dos quatro services: 88,26% statements, 68,49% branches, 96,77% functions, 95,03% lines. `npm run check` ainda falha no lint por dois imports anteriores antes do Jest; execução completa separada passou. [Ownership e ressalvas](SECURITY-AUTH-ETAPA-4.md).
 
@@ -45,6 +74,7 @@
 - [x] **SEC-AUTH-6 / ORQUESTRACAO:** integrar solicitação/verificação, ativação e revisão ADMIN na interface web; concluída em 2026-11-18, aprovada com ressalvas. [Relatório](SECURITY-AUTH-ETAPA-6.md).
 - [x] **SEC-AUTH-7:** implementação e validação local com ressalvas concluídas em 2026-11-25. API final: reteste HTTP 1/1 suíte, 9/9, Jest exit 0/Docker 0; 21/21 suítes e 339/339 testes distintos; build/TSC/Prisma/lint focal/migrations 23/23 passaram. Web pós-`dev` 124/125, falha reproduzida na base pura igual à `dev`; Compose DEV/real PASS. Ressalvas: lint global com dois args unused herdados e 12 npm advisories; SMTP externo, Turnstile em produção e deploy não executados. Rastreabilidade remota: [PR #83](https://github.com/guimunizzz/Vulnera-TCC/pull/83). [Registro](SECURITY-AUTH-ETAPA-7.md).
 - [ ] **SEC-AUTH-7+:** trabalho operacional remanescente e follow-ups após avaliação da Etapa 7.
+
 **🚧 2026-11-18 — Fila BullMQ com worker desacoplável e scans DAST agendados (ADR-056, issue #76).** Branches `feat/fila-fase0-adr` a `feat/fila-fase6-docs`, empilhadas a partir da `dev` @ `95f3252`. O padrão continua `QUEUE_DRIVER=memory` (comportamento de antes); `bullmq` é opt-in.
 
 - [x] FILA-00 — ADR-056 e texto revisado da issue #76 (fora do git). Investigação: fila DAST em memória, findings idempotentes por `@@unique`, visibilidade de scans por requester, simulado fora das métricas só pela promoção.
@@ -79,6 +109,59 @@
 - [x] LP-FUT-02 — ✅ 2026-11-16: diagnosticado. O intervalo de ~200 ms é custo de primeira passada do Chrome com perfil vazio (igual com a cena desligada, some na segunda passada no mesmo navegador); não é da página. `medir.cjs` passou a aquecer antes de medir. Ver `docs/LANDING_NARRATIVA.md` §12.8. ~~Investigar o intervalo de ~200 ms na primeira vez que a região depois de "Recursos" entra na tela.~~
 - [ ] LP-FUT-03 — Seção Demo com capturas reais do produto (hoje é uma prévia interativa com dados fictícios).
 - [ ] LP-FUT-04 — Ligar os planos da landing em `GET /api/plans` (TODO em `pricing.tsx`; hoje espelham o seed à mão).
+
+**🚧 2026-11-16 — Atendimento do PR #77.** Limpeza de 74 artefatos do índice concluída, preservando hashes/cópias locais e fontes de testes. Resumo histórico manual realocado para docs e links atualizados; padrões de output/cobertura/temporários adicionados ao `.gitignore`. Restam contexto de produto, configuração privada do modelo, checks e publicação nas branches correspondentes. Nenhum deploy ou alteração de dados de negócio nesta revisão.
+
+- [x] PR77-01 — Limpeza do versionamento sem apagar as evidências locais nem os testes de código.
+- [x] PR77-02 — Curadoria de 29 tópicos (12 novos), com rastreabilidade e diferenças de documentos antigos registradas. Até três tópicos/6.000 caracteres, permissões mantidas; focal API 75/75.
+- [x] PR77-03 — Modelo real omitido da versão pública atual; campos vazios nos exemplos, fixture sintética e fallback se a resposta reproduzir a configuração privada. Histórico anterior preservado; focal API 60/60.
+- [x] PR77-04 — Oito pedidos conferidos, checks/builds aprovados e publicação nas duas branches com merge preservando a Vuvu; aprovação do revisor é etapa externa.
+
+**✅ 2026-11-15 — INT-AI-04E, instruções nos `.env.example` (100%).** Modelo da raiz inclui o fluxo de clone/pull até validação Gemini, preservação de `.env`, distribuição privada da credencial e restart somente sem scans ativos. Modelo da API explica o uso no host e remete ao modelo Docker. Alteração apenas de comentários/docs; padrões local/chave vazia/modelo preservados e Compose validado sem reiniciar serviços. Publicação restrita à `feature/agent-ai`, como `iannxz`.
+
+- [x] INT-AI-04E — Passo a passo nos modelos de ambiente, revisão e publicação na branch atual.
+
+**✅ 2026-11-15 — INT-AI-04D, onboarding de configuração no clone (100%).** `.env.example` da raiz contém apenas valores públicos e chave vazia; README/guia explicam onde copiar, como preservar `.env` existente e a diferença entre Docker e host. Compose validado com o template e ajuda local padrão. Clones/pulls recebem o modelo, enquanto a credencial deve ser fornecida privadamente por instalação. Runtime e `.env` real preservados.
+
+- [x] INT-AI-04D — Template Docker da raiz e instruções reproduzíveis sem versionar a chave.
+
+**✅ 2026-11-15 — INT-AI-04B1, ativação técnica Gemini local concluída (100%).** Chave somente no `.env` ignorado; modelo `modelo configurado privadamente`. Zero scans ativos antes da recriação exclusiva da API, mantendo imagem/volumes e IDs de banco/Web/Mailhog. Provedor HTTP 200/STOP; rota autenticada por token interno efêmero HTTP 200 com `source: gemini`; health/Web HTTP 200. Chave não aparece nos logs da API ou nos arquivos versionados. Nenhuma configuração de cobrança foi alterada. Evidências sanitizadas em `output/agent-ai-dev-merge/` (local e ignorado). Registro anterior INT-AI-04B desdobrado abaixo; a confirmação de gratuidade não é inferida de uma resposta bem-sucedida.
+
+- [x] INT-AI-04B1 — Configuração privada e chamada real Gemini na stack local.
+- [ ] INT-AI-04B2 — Responsável confirmar Free Tier e substituir a credencial compartilhada em chat.
+
+**✅ 2026-11-15 — INT-AI-04C, geração dinâmica conferida (100%).** Duas perguntas inéditas à rota real: 2/2 HTTP 200 com `source: gemini` e mensagens distintas do fallback local computado em memória. Analogia de biblioteca recebeu limitação ao domínio; pergunta sobre estados/retrabalho de Projetos recebeu duas frases com os prefixos exclusivos solicitados “Sequência:” e “Retorno:” (777 ms), ausentes do catálogo estático. Smoke autenticado por tokens efêmeros, sem escrita no banco, alteração de runtime ou exposição de credenciais.
+
+- [x] INT-AI-04C — Verificar origem Gemini e adaptação a uma pergunta/formato inéditos contra a ajuda predefinida.
+
+**✅ 2026-11-15 — INT-AI-04A, guia da configuração Gemini gratuita preparado.** Fontes oficiais reconferidas; projeto Free sem faturamento, chave privada, verificação eventual por celular, `.env` na raiz do Compose e recriação da API apenas sem scans ativos. Texto no `modelo configurado privadamente` elegível ao Free Tier; selo Gemini e Usage necessários para comprovar a integração. Nenhum segredo/arquivo privado/cobrança/serviço alterado. Guia em [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md).
+
+- [x] INT-AI-04A — Requisitos, condições de custo/cartão e passo a passo revisados.
+- [ ] INT-AI-04B — Responsável configurar projeto/chave/modelo privadamente e validar Gemini ao vivo; sem ativação automática de faturamento.
+
+**✅ 2026-11-15 — INT-AI-03, QA Docker e correções de acessibilidade (100%).** Builds reais API/Web aprovados, API Linux **905/905** e Web Linux **659/659**, lint/contraste aprovados. Dois defeitos `label-content-name-mismatch` encontrados (assistente e marca de login/cadastro) e corrigidos após autorização, sem mudar o visual ou as ações; teste de roteamento passa a aguardar o portal sem mudar a implementação. Check Web final **659/659**, focal Linux **36/36**, e2e final **7/7** com axe sem regras desativadas. Smoke real por três perfis e seis etapas de importação/triagem/grafo/PDF aprovados em cópia isolada; containers e dados existentes preservados. Relatório [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).
+
+- [x] INT-AI-03 — QA Docker complementar, investigação e correção autorizada dos nomes acessíveis.
+- [ ] INT-AI-FUT-03 — Avaliar separadamente a lentidão de `chown -R /app` no build Web (106–143 s observados; branch `chore/docker-build-leve` não incorporada nesta rodada).
+
+**✅ 2026-11-15 — Integração preparatória da feature/agent-ai com a dev concluída (100% do escopo de resolução/validação).** Os sete conflitos foram compostos na feature, com ambas as origens no histórico, 30 rotas preservadas e comparação dos arquivos exclusivos. API check no Node 22: **905/905**, lint sem erros; Web check: **659/659**, contraste **132/132**; builds aprovados. Navegador: **12/12** originais + **11 verificações** com login/API reais em bancos descartáveis, sem erros de página/CSP. Contexto novo e imports corrigidos mediante autorização; JavaScript de vulnerabilidades idêntico após remover os imports. ADR-054 distingue o assistente da ADR-048 do grafo. Commits de código `2e2ead6`, `da21fc7`, `05735a7`, todos `iannxz`. Publicação somente da feature; merge na dev/deploy não executados, backups somente locais. Relatório [INTEGRACAO_AGENT_AI_DEV_2026-11-15.md](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md). Marcos parciais abaixo são históricos e foram concluídos por esta entrada.
+
+- [x] INT-AI-02 — Contextos, ADRs, checks/builds/navegador e preparação revisada para publicação da feature.
+- [ ] INT-AI-FUT-01 — Revisar e integrar o PR na dev; deploy do ambiente em etapa separada.
+- [ ] INT-AI-FUT-02 — Investigar overflow anterior de página a 320 px (340 px com chat fechado/aberto), sem ampliar o escopo desta integração.
+
+**✅ 2026-11-15 — INT-AI-02B: lint API desbloqueado (100% da correção pontual).** Autorizada a remoção exclusiva dos imports não usados `UserEntity`/`UserResponseDTO`; nenhum método alterado. Lint aprovado; suíte integrada 905/905 no Node 22 e Web 659/659. `npm run check` API completo em execução após a correção; fechamento/publicação da integração pendentes.
+
+- [x] INT-AI-02B — Corrigir exclusivamente os dois imports não usados da API após autorização.
+
+**🚧 2026-11-15 — INT-AI-02A implementada e validada no Web.** Assistente reconhece quatro telas novas e oferece três atalhos adicionais, sem remover os antigos ou ampliar permissões. API focal 58/58; Web focal 57/57 e check completo 659/659. Builds aprovados; Chrome com CSP: 12/12 cenários originais e 11 verificações com login/API reais em banco descartável, sem erros. Suíte completa API em repetição no Node 22; decisão sobre dois imports não usados e fechamento documental/publicação pendentes.
+
+- [x] INT-AI-02A — Adaptar contextos SAST/SCA, importação, Threat Intel e Exposure Graph; preservar guards e sessão.
+
+**🚧 2026-11-15 — feature/agent-ai sobre a dev (7/7 conflitos resolvidos; validação final pendente).** Backups somente locais de `69af46c`/`ac96859`; sem rebase/force push ou alteração da dev. Baseline: API 847/847 e Web 614/614; focais após composição: API 47/47 e Web 45/45. Todas as 30 rotas e os arquivos exclusivos de cada lado preservados. Dois imports não usados da API são bloqueio anterior do lint. Contexto de SAST/SCA, Threat Intel e Exposure Graph autorizado pelo usuário; próxima etapa antes de publicar os commits da feature com identidade `iannxz`.
+
+- [x] INT-AI-01 — Preservar referências locais, medir baseline e resolver os sete conflitos combinando funcionalidades.
+- [x] INT-AI-02 — Contexto das telas novas, referências ADR sem colisão, checks/builds/navegador e preparação da publicação da feature (concluído no marco final de 15/11).
 
 **✅ 2026-11-15 — Threat Intel: CVEs publicadas contra o inventário de tecnologias, com notificação.** Branch `feat/threat-intel` (sobre a `feat/unified-origin-view`). Inventário por empresa (pacote via OSV, produto via CPE/NVD) que se alimenta do uso como **sugestão** (SBOM importado e fingerprint do DAST); sincronização agendada dentro da API com **NVD, OSV, CISA KEV e FIRST EPSS** (ADR-053 supersede parcialmente o ADR-030); aba "Afeta você" com KEV, EPSS, versão corrigida, triagem e promoção para `Vulnerability` (`THREAT_INTEL`, A06); feed de CVEs publicadas; aba Fontes; **sino de notificações** no topo (CVE nova com CVSS ≥ 7 ou KEV, CVE antiga que entra no KEV; o que já existia ao mapear não notifica). Tenancy nos dois sentidos, 404 para recurso de outra empresa. Validado com fontes **reais** (KEV 1.781, feed do NVD 811 CVEs, SBOM do NodeGoat → 90 CVEs, scan DAST real → sugestão do nginx, NVD fora do ar → PARTIAL com o motivo); a notificação foi mostrada por **simulação controlada e rotulada**. API **847/847**, web **614/614**, lint 0 erros, contraste OK. Ver ADR-053, D19, `docs/THREAT_INTEL.md` e `docs/evidencias/threat-intel/`.
 
@@ -146,6 +229,31 @@
 - [ ] SG-FUT-03 — CyberGraph: persistir o layout arrastado por scan, se a equipe quiser (o E2E existe em `cybergraph.spec.ts`; a troca 2D/3D virou troca de layout em 2026-11-09).
 - [x] ~~SG-FUT-02 — Medir o grafo 3D em GPU integrada e celular real~~ — obsoleto: o modo 3D do CyberGraph saiu em 2026-11-09 (ADR-051). O mapa 3D do Exposure Graph herda a pendência de medição em GPU fraca.
 - [x] ~~SG-FUT-04 — Paleta da cena 3D (`features/security-graph/scene/palette.ts`) em hex aproximado: migrar para a leitura de tokens em runtime de `src/three/palette.ts` (como a atmosfera, desde o refactor web-motion-3d) e avaliar montar a cena sobre o kit `src/three/` (hospedeiro, loop, descarte). No merge na `refactor/web-motion-3d` os valores vindos do `dashboard-scene-palette.ts` removido foram copiados sem mudança.~~ — obsoleto: a cena do CyberGraph saiu em 2026-11-09 (ADR-051).
+
+**✅ 2026-10-23 — Assistente Vulnera concluído localmente (7/7 fases, 100% do plano de implementação/validação local).** Disponível em `http://localhost:8086`, modo local. API focal 47/47, web 400/400, contraste 66/66, builds host/Docker e navegador produção 12/12 aprovados; 100% de linhas nos serviços novos, HTTP sintético 13/13, três perfis reais na API e fluxo CLIENT pela UI. Resultado API geral combinado 772/773 (rodada Linux + CVSS corrigido no ambiente): somente assertion anterior do header Excel; `check` API mantém dois imports antigos de lint. Gemini ao vivo pendente de chave/modelo privados, sem chamada Google. Guia [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md), [evidências](VALIDACAO_ASSISTENTE_2026-10-23.md), ADR-048; histórico e trabalho anterior preservados, sem commit/push/PR.
+
+- [ ] Assistente — responsável preparar projeto Free Tier e chave/modelo privados e executar poucas perguntas manuais para comprovar Gemini ao vivo; não confundir ajuda local com prova do provedor.
+- [ ] Fora do assistente — revisar assertion `findings-export.test.ts:176` que exige aspas no filename, incompatível com Express 5.3.0 resolvido pelas faixas atuais; reprodução independente em `docs/VALIDACAO_ASSISTENTE_2026-10-23.md`.
+- [ ] Fora do assistente — cabeçalho Conta em 320px continua gerando largura 335px; painel do assistente cabe e não amplia o overflow, conforme QA antes/depois.
+
+**✅ 2026-10-23 — Assistente Vulnera: Fase 0 concluída (1/7 fases, 14% do plano).** Investigação do checkout e plano registrados em [ASSISTENTE_VULNERA_PLANO.md](ASSISTENTE_VULNERA_PLANO.md), com mapa de rotas/perfis, ações, arquivos/dependências, critérios de aceite, configuração proposta e divergências. ADR-048 registra o retorno da IA apenas como orientação; as funcionalidades antigas de geração de findings e IA mobile continuam excluídas. Implementação ainda não iniciada. Branch `feature/agent-ai`; alterações anteriores preservadas, sem commit/push/PR.
+
+- [x] Assistente — Fase 0: investigar e delimitar a integração, incluindo onboarding, relatório DAST, overlays, sessão e Free Tier atual.
+- [x] Assistente — Fase 1: 14 tópicos versionados, recuperação PT-BR com continuação limitada, DTOs e nove ações rastreadas até as rotas.
+- [x] Assistente — Fase 2: endpoint autenticado, gateway Gemini injetável, ajuda local, limites compartilhados por usuário/globais e configuração backend/Docker; 47/47 focais.
+- [x] Assistente — Fase 3: layout autenticado compartilhado, mascote SVG/CSS com movimento/pausas e painel acessível; QA desktop/320px e modais.
+- [x] Assistente — Fase 4: contexto normalizado, envio explícito, navegação por ação permitida e isolamento de sessão/resposta tardia; 45/45 focais web.
+- [x] Assistente — Fase 5: checks/builds, navegador nos três perfis/temas/larguras, HTTP e UI reais locais; ressalvas da API e ausência de Gemini ao vivo explicitadas.
+- [x] Assistente — Fase 6: guia `ASSISTENTE_VULNERA.md`, configuração segura/Free Tier, limites, roteiro de três minutos e documentos vivos sincronizados.
+- [x] Preparação do assistente: dependências instaladas por `npm install --package-lock=false`, pois não há lockfile raiz; nenhum manifesto/lockfile alterado. Prisma Client gerado, builds executados.
+- [x] Preparação da validação API: criado MySQL de teste isolado em porta 3308 e database `vulnera_test`, com configuração explícita do processo. Endurecimento geral do setup/reconciliação das regras protegidas permanece fora desta feature; banco demo não foi usado na limpeza.
+
+**? 2026-10-21 ? Refer?ncia da dura??o de transi??o das abas corrigida (100% desta corre??o).** Branch `fix/mobile-erro-layout`: adicionado o import de `TAB_TRANSITION_DURATION` em `app/mobile/app/(tabs)/_layout.tsx`, reutilizando a constante de 320 ms j? exportada pela barra. Anima??es e prefer?ncia de movimento reduzido preservadas. Compara??o TypeScript com o layout original em mem?ria confirmou a remo??o exclusiva deste erro (200 ? 199 diagn?sticos, nenhum novo; zero no layout). `npm run typecheck` e `npm run lint` continuam reprovados por pend?ncias preexistentes: 14 diagn?sticos em projeto/conta, 185 em c?pias de arquivos web dentro de `output/`, e vari?veis `width`/`stage` sem uso. `git diff --check` aprovado. Mobile n?o possui script `check` nem su?te de testes; valida??o em aparelho n?o executada nesta tarefa.
+
+- [x] Corrigir o import ausente que causava `ReferenceError: TAB_TRANSITION_DURATION` nas abas mobile.
+
+- [ ] Mobile ? corrigir refer?ncias preexistentes a `STAGES`, `DetailField`, `displayDate`, `SectionHeading` e `Ionicons`, al?m de propriedades inconsistentes em Configura??es (`notificationIcon`, `footer`, `wordmark`, `icon`/`title` do estado de push). Podem causar novas falhas ao abrir essas telas.
+- [ ] Mobile ? revisar a inclus?o de c?pias web em `output/` no typecheck e as vari?veis sem uso `width` no layout e `stage` no detalhe do projeto; fora do escopo desta corre??o.
 
 **✅ 2026-10-16 — Frontend Docker atualizado para exibir a barra lateral (100%).** Corrigida a divergência entre a validação via Vite e a versão servida em `http://localhost:8086`: reconstruído e recriado somente `web` com `docker compose up -d --build --no-deps web`. HTML/JS/CSS retornam HTTP 200 e contêm a nova marca, grupos e estilos. API/MySQL seguem saudáveis sem reinicialização. Evidência: `output/sidebar-applied/served-check.md`; procedimento registrado em `docs/FRONTEND_WEB.md`.
 
@@ -601,6 +709,10 @@ prompts.
 ---
 
 ## Removido do escopo
+
+> O corte histórico abaixo permanece aplicável ao editor/sugestão de findings.
+> ADR-048 reintroduziu em 23/10/2026 somente o assistente de orientação web,
+> com Gemini opcional e ajuda local, sem IA no mobile ou operações sobre dados.
 
 | Removido                                                       | Quando     | Motivo                                      |
 | -------------------------------------------------------------- | ---------- | ------------------------------------------- |

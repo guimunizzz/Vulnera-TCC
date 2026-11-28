@@ -175,9 +175,10 @@ export function useLandingScene(hostRef: RefObject<HTMLElement | null>, opcoes: 
         terreno.redimensionar(largura, altura, dpr, grade.uniformes.uGradeTextura.value, uniformes.uCelula.value);
         redimensionar = false;
       }
-      // Primeiro quadro: compila os shaders do terreno enquanto o canvas ainda
-      // está entrando, e não no meio da virada.
-      if (!pronto) terreno.aquecer(renderer);
+      // Primeiro quadro: começa a compilar os shaders do terreno em segundo
+      // plano, sem esperar. Compilar aqui de forma síncrona travava o
+      // navegador inteiro na primeira visita (ver `Terreno.preparar`).
+      if (!pronto) void terreno.preparar(renderer);
       tempo += delta;
       const tique = Math.floor(tempo * TIQUES_POR_SEGUNDO);
       const p = progresso.valor;

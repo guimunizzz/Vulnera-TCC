@@ -32,6 +32,8 @@ import {
   ROTULO_CRITICIDADE,
 } from "./exposure-graph-model";
 import { cor, ROTULO_RISCO, tokenDoNo } from "./node-visual";
+import { ComentariosDoNo } from "./comentarios-do-no";
+import type { ComentarioDoGrafo } from "../../types/graph-comment.types";
 
 const SEVERIDADES: SeveridadeVuln[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 const SENSIBILIDADE: Record<string, string> = { PUBLIC: "Pública", INTERNAL: "Interna", CONFIDENTIAL: "Confidencial", RESTRICTED: "Restrita" };
@@ -57,7 +59,9 @@ function ContagemPorSeveridade({ abertas }: { abertas: Record<SeveridadeVuln, nu
 /** Visão unificada: as mesmas abertas pelas lentes que as encontraram (DAST, SAST, SCA, manual). */
 function ContagemPorOrigem({ porOrigem }: { porOrigem: Record<string, number> }) {
   return (
-    <dl className="grid grid-cols-3 gap-2 sm:grid-cols-5" aria-label="Abertas por origem">
+    // Colunas pela largura do selo, não pela tela: o painel tem 20rem ao lado do
+    // grafo, e cinco colunas encavalavam "SCA" e "Threat Intel".
+    <dl className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2" aria-label="Abertas por origem">
       {SOURCE_TYPES.map((o) => (
         <div key={o} className="flex flex-col items-center gap-1 rounded-control border border-subtle bg-inset px-2 py-2">
           <dt>
@@ -157,10 +161,13 @@ export function PainelExposicao({
   dados,
   selecionadoId,
   aoSelecionar,
+  comentarios,
 }: {
   dados: ExposureGraph;
   selecionadoId: string | null;
   aoSelecionar(id: string): void;
+  /** Comentários do grafo (ADR-061); sem eles, o painel não mostra o fio. */
+  comentarios?: ComentarioDoGrafo[];
 }) {
   const app = dados.aplicacoes.find((a) => idDaAplicacao(a.id) === selecionadoId);
   const categoria = categoriasDaEmpresa(dados.aplicacoes).find((c) => idDaCategoria(c.owaspCategory) === selecionadoId);
@@ -178,7 +185,10 @@ export function PainelExposicao({
   return (
     <aside aria-label="Detalhes da seleção" className="space-y-4 rounded-container border border-subtle bg-surface p-4 shadow-raised lg:sticky lg:top-4 lg:self-start">
       {app ? (
-        <PainelAplicacao app={app} aoSelecionar={aoSelecionar} />
+        <>
+          <PainelAplicacao app={app} aoSelecionar={aoSelecionar} />
+          {comentarios && <ComentariosDoNo grafo="EXPOSURE" noId={idDaAplicacao(app.id)} rotulo={app.name} comentarios={comentarios} />}
+        </>
       ) : categoria ? (
         <>
           <div className="space-y-1">
@@ -212,6 +222,14 @@ export function PainelExposicao({
             A mesma classe de falha em várias aplicações costuma ter a mesma causa (biblioteca, padrão de código, configuração): corrigir na origem
             fecha todas.
           </p>
+          {comentarios && (
+            <ComentariosDoNo
+              grafo="EXPOSURE"
+              noId={idDaCategoria(categoria.owaspCategory)}
+              rotulo={rotuloCategoria(categoria.owaspCategory)}
+              comentarios={comentarios}
+            />
+          )}
         </>
       ) : (
         <>

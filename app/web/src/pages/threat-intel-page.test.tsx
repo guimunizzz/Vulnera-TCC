@@ -68,7 +68,7 @@ function casamento(over: Partial<CasamentoTI> & { id: string }): CasamentoTI {
       epssScore: 0.2,
       epssPercentile: 0.96,
     },
-    asset: { id: "a1", displayName: "lodash 4.17.15 (npm)", kind: "PACKAGE", version: "4.17.15" },
+    asset: { id: "a1", displayName: "lodash 4.17.15 (npm)", kind: "PACKAGE", version: "4.17.15", ecosystem: "npm", packageName: "lodash" },
     versionConfirmed: true,
     preexisting: true,
     fixedVersion: "4.17.21",

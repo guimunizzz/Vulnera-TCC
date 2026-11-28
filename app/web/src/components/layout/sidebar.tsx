@@ -20,70 +20,11 @@
 
 import { NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, Clock3, FileCode2, FileText, Folder, LayoutDashboard, ListTodo, Monitor, Network, Radar, ScanLine, Search, ShieldCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { savedQueriesApi } from "../../lib/api/saved-queries.api";
-import type { UserRole } from "../../types/auth.types";
+import { GRUPOS } from "./navegacao";
 import "./sidebar.css";
-
-interface ItemNav {
-  para: string;
-  rotulo: string;
-  icone: LucideIcon;
-  /** Se definido, só esses papéis veem o item. */
-  papeis?: UserRole[];
-  companyRoles?: Array<"OWNER" | "MEMBER">;
-  /**
-   * Selo "new" no canto do item. Fixo de propósito (decisão de 2026-11-13):
-   * some quando alguém tirar daqui, não por visita — previsível na demo.
-   */
-  novo?: boolean;
-}
-
-interface GrupoNav {
-  rotulo: string;
-  itens: ItemNav[];
-}
-
-const GRUPOS: GrupoNav[] = [
-  {
-    rotulo: "Visão geral",
-    itens: [{ para: "/dashboard", rotulo: "Dashboard", icone: LayoutDashboard }],
-  },
-  {
-    rotulo: "Operação",
-    itens: [
-      { para: "/applications", rotulo: "Aplicações", papeis: ["ADMIN", "CLIENT"], icone: Monitor },
-      { para: "/exposure-graph", rotulo: "Exposure Graph", papeis: ["ADMIN", "CLIENT"], icone: Network },
-      // Threat Intel (ADR-053): os três papéis — o que cada um pode fazer em cada empresa a API decide.
-      { para: "/threat-intel", rotulo: "Threat Intel", icone: Radar, novo: true },
-      { para: "/projects", rotulo: "Projetos", icone: Folder },
-      // Os papéis são os mesmos das rotas; agrupar não amplia o acesso.
-      { para: "/findings", rotulo: "Findings", papeis: ["ADMIN", "PENTESTER"], icone: Search },
-      { para: "/remediation", rotulo: "Remediação", papeis: ["ADMIN", "PENTESTER"], icone: ShieldCheck },
-      { para: "/dast", rotulo: "DAST", papeis: ["ADMIN", "PENTESTER"], icone: ScanLine },
-      // ADR-052 — importação de relatórios SAST (SARIF) e SCA (CycloneDX).
-      { para: "/sast-sca", rotulo: "SAST/SCA", papeis: ["ADMIN", "PENTESTER"], icone: FileCode2, novo: true },
-      // ADR-056 — scans DAST agendados. Os três papéis: o CLIENT acompanha os da própria empresa, sem editar.
-      { para: "/agendamentos", rotulo: "Agendamentos", icone: CalendarClock, novo: true },
-      { para: "/playbooks", rotulo: "Playbooks", icone: FileText },
-    ],
-  },
-  {
-    rotulo: "Administração",
-    itens: [
-      { para: "/settings/sla", rotulo: "Políticas de SLA", papeis: ["ADMIN", "CLIENT"], icone: Clock3 },
-      { para: "/admin/access-requests", rotulo: "Central de solicitações", papeis: ["ADMIN"], icone: UserPlus },
-      // ADR-056 — painel de filas (contagens e falhas do BullMQ). Só ADMIN, como a rota.
-      { para: "/admin/filas", rotulo: "Filas", papeis: ["ADMIN"], icone: ListTodo, novo: true },
-    ],
-  },
-  {
-    rotulo: "Empresa",
-    itens: [{ para: "/team", rotulo: "Minha equipe", papeis: ["CLIENT"], companyRoles: ["OWNER", "MEMBER"], icone: Users }],
-  },
-];
 
 export function Sidebar({ aoNavegar, embutida }: { aoNavegar?: () => void; embutida?: boolean }) {
   const papel = useAuthStore((s) => s.user?.role);

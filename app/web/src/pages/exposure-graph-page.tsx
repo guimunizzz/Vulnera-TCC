@@ -8,6 +8,11 @@
  * compartilhados. No 3D, "Apresentar" percorre as aplicações da mais grave
  * para a menos grave (desligado com movimento reduzido).
  *
+ * No grafo, as análises do ADR-061 (combinações tóxicas, raio de impacto,
+ * máquina do tempo — `analises/use-analises-do-grafo.tsx`) e os comentários
+ * por nó. `?no=<id>` (link da notificação de comentário) já abre com o nó
+ * selecionado.
+ *
  * POR QUE EXISTE
  * O CyberGraph mostra um scan; esta página mostra a empresa. Nome oficial:
  * Exposure Graph / Cadeias de Exposição — nunca "Attack Path" (DECISIONS D8).
@@ -16,7 +21,8 @@
  * `App.tsx` (rota `/exposure-graph`, ADMIN e CLIENT) e o item da Sidebar.
  */
 
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Pause, Play } from "lucide-react";
 import { exposureGraphApi } from "../lib/api/exposure-graph.api";
@@ -32,8 +38,13 @@ import { EmptyState } from "../components/ui/empty-state";
 import { useMotion } from "../motion/use-motion";
 import { idDaAplicacao } from "../features/security-graph/exposure-graph-model";
 import { PainelExposicao } from "../features/security-graph/painel-exposicao";
+import { chaveDosComentarios, contarPorNo } from "../features/security-graph/comentarios";
+import { useAnalisesDoGrafo } from "../features/security-graph/analises/use-analises-do-grafo";
+import { graphCommentsApi } from "../lib/api/graph-comments.api";
 import { ExposureGraph2D } from "../features/security-graph/exposure-graph";
 import type { ExposureGraph } from "../types/exposure-graph.types";
+import { riscoDoExposureGraph } from "../features/atmosfera-3d/risco";
+import { pingarAtmosfera, usePublicarRisco, useSuprimirAtmosfera } from "../features/atmosfera-3d/atmosfera.store";
 
 // A página já é lazy (paginaLazy); o mapa é outro chunk para `three` só baixar na aba do mapa.
 const ExposureMap3D = lazy(
@@ -140,6 +151,31 @@ export function ExposureGraphPage() {
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const failure = getResourceFailure(consulta.error);
   const semEmpresa = failure === "unavailable" && getApiErrorCode(consulta.error) === "COMPANY_NOT_FOUND";
+  // A atmosfera (relevo) acompanha o grafo: sobe com as abertas, pinga a cada
+  // seleção e some na aba do mapa 3D, que tem a própria cena (D21.2).
+  const [params] = useSearchParams();
+  useSuprimirAtmosfera(params.get("visao") === "mapa");
+  usePublicarRisco(consulta.data ? riscoDoExposureGraph(consulta.data.aplicacoes) : undefined);
+  const selecionar = useCallback((id: string | null) => {
+    setSelecionadoId(id);
+    if (id) pingarAtmosfera();
+  }, []);
+
+  const temDados = !!consulta.data && consulta.data.aplicacoes.length > 0;
+  const analises = useAnalisesDoGrafo(consulta.data, selecionar);
+  const comentarios = useQuery({
+    queryKey: chaveDosComentarios("EXPOSURE"),
+    queryFn: () => graphCommentsApi.listar("EXPOSURE"),
+    enabled: temDados,
+  });
+  const comentariosPorNo = useMemo(() => contarPorNo(comentarios.data), [comentarios.data]);
+
+  // Link da notificação de comentário: abre com o nó selecionado.
+  const noDaUrl = params.get("no");
+  useEffect(() => {
+    if (noDaUrl && temDados) setSelecionadoId(noDaUrl);
+  }, [noDaUrl, temDados]);
+
   if (!semEmpresa) {
     if (failure === "unavailable") {
       return <ResourceUnavailable backTo="/applications" backLabel="Voltar para aplicações" />;
@@ -196,10 +232,13 @@ export function ExposureGraphPage() {
                   rotulo: "Grafo",
                   conteudo: (
                     <ExposureGraph2D
-                      dados={consulta.data}
+                      dados={analises.dadosExibidos ?? consulta.data}
                       nomeEmpresa={empresa.data?.name ?? "Empresa"}
                       selecionadoId={selecionadoId}
-                      aoSelecionar={setSelecionadoId}
+                      aoSelecionar={selecionar}
+                      barraDeAnalise={analises.barra}
+                      destaque={analises.destaque}
+                      comentarios={comentariosPorNo}
                     />
                   ),
                 },
@@ -210,18 +249,22 @@ export function ExposureGraphPage() {
                     <MapaComApresentacao
                       dados={consulta.data}
                       selecionadoId={selecionadoId}
-                      aoSelecionar={setSelecionadoId}
+                      aoSelecionar={selecionar}
                     />
                   ),
                 },
               ]}
             />
           </div>
-          <PainelExposicao
-            dados={consulta.data}
-            selecionadoId={selecionadoId}
-            aoSelecionar={setSelecionadoId}
-          />
+          {/* No mapa 3D a análise não se aplica: volta o painel da seleção. */}
+          {(params.get("visao") !== "mapa" && analises.painel) || (
+            <PainelExposicao
+              dados={consulta.data}
+              selecionadoId={selecionadoId}
+              aoSelecionar={selecionar}
+              comentarios={comentarios.data}
+            />
+          )}
         </div>
       )}
     </div>

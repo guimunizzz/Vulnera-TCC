@@ -2,8 +2,9 @@
  * app-layout.tsx
  *
  * O QUE FAZ
- * A moldura de toda tela autenticada: navegação lateral, barra superior com
- * usuário e tema, e a área de conteúdo.
+ * A moldura das telas autenticadas com navegação lateral, barra superior e
+ * conteúdo. Onboarding e relatório DAST usam somente AuthenticatedLayout,
+ * que também mantém a instância do assistente fora das transições de página.
  *
  * O QUE MUDOU NA FASE 6.5
  * - Navegação vira `Drawer` abaixo de `lg` — antes a sidebar de 224px roubava
@@ -22,7 +23,7 @@
  *     `aria-controls`.
  *
  * QUEM USA
- * `App.tsx`, envolvendo todas as rotas autenticadas.
+ * `App.tsx`, dentro do contêiner autenticado compartilhado.
  */
 
 import { useEffect, useState } from "react";
@@ -35,9 +36,12 @@ import { AccessibilityMenu } from "../../design/accessibility-menu";
 import { TransicaoDeRota } from "../../motion/components";
 import { useAuthStore } from "../../store/auth.store";
 import { authApi } from "../../lib/api/auth.api";
-import { DashboardAtmosphere } from "../dashboard/hero/dashboard-atmosphere";
+import { AtmosferaDaPlataforma } from "../../features/atmosfera-3d/atmosfera-da-plataforma";
+import { ID_DA_AREA_DE_CONTEUDO } from "../../features/atmosfera-3d/apresentacao";
 import { AmbientHostContext } from "../dashboard/hero/ambient-host-context";
 import { QueryLoadingIndicator } from "./query-loading-indicator";
+import { PaletaDeComandos } from "./paleta-de-comandos";
+import { Search } from "lucide-react";
 import { LimiteDeRota } from "./route-boundary";
 import "./operations-backdrop.css";
 import "./module-surfaces.css";
@@ -61,6 +65,8 @@ export function AppLayout() {
   // a próxima tela começa suas consultas somente quando entra.
   const outlet = useOutlet();
   const [navAberta, setNavAberta] = useState(false);
+  // Paleta de comandos (ADR-062): Ctrl+K de qualquer tela, ou o botão "Buscar".
+  const [paletaAberta, setPaletaAberta] = useState(false);
   const [ambientePausado, setAmbientePausado] = useState(false);
 
   useEffect(() => {
@@ -102,6 +108,8 @@ export function AppLayout() {
         </DrawerBody>
       </Drawer>
 
+      <PaletaDeComandos aberta={paletaAberta} aoMudar={setPaletaAberta} />
+
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Gaps menores abaixo de sm: a 375px os seis controles passavam 4px da tela em todas as páginas (WEB-FUT-08). */}
         <header className="sticky top-0 z-sticky flex h-16 items-center justify-between gap-2 border-b border-subtle bg-canvas px-4 sm:gap-4 lg:px-6">
@@ -125,6 +133,16 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-3">
+            <Button
+              variant="fantasma"
+              size="sm"
+              rotulo="Buscar ou executar um comando (Ctrl+K)"
+              onClick={() => setPaletaAberta(true)}
+              className="gap-2"
+            >
+              <Search className="h-4 w-4" aria-hidden="true" />
+              <kbd className="hidden rounded border border-subtle bg-inset px-[0.375rem] font-mono text-[11px] text-fg-muted md:inline">Ctrl K</kbd>
+            </Button>
             <NotificationBell />
             <AccessibilityMenu />
             <ThemeToggle compacto />
@@ -147,9 +165,10 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main id="conteudo" tabIndex={-1} className="operations-main relative isolate flex-1 p-4 focus-visible:outline-none lg:p-6">
+        <main id={ID_DA_AREA_DE_CONTEUDO} tabIndex={-1} className="operations-main relative isolate flex-1 p-4 focus-visible:outline-none lg:p-6">
           <div aria-hidden="true" className="operations-backdrop pointer-events-none absolute inset-0" />
-          <DashboardAtmosphere pausado={ambientePausado} />
+          {/* A atmosfera depende da seção (nebulosa, relevo, ASCII ou nada) — ver features/atmosfera-3d/rotas.ts. */}
+          <AtmosferaDaPlataforma pausado={ambientePausado} />
           {/* A chave é o caminho: o crossfade dispara na troca de rota, não a
               cada re-render da mesma rota. */}
           <div className="operations-content relative">

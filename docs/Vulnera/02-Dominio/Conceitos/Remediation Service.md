@@ -6,6 +6,14 @@ status: ativo
 
 # Remediation Service
 
+## Regra vigente ? conferida em 2026-11-16
+
+A op??o de remedia??o do projeto depende de plano ativo da empresa que inclua o servi?o. Ela n?o concede ao CLIENT escrita de status de findings. ADMIN/PENTESTER autorizado mant?m as transi??es; revalida??o ? atividade e aceite de risco ? registro separado. REVALIDATION/RISK_ACCEPTED n?o s?o estados de Vulnerability no produto atual.
+
+## Modelo conceitual original ? hist?rico
+
+A descri??o abaixo de responsabilidades e estados fazia parte do planejamento anterior; a implementa??o comercial posterior e a regra vigente acima delimitam o que pode ser oferecido hoje.
+
 ## Definição
 Flag opcional de um `Project` (`hasRemediationService`) que define se o serviço de remediação está incluso na análise. Altera quem pode mover o status de uma `Vulnerability` durante o ciclo de remediação.
 

@@ -15,6 +15,7 @@ import { dastScanRoutes } from "./dast-scan.routes";
 import { riskAcceptanceRoutes } from "./risk-acceptance.routes";
 import { remediationPlaybookRoutes } from "./remediation-playbook.routes";
 import { savedQueryRoutes } from "./saved-query.routes";
+import { assistantRoutes } from "./assistant.routes";
 import { makeAccessRequestRoutes } from "./access-request.routes";
 import type { AccessRequestRouteDependencies } from "../factories/access-request.factory";
 import { makeAdminAccessRequestRoutes } from "./admin-access-request.routes";
@@ -27,6 +28,8 @@ import { dastScheduleRoutes } from "./dast-schedules.routes";
 import { adminQueuesRoutes } from "./admin-queues.routes";
 import { makeCompanyInvitationActivationRoutes, makeCompanyTeamRoutes } from "./company-invitation.routes";
 import type { CompanyInvitationRouteDependencies } from "../factories/company-invitation.factory";
+import { graphCommentRoutes } from "./graph-comment.routes";
+import { triageInboxRoutes } from "./triage-inbox.routes";
 
 export function makeApiRoutes(options: {
   accessRequestDependencies?: AccessRequestRouteDependencies;
@@ -67,11 +70,16 @@ export function makeApiRoutes(options: {
 
   // CP-6 — buscas salvas e watchlists (a pergunta, nunca a resposta).
   router.use("/saved-queries", savedQueryRoutes);
+  router.use("/assistant", assistantRoutes);
 
   // ADR-052 — importação de relatórios SAST (SARIF) e SCA (CycloneDX) por projeto.
   router.use("/code-imports", codeScanRoutes);
   // Threat Intel (ADR-053) — inventário, CVEs que afetam a empresa, feed e sincronização.
   router.use("/threat-intel", threatIntelRoutes);
+  // ADR-061 — comentários fixados nos nós do Exposure Graph e do grafo do scan DAST.
+  router.use("/graph-comments", graphCommentRoutes);
+  // ADR-062 — caixa de triagem única (DAST, SAST/SCA e Threat Intel).
+  router.use("/triage", triageInboxRoutes);
 
   return router;
 }

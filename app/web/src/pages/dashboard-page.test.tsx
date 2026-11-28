@@ -51,6 +51,10 @@ vi.mock("../components/dashboard/client-dashboard", () => ({
 vi.mock("../components/dashboard/pentester-dashboard", () => ({
   PentesterDashboard: () => <p>Conteúdo PENTESTER</p>,
 }));
+// O calendário de prazos (ADR-062) busca dados e tem teste próprio; aqui o foco é o roteamento e a atmosfera.
+vi.mock("../components/sla/calendario-de-prazos", () => ({
+  CalendarioDePrazos: () => <p>Calendário de prazos</p>,
+}));
 
 function dashboardLayout() {
   return (

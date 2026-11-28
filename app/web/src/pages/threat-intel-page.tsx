@@ -30,6 +30,8 @@ import { FeedTab, FontesTab } from "../components/threat-intel/feed-tab";
 import { useAuthStore } from "../store/auth.store";
 import { haQuanto } from "../lib/threat-intel";
 import type { ResumoTI } from "../types/threat-intel.types";
+import { riscoDoThreatIntel } from "../features/atmosfera-3d/risco";
+import { usePublicarRisco } from "../features/atmosfera-3d/atmosfera.store";
 
 const CLASSE_SELECT = "h-touch rounded-control border border-default bg-surface px-3 text-sm text-fg";
 const FONTES_OPERACIONAIS: { rotulo: string; chaves: string[] }[] = [
@@ -99,6 +101,8 @@ export function ThreatIntelPage() {
     queryFn: () => threatIntelApi.overview(companyId ?? undefined),
     enabled: !!companyId,
   });
+  // O radar acha mais alerta conforme as CVEs abertas e os KEV do inventário.
+  usePublicarRisco(resumo.data ? riscoDoThreatIntel(resumo.data.casamentos) : undefined);
 
   const seletor =
     !ehCliente && (empresas.data?.length ?? 0) > 1 ? (

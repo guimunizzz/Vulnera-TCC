@@ -15,6 +15,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   user: User | null;
+  /** Identifica um novo login, inclusive da mesma pessoa; nunca é persistido. */
   sessionVersion: number;
   setAuth: (auth: AuthResponse) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
@@ -51,6 +52,10 @@ export const useAuthStore = create<AuthState>()(
         set({ accessToken: null, refreshToken: null, user: null, sessionVersion: get().sessionVersion + 1 });
       },
     }),
-    { name: "vulnera-auth", partialize: ({ accessToken, refreshToken, user }) => ({ accessToken, refreshToken, user }) },
+    {
+      name: "vulnera-auth",
+      // A identidade temporária separa sessões; não é credencial nem estado recuperável.
+      partialize: ({ accessToken, refreshToken, user }) => ({ accessToken, refreshToken, user }),
+    },
   ),
 );

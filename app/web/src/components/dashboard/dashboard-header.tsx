@@ -4,7 +4,9 @@
  * O QUE FAZ
  * Cabeçalho compacto de `/dashboard`, igual para os três papéis: rótulo do
  * escopo, saudação real, uma linha de contexto com os críticos em aberto e
- * o atalho para a triagem.
+ * o atalho para a triagem. Também publica o risco do escopo para a atmosfera
+ * (nebulosa) e abre o modo apresentação (o conteúdo em tela cheia, com a
+ * atmosfera imersiva).
  *
  * POR QUE EXISTE
  * Substitui o hero grande (Fase 5 do refactor web-motion-3d, proposta em
@@ -17,12 +19,15 @@
  * `pages/dashboard-page.tsx`.
  */
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Maximize2, Minimize2 } from "lucide-react";
 import { motion } from "motion/react";
-import { LinkButton } from "../ui/button";
+import { Button, LinkButton } from "../ui/button";
 import { STATUS_ABERTOS, useFindingsResumo } from "../../hooks/use-findings";
 import { useMotion } from "../../motion/use-motion";
 import type { UserRole } from "../../types/auth.types";
+import { useApresentacao } from "../../features/atmosfera-3d/apresentacao";
+import { riscoDoDashboard } from "../../features/atmosfera-3d/risco";
+import { usePublicarRisco } from "../../features/atmosfera-3d/atmosfera.store";
 
 const ESCOPO: Record<UserRole, string> = {
   ADMIN: "Visão geral da plataforma",
@@ -37,6 +42,9 @@ export function DashboardHeader({ userName, role }: { userName: string; role?: U
   const { item } = useMotion();
   const resumo = useFindingsResumo();
   const criticos = resumo.criticosAbertos;
+  const apresentacao = useApresentacao();
+  // A nebulosa esquenta com a severidade do escopo (dado que esta tela já carregou).
+  usePublicarRisco(resumo.carregando ? undefined : riscoDoDashboard(resumo));
 
   return (
     <motion.header
@@ -69,14 +77,26 @@ export function DashboardHeader({ userName, role }: { userName: string; role?: U
         </p>
       </div>
 
-      <LinkButton
-        to={role === "CLIENT" ? "/projects" : criticos > 0 ? ROTA_CRITICOS_ABERTOS : "/findings"}
-        variant="secundario"
-        className="shrink-0 self-start sm:self-auto"
-        iconeInicio={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
-      >
-        {role === "CLIENT" ? "Ver projetos" : criticos > 0 ? "Revisar críticos" : "Explorar findings"}
-      </LinkButton>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
+        {apresentacao.disponivel && (
+          <Button
+            variant="fantasma"
+            aria-pressed={apresentacao.ativa}
+            onClick={apresentacao.alternar}
+            iconeInicio={apresentacao.ativa ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          >
+            {apresentacao.ativa ? "Sair da apresentação" : "Apresentar"}
+          </Button>
+        )}
+        <LinkButton
+          to={role === "CLIENT" ? "/projects" : criticos > 0 ? ROTA_CRITICOS_ABERTOS : "/findings"}
+          variant="secundario"
+          className="shrink-0 self-start sm:self-auto"
+          iconeInicio={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+        >
+          {role === "CLIENT" ? "Ver projetos" : criticos > 0 ? "Revisar críticos" : "Explorar findings"}
+        </LinkButton>
+      </div>
     </motion.header>
   );
 }

@@ -6,6 +6,14 @@ status: ativo
 
 # Fluxo - Revalidacao
 
+## Fluxo vigente ? conferido em 2026-11-16
+
+CLIENT acompanha o finding em leitura. ADMIN ou PENTESTER membro do projeto registram transi??es permitidas. FIXED (Corrigido) pode ir para CLOSED (Fechado) ap?s valida??o ou voltar para IN_PROGRESS (Em andamento) se a corre??o for reprovada, iniciando novo ciclo de SLA. REVALIDATION n?o ? um estado separado e CLOSED ? terminal. A op??o comercial de remedia??o n?o muda essas permiss?es.
+
+## Fluxo conceitual original ? hist?rico
+
+As transi??es pelo CLIENT e os estados adicionais abaixo n?o est?o implementados e n?o devem ser oferecidos como a??es atuais.
+
 ## Objetivo
 Descrever o ciclo de correção de uma vulnerabilidade: o cliente marca como corrigida, solicita revalidação e o Pentester confirma ou contesta a correção.
 
