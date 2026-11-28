@@ -23,15 +23,20 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "../../lib/cn";
 import { useAuthStore } from "../../store/auth.store";
 import { savedQueriesApi } from "../../lib/api/saved-queries.api";
-import "./sidebar.css";
-
 import { GRUPOS } from "./navegacao";
+import "./sidebar.css";
 
 export function Sidebar({ aoNavegar, embutida }: { aoNavegar?: () => void; embutida?: boolean }) {
   const papel = useAuthStore((s) => s.user?.role);
+  const companyRole = useAuthStore((s) => s.user?.companyRole);
+  const companyId = useAuthStore((s) => s.user?.companyId);
   const grupos = GRUPOS.map((grupo) => ({
     ...grupo,
-    itens: grupo.itens.filter((item) => !item.papeis || (papel && item.papeis.includes(papel))),
+    itens: grupo.itens.filter((item) => {
+      const papelPermitido = !item.papeis || (papel && item.papeis.includes(papel));
+      const empresaPermitida = !item.companyRoles || (companyId && item.companyRoles.some((role) => role === companyRole));
+      return papelPermitido && empresaPermitida;
+    }),
   })).filter((grupo) => grupo.itens.length > 0);
 
   return (

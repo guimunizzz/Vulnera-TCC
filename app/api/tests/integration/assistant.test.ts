@@ -1,7 +1,7 @@
 /**
  * Exercita HTTP autenticado, recuperação, gateway e orçamento do assistente.
- * Usa JWT real e dependências injetadas sem banco/Google; existe para provar
- * permissões, fallback e chamada única antes da demonstração.
+ * Usa JWT real de identidades persistidas e dependências injetadas sem Google;
+ * existe para provar permissões, fallback e chamada única antes da demonstração.
  */
 import express from "express";
 import request from "supertest";
@@ -19,12 +19,15 @@ import { signAccessToken } from "../../src/utils/jwt.util";
 import type { UserRepository } from "../../src/repositories/user.repository";
 import type { AssistantChatDTO, AssistantGatewayInput, AssistantResponseDTO } from "../../src/models/assistant.model";
 import type { UserRole } from "../../src/models/user.model";
+import { seedUser } from "../fixtures/users.fixture";
+import { cleanDatabase } from "../setup";
 
 const GEMINI: AssistantConfig = { mode: "gemini", apiKey: "synthetic-test-key", model: "gemini-3-test-fixture", timeoutMs: 15000, maxOutputTokens: 500 };
 const QUESTION: AssistantChatDTO = { question: "Como solicito uma análise?", screen: "dashboard", history: [] };
 const INPUT: AssistantGatewayInput = { ...QUESTION, role: "CLIENT", help: "A análise cria um projeto." };
 const HIGH: TokenBucketPolicy = { ratePerSecond: 1000, burst: 1000 };
 const disposers: (() => void)[] = [];
+const persistedUserIds = new Map<string, string>();
 
 function makeApp(options: {
   config?: AssistantConfig;
@@ -45,12 +48,35 @@ function makeApp(options: {
   return { app, generate, limiter };
 }
 
-function bearer(role: UserRole = "CLIENT", userId = "synthetic-user"): string {
+function bearer(role: UserRole = "CLIENT", identityKey = "synthetic-user"): string {
+  const userId = persistedUserIds.get(`${role}:${identityKey}`);
+  if (!userId) throw new Error(`ASSISTANT_TEST_IDENTITY_NOT_SEEDED: ${role}:${identityKey}`);
   return `Bearer ${signAccessToken({ userId, role })}`;
 }
 function textResponse(message = "Orientação validada.", finishReason = "STOP"): Response {
   return new Response(JSON.stringify({ candidates: [{ finishReason, content: { parts: [{ text: message }] } }] }), { status: 200 });
 }
+
+beforeAll(async () => {
+  await cleanDatabase();
+  const identities: Array<{ role: UserRole; key: string }> = [
+    { role: "ADMIN", key: "synthetic-user" },
+    { role: "CLIENT", key: "synthetic-user" },
+    { role: "PENTESTER", key: "synthetic-user" },
+    { role: "ADMIN", key: "first" },
+    { role: "CLIENT", key: "second" },
+    { role: "CLIENT", key: "other" },
+  ];
+  for (const identity of identities) {
+    const user = await seedUser({
+      name: `Assistant ${identity.role} ${identity.key}`,
+      email: `assistant-${identity.role.toLowerCase()}-${identity.key}@synthetic.test`,
+      password: "assistant-synthetic-password",
+      role: identity.role,
+    });
+    persistedUserIds.set(`${identity.role}:${identity.key}`, user.id);
+  }
+});
 
 afterEach(() => {
   for (const dispose of disposers.splice(0)) dispose();

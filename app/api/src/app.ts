@@ -9,6 +9,7 @@ import type { RateLimitService } from "./services/rate-limit.service";
 import type { AccessRequestRouteDependencies } from "./factories/access-request.factory";
 import type { AdminAccessRequestRouteDependencies } from "./factories/admin-access-request.factory";
 import type { AccountActivationRouteDependencies } from "./factories/account-activation.factory";
+import type { CompanyInvitationRouteDependencies } from "./factories/company-invitation.factory";
 import { accountActivationBodyErrorHandler } from "./middlewares/account-activation-body.middleware";
 
 export function createApp(options: {
@@ -16,6 +17,7 @@ export function createApp(options: {
   accessRequestDependencies?: AccessRequestRouteDependencies;
   adminAccessRequestDependencies?: AdminAccessRequestRouteDependencies;
   accountActivationDependencies?: AccountActivationRouteDependencies;
+  companyInvitationDependencies?: CompanyInvitationRouteDependencies;
 } = {}) {
   const app = express();
   const rateLimitService = options.rateLimitService ?? makeRateLimitService();
@@ -37,7 +39,9 @@ export function createApp(options: {
   app.use((req, res, next) => {
     // A ativação usa parser próprio depois do limite de IP, inclusive para JSON inválido ou grande.
     const requestPath = req.path.toLowerCase();
-    if (requestPath === "/api/account-activation" || requestPath.startsWith("/api/account-activation/")) {
+    if (["/api/account-activation", "/api/company-invitations"].some(
+      (prefix) => requestPath === prefix || requestPath.startsWith(prefix + "/"),
+    )) {
       next();
       return;
     }
@@ -47,8 +51,9 @@ export function createApp(options: {
     accessRequestDependencies: options.accessRequestDependencies,
     adminAccessRequestDependencies: options.adminAccessRequestDependencies,
     accountActivationDependencies: options.accountActivationDependencies,
+    companyInvitationDependencies: options.companyInvitationDependencies,
   }));
-  app.use("/api/account-activation", accountActivationBodyErrorHandler);
+  app.use(["/api/account-activation", "/api/company-invitations"], accountActivationBodyErrorHandler);
   return app;
 }
 

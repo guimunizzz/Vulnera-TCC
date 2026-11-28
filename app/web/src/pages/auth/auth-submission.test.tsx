@@ -29,6 +29,7 @@ const sessao: AuthResponse = {
     email: "rafael@example.test",
     role: "CLIENT",
     companyId: null,
+    legacyOnboardingAllowed: true,
     createdAt: "2026-10-15T12:00:00.000Z",
   },
 };

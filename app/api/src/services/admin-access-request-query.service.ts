@@ -47,7 +47,10 @@ export class AdminAccessRequestQueryService {
     await this.authorization.ensureAdmin(actor);
     const request = await this.repository.findById(id);
     if (!request) throw new Error("ACCESS_REQUEST_NOT_FOUND");
-    return new AdminAccessRequestEntity(request).toDetailResponse();
+    const enrollmentEligibility = request.enrollment
+      ? await this.repository.enrollmentEligibility(request.enrollment)
+      : "LEGACY";
+    return new AdminAccessRequestEntity(request).toDetailResponse(enrollmentEligibility);
   }
 
   async events(

@@ -102,6 +102,10 @@ Restrições que já valiam:
 - O seed passa a importar o SBOM real em três aplicações da TechNova, para o
   raio de impacto ter "onde mais". KEV e EPSS **não** são inventados.
 
+## Atualização de 2026-11-28
+
+Ao gravar avisos de comentário no Exposure Graph, a API filtra quem já comentou no nó, está ativo e ainda pertence ao tenant. Estado e vínculo são conferidos sob lock na gravação. No grafo DAST, o serviço confere a leitura autorizada para cada destinatário. A restrição complementa a validação de acesso ao abrir o link.
+
 ## Relacionado
 
 [[ADR-035 - Vulnera Risk Score aditivo e auditavel]] ·

@@ -28,10 +28,11 @@ import type { DastModuleStatus } from "../../types/dast.types";
  * módulo chamam este hook com a MESMA queryKey — o react-query desduplica, e
  * não vira uma requisição por tela.
  */
-export function useDastStatus(): UseQueryResult<DastModuleStatus> {
+export function useDastStatus(enabled = true): UseQueryResult<DastModuleStatus> {
   return useQuery({
     queryKey: ["dast", "status"],
     queryFn: dastApi.getStatus,
+    enabled,
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return 30000;

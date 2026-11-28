@@ -36,6 +36,13 @@ export class PlanService {
 
   async delete(id: string): Promise<void> {
     await this.getById(id);
-    await this.repository.delete(id);
+    try {
+      await this.repository.delete(id);
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "P2003") {
+        throw new Error("PLAN_IN_USE");
+      }
+      throw error;
+    }
   }
 }

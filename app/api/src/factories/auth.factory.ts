@@ -12,9 +12,12 @@ import { AuthService } from "../services/auth.service";
 import { UserRepository } from "../repositories/user.repository";
 import { RefreshTokenRepository } from "../repositories/refresh-token.repository";
 
-export function makeAuthController(): AuthController {
+export function makeAuthService(): AuthService {
   const userRepo = new UserRepository(prisma);
   const refreshRepo = new RefreshTokenRepository(prisma);
-  const service = new AuthService(userRepo, refreshRepo);
-  return new AuthController(service);
+  return new AuthService(userRepo, refreshRepo);
+}
+
+export function makeAuthController(): AuthController {
+  return new AuthController(makeAuthService());
 }

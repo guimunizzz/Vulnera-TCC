@@ -578,19 +578,22 @@ export class DastScheduleService {
     if (!s.applicationId) {
       // Por URL: sem autorização com prazo nem empresa (decisão de 2026-11-19);
       // ainda assim, quem agendou precisa continuar sendo ADMIN/PENTESTER.
-      if (!s.targetUrl) return "ERROR";
+      if (!s.targetUrl || s.companyId || s.projectId) return "ERROR";
       const criador = await this.users.findById(s.createdById);
-      if (!criador || (criador.role !== "ADMIN" && criador.role !== "PENTESTER")) return "CREATOR_INACTIVE";
+      if (!criador || criador.deactivatedAt || (criador.role !== "ADMIN" && criador.role !== "PENTESTER")) return "CREATOR_INACTIVE";
       return null;
     }
     const app = await this.applications.findById(s.applicationId);
     if (!app || !app.isActive) return "APPLICATION_INACTIVE";
     if (app.companyId !== s.companyId) return "COMPANY_MISMATCH";
+    if (s.projectId) {
+      const project = await this.projects.findById(s.projectId);
+      if (!project || project.applicationId !== app.id || project.companyId !== app.companyId) return "COMPANY_MISMATCH";
+    }
     const semAutorizacao = motivoSemAutorizacao(app, this.agora());
     if (semAutorizacao) return semAutorizacao;
-    // O schema não tem "usuário desativado": inativo = sumiu ou deixou de ser ADMIN/PENTESTER.
     const criador = await this.users.findById(s.createdById);
-    if (!criador || (criador.role !== "ADMIN" && criador.role !== "PENTESTER")) return "CREATOR_INACTIVE";
+    if (!criador || criador.deactivatedAt || (criador.role !== "ADMIN" && criador.role !== "PENTESTER")) return "CREATOR_INACTIVE";
     if (criador.role === "PENTESTER" && (!s.projectId || !(await this.members.findOne(s.projectId, criador.id)))) return "NOT_MEMBER";
     return null;
   }

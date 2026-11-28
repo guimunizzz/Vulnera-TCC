@@ -9,9 +9,21 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-28 — Integração e QA real da Wave B2B
+
+Issue #84 integrada à `dev` em `54c6f36` por `0d669f4`, com nove conflitos resolvidos. O QA da versão `c4a3ff7` confirmou adesão com Turnstile real, aprovação única e assinatura ativa, além da separação de Alpha/Beta. A revisão independente aprovou com ressalvas e confirmou a minimização do diretório e das notificações de grafo após correção. [Relatório de QA integrado](../../../UNIFIED-B2B-QA-2026-11-28.md).
+
+## 2026-11-27 — Refinamentos finais da wave B2B
+
+A Central de solicitações reúne adesão e decisões comerciais para ADMIN. Páginas protegidas apresentam uma mensagem neutra para recursos indisponíveis, e as consultas dependentes aguardam a leitura principal. O frontend descarta dados e refresh da sessão anterior. Os testes focais e a preparação da rodada no Chrome constam no [relatório da wave](../../../UNIFIED-B2B-TENANT-SECURITY.md#refinamentos-finais-de-2026-11-27).
+
 ## 2026-11-26 — Resolução dos conflitos do PR #77
 
 **✅ 2026-11-26 — Conflitos do PR #77 resolvidos (8/8, 100%).** A feature/agent-ai integrou a dev em `65a792d`, com o assistente autenticado, o fluxo de acesso controlado e as permissões de triagem, agendamentos, conformidade e administração. Conferidas 26 montagens da API, 39 rotas Web e 92 chaves de configuração. As 27 combinações de rota e perfil exercitadas verificam permissões e uma instância do assistente. Builds API/Web, check Web (865/865 testes e 132/132 pares de contraste) e lint de 16 arquivos da API da integração aprovados. Os 112 testes focais de assistente, solicitação, ativação e administração de acesso passaram no MySQL descartável. A primeira execução integral do Jest foi interrompida pelo processo Node no Windows (código 3221226505). A segunda execução, com um worker reciclado por limite de memória, passou em 1.393/1.393 testes (90/90 suítes). O lint integral da API aponta quatro erros herdados de `graph-comment.model.ts` e `memory-job-queue.ts`. A decisão do assistente passou a ADR-064 para preservar o número da decisão da landing na dev.
+
+## 2026-11-25 — Adesão B2B, equipes e segurança de tenants
+
+Registrada a decisão [[ADR-058 - Adesao B2B, equipes e revogacao de sessoes]]. A primeira migration acrescenta condições comerciais da adesão, convites próprios de equipe e estado de sessão. A segunda permite registrar o encerramento administrativo de uma adesão aprovada e incompatível. Ambas foram aplicadas em MySQL isolado. O gate local foi aprovado com ressalvas após a revisão independente. Build, resultados e roteiro manual em [Adesão B2B, equipes e segurança de tenants](../../../UNIFIED-B2B-TENANT-SECURITY.md).
 
 ## 2026-11-25 — Issue #51, Etapa 7: validada localmente com ressalvas
 

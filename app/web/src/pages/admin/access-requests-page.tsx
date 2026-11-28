@@ -1,10 +1,12 @@
 ﻿/**
- * O que faz: permite consultar e decidir solicitações de acesso recebidas.
- * Por que existe: oferece triagem administrativa auditável sem alterar assinatura comercial.
+ * O que faz: centraliza adesões empresariais e solicitações comerciais para o ADMIN.
+ * Por que existe: reúne a navegação administrativa preservando os dois domínios de aprovação.
  * Quem consome: rota protegida de administração e equipe ADMIN.
  */
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useSearchParams } from "react-router-dom";
+import { PendingSubscriptionsPage } from "./pending-subscriptions-page";
 import { Alert } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogDescription, DialogFooter, DialogTitle } from "../../components/ui/dialog";
@@ -30,8 +32,39 @@ const LABELS: Record<AdminAccessRequestStatus | "ALL", string> = {
   ACTIVATED: "Conta ativada",
 };
 const statusOptions = Object.entries(LABELS).map(([valor, rotulo]) => ({ valor, rotulo }));
+const ENROLLMENT_LABELS = {
+  LEGACY: "Legada",
+  ELIGIBLE: "Plano compatível",
+  PLAN_NOT_FOUND: "Plano indisponível",
+  PLAN_UNAVAILABLE: "Plano indisponível",
+  PLAN_CHANGED: "Condições do plano alteradas",
+  COMPANY_CNPJ_CONFLICT: "CNPJ já cadastrado",
+} as const;
 
 export function AccessRequestsPage() {
+  const isAdmin = useAuthStore((state) => state.user?.role === "ADMIN");
+  const [searchParams] = useSearchParams();
+  const isCommercial = searchParams.get("section") === "commercial";
+
+  if (!isAdmin) return <section className="access-requests-page"><h1>Central de solicitações</h1><Alert tom="perigo">Acesso restrito a administradores.</Alert></section>;
+
+  return (
+    <section className="access-requests-page" data-ops-hero="governance" aria-labelledby="access-requests-title">
+      <header className="access-requests-header">
+        <p className="access-requests-eyebrow">Administração</p>
+        <h1 id="access-requests-title">Central de solicitações</h1>
+        <p>Revise adesões empresariais e solicitações comerciais em um só lugar.</p>
+      </header>
+      <nav className="access-requests-sections" aria-label="Seções da central de solicitações">
+        <Link to="/admin/access-requests" aria-current={!isCommercial ? "page" : undefined}>Adesões empresariais</Link>
+        <Link to="/admin/access-requests?section=commercial" aria-current={isCommercial ? "page" : undefined}>Solicitações comerciais</Link>
+      </nav>
+      {isCommercial ? <PendingSubscriptionsPage /> : <BusinessEnrollmentRequestsPanel />}
+    </section>
+  );
+}
+
+function BusinessEnrollmentRequestsPanel() {
   const role = useAuthStore((state) => state.user?.role);
   const isAdmin = role === "ADMIN";
   const [status, setStatus] = useState<AdminAccessRequestStatus | "ALL">("PENDING_REVIEW");
@@ -112,7 +145,14 @@ export function AccessRequestsPage() {
   });
 
   const selected = detailQuery.data;
-  const canReview = selected?.status === "PENDING_REVIEW" && Boolean(selected.emailVerifiedAt);
+  const canReview = selected?.status === "PENDING_REVIEW" && Boolean(selected.emailVerifiedAt)
+    && (selected.enrollmentEligibility === "LEGACY" || selected.enrollmentEligibility === "ELIGIBLE");
+  const incompatibleApproved = selected?.status === "APPROVED"
+    && Boolean(selected.enrollment)
+    && selected.enrollmentEligibility !== "LEGACY"
+    && selected.enrollmentEligibility !== "ELIGIBLE";
+  const rejectable = (selected?.status === "PENDING_REVIEW" && Boolean(selected.emailVerifiedAt)) || incompatibleApproved;
+  const rejectionReasonRequired = Boolean(incompatibleApproved);
   const canResend = selected?.status === "APPROVED" && !selected.invitation?.usedAt;
   const isBusy = mutation.isPending;
 
@@ -125,8 +165,12 @@ export function AccessRequestsPage() {
 
   function confirm() {
     if (!isAdmin || !action || inFlight.current) return;
-    if (action.type === "approve" && (action.request.status !== "PENDING_REVIEW" || !action.request.emailVerifiedAt)) return;
-    if (action.type === "reject" && (action.request.status !== "PENDING_REVIEW" || !action.request.emailVerifiedAt)) return;
+    if (action.type === "approve" && (!canReview || action.request.status !== "PENDING_REVIEW" || !action.request.emailVerifiedAt)) return;
+    if (action.type === "reject" && !rejectable) return;
+    if (action.type === "reject" && rejectionReasonRequired && !reason.trim()) {
+      setError("Informe o motivo para rejeitar uma adesão aprovada incompatível.");
+      return;
+    }
     if (action.type === "resend" && action.request.status !== "APPROVED") return;
     inFlight.current = true;
     mutation.mutate({ type: action.type, id: action.request.id, reason });
@@ -143,11 +187,10 @@ export function AccessRequestsPage() {
 
   const pages = Math.max(1, Math.ceil((listQuery.data?.total ?? 0) / PAGE_SIZE));
   return (
-    <section className="access-requests-page" data-ops-hero="governance" aria-labelledby="access-requests-title">
-      <header className="access-requests-header">
-        <p className="access-requests-eyebrow">Administração</p>
-        <h1 id="access-requests-title">Solicitações de acesso</h1>
-        <p>Revise os pedidos de criação de conta e acompanhe o histórico de decisões.</p>
+    <section className="access-requests-panel" aria-labelledby="business-enrollments-title">
+      <header className="access-requests-panel-heading">
+        <h2 id="business-enrollments-title">Adesões empresariais</h2>
+        <p>Aprove responsável, empresa e plano em uma única decisão. Pedidos de acesso legados e seus históricos continuam disponíveis nesta fila.</p>
       </header>
 
       {error && <Alert className="access-requests-alert" tom="perigo" aoFechar={() => setError(null)}>{error}</Alert>}
@@ -158,7 +201,7 @@ export function AccessRequestsPage() {
       <section className="access-requests-toolbar" aria-label="Filtros da fila">
         <label className="access-requests-filter-label" htmlFor="access-status-filter">Filtrar solicitações por estado</label>
         <Select id="access-status-filter" aria-label={`Filtrar solicitações por estado, ${LABELS[status]}`} opcoes={statusOptions} valor={status} aoMudar={(next) => { setStatus(next as AdminAccessRequestStatus | "ALL"); setPage(1); setSelectedId(null); setDeliveryFailed(false); }} />
-        <span className="access-requests-total">{listQuery.data?.total ?? 0} solicitações</span>
+        <span className="access-requests-total">{listQuery.data?.total ?? 0} {listQuery.data?.total === 1 ? "solicitação" : "solicitações"}</span>
       </section>
 
       {listQuery.isLoading ? <p role="status" className="access-requests-state">Carregando solicitações…</p> : null}
@@ -168,10 +211,10 @@ export function AccessRequestsPage() {
         <div className="access-requests-table-scroll">
           <table className="access-requests-table">
             <caption className="sr-only">Solicitações de acesso recebidas</caption>
-            <thead className={TABELA.cabecalho}><tr><th scope="col">Pessoa</th><th scope="col">Empresa</th><th scope="col">Recebida em</th><th scope="col">Estado</th><th scope="col">Ações</th></tr></thead>
+            <thead className={TABELA.cabecalho}><tr><th scope="col">Pessoa</th><th scope="col">Empresa</th><th scope="col">Adesão</th><th scope="col">Recebida em</th><th scope="col">Estado</th><th scope="col">Ações</th></tr></thead>
             <tbody>{listQuery.data.items.map((request) => <tr key={request.id} className={TABELA.linha} aria-selected={request.id === selectedId}>
               <th scope="row"><button className="access-requests-person" onClick={() => { setSelectedId(request.id); setEventPage(1); setDeliveryFailed(false); }}>{request.name}<span>{request.email}</span></button></th>
-              <td>{request.companyName}</td><td>{new Date(request.createdAt).toLocaleString("pt-BR")}</td><td>{LABELS[request.status]}</td>
+              <td>{request.companyName}</td><td>{request.enrollmentEligibility ? ENROLLMENT_LABELS[request.enrollmentEligibility] : request.enrollment ? "Plano selecionado" : "Legada"}</td><td>{new Date(request.createdAt).toLocaleString("pt-BR")}</td><td>{LABELS[request.status]}</td>
               <td><Button size="sm" variant="secundario" onClick={() => { setSelectedId(request.id); setEventPage(1); }}>Ver detalhes</Button></td>
             </tr>)}</tbody>
           </table>
@@ -188,9 +231,15 @@ export function AccessRequestsPage() {
         {detailQuery.isLoading && <p role="status">Carregando detalhes…</p>}
         {detailQuery.isError && <div><p>Não foi possível carregar o detalhe.</p><Button variant="secundario" onClick={() => void detailQuery.refetch()}>Tentar novamente</Button></div>}
         {selected && <>
-          <dl className="access-requests-facts"><div><dt>E-mail</dt><dd>{selected.email}</dd></div><div><dt>Telefone</dt><dd>{selected.phone ?? "Não informado"}</dd></div><div><dt>Estado</dt><dd>{LABELS[selected.status]}</dd></div><div><dt>E-mail verificado</dt><dd>{selected.emailVerifiedAt ? new Date(selected.emailVerifiedAt).toLocaleString("pt-BR") : "Ainda não"}</dd></div><div><dt>Expira em</dt><dd>{new Date(selected.expiresAt).toLocaleString("pt-BR")}</dd></div><div><dt>Motivo da recusa</dt><dd>{selected.rejectionReason ?? "—"}</dd></div></dl>
+          <dl className="access-requests-facts"><div><dt>Responsável</dt><dd>{selected.name}</dd></div><div><dt>E-mail</dt><dd>{selected.email}</dd></div><div><dt>Empresa</dt><dd>{selected.companyName}</dd></div><div><dt>Telefone</dt><dd>{selected.phone ?? "Não informado"}</dd></div><div><dt>Estado</dt><dd>{LABELS[selected.status]}</dd></div><div><dt>E-mail verificado</dt><dd>{selected.emailVerifiedAt ? new Date(selected.emailVerifiedAt).toLocaleString("pt-BR") : "Ainda não"}</dd></div><div><dt>Expira em</dt><dd>{new Date(selected.expiresAt).toLocaleString("pt-BR")}</dd></div><div><dt>Motivo da recusa</dt><dd>{selected.rejectionReason ?? "—"}</dd></div>
+            <div><dt>Adesão</dt><dd>{selected.enrollment ? "Solicitação unificada" : "Solicitação legada"}</dd></div>
+            {selected.enrollment && <><div><dt>CNPJ</dt><dd>{selected.enrollment.companyCnpj ?? "Não informado"}</dd></div><div><dt>Plano analisado</dt><dd>{selected.enrollment.planName} · {formatPrice(selected.enrollment.planPrice)}</dd></div><div><dt>Limites do plano</dt><dd>{selected.enrollment.planMaxApplications} {selected.enrollment.planMaxApplications === 1 ? "aplicação" : "aplicações"} · {selected.enrollment.planMaxProjects} {selected.enrollment.planMaxProjects === 1 ? "projeto" : "projetos"} · {selected.enrollment.planIncludesRemediation ? "com remediação" : "sem remediação"}</dd></div></>}
+            <div><dt>Compatibilidade atual</dt><dd>{ENROLLMENT_LABELS[selected.enrollmentEligibility]}</dd></div>
+          </dl>
+          {selected.enrollmentEligibility !== "ELIGIBLE" && selected.enrollmentEligibility !== "LEGACY" && <Alert className="access-requests-alert" tom="atencao">As condições desta adesão mudaram ou não estão disponíveis. Revise os dados antes de decidir. A solicitação aprovada pode ser rejeitada com um motivo.</Alert>}
           <div className="access-requests-actions">
-            {selected.status === "PENDING_REVIEW" && <><Button disabled={!canReview || isBusy} onClick={() => beginAction("approve", selected)}>Aprovar</Button><Button variant="destrutivo" disabled={!canReview || isBusy} onClick={() => beginAction("reject", selected)}>Rejeitar</Button></>}
+            {selected.status === "PENDING_REVIEW" && <Button disabled={!canReview || isBusy} onClick={() => beginAction("approve", selected)}>Aprovar</Button>}
+            {(selected.status === "PENDING_REVIEW" || incompatibleApproved) && <Button variant="destrutivo" disabled={!rejectable || isBusy} onClick={() => beginAction("reject", selected)}>Rejeitar</Button>}
             {selected.status === "APPROVED" && <Button variant="secundario" disabled={!canResend || isBusy || cooldownUntil > Date.now()} onClick={() => beginAction("resend", selected)}>Reenviar convite</Button>}
           </div>
         </>}
@@ -205,10 +254,17 @@ export function AccessRequestsPage() {
 
       <Dialog aberto={Boolean(action)} aoFechar={() => { if (!isBusy) setAction(null); }} tamanho={action?.type === "reject" ? "md" : "sm"}>
         <DialogTitle>{action?.type === "approve" ? "Aprovar solicitação?" : action?.type === "reject" ? "Rejeitar solicitação?" : "Reenviar convite?"}</DialogTitle>
-        <DialogDescription>{action?.type === "approve" ? "A pessoa receberá um convite para concluir a criação da conta." : action?.type === "reject" ? "A solicitação será marcada como rejeitada. O motivo é opcional." : "Um novo convite será enviado para o e-mail cadastrado."}</DialogDescription>
-        {action?.type === "reject" && <Field rotulo="Motivo (opcional)" dica="Até 2.000 caracteres.">{(attrs) => <Input {...attrs} value={reason} maxLength={2000} onChange={(event) => setReason(event.target.value)} />}</Field>}
+        <DialogDescription>{action?.type === "approve" ? action.request.enrollment ? "Esta decisão aprova o responsável, a empresa e o plano solicitado. A assinatura inicial não exige outra aprovação; o responsável receberá um convite para ativar a conta." : "A pessoa receberá um convite para concluir a criação da conta." : action?.type === "reject" ? rejectionReasonRequired ? "A aprovação será encerrada porque as condições analisadas não são mais compatíveis. Informe o motivo para registrar a decisão." : "A solicitação será marcada como rejeitada. O motivo é opcional." : "Um novo convite será enviado para o e-mail cadastrado."}</DialogDescription>
+        {action?.type === "reject" && <Field rotulo={rejectionReasonRequired ? "Motivo obrigatório" : "Motivo (opcional)"} obrigatorio={rejectionReasonRequired} dica="Até 2.000 caracteres.">{(attrs) => <Input {...attrs} value={reason} maxLength={2000} onChange={(event) => setReason(event.target.value)} />}</Field>}
         <DialogFooter><Button variant="secundario" onClick={() => setAction(null)} disabled={isBusy}>Cancelar</Button><Button variant={action?.type === "reject" ? "destrutivo" : "primario"} onClick={confirm} disabled={isBusy || (action?.type === "resend" && cooldownUntil > Date.now())}>{isBusy ? "Processando…" : "Confirmar"}</Button></DialogFooter>
       </Dialog>
     </section>
   );
+}
+
+function formatPrice(value: string): string {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "Valor indisponível";
+  if (parsed <= 0) return "Sob consulta";
+  return parsed.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }

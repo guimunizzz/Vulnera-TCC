@@ -28,10 +28,50 @@ import { AfetaTab } from "../components/threat-intel/afeta-tab";
 import { InventarioTab } from "../components/threat-intel/inventario-tab";
 import { FeedTab, FontesTab } from "../components/threat-intel/feed-tab";
 import { useAuthStore } from "../store/auth.store";
+import { haQuanto } from "../lib/threat-intel";
+import type { ResumoTI } from "../types/threat-intel.types";
 import { riscoDoThreatIntel } from "../features/atmosfera-3d/risco";
 import { usePublicarRisco } from "../features/atmosfera-3d/atmosfera.store";
 
 const CLASSE_SELECT = "h-touch rounded-control border border-default bg-surface px-3 text-sm text-fg";
+const FONTES_OPERACIONAIS: { rotulo: string; chaves: string[] }[] = [
+  { rotulo: "CISA KEV", chaves: ["KEV"] },
+  { rotulo: "NVD", chaves: ["NVD_FEED", "NVD_PRODUTOS"] },
+  { rotulo: "OSV", chaves: ["OSV"] },
+  { rotulo: "FIRST EPSS", chaves: ["EPSS"] },
+];
+
+function FontesResumo({
+  execucao,
+  sincronizando,
+}: {
+  execucao: ResumoTI["ultimaExecucao"];
+  sincronizando: boolean;
+}) {
+  if (!execucao) {
+    return <p className="text-sm text-fg-muted">A primeira sincronização ainda não rodou.</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-4 rounded-container border border-subtle bg-surface p-4">
+      <p className="text-sm text-fg-muted">
+        {sincronizando ? "Sincronização em andamento." : `Última sincronização ${haQuanto(execucao.finishedAt ?? execucao.startedAt)}`}
+      </p>
+      <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm" aria-label="Disponibilidade das fontes">
+        {FONTES_OPERACIONAIS.map((fonte) => {
+          const resultados = fonte.chaves
+            .map((chave) => execucao.sources[chave])
+            .filter((resultado): resultado is NonNullable<typeof resultado> => resultado !== undefined);
+          const indisponivel = resultados.some((resultado) => !resultado.ok);
+          const estado = resultados.length === 0
+            ? "Sem atualização nesta execução"
+            : indisponivel ? "Indisponível" : "Disponível";
+          return <li key={fonte.rotulo}>{fonte.rotulo}: {estado}</li>;
+        })}
+      </ul>
+    </div>
+  );
+}
 
 export function ThreatIntelPage() {
   const getErrorMessage = useApiError();
@@ -127,7 +167,13 @@ export function ThreatIntelPage() {
                   conteudo: <InventarioTab companyId={companyId} permissoes={r.permissoes} />,
                 },
                 { id: "feed", rotulo: "Feed de CVEs", conteudo: <FeedTab companyId={companyId} /> },
-                { id: "fontes", rotulo: "Fontes", conteudo: <FontesTab companyId={companyId} permissoes={r.permissoes} /> },
+                {
+                  id: "fontes",
+                  rotulo: "Fontes",
+                  conteudo: r.permissoes.sincronizar
+                    ? <FontesTab companyId={companyId} permissoes={r.permissoes} />
+                    : <FontesResumo execucao={r.ultimaExecucao} sincronizando={r.sincronizando} />,
+                },
               ]}
             />
           )}

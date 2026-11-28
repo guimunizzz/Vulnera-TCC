@@ -55,7 +55,8 @@ function useAtalhoDaPaleta(alternar: () => void) {
 
 export function PaletaDeComandos({ aberta, aoMudar }: { aberta: boolean; aoMudar(aberta: boolean): void }) {
   const navigate = useNavigate();
-  const papel = useAuthStore((s) => s.user?.role);
+  const user = useAuthStore((s) => s.user);
+  const papel = user?.role;
   const { definirTema } = useTheme();
   const [consulta, setConsulta] = useState("");
   const [buscaAtrasada, setBuscaAtrasada] = useState("");
@@ -95,7 +96,7 @@ export function PaletaDeComandos({ aberta, aoMudar }: { aberta: boolean; aoMudar
 
   const comandos = useMemo<Comando[]>(() => {
     const ir = (para: string) => executar(() => navigate(para));
-    const lista: Comando[] = itensDoPapel(papel).map((item) => ({
+    const lista: Comando[] = itensDoPapel(papel, user?.companyRole, user?.companyId).map((item) => ({
       id: `ir:${item.para}`,
       grupo: "Ir para",
       rotulo: item.rotulo,
@@ -136,7 +137,7 @@ export function PaletaDeComandos({ aberta, aoMudar }: { aberta: boolean; aoMudar
     return lista;
     // `executar` e `ir` são recriados a cada render; o que muda a lista são os dados.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [papel, aplicacoes.data, projetos.data, vulnerabilidades.data, buscaAtrasada, navigate, definirTema]);
+  }, [papel, user?.companyRole, user?.companyId, aplicacoes.data, projetos.data, vulnerabilidades.data, buscaAtrasada, navigate, definirTema]);
 
   // Sem consulta, a paleta mostra navegação e ações; entidades só quando se busca.
   const visiveis = useMemo(() => {

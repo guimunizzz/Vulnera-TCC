@@ -52,8 +52,11 @@ const ROTULO_PAPEL: Record<string, string> = {
   PENTESTER: "Analista",
 };
 
+const ROTULO_EMPRESARIAL: Record<string, string | undefined> = { OWNER: "Responsável", MEMBER: "Membro" };
+
 export function AppLayout() {
   const user = useAuthStore((s) => s.user);
+  const companyRoleLabel = user?.role === "CLIENT" ? ROTULO_EMPRESARIAL[user.companyRole ?? ""] : undefined;
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
@@ -73,6 +76,7 @@ export function AppLayout() {
   }, []);
 
   async function sair(): Promise<void> {
+    const sessionVersion = useAuthStore.getState().sessionVersion;
     if (refreshToken) {
       try {
         await authApi.logout(refreshToken);
@@ -80,6 +84,7 @@ export function AppLayout() {
         // mesmo se a chamada falhar, o estado local é limpo do mesmo jeito
       }
     }
+    if (useAuthStore.getState().sessionVersion !== sessionVersion) return;
     clearAuth();
     navigate("/login");
   }
@@ -148,7 +153,10 @@ export function AppLayout() {
                   <Avatar nome={user?.name ?? "?"} tamanho="sm" />
                   <span className="hidden text-left sm:flex sm:flex-col">
                     <span className="text-sm text-fg">{user?.name}</span>
-                    <span className="text-xs text-fg-muted">{ROTULO_PAPEL[user?.role ?? ""] ?? user?.role}</span>
+                    <span className="text-xs text-fg-muted">
+                      {ROTULO_PAPEL[user?.role ?? ""] ?? user?.role}
+                      {companyRoleLabel && ` · ${companyRoleLabel}`}
+                    </span>
                   </span>
                 </Button>
               }

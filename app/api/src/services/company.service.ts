@@ -1,5 +1,4 @@
 import { CompanyRepository } from "../repositories/company.repository";
-import { PlanRepository } from "../repositories/plan.repository";
 import { UserRepository } from "../repositories/user.repository";
 import {
   CompanyEntity,
@@ -16,7 +15,6 @@ interface Actor {
 export class CompanyService {
   constructor(
     private readonly repository: CompanyRepository,
-    private readonly planRepository: PlanRepository,
     private readonly userRepository: UserRepository,
   ) {}
 
@@ -40,60 +38,31 @@ export class CompanyService {
 
   /** Quem cria vira dono (User.companyId + companyRole="OWNER"). */
   async create(actor: Actor, dto: CreateCompanyDTO): Promise<CompanyEntity> {
-    const user = await this.userRepository.findById(actor.userId);
-    if (user?.companyId) throw new Error("USER_ALREADY_HAS_COMPANY");
-
-    const plan = await this.planRepository.findById(dto.planId);
-    if (!plan) throw new Error("PLAN_NOT_FOUND");
-
-    if (dto.cnpj) {
-      const existing = await this.repository.findByCnpj(dto.cnpj);
-      if (existing) throw new Error("COMPANY_ALREADY_EXISTS");
-    }
-
-    const created = await this.repository.createWithOwner(actor.userId, dto).catch((error: unknown) => {
-      // A verificação prévia de CNPJ melhora a mensagem comum; a constraint
-      // única ainda precisa decidir corretamente duas criações concorrentes.
-      if (dto.cnpj && isUniqueConstraintViolation(error)) {
-        throw new Error("COMPANY_ALREADY_EXISTS");
-      }
-      throw error;
-    });
+    const created = await this.repository.createWithOwner(actor.userId, dto).catch(handleCompanyWriteError);
     return new CompanyEntity(created);
   }
 
   async update(actor: Actor, id: string, dto: UpdateCompanyDTO): Promise<CompanyEntity> {
-    await this.assertCanEdit(actor, id);
-
-    if (dto.planId !== undefined) {
-      const plan = await this.planRepository.findById(dto.planId);
-      if (!plan) throw new Error("PLAN_NOT_FOUND");
-    }
-    if (dto.cnpj !== undefined) {
-      const existing = await this.repository.findByCnpj(dto.cnpj);
-      if (existing && existing.id !== id) throw new Error("COMPANY_ALREADY_EXISTS");
-    }
-
-    const updated = await this.repository.update(id, dto);
+    const updated = await this.repository.update(id, actor.userId, dto).catch(handleCompanyWriteError);
     return new CompanyEntity(updated);
   }
 
   async delete(id: string): Promise<void> {
     await this.getById(id);
-    await this.repository.delete(id);
-  }
-
-  /** ADMIN edita qualquer company; CLIENT só a própria. */
-  private async assertCanEdit(actor: Actor, id: string): Promise<void> {
-    await this.getById(id);
-    if (actor.role === "ADMIN") return;
-
-    const user = await this.userRepository.findById(actor.userId);
-    if (!user?.companyId || user.companyId !== id) throw new Error("FORBIDDEN");
+    try {
+      await this.repository.delete(id);
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "P2003") {
+        throw new Error("COMPANY_HAS_HISTORY");
+      }
+      throw error;
+    }
   }
 }
 
-function isUniqueConstraintViolation(error: unknown): boolean {
-  return typeof error === "object" && error !== null
-    && "code" in error && (error as { code?: unknown }).code === "P2002";
+function handleCompanyWriteError(error: unknown): never {
+  if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+    throw new Error("COMPANY_ALREADY_EXISTS");
+  }
+  throw error;
 }

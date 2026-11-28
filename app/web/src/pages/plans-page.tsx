@@ -48,7 +48,7 @@ export function PlansPage() {
 
   // Menor para maior por CAPACIDADE — o preço sozinho não serve de ranking
   // porque o Enterprise usa 0 para "sob consulta".
-  const ordenados = [...(planos ?? [])].sort((a, b) => a.maxApplications - b.maxApplications);
+  const ordenados = (planos ?? []).filter((plano) => plano.isActive).sort((a, b) => a.maxApplications - b.maxApplications);
 
   return (
     <div className="min-h-dvh bg-canvas px-4 py-16">
@@ -92,11 +92,10 @@ export function PlansPage() {
 
                   <ul className="mt-6 flex flex-1 flex-col gap-3 text-sm text-fg-secondary">
                     <li className="flex items-center gap-2">
-                      <Marca /> Até <strong className="font-semibold text-fg">{plano.maxApplications}</strong> aplicações
+                      <Marca /> Até <strong className="font-semibold text-fg">{plano.maxApplications}</strong> {plano.maxApplications === 1 ? "aplicação" : "aplicações"}
                     </li>
                     <li className="flex items-center gap-2">
-                      <Marca /> Até <strong className="font-semibold text-fg">{plano.maxProjects}</strong> projetos
-                      simultâneos
+                      <Marca /> Até <strong className="font-semibold text-fg">{plano.maxProjects}</strong> {plano.maxProjects === 1 ? "projeto simultâneo" : "projetos simultâneos"}
                     </li>
                     <li className="flex items-center gap-2">
                       {plano.includesRemediation ? <Marca /> : <MarcaAusente />}

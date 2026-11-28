@@ -143,6 +143,10 @@
   white-space: nowrap;
 }
 
+.app-sidebar-link[href="/admin/access-requests"] > span:not(.sr-only) {
+  white-space: normal;
+}
+
 .app-sidebar-new {
   position: absolute;
   /* Canto superior direito do ícone de 18 px, que começa no padding do item. */

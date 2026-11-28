@@ -3,10 +3,16 @@
  * Centraliza estados, normalização e preparação de transições; consumido pelos
  * repositories e pelos futuros services, sem emitir credenciais ou expor HTTP.
  */
-import type { AccessRequest as PrismaAccessRequest, AccessRequestEvent } from "@prisma/client";
+import type {
+  AccessRequest as PrismaAccessRequest,
+  AccessRequestEnrollment as PrismaAccessRequestEnrollment,
+  AccessRequestEvent,
+  Plan as PrismaPlan,
+} from "@prisma/client";
 import type { UserRole } from "./user.model";
 
 export type AccessRequest = PrismaAccessRequest;
+export type AccessRequestEnrollment = PrismaAccessRequestEnrollment;
 export type { AccessRequestEvent };
 
 export const ACCESS_REQUEST_STATUSES = [
@@ -47,6 +53,33 @@ export type CreateAccessRequestDTO = {
   phone?: string | null;
 };
 
+/** Adesão pública nova: dados pessoais mais uma oferta selecionada do catálogo. */
+export type CreateAccessRequestEnrollmentDTO = CreateAccessRequestDTO & {
+  companyCnpj?: string | null;
+  planId: string;
+};
+
+/** O snapshot permanece vinculado ao plano selecionado e não aceita trocas administrativas. */
+export function matchesAccessRequestPlanSnapshot(
+  enrollment: Pick<
+    AccessRequestEnrollment,
+    | "planId"
+    | "planName"
+    | "planPrice"
+    | "planMaxApplications"
+    | "planMaxProjects"
+    | "planIncludesRemediation"
+  >,
+  plan: PrismaPlan,
+): boolean {
+  return plan.id === enrollment.planId
+    && plan.name === enrollment.planName
+    && plan.price.equals(enrollment.planPrice)
+    && plan.maxApplications === enrollment.planMaxApplications
+    && plan.maxProjects === enrollment.planMaxProjects
+    && plan.includesRemediation === enrollment.planIncludesRemediation;
+}
+
 /** DTO interno produzido pela entidade; não aceitar este objeto de um body HTTP. */
 export type AccessRequestTransitionDTO = {
   fromStatus: AccessRequestStatus;
@@ -68,7 +101,10 @@ export class AccessRequestEntity {
     now: Date = new Date(),
   ): AccessRequestTransitionDTO {
     const fromStatus = this.data.status as AccessRequestStatus;
-    if (!ACCESS_REQUEST_TRANSITIONS[fromStatus]?.includes(toStatus)) {
+    const approvalInvalidation = fromStatus === "APPROVED"
+      && toStatus === "REJECTED"
+      && Boolean(reason?.trim());
+    if (!ACCESS_REQUEST_TRANSITIONS[fromStatus]?.includes(toStatus) && !approvalInvalidation) {
       throw new Error("INVALID_STATUS_TRANSITION");
     }
     if (toStatus === "EXPIRED") {

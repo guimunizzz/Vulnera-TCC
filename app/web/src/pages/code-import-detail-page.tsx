@@ -34,6 +34,8 @@ import { Button, LinkButton } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Skeleton } from "../components/ui/card";
 import { EmptyState, ErrorState } from "../components/ui/empty-state";
+import { ResourceLoadError, ResourceUnavailable } from "../components/ui/resource-unavailable";
+import { getResourceFailure } from "../lib/resource-failure";
 import { Tabs } from "../components/ui/tabs";
 import { TABELA } from "../components/ui/table-estilos";
 import { DastTriageControls } from "../components/dast/dast-triage-controls";
@@ -126,8 +128,9 @@ export function CodeImportDetailPage() {
   const [, setSearchParams] = useSearchParams();
 
   const importQuery = useQuery({ queryKey: ["code-imports", id], queryFn: () => codeImportsApi.getById(id!), enabled: !!id });
-  const findingsQuery = useQuery({ queryKey: ["code-imports", id, "findings"], queryFn: () => codeImportsApi.listFindings(id!), enabled: !!id });
-  const compareQuery = useQuery({ queryKey: ["code-imports", id, "compare"], queryFn: () => codeImportsApi.compare(id!), enabled: !!id });
+  const importAvailable = importQuery.isSuccess && !!importQuery.data;
+  const findingsQuery = useQuery({ queryKey: ["code-imports", id, "findings"], queryFn: () => codeImportsApi.listFindings(id!), enabled: importAvailable });
+  const compareQuery = useQuery({ queryKey: ["code-imports", id, "compare"], queryFn: () => codeImportsApi.compare(id!), enabled: importAvailable });
 
   const findings = useMemo(() => findingsQuery.data ?? [], [findingsQuery.data]);
   const novos = useMemo(
@@ -185,15 +188,10 @@ export function CodeImportDetailPage() {
     );
   }
 
-  if (importQuery.isError || !importQuery.data) {
-    return (
-      <ErrorState
-        titulo="Importação indisponível"
-        descricao={importQuery.error ? getErrorMessage(importQuery.error) : "Não encontramos esta importação."}
-        aoTentarNovamente={() => importQuery.refetch()}
-      />
-    );
-  }
+  const failure = getResourceFailure(importQuery.error);
+  if (failure === "unavailable") return <ResourceUnavailable backTo="/sast-sca" backLabel="Voltar para SAST/SCA" />;
+  if (failure) return <ResourceLoadError failure={failure} onRetry={() => void importQuery.refetch()} />;
+  if (!importQuery.data) return <ResourceUnavailable backTo="/sast-sca" backLabel="Voltar para SAST/SCA" />;
 
   const imp = importQuery.data;
   const alternarSeveridade = (s: CodeSeverity) =>

@@ -3,6 +3,8 @@ import { app } from "../../src/app";
 import { cleanDatabase } from "../setup";
 import { seedUser } from "../fixtures/users.fixture";
 import { seedPlan } from "../fixtures/plans.fixture";
+import { seedCompany } from "../fixtures/companies.fixture";
+import { seedSubscription } from "../fixtures/subscriptions.fixture";
 import { loginAs } from "../fixtures/auth.fixture";
 
 const PASSWORD = "senha12345";
@@ -115,5 +117,21 @@ describe("Plan (list/getById/create/update/delete)", () => {
 
     const getDeleted = await request(app).get(`/api/plans/${planB.id}`);
     expect(getDeleted.status).toBe(404);
+  });
+
+  it("ADMIN pode desativar oferta, preservando as condições de uma assinatura ativa", async () => {
+    const plan = await seedPlan({ name: "Contrato em vigor" });
+    const company = await seedCompany({ name: "Empresa", planId: plan.id });
+    await seedSubscription({ companyId: company.id, planId: plan.id, status: "ACTIVE" });
+    const admin = await seedUser({ name: "Admin", email: "plan-admin@vulnera.local", password: PASSWORD, role: "ADMIN" });
+    const token = await loginAs(app, admin.email, PASSWORD);
+    const url = `/api/plans/${plan.id}`;
+    const changed = await request(app).put(url).set("Authorization", `Bearer ${token}`).send({ maxProjects: 1 });
+    expect(changed.status).toBe(409);
+    expect(changed.body.error).toBe("PLAN_HAS_ACTIVE_SUBSCRIPTIONS");
+
+    const deactivated = await request(app).put(url).set("Authorization", `Bearer ${token}`).send({ isActive: false });
+    expect(deactivated.status).toBe(200);
+    expect(deactivated.body).toMatchObject({ isActive: false, maxProjects: plan.maxProjects });
   });
 });

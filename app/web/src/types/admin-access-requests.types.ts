@@ -28,9 +28,31 @@ export interface AdminAccessRequest {
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
+  enrollment: AdminAccessRequestEnrollment | null;
+  enrollmentEligibility?: AdminAccessRequestEnrollmentEligibility;
 }
 
+export interface AdminAccessRequestEnrollment {
+  companyCnpj: string | null;
+  planId: string;
+  planName: string;
+  planPrice: string;
+  planMaxApplications: number;
+  planMaxProjects: number;
+  planIncludesRemediation: boolean;
+}
+
+export type AdminAccessRequestEnrollmentEligibility =
+  | "LEGACY"
+  | "ELIGIBLE"
+  | "PLAN_NOT_FOUND"
+  | "PLAN_UNAVAILABLE"
+  | "PLAN_CHANGED"
+  | "COMPANY_CNPJ_CONFLICT";
+
 export interface AdminAccessRequestDetail extends AdminAccessRequest {
+  enrollment: AdminAccessRequestEnrollment | null;
+  enrollmentEligibility: AdminAccessRequestEnrollmentEligibility;
   invitation: {
     issuedAt: string;
     expiresAt: string;

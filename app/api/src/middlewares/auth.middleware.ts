@@ -12,7 +12,10 @@
  */
 
 import type { NextFunction, Request, Response } from "express";
-import { verifyAccessToken, type JwtPayload } from "../utils/jwt.util";
+import { makeAuthService } from "../factories/auth.factory";
+import type { JwtPayload } from "../utils/jwt.util";
+
+const authService = makeAuthService();
 
 // Aumenta o tipo Request do Express pra incluir nosso payload
 declare global {
@@ -34,11 +37,15 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
 
   const token = header.slice("Bearer ".length).trim();
 
-  try {
-    const payload = verifyAccessToken(token);
+  void authService.authenticateAccessToken(token).then((payload) => {
     req.user = payload;
     next();
-  } catch {
-    res.status(401).json({ code: "INVALID_TOKEN", message: "Token inválido ou expirado" });
-  }
+  }).catch((error: unknown) => {
+    if (error instanceof Error && error.message === "INVALID_TOKEN") {
+      res.status(401).json({ code: "INVALID_TOKEN", message: "Token inválido ou expirado" });
+      return;
+    }
+    console.error("AuthMiddleware.identity", error);
+    res.status(500).json({ code: "INTERNAL_ERROR", message: "Erro interno" });
+  });
 }

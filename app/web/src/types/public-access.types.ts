@@ -8,6 +8,8 @@ export interface RequestAccessInput {
   name: string;
   email: string;
   companyName: string;
+  planId: string;
+  companyCnpj?: string;
   phone?: string;
   captchaToken: string;
 }

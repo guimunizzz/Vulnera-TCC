@@ -50,6 +50,8 @@ export interface UserResponseDTO {
    * um botão que vai dar 403.
    */
   companyRole: string | null;
+  /** Capability persistida para retomar somente o onboarding legado permitido. */
+  legacyOnboardingAllowed: boolean;
   createdAt: Date;
 }
 
@@ -66,6 +68,10 @@ export interface AssigneeCandidateDTO {
  * Sempre que for retornar User na API, use UserEntity.toResponse(user).
  */
 export class UserEntity {
+  static toDirectoryEntry({ id, name }: User): AssigneeCandidateDTO {
+    return { id, name };
+  }
+
   static toResponse(u: User): UserResponseDTO {
     return {
       id: u.id,
@@ -74,6 +80,7 @@ export class UserEntity {
       role: u.role as UserRole,
       companyId: u.companyId,
       companyRole: u.companyRole,
+      legacyOnboardingAllowed: u.legacyOnboardingAllowed,
       createdAt: u.createdAt,
     };
   }

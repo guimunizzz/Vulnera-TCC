@@ -7,8 +7,10 @@
  * fast refresh do Vite continuar funcionando.
  */
 
-import { CalendarClock, Check, Clock3, FileCode2, FileText, Folder, Inbox, LayoutDashboard, ListTodo, Monitor, Network, Radar, Scale, ScanLine, Search, ShieldCheck, UserPlus, type LucideIcon } from "lucide-react";
+import { CalendarClock, Clock3, FileCode2, FileText, Folder, Inbox, LayoutDashboard, ListTodo, Monitor, Network, Radar, Scale, ScanLine, Search, ShieldCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
 import type { UserRole } from "../../types/auth.types";
+
+type CompanyRole = "OWNER" | "MEMBER";
 
 export interface ItemNav {
   para: string;
@@ -16,6 +18,8 @@ export interface ItemNav {
   icone: LucideIcon;
   /** Se definido, só esses papéis veem o item. */
   papeis?: UserRole[];
+  /** Exige também vínculo empresarial com um dos papéis definidos. */
+  companyRoles?: CompanyRole[];
   /**
    * Selo "new" no canto do item. Fixo de propósito (decisão de 2026-11-13):
    * some quando alguém tirar daqui, não por visita — previsível na demo.
@@ -60,15 +64,26 @@ export const GRUPOS: GrupoNav[] = [
     rotulo: "Administração",
     itens: [
       { para: "/settings/sla", rotulo: "Políticas de SLA", papeis: ["ADMIN", "CLIENT"], icone: Clock3 },
-      { para: "/admin/access-requests", rotulo: "Solicitações de acesso", papeis: ["ADMIN"], icone: UserPlus },
-      { para: "/admin/subscriptions", rotulo: "Aprovações de assinatura", papeis: ["ADMIN"], icone: Check },
+      { para: "/admin/access-requests", rotulo: "Central de solicitações", papeis: ["ADMIN"], icone: UserPlus },
       // ADR-056 — painel de filas (contagens e falhas do BullMQ). Só ADMIN, como a rota.
       { para: "/admin/filas", rotulo: "Filas", papeis: ["ADMIN"], icone: ListTodo, novo: true },
     ],
   },
+  {
+    rotulo: "Empresa",
+    itens: [{ para: "/team", rotulo: "Minha equipe", papeis: ["CLIENT"], companyRoles: ["OWNER", "MEMBER"], icone: Users }],
+  },
 ];
 
 /** Os itens que um papel enxerga (a mesma regra da barra lateral). */
-export function itensDoPapel(papel: UserRole | undefined): ItemNav[] {
-  return GRUPOS.flatMap((g) => g.itens).filter((item) => !item.papeis || (papel !== undefined && item.papeis.includes(papel)));
+export function itensDoPapel(
+  papel: UserRole | undefined,
+  companyRole?: string | null,
+  companyId?: string | null,
+): ItemNav[] {
+  return GRUPOS.flatMap((g) => g.itens).filter((item) => {
+    const papelPermitido = !item.papeis || (papel !== undefined && item.papeis.includes(papel));
+    const empresaPermitida = !item.companyRoles || (!!companyId && item.companyRoles.some((role) => role === companyRole));
+    return papelPermitido && empresaPermitida;
+  });
 }

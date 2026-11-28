@@ -3,7 +3,10 @@
  * Protege reserva, envio neutro e confirmação; consumido pelo Jest de integração.
  */
 import { prisma } from "../../src/database/prisma.database";
-import type { CreateAccessRequestDTO } from "../../src/models/access-request.model";
+import type {
+  CreateAccessRequestDTO,
+  CreateAccessRequestEnrollmentDTO,
+} from "../../src/models/access-request.model";
 import type { EmailMessage } from "../../src/models/email.model";
 import { AccessRequestRepository } from "../../src/repositories/access-request.repository";
 import { AccessRequestService } from "../../src/services/access-request.service";
@@ -11,6 +14,7 @@ import { EmailVerificationService } from "../../src/services/email-verification.
 import { hashAccessToken } from "../../src/utils/access-token.util";
 import { FakeEmailSender } from "../fixtures/fake-email-sender";
 import { seedUser } from "../fixtures/users.fixture";
+import { seedPlan } from "../fixtures/plans.fixture";
 import { cleanDatabase } from "../setup";
 
 const requests = new AccessRequestRepository(prisma);
@@ -26,6 +30,7 @@ const INPUT: CreateAccessRequestDTO = {
 };
 
 let now: Date;
+let eligiblePlanId: string;
 let sender: FakeEmailSender;
 let verification: EmailVerificationService;
 let service: AccessRequestService;
@@ -37,6 +42,12 @@ function configureService(nextSender = new FakeEmailSender()): void {
     clock: () => new Date(now),
     cooldownMs: COOLDOWN_MS,
   });
+}
+
+function enrollmentInput(
+  overrides: Partial<CreateAccessRequestEnrollmentDTO> = {},
+): CreateAccessRequestEnrollmentDTO {
+  return { ...INPUT, planId: eligiblePlanId, ...overrides };
 }
 
 function tokenFrom(message: EmailMessage): string {
@@ -52,14 +63,16 @@ async function activeRequest(email = INPUT.email) {
 beforeEach(async () => {
   await cleanDatabase();
   now = new Date("2026-10-20T12:00:00.000Z");
+  eligiblePlanId = (await seedPlan({ name: "public-service-plan" })).id;
   configureService();
 });
 
 describe("AccessRequestService — solicitação pública", () => {
   it("cria pedido e verificação, reutiliza duplicata sem alterar dados pessoais", async () => {
-    await service.request(INPUT);
+    await service.request(enrollmentInput());
+    const alternatePlan = await seedPlan({ name: "alternate-public-service-plan", price: 250 });
     await service.request({
-      ...INPUT,
+      ...enrollmentInput({ planId: alternatePlan.id, companyCnpj: "12345678000190" }),
       name: "Nome enviado na duplicata",
       email: " PUBLIC-ACCESS@EMPRESA.LOCAL ",
       companyName: "Empresa enviada na duplicata",
@@ -74,6 +87,8 @@ describe("AccessRequestService — solicitação pública", () => {
     expect(await prisma.emailVerificationToken.count()).toBe(1);
     expect(await prisma.emailVerificationToken.findUnique({ where: { accessRequestId: row!.id } }))
       .toMatchObject({ tokenHash: hashAccessToken(tokenFrom(sender.messages[0])), usedAt: null, revokedAt: null });
+    expect(await prisma.accessRequestEnrollment.findUnique({ where: { accessRequestId: row!.id } }))
+      .toMatchObject({ planId: eligiblePlanId, planName: "public-service-plan", companyCnpj: null });
     expect(await Promise.all([
       prisma.user.count(), prisma.company.count(), prisma.subscription.count(),
       prisma.refreshToken.count(), prisma.auditLog.count(),
@@ -82,9 +97,9 @@ describe("AccessRequestService — solicitação pública", () => {
 
   it("serializa pedidos públicos concorrentes equivalentes e envia uma mensagem", async () => {
     await Promise.all([
-      service.request(INPUT),
-      service.request({ ...INPUT, email: " PUBLIC-ACCESS@EMPRESA.LOCAL " }),
-      service.request({ ...INPUT, email: "Public-Access@empresa.local" }),
+      service.request(enrollmentInput()),
+      service.request(enrollmentInput({ email: " PUBLIC-ACCESS@EMPRESA.LOCAL " })),
+      service.request(enrollmentInput({ email: "Public-Access@empresa.local" })),
     ]);
 
     expect(await prisma.accessRequest.count()).toBe(1);
@@ -95,7 +110,7 @@ describe("AccessRequestService — solicitação pública", () => {
   });
 
   it("persiste o cooldown entre aliases e serializa reenvios simultâneos", async () => {
-    await service.request(INPUT);
+    await service.request(enrollmentInput());
     const firstTokenSlot = await prisma.emailVerificationToken.findFirst();
     expect(firstTokenSlot).not.toBeNull();
     const firstHash = firstTokenSlot!.tokenHash;
@@ -105,7 +120,7 @@ describe("AccessRequestService — solicitação pública", () => {
     await Promise.all([
       service.resend("PUBLIC-ACCESS@EMPRESA.LOCAL"),
       service.resend(" public-access@empresa.local "),
-      service.request({ ...INPUT, email: "Public-Access@empresa.local" }),
+      service.request(enrollmentInput({ email: "Public-Access@empresa.local" })),
     ]);
     expect(sender.messages).toHaveLength(1);
     expect((await prisma.emailVerificationToken.findFirst())?.tokenHash).toBe(firstHash);
@@ -114,7 +129,7 @@ describe("AccessRequestService — solicitação pública", () => {
     await Promise.all([
       service.resend("PUBLIC-ACCESS@EMPRESA.LOCAL"),
       service.resend(" public-access@empresa.local "),
-      service.request(INPUT),
+      service.request(enrollmentInput()),
     ]);
     expect(sender.messages).toHaveLength(2);
     expect((await prisma.emailVerificationToken.findFirst())?.tokenHash).not.toBe(firstHash);
@@ -128,7 +143,7 @@ describe("AccessRequestService — solicitação pública", () => {
   ])("consulta User pela collation do MySQL e não envia para conta existente (%s / %s)", async (stored, submitted) => {
     await seedUser({ name: "Conta antiga", email: stored, password: PASSWORD, role: "CLIENT" });
 
-    await service.request({ ...INPUT, email: submitted });
+    await service.request(enrollmentInput({ email: submitted }));
     await service.resend(submitted);
 
     expect(await prisma.user.count()).toBe(1);
@@ -142,7 +157,7 @@ describe("AccessRequestService — solicitação pública", () => {
     const old = await requests.createIfEmailAvailable(INPUT, createdAt);
     expect(old).not.toBeNull();
 
-    await service.request({ ...INPUT, name: "Nome atualizado", companyName: "Nova empresa", phone: null });
+    await service.request(enrollmentInput({ name: "Nome atualizado", companyName: "Nova empresa", phone: null }));
 
     const history = await prisma.accessRequest.findMany({ orderBy: { createdAt: "asc" } });
     expect(history).toHaveLength(2);
@@ -162,14 +177,14 @@ describe("AccessRequestService — solicitação pública", () => {
   });
 
   it("substitui reserva vencida uma vez sob concorrência e revoga o token anterior", async () => {
-    await service.request(INPUT);
+    await service.request(enrollmentInput());
     const old = await activeRequest();
     const oldToken = tokenFrom(sender.messages[0]);
     now = new Date(now.getTime() + 8 * DAY_MS);
 
     await Promise.all([
-      service.request(INPUT),
-      service.request({ ...INPUT, email: " PUBLIC-ACCESS@EMPRESA.LOCAL " }),
+      service.request(enrollmentInput()),
+      service.request(enrollmentInput({ email: " PUBLIC-ACCESS@EMPRESA.LOCAL " })),
     ]);
 
     const history = await prisma.accessRequest.findMany({ orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
@@ -189,7 +204,7 @@ describe("AccessRequestService — solicitação pública", () => {
     const old = await requests.createIfEmailAvailable(INPUT, createdAt);
     expect(old).not.toBeNull();
 
-    await expect(service.request({ ...INPUT, name: "x".repeat(10_000) }))
+    await expect(service.request(enrollmentInput({ name: "x".repeat(10_000) })))
       .rejects.toThrow("ACCESS_REQUEST_PERSISTENCE_FAILED");
 
     expect(await prisma.accessRequest.findUnique({ where: { id: old!.id } })).toEqual(old);
@@ -201,24 +216,24 @@ describe("AccessRequestService — solicitação pública", () => {
   it("recupera verificação ausente, expirada, revogada e com falha de SMTP", async () => {
     const missing = await requests.createIfEmailAvailable({ ...INPUT, email: "missing@empresa.local" }, now);
     expect(missing).not.toBeNull();
-    await service.request({ ...INPUT, email: "missing@empresa.local" });
+    await service.request(enrollmentInput({ email: "missing@empresa.local" }));
     expect(sender.messages).toHaveLength(1);
 
     const firstToken = tokenFrom(sender.messages[0]);
     now = new Date(now.getTime() + 60 * 60_000 + 1);
-    await service.request({ ...INPUT, email: "missing@empresa.local" });
+    await service.request(enrollmentInput({ email: "missing@empresa.local" }));
     expect(sender.messages).toHaveLength(2);
     const rotated = await prisma.emailVerificationToken.findUnique({ where: { accessRequestId: missing!.id } });
     expect(rotated?.tokenHash).not.toBe(hashAccessToken(firstToken));
 
     await prisma.emailVerificationToken.update({ where: { id: rotated!.id }, data: { revokedAt: now } });
     now = new Date(now.getTime() + COOLDOWN_MS + 1);
-    await service.request({ ...INPUT, email: "missing@empresa.local" });
+    await service.request(enrollmentInput({ email: "missing@empresa.local" }));
     expect(sender.messages).toHaveLength(3);
 
     const failedEmail = "smtp-failure@empresa.local";
     configureService(new FakeEmailSender({ fail: true }));
-    await service.request({ ...INPUT, email: failedEmail });
+    await service.request(enrollmentInput({ email: failedEmail }));
     const failedRequest = await activeRequest(failedEmail);
     expect(await prisma.emailVerificationToken.findUnique({ where: { accessRequestId: failedRequest!.id } }))
       .toMatchObject({ revokedAt: now });
@@ -234,7 +249,7 @@ describe("AccessRequestService — solicitação pública", () => {
   });
 
   it("confirma token válido e não revela token inválido", async () => {
-    await service.request(INPUT);
+    await service.request(enrollmentInput());
     const token = tokenFrom(sender.messages[0]);
 
     expect(await service.confirmEmail("not-a-token")).toBe(false);

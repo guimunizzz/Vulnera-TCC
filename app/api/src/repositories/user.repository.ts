@@ -16,6 +16,7 @@ export interface CreateUserData {
   role?: UserRole;
   companyId?: string | null;
   companyRole?: string | null;
+  legacyOnboardingAllowed?: boolean;
 }
 
 export class UserRepository {
@@ -35,17 +36,79 @@ export class UserRepository {
     return user?.companyId ?? null;
   }
 
-  findAll(filters: { companyId?: string } = {}): Promise<User[]> {
+  findAll(filters: { companyId?: string; includeDeactivated?: boolean } = {}): Promise<User[]> {
     return this.prisma.user.findMany({
-      where: filters.companyId ? { companyId: filters.companyId } : {},
+      where: {
+        ...(filters.companyId ? { companyId: filters.companyId } : {}),
+        ...(!filters.includeDeactivated ? { deactivatedAt: null } : {}),
+      },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  /** Bloqueia a identidade durante uma operação transacional de sessão/conta. */
+  async lockById(id: string): Promise<User | null> {
+    if ("$transaction" in this.prisma) throw new Error("USER_LOCK_REQUIRES_TRANSACTION");
+    const rows = await this.prisma.$queryRaw<User[]>`SELECT * FROM \`User\` WHERE id = ${id} FOR UPDATE`;
+    return rows[0] ?? null;
+  }
+
+  /** Bloqueia os membros em ordem estável depois de bloquear a linha Company. */
+  async lockCompanyMembers(companyId: string): Promise<User[]> {
+    if ("$transaction" in this.prisma) throw new Error("USER_LOCK_REQUIRES_TRANSACTION");
+    return this.prisma.$queryRaw<User[]>`
+      SELECT * FROM \`User\` WHERE companyId = ${companyId} ORDER BY id FOR UPDATE
+    `;
+  }
+
+  /** Apendeia a transição de conta dentro da mesma transação da mudança. */
+  recordAccountLifecycle(
+    actorId: string,
+    companyId: string | null,
+    userId: string,
+    action: "USER_DEACTIVATED" | "OWNER_REACTIVATED",
+    now: Date,
+  ): Promise<unknown> {
+    return this.prisma.auditLog.create({
+      data: {
+        actorId,
+        companyId,
+        entityType: "User",
+        entityId: userId,
+        action,
+        createdAt: now,
+      },
+    });
+  }
+
+  /** Desativa sem apagar histórico e invalida todas as credenciais da conta. */
+  async markDeactivated(id: string, now: Date): Promise<User> {
+    if ("$transaction" in this.prisma) throw new Error("USER_DEACTIVATION_REQUIRES_TRANSACTION");
+    await this.prisma.user.updateMany({
+      where: { id, deactivatedAt: null },
+      data: { deactivatedAt: now, sessionVersion: { increment: 1 }, expoPushToken: null },
+    });
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new Error("USER_NOT_FOUND");
+    return user;
+  }
+
+  /** Reativa apenas o OWNER histórico; sessões antigas nunca são restauradas. */
+  async reactivateOwner(id: string, now: Date): Promise<User> {
+    if ("$transaction" in this.prisma) throw new Error("USER_REACTIVATION_REQUIRES_TRANSACTION");
+    const result = await this.prisma.user.updateMany({
+      where: { id, role: "CLIENT", companyRole: "OWNER", deactivatedAt: { not: null } },
+      data: { deactivatedAt: null, sessionVersion: { increment: 1 }, expoPushToken: null, updatedAt: now },
+    });
+    if (result.count !== 1) throw new Error("OWNER_RECOVERY_NOT_AVAILABLE");
+    return this.prisma.user.findUniqueOrThrow({ where: { id } });
   }
 
   /** Responsáveis elegíveis, sem vazar email/company de admins globais. */
   findEligibleAssignees(projectId: string, companyId: string): Promise<AssigneeCandidateDTO[]> {
     return this.prisma.user.findMany({
       where: {
+        deactivatedAt: null,
         OR: [
           { role: "ADMIN" },
           { role: "CLIENT", companyId },
@@ -64,7 +127,7 @@ export class UserRepository {
     if (companyIds.length > 0) regras.push({ role: "CLIENT", companyId: { in: companyIds } });
     if (projectIds.length > 0) regras.push({ role: "PENTESTER", projectMembers: { some: { projectId: { in: projectIds } } } });
     return this.prisma.user.findMany({
-      where: { OR: regras },
+      where: { deactivatedAt: null, OR: regras },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });
@@ -89,6 +152,7 @@ export class UserRepository {
           role: data.role ?? "CLIENT",
           companyId: data.companyId ?? null,
           ...(data.companyRole !== undefined ? { companyRole: data.companyRole } : {}),
+          ...(data.legacyOnboardingAllowed !== undefined ? { legacyOnboardingAllowed: data.legacyOnboardingAllowed } : {}),
         },
       });
     } catch (error) {
@@ -100,7 +164,7 @@ export class UserRepository {
     }
   }
 
-  update(id: string, data: Partial<{ name: string; email: string }>): Promise<User> {
+  update(id: string, data: Partial<{ name: string }>): Promise<User> {
     return this.prisma.user.update({ where: { id }, data });
   }
 
@@ -112,7 +176,7 @@ export class UserRepository {
   /** Usado pelo disparo de push (RN20-like em CRITICAL): só quem tem token registrado. */
   findClientsWithPushToken(companyId: string): Promise<User[]> {
     return this.prisma.user.findMany({
-      where: { companyId, role: "CLIENT", expoPushToken: { not: null } },
+      where: { companyId, role: "CLIENT", deactivatedAt: null, expoPushToken: { not: null } },
     });
   }
 
@@ -124,9 +188,6 @@ export class UserRepository {
     });
   }
 
-  delete(id: string): Promise<User> {
-    return this.prisma.user.delete({ where: { id } });
-  }
 }
 
 function isUniqueConstraintViolation(error: unknown): boolean {

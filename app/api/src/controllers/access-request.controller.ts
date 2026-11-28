@@ -4,10 +4,14 @@
 
 import type { Request, Response } from "express";
 import { isSingleEmailAddress } from "../models/email.model";
-import { normalizeAccessRequestEmail, type CreateAccessRequestDTO } from "../models/access-request.model";
+import {
+  normalizeAccessRequestEmail,
+  type CreateAccessRequestEnrollmentDTO,
+} from "../models/access-request.model";
+import { normalizeCompanyCnpj } from "../utils/cnpj.util";
 
 export interface PublicAccessRequestService {
-  request(dto: CreateAccessRequestDTO): Promise<void>;
+  request(dto: CreateAccessRequestEnrollmentDTO): Promise<void>;
   resend(email: string): Promise<void>;
   confirmEmail(token: string): Promise<boolean>;
 }
@@ -26,7 +30,12 @@ export class AccessRequestController {
       // somente este DTO construído aqui pode chegar ao serviço.
       await this.service.request(input.dto);
       return res.status(202).json({ message: NEUTRAL_MESSAGE });
-    } catch {
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "";
+      if (code === "PLAN_NOT_FOUND") return res.status(404).json({ error: code });
+      if (code === "PLAN_UNAVAILABLE" || code === "COMPANY_ALREADY_EXISTS") {
+        return res.status(409).json({ error: code });
+      }
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
   }
@@ -58,7 +67,7 @@ export class AccessRequestController {
   }
 }
 
-type CreateBodyResult = { dto: CreateAccessRequestDTO; error?: never } | { dto?: never; error: string };
+type CreateBodyResult = { dto: CreateAccessRequestEnrollmentDTO; error?: never } | { dto?: never; error: string };
 
 function parseCreateBody(body: unknown): CreateBodyResult {
   const record = readBodyRecord(body);
@@ -70,6 +79,11 @@ function parseCreateBody(body: unknown): CreateBodyResult {
   if (!companyName) return { error: "INVALID_COMPANY_NAME" };
   const email = parseEmail(record.email);
   if (!email) return { error: "INVALID_EMAIL" };
+  const planId = parsePlanId(record.planId);
+  if (!planId) return { error: "INVALID_PLAN_ID" };
+
+  const companyCnpj = parseCompanyCnpj(record.companyCnpj);
+  if (companyCnpj === undefined) return { error: "INVALID_CNPJ" };
 
   let phone: string | null | undefined;
   if (record.phone !== undefined && record.phone !== null) {
@@ -84,9 +98,25 @@ function parseCreateBody(body: unknown): CreateBodyResult {
       name,
       companyName,
       email,
+      planId,
+      companyCnpj,
       ...(phone !== undefined ? { phone } : {}),
     },
   };
+}
+
+function parsePlanId(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const planId = value.trim();
+  return /^[A-Za-z0-9_-]{8,64}$/u.test(planId) ? planId : undefined;
+}
+
+/** Retorna null quando o CNPJ opcional foi omitido ou enviado em branco. */
+function parseCompanyCnpj(value: unknown): string | null | undefined {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") return undefined;
+  if (value.trim() === "") return null;
+  return normalizeCompanyCnpj(value) ?? undefined;
 }
 
 function parseText(value: unknown, maxLength: number): string | undefined {

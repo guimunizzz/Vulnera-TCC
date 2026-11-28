@@ -18,7 +18,7 @@ Não é uma role global do sistema — é uma subrole de escopo empresarial.
 - pode editar os dados da própria empresa
 - pode convidar novos usuários para a empresa
 - é o interlocutor primário com o Admin
-- normalmente é quem fez o cadastro (onboarding)
+- é o responsável da adesão empresarial aprovada ou o usuário habilitado para recuperar um onboarding legado
 
 ### MEMBER
 - usuário convidado pelo OWNER
@@ -27,13 +27,11 @@ Não é uma role global do sistema — é uma subrole de escopo empresarial.
 - não pode editar a empresa nem convidar outros usuários
 
 ## Atribuição
-- OWNER: definido no momento do onboarding (cadastro da empresa)
-- MEMBER: atribuído pelo OWNER via convite na plataforma
+- OWNER: definido junto da empresa e da assinatura na ativação da adesão aprovada, ou na recuperação autorizada de onboarding legado
+- MEMBER: associado à empresa do OWNER emissor no consumo de um convite empresarial
 
 ## Campo no banco
-Campo `company_role` na tabela `USER`:
-- tipo: enum `OWNER | MEMBER | null`
-- valor `null` para usuários que não são CLIENT (Admin, Pentester)
+O campo `User.companyRole` aceita `OWNER`, `MEMBER` ou `null`. ADMIN e PENTESTER usam `null`.
 
 ## Regras relacionadas
 - [[RN01 - Empresa pode ter multiplos usuarios cliente]] — mais de um CLIENT por Company
@@ -45,3 +43,4 @@ Campo `company_role` na tabela `USER`:
 [[Regras de Ownership]]
 [[User]]
 [[Company]]
+[[ADR-058 - Adesao B2B, equipes e revogacao de sessoes]]

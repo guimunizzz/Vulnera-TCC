@@ -22,7 +22,7 @@ vi.mock("../lib/api/subscriptions.api", () => ({ subscriptionsApi: { request: ap
 
 const USER: User = {
   id: "user-qa", name: "Pessoa QA", email: "qa@example.test", role: "CLIENT",
-  companyId: null, companyRole: null, createdAt: "2026-10-15T12:00:00Z",
+  companyId: null, companyRole: null, legacyOnboardingAllowed: true, createdAt: "2026-10-15T12:00:00Z",
 };
 const COMPANY: Company = {
   id: "company-qa", name: "Empresa QA salva", cnpj: "12345678000199", planId: "plan-qa",
@@ -71,7 +71,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   instalarMatchMedia(["prefers-reduced-motion"]);
   useAuthStore.getState().setAuth({ accessToken: "token", refreshToken: "refresh", user: { ...USER } });
-  api.plans.mockResolvedValue([{ id: "plan-qa", name: "Plano QA", maxApplications: 3, maxProjects: 3 }]);
+  api.plans.mockResolvedValue([{ id: "plan-qa", name: "Plano QA", maxApplications: 3, maxProjects: 3, isActive: true }]);
   api.companyMe.mockRejectedValue(apiError("USER_HAS_NO_COMPANY"));
   api.createCompany.mockImplementation(async () => {
     api.companyMe.mockResolvedValue(COMPANY);
@@ -85,6 +85,16 @@ beforeEach(() => {
 afterEach(() => useAuthStore.getState().clearAuth());
 
 describe("Onboarding — QA-02 e QA-03", () => {
+  it.each([
+    [0, "aplicações", "projetos"], [1, "aplicação", "projeto"], [2, "aplicações", "projetos"],
+  ] as const)("VUL-QA-01 — flexiona limites de %i no onboarding legado", async (count, applications, projects) => {
+    api.plans.mockResolvedValue([{ id: "plan-qa", name: "Plano QA", maxApplications: count, maxProjects: count, isActive: true }]);
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Nome da empresa"), { target: { value: "Empresa QA" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(await screen.findByRole("button", { name: new RegExp(`Até ${count} ${applications} · ${count} ${projects}`) })).toBeInTheDocument();
+  });
+
   it("atualiza o perfil autoritativo antes de solicitar assinatura e concluir, preservando tokens", async () => {
     const profile = deferred<User>();
     api.userMe.mockReturnValue(profile.promise);
@@ -170,8 +180,8 @@ describe("Onboarding — QA-02 e QA-03", () => {
   it("mantém o plano escolhido na retomada, sem tratar Company.planId como assinatura ativa", async () => {
     api.companyMe.mockResolvedValue(COMPANY);
     api.plans.mockResolvedValue([
-      { id: "plan-qa", name: "Plano QA", maxApplications: 3, maxProjects: 3 },
-      { id: "plan-pro", name: "Plano Pro", maxApplications: 10, maxProjects: 10 },
+      { id: "plan-qa", name: "Plano QA", maxApplications: 3, maxProjects: 3, isActive: true },
+      { id: "plan-pro", name: "Plano Pro", maxApplications: 10, maxProjects: 10, isActive: true },
     ]);
     renderPage();
 
@@ -191,6 +201,51 @@ describe("Onboarding — QA-02 e QA-03", () => {
 
     expect(await screen.findByRole("heading", { name: "Destino dashboard" })).toBeInTheDocument();
     expect(api.request).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["CLIENT sem permissão legada", { ...USER, legacyOnboardingAllowed: false }],
+    ["MEMBER", { ...USER, companyId: COMPANY.id, companyRole: "MEMBER", legacyOnboardingAllowed: false }],
+    ["ADMIN", { ...USER, role: "ADMIN", legacyOnboardingAllowed: false }],
+    ["PENTESTER", { ...USER, role: "PENTESTER", legacyOnboardingAllowed: false }],
+  ] as const)("nega cadastro e ações comerciais a %s", async (_label, user) => {
+    useAuthStore.getState().setAuth({ accessToken: "token", refreshToken: "refresh", user });
+    renderPage();
+
+    expect(await screen.findByRole("heading", { name: "Destino dashboard" })).toBeInTheDocument();
+    expect(api.companyMe).not.toHaveBeenCalled();
+    expect(api.userMe).not.toHaveBeenCalled();
+    expect(api.plans).not.toHaveBeenCalled();
+    expect(api.createCompany).not.toHaveBeenCalled();
+    expect(api.request).not.toHaveBeenCalled();
+  });
+
+  it("consulta /users/me antes de liberar uma sessão antiga sem flag", async () => {
+    const persistedUser: User = { ...USER, legacyOnboardingAllowed: undefined };
+    useAuthStore.getState().setAuth({ accessToken: "token", refreshToken: "refresh", user: persistedUser });
+    api.userMe.mockResolvedValueOnce({ ...USER, legacyOnboardingAllowed: true });
+    renderPage();
+
+    expect(await screen.findByLabelText("Nome da empresa")).toBeInTheDocument();
+    expect(api.userMe).toHaveBeenCalledOnce();
+    expect(useAuthStore.getState().user?.legacyOnboardingAllowed).toBe(true);
+  });
+
+  it("preserva a sessão e oferece retry quando /users/me falha", async () => {
+    const persistedUser: User = { ...USER, legacyOnboardingAllowed: undefined };
+    useAuthStore.getState().setAuth({ accessToken: "token", refreshToken: "refresh", user: persistedUser });
+    api.userMe.mockRejectedValueOnce(new Error("NETWORK")).mockResolvedValueOnce({ ...USER, legacyOnboardingAllowed: true });
+    renderPage();
+
+    expect(await screen.findByRole("button", { name: "Tentar novamente" })).toBeInTheDocument();
+    expect(api.companyMe).not.toHaveBeenCalled();
+    expect(api.createCompany).not.toHaveBeenCalled();
+    expect(api.request).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().accessToken).toBe("token");
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+
+    expect(await screen.findByLabelText("Nome da empresa")).toBeInTheDocument();
+    expect(api.userMe).toHaveBeenCalledTimes(2);
   });
 
   it("reconcilia a empresa quando a resposta do POST se perde e pede nova confirmação", async () => {

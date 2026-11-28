@@ -89,11 +89,12 @@ export function DashboardHeader({ userName, role }: { userName: string; role?: U
           </Button>
         )}
         <LinkButton
-          to={criticos > 0 ? ROTA_CRITICOS_ABERTOS : "/findings"}
+          to={role === "CLIENT" ? "/projects" : criticos > 0 ? ROTA_CRITICOS_ABERTOS : "/findings"}
           variant="secundario"
+          className="shrink-0 self-start sm:self-auto"
           iconeInicio={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
         >
-          {criticos > 0 ? "Revisar críticos" : "Explorar findings"}
+          {role === "CLIENT" ? "Ver projetos" : criticos > 0 ? "Revisar críticos" : "Explorar findings"}
         </LinkButton>
       </div>
     </motion.header>

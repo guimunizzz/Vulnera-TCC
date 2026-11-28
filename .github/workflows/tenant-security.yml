@@ -1,0 +1,53 @@
+# Gate de segurança e compatibilidade para PRs destinados à dev.
+# O workflow de cobertura e Sonar da main permanece independente.
+name: Tenant Security
+
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API and tenant authorization
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: test-root
+          MYSQL_DATABASE: vulnera_test_ci
+          MYSQL_USER: vulnera
+          MYSQL_PASSWORD: test-database
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: mysql://vulnera:test-database@127.0.0.1:3306/vulnera_test_ci
+      JWT_ACCESS_SECRET: ci-access-key-for-isolated-tenant-tests
+      JWT_REFRESH_SECRET: ci-refresh-key-for-isolated-tenant-tests
+      BCRYPT_COST: "4"
+      QUEUE_DRIVER: memory
+      THREAT_INTEL_SYNC_ENABLED: "false"
+      DAST_FORCE_SIMULATE: "true"
+      UPLOADS_DIR: uploads-test
+      DAST_REPORTS_DIR: dast-reports-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install -g npm@11 && npm install
+      - run: npx prisma generate && npx prisma migrate deploy
+        working-directory: app/api
+      - run: npm run build --workspace=app/api
+      - run: >-
+          npm run test --workspace=app/api --
+          --testPathPattern='(auth|user|company|subscription|plans?\.test|tenant|tenancy|access-request|account-activation|turnstile|project-member|notification)'

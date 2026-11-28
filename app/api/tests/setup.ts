@@ -26,7 +26,9 @@ import { prisma } from "../src/database/prisma.database";
  * (filhos antes dos pais). Chamar em beforeEach/afterEach pra isolar testes.
  */
 export async function cleanDatabase(): Promise<void> {
+  await prisma.companyInvitation.deleteMany();
   // Histórico e tokens antes do pedido; pedido/eventos antes dos Users revisores.
+  await prisma.accessRequestEnrollment.deleteMany();
   await prisma.accessRequestEvent.deleteMany();
   await prisma.emailVerificationToken.deleteMany();
   await prisma.accessInvitation.deleteMany();

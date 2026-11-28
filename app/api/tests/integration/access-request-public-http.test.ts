@@ -19,6 +19,7 @@ import { prisma } from "../../src/database/prisma.database";
 import { FakeCaptchaVerifier } from "../fixtures/fake-captcha-verifier";
 import { FakeEmailSender } from "../fixtures/fake-email-sender";
 import { seedUser } from "../fixtures/users.fixture";
+import { seedPlan } from "../fixtures/plans.fixture";
 import { cleanDatabase } from "../setup";
 
 const PUBLIC_WEB_URL = "https://app.vulnera.example";
@@ -55,6 +56,7 @@ let sender: FakeEmailSender;
 let publicLimiter: AccessRequestRateLimitService;
 let globalRateLimit: ReturnType<typeof makeRateLimitService>;
 let app: ReturnType<typeof createApp>;
+let eligiblePlanId: string;
 
 function makePublicLimiter(overrides: PublicRateLimitOverrides = {}, storeTtlMs = 60_000) {
   const config = {
@@ -113,9 +115,12 @@ function emailTokenFromMessage(message: { text: string }): string {
 }
 
 function postRequest(body: Record<string, unknown> = INPUT) {
+  const payload = Object.prototype.hasOwnProperty.call(body, "planId")
+    ? body
+    : { ...body, planId: eligiblePlanId };
   return request(app)
     .post("/api/access-requests")
-    .send({ ...body, captchaToken: captcha.issueToken() });
+    .send({ ...payload, captchaToken: captcha.issueToken() });
 }
 
 function postResend(email: string, forwardedFor?: string) {
@@ -130,9 +135,10 @@ function postConfirmation(token: string) {
 }
 
 function postRequestFrom(email: string, forwardedFor?: string) {
+  const payload = { ...INPUT, email, planId: eligiblePlanId };
   const call = request(app)
     .post("/api/access-requests")
-    .send({ ...INPUT, email, captchaToken: captcha.issueToken() });
+    .send({ ...payload, captchaToken: captcha.issueToken() });
   return forwardedFor ? call.set("X-Forwarded-For", forwardedFor) : call;
 }
 
@@ -142,6 +148,7 @@ async function activeRequest(email: string) {
 
 beforeEach(async () => {
   await cleanDatabase();
+  eligiblePlanId = (await seedPlan({ name: "public-access-plan" })).id;
   now = new Date(INITIAL_TIME);
   captcha = new FakeCaptchaVerifier({ nowMs: () => now.getTime() });
   sender = new FakeEmailSender();
@@ -164,6 +171,12 @@ describe("HTTP público de AccessRequest", () => {
       activeEmail: "attacker@example.local",
       expiresAt: "2099-01-01T00:00:00.000Z",
       password: "must-not-be-used",
+      companyCnpj: "12.345.678/0001-90",
+      planName: "plano-injetado",
+      planPrice: 0,
+      planMaxApplications: 0,
+      planMaxProjects: 0,
+      planIncludesRemediation: true,
     }).expect(202);
 
     expect(response.body).toEqual(NEUTRAL_RESPONSE);
@@ -178,6 +191,19 @@ describe("HTTP público de AccessRequest", () => {
       expiresAt: new Date(now.getTime() + 7 * DAY_MS),
     });
     expect(row!.id).toBeTruthy();
+    const enrollment = await prisma.accessRequestEnrollment.findUnique({
+      where: { accessRequestId: row!.id },
+    });
+    expect(enrollment).toMatchObject({
+      accessRequestId: row!.id,
+      companyCnpj: "12345678000190",
+      planId: eligiblePlanId,
+      planName: "public-access-plan",
+      planMaxApplications: 5,
+      planMaxProjects: 3,
+      planIncludesRemediation: false,
+    });
+    expect(enrollment!.planPrice.toFixed(2)).toBe("100.00");
     const message = sender.messages[0];
     expect(message).toBeDefined();
     const rawToken = emailTokenFromMessage(message);
@@ -199,6 +225,30 @@ describe("HTTP público de AccessRequest", () => {
       prisma.refreshToken.count(),
       prisma.auditLog.count(),
     ])).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  it("exige plano e rejeita formato CNPJ inválido sem persistir pedido", async () => {
+    await request(app).post("/api/access-requests")
+      .send({ ...INPUT, captchaToken: captcha.issueToken() })
+      .expect(400, { error: "INVALID_PLAN_ID" });
+    await postRequest({ ...INPUT, email: "invalid-cnpj@empresa.local", companyCnpj: "cnpj-inválido" })
+      .expect(400, { error: "INVALID_CNPJ" });
+    expect(await prisma.accessRequest.count()).toBe(0);
+  });
+
+  it("responde de forma neutra quando o CNPJ já existe e valida plano ativo", async () => {
+    await prisma.company.create({
+      data: { name: "Empresa existente", cnpj: "12345678000190", planId: eligiblePlanId },
+    });
+
+    await postRequest({ ...INPUT, email: "cnpj-conflict@empresa.local", companyCnpj: "12.345.678/0001-90" })
+      .expect(202, NEUTRAL_RESPONSE);
+    const inactive = await seedPlan({ name: "inactive-public-plan", isActive: false });
+    await postRequest({ ...INPUT, email: "inactive-plan@empresa.local", planId: inactive.id })
+      .expect(409, { error: "PLAN_UNAVAILABLE" });
+    await postRequest({ ...INPUT, email: "missing-plan@empresa.local", planId: "missing-plan-123" })
+      .expect(404, { error: "PLAN_NOT_FOUND" });
+    expect(await prisma.accessRequest.count()).toBe(1);
   });
 
   it("mantém status e corpo neutros para pedido novo, duplicado, conta existente e reserva vencida", async () => {
@@ -256,7 +306,7 @@ describe("HTTP público de AccessRequest", () => {
       .expect(400);
     const validToken = captcha.issueToken();
     await request(app).post("/api/access-requests")
-      .send({ ...INPUT, email: "captcha-replay@empresa.local", captchaToken: validToken })
+      .send({ ...INPUT, email: "captcha-replay@empresa.local", planId: eligiblePlanId, captchaToken: validToken })
       .expect(202);
     const replay = await request(app).post("/api/access-requests")
       .send({ ...INPUT, email: "captcha-replay@empresa.local", captchaToken: validToken })

@@ -192,7 +192,7 @@ export function AdminDashboard() {
             </div>
           </div>
           <LinkButton
-            to="/admin/subscriptions"
+            to="/admin/access-requests?section=commercial"
             variant={pendentes > 0 ? "primario" : "secundario"}
             larguraTotal
             className="mt-5"

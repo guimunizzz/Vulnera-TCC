@@ -31,9 +31,8 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       sessionVersion: 0,
       setAuth: (auth) => {
-        // Leituras recentes pertencem à sessão: outro usuário precisa buscar
-        // seu próprio escopo, mesmo que visite a mesma rota dentro de 30 s.
-        if (get().user?.id !== auth.user.id) queryClient.clear();
+        // Um novo login pode ter outro escopo mesmo para a mesma pessoa.
+        queryClient.clear();
         set({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user, sessionVersion: get().sessionVersion + 1 });
       },
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
@@ -42,10 +41,10 @@ export const useAuthStore = create<AuthState>()(
         // (até da mesma pessoa) invalida uma resposta antiga. Rotação de token
         // preserva a referência e os tokens atuais nunca são sobrescritos.
         if (get().user !== sessionUser || user.id !== sessionUser.id) return false;
-        if (user.companyId !== sessionUser.companyId || user.companyRole !== sessionUser.companyRole || user.role !== sessionUser.role) {
-          queryClient.clear();
-        }
-        set({ user });
+        const scopeChanged = user.companyId !== sessionUser.companyId || user.companyRole !== sessionUser.companyRole
+          || user.role !== sessionUser.role || user.legacyOnboardingAllowed !== sessionUser.legacyOnboardingAllowed;
+        if (scopeChanged) queryClient.clear();
+        set({ user, sessionVersion: get().sessionVersion + Number(scopeChanged) });
         return true;
       },
       clearAuth: () => {
@@ -55,7 +54,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "vulnera-auth",
-      // A identidade temporária separa conversas; não é uma credencial nem estado recuperável.
+      // A identidade temporária separa sessões; não é credencial nem estado recuperável.
       partialize: ({ accessToken, refreshToken, user }) => ({ accessToken, refreshToken, user }),
     },
   ),

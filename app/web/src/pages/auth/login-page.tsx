@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { authApi } from "../../lib/api/auth.api";
 import { subscriptionsApi } from "../../lib/api/subscriptions.api";
+import { usersApi } from "../../lib/api/users.api";
 import { useAuthStore } from "../../store/auth.store";
 import { useApiError } from "../../hooks/use-api-error";
 import { Alert, Button, Field, Input } from "../../components/ui";
@@ -17,6 +18,7 @@ export function LoginPage() {
   const [enviando, setEnviando] = useState(false);
   const envioPendente = useRef(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [profileRecovery, setProfileRecovery] = useState(false);
 
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
@@ -40,32 +42,45 @@ export function LoginPage() {
     // Enter repetido também passa por esta trava antes do próximo render.
     if (envioPendente.current) return;
     setErro(null);
+    setProfileRecovery(false);
     envioPendente.current = true;
     setEnviando(true);
     try {
       const auth = await authApi.login({ email, password: senha });
       setAuth(auth);
-      if (
-        auth.user.role === "CLIENT" &&
-        auth.user.companyId &&
-        auth.user.companyRole === "OWNER"
-      ) {
-        try {
-          const status = await subscriptionsApi.onboardingStatus();
-          navigate(status.status === "ACTIVE" ? "/dashboard" : "/onboarding");
-        } catch {
-          // O onboarding pode reconsultar o estado e oferecer retry sem perder a sessão.
-          navigate("/onboarding");
-        }
-        return;
-      }
-      navigate(auth.user.role === "CLIENT" && auth.user.companyId === null ? "/onboarding" : "/dashboard");
+      await routeAuthenticatedUser(auth.user);
     } catch (err) {
       setErro(mensagemDeErro(err));
     } finally {
       envioPendente.current = false;
       setEnviando(false);
     }
+  }
+
+  async function routeAuthenticatedUser(authUser = useAuthStore.getState().user): Promise<void> {
+    if (!authUser) return;
+    let user = authUser;
+    if (user.role === "CLIENT" && user.companyId === null && user.legacyOnboardingAllowed === undefined) {
+      try {
+        const profile = await usersApi.me();
+        if (!useAuthStore.getState().updateUser(profile, user)) return;
+        user = profile;
+      } catch {
+        setProfileRecovery(true);
+        setErro("Sua sessão foi iniciada, mas não foi possível carregar seu perfil. Tente novamente para continuar.");
+        return;
+      }
+    }
+    if (user.role === "CLIENT" && user.companyId && user.companyRole === "OWNER") {
+      try {
+        const status = await subscriptionsApi.onboardingStatus();
+        navigate(status.status === "ACTIVE" ? "/dashboard" : "/onboarding");
+      } catch {
+        navigate("/onboarding");
+      }
+      return;
+    }
+    navigate(user.role === "CLIENT" && user.companyId === null && user.legacyOnboardingAllowed === true ? "/onboarding" : "/dashboard");
   }
 
   return (
@@ -79,6 +94,7 @@ export function LoginPage() {
         {erro && (
           <Alert tom="perigo" titulo="Não foi possível entrar">
             {erro}
+            {profileRecovery && <Button className="mt-3" type="button" variant="secundario" onClick={() => void routeAuthenticatedUser()}>Tentar novamente</Button>}
           </Alert>
         )}
 

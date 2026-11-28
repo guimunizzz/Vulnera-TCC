@@ -9,6 +9,11 @@ status: ativo
 
 # Padrao - Autenticacao e JWT
 
+> [!info] Implementação vigente na wave de adesão B2B
+> A API Express assina access e refresh como JWT HS256 com chaves separadas. No refresh, expiração do JWT e `expiresAt` persistido precisam estar vigentes. A rotação bloqueia a identidade primeiro, consome o token e grava o hash do sucessor na mesma transação. A autorização aceita apenas identidade ativa com a `sessionVersion` atual e usa o papel persistido. Tokens anteriores à migration usam versão 0.
+> As variáveis em uso são `JWT_ACCESS_SECRET` e `JWT_REFRESH_SECRET`, com TTLs em `JWT_ACCESS_TTL` e `JWT_REFRESH_TTL`. O payload assinado usa `userId`, `role`, `sessionVersion`, `iat` e `exp`. O refresh também usa `jti` aleatório.
+> Web conserva a sessão pelo store existente e mobile usa SecureStore. Os exemplos abaixo descrevem padrões recomendados para cookies e integração com frameworks. O contrato em uso está em [[ADR-058 - Adesao B2B, equipes e revogacao de sessoes]].
+
 ## Objetivo
 Definir o padrão seguro de autenticação e uso de JWT no Vulnera.
 
@@ -43,7 +48,9 @@ Definir o padrão seguro de autenticação e uso de JWT no Vulnera.
 
 ---
 
-## Implementação no Vulnera (Express)
+## Exemplos históricos e padrões de referência
+
+Os exemplos históricos de integração com NestJS e cookie HttpOnly foram substituídos no Vulnera pelo contrato Express descrito no topo. Permanecem como referências de desenho.
 
 ### Configuração do módulo JWT
 
@@ -107,7 +114,7 @@ const hashed = createHash('sha256').update(rawFromCookie).digest('hex')
 const token = await prisma.refreshToken.findFirst({
   where: { tokenHash: hashed, revokedAt: null },
 })
-if (!token || token.expiresAt < new Date()) throw new throw new Error("UNAUTHORIZED")()
+if (!token || token.expiresAt < new Date()) throw new Error("UNAUTHORIZED")
 ```
 
 ### Rotação de refresh token

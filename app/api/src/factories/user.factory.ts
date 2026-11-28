@@ -10,9 +10,11 @@ import { prisma } from "../database/prisma.database";
 import { UserController } from "../controllers/user.controller";
 import { UserService } from "../services/user.service";
 import { UserRepository } from "../repositories/user.repository";
+import { RefreshTokenRepository } from "../repositories/refresh-token.repository";
 
 export function makeUserController(): UserController {
   const userRepo = new UserRepository(prisma);
-  const service = new UserService(userRepo);
+  const refreshRepo = new RefreshTokenRepository(prisma);
+  const service = new UserService(userRepo, refreshRepo);
   return new UserController(service);
 }

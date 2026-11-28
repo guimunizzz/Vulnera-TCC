@@ -14,6 +14,6 @@ export class AccessRequestAdminAuthorizationService {
     if (actor.role !== "ADMIN") throw new Error("FORBIDDEN");
 
     const user = await this.users.findById(actor.userId);
-    if (!user || user.role !== "ADMIN") throw new Error("FORBIDDEN");
+    if (!user || user.deactivatedAt || user.role !== "ADMIN") throw new Error("FORBIDDEN");
   }
 }

@@ -33,9 +33,11 @@ const RegisterPage = paginaLazy(() => carregarAcesso().then(([, , cadastro]) => 
 const RequestAccessPage = paginaLazy(() => carregarAcesso().then(([, , , pagina]) => pagina), "RequestAccessPage");
 const VerifyEmailPage = paginaLazy(() => carregarAcesso().then(([, , , , pagina]) => pagina), "VerifyEmailPage");
 const ActivateAccountPage = paginaLazy(() => carregarAcesso().then(([, , , , , pagina]) => pagina), "ActivateAccountPage");
+const JoinCompanyPage = paginaLazy(() => import("./pages/auth/join-company-page"), "JoinCompanyPage");
 
 const PlansPage = paginaLazy(() => import("./pages/plans-page"), "PlansPage");
 const OnboardingPage = paginaLazy(() => import("./pages/onboarding-page"), "OnboardingPage");
+const CompanyTeamPage = paginaLazy(() => import("./pages/company-team-page"), "CompanyTeamPage");
 const DashboardPage = paginaLazy(() => import("./pages/dashboard-page"), "DashboardPage");
 const ApplicationsPage = paginaLazy(() => import("./pages/applications-page"), "ApplicationsPage");
 const ExposureGraphPage = paginaLazy(() => import("./pages/exposure-graph-page"), "ExposureGraphPage");
@@ -46,10 +48,6 @@ const ProjectDetailPage = paginaLazy(() => import("./pages/project-detail-page")
 const FindingEditorPage = paginaLazy(() => import("./pages/finding-editor-page"), "FindingEditorPage");
 const FindingDetailPage = paginaLazy(() => import("./pages/finding-detail-page"), "FindingDetailPage");
 const FindingsPage = paginaLazy(() => import("./pages/findings-page"), "FindingsPage");
-const PendingSubscriptionsPage = paginaLazy(
-  () => import("./pages/admin/pending-subscriptions-page"),
-  "PendingSubscriptionsPage",
-);
 const AccessRequestsPage = paginaLazy(
   () => import("./pages/admin/access-requests-page"),
   "AccessRequestsPage",
@@ -107,6 +105,7 @@ export function App() {
             <Route path="/request-access" element={<RequestAccessPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/activate-account" element={<ActivateAccountPage />} />
+            <Route path="/join-company" element={<JoinCompanyPage />} />
           </Route>
           <Route path="/plans" element={<PlansPage />} />
 
@@ -124,8 +123,15 @@ export function App() {
               <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>
 
+            <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
+              <Route path="/admin/subscriptions" element={<Navigate to="/admin/access-requests?section=commercial" replace />} />
+            </Route>
+
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route element={<ProtectedRoute roles={["CLIENT"]} companyRoles={["OWNER", "MEMBER"]} />}>
+                <Route path="/team" element={<CompanyTeamPage />} />
+              </Route>
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/projects/:id" element={<ProjectDetailPage />} />
               <Route path="/findings/:id" element={<FindingDetailPage />} />
@@ -180,7 +186,6 @@ export function App() {
               </Route>
 
               <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
-                <Route path="/admin/subscriptions" element={<PendingSubscriptionsPage />} />
                 <Route path="/admin/access-requests" element={<AccessRequestsPage />} />
                 {/* ADR-056 — painel de filas restrito a ADMIN. */}
                 <Route path="/admin/filas" element={<FilasPage />} />

@@ -30,7 +30,7 @@ import { seedPlan } from "../fixtures/plans.fixture";
 import { seedCompany } from "../fixtures/companies.fixture";
 import { seedApplication } from "../fixtures/applications.fixture";
 import { seedProject, seedProjectMember } from "../fixtures/projects.fixture";
-import { makeThreatIntelSyncService, makeTechSuggestionService } from "../../src/factories/threat-intel.factory";
+import { makeThreatIntelService, makeThreatIntelSyncService, makeTechSuggestionService } from "../../src/factories/threat-intel.factory";
 import type { AvisoNormalizado, EntradaKev } from "../../src/utils/threat-intel.util";
 
 // ---------------------------------------------------------------------------
@@ -350,8 +350,30 @@ describe("Threat Intel — sincronização e notificações", () => {
     expect(r!.sources.NVD_FEED).toMatchObject({ ok: false, erro: "NVD: HTTP 503" });
     expect(r!.sources.NVD_PRODUTOS).toMatchObject({ ok: false });
     expect(r!.sources.OSV).toMatchObject({ ok: true });
-    const status = await request(app).get(`/api/threat-intel/sync?companyId=${c.companyA.id}`).set(auth(c.t.ownerA));
-    expect(status.body.execucoes[0]).toMatchObject({ status: "PARTIAL", errorMessage: expect.stringContaining("NVD_FEED: NVD: HTTP 503") });
+    const statusOwner = await request(app).get(`/api/threat-intel/sync?companyId=${c.companyA.id}`).set(auth(c.t.ownerA));
+    const statusPentester = await request(app).get(`/api/threat-intel/sync?companyId=${c.companyA.id}`).set(auth(c.t.pentA));
+    expect(statusOwner.status).toBe(403);
+    expect(statusPentester.status).toBe(403);
+
+    const statusAdmin = await request(app).get(`/api/threat-intel/sync?companyId=${c.companyA.id}`).set(auth(c.t.admin));
+    expect(statusAdmin.status).toBe(200);
+    expect(statusAdmin.body.execucoes[0]).toMatchObject({ status: "PARTIAL", errorMessage: expect.stringContaining("NVD_FEED: NVD: HTTP 503") });
+
+    const resumoOwner = await request(app).get(`/api/threat-intel/overview?companyId=${c.companyA.id}`).set(auth(c.t.ownerA));
+    const ultima = resumoOwner.body.ultimaExecucao;
+    expect(ultima).toMatchObject({
+      startedAt: expect.any(String),
+      finishedAt: expect.any(String),
+      sources: { NVD_FEED: { ok: false, erro: "Indisponível" }, OSV: { ok: true } },
+    });
+    for (const campo of ["id", "trigger", "status", "newAdvisories", "newMatches", "notifications", "errorMessage"]) {
+      expect(ultima).not.toHaveProperty(campo);
+    }
+    expect(ultima.sources.NVD_FEED).not.toHaveProperty("itens");
+    expect(JSON.stringify(ultima)).not.toContain("HTTP 503");
+
+    const resumoAdmin = await request(app).get(`/api/threat-intel/overview?companyId=${c.companyA.id}`).set(auth(c.t.admin));
+    expect(resumoAdmin.body.ultimaExecucao.errorMessage).toContain("NVD_FEED: NVD: HTTP 503");
   });
 
   it("TI-SYN-05 mais de 3 eventos numa execução viram um resumo por pessoa", async () => {
@@ -367,6 +389,9 @@ describe("Threat Intel — sincronização e notificações", () => {
 
   it("TI-SYN-06 só ADMIN dispara a sincronização manual", async () => {
     const c = await cenario();
+    const service = makeThreatIntelService();
+    await expect(service.execucoes({ userId: c.ids.ownerA, role: "CLIENT" }, c.companyA.id)).rejects.toThrow("FORBIDDEN");
+    await expect(service.execucoes({ userId: c.ids.pentA, role: "PENTESTER" }, c.companyA.id)).rejects.toThrow("FORBIDDEN");
     expect((await request(app).post("/api/threat-intel/sync").set(auth(c.t.ownerA))).status).toBe(403);
     expect((await request(app).post("/api/threat-intel/sync").set(auth(c.t.pentA))).status).toBe(403);
     expect((await request(app).post("/api/threat-intel/sync").set(auth(c.t.admin))).status).toBe(202);

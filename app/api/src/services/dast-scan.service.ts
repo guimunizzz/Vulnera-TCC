@@ -120,8 +120,8 @@ export interface DastReportData {
  * 2026-11-19, a mesma visibilidade do agendamento). Os demais continuam
  * visíveis só a quem pediu e ao ADMIN (ADR-056 §7).
  */
-export const scanDeAgendamentoPorUrl = (scan: Pick<DastScan, "trigger" | "applicationId">): boolean =>
-  scan.trigger === "SCHEDULED" && scan.applicationId === null;
+export const scanDeAgendamentoPorUrl = (scan: Pick<DastScan, "trigger" | "companyId" | "applicationId" | "projectId">): boolean =>
+  scan.trigger === "SCHEDULED" && scan.companyId === null && scan.applicationId === null && scan.projectId === null;
 
 export interface PedidoScanAgendado {
   scheduleId: string;
@@ -638,10 +638,30 @@ export class DastScanService {
     return scan;
   }
 
+  private async canStartQueuedScan(scan: DastScan): Promise<boolean> {
+    const requester = await this.userRepository.findById(scan.requestedById);
+    if (!requester || requester.deactivatedAt || (requester.role !== "ADMIN" && requester.role !== "PENTESTER")) {
+      return false;
+    }
+    if (!scan.applicationId) return scan.companyId === null && scan.projectId === null;
+    const application = await this.scope.applications.findById(scan.applicationId);
+    if (!application?.isActive || application.companyId !== scan.companyId) return false;
+    if (scan.projectId) {
+      const project = await this.scope.projects.findById(scan.projectId);
+      if (project?.applicationId !== application.id || project.companyId !== application.companyId) return false;
+      return requester.role === "ADMIN" || !!(await this.scope.members.findOne(project.id, requester.id));
+    }
+    return requester.role === "ADMIN" || this.scope.members.existsForUserInApplication(requester.id, application.id);
+  }
+
   /** Devolve false quando o scan não foi tomado (já não estava QUEUED): nada foi executado. */
   private async runInBackground(scanId: string, ctx: WatchdogRunContext): Promise<boolean> {
     const scan = await this.repository.findById(scanId);
-    if (!scan) return false; // registro sumiu entre o create e aqui — não há o que fazer
+    if (!scan || scan.status !== "QUEUED") return false;
+    if (!await this.canStartQueuedScan(scan)) {
+      await this.repository.failIfQueued(scan.id, "O responsável ou o escopo do scan não está mais autorizado.");
+      return false;
+    }
 
     // ADR-056: tomada ATÔMICA (UPDATE ... WHERE status = QUEUED). Um job
     // repetido, ou um scan cancelado entre a fila e aqui, não volta a RUNNING.

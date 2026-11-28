@@ -41,10 +41,10 @@ router.post("/:id/sla-policy/apply", requireRole("ADMIN"), (req, res) => slaPoli
 router.get("/", requireRole("ADMIN"), (req, res) => controller.list(req, res));
 router.get("/:id", requireRole("ADMIN"), (req, res) => controller.getById(req, res));
 
-// criação: qualquer autenticado (quem cria vira dono, ownership validada no service)
-router.post("/", (req, res) => controller.create(req, res));
+// Apenas CLIENT com recuperação legada autorizada pode criar pelo caminho antigo.
+router.post("/", requireRole("CLIENT"), (req, res) => controller.create(req, res));
 
-// edição: ownership fina validada no service (ADMIN edita qualquer uma, CLIENT só a própria)
+// Edição: ADMIN global ou OWNER da própria empresa.
 router.put("/:id", (req, res) => controller.update(req, res));
 
 // exclusão: admin-only

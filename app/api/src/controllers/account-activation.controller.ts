@@ -40,6 +40,14 @@ export class AccountActivationController {
       if (hasCode(error, "INVALID_ACTIVATION_TOKEN")) {
         return res.status(400).json({ error: "INVALID_ACTIVATION_TOKEN" });
       }
+      if (error instanceof Error && [
+        "ACCESS_REQUEST_PLAN_NOT_FOUND",
+        "ACCESS_REQUEST_PLAN_UNAVAILABLE",
+        "ACCESS_REQUEST_PLAN_CHANGED",
+        "COMPANY_ALREADY_EXISTS",
+      ].includes(error.message)) {
+        return res.status(409).json({ error: error.message });
+      }
       return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
   }

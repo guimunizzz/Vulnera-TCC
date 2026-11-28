@@ -11,10 +11,27 @@
  */
 
 import { createHash } from "crypto";
-import type { PrismaClient, RefreshToken } from "@prisma/client";
+import type { RefreshToken } from "@prisma/client";
+import { UserRepository } from "./user.repository";
+import { inAccessTransaction, type AccessDatabaseClient } from "./access-transaction.repository";
+import { TenantLockRepository } from "./tenant-lock.repository";
+
+export interface AuthTransactionRepositories {
+  users: UserRepository;
+  refreshTokens: RefreshTokenRepository;
+  tenantLocks: TenantLockRepository;
+}
 
 export class RefreshTokenRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: AccessDatabaseClient) {}
+
+  transaction<T>(operation: (repositories: AuthTransactionRepositories) => Promise<T>): Promise<T> {
+    return inAccessTransaction(this.prisma, (tx) => operation({
+      users: new UserRepository(tx),
+      refreshTokens: new RefreshTokenRepository(tx),
+      tenantLocks: new TenantLockRepository(tx),
+    }));
+  }
 
   /** Helper estático — outros lugares também podem usar */
   static hash(token: string): string {
@@ -29,17 +46,27 @@ export class RefreshTokenRepository {
     return this.prisma.refreshToken.findUnique({ where: { tokenHash } });
   }
 
-  revoke(id: string): Promise<RefreshToken> {
+  revoke(id: string, now: Date = new Date()): Promise<RefreshToken> {
     return this.prisma.refreshToken.update({
       where: { id },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: now },
     });
   }
 
-  revokeAllForUser(userId: string): Promise<{ count: number }> {
+  async findByHashForUpdate(tokenHash: string): Promise<RefreshToken | null> {
+    if ("$transaction" in this.prisma) {
+      throw new Error("REFRESH_TOKEN_LOCK_REQUIRES_TRANSACTION");
+    }
+    const rows = await this.prisma.$queryRaw<RefreshToken[]>`
+      SELECT * FROM RefreshToken WHERE tokenHash = ${tokenHash} FOR UPDATE
+    `;
+    return rows[0] ?? null;
+  }
+
+  revokeAllForUser(userId: string, now: Date = new Date()): Promise<{ count: number }> {
     return this.prisma.refreshToken.updateMany({
       where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: now },
     });
   }
 }

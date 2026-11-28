@@ -35,6 +35,15 @@ describe("Cache de leitura por sessão", () => {
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });
 
+  it("limpa o cache e troca a versão ao autenticar novamente a mesma pessoa", () => {
+    useAuthStore.getState().setAuth(session("company-a"));
+    const previous = useAuthStore.getState().sessionVersion;
+    queryClient.setQueryData(["projects"], ["Leitura da sessão antiga"]);
+    useAuthStore.getState().setAuth(session("company-a"));
+    expect(queryClient.getQueryData(["projects"])).toBeUndefined();
+    expect(useAuthStore.getState().sessionVersion).not.toBe(previous);
+  });
+
   it("preserva leituras da mesma sessão durante a rotação dos tokens", () => {
     useAuthStore.getState().setAuth(session("company-a"));
     queryClient.setQueryData(["projects"], ["Projeto da empresa A"]);
@@ -60,6 +69,15 @@ describe("Cache de leitura por sessão", () => {
     queryClient.setQueryData(["projects"], ["Projeto da mesma empresa"]);
     expect(useAuthStore.getState().updateUser({ ...auth.user, name: "Nome atualizado" }, auth.user)).toBe(true);
     expect(queryClient.getQueryData(["projects"])).toEqual(["Projeto da mesma empresa"]);
+  });
+
+  it("invalida sessão de onboarding quando o backend atualiza a permissão legada", () => {
+    const auth = session("legacy");
+    auth.user.companyId = null;
+    useAuthStore.getState().setAuth(auth);
+    queryClient.setQueryData(["onboarding-status"], { status: "PENDING_APPROVAL" });
+    expect(useAuthStore.getState().updateUser({ ...auth.user, legacyOnboardingAllowed: false }, auth.user)).toBe(true);
+    expect(queryClient.getQueryData(["onboarding-status"])).toBeUndefined();
   });
 
   it("recusa resposta de perfil de outra sessão, inclusive novo login da mesma pessoa", () => {

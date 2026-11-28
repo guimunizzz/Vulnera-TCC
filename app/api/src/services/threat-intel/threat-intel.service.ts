@@ -146,12 +146,17 @@ export class ThreatIntelService {
       // Backfill de uma tecnologia só consulta OSV/NVD daquela tecnologia: a saúde das fontes vem da última completa.
       this.repository.ultimaExecucaoCompleta(),
     ]);
+    const ultimaExecucao = ultima ? toExecucaoDTO(ultima) : null;
     return {
       companyId: e.companyId,
       permissoes: e.permissoes,
       inventario: { confirmados: inventario.CONFIRMED ?? 0, sugeridos: inventario.SUGGESTED ?? 0, descartados: inventario.DISMISSED ?? 0 },
       casamentos,
-      ultimaExecucao: ultima ? toExecucaoDTO(ultima) : null,
+      // CLIENT/PENTESTER precisam saber quando as fontes atualizaram e se cada
+      // fonte respondeu, mas não precisam de erro bruto, IDs ou métricas globais.
+      ultimaExecucao: ultimaExecucao && actor.role !== "ADMIN"
+        ? toResumoOperacional(ultimaExecucao)
+        : ultimaExecucao,
       sincronizando: await this.fila.threatIntelEmAndamento(),
     };
   }
@@ -414,6 +419,7 @@ export class ThreatIntelService {
   }
 
   async execucoes(actor: Actor, companyId: string | undefined): Promise<{ sincronizando: boolean; execucoes: ExecucaoDTO[] }> {
+    if (actor.role !== "ADMIN") throw new Error("FORBIDDEN");
     await this.escopo(actor, companyId);
     return { sincronizando: await this.fila.threatIntelEmAndamento(), execucoes: (await this.repository.ultimasExecucoes(10)).map(toExecucaoDTO) };
   }
@@ -485,6 +491,19 @@ function valido(vetor: string): boolean {
   } catch {
     return false;
   }
+}
+
+function toResumoOperacional(execucao: ExecucaoDTO) {
+  return {
+    startedAt: execucao.startedAt,
+    finishedAt: execucao.finishedAt,
+    sources: Object.fromEntries(
+      Object.entries(execucao.sources).map(([source, resultado]) => [
+        source,
+        resultado.ok ? { ok: true } : { ok: false, erro: "Indisponível" },
+      ]),
+    ),
+  };
 }
 
 /** Valida o formulário do inventário e devolve a identidade normalizada. */

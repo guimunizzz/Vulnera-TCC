@@ -82,6 +82,9 @@ export class PlanController {
   async update(req: Request, res: Response): Promise<Response> {
     try {
       const id = req.params.id as string;
+      if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+        return res.status(400).json({ error: "INVALID_BODY" });
+      }
       const body = req.body as UpdatePlanDTO;
 
       if (
@@ -115,7 +118,17 @@ export class PlanController {
         return res.status(400).json({ error: "INVALID_INCLUDES_REMEDIATION" });
       }
 
-      const plan = await this.service.update(id, body);
+      if (body.isActive !== undefined && typeof body.isActive !== "boolean") {
+        return res.status(400).json({ error: "INVALID_IS_ACTIVE" });
+      }
+      const plan = await this.service.update(id, {
+        name: body.name,
+        maxApplications: body.maxApplications,
+        maxProjects: body.maxProjects,
+        includesRemediation: body.includesRemediation,
+        price: body.price,
+        isActive: body.isActive,
+      });
       return res.status(200).json(plan.toResponse());
     } catch (error: any) {
       if (error.message === "PLAN_NOT_FOUND") {
@@ -123,6 +136,9 @@ export class PlanController {
       }
       if (error.message === "PLAN_ALREADY_EXISTS") {
         return res.status(409).json({ error: "PLAN_ALREADY_EXISTS" });
+      }
+      if (error.message === "PLAN_HAS_ACTIVE_SUBSCRIPTIONS") {
+        return res.status(409).json({ error: "PLAN_HAS_ACTIVE_SUBSCRIPTIONS" });
       }
       console.error("PlanController.update", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });
@@ -136,6 +152,9 @@ export class PlanController {
     } catch (error: any) {
       if (error.message === "PLAN_NOT_FOUND") {
         return res.status(404).json({ error: "PLAN_NOT_FOUND" });
+      }
+      if (error.message === "PLAN_IN_USE") {
+        return res.status(409).json({ error: "PLAN_IN_USE" });
       }
       console.error("PlanController.delete", error);
       return res.status(500).json({ error: "INTERNAL_ERROR" });

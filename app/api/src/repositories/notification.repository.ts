@@ -7,6 +7,7 @@
  */
 
 import type { Notification, PrismaClient } from "@prisma/client";
+import { TenantLockRepository } from "./tenant-lock.repository";
 
 export interface NovaNotificacao {
   userId: string;
@@ -19,10 +20,22 @@ export interface NovaNotificacao {
 export class NotificationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async criarVarias(notificacoes: NovaNotificacao[]): Promise<number> {
+  async criarVarias(notificacoes: NovaNotificacao[], companyId?: string): Promise<number> {
     if (notificacoes.length === 0) return 0;
-    const r = await this.prisma.notification.createMany({ data: notificacoes });
-    return r.count;
+    return this.prisma.$transaction(async (tx) => {
+      const locks = new TenantLockRepository(tx);
+      const userIds = [...new Set(notificacoes.map(({ userId }) => userId))];
+      await locks.lockUsers(userIds);
+      const active = await tx.user.findMany({
+        where: { id: { in: userIds }, deactivatedAt: null, companyId },
+        select: { id: true },
+      });
+      const activeIds = new Set(active.map(({ id }) => id));
+      const authorized = notificacoes.filter(({ userId }) => activeIds.has(userId));
+      if (authorized.length === 0) return 0;
+      const result = await tx.notification.createMany({ data: authorized });
+      return result.count;
+    }, { isolationLevel: "ReadCommitted" });
   }
 
   /**

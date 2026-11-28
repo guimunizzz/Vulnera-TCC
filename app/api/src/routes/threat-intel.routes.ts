@@ -8,6 +8,7 @@
 import { Router } from "express";
 import { makeThreatIntelController } from "../factories/threat-intel.factory";
 import { authRateLimitMiddleware, endpointRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
+import { requireRole } from "../middlewares/require-role.middleware";
 
 const router = Router();
 const controller = makeThreatIntelController();
@@ -32,7 +33,7 @@ router.patch("/matches/:id/triage", controller.triage);
 router.get("/matches/:id/promotion-draft", controller.promotionDraft);
 router.post("/matches/:id/promote", controller.promote);
 
-router.get("/sync", controller.syncStatus);
+router.get("/sync", requireRole("ADMIN"), controller.syncStatus);
 router.post("/sync", endpointRateLimitMiddleware("expensive"), controller.syncNow);
 
 export { router as threatIntelRoutes };

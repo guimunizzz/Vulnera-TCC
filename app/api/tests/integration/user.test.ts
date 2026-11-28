@@ -1,7 +1,10 @@
 import request from "supertest";
 import { app } from "../../src/app";
+import { prisma } from "../../src/database/prisma.database";
 import { cleanDatabase } from "../setup";
 import { seedUser } from "../fixtures/users.fixture";
+import { seedPlan } from "../fixtures/plans.fixture";
+import { seedCompany } from "../fixtures/companies.fixture";
 import { loginAs } from "../fixtures/auth.fixture";
 
 const PASSWORD = "senha12345";
@@ -71,6 +74,113 @@ describe("User (me/list/getById/update/delete)", () => {
     expect(getAdminByPentester.body.code).toBe("FORBIDDEN");
   });
 
+  // SEC-12: MEMBER recebe somente o diretório mínimo; o OWNER preserva a visão de gestão.
+  it("minimiza diretório do CLIENT MEMBER, inclui a si mesmo, preserva /me e detalhes do OWNER", async () => {
+    const plan = await seedPlan({ name: "MEMBER-DIRECTORY" });
+    const companyA = await seedCompany({ name: "Member Directory Alpha", planId: plan.id });
+    const companyB = await seedCompany({ name: "Member Directory Beta", planId: plan.id });
+    const ownerA = await seedUser({
+      name: "Owner Alpha",
+      email: "owner-alpha@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "OWNER",
+    });
+    const memberA = await seedUser({
+      name: "Member Alpha",
+      email: "member-alpha@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+    });
+    const colleagueA = await seedUser({
+      name: "Colleague Alpha",
+      email: "colleague-alpha@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+    });
+    const inactiveA = await seedUser({
+      name: "Inactive Alpha",
+      email: "inactive-alpha@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+    });
+    const memberB = await seedUser({
+      name: "Member Beta",
+      email: "member-beta@member-directory.local",
+      password: PASSWORD,
+      role: "CLIENT",
+      companyId: companyB.id,
+      companyRole: "MEMBER",
+    });
+    await prisma.user.update({ where: { id: inactiveA.id }, data: { deactivatedAt: new Date() } });
+
+    const memberToken = await loginAs(app, memberA.email, PASSWORD);
+    const memberList = await request(app).get("/api/users").set("Authorization", `Bearer ${memberToken}`);
+    expect(memberList.status).toBe(200);
+    expect(memberList.body.map((user: { id: string }) => user.id).sort()).toEqual([ownerA.id, memberA.id, colleagueA.id].sort());
+    expect(memberList.body.some((user: { id: string }) => user.id === memberA.id)).toBe(true);
+    for (const user of memberList.body) {
+      expect(Object.keys(user).sort()).toEqual(["id", "name"]);
+    }
+
+    const colleague = await request(app)
+      .get(`/api/users/${colleagueA.id}`)
+      .set("Authorization", `Bearer ${memberToken}`);
+    expect(colleague.status).toBe(200);
+    expect(colleague.body).toEqual({ id: colleagueA.id, name: colleagueA.name });
+
+    const me = await request(app).get("/api/users/me").set("Authorization", `Bearer ${memberToken}`);
+    expect(me.status).toBe(200);
+    expect(Object.keys(me.body).sort()).toEqual([
+      "companyId", "companyRole", "createdAt", "email", "id", "legacyOnboardingAllowed", "name", "role",
+    ]);
+    expect(me.body).toMatchObject({
+      id: memberA.id,
+      email: memberA.email,
+      role: "CLIENT",
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+      legacyOnboardingAllowed: false,
+    });
+    expect(me.body.password).toBeUndefined();
+
+    const ownerToken = await loginAs(app, ownerA.email, PASSWORD);
+    const ownerDetails = await request(app)
+      .get(`/api/users/${colleagueA.id}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(ownerDetails.status).toBe(200);
+    expect(Object.keys(ownerDetails.body).sort()).toEqual([
+      "companyId", "companyRole", "createdAt", "email", "id", "legacyOnboardingAllowed", "name", "role",
+    ]);
+    expect(ownerDetails.body).toMatchObject({
+      id: colleagueA.id,
+      email: colleagueA.email,
+      companyId: companyA.id,
+      companyRole: "MEMBER",
+    });
+    const ownerList = await request(app).get("/api/users").set("Authorization", `Bearer ${ownerToken}`);
+    expect(ownerList.status).toBe(200);
+    expect(ownerList.body.map((user: { id: string }) => user.id).sort()).toEqual([ownerA.id, memberA.id, colleagueA.id].sort());
+    for (const user of ownerList.body) {
+      expect(Object.keys(user).sort()).toEqual([
+        "companyId", "companyRole", "createdAt", "email", "id", "legacyOnboardingAllowed", "name", "role",
+      ]);
+    }
+
+    const betaDetails = await request(app)
+      .get(`/api/users/${memberB.id}`)
+      .set("Authorization", `Bearer ${memberToken}`);
+    expect(betaDetails.status).toBe(403);
+    expect(betaDetails.body.code).toBe("FORBIDDEN");
+  });
+
   // USR-03
   it("PATCH/DELETE: usuário atualiza a si mesmo, não pode se autodeletar, e só ADMIN deleta outros", async () => {
     const admin = await seedUser({ name: "Admin", email: "admin@vulnera.local", password: PASSWORD, role: "ADMIN" });
@@ -116,11 +226,97 @@ describe("User (me/list/getById/update/delete)", () => {
       .set("Authorization", `Bearer ${adminToken}`);
     expect(deleteAsAdmin.status).toBe(204);
 
-    // usuário deletado não existe mais
-    const getDeleted = await request(app)
+    // A desativação mantém a linha histórica acessível ao ADMIN.
+    const getDeactivated = await request(app)
       .get(`/api/users/${clientB.id}`)
       .set("Authorization", `Bearer ${adminToken}`);
-    expect(getDeleted.status).toBe(404);
-    expect(getDeleted.body.code).toBe("USER_NOT_FOUND");
+    expect(getDeactivated.status).toBe(200);
+    expect(getDeactivated.body.id).toBe(clientB.id);
+  });
+
+  // SEC-06
+  it("PATCH rejeita mudança de email até existir fluxo de reverificação", async () => {
+    const user = await seedUser({ name: "Email Guard", email: "email-guard@vulnera.local", password: PASSWORD, role: "CLIENT" });
+    const token = await loginAs(app, user.email, PASSWORD);
+
+    const response = await request(app)
+      .patch(`/api/users/${user.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ email: "new-address@vulnera.local" });
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("EMAIL_CHANGE_REQUIRES_VERIFICATION");
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).email).toBe(user.email);
+  });
+
+  // SEC-08
+  it("DELETE é desativação: preserva User, revoga refresh e invalida access", async () => {
+    const admin = await seedUser({ name: "Admin", email: "deactivate-admin@vulnera.local", password: PASSWORD, role: "ADMIN" });
+    const target = await seedUser({ name: "Target", email: "deactivate-target@vulnera.local", password: PASSWORD, role: "CLIENT" });
+    const adminToken = await loginAs(app, admin.email, PASSWORD);
+    const session = await request(app).post("/api/auth/login").send({ email: target.email, password: PASSWORD });
+
+    const response = await request(app)
+      .delete(`/api/users/${target.id}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(204);
+    const storedUser = await prisma.user.findUniqueOrThrow({ where: { id: target.id } });
+    expect(storedUser.deactivatedAt).toBeInstanceOf(Date);
+    expect(storedUser.sessionVersion).toBe(1);
+    expect(await prisma.refreshToken.count({ where: { userId: target.id, revokedAt: null } })).toBe(0);
+
+    const staleAccess = await request(app).get("/api/users/me").set("Authorization", `Bearer ${session.body.accessToken}`);
+    expect(staleAccess.status).toBe(401);
+    const loginAgain = await request(app).post("/api/auth/login").send({ email: target.email, password: PASSWORD });
+    expect(loginAgain.status).toBe(401);
+  });
+
+  // SEC-08-OWNER
+  it("impede desativar o último OWNER ativo da empresa", async () => {
+    const plan = await seedPlan({ name: "OWNER-GUARD" });
+    const company = await seedCompany({ name: "Owner Guard Co", planId: plan.id });
+    const admin = await seedUser({ name: "Admin", email: "owner-guard-admin@vulnera.local", password: PASSWORD, role: "ADMIN" });
+    const owner = await seedUser({
+      name: "Only Owner", email: "only-owner@vulnera.local", password: PASSWORD,
+      role: "CLIENT", companyId: company.id, companyRole: "OWNER",
+    });
+    const adminToken = await loginAs(app, admin.email, PASSWORD);
+
+    const response = await request(app)
+      .delete(`/api/users/${owner.id}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("LAST_ACTIVE_OWNER");
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: owner.id } })).deactivatedAt).toBeNull();
+  });
+
+  // SEC-08-RECOVERY
+  it("ADMIN reativa OWNER histórico da própria Company sem restaurar sessões antigas", async () => {
+    const plan = await seedPlan({ name: "OWNER-RECOVERY" });
+    const company = await seedCompany({ name: "Owner Recovery Co", planId: plan.id });
+    const admin = await seedUser({ name: "Admin", email: "owner-recovery-admin@vulnera.local", password: PASSWORD, role: "ADMIN" });
+    const owner = await seedUser({
+      name: "Historical Owner", email: "historical-owner@vulnera.local", password: PASSWORD,
+      role: "CLIENT", companyId: company.id, companyRole: "OWNER",
+    });
+    const oldSession = await request(app).post("/api/auth/login").send({ email: owner.email, password: PASSWORD });
+    await prisma.user.update({ where: { id: owner.id }, data: { deactivatedAt: new Date(), sessionVersion: 1 } });
+    const adminToken = await loginAs(app, admin.email, PASSWORD);
+
+    const response = await request(app)
+      .post(`/api/users/${owner.id}/reactivate-owner`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    const storedUser = await prisma.user.findUniqueOrThrow({ where: { id: owner.id } });
+    expect(storedUser.deactivatedAt).toBeNull();
+    expect(storedUser.sessionVersion).toBe(2);
+    expect(await prisma.refreshToken.count({ where: { userId: owner.id, revokedAt: null } })).toBe(0);
+    const oldAccess = await request(app).get("/api/users/me").set("Authorization", `Bearer ${oldSession.body.accessToken}`);
+    expect(oldAccess.status).toBe(401);
+    const oldRefresh = await request(app).post("/api/auth/refresh").send({ refreshToken: oldSession.body.refreshToken });
+    expect(oldRefresh.status).toBe(401);
   });
 });

@@ -28,7 +28,7 @@ interface Atalho {
 const ATALHOS: Atalho[] = [
   { rotulo: "Aplicações", to: "/applications", Icone: Monitor, papeis: ["ADMIN", "CLIENT"] },
   { rotulo: "Projetos", to: "/projects", Icone: Folder, papeis: ["ADMIN", "CLIENT", "PENTESTER"] },
-  { rotulo: "Findings", to: "/findings", Icone: Search, papeis: ["ADMIN", "CLIENT", "PENTESTER"] },
+  { rotulo: "Findings", to: "/findings", Icone: Search, papeis: ["ADMIN", "PENTESTER"] },
   { rotulo: "DAST", to: "/dast", Icone: Radar, papeis: ["PENTESTER"] },
 ];
 

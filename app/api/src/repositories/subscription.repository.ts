@@ -8,6 +8,8 @@
 
 import type { PrismaClient } from "@prisma/client";
 import type { Subscription } from "../models/subscription.model";
+import { lockEligiblePlan } from "./plan.repository";
+import { TenantLockRepository } from "./tenant-lock.repository";
 
 export class SubscriptionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -55,15 +57,21 @@ export class SubscriptionRepository {
     actorId: string;
   }): Promise<Subscription> {
     return this.prisma.$transaction(async (tx) => {
-      const companyRows = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM Company WHERE id = ${data.companyId} FOR UPDATE
-      `;
-      if (companyRows.length === 0) throw new Error("USER_HAS_NO_COMPANY");
+      const locks = new TenantLockRepository(tx);
+      const company = await locks.lockCompany(data.companyId);
+      if (!company) throw new Error("USER_HAS_NO_COMPANY");
+      await locks.lockUsers([data.actorId]);
+      const actor = await tx.user.findUnique({ where: { id: data.actorId } });
+      if (!actor || actor.deactivatedAt || actor.role !== "CLIENT"
+        || actor.companyRole !== "OWNER" || actor.companyId !== data.companyId) {
+        throw new Error("FORBIDDEN");
+      }
 
       const active = await tx.subscription.findFirst({
         where: { companyId: data.companyId, status: "ACTIVE" },
       });
       if (active) throw new Error("ALREADY_HAS_ACTIVE_SUBSCRIPTION");
+      await lockEligiblePlan(tx, data.planId);
 
       const pending = await tx.subscription.findFirst({
         where: { companyId: data.companyId, status: "PENDING_APPROVAL" },
@@ -94,20 +102,44 @@ export class SubscriptionRepository {
       });
 
       return subscription;
-    });
+    }, { isolationLevel: "ReadCommitted" });
   }
 
-  async approve(id: string, approvedBy: string): Promise<Subscription> {
-    return this.prisma.subscription.update({
-      where: { id },
-      data: { status: "ACTIVE", startDate: new Date(), approvedBy },
-    });
-  }
+  async decide(id: string, actorId: string, decision: "ACTIVE" | "REJECTED"): Promise<Subscription> {
+    return this.prisma.$transaction(async (tx) => {
+      const locks = new TenantLockRepository(tx);
+      const target = await tx.subscription.findUnique({ where: { id }, select: { companyId: true } });
+      if (!target || !await locks.lockCompany(target.companyId)) throw new Error("SUBSCRIPTION_NOT_FOUND");
+      await locks.lockUsers([actorId]);
+      const actor = await tx.user.findUnique({ where: { id: actorId } });
+      if (!actor || actor.role !== "ADMIN" || actor.deactivatedAt) throw new Error("FORBIDDEN");
 
-  async reject(id: string, rejectedBy: string): Promise<Subscription> {
-    return this.prisma.subscription.update({
-      where: { id },
-      data: { status: "REJECTED", approvedBy: rejectedBy },
-    });
+      const current = await tx.subscription.findUnique({ where: { id } });
+      if (!current) throw new Error("SUBSCRIPTION_NOT_FOUND");
+      if (current.status !== "PENDING_APPROVAL") throw new Error("INVALID_STATUS_TRANSITION");
+
+      if (decision === "ACTIVE") {
+        const active = await tx.subscription.findFirst({
+          where: { companyId: current.companyId, status: "ACTIVE" },
+        });
+        if (active) throw new Error("ALREADY_HAS_ACTIVE_SUBSCRIPTION");
+        await lockEligiblePlan(tx, current.planId);
+      }
+
+      const updated = await tx.subscription.update({
+        where: { id },
+        data: { status: decision, approvedBy: actorId, startDate: decision === "ACTIVE" ? new Date() : undefined },
+      });
+      if (decision === "ACTIVE") {
+        await tx.company.update({ where: { id: current.companyId }, data: { planId: current.planId } });
+      }
+      await tx.auditLog.create({
+        data: {
+          actorId, companyId: current.companyId, entityType: "Subscription", entityId: id,
+          action: decision === "ACTIVE" ? "SUBSCRIPTION_APPROVED" : "SUBSCRIPTION_REJECTED",
+        },
+      });
+      return updated;
+    }, { isolationLevel: "ReadCommitted" });
   }
 }

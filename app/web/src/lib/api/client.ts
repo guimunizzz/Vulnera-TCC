@@ -1,18 +1,8 @@
 /**
- * client.ts
- *
- * Instância Axios central da Vulnera API.
- *
- * - Request interceptor: anexa o accessToken (se houver) em todo request.
- * - Response interceptor: em 401 por token expirado, tenta 1 refresh e
- *   reenvia o request original. Se várias requests falharem ao mesmo tempo
- *   (ex: dashboard disparando 3 queries em paralelo), só UM refresh roda —
- *   as outras entram numa fila e são liberadas quando o refresh original
- *   termina (senão cada uma dispararia sua própria rotação de refresh token
- *   e todas menos a última seriam invalidadas pela rotation).
+ * Cliente Axios autenticado, consumido pelos módulos HTTP do frontend.
+ * Compartilha o refresh dentro da sessão e descarta respostas da sessão anterior.
  */
-
-import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from "axios";
+import axios, { type AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "../../store/auth.store";
 
 const AUTH_PATHS_WITHOUT_REFRESH = ["/auth/login", "/auth/refresh"];
@@ -21,74 +11,70 @@ export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
-apiClient.interceptors.request.use((config) => {
-  const { accessToken } = useAuthStore.getState();
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
+type SessionRequest = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+  _sessionVersion?: number;
+};
+
+function assertCurrentSession(request?: SessionRequest): void {
+  if (request?._sessionVersion !== undefined && request._sessionVersion !== useAuthStore.getState().sessionVersion) {
+    throw new axios.CanceledError("Sessão alterada");
   }
+}
+
+apiClient.interceptors.request.use((config: SessionRequest) => {
+  assertCurrentSession(config);
+  const { accessToken, sessionVersion } = useAuthStore.getState();
+  config._sessionVersion = sessionVersion;
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
   return config;
 });
 
-let isRefreshing = false;
-let queue: Array<{
-  resolve: (token: string) => void;
-  reject: (error: unknown) => void;
-}> = [];
+let activeRefresh: { sessionVersion: number; promise: Promise<void> } | undefined;
 
-function processQueue(error: unknown, token: string | null): void {
-  queue.forEach(({ resolve, reject }) => {
-    if (error || !token) reject(error);
-    else resolve(token);
+function refreshSession(request: SessionRequest, sessionVersion: number, refreshToken: string): Promise<void> {
+  if (activeRefresh?.sessionVersion === sessionVersion) return activeRefresh.promise;
+
+  const promise = axios.post<{ accessToken: string; refreshToken: string }>(
+    `${apiClient.defaults.baseURL}/auth/refresh`,
+    { refreshToken },
+  ).then(({ data }) => {
+    assertCurrentSession(request);
+    useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
+  }).catch((error: unknown) => {
+    assertCurrentSession(request);
+    useAuthStore.getState().clearAuth();
+    throw error;
+  }).finally(() => {
+    if (activeRefresh?.promise === promise) activeRefresh = undefined;
   });
-  queue = [];
+
+  activeRefresh = { sessionVersion, promise };
+  return promise;
 }
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    assertCurrentSession(response.config);
+    return response;
+  },
   async (error: AxiosError) => {
-    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const originalRequest: SessionRequest | undefined = error.config;
+    assertCurrentSession(originalRequest);
 
     const isAuthEndpoint = AUTH_PATHS_WITHOUT_REFRESH.some((path) => originalRequest?.url?.includes(path));
+    if (error.response?.status !== 401 || !originalRequest || isAuthEndpoint || originalRequest._retry) throw error;
 
-    if (error.response?.status !== 401 || !originalRequest || isAuthEndpoint || originalRequest._retry) {
-      return Promise.reject(error);
-    }
-
-    const { refreshToken, setTokens, clearAuth } = useAuthStore.getState();
+    const { refreshToken, sessionVersion, clearAuth } = useAuthStore.getState();
     if (!refreshToken) {
       clearAuth();
-      return Promise.reject(error);
-    }
-
-    if (isRefreshing) {
-      return new Promise<string>((resolve, reject) => {
-        queue.push({ resolve, reject });
-      }).then((newToken) => {
-        originalRequest._retry = true;
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return apiClient(originalRequest);
-      });
+      throw error;
     }
 
     originalRequest._retry = true;
-    isRefreshing = true;
-
-    try {
-      const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
-        `${import.meta.env.VITE_API_URL}/auth/refresh`,
-        { refreshToken },
-      );
-      setTokens(data.accessToken, data.refreshToken);
-      processQueue(null, data.accessToken);
-      originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-      return apiClient(originalRequest);
-    } catch (refreshError) {
-      processQueue(refreshError, null);
-      clearAuth();
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
-    }
+    await refreshSession(originalRequest, sessionVersion, refreshToken);
+    assertCurrentSession(originalRequest);
+    return apiClient(originalRequest);
   },
 );
 

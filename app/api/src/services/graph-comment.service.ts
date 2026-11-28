@@ -17,9 +17,8 @@
  *
  * NOTIFICAÇÃO
  * Sem menção por enquanto (D22.9). Um comentário novo avisa, pelo sino, quem já
- * comentou naquele nó — menos o próprio autor. Quem perdeu o acesso ao grafo
- * depois de comentar ainda recebe o aviso, mas o link não abre nada para ele:
- * o acesso é conferido de novo ao abrir.
+ * comentou naquele nó e ainda pode acessar o grafo. O autor não recebe aviso.
+ * A empresa do destinatário é conferida sob lock na gravação de avisos de exposição.
  *
  * QUEM USA
  * `graph-comment.controller.ts`, via `graph-comment.factory.ts`.
@@ -109,23 +108,47 @@ export class GraphCommentService {
       body: entrada.texto,
     });
 
-    const destinatarios = participantes.filter((id) => id !== actor.userId);
-    if (destinatarios.length > 0) {
-      const onde = entrada.rotulo ? `em "${entrada.rotulo}"` : "num nó que você comentou";
-      const grafoNome = alvo.grafo === "EXPOSURE" ? "Exposure Graph" : "grafo do scan DAST";
+    const participantesAnteriores = participantes.filter((id) => id !== actor.userId);
+    if (participantesAnteriores.length > 0) {
       // Notificação é efeito colateral: falhar aqui não desfaz o comentário salvo.
-      await this.notifications
-        .criarVarias(destinatarios.map((userId) => ({
-          userId,
-          category: "COMMENT",
-          title: `Novo comentário no ${grafoNome}`,
-          message: `${criado.author.name} comentou ${onde}.`,
-          link: linkDoComentario(alvo.grafo, alvo.scopeId, entrada.noId),
-        })))
-        .catch((erro: unknown) => console.error("GraphCommentService.criar: notificação falhou", erro));
+      try {
+        const exposicao = alvo.grafo === "EXPOSURE";
+        const destinatarios = exposicao
+          ? participantesAnteriores
+          : await this.participantesComAcessoAoScan(participantesAnteriores, alvo.scopeId);
+        const onde = entrada.rotulo ? `em "${entrada.rotulo}"` : "num nó que você comentou";
+        const grafoNome = exposicao ? "Exposure Graph" : "grafo do scan DAST";
+        await this.notifications.criarVarias(
+          destinatarios.map((userId) => ({
+            userId,
+            category: "COMMENT",
+            title: `Novo comentário no ${grafoNome}`,
+            message: `${criado.author.name} comentou ${onde}.`,
+            link: linkDoComentario(alvo.grafo, alvo.scopeId, entrada.noId),
+          })),
+          exposicao ? alvo.scopeId : undefined,
+        );
+      } catch (erro) {
+        console.error("GraphCommentService.criar: notificação falhou", erro);
+      }
     }
 
     return this.paraDTO(actor, criado);
+  }
+
+  private async participantesComAcessoAoScan(ids: string[], scanId: string): Promise<string[]> {
+    const participantes = await this.userRepository.findByIds(ids);
+    const autorizados = await Promise.all(participantes.map(async (user) => {
+      if (user.deactivatedAt || (user.role !== "ADMIN" && user.role !== "PENTESTER")) return null;
+      try {
+        await this.scans.getById({ userId: user.id, role: user.role }, scanId);
+        return user.id;
+      } catch (erro) {
+        if (erro instanceof Error && ["FORBIDDEN", "SCAN_NOT_FOUND"].includes(erro.message)) return null;
+        throw erro;
+      }
+    }));
+    return autorizados.filter((id) => id !== null);
   }
 
   async apagar(actor: Actor, id: string): Promise<void> {

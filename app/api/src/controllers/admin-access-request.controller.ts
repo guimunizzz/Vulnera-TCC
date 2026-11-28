@@ -12,6 +12,7 @@ import {
 import {
   AdminAccessRequestEntity,
   type AccessRequestAdminActor,
+  type AdminAccessRequestEnrollmentRaw,
 } from "../models/admin-access-request.model";
 import type { AdminAccessRequestQueryService } from "../services/admin-access-request-query.service";
 import type { AdminAccessRequestDecisionService } from "../services/admin-access-request-decision.service";
@@ -80,7 +81,7 @@ export class AdminAccessRequestController {
     try {
       const result = await this.dependencies.decisionService.approve(id, actorFrom(req));
       return res.status(200).json({
-        request: safeRequest(result.request),
+        request: safeRequest(result.request, result.enrollment),
         invitationDelivery: result.invitationDelivery,
       });
     } catch (error) {
@@ -97,7 +98,7 @@ export class AdminAccessRequestController {
     if (reason === INVALID_REASON) return res.status(400).json({ error: "INVALID_REASON" });
     try {
       const result = await this.dependencies.decisionService.reject(id, actorFrom(req), reason);
-      return res.status(200).json({ request: safeRequest(result.request) });
+      return res.status(200).json({ request: safeRequest(result.request, result.enrollment) });
     } catch (error) {
       return mapError(res, error);
     }
@@ -109,7 +110,7 @@ export class AdminAccessRequestController {
     try {
       const result = await this.dependencies.invitationService.resend(id, actorFrom(req));
       return res.status(200).json({
-        request: safeRequest(result.request),
+        request: safeRequest(result.request, result.enrollment),
         invitationDelivery: result.invitationDelivery,
       });
     } catch (error) {
@@ -161,9 +162,10 @@ function actorFrom(req: Request): AccessRequestAdminActor {
   return { userId: req.user.userId, role: req.user.role };
 }
 
-function safeRequest(request: AccessRequest) {
+function safeRequest(request: AccessRequest, enrollment?: AdminAccessRequestEnrollmentRaw | null) {
   return new AdminAccessRequestEntity({
     ...request,
+    enrollment,
     status: request.status as AccessRequestStatus,
   }).toResponse();
 }
@@ -187,8 +189,15 @@ function mapError(res: Response, error: unknown): Response {
   ].includes(code)) {
     return res.status(422).json({ error: code });
   }
+  if (code === "ACCESS_REQUEST_INVALIDATION_REASON_REQUIRED") {
+    return res.status(400).json({ error: code });
+  }
   if (code === "ACCESS_REQUEST_TRANSITION_CONFLICT" || code === "ACCESS_INVITATION_ROTATION_CONFLICT") {
     return res.status(409).json({ error: "ACCESS_REQUEST_TRANSITION_CONFLICT" });
+  }
+  if (code === "ACCESS_REQUEST_PLAN_NOT_FOUND" || code === "ACCESS_REQUEST_PLAN_CHANGED"
+    || code === "ACCESS_REQUEST_PLAN_UNAVAILABLE" || code === "COMPANY_ALREADY_EXISTS") {
+    return res.status(409).json({ error: code });
   }
   return res.status(500).json({ error: "INTERNAL_ERROR" });
 }

@@ -101,7 +101,7 @@ describe("AdminDashboard", () => {
 
     const card = await screen.findByRole("region", { name: "Aprovações" });
     expect(within(card).getByText("1 assinatura aguardando aprovação")).toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: "Revisar assinaturas" })).toHaveAttribute("href", "/admin/subscriptions");
+    expect(within(card).getByRole("link", { name: "Revisar assinaturas" })).toHaveAttribute("href", "/admin/access-requests?section=commercial");
     expect(within(screen.getByRole("article", { name: "Assinaturas pendentes" })).getByText("Aguardando a sua aprovação")).toBeInTheDocument();
   });
 
@@ -111,7 +111,7 @@ describe("AdminDashboard", () => {
 
     const card = await screen.findByRole("region", { name: "Aprovações" });
     expect(within(card).getByText("Tudo em dia")).toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: "Ver assinaturas" })).toHaveAttribute("href", "/admin/subscriptions");
+    expect(within(card).getByRole("link", { name: "Ver assinaturas" })).toHaveAttribute("href", "/admin/access-requests?section=commercial");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
