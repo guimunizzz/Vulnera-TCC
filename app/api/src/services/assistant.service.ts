@@ -2,14 +2,25 @@
  * Orquestra orientação por ajuda/Gemini sem acessar registros de negócio.
  * Mantém permissões e origem sob controle da aplicação; consumido pelo controller.
  */
+import { createRequire } from "node:module";
 import type { AssistantConfig } from "../config/assistant.config";
-import type { AssistantChatDTO, AssistantGateway, AssistantResponseDTO } from "../models/assistant.model";
+import { ASSISTANT_CAPABILITIES, ASSISTANT_OUTSIDE_PRODUCT, ASSISTANT_REFUSALS } from "../config/assistant-conversation.config";
+import type { AssistantBudgetResult, AssistantChatDTO, AssistantGateway, AssistantGatewayFailure, AssistantGatewayResult, AssistantResponseDTO } from "../models/assistant.model";
 import type { JwtPayload } from "../utils/jwt.util";
 import { AssistantHelpService, normalizeAssistantText } from "./assistant-help.service";
+import { assistantRuleTarget, containsInternalDetails, containsSensitiveContent, historyForAssistant, outsideProductTopic, requestsCapabilityList, requestsProductNavigation } from "./assistant-input.service";
 
-/** Barreiras reconhecíveis, sem alegar detectar todo dado sensível em texto livre. */
-function containsSensitiveContent(text: string): boolean {
-  return /https?:\/\/|www\.|\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b|\b(?:bearer\s+\S+|AIza[\w-]{20,}|eyJ[\w-]+\.[\w-]+\.[\w-]+)|\b[a-z][a-z0-9]{23,}\b|\b[0-9a-f]{8}-[0-9a-f-]{27,}\b|(?:senha|password|api[_ -]?key|token|segredo)\s*[:=]\s*\S+/i.test(text);
+const { version: apiVersion } = createRequire(__filename)("../../package.json") as { version: string };
+const ASSISTANT_REVISION = "AI-CHAT-12";
+const PRIVACY = "Para proteger os dados, esta pergunta ficou na ajuda local. Envie só a dúvida sobre o Vulnera, sem URLs, identificadores, credenciais ou dados reais.";
+const MARKUP_IN_GENERATED_REPLY = /<|\]\s*\(|javascript\s*:/i;
+
+type LocalReason = AssistantGatewayFailure | "local_mode" | "local_quota" | "privacy" | "internal_request" | "restricted_screen";
+
+function localResponse(reason: LocalReason, message: string, actions: AssistantResponseDTO["actions"] = [], retryAfterSeconds?: number): AssistantResponseDTO {
+  // Campos fechados permitem diagnosticar a queda sem guardar documentos, texto ou identidade.
+  console.info(JSON.stringify({ event: "assistant.local_response", reason, apiVersion, assistantRevision: ASSISTANT_REVISION }));
+  return { source: "local", message, actions, ...(retryAfterSeconds ? { providerRetryAfterSeconds: retryAfterSeconds } : {}) };
 }
 
 export class AssistantService {
@@ -19,33 +30,65 @@ export class AssistantService {
     private readonly config: AssistantConfig,
   ) {}
 
-  async chat(actor: JwtPayload, dto: AssistantChatDTO): Promise<AssistantResponseDTO> {
+  async chat(actor: JwtPayload, dto: AssistantChatDTO, reserveBudget: () => AssistantBudgetResult): Promise<AssistantResponseDTO> {
     if (!["ADMIN", "CLIENT", "PENTESTER"].includes(actor.role)) throw new Error("FORBIDDEN");
-    const topics = this.help.select(dto, actor.role);
-    const related = topics.length ? topics : this.help.related(dto.screen, actor.role);
-    const actions = this.help.actions(related, actor.role);
-    const conversation = [dto.question, ...dto.history.map((item) => item.content)].join("\n");
-    if (containsSensitiveContent(conversation)) {
-      return { source: "local", actions, message: "Para proteger os dados, esta pergunta ficou na ajuda local. Envie apenas dúvidas sobre o uso da plataforma, sem nomes, e-mails, URLs, identificadores, credenciais ou conteúdo real de findings. Posso orientar sobre projetos, análise, SLA e relatórios." };
+    const target = assistantRuleTarget(dto.question);
+    const refusal = target ? ASSISTANT_REFUSALS[target] : null;
+    if (containsSensitiveContent(dto.question)) {
+      return localResponse("privacy", refusal ?? PRIVACY);
     }
-    if (!topics.length) {
-      return { source: "local", actions, message: `Minha ajuda cobre o uso do Vulnera, sem consultar registros reais ou executar operações. Não encontrei essa informação na documentação de ajuda. Posso explicar: ${related.map((topic) => topic.title).join("; ")}.` };
+    if (target === "private_instructions" || target === "private_credentials") return localResponse("internal_request", ASSISTANT_REFUSALS[target]);
+
+    const restricted = this.help.restriction(dto.screen, actor.role);
+    if (restricted && !target) return localResponse("restricted_screen", restricted);
+
+    const history = historyForAssistant(dto.history);
+    const outside = target ? null : outsideProductTopic(dto.question);
+    const inventory = !target && !outside && requestsCapabilityList(dto.question) ? ASSISTANT_CAPABILITIES[actor.role] : null;
+    const inventoryText = inventory?.map(([title, description]) => `• ${title}: ${description}`).join("\n");
+    const topics = target || outside || inventory ? [] : this.help.select({ ...dto, history }, actor.role);
+    const basic = this.help.conversation(dto.question);
+    const actions = topics.length && requestsProductNavigation(dto.question) ? this.help.actions(topics, actor.role) : [];
+    const local = (reason: LocalReason, retryAfterSeconds?: number): AssistantResponseDTO => {
+      const productHelp = topics.length ? this.help.guidance(topics[0], actor.role) : null;
+      const variants = outside ? ASSISTANT_OUTSIDE_PRODUCT[outside] : [];
+      const unused = variants.filter((message) => !history.some((turn) => turn.role === "assistant" && turn.content === message));
+      const message = refusal ?? inventoryText ?? basic ?? productHelp ?? (outside ? (unused.length ? unused : variants)[0]
+        : "Você quer entender um conceito ou aprender a fazer algo no Vulnera? Me diga a tela ou o recurso.");
+      return localResponse(reason, message, actions, retryAfterSeconds);
+    };
+    if (this.config.mode !== "gemini") return local("local_mode");
+    if (!this.config.apiKey || !this.config.model) return local("provider_not_configured");
+    const budget = reserveBudget();
+    if (!budget.allowed) return local("local_quota", budget.retryAfterSeconds);
+
+    const help = inventoryText ? `A pessoa pediu a lista de funções. Inclua todos os blocos abaixo pelos nomes indicados e diga o que pode fazer em cada um.\n${inventoryText}`
+      : target || outside ? "" : this.help.context(topics.length ? topics : this.help.related(dto.screen, actor.role), actor.role);
+    let result: AssistantGatewayResult;
+    try {
+      result = await this.gateway.generate({ question: dto.question, history, screen: dto.screen, role: actor.role, help });
+    } catch {
+      // Gateways injetados também devem falhar sem derrubar a orientação local.
+      return local("provider_error");
     }
-    if (this.config.mode === "gemini" && this.config.apiKey && this.config.model) {
-      let message: string | null = null;
-      try {
-        message = await this.gateway.generate({ question: dto.question, history: dto.history, screen: dto.screen, role: actor.role, help: this.help.context(topics, actor.role) });
-      } catch {
-        // Gateways injetados também devem falhar sem derrubar a orientação local.
-      }
-      // A configuração do provedor não faz parte da orientação pública do produto.
-      const candidate = message ?? "";
-      const privateValue = [this.config.model, this.config.apiKey].some((value) => value && candidate.toLowerCase().includes(value.toLowerCase()));
-      if (candidate.trim() && candidate.length <= 4_000 && !privateValue) return { message: candidate, source: "gemini", actions };
+    if (!result.ok) return local(result.reason);
+
+    const message = result.message.trim();
+    const privateValue = [this.config.model, this.config.apiKey].some((value) => message.toLowerCase().includes(value.toLowerCase()));
+    const expectedKind = target ? "refusal" : outside ? "off_topic" : inventory ? "answer" : null;
+    const normalizedMessage = normalizeAssistantText(message);
+    const inventoryHeadings = inventory ? message.split(/\r?\n/).map((line) => normalizeAssistantText(line).replace(/^\d+\s+/, "")) : [];
+    const incompleteInventory = inventory?.some(([title]) => !inventoryHeadings.some((line) => line.startsWith(normalizeAssistantText(title))));
+    const missedChoice = (outside === "cars" && !/\b(?:celta|corsa)\b/.test(normalizedMessage))
+      || (outside === "pets" && !/\b(?:gato|cachorro)\b/.test(normalizedMessage));
+    const repeatedJoke = result.kind === "off_topic" && (/\b(?:dashboard|tela de projetos|prefiro ficar|prefiro me manter|seria como tentar)\b/.test(normalizedMessage)
+      || (outside && /\b(?:estou por aqui|e so me chamar|se quiser falar sobre|se a sua duvida for|quer ver alguma funcao por aqui|novos dados na sua tela)\b/.test(normalizedMessage))
+      || history.some((turn) => turn.role === "assistant" && normalizeAssistantText(turn.content) === normalizedMessage));
+    if (!message || message.length > 4_000 || MARKUP_IN_GENERATED_REPLY.test(message) || privateValue
+      || containsSensitiveContent(message) || containsInternalDetails(message) || (expectedKind && result.kind !== expectedKind)
+      || incompleteInventory || missedChoice || repeatedJoke) {
+      return local("provider_invalid_response");
     }
-    const first = topics[0];
-    // A pergunta por conceito não deve ganhar uma instrução operacional alheia.
-    const prefix = normalizeAssistantText(dto.question).includes("quem e voce") ? "Sou o Assistente Vulnera.\n\n" : "";
-    return { source: "local", actions, message: `${prefix}${this.help.guidance(first, actor.role)}` };
+    return { message, source: "generated", actions: result.kind === "navigation" ? actions : [] };
   }
 }

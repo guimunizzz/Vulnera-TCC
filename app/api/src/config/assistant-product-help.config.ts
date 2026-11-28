@@ -7,11 +7,13 @@ import type { AssistantTopic } from "../models/assistant.model";
 import type { UserRole } from "../models/user.model";
 
 const ALL: readonly UserRole[] = ["ADMIN", "CLIENT", "PENTESTER"];
+const COMPANY_OPERATORS: readonly UserRole[] = ["ADMIN", "CLIENT"];
+const ANALYSTS: readonly UserRole[] = ["ADMIN", "PENTESTER"];
 
 export const ASSISTANT_PRODUCT_TOPICS: readonly AssistantTopic[] = [
   {
     id: "analysis-origins", title: "Tipos e origens dos achados",
-    keywords: ["o que e dast", "o que e sast", "o que e sca", "diferenca entre dast e sast", "diferenca entre sast e sca", "origem do achado", "origem dos achados", "procedencia", "finding manual"],
+    keywords: ["o que e dast", "o que e sast", "o que e sca", "diferenca entre dast e sast", "diferenca entre sast e sca", "diferenca entre dast sast e sca", "origem do achado", "origem dos achados", "procedencia", "finding manual"],
     screens: ["findings", "finding-detail", "sast-sca", "code-import-detail", "dast-detail"], roles: ALL, actions: ["projects", "dast", "sast-sca"],
     guidance: "DAST observa uma aplicação em execução. SAST analisa código e SCA analisa componentes e dependências. No Vulnera, DAST tem fluxo próprio de scan; SAST/SCA recebe relatórios importados. Um finding manual é registrado por uma pessoa autorizada. A origem informa de onde veio o achado; não prova exploração, não substitui triagem nem revisão humana do CVSS. Resultados brutos de ferramentas e vulnerabilidades publicadas no projeto são etapas distintas.",
     byRole: { CLIENT: "Como CLIENT, acompanhe os findings publicados nos seus projetos; os módulos e relatórios brutos de DAST/SAST/SCA são restritos a ADMIN e PENTESTER autorizado." },
@@ -20,12 +22,12 @@ export const ASSISTANT_PRODUCT_TOPICS: readonly AssistantTopic[] = [
     id: "analysis-scope", title: "Escopo, nível e elegibilidade da análise",
     keywords: ["escopo", "escopo da analise", "nivel da analise", "basico intermediario avancado", "servico de remediacao", "assinatura ativa", "aplicacao ja tem projeto", "mesma aplicacao"],
     screens: ["new-analysis", "project-detail", "applications"], roles: ALL, actions: ["new-analysis", "applications", "projects"],
-    guidance: "Ao solicitar uma análise, indique aplicação, tipo, nível Básico/Intermediário/Avançado, o que está incluído no escopo, exclusões e restrições. SAST, DAST, Maturidade e Combo descrevem o trabalho solicitado; criar o projeto não executa scanners automaticamente. A aplicação precisa estar ativa e sua empresa deve ter assinatura ativa e capacidade no plano. A implementação atual bloqueia outro projeto para uma aplicação que já tenha um, inclusive concluído. Remediação só pode ser contratada se incluída no plano; a opção não concede ao CLIENT permissão de alterar status de findings.",
+    guidance: "O escopo aprovado registra a aplicação, o tipo, o nível Básico/Intermediário/Avançado, inclusões, exclusões e restrições. SAST, DAST, Maturidade e Combo descrevem o trabalho solicitado; criar o projeto não executa scanners automaticamente. A aplicação precisa estar ativa e sua empresa deve ter assinatura ativa e capacidade no plano. A implementação atual bloqueia outro projeto para uma aplicação que já tenha um, inclusive concluído. Remediação só pode ser contratada se incluída no plano; a opção não concede ao CLIENT permissão de alterar status de findings.",
     byRole: { PENTESTER: "PENTESTER acompanha o escopo nos projetos atribuídos; a solicitação e os metadados são conduzidos por CLIENT ou ADMIN autorizado." },
   },
   {
     id: "finding-lifecycle", title: "Ciclo de correção e reabertura do finding",
-    keywords: ["status do finding", "status de finding", "ciclo do finding", "reabrir", "reabertura", "revalidacao", "corrigido", "fechado", "fixed", "closed"],
+    keywords: ["status do finding", "status de finding", "ciclo do finding", "reabrir", "reabertura", "revalidacao", "revalidar", "corrigido", "fechado", "fixed", "closed"],
     screens: ["finding-detail", "finding-editor", "remediation", "project-detail"], roles: ALL, actions: ["projects", "findings"],
     guidance: "O ciclo implementado é Aberto → Em andamento → Corrigido → Fechado. Em andamento pode voltar para Aberto, sem reiniciar o prazo. Corrigido pode voltar para Em andamento se a validação reprovar a correção; isso inicia um novo ciclo de SLA. Fechado é terminal: um problema posterior deve ser registrado como novo finding. Corrigido não é sinônimo de correção validada. Revalidação é uma atividade, não um estado separado; aceite de risco também é um registro separado e não corrige o achado. ADMIN e PENTESTER membro do projeto fazem as transições permitidas; CLIENT acompanha em leitura.",
   },
@@ -51,9 +53,9 @@ export const ASSISTANT_PRODUCT_TOPICS: readonly AssistantTopic[] = [
   {
     id: "sla-policy-lifecycle", title: "Salvar política e reaplicar prazos",
     keywords: ["salvar politica", "reaplicar", "reaplicacao", "novo prazo", "sem sla", "sem prazo", "dias corridos", "pausa do sla"],
-    screens: ["sla-settings", "finding-detail", "remediation"], roles: ALL, actions: ["sla-settings", "projects"],
+    screens: ["sla-settings"], roles: COMPANY_OPERATORS, actions: ["sla-settings", "projects"],
     guidance: "A política define dias corridos de remediação por severidade; empresas sem política própria usam a padrão. Salvar a política vale para novos findings e não altera prazos já atribuídos. Reaplicar aos abertos é uma ação separada, exclusiva de ADMIN e registrada no histórico. Severidade sem impacto não tem SLA; isso não significa estar no prazo. Aceite aprovado vigente pausa o relógio, sem apagar o risco nem zerar o prazo. Ao terminar a pausa, seu período é contabilizado. O prazo vencido indica atraso de remediação, não comprovação de exploração.",
-    byRole: { CLIENT: "CLIENT OWNER pode editar a política da própria empresa; MEMBER apenas consulta. Nenhum deles reaplica prazos aos findings existentes.", PENTESTER: "PENTESTER acompanha os prazos, mas não configura políticas nem reaplica SLA." },
+    byRole: { CLIENT: "CLIENT OWNER pode editar a política da própria empresa; MEMBER apenas consulta. Nenhum deles reaplica prazos aos findings existentes." },
   },
   {
     id: "risk-governance", title: "Validade e aprovação do aceite de risco",
@@ -64,9 +66,8 @@ export const ASSISTANT_PRODUCT_TOPICS: readonly AssistantTopic[] = [
   {
     id: "saved-searches", title: "Filtros, buscas salvas e watchlists",
     keywords: ["busca salva", "buscas salvas", "watchlist", "watchlists", "filtros combinados", "combinar filtros", "fixar busca", "compartilhar busca"],
-    screens: ["findings", "project-detail"], roles: ALL, actions: ["findings", "projects"],
+    screens: ["findings"], roles: ANALYSTS, actions: ["findings", "projects"],
     guidance: "A busca combina campos diferentes com E e valores do mesmo campo com OU: Alta ou Crítica, junto com Aberto, retorna apenas achados que atendam aos dois critérios. Uma busca salva guarda filtros, não uma cópia dos resultados. Ao reabrir, considera os dados atuais e as permissões de quem consulta. Buscas podem ser privadas ou compartilhadas com a empresa; PENTESTER só cria privadas. Uma watchlist da empresa pode ser lida pelo time autorizado e editada pelo dono. Fixar na barra lateral cria um atalho, sem ampliar acesso a outras empresas ou projetos.",
-    byRole: { CLIENT: "CLIENT não acessa a página global de findings; acompanhe e filtre os achados dentro dos seus projetos. Um link ou busca salva não libera essa página nem outros dados." },
   },
   {
     id: "maturity-checklist", title: "Checklist e notas de maturidade",

@@ -9,6 +9,9 @@
 import { EnvVar } from "./EnvVar";
 import { EnvKeys } from "./enum/EnvKeys";
 
+const DEFAULT_ASSISTANT_USER_BURST = 5;
+const DEFAULT_ASSISTANT_GLOBAL_BURST = 20;
+
 export type RateLimitScope =
   | "global"
   | "tenant"
@@ -61,9 +64,33 @@ function perMinute(value: number, burst: number): TokenBucketPolicy {
   return { ratePerSecond: value / 60, burst };
 }
 
+function loadAssistantPolicies(): Pick<RateLimitConfig["policies"], "assistant-user" | "assistant-global"> {
+  const replicas = Number(EnvVar.getOptional(EnvKeys.ASSISTANT_API_REPLICAS, "1"));
+  const userBurst = Math.floor(optionalNumber(EnvKeys.RATE_LIMIT_ASSISTANT_USER_BURST, DEFAULT_ASSISTANT_USER_BURST, 1));
+  const globalBurst = Math.floor(optionalNumber(EnvKeys.RATE_LIMIT_ASSISTANT_GLOBAL_BURST, DEFAULT_ASSISTANT_GLOBAL_BURST, 1));
+  if (userBurst >= globalBurst) throw new Error("INVALID_ASSISTANT_BURST: o burst pessoal deve ser menor que o global");
+  const localGlobalBurst = Math.floor(globalBurst / replicas);
+  const localUserBurst = Math.min(Math.floor(userBurst / replicas), localGlobalBurst - 1);
+  if (!Number.isSafeInteger(replicas) || replicas < 1 || localUserBurst < 1) {
+    throw new Error("INVALID_ASSISTANT_API_REPLICAS: os limites precisam reservar pelo menos um token pessoal e outro compartilhado por processo");
+  }
+
+  // Dividir e arredondar o saldo inicial para baixo mantém o total do deployment.
+  return {
+    "assistant-user": {
+      ratePerSecond: optionalNumber(EnvKeys.RATE_LIMIT_ASSISTANT_USER_PER_HOUR, 10, 0.01) / (3600 * replicas),
+      burst: localUserBurst,
+    },
+    "assistant-global": {
+      ratePerSecond: optionalNumber(EnvKeys.RATE_LIMIT_ASSISTANT_GLOBAL_PER_HOUR, 30, 0.01) / (3600 * replicas),
+      burst: localGlobalBurst,
+    },
+  };
+}
+
 /**
  * Lê defaults seguros para produção. Testes usam `createRateLimitConfig()`
- * com overrides e a API padrão desliga o limiter quando NODE_ENV=test, para
+ * com overrides e a API padrão desliga o limiter HTTP quando NODE_ENV=test, para
  * que a suíte inteira não fique dependente da ordem das requisições.
  */
 export function loadRateLimitConfig(): RateLimitConfig {
@@ -100,14 +127,7 @@ export function loadRateLimitConfig(): RateLimitConfig {
       dast: perMinute(optionalNumber(EnvKeys.RATE_LIMIT_DAST_PER_MINUTE, 2, 1), 2),
       // Exportação Excel: lê até EXPORT_MAX_ROWS findings e monta um arquivo — mais pesada que uma busca.
       export: perMinute(optionalNumber(EnvKeys.RATE_LIMIT_EXPORT_PER_MINUTE, 6, 1), 2),
-      "assistant-user": {
-        ratePerSecond: optionalNumber(EnvKeys.RATE_LIMIT_ASSISTANT_USER_PER_HOUR, 10, 0.01) / 3600,
-        burst: Math.floor(optionalNumber(EnvKeys.RATE_LIMIT_ASSISTANT_USER_BURST, 5, 1)),
-      },
-      "assistant-global": {
-        ratePerSecond: optionalNumber(EnvKeys.RATE_LIMIT_ASSISTANT_GLOBAL_PER_HOUR, 30, 0.01) / 3600,
-        burst: Math.floor(optionalNumber(EnvKeys.RATE_LIMIT_ASSISTANT_GLOBAL_BURST, 10, 1)),
-      },
+      ...loadAssistantPolicies(),
       "auth-login-ip": {
         ratePerSecond: optionalNumber(EnvKeys.RATE_LIMIT_LOGIN_IP_MAX, 20, 1) / authWindowSeconds,
         burst: optionalNumber(EnvKeys.RATE_LIMIT_LOGIN_IP_MAX, 20, 1),
@@ -139,8 +159,8 @@ export function createRateLimitConfig(overrides: RateLimitConfigOverrides = {}):
       report: perMinute(3, 2),
       dast: perMinute(2, 2),
       export: perMinute(6, 2),
-      "assistant-user": { ratePerSecond: 10 / 3600, burst: 5 },
-      "assistant-global": { ratePerSecond: 30 / 3600, burst: 10 },
+      "assistant-user": { ratePerSecond: 10 / 3600, burst: DEFAULT_ASSISTANT_USER_BURST },
+      "assistant-global": { ratePerSecond: 30 / 3600, burst: DEFAULT_ASSISTANT_GLOBAL_BURST },
       "auth-login-ip": perMinute(4, 20),
       "auth-login-account": perMinute(1, 5),
       "auth-refresh": perMinute(10, 3),

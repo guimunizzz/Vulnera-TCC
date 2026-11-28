@@ -12,12 +12,18 @@ data: 2026-10-23
 
 ## Contexto
 
+> Atualização 2026-11-16: a [ADR-066](ADR-066%20-%20Conversa%20basica%20e%20cota%20de%20geracao%20da%20Vuvu.md) substitui somente a aplicação dos buckets próprios a toda mensagem: eles passam a reservar tentativas de geração, com ajuda local e prazo em seu esgotamento. Limites HTTP gerais preservam 429. Decisões originais abaixo mantidas como histórico.
+
 O ADR-017 retirou a IA do MVP em 03/08/2026, incluindo sugestões de findings. ADR-006 e ADR-011 preservam decisões anteriores sobre Gemini. Em 23/10/2026 foi solicitada explicitamente uma nova entrega: um mascote com chat de orientação para a apresentação do TCC, exclusivo da web autenticada.
 
 Esta decisão registra a autorização de escopo do pedido atual, sem editar regras protegidas de `AGENTS.md`, `CLAUDE.md` ou `GOTCHA.md`. O histórico do corte continua válido para as funcionalidades antigas. Na criação desta ADR, a Fase 0 está concluída e a implementação ainda não começou.
 
 ## Decisão
 
+> Em 27/11/2026, a [ADR-068](ADR-068%20-%20Orcamento%20e%20fronteiras%20da%20Vuvu.md) atualizou a coordenação de orçamento e a política de modelos. Testes com transporte simulado usam identificadores públicos compatíveis, independentes da escolha privada do ambiente.
+
+- **Invariante de privacidade (H6, PR #88):** `systemInstruction` recebe somente instruções estáticas, o papel autenticado, um rótulo de tela de catálogo fechado e ajuda pública versionada filtrada por papel. Dados de tenant, identidade (como IDs de empresa, usuário e recurso), registros e segredos jamais entram nesse campo. Pergunta e histórico são dados não confiáveis e só entram em `contents` após os limites e filtros aplicáveis. Regexes são heurísticas para texto livre e podem deixar passar dados. A garantia depende da origem restrita do contexto e da ausência de ferramentas ou acesso a registros pelo modelo. Incluir qualquer dado de tenant nesse fluxo requer uma nova decisão de arquitetura e revisão da fronteira.
+- **Ampliação de domínio em 2026-11-16:** catálogo de 44 tópicos (29 anteriores mais 15 aprofundamentos), sem leitura bruta de docs ou dados reais. Jornadas conectam pré-condições, etapas, responsáveis e próximo passo; empates de recuperação preferem expressões específicas. Preservados três tópicos/6.000 caracteres, saída, chamadas e permissões. O alinhamento da API principal, ainda em 17 tópicos antes desta aplicação, é registrado em `docs/QA_VUVU_CONTEXTO_2026-11-16.md`; curadoria em `docs/ASSISTENTE_CONTEUDO_PRODUTO.md`. Sem nova arquitetura de recuperação ou persistência.
 - **Esclarecimento PR #77 (2026-11-16):** ajuda curada exclusivamente de domínio/produto, conferida contra o comportamento vigente, sem ingestão de documentação arquitetural ou de desenvolvimento. Catálogo atual de 29 tópicos; até três e 6.000 caracteres por chamada. Identificador concreto do modelo apenas no ambiente privado; exemplos vazios, fixture sintética e alternativa local quando uma resposta reproduz valores privados configurados. O histórico Git não foi reescrito. Ver `docs/ASSISTENTE_CONTEUDO_PRODUTO.md` e `docs/REVISAO_PR77_2026-11-16.md`.
 - Reintroduzir IA apenas como **Assistente Vulnera**, para explicar telas, processos e conceitos em PT-BR. Nenhuma geração de findings, cálculo de severidade, leitura de registros reais, preenchimento ou alteração de dados, execução de scans ou integração mobile.
 - Usar base curta de ajuda versionada e recuperação simples por tela/termos/histórico limitado. Não adicionar embeddings, banco vetorial, conversas persistidas, migration, repository vazio ou infraestrutura nova.
@@ -56,3 +62,11 @@ A configuração runtime consultada sem expor valores não continha chave/modelo
 Esta decisão foi criada como ADR-048 na feature/agent-ai em 23/10/2026. A dev passou a usar ADR-048 para o grafo DAST. Na integração, a decisão do assistente recebeu ADR-054, com conteúdo e histórico preservados e links atualizados; a ADR-048 do grafo permanece intacta. Menções históricas ao ADR-048 do assistente correspondem agora a esta decisão.
 
 Em 26/11/2026, a integração do PR #77 renumerou esta decisão para ADR-064. O número ADR-054 ficou associado ao registro da pintura da landing na dev. ADR-048 e ADR-054 são identificadores históricos do assistente na feature.
+
+## Evolução Vuvu — 2026-11-15
+
+> **Atualização autorizada de interação — 2026-11-16:** passeio, flutuação e botão de pausa citados nos registros anteriores foram substituídos por posição controlada por arraste/teclado. O usuário escolheu duplo clique para o novo atlas six seven, uma execução de 2,88 s e alternativa por Shift+Enter; não abre conversa nem solicita geração. Preferências/contextos restritivos continuam interrompendo animações e o repouso não mantém loop. Chat compacto preserva origem, contexto, atalhos e sessão. Backend/personalidade inalterados. Detalhes em `docs/QA_VUVU_INTERACOES_2026-11-16.md`; o registro abaixo permanece histórico.
+
+O responsável forneceu o atlas animado da Vuvu e sua personalidade, autorizando explicitamente aplicá-la também às respostas Gemini. A personagem é renderizada a partir do PNG local original, sem WebGL, nova dependência ou serviço de animação. Quadros e 16 direções de olhar respondem a eventos da interface; coordenadas de cursor não entram na conversa nem saem do navegador. O player pausa por preferências, modal, aba oculta e controle manual, sem render React a cada quadro.
+
+O tom acolhedor e curioso não amplia o escopo desta ADR: perfis, ajuda documentada, operações proibidas e limites permanecem. A apresentação da Vuvu também funciona localmente. O painel mantém o modelo não modal e a conversa em memória; a altura/rolagem se adapta ao texto ampliado. Evidências em [QA_VUVU_UI_2026-11-15.md](../../QA_VUVU_UI_2026-11-15.md).

@@ -432,3 +432,38 @@ ZAP, PDF ou Excel; impressão oculta o portal.
 
 Guia: [ASSISTENTE_VULNERA.md](ASSISTENTE_VULNERA.md). Evidências de testes,
 navegador, integração local e limites: [VALIDACAO.md](VALIDACAO_ASSISTENTE_2026-10-23.md).
+
+### Vuvu — evolução em 2026-11-15
+
+O mascote agora reproduz o atlas original local de `src/assets/vuvu/`, com nove
+animações e 16 direções de olhar. `assistant-mascot.tsx` atualiza quadros no
+elemento gráfico sem renders React por quadro; `vuvu-sprite.ts` descreve os
+estados. Cursor, hover, rascunho, envio, resposta e erro controlam expressões,
+sem chamadas implícitas nem transmissão do cursor ao servidor.
+
+O painel recebeu hierarquia Vuvu/contexto/origem, mensagens, sugestões e
+compositor usando os tokens do produto. O histórico pode receber foco pelo
+teclado; texto ampliado a partir de 150% usa mais altura e rolagem completa.
+Tamanho do conjunto é compartilhado entre movimento e CSS. Na evolução de
+16/11, o limite passa a 112×128: retirados passeio/flutuação e controle manual
+de pausa. Mouse/toque arrastam com captura de ponteiro, limites e reação própria;
+setas movem e Home reposiciona pelo teclado. Duplo clique ou Shift+Enter dispara
+o atlas “six seven” por 2,88 s, sem envio ou abertura do chat. Movimento reduzido,
+alto contraste, modais e aba oculta continuam interrompendo quadros animados.
+Chat compacto mantém histórico/origem/atalhos, com sugestões recolhidas após a
+primeira pergunta e contador discreto próximo do limite.
+
+Na evolução seguinte de 16/11, o painel usa presença Motion para entrada/saída;
+ao fechar, fica inerte e fora da árvore acessível durante a animação. O rascunho
+fica na sessão, preservado ao fechar/recolher. Modo discreto exibe apenas um
+ícone de 44 px, sem reexpansão por resultados. Olhar com filtro/histerese e
+mistura breve de poses; RAF encerra ao estabilizar. `lib/assistant-feedback.ts`
+recebe somente dois tipos de resultado, com assinante capturado no início da
+ação e isolamento após troca de sessão. Integra os três fluxos PDF e falhas
+finais de mutations, preservando callbacks/erros/retries. Nada é enviado ao
+Gemini por esses sinais. Ver ADR-065 e `QA_VUVU_FLUIDEZ_2026-11-16.md`.
+
+Personalidade autorizada aplicada também ao Gemini, preservando as fronteiras
+do backend. Visual e nova voz foram aplicados ao Docker local após autorização,
+com banco/volumes preservados. Prévias com dados fictícios e testes:
+[QA_VUVU_UI_2026-11-15.md](QA_VUVU_UI_2026-11-15.md).

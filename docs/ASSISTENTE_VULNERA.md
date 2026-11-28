@@ -2,11 +2,25 @@
 
 # Assistente Vulnera
 
-O assistente explica como usar o Vulnera em português brasileiro. A sentinela percorre lentamente as bordas da tela; clicar em **Ajuda** abre um painel estável. As sugestões apenas preenchem a pergunta: é preciso escolher **Enviar** para receber orientação. Somente esse envio pode chamar o Gemini.
+O assistente explica como usar o Vulnera em português brasileiro. Sua personagem é a **Vuvu**, companheira grafite com expressões violetas, posicionada por arraste ou teclado. Clicar em **Ajuda** abre o painel. As sugestões apenas preenchem a pergunta: **Enter** no campo ou o botão **Enviar** confirma o envio; **Shift+Enter** quebra linha. Apenas envios explícitos podem chamar o Gemini. No modo Gemini, ele é a primeira opção para toda mensagem elegível, incluindo saudações, apresentações e perguntas sem tópico reconhecido. O filtro de privacidade continua mantendo conteúdo sensível reconhecível na ajuda local, sem chamada externa.
 
-O painel mostra **Gemini** ou **Ajuda local** em cada resposta. Os botões de navegação são definidos pela aplicação e exigem clique; o texto da resposta nunca executa operações. A conversa fica em memória na sessão da aba, sobrevive à navegação protegida e é limpa ao sair, entrar novamente ou trocar de usuário. Fechar o painel preserva a conversa; **Limpar conversa** a apaga e cancela o envio atual.
+O painel mostra **Resposta da Vuvu** ou **Ajuda local**. O contrato público usa `source: generated` ou `source: local`. A API e a Web devem ser atualizadas juntas ao trocar esse contrato. Os botões aparecem quando a pergunta pede um caminho ou uma operação e a resposta orienta esse fluxo. A aplicação escolhe os botões conforme o perfil; recusas, esclarecimentos e avisos de privacidade ficam sem botões. A conversa fica em memória na sessão da aba, sobrevive à navegação protegida e é limpa ao sair, entrar novamente ou trocar de usuário. Fechar o painel preserva a conversa; **Limpar conversa** a apaga e cancela o envio atual.
 
 ## Cobertura e permissões
+
+### Vuvu — visual e personalidade
+
+A arte original fornecida pelo responsável é reproduzida por um atlas PNG transparente local, com nove animações e 16 olhares. O player acompanha hover, cursor, deslocamento, digitação, envio, resposta e erro; os movimentos não fazem chamadas à API nem enviam coordenadas ao provedor. Quadros são atualizados no elemento gráfico sem renders React a cada quadro. ZIP, prompts de geração e demais arquivos de trabalho não entram no produto.
+
+O painel usa a identidade visual da plataforma nos temas claro/escuro, com contexto da tela, mensagens, sugestões e os selos genéricos de origem. O histórico pode receber foco para rolagem pelo teclado. Com texto ampliado a partir de 150%, o painel aproveita a altura da viewport e permite rolagem completa, preservando acesso ao envio e à limpeza.
+
+A personalidade de `personalidade.md` foi aplicada ao Gemini por autorização explícita: fala próxima em PT-BR, curiosidade, gentileza, clareza e humor discreto, sem infantilização ou falsa afirmação de ações realizadas. “Quem é você?” e “Quem é a Vuvu?” também são reconhecidas pela ajuda local. A personalidade não amplia acesso a registros, permissões ou operações.
+
+O tom escolhido para tentativas explícitas de injeção e pedidos claramente alheios ao Vulnera é o **nível 4, absurdo bem-humorado**. A Vuvu reage ao detalhe do pedido, escolhe uma opção quando a pessoa pede uma escolha e pode encerrar na piada. A API descarta bordões reconhecíveis ou uma resposta que repete o histórico. Para alguns assuntos, a ajuda local tem mais de uma tirada e prioriza a que ainda não usou no histórico recente. Perguntas legítimas sobre segurança, situações ambíguas e relatos de incidentes recebem tom neutro. A interpretação do Gemini e a cobertura dos sinais locais podem variar.
+
+Pedidos para listar as funções recebem um inventário em blocos por perfil. Se a geração resumir demais ou devolver tudo em um parágrafo, a API renderiza a lista curada. Pedidos de credenciais administrativas, inclusive grafias reconhecíveis com erro, recebem recusa local antes de chamar o provedor e sem apresentar atalhos. A tela é contextualizada com seu nome público; identificadores internos na saída são barrados junto dos demais detalhes privados.
+
+Plano e evidências: [ASSISTENTE_VISUAL_PLANO.md](ASSISTENTE_VISUAL_PLANO.md) e [QA_VUVU_UI_2026-11-15.md](QA_VUVU_UI_2026-11-15.md).
 
 Disponível apenas na web autenticada, incluindo onboarding e visualizador de relatório DAST. Não aparece na landing, login, cadastro, planos, styleguide público ou aplicativo mobile. O assistente não é inserido no HTML original do ZAP e não participa dos PDFs/Excel exportados ou da impressão da página.
 
@@ -32,17 +46,25 @@ O contêiner do assistente envolve todas as rotas protegidas, mantendo lazy load
 
 A decisão atual é **ADR-064**, originalmente criada como ADR-048 na branch do assistente. A ADR-048 da dev pertence ao grafo DAST e foi preservada. Validação da integração: [relatório de 15/11/2026](INTEGRACAO_AGENT_AI_DEV_2026-11-15.md).
 
-O contexto externo contém a pergunta, até seis mensagens anteriores, uma tela conhecida sem parâmetros/query string, o perfil autenticado e trechos da ajuda. Não consulta registros, formulários ou DOM para construir o prompt. Perguntas com padrões reconhecíveis de e-mail, URL, identificador ou credencial recebem orientação local, sem envio ao provedor. Isso não é um detector infalível de informação confidencial: use somente documentação e dados fictícios.
+O contexto externo contém a pergunta, até seis mensagens limpas do histórico recente, uma tela conhecida sem parâmetros/query string, o perfil autenticado e trechos da ajuda. Não consulta registros, formulários ou DOM para construir o prompt. A pergunta atual com padrões reconhecíveis de e-mail, URL, identificador ou credencial recebe orientação local. No histórico, a API descarta a pergunta com esses padrões ou com tentativa explícita de injeção e a resposta associada. As perguntas limpas seguintes ainda podem chamar o Gemini. O filtro reconhece padrões específicos; use somente documentação e dados fictícios.
+
+Pedidos explícitos de obedecer a texto escondido ou codificado, falsa autoridade e pedidos de instruções internas são reconhecidos antes da busca de ajuda por palavras. A API não decodifica nem executa esse conteúdo e não abre os links. Quando o tipo é reconhecido, a falta de cota ou o filtro de privacidade já usam a recusa correspondente, sem desviar para CVSS, comentários ou outros tópicos do catálogo.
+
+Pedidos explícitos sobre o provedor, o modelo, dependências e outros bastidores recebem a recusa controlada da API, sem gastar cota. A aplicação também descarta saídas com detalhes internos reconhecíveis, credenciais ou caminhos privados. Termos públicos de domínio, como CVSS e os formatos aceitos na importação, continuam disponíveis na orientação. A filtragem de texto cobre padrões conhecidos. A proteção primária vem de manter código, registros reais e configuração fora da ajuda e do contexto externo.
 
 ### Conteúdo ampliado na revisão do PR #77
 
-O catálogo atual tem **29 tópicos**, com os 17 anteriores preservados e 12 aprofundamentos de domínio/produto: tipos/origens de achados, escopo e elegibilidade, ciclo de findings, OWASP, métricas CVSS, contexto/VRS, política/ciclo SLA, governança do aceite, buscas/watchlists, checklist de maturidade, papéis na empresa e notificações. As fontes e divergências históricas estão em [ASSISTENTE_CONTEUDO_PRODUTO.md](ASSISTENTE_CONTEUDO_PRODUTO.md).
+Na revisão do PR #77, o catálogo passou a **29 tópicos**, com os 17 anteriores preservados e 12 aprofundamentos de domínio/produto: tipos/origens de achados, escopo e elegibilidade, ciclo de findings, OWASP, métricas CVSS, contexto/VRS, política/ciclo SLA, governança do aceite, buscas/watchlists, checklist de maturidade, papéis na empresa e notificações. As fontes e divergências históricas estão em [ASSISTENTE_CONTEUDO_PRODUTO.md](ASSISTENTE_CONTEUDO_PRODUTO.md).
+
+**Ampliação de 16/11/2026:** a Vuvu passa a **44 tópicos**, com mais 15 aprofundamentos: jornada completa, onboarding/assinatura, capacidade do plano, formatos/limites de evidência, conteúdo dos PDFs, exportações, fila/cancelamento de scans, promoção DAST, formatos/comparação SAST/SCA, inventário/triagem Threat Intel, override, uso da Vuvu e acessibilidade. A seleção privilegia expressões específicas em empates. Fluxos completos conectam pré-condições, etapas, responsáveis e próximo passo. Somente domínio/produto vigente, sem consultar os registros da conta. A aplicação da API principal, que ainda tinha 17 tópicos na conferência, é registrada em `docs/QA_VUVU_CONTEXTO_2026-11-16.md`.
 
 A curadoria é versionada em linguagem de usuário e conferida no código; a documentação técnica, arquitetura e desenvolvimento não são carregados no prompt. O assistente recupera até três tópicos e 6.000 caracteres. Regras e atalhos continuam determinados pela aplicação, sem ler registros reais nem executar operações.
 
+**Ampliação de 20/11/2026:** total de **56 tópicos**, com doze fichas de passos práticos. As fichas cobrem participantes de projeto, dashboard da aplicação, filtros, remediação, playbooks, revalidação, comparação e visualização DAST, triagem e navegação SAST/SCA, escolha de relatório e avisos de Threat Intel. Cadastro de aplicação e solicitação de análise ganharam os nomes das etapas da tela. A matriz de fontes continua no [catálogo de curadoria](ASSISTENTE_CONTEUDO_PRODUTO.md).
+
 ## Preparar o Free Tier
 
-O responsável escolhe o modelo permitido no seu projeto e preenche seu identificador somente no ambiente privado. Consulte o [catálogo](https://ai.google.dev/gemini-api/docs/models), a [tabela de preços](https://ai.google.dev/gemini-api/docs/pricing) e o [ciclo de vida](https://ai.google.dev/gemini-api/docs/deprecations) antes de configurar; disponibilidade e cotas podem mudar. O identificador concreto foi omitido dos arquivos públicos atuais no atendimento ao PR #77, sem reescrever os commits históricos.
+O responsável escolhe um modelo permitido no seu projeto que aceite [saída estruturada](https://ai.google.dev/gemini-api/docs/structured-output) e preenche seu identificador somente no ambiente privado. Consulte o [catálogo](https://ai.google.dev/gemini-api/docs/models), a [tabela de preços](https://ai.google.dev/gemini-api/docs/pricing) e o [ciclo de vida](https://ai.google.dev/gemini-api/docs/deprecations) antes de configurar. Disponibilidade e cotas podem mudar. O identificador concreto foi omitido dos arquivos públicos atuais no atendimento ao PR #77, sem reescrever os commits históricos.
 
 1. Entre no Google AI Studio com sua conta e selecione/crie um projeto elegível ao Free Tier.
 2. Confira o tier do projeto e as cotas disponíveis no AI Studio. Mantenha-o em **Free**, sem vincular faturamento, habilitar trial pago, fazer pré-pagamento ou ativar serviços adicionais. Veja [faturamento](https://ai.google.dev/gemini-api/docs/billing) e [limites oficiais](https://ai.google.dev/gemini-api/docs/rate-limits).
@@ -78,7 +100,7 @@ Requisitos: conta Google com acesso ao AI Studio (18 anos ou mais), projeto Free
    ```
 
    Não exige rebuild por mudar apenas variáveis. Reinicia a API; dados/volumes são preservados. O watchdog de boot pode encerrar scans ativos como órfãos, por isso a condição de não haver scans em andamento. Não foi executado por esta orientação.
-6. Entre em `http://localhost:8086`, abra Ajuda e envie “Como solicito uma análise?”. A resposta precisa mostrar **Gemini** para comprovar a chamada externa. **Ajuda local** continua disponível, mas não comprova que a chave/modelo/cota funcionaram. Consulte [Usage](https://aistudio.google.com/usage) e [Rate limits](https://aistudio.google.com/rate-limit) no AI Studio.
+6. Entre em `http://localhost:8086`, abra Ajuda e envie “Como solicito uma análise?”. O selo **Resposta da Vuvu** indica geração; **Ajuda local** indica a alternativa documentada. Para confirmar o serviço e a cota no ensaio, consulte [Usage](https://aistudio.google.com/usage) e [Rate limits](https://aistudio.google.com/rate-limit) no AI Studio.
 
 As [cotas](https://aistudio.google.com/docs/rate-limits) variam por modelo/projeto e não equivalem aos buckets do Vulnera. No Free Tier, exceder cota gera limitação; não é autorização para migrar ao pago. Se o projeto já estiver no plano pago, chamadas podem gerar cobranças. O Free Tier também permite uso do conteúdo para melhoria dos produtos Google: use documentação e dados fictícios, sem informações confidenciais.
 
@@ -94,15 +116,19 @@ GEMINI_API_KEY=
 GEMINI_MODEL=
 ASSISTANT_TIMEOUT_MS=15000
 ASSISTANT_MAX_OUTPUT_TOKENS=500
+ASSISTANT_THINKING_LEVEL=MINIMAL
+ASSISTANT_API_REPLICAS=1
 RATE_LIMIT_ASSISTANT_USER_PER_HOUR=10
 RATE_LIMIT_ASSISTANT_USER_BURST=5
 RATE_LIMIT_ASSISTANT_GLOBAL_PER_HOUR=30
-RATE_LIMIT_ASSISTANT_GLOBAL_BURST=10
+RATE_LIMIT_ASSISTANT_GLOBAL_BURST=20
 ```
 
 Para ensaiar sem chamadas externas, use `ASSISTANT_MODE=local`. Para Gemini, use `ASSISTANT_MODE=gemini` com chave e modelo preenchidos no ambiente privado. Chave/modelo ausentes, modo inválido, falha externa ou resposta inválida preservam a ajuda local; não impedem a API de iniciar.
 
-O gateway chama somente `generativelanguage.googleapis.com`, por `fetch`, sem seguir redirecionamentos, em uma tentativa por pergunta. Para o modelo recomendado, usa saída limitada e thinking mínimo, sem parâmetros de amostragem incompatíveis. `store:false` não altera os termos de uso de dados do Free Tier.
+O gateway chama somente `generativelanguage.googleapis.com`, sem seguir redirecionamentos, em uma tentativa por pergunta. O padrão é `MINIMAL`. Para ensaiar com raciocínio acima do mínimo, defina `ASSISTANT_THINKING_LEVEL=LOW` no ambiente privado com um modelo textual compatível, como o Gemini 3.5 Flash-Lite. O Free Tier desse modelo inclui tokens de raciocínio na saída gratuita, dentro das cotas do projeto. O limite de 500 tokens de saída e o timeout continuam válidos. Respostas truncadas ou atrasadas acionam a ajuda local. Consulte o [guia de raciocínio](https://ai.google.dev/gemini-api/docs/thinking), os [preços](https://ai.google.dev/gemini-api/docs/pricing#gemini-3.5-flash-lite) e a [cota ativa do projeto](https://aistudio.google.com/rate-limit).
+
+No Gemini 2.5 Flash e Flash-Lite, `MINIMAL` é enviado como orçamento de zero tokens de raciocínio. Modelos sem política de raciocínio validada e combinações incompatíveis usam ajuda local. `store:false` não altera os termos de uso de dados do Free Tier.
 
 ### Docker
 
@@ -147,19 +173,31 @@ npm run dev --workspace=app/web
 | Pergunta | Até 1.000 caracteres, sem texto vazio |
 | Histórico transmitido | Até seis mensagens `user/assistant`, 1.000 caracteres cada e 4.000 no total |
 | Ajuda recuperada | Até três tópicos e 6.000 caracteres |
-| Saída externa | Até 500 tokens; resposta aceita até 4.000 caracteres |
+| Saída externa | Até 500 tokens, corpo de até 32.000 bytes e mensagem de até 4.000 caracteres |
 | Timeout | 15 segundos por padrão; configuração de 100 a 15.000 ms |
 | Tokens de saída configuráveis | 64 a 500; valor inválido volta ao padrão |
-| Cota pessoal da aplicação | Bucket com rajada de cinco e reposição de 10 tokens/hora |
-| Cota global do assistente | Bucket com rajada de dez e reposição de 30 tokens/hora |
+| Cota pessoal da aplicação | Inicia com 5 gerações e repõe 10 por hora |
+| Cota global do assistente | Inicia com 20 gerações compartilhadas e repõe 30 por hora |
 
-Os buckets repõem continuamente: não são limites de uma janela civil exata. São controles da aplicação, separados das cotas Google e dos limitadores gerais HTTP já existentes. Tentativas negadas pela cota global não consomem a reserva pessoal. Os budgets do assistente não são descartados antes do tempo necessário à reposição nem expulsos para abrir espaço a novas chaves.
+Em processo único e com ambas as cotas cheias, cada pessoa tem até 5 tentativas iniciais. Os contadores de geração continuam ativos com `RATE_LIMIT_ENABLED=false` e em testes. Instalações com o valor antigo `RATE_LIMIT_ASSISTANT_USER_BURST=20` devem ajustar a variável privada para 5 ou removê-la para usar o padrão. A API valida que a rajada pessoal é menor que a compartilhada.
 
-Quando a própria aplicação limita uma requisição, preserva HTTP 429, `code: RATE_LIMITED`, mensagem existente, `retryAfterSeconds` e `Retry-After`. A interface informa a espera e não repete automaticamente. Timeout, indisponibilidade, cota do Google ou resposta vazia/bloqueada/inválida resultam em ajuda local quando houver tópico. Fora da ajuda documentada, explica o limite e oferece assuntos relacionados.
+Os buckets repõem continuamente e controlam **tentativas de geração externa**. Saudações, apresentações e perguntas sem correspondência usam esse orçamento ao chamar o Gemini. Conteúdo sensível barrado pela API e modo local ficam fora dessa contagem. Tentativas negadas pela cota global devolvem o token pessoal. Uma tentativa externa que falha continua contando. Os contadores ficam na memória até o prazo de reposição e são protegidos contra descarte sob pressão de chaves.
 
-Os contadores reiniciam com o processo e não são coordenados entre várias instâncias. Fechar a aba ou recarregar termina a conversa; outra aba possui memória própria. Sem internet externa, a demonstração pressupõe que a **API local continue funcionando**. Ajuda local não equivale a Gemini ao vivo.
+Quando a cota de geração da aplicação acaba, retorna **Ajuda local, HTTP 200**, com `providerRetryAfterSeconds`. O painel mostra **Nova tentativa em N segundos. A ajuda local continua disponível.** É possível continuar perguntando. Os limitadores **HTTP gerais** respondem HTTP 429, `code: RATE_LIMITED`, `retryAfterSeconds` e `Retry-After`: nesse caso há contagem regressiva, rascunho preservado e bloqueio temporário do envio. A retomada é manual. Timeout, indisponibilidade, cota externa e resposta vazia, bloqueada ou inválida também resultam em ajuda local. Quando o catálogo não reconhece um tópico, a Vuvu pede esclarecimento sem oferecer atalhos alheios. A prioridade de geração segue a ADR-067 e os limites seguem a ADR-066.
 
-O mascote pausa com hover, foco, conversa aberta, modal, aba oculta ou controle manual. Em tela estreita e `prefers-reduced-motion`, fica estático em posição previsível. O painel tem Escape, retorno de foco, rolagem interna e controles de 44px; a plataforma continua utilizável durante uma falha externa.
+Para diagnosticar **Ajuda local**, procure `assistant.local_response` no log da API. O evento traz somente o motivo, a versão do pacote da API e a revisão do assistente. Motivos distinguem privacidade, tela restrita, modo local, configuração ausente, cota da aplicação, cota do provedor, timeout, bloqueio e erro ou resposta inválida. Pergunta, histórico, resposta, identidade e credenciais ficam fora do evento. Ver ADR-058.
+
+**Conversa e teclado (16/11):** “OI”, “OQ E O VULNERA” e “quem e vc” ganharam respostas próprias, usadas como alternativa local a partir da ADR-067. Abreviações `oq`, `q`, `vc`, `vcs`, `pq`, `pfv` e `tb` são normalizadas por palavra inteira; pedidos como “Oi, como faço uma análise?” continuam sendo pedidos. Enter envia somente fora de composição de texto e sem repetição de tecla; Shift+Enter insere linha. Tab alcança o botão; instruções visíveis/descritivas e avisos estáveis acompanham o campo. Contagem por segundo não usa anúncio contínuo ao leitor de tela; a retomada é manual. Relatório histórico: `docs/QA_VUVU_CONVERSA_2026-11-16.md`.
+
+Em múltiplos processos, configure `ASSISTANT_API_REPLICAS` com o total máximo simultâneo em todos eles, incluindo a sobreposição durante uma atualização. A API divide as taxas e arredonda as rajadas para baixo. Cada processo repõe sua parcela e restaura o saldo inicial ao reiniciar. A [ADR-068](Vulnera/07-Decisoes/ADR-068%20-%20Orcamento%20e%20fronteiras%20da%20Vuvu.md) detalha a escolha.
+
+Fechar a aba, recarregar a página ou mudar a empresa da sessão encerra a conversa. Outra aba tem sua própria conversa em memória.
+
+Na branch visual, a Vuvu fica onde você a coloca: arraste por mouse/toque ou use as setas com o botão focado; Home volta ao canto. Não há passeio, inércia, flutuação contínua ou botão de pausa. O arraste tem expressão própria e não abre a conversa ao soltar. Duplo clique, ou Shift+Enter com foco, faz o “six seven” uma vez (2,88 s), sem envio externo. Movimento reduzido, alto contraste, modal e aba oculta interrompem quadros animados; a posição continua controlável por interação. O painel compacto mantém contexto, selos genéricos de origem, atalhos, Escape, retorno de foco, rolagem e alvos de 44px. Sugestões ficam recolhidas durante a conversa; contador aparece próximo do limite. A plataforma continua utilizável durante uma falha externa. Evolução de 2026-11-16, posterior ao PR #77; os marcos históricos do passeio original permanecem documentados.
+
+**Fluidez e modo discreto (evolução seguinte de 16/11):** o chat agora anima entrada e saída, respeitando as preferências de movimento. O olhar amortece a mudança de direção e mistura as poses originais, mantendo a direção perto do centro; não há salto automático ao passar o mouse. **Recolher Vuvu**, no cabeçalho, deixa apenas um ícone na borda. Clique nele para restaurar a personagem; reabra o chat normalmente. Conversa, rascunho e posição continuam na sessão. A Vuvu fica recolhida até essa interação.
+
+Reações locais acompanham PDFs concluídos e falhas confirmadas de ações. No PDF do projeto, a confirmação inclui o registro final existente; o download iniciado não comprova salvamento no disco. Falhas de consultas/polling não viram reações. Mensagens de erro continuam nas telas; a personagem não abre chat nem envia pergunta por esses eventos. Em modo discreto ou contexto restritivo, não há reação guardada para aparecer depois. As quatro melhorias não adicionam chamadas Gemini. Decisão: ADR-065; validação em `docs/QA_VUVU_FLUIDEZ_2026-11-16.md`.
 
 ## Preparar a apresentação
 
@@ -169,7 +207,7 @@ Para a pergunta de solicitação, prefira CLIENT ou ADMIN. Confirme o modo e fa�
 
 ### Roteiro de aproximadamente três minutos
 
-1. **0:00–0:25:** entrar como CLIENT e observar a sentinela nas bordas; demonstrar pausa por hover ou botão.
+1. **0:00–0:25:** entrar como CLIENT, mostrar a Vuvu e demonstrar arraste ou movimento por teclado.
 2. **0:25–1:05:** abrir Ajuda, perguntar **“Como solicito uma análise?”**, enviar e apontar a origem real da resposta.
 3. **1:05–1:30:** clicar no atalho **Solicitar análise**. Explicar que a navegação é permitida pelo perfil e acionada pela pessoa; o assistente não envia formulários.
 4. **1:30–2:00:** perguntar **“O que posso fazer nesta tela?”**. Mostrar que a conversa permaneceu e o contexto acompanha a tela.

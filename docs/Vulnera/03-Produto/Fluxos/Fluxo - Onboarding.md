@@ -6,6 +6,8 @@ status: ativo
 
 # Fluxo - Onboarding
 
+> **Comportamento vigente conferido em 2026-11-16:** o fluxo atual acontece após o cadastro da conta CLIENT, na área autenticada, com Empresa, Plano e Confirmação. A empresa usa os campos atuais da tela (nome/CNPJ), e uma empresa já salva é retomada quando a etapa posterior falha. A solicitação fica Pendente de aprovação até a decisão administrativa. Convites e envio de e-mails de onboarding não são garantidos por essa implementação. O fluxo detalhado abaixo registra o planejamento anterior, superado nesses pontos; ver `docs/ASSISTENTE_CONTEUDO_PRODUTO.md`.
+
 ## Objetivo
 Permitir que uma empresa contratante se cadastre na plataforma pela primeira vez, criando sua conta e selecionando um plano de análise.
 

@@ -27,7 +27,7 @@ export class AssistantController {
       }
       if (total > 4_000) return res.status(400).json({ error: "INVALID_HISTORY" });
       const dto: AssistantChatDTO = { question: data.question.trim(), screen: data.screen as AssistantScreen, history: data.history as AssistantHistoryMessage[] };
-      return res.status(200).json(await this.service.chat(req.user!, dto));
+      return res.status(200).json(await this.service.chat(req.user!, dto, () => req.app.locals.rateLimitService!.reserveAssistant(req.user!.userId)));
     } catch (error) {
       if (error instanceof Error && error.message === "FORBIDDEN") return res.status(403).json({ error: "FORBIDDEN" });
       // Não registrar o objeto de erro: pode conter payload/config de um gateway.

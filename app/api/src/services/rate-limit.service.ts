@@ -9,7 +9,7 @@
 import { createHash } from "node:crypto";
 import type { JwtPayload } from "../utils/jwt.util";
 import type { RateLimitConfig, RateLimitScope } from "../config/rate-limit.config";
-import { TokenBucketStore, type TokenBucketResult } from "../utils/token-bucket.util";
+import { TokenBucketStore, type TokenBucketResult, type TokenBucketStoreOptions } from "../utils/token-bucket.util";
 import type { UserRepository } from "../repositories/user.repository";
 
 interface TenantCacheEntry {
@@ -89,16 +89,24 @@ export class TenantRateLimitResolver {
 
 export class RateLimitService {
   readonly store: TokenBucketStore;
+  private readonly assistantStore: TokenBucketStore;
 
   constructor(
     readonly config: RateLimitConfig,
     private readonly tenantResolver: TenantRateLimitResolver,
-    store?: TokenBucketStore,
+    storeOptions: TokenBucketStoreOptions = { ttlMs: config.storeTtlMs, maxKeys: config.storeMaxKeys },
   ) {
-    this.store = store ?? new TokenBucketStore({ ttlMs: config.storeTtlMs, maxKeys: config.storeMaxKeys });
+    this.store = new TokenBucketStore(storeOptions);
+    this.assistantStore = new TokenBucketStore(storeOptions);
   }
 
   consume(scope: RateLimitScope, key: string): TokenBucketResult {
+    if (scope === "assistant-user" || scope === "assistant-global") {
+      return this.assistantStore.consume(`${scope}:${key}`, this.config.policies[scope], {
+        rejectNewAtCapacity: true,
+        preserveBudget: true,
+      });
+    }
     if (!this.config.enabled) {
       const policy = this.config.policies[scope];
       return { allowed: true, remaining: policy.burst, retryAfterSeconds: 0, resetAfterSeconds: 0, limit: policy.burst };
@@ -106,13 +114,25 @@ export class RateLimitService {
     return this.store.consume(`${scope}:${key}`, this.config.policies[scope], {
       // Ao lotar a memória, fingerprints novos de autenticação são recusados
       // em vez de expulsar uma conta já bloqueada e permitir brute force.
-      rejectNewAtCapacity: scope.startsWith("auth-") || scope.startsWith("assistant-"),
-      preserveBudget: scope.startsWith("assistant-"),
+      rejectNewAtCapacity: scope.startsWith("auth-"),
     });
   }
 
   refund(scope: RateLimitScope, key: string): void {
-    if (this.config.enabled) this.store.refund(`${scope}:${key}`, this.config.policies[scope]);
+    if (scope === "assistant-user" || scope === "assistant-global") {
+      this.assistantStore.refund(`${scope}:${key}`, this.config.policies[scope]);
+    } else if (this.config.enabled) {
+      this.store.refund(`${scope}:${key}`, this.config.policies[scope]);
+    }
+  }
+
+  /** Reserva somente a tentativa de geração externa; a ajuda local usa os limites gerais da API. */
+  reserveAssistant(userId: string): TokenBucketResult {
+    const personal = this.consume("assistant-user", userId);
+    if (!personal.allowed) return personal;
+    const shared = this.consume("assistant-global", "all");
+    if (!shared.allowed) this.refund("assistant-user", userId);
+    return shared;
   }
 
   async resolveTenant(actor: JwtPayload): Promise<string | null> {
@@ -121,11 +141,13 @@ export class RateLimitService {
 
   reset(): void {
     this.store.reset();
+    this.assistantStore.reset();
     this.tenantResolver.reset();
   }
 
   dispose(): void {
     this.store.dispose();
+    this.assistantStore.dispose();
     this.tenantResolver.dispose();
   }
 

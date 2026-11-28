@@ -6,12 +6,12 @@
 import { Router } from "express";
 import { makeAssistantController } from "../factories/assistant.factory";
 import type { AssistantController } from "../controllers/assistant.controller";
-import { assistantRateLimitMiddleware, authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
+import { authRateLimitMiddleware } from "../middlewares/rate-limit.middleware";
 
 export function createAssistantRoutes(controller: AssistantController = makeAssistantController()) {
   const router = Router();
   router.use(authRateLimitMiddleware);
-  router.post("/chat", assistantRateLimitMiddleware, (req, res) => controller.chat(req, res));
+  router.post("/chat", (req, res) => controller.chat(req, res));
   return router;
 }
 export const assistantRoutes = createAssistantRoutes();

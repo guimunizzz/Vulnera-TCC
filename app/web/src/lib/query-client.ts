@@ -7,8 +7,9 @@
  * Consumido pelo provider em main.tsx e pelos testes de navegação/carregamento.
  */
 
-import { QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { beginAssistantFeedback } from "./assistant-feedback";
 
 const MAX_RETRIES = 2;
 const MAX_RATE_LIMIT_WAIT_MS = 30_000;
@@ -39,7 +40,15 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
 }
 
 export function createQueryClient(): QueryClient {
+  const feedback = new WeakMap<object, ReturnType<typeof beginAssistantFeedback>>();
   return new QueryClient({
+    mutationCache: new MutationCache({
+      onMutate: (_variables, mutation) => { feedback.set(mutation, beginAssistantFeedback()); },
+      onError: (error, _variables, _context, mutation) => {
+        if (!axios.isCancel(error)) feedback.get(mutation)?.("operation-error");
+      },
+      onSettled: (_data, _error, _variables, _context, mutation) => { feedback.delete(mutation); },
+    }),
     defaultOptions: {
       queries: {
         // Reutiliza uma leitura recente ao alternar páginas. invalidateQueries

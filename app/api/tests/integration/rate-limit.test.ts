@@ -10,7 +10,6 @@ import { createApp } from "../../src/app";
 import { createRateLimitConfig, type TokenBucketPolicy } from "../../src/config/rate-limit.config";
 import { UserRepository } from "../../src/repositories/user.repository";
 import { RateLimitService, TenantRateLimitResolver } from "../../src/services/rate-limit.service";
-import { TokenBucketStore } from "../../src/utils/token-bucket.util";
 import { signAccessToken } from "../../src/utils/jwt.util";
 import { prisma } from "../../src/database/prisma.database";
 import { cleanDatabase } from "../setup";
@@ -41,14 +40,17 @@ function makeLimitedApp(policies: Partial<Record<string, TokenBucketPolicy>> = {
       ...policies,
     },
   });
-  const store = new TokenBucketStore({ ttlMs: config.storeTtlMs, maxKeys: config.storeMaxKeys, nowMs: () => clock.now });
   const resolver = new TenantRateLimitResolver(
     new UserRepository(prisma),
     config.tenantCacheTtlMs,
     config.tenantCacheMaxKeys,
     () => clock.now,
   );
-  const service = new RateLimitService(config, resolver, store);
+  const service = new RateLimitService(config, resolver, {
+    ttlMs: config.storeTtlMs,
+    maxKeys: config.storeMaxKeys,
+    nowMs: () => clock.now,
+  });
 
   return { app: createApp({ rateLimitService: service }), service, clock };
 }

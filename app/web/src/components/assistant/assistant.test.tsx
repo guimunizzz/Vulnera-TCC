@@ -4,11 +4,13 @@
  */
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AuthenticatedLayout } from "../layout/authenticated-layout";
 import { useAuthStore } from "../../store/auth.store";
 import { assistantApi } from "../../lib/api/assistant.api";
 import { assistantBounds } from "./use-assistant-motion";
+import { beginAssistantFeedback } from "../../lib/assistant-feedback";
 import type { AuthResponse, UserRole } from "../../types/auth.types";
 import type { AssistantChatResponse } from "../../types/assistant.types";
 
@@ -53,6 +55,17 @@ beforeEach(() => {
   Object.defineProperty(window, "innerWidth", { value: 1_024, writable: true, configurable: true });
   Object.defineProperty(window, "innerHeight", { value: 768, writable: true, configurable: true });
   Object.defineProperty(document, "hidden", { value: false, configurable: true });
+  vi.stubGlobal("PointerEvent", class extends MouseEvent {
+    readonly pointerId: number;
+    readonly pointerType: string;
+    readonly isPrimary: boolean;
+    constructor(type: string, options: PointerEventInit = {}) {
+      super(type, options);
+      this.pointerId = options.pointerId ?? 1;
+      this.pointerType = options.pointerType ?? "mouse";
+      this.isPrimary = options.isPrimary ?? true;
+    }
+  });
   vi.mocked(assistantApi.chat).mockResolvedValue(localResponse);
 });
 
@@ -60,6 +73,7 @@ afterEach(() => {
   cleanup();
   useAuthStore.getState().clearAuth();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe("Assistente autenticado", () => {
@@ -127,7 +141,7 @@ describe("Assistente autenticado", () => {
   });
 
   it("usa somente rótulos/destinos controlados e filtra ações por perfil, inclusive forjadas", async () => {
-    vi.mocked(assistantApi.chat).mockResolvedValue({ message: "Orientação segura <script>nunca executar</script>", source: "gemini", actions: [
+    vi.mocked(assistantApi.chat).mockResolvedValue({ message: "Orientação segura <script>nunca executar</script>", source: "generated", actions: [
       { id: "projects", label: "Excluir tudo" }, { id: "dast", label: "Abrir DAST" },
       { id: "__proto__", label: "Ataque" }, { id: "https://outside.test", label: "Sair da plataforma" },
     ] } as unknown as AssistantChatResponse);
@@ -138,7 +152,7 @@ describe("Assistente autenticado", () => {
     expect(screen.queryByRole("button", { name: "Abrir DAST" })).not.toBeInTheDocument();
     expect(screen.queryByText("Excluir tudo")).not.toBeInTheDocument();
     expect(screen.getByRole("dialog").querySelector("script")).toBeNull();
-    expect(screen.getByText("Gemini")).toBeInTheDocument();
+    expect(screen.getByText("Resposta da Vuvu")).toBeInTheDocument();
     fireEvent.click(action);
     expect(screen.getByTestId("current-route")).toHaveTextContent("/projects");
   });
@@ -155,7 +169,7 @@ describe("Assistente autenticado", () => {
     expect(!!screen.queryByRole("button", { name: "Abrir DAST" })).toBe(role !== "CLIENT");
   });
 
-  it.each(["logout", "switch", "same-login"] as const)("cancela e descarta resposta tardia após %s", async (change) => {
+  it.each(["logout", "switch", "same-login", "company"] as const)("cancela e descarta resposta tardia após %s", async (change) => {
     let resolve!: (response: AssistantChatResponse) => void;
     vi.mocked(assistantApi.chat).mockReturnValue(new Promise((done) => { resolve = done; }));
     mount();
@@ -163,15 +177,17 @@ describe("Assistente autenticado", () => {
     submit();
     const signal = vi.mocked(assistantApi.chat).mock.calls[0][1];
     act(() => {
-      if (change === "logout") useAuthStore.getState().clearAuth();
-      else useAuthStore.getState().setAuth(session(change === "switch" ? "client-b" : "client-a"));
+      const auth = useAuthStore.getState();
+      if (change === "logout") auth.clearAuth();
+      else if (change === "company") auth.updateUser({ ...auth.user!, companyId: "company-b" }, auth.user!);
+      else auth.setAuth(session(change === "switch" ? "client-b" : "client-a"));
     });
     expect(signal.aborted).toBe(true);
     await act(async () => resolve(localResponse));
     expect(screen.queryByText(responseText)).not.toBeInTheDocument();
     if (change !== "logout") {
       await open();
-      expect(screen.getByText("Olá! Posso explicar as telas e os processos do Vulnera.")).toBeInTheDocument();
+      expect(screen.getByText("Oi! Eu sou a Vuvu.")).toBeInTheDocument();
     } else expect(screen.queryByTestId("assistant-root")).not.toBeInTheDocument();
   });
 
@@ -234,12 +250,68 @@ describe("Assistente autenticado", () => {
     mount();
     await open();
     submit();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Aguarde 12 segundos");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Seu texto foi mantido");
+    expect(screen.getByText(/Aguarde 12 segundos para enviar/)).toBeInTheDocument();
     expect(assistantApi.chat).toHaveBeenCalledTimes(1);
   });
 
+  it("envia por Enter uma única vez, mantém foco e ignora repetição durante a espera", async () => {
+    let resolve!: (response: AssistantChatResponse) => void;
+    vi.mocked(assistantApi.chat).mockReturnValue(new Promise((done) => { resolve = done; }));
+    mount(); await open();
+    const input = screen.getByRole("textbox", { name: "Sua pergunta" });
+    expect(input).toHaveFocus();
+    expect(input).toHaveAccessibleDescription(/Enter envia.*Shift\+Enter quebra linha/);
+    fireEvent.change(input, { target: { value: "quem e vc" } });
+    fireEvent.keyDown(input, { key: "Enter", repeat: true });
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(assistantApi.chat).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(assistantApi.chat).mock.calls[0][0].question).toBe("quem e vc");
+    expect(input).toHaveFocus();
+    await act(async () => resolve(localResponse));
+    expect(input).toHaveValue(""); expect(input).toHaveFocus();
+  });
+
+  it("permite Shift+Enter para linha nova e Tab/Enter para o botão de envio", async () => {
+    const user = userEvent.setup();
+    mount(); await open();
+    const input = screen.getByRole("textbox", { name: "Sua pergunta" });
+    await user.type(input, "Oi"); await user.keyboard("{Shift>}{Enter}{/Shift}Vuvu");
+    expect(input).toHaveValue("Oi\nVuvu"); expect(assistantApi.chat).not.toHaveBeenCalled();
+    await user.tab(); expect(screen.getByRole("button", { name: "Enviar pergunta" })).toHaveFocus();
+    await user.keyboard("{Enter}"); await screen.findByText(responseText);
+    expect(assistantApi.chat).toHaveBeenCalledTimes(1); expect(input).toHaveFocus();
+  });
+
+  it("não envia texto vazio nem Enter usado para composição de caracteres", async () => {
+    mount(); await open();
+    const input = screen.getByRole("textbox", { name: "Sua pergunta" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.change(input, { target: { value: "Olá" } });
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    await screen.findByText(responseText); expect(assistantApi.chat).toHaveBeenCalledTimes(1);
+  });
+
+  it("mantém ajuda local utilizável durante a espera do Gemini sem repetir perguntas", async () => {
+    mount(); await open();
+    vi.mocked(assistantApi.chat).mockResolvedValueOnce({ ...localResponse, providerRetryAfterSeconds: 60 });
+    await act(async () => submit());
+    expect(screen.getByText(/Nova tentativa em 60 segundos/)).toBeInTheDocument();
+    const input = screen.getByRole("textbox", { name: "Sua pergunta" });
+    fireEvent.change(input, { target: { value: "quem e vc" } });
+    expect(screen.getByRole("button", { name: "Enviar pergunta" })).toBeEnabled();
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    expect(assistantApi.chat).toHaveBeenCalledTimes(2);
+    expect(assistantApi.chat).toHaveBeenCalledTimes(2);
+  });
+
   it("recusa resposta inválida como erro recuperável", async () => {
-    vi.mocked(assistantApi.chat).mockResolvedValue({ message: "", source: "gemini", actions: [] });
+    vi.mocked(assistantApi.chat).mockResolvedValue({ message: "", source: "generated", actions: [] });
     mount();
     await open();
     submit();
@@ -248,22 +320,62 @@ describe("Assistente autenticado", () => {
   });
 });
 
-describe("Movimento e overlays", () => {
-  it("pausa por hover, foco, preferência manual, chat e aba oculta", async () => {
+describe("Arraste, surpresa e overlays", () => {
+  it("recolhe sem perder conversa, rascunho ou posição e permanece discreta após um evento", async () => {
+    mount();
+    const mascot = await screen.findByTestId("assistant-mascot");
+    const launcher = screen.getByTestId("assistant-launcher");
+    fireEvent.keyDown(launcher, { key: "ArrowLeft" });
+    await open(); submit(); await screen.findByText(responseText);
+    fireEvent.change(screen.getByRole("textbox", { name: "Sua pergunta" }), { target: { value: "Ainda escrevendo" } });
+    fireEvent.click(screen.getByRole("button", { name: "Recolher Vuvu" }));
+    expect(mascot).toHaveAttribute("hidden"); expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const restore = screen.getByRole("button", { name: "Mostrar Vuvu" });
+    expect(restore).toHaveFocus();
+    act(() => beginAssistantFeedback()("report-ready"));
+    expect(restore).toBeInTheDocument(); expect(mascot).toHaveAttribute("hidden");
+    fireEvent.click(restore); await open();
+    expect(screen.getByText(responseText)).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Sua pergunta" })).toHaveValue("Ainda escrevendo");
+    expect(assistantApi.chat).toHaveBeenCalledTimes(1);
+  });
+
+  it("reage localmente ao relatório confirmado e ao erro, sem abrir chat ou enviar pergunta", async () => {
+    mount();
+    const launcher = await screen.findByTestId("assistant-launcher");
+    act(() => beginAssistantFeedback()("report-ready"));
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "answered");
+    act(() => beginAssistantFeedback()("operation-error"));
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "error");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+  });
+
+  it("não repete a reação de uma resposta antiga ao encerrar a expressão de erro", async () => {
+    mount(); await open(); submit(); await screen.findByText(responseText);
+    fireEvent.click(screen.getByRole("button", { name: "Fechar assistente" }));
+    await waitFor(() => expect(document.getElementById("assistant-panel")).toBeNull());
+    vi.useFakeTimers();
+    const sprite = screen.getByTestId("assistant-launcher").querySelector(".vuvu-sprite");
+    act(() => beginAssistantFeedback()("operation-error"));
+    expect(sprite).toHaveAttribute("data-vuvu-state", "error");
+    act(() => vi.advanceTimersByTime(2100));
+    expect(sprite).not.toHaveAttribute("data-vuvu-state", "answered");
+    expect(assistantApi.chat).toHaveBeenCalledTimes(1);
+  });
+  it("não oferece pausa nem passeia por hover, foco ou abertura do chat", async () => {
     mount();
     const mascot = await screen.findByTestId("assistant-mascot");
     fireEvent.mouseEnter(mascot);
-    expect(mascot).toHaveAttribute("data-pause-reasons", "hover");
+    expect(mascot).toHaveAttribute("data-motion", "static");
     fireEvent.mouseLeave(mascot);
     const launcher = screen.getByRole("button", { name: "Ajuda — abrir Assistente Vulnera" });
     fireEvent.focus(launcher);
-    expect(mascot.getAttribute("data-pause-reasons")).toContain("focus");
+    expect(mascot).toHaveAttribute("data-motion", "static");
     fireEvent.blur(launcher);
-    fireEvent.click(screen.getByRole("button", { name: "Pausar movimento" }));
-    expect(mascot.getAttribute("data-pause-reasons")).toContain("manual");
-    fireEvent.click(screen.getByRole("button", { name: "Retomar movimento" }));
+    expect(screen.queryByRole("button", { name: /Pausar movimento|Retomar movimento/ })).not.toBeInTheDocument();
     await open();
-    expect(mascot.getAttribute("data-pause-reasons")).toContain("chat");
+    expect(mascot).toHaveAttribute("data-motion", "static");
     Object.defineProperty(document, "hidden", { value: true, configurable: true });
     fireEvent(document, new Event("visibilitychange"));
     expect(mascot.getAttribute("data-pause-reasons")).toContain("hidden");
@@ -297,24 +409,87 @@ describe("Movimento e overlays", () => {
     window.innerWidth = 320;
     window.innerHeight = 568;
     fireEvent(window, new Event("resize"));
-    expect(mascot.getAttribute("data-pause-reasons")).toContain("compact");
-    expect(assistantBounds(320, 568)).toEqual({ right: 188, bottom: 464, top: 128, middle: 60 });
-    expect(assistantBounds(320, 140).bottom).toBe(36);
+    expect(assistantBounds(320, 568)).toEqual({ left: 16, right: 192, bottom: 424, top: 16 });
+    expect(assistantBounds(320, 140).bottom).toBe(12);
     expect(assistantApi.chat).not.toHaveBeenCalled();
   });
 
-  it("não chama a API durante o passeio autônomo e limpa seus timers", async () => {
+  it("permanece no lugar após um minuto e limpa seus timers", async () => {
     vi.useFakeTimers();
     const view = mount();
     await act(async () => {});
     const mascot = screen.getByTestId("assistant-mascot");
-    act(() => vi.advanceTimersByTime(3_000));
-    expect(mascot).toHaveAttribute("data-motion", "moving");
+    const position = mascot.style.transform;
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(mascot).toHaveAttribute("data-motion", "static");
+    expect(mascot.style.transform).toBe(position);
     expect(assistantApi.chat).not.toHaveBeenCalled();
     view.unmount();
     const remaining = vi.getTimerCount();
     act(() => vi.advanceTimersByTime(60_000));
     expect(vi.getTimerCount()).toBeLessThanOrEqual(remaining);
+  });
+
+  it.each(["mouse", "touch"])("arrasta por %s com animação e não abre chat ao soltar", async (pointerType) => {
+    mount();
+    const launcher = await screen.findByTestId("assistant-launcher");
+    const mascot = screen.getByTestId("assistant-mascot");
+    fireEvent.pointerDown(launcher, { pointerId: 1, pointerType, button: 0, clientX: 950, clientY: 680 });
+    fireEvent.pointerMove(launcher, { pointerId: 1, pointerType, clientX: 750, clientY: 480 });
+    expect(mascot).toHaveAttribute("data-motion", "dragging");
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "dragging");
+    fireEvent.pointerUp(launcher, { pointerId: 1, pointerType, clientX: 750, clientY: 480 });
+    fireEvent.click(launcher, { detail: 1 });
+    expect(mascot).toHaveAttribute("data-motion", "static");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+    fireEvent.keyDown(launcher, { key: "Enter", shiftKey: true });
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "six-seven");
+  });
+
+  it("cancela o arraste sem ficar preso e ignora um segundo ponteiro", async () => {
+    mount();
+    const launcher = await screen.findByTestId("assistant-launcher");
+    const mascot = screen.getByTestId("assistant-mascot");
+    fireEvent.pointerDown(launcher, { pointerId: 1, button: 0, clientX: 950, clientY: 680 });
+    fireEvent.pointerMove(launcher, { pointerId: 2, clientX: 700, clientY: 400 });
+    expect(mascot).toHaveAttribute("data-motion", "static");
+    fireEvent.pointerMove(launcher, { pointerId: 1, clientX: 700, clientY: 400 });
+    fireEvent.pointerCancel(launcher, { pointerId: 1 });
+    expect(mascot).toHaveAttribute("data-motion", "static");
+    fireEvent.pointerDown(launcher, { pointerId: 3, button: 0, clientX: 700, clientY: 400 });
+    fireEvent.pointerMove(launcher, { pointerId: 3, clientX: 600, clientY: 300 });
+    expect(mascot).toHaveAttribute("data-motion", "dragging");
+    fireEvent(window, new Event("blur"));
+    expect(mascot).toHaveAttribute("data-motion", "static");
+  });
+
+  it("distingue clique simples, duplo clique e não repete o six seven", async () => {
+    vi.useFakeTimers();
+    mount();
+    await act(async () => {});
+    const launcher = screen.getByTestId("assistant-launcher");
+    fireEvent.click(launcher, { detail: 1 });
+    fireEvent.click(launcher, { detail: 2 });
+    fireEvent.doubleClick(launcher);
+    expect(launcher.querySelector(".vuvu-sprite")).toHaveAttribute("data-vuvu-state", "six-seven");
+    act(() => vi.advanceTimersByTime(2880));
+    expect(launcher.querySelector(".vuvu-sprite")).not.toHaveAttribute("data-vuvu-state", "six-seven");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(assistantApi.chat).not.toHaveBeenCalled();
+    fireEvent.click(launcher, { detail: 1 });
+    act(() => vi.advanceTimersByTime(280));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("mantém a surpresa desligada com movimento reduzido e permite abrir ajuda pelo teclado", async () => {
+    motionPreference.reduced = true;
+    mount();
+    const launcher = await screen.findByTestId("assistant-launcher");
+    fireEvent.keyDown(launcher, { key: "Enter", shiftKey: true });
+    expect(launcher.querySelector(".vuvu-sprite")).not.toHaveAttribute("data-vuvu-state", "six-seven");
+    fireEvent.click(launcher, { detail: 0 });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("oferece campo e controles acessíveis sem transformar o painel em modal", async () => {

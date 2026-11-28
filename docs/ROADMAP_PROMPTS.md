@@ -1458,6 +1458,24 @@ partindo de `dev`, com espera visual fluida quando necessária.
 
 # Assistente Vulnera — orientação contextual (pedido de 2026-10-23)
 
+### Histórico de fluidez e modo discreto — ✅ Concluída em 2026-11-16 (código)
+
+- **Fechamento de aplicação AI-UI-09 — ✅ Concluído em 2026-11-16:** Web de `330d5ff` aplicada exclusivamente em 8086; smoke real de gestos/painel/modo discreto/rascunho, zero POST do assistente/erros de página/CSP. API/DB/Mailhog/volumes, contagens, atlas e `.env` preservados; zero scans. Backup e artefatos brutos locais; sem seed/reset ou Gemini adicional.
+
+- **Branch/base:** `refactor/assistant-ui`, `9504cd9`; PR #77/dev intactos. Usuário escolheu somente quatro melhorias, excluindo as demais sugestões.
+- **Resultado:** entrada/saída do chat, olhar amortecido/misturado, reações locais de resultado e modo discreto, com conversa/rascunho/posição na sessão. ADR-065 registra a decisão.
+- **Validação:** Web 690/690, contraste 132/132, build; 11 regressões e cinco novos cenários de navegador, zero erros de página/CSP/axe. Ensaio de cadência estável, sem alegar FPS universal.
+- **Limites:** sem backend/schema/dependência nova, Gemini adicional, persistência após reload ou promessa de arquivo salvo no disco. Aplicação exclusiva da Web principal no checkpoint AI-UI-09. [Relatório](QA_VUVU_FLUIDEZ_2026-11-16.md).
+
+### Histórico da evolução de interação — ✅ Concluída em 2026-11-16
+
+- **Aplicação posterior autorizada (AI-UI-07):** Web de `6e7e467` construída e aplicada exclusivamente em `localhost:8086`. Smoke real de gestos/atlas/painel e Web/API HTTP 200; sem POST do assistente ou erros de página/CSP. API/DB/Mailhog/volumes, contagens e `.env` preservados; nenhum seed/reset. Backup de imagem e artefatos de QA apenas locais. Este registro supera o estado de prévia sem aplicação indicado no checkpoint inicial abaixo.
+
+- **Branch/base:** `refactor/assistant-ui`, `2abbd9b`; sem PR novo ou alteração do PR #77.
+- **Pedido/escolha:** retirar passeio/pausa, arrastar com reação e limpar o chat; usuário escolheu duplo clique para o six seven. Alternativa por Shift+Enter, sem execução automática.
+- **Validação:** 43/43 focais, Web 677/677, contraste 132/132, build e navegador de produção/axe 11/11; mouse, toque por CDP, teclado e texto 200%.
+- **Desvios/limites:** prévia antiga com CSS incompleto substituída por preview de produção separado; roteiro adaptado ao Escape já existente. Sem API, schema, configuração privada ou deploy em 8086. [Relatório](QA_VUVU_INTERACOES_2026-11-16.md).
+
 ### Histórico da revisão PR #77 — ✅ Concluída em 2026-11-16
 
 - **Branches/PR:** `feature/agent-ai` → [#77](https://github.com/guimunizzz/Vulnera-TCC/pull/77), base dev `e6a445c`; propagação separada para `refactor/assistant-ui` por `f31b678`, sem visual novo no PR #77.
@@ -1514,6 +1532,86 @@ Resolução e validação na própria feature, sem alterar os marcos das fases o
 - **Validação final:** Web 659/659, focal Linux 36/36, e2e acessibilidade/Exposure Graph 7/7; smoke real de três perfis e seis etapas de importação/triagem/grafo/PDF.
 - **Histórico e limites:** relato anterior de Docker indisponível preservado como primeira rodada; não é mais bloqueio. Sem Gemini ao vivo ou scans externos. [QA_DOCKER_AGENT_AI_2026-11-15.md](QA_DOCKER_AGENT_AI_2026-11-15.md).
 
+## Vuvu — refatoração visual e personalidade — ✅ Concluída em 2026-11-15
+
+Pedido executado: analisar o visual do site, usar a personagem fornecida em `output/visual-agent-ai`, animá-la em tempo real no hover e durante a conversa e adaptar seu painel. Aplicação da personalidade ao Gemini e atualização local em 8086 autorizadas explicitamente pelo usuário.
+
+- [x] CP-0 — Branch própria, investigação e plano.
+- [x] CP-1 — Direção pela Vuvu fornecida e prévias desktop/celular.
+- [x] CP-2 — Atlas original, nove animações/16 olhares, painel e personalidade.
+- [x] CP-3 — Responsividade, teclado, modais, pausas e texto ampliado.
+- [x] CP-4 — Checks/builds, navegador com CSP e Gemini real.
+- [x] CP-5 — Docs, evidências, commits e aplicação local autorizada.
+
+### Histórico
+
+- **Branch/base:** `refactor/assistant-ui`, originada de `feature/agent-ai` em `63c4696`; plano `ccab3a8`, personalidade `4661baf`, visual `201c05f`. Identidade Git `iannxz`.
+- **PR:** não aberto nesta tarefa; revisar inicialmente contra a feature de origem se o PR anterior ainda estiver pendente. Não houve merge na dev/agent-ai.
+- **Desvio autorizado:** prompts estavam fora do plano visual inicial; usuário aprovou incorporar `personalidade.md`. Dois termos exatos de identidade permitem a apresentação da Vuvu no tópico já existente, sem ampliar permissões/cotas.
+- **Validação:** API 906/906, focal final 59/59; Web 671/671, contraste 132/132, focal pós-ajuste 48/48; build de produção e navegador/CSP 10/10. Docker API/Web aprovado; smoke real em 8086 com Gemini/Vuvu e atlas carregado.
+- **Aplicação local:** API/Web recriados depois de confirmar zero scans ativos; banco/Mailhog, volumes e contagens de negócio preservados. Imagens anteriores somente locais. Sem schema/dependências novas, seed/reset ou scans reais.
+- **Documentação:** [plano](ASSISTENTE_VISUAL_PLANO.md), [guia](ASSISTENTE_VULNERA.md) e [relatório com prévias](QA_VUVU_UI_2026-11-15.md). Ressalvas de aparelho/leitor de tela físico, atlas de 1,9 MB e limitações anteriores mantidas no backlog.
+
+## Vuvu — conhecimento de produto e fluxos — ✅ Concluída em 2026-11-16
+
+Pedido executado: aprofundar conceitos, regras e fluxos completos do Vulnera,
+conforme escolha explícita do usuário; manter personalidade, permissões e visual.
+
+- [x] AI-CONTEXT-01 — Curar 15 aprofundamentos, conferir regras vigentes,
+  seleção por perfil/expressão, limites e regressões; fonte de 29 para 44 tópicos.
+- [x] AI-CONTEXT-02 — Aplicar somente API principal e verificar catálogo,
+  uma resposta real e preservação do ambiente.
+
+### Histórico
+
+- **Branch/base:** `refactor/assistant-ui`, iniciada esta rodada em `813d07a`;
+  código `7d195d1`, autor/committer `iannxz`; data 2026-11-16.
+- **PR:** nenhuma nova nesta tarefa; PR #77/feature/dev não modificados.
+- **Validação:** API `npm run check` 942/942, 58 suítes; build Docker aprovado.
+  Navegador real em 8086: uma pergunta fictícia HTTP 200/Gemini em 1.925 ms,
+  explicando jornada/aprovação pelo ADMIN; zero erros de página/CSP.
+- **Aplicação:** principal antes com 17 tópicos, agora com 44. Zero scans,
+  migrations pendentes ou variáveis divergentes antes do restart exclusivo da
+  API; Web/DB/Mailhog, volumes/portas, contagens e `.env` preservados. Backup
+  de imagem e artefatos brutos só locais, sem seed/reset ou nova dependência.
+- **Decisões/desvios:** arquitetura existente mantida (ADR-064); empates na
+  seleção preferem expressões específicas. Notas antigas de onboarding e
+  contratação contextualizadas, sem apagar histórico. Web não alterada nem
+  revalidada integralmente nesta rodada. Sem promessa de custo zero/novas ações.
+- **Relatório:** [QA_VUVU_CONTEXTO_2026-11-16.md](QA_VUVU_CONTEXTO_2026-11-16.md).
+
+## Vuvu — conversa, cota e teclado — ✅ Concluída em 2026-11-16
+
+Pedido executado: corrigir a sequência informal relatada, reconhecer perguntas
+básicas, pedir esclarecimento apropriado, separar proteção HTTP de geração e
+melhorar espera/acessibilidade, incluindo envio por Enter.
+
+- [x] AI-CHAT-01 — Três respostas básicas locais, abreviações e esclarecimento.
+- [x] AI-CHAT-02 — Reserva somente de tentativa externa, mantendo cotas e
+  proteção HTTP; ajuda local disponível ao esgotar o orçamento de geração.
+- [x] AI-CHAT-03 — Enter/Shift+Enter/Tab, composição IME, foco, contagens manuais
+  e cabeçalho legível com texto a 200%.
+- [x] AI-CHAT-04 — Checks/builds, navegador, aplicação principal e publicação.
+
+### Histórico
+
+- **Branch/base:** `refactor/assistant-ui`, base `9cc38bf`; código `7388ba0`,
+  autor/committer `iannxz`, data 2026-11-16. Nenhuma nova PR ou mudança em
+  feature/dev/PR #77.
+- **Validação:** API 957/957 em 58 suítes; Web final 697/697 em 78 arquivos,
+  contraste 132/132, focal Web 40/40, builds e navegador final 11/11.
+- **Aplicação:** somente API/Web após zero scans/migrations/variáveis
+  divergentes. Quatro perguntas reais pela tecla Enter, três locais e uma
+  Gemini (HTTP 200, 1.297 ms); foco/Escape e origem corretos, zero erros de
+  página/CSP. Banco/Mailhog/QA pré-existente, volumes/portas, contagens e `.env`
+  preservados. Imagens anteriores e QA bruto somente locais.
+- **Decisão/desvios:** ADR-066 substitui parte da ADR-064 relativa à cota por
+  mensagem. Valores existentes preservados; sem seed/reset, schema, dependências
+  novas, reenvio automático ou garantia de gratuidade. Conferência visual motivou
+  layout do cabeçalho para texto ampliado. Falhas iniciais do harness por relógio
+  compartilhado/prontidão da prévia corrigidas sem enfraquecer testes de produto.
+- **Relatório:** [QA_VUVU_CONVERSA_2026-11-16.md](QA_VUVU_CONVERSA_2026-11-16.md).
+
 ## 2026-11-17 — Integração Issue #51 com `dev` (em andamento)
 
 Merge local aberto em `integration/issue51-dev-20261117`. A conciliação documental
@@ -1547,3 +1645,21 @@ parciais e limites estão no relatório, sem declaração de aprovação integra
 - Oito conflitos resolvidos. O roteador da dev com injeção de dependências monta também o assistente e o layout autenticado da feature envolve as rotas da dev respeitando seus controles de acesso.
 - A decisão do assistente passou a ADR-064. A decisão da pintura da landing mantém ADR-054.
 - Validação final com o merge `d048eaf`: API 1.393/1.393 (90 suítes), Web 865/865 (104 arquivos), contraste 132/132 e builds API/Web aprovados. O lint integral da API continua com quatro erros herdados da dev, e o lint dos 16 arquivos da integração passou.
+
+
+## Integração da Vuvu com a dev — ✅ Concluída em 2026-11-26
+
+### Histórico
+
+- Branch `refactor/assistant-ui` em `07dcb5c` e integração da `dev` em `65a792d` pela resolução já validada no [PR #77](https://github.com/guimunizzz/Vulnera-TCC/pull/77), commit `31f5c06`. [PR #88](https://github.com/guimunizzz/Vulnera-TCC/pull/88).
+- Cinco conflitos de documentação resolvidos. ADR-065, ADR-066 e ADR-067 identificam as decisões da Vuvu que usavam ADR-055, ADR-056 e ADR-057 na branch visual.
+- API 1.492/1.492, Web 903/903, contraste 132/132, builds, Compose e smoke com API simulada aprovados. O lint integral da API mantém quatro erros herdados da dev.
+
+## Hardening da Vuvu — ✅ Concluída em 2026-11-27
+
+### Histórico
+
+- Branch `refactor/assistant-ui`, a partir de `4b1dac0`. [PR #88](https://github.com/guimunizzz/Vulnera-TCC/pull/88).
+- H1–H12 entregues. Cotas em memória divididas pelo máximo configurado de processos. `LOW` fica disponível como opção nos modelos compatíveis. A ADR-064 explicita a fronteira de privacidade e a ADR-068 registra a política de operação.
+- Testes focais aprovados em 199/199 na API e 103/103 na Web. Builds da API e da Web, lint dos arquivos de API alterados, contraste e Compose aprovados. O lint integral da API ainda aponta quatro erros preexistentes. O gateway foi validado com transporte simulado.
+- H13 permanece no backlog para avaliação de Docker secrets.

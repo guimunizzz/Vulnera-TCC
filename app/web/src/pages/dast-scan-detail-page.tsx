@@ -32,6 +32,7 @@ import { EmptyState, ErrorState } from "../components/ui/empty-state";
 import { Skeleton } from "../components/ui/card";
 import { downloadBlob } from "../lib/pdf/base";
 import { generateDastReportPdf } from "../lib/pdf/dast-report";
+import { beginAssistantFeedback } from "../lib/assistant-feedback";
 import { DastTriageControls } from "../components/dast/dast-triage-controls";
 import { DastPromoteDialog } from "../components/dast/dast-promote-dialog";
 import { DastComparePanel } from "../components/dast/dast-compare-panel";
@@ -368,6 +369,7 @@ export function DastScanDetailPage() {
 
   async function handleDownloadPdf(): Promise<void> {
     if (!id) return;
+    const feedback = beginAssistantFeedback();
     setIsGeneratingPdf(true);
     setError(null);
     try {
@@ -375,7 +377,9 @@ export function DastScanDetailPage() {
       const blob = await generateDastReportPdf(data);
       const fileName = `dast-${slugify(data.scan.targetUrl)}-${new Date().toISOString().slice(0, 10)}.pdf`;
       downloadBlob(blob, fileName);
+      feedback("report-ready");
     } catch (err) {
+      feedback("operation-error");
       setError(getErrorMessage(err));
     } finally {
       setIsGeneratingPdf(false);

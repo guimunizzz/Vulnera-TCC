@@ -9,6 +9,14 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-27 — Hardening da Vuvu no PR #88
+
+H1–H12 atendidos em `refactor/assistant-ui`. Cota de geração independente da proteção HTTP, com rajadas de 5/20 e divisão conservadora entre processos. Gateway com limite de corpo e raciocínio explícito por modelo. Guias operacionais filtrados por papel, com aviso local para telas restritas. Web encerra a conversa ao trocar de empresa, alinha a saída a 4.000 caracteres e testa a paridade dos 12 atalhos com os guards reais. `MINIMAL` segue como padrão e `LOW` é configurável nos modelos compatíveis. Ver ADR-064 e ADR-068.
+
+## 2026-11-26 — Integração do PR #88
+
+**✅ 2026-11-26 — Integração do PR #88 concluída (5/5 conflitos, 100%).** A refactor/assistant-ui incorporou a resolução do PR #77 em `31f5c06`, que já integra a dev em `65a792d`. As rotas e permissões da dev foram preservadas junto com o atlas da Vuvu, a ajuda com 56 tópicos e o contrato público do chat. Os históricos dos dois lados foram preservados. As decisões da Vuvu sobre reações e modo discreto, conversa e cotas, e prioridade do Gemini passaram respectivamente para ADR-065, ADR-066 e ADR-067. Na integração, passaram 1.492/1.492 testes da API em 90 suítes, 903/903 testes Web em 107 arquivos, 132/132 checks de contraste, builds API/Web e validação do Compose. O smoke do build Web em Chrome com API simulada validou login público, atlas, envio por teclado, foco e bloqueio de CLIENT na rota administrativa. O lint de 15 arquivos da API alterados pela Vuvu passou. O lint integral conserva quatro erros preexistentes em `graph-comment.model.ts` e `memory-job-queue.ts`. O cenário Web de redirecionamento foi estabilizado ajustando o tempo de espera do teste pela rota carregada sob demanda.
+
 ## 2026-11-26 — Resolução dos conflitos do PR #77
 
 **✅ 2026-11-26 — Conflitos do PR #77 resolvidos (8/8, 100%).** A feature/agent-ai integrou a dev em `65a792d`, com o assistente autenticado, o fluxo de acesso controlado e as permissões de triagem, agendamentos, conformidade e administração. Conferidas 26 montagens da API, 39 rotas Web e 92 chaves de configuração. As 27 combinações de rota e perfil exercitadas verificam permissões e uma instância do assistente. Builds API/Web, check Web (865/865 testes e 132/132 pares de contraste) e lint de 16 arquivos da API da integração aprovados. Os 112 testes focais de assistente, solicitação, ativação e administração de acesso passaram no MySQL descartável. A primeira execução integral do Jest foi interrompida pelo processo Node no Windows (código 3221226505). A segunda execução, com um worker reciclado por limite de memória, passou em 1.393/1.393 testes (90/90 suítes). O lint integral da API aponta quatro erros herdados de `graph-comment.model.ts` e `memory-job-queue.ts`. A decisão do assistente passou a ADR-064 para preservar o número da decisão da landing na dev.
@@ -283,6 +291,86 @@ anteriores preservados. Decisão ADR-057.
   ou User pelo novo domínio. Naquele marco histórico, Etapa 2 ainda não iniciada;
   a revisão foi seguida pela implementação e conclusão registradas acima.
 
+## 2026-11-16 — Conversa informal, cota de geração e teclado da Vuvu
+
+**✅ AI-CHAT-01..04, 100%.** Três respostas básicas locais para saudação,
+identidade e produto; 44 tópicos mantidos. Abreviações normalizadas, pedidos
+com saudação preservados e esclarecimento sem atalhos alheios. Buckets próprios
+reservam geração; esgotamento mantém ajuda local e prazo, sem aumentar valores.
+Proteção HTTP/429 geral mantida, com rascunho/contagem e retomada manual. Enter,
+Shift+Enter, Tab, IME, foco/avisos e layout a 200% validados. ADR-056 complementa
+e substitui parcialmente a ADR-054. Código `7388ba0`, como iannxz.
+API 957/957, Web final 697/697, contraste 132/132, focal Web 40/40, builds e
+navegador final 11/11. Aplicados somente API/Web principais após conferências;
+sequência real por Enter: três locais, uma Gemini HTTP 200 (1.297 ms), zero
+erros de página/CSP. Banco/Mailhog/QA/volumes/contagens e `.env` preservados;
+sem schema, dependência, seed/reset, novos arquivos de teste gerados publicados
+ou nova PR. Backups e QA bruto somente locais. Relatório
+`docs/QA_VUVU_CONVERSA_2026-11-16.md`.
+
+## 2026-11-16 — Contexto de produto ampliado e aplicado à Vuvu
+
+**✅ AI-CONTEXT-01/02, 100%.** Catálogo de fonte de 29 para 44 tópicos; quinze
+aprofundamentos de jornadas/regras/fluxos completos, com responsável, condições e
+próximo passo. Ajuda/perfis/ações/orçamentos e personalidade mantidos; notas do
+vault contextualizadas e ADR-054 atualizada. Código `7d195d1`, como iannxz.
+API check 942/942 em 58 suítes, build Docker aprovado. Principal encontrado com
+17 tópicos, atualizado para 44 mediante recriação exclusiva da API após zero
+scans/migrations/variáveis divergentes. Uma pergunta fictícia real HTTP 200/Gemini
+em 1.925 ms confirmou jornada e aprovação pelo ADMIN, zero erros de página/CSP.
+Web/DB/Mailhog, volumes/portas, contagens e `.env` preservados; sem seed/reset,
+schema/dependências/novo frontend ou artefatos de QA públicos. Backup da imagem
+somente local. Branch `refactor/assistant-ui`; sem alterar PR #77/feature/dev.
+Relatório `docs/QA_VUVU_CONTEXTO_2026-11-16.md`.
+
+## 2026-11-16 — Quatro melhorias da Vuvu aplicadas em 8086
+
+**✅ AI-UI-09, 100%.** Web de `330d5ff` construída e exclusivamente recriada.
+Smoke autenticado real aprovou atlas/gestos/chat, modo discreto e rascunho;
+zero POST do assistente/erros de página/CSP. API/DB/Mailhog e volumes/contagens,
+`.env` e atlas preservados; zero scans, sem seed/reset, backend novo ou Gemini
+adicional. Imagem anterior e QA bruto apenas locais; registro humano publicado
+na branch visual como iannxz. Ver `docs/QA_VUVU_FLUIDEZ_2026-11-16.md`.
+
+## 2026-11-16 — Fluidez, resultados confirmados e modo discreto da Vuvu
+
+**✅ AI-UI-08, 100% do código.** Quatro melhorias escolhidas: chat com
+entrada/saída inerte, olhar amortecido e mistura de poses, reações locais a
+PDF concluído/erro de ação e modo discreto sem expansão automática. Conversa,
+rascunho e posição preservados. Sinais sem registros/IDs e isolados por sessão;
+falhas parciais não comemoradas, callbacks/erros/retries mantidos. ADR-055.
+Web 690/690, contraste 132/132, build e navegador 16/16; perfil de cadência
+estável e sem tarefas longas no ensaio. Sem backend, dependências ou Gemini
+extra; atlas preservados. Aplicação Web principal no checkpoint seguinte.
+Relatório `docs/QA_VUVU_FLUIDEZ_2026-11-16.md`; artefatos brutos apenas locais.
+
+## 2026-11-16 — Vuvu com novas interações aplicada à Web principal
+
+**✅ 100%; AI-UI-07.** Usuário autorizou aplicar a versão de `6e7e467` em
+localhost:8086. Build Web aprovado; imagem anterior guardada apenas localmente.
+Zero scans na conferência. Recriado somente `vulnera-web`, sem dependências.
+Navegador autenticado confirmou atlas, repouso sem pausa, six seven único,
+arraste com reação e chat compacto. Zero POST do assistente/erros de página/CSP;
+Web/API HTTP 200. API/DB/Mailhog e seus volumes/contagens/configuração privada
+preservados; sem seed/reset ou backend atualizado. Serviços de QA não alterados.
+Registros brutos locais, somente documentação humana versionada nesta etapa.
+Ver `docs/QA_VUVU_INTERACOES_2026-11-16.md`.
+
+## 2026-11-16 — Vuvu controlada por arraste, six seven e chat compacto
+
+**✅ 100%.** Usuário pediu retirar passeio/pausa e limpar o chat; escolheu
+duplo clique para o six seven fornecido. Arraste mouse/toque com captura,
+limites e reação própria; setas/Home e Shift+Enter acessíveis. Sem movimento
+espacial autônomo ou loop de repouso. Dança de 2,88 s, sem rede ou abertura
+do chat. Cabeçalho e compositor compactos, sugestões recolhidas durante a
+conversa, origem e atalhos mantidos. Arte copiada sem editar pixels.
+
+Focais 43/43; check Web 677/677, contraste 132/132, build e navegador/axe
+11/11. Prévia de produção separada em 4190 após diagnosticar estilos
+incompletos da prévia dev antiga. Sem API/schema/dependência/chave nova,
+PR #77 modificado ou deploy/restart principal. Entrega somente na branch
+visual, como iannxz. Relatório: `docs/QA_VUVU_INTERACOES_2026-11-16.md`.
+
 ## 2026-11-16 — Revisão PR #77 fechada nas duas branches
 
 **✅ 100%; 4/4 entregas.** Feature com oito comentários conferidos e propagação
@@ -312,6 +400,14 @@ diretório temporário; repetição aprovada com permissão somente na imagem lo
 de testes, sem alterar Dockerfiles do produto. Sem deploy/restart no ambiente
 principal; Vuvu permanece em localhost:8086. Propagação à branch visual em
 checkpoint separado. Matriz: `docs/REVISAO_PR77_2026-11-16.md`.
+
+## 2026-11-15 — Vuvu: visual, animações e personalidade
+
+**✅ Concluída; 6/6 checkpoints.** Branch `refactor/assistant-ui`, originada de `feature/agent-ai` em `63c4696`. Usuário forneceu a Vuvu e autorizou aplicar sua personalidade ao Gemini. Atlas transparente original preservado, nove animações/16 olhares, estados reais de interação e painel alinhado aos tokens da plataforma. Pausas, sessão, modais, permissões, origem Gemini/local e envio explícito mantidos. Texto ampliado recebe altura/rolagem adequadas e histórico focável.
+
+API Linux 906/906, focal final 59/59; Web 671/671, contraste 132/132, focal pós-ajuste 48/48; builds e navegador/CSP 10/10. Nova personalidade comprovada em chamada Google real. Após prévias e autorização de aplicação em 8086, API/Web Docker reconstruídos e recriados com zero scans ativos. Smoke autenticado pelo navegador: HTTP 200, atlas carregado, Gemini com identidade Vuvu, nenhum POST por hover e zero erros de página/CSP. Banco/Mailhog, mounts e contagens de negócio preservados; imagens anteriores guardadas apenas localmente.
+
+Commits de produto `4661baf` e `201c05f`, identidade `iannxz`. Guia, plano, ADR-054 e docs vivos atualizados; relatório `docs/QA_VUVU_UI_2026-11-15.md` e capturas fictícias versionadas. Sem schema/dependências, segredos publicados, merge na dev/agent-ai ou execução de scans reais. Pendências anteriores de tier/chave e overflow preexistente não foram declaradas corrigidas.
 
 ## 2026-11-15 — QA Docker complementar e nomes acessíveis
 

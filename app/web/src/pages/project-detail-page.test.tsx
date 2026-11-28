@@ -5,17 +5,20 @@
  * QUEM CONSOME: suíte Vitest do frontend.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "../design/theme-provider";
 import { useAuthStore } from "../store/auth.store";
 import type { Project } from "../types/project.types";
 import { ProjectDetailPage } from "./project-detail-page";
+import { subscribeAssistantFeedback } from "../lib/assistant-feedback";
+import { createQueryClient } from "../lib/query-client";
 
 const api = vi.hoisted(() => ({
   project: vi.fn(), application: vi.fn(), members: vi.fn(), users: vi.fn(),
   addMember: vi.fn(), removeMember: vi.fn(),
+  reportData: vi.fn(), reportHistory: vi.fn(), registerReport: vi.fn(), executive: vi.fn(), technical: vi.fn(), download: vi.fn(),
 }));
 vi.mock("../lib/api/projects.api", () => ({ projectsApi: { getById: api.project } }));
 vi.mock("../lib/api/applications.api", () => ({ applicationsApi: { getById: api.application } }));
@@ -25,6 +28,10 @@ vi.mock("../lib/api/project-members.api", () => ({
 vi.mock("../lib/api/users.api", () => ({ usersApi: { list: api.users } }));
 vi.mock("../hooks/use-company-name", () => ({ useCompanyName: () => "TechNova" }));
 vi.mock("../hooks/use-findings", () => ({ useFindings: () => ({ dados: undefined }) }));
+vi.mock("../lib/api/reports.api", () => ({ reportsApi: { getReportData: api.reportData, listByProject: api.reportHistory, create: api.registerReport } }));
+vi.mock("../lib/pdf/executive", () => ({ generateExecutivePdf: api.executive }));
+vi.mock("../lib/pdf/technical", () => ({ generateTechnicalPdf: api.technical }));
+vi.mock("../lib/pdf/base", () => ({ downloadBlob: api.download }));
 
 const PROJECT: Project = {
   id: "project-hash", name: "Avaliação do portal", description: null,
@@ -47,8 +54,7 @@ function enterAs(role: "ADMIN" | "CLIENT" | "PENTESTER") {
   });
 }
 
-function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderPage(client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return render(
     <ThemeProvider>
       <QueryClientProvider client={client}>
@@ -66,6 +72,10 @@ beforeEach(() => {
   api.application.mockResolvedValue({ id: "app-1", name: "Portal" });
   api.members.mockResolvedValue(MEMBERS);
   api.users.mockResolvedValue([]);
+  api.reportHistory.mockResolvedValue([]);
+  api.reportData.mockResolvedValue({});
+  api.executive.mockResolvedValue(new Blob(["PDF fictício"], { type: "application/pdf" }));
+  api.registerReport.mockResolvedValue({});
 });
 
 afterEach(() => useAuthStore.setState({ accessToken: null, refreshToken: null, user: null }));
@@ -118,5 +128,41 @@ describe("ProjectDetailPage — nomes dos pentesters", () => {
     await waitFor(() => expect(api.removeMember).toHaveBeenCalledWith(PROJECT.id, MEMBERS[0].userId));
     await waitFor(() => expect(screen.queryByText("Rafael Barros", { selector: "span" })).not.toBeInTheDocument());
     expect(screen.getByText("João Gonçalves da Silva", { selector: "span" })).toBeInTheDocument();
+  });
+});
+
+describe("Relatório concluído antes da reação da Vuvu", () => {
+  it("espera PDF, download iniciado e registro confirmado antes de sinalizar sucesso", async () => {
+    enterAs("ADMIN"); api.project.mockResolvedValue({ ...PROJECT, status: "IN_REVIEW" });
+    let complete!: (value: unknown) => void;
+    api.registerReport.mockReturnValue(new Promise((resolve) => { complete = resolve; }));
+    const receive = vi.fn(); const leave = subscribeAssistantFeedback(receive);
+    const client = createQueryClient();
+    try {
+      renderPage(client); await screen.findByText("Rafael Barros");
+      fireEvent.click(screen.getByRole("button", { name: "Relatórios" }));
+      fireEvent.click(screen.getByRole("button", { name: "Gerar PDF Executivo" }));
+      await waitFor(() => expect(api.registerReport).toHaveBeenCalledWith(PROJECT.id, "EXECUTIVE"));
+      expect(api.executive).toHaveBeenCalledTimes(1); expect(api.download).toHaveBeenCalledTimes(1);
+      expect(receive).not.toHaveBeenCalled();
+      await act(async () => complete({}));
+      await waitFor(() => expect(receive).toHaveBeenCalledExactlyOnceWith("report-ready"));
+    } finally { leave(); client.clear(); }
+  });
+
+  it.each(["geração", "registro"])("preserva o erro de %s sem comemorar um sucesso parcial", async (step) => {
+    enterAs("ADMIN"); api.project.mockResolvedValue({ ...PROJECT, status: "IN_REVIEW" });
+    (step === "geração" ? api.executive : api.registerReport).mockRejectedValue(new Error("Relatório não concluído"));
+    const receive = vi.fn(); const leave = subscribeAssistantFeedback(receive);
+    const client = createQueryClient();
+    try {
+      renderPage(client); await screen.findByText("Rafael Barros");
+      fireEvent.click(screen.getByRole("button", { name: "Relatórios" }));
+      fireEvent.click(screen.getByRole("button", { name: "Gerar PDF Executivo" }));
+      await waitFor(() => expect(receive).toHaveBeenCalledExactlyOnceWith("operation-error"));
+      expect(receive).not.toHaveBeenCalledWith("report-ready");
+      expect(await screen.findByText("Não foi possível concluir a ação. Tente novamente.")).toBeInTheDocument();
+      if (step === "geração") { expect(api.download).not.toHaveBeenCalled(); expect(api.registerReport).not.toHaveBeenCalled(); }
+    } finally { leave(); client.clear(); }
   });
 });
