@@ -1,5 +1,11 @@
 # Adesão B2B, equipes e segurança de tenants
 
+## Wave B2B integrada em 2026-11-28
+
+O merge com `dev` preservou as rotas, migrations e guardas dos dois lados. As leituras legadas de usuários passaram a usar a projeção mínima do MEMBER. Avisos do Exposure Graph são gravados somente para participantes ativos do tenant. Avisos do grafo DAST conferem a autorização de leitura do scan. O parecer independente após a correção foi GO WITH CONDITIONS. A prova final de adesão com Turnstile real, a matriz SEC-01 a SEC-11, a comparação das migrations e os resultados de Brave, API, Web e Mobile estão no [relatório de QA integrado](UNIFIED-B2B-QA-2026-11-28.md).
+
+Os registros seguintes preservam as rodadas históricas anteriores ao merge.
+
 Branch `feat/unified-onboarding-tenant-security`, base `db91b70e37ab121dc1d87c071e95620d38bb8bd9`. **Aprovada com ressalvas para revisão local em 2026-11-25.** A adesão, as equipes e os controles de acesso estão integrados em commits locais. O desenho aditivo e as duas migrations foram aplicados sobre MySQL descartável, inclusive com registros legados.
 
 O gate independente validou os canários de autorização, efeitos persistidos, rejeição de replay e concorrência nos domínios alterados. A revisão dirigida ficou sem achados altos ou críticos confirmados em aberto no recorte. O CI aguardará publicação autorizada e as quatro jornadas com Turnstile real e MailHog permanecem para validação manual.

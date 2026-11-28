@@ -1,5 +1,7 @@
 # BACKLOG.md — Vulnera
 
+**🚧 2026-11-28 — Issue #84, integração e QA com ressalvas.** Integração de `dev`, nove conflitos, migrations e correções de privacidade concluídos. Adesão com Turnstile real e regressões VUL-QA-01/02/03 exercitadas. Restam a leitura do CI do PR, as confirmações nativas de revogação e desativação e os cenários auxiliares no Brave. [Relatório de QA](UNIFIED-B2B-QA-2026-11-28.md).
+
 **🚧 2026-11-27 — Issue #84, checkpoint de preservação.** QA-01 pluralização, QA-02 leitura da equipe por MEMBER e QA-03 atalhos Findings foram preservados em commits separados e publicados em `feat/unified-onboarding-tenant-security` por push normal. Não foi feita integração da `dev`, PR ou suíte integral. Próximos gates: recuperar evidência do runner `vulnera-qa-api-runner.cjs`, revisar falha do Vitest integral, obter parecer final de segurança, integrar a `dev` em tarefa separada, retestar os três QA no Chrome e validar focalmente. [Handoff](UNIFIED-B2B-HANDOFF.md).
 
 **✅ 2026-11-27 — Central administrativa e tratamento de acesso direto concluídos na wave B2B.** Seções de adesão e comercial sob proteção ADMIN, redirecionamento compatível e neutralidade de acesso no frontend. A próxima rodada testa no Chrome adesão, convites, revogação, permissão de equipe, isolamento e recuperação legada. [Evidências e roteiro](UNIFIED-B2B-TENANT-SECURITY.md#refinamentos-finais-de-2026-11-27).

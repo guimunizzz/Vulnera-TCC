@@ -1,5 +1,9 @@
 # Checkpoint de continuidade — Wave B2B unificada
 
+## Wave B2B integrada em 2026-11-28
+
+O registro de preservação abaixo é histórico. A branch integra `origin/dev` em `54c6f36` por `0d669f4`. A versão de código `c4a3ff7` está servida nas portas habituais e usa schema de QA manual isolado. As fixtures da máquina original continuam fora do trabalho atual. O perfil real do Turnstile está configurado localmente. A jornada pública completa e a ativação do OWNER foram comprovadas no Brave com MailHog. A rodada confirmou equipes Alpha/Beta, convites, autorização de projetos, relatórios, notificações e Exposure Graph. A revogação e a desativação foram confirmadas pela API real, com confirmação nativa no Brave pendente. [Evidências, Security Gate e pendências](UNIFIED-B2B-QA-2026-11-28.md).
+
 Atualizado em 2026-11-27 para transferir o estado da Issue #84 sem iniciar nova implementação.
 
 ## Repositório e Git

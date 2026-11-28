@@ -32,6 +32,10 @@ As respostas de ativação terminam em 204 e o login inicia a sessão. O escopo 
 
 Cada alteração de plano ativa para novas adesões pode exigir resolução dos pedidos compatíveis com a oferta anterior. Planos de assinaturas ativas conservam condições materiais. Há uma janela de falha de entrega após o commit SMTP, coberta por reenvio.
 
+## Atualização de 2026-11-28
+
+A consulta de equipe pode ser usada pelo MEMBER com ID, nome e papel dos integrantes ativos da própria empresa. O diretório legado de usuários entrega só ID e nome na listagem e na leitura de colegas pelo CLIENT sem papel OWNER. O perfil próprio continua completo. OWNER e ADMIN preservam as projeções de gestão dentro de seus escopos.
+
 ## Relacionado
 
 - [[ADR-057 - Fundacao do acesso controlado]]

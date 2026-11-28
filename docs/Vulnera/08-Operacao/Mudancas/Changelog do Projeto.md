@@ -9,6 +9,10 @@ status: ativo
 
 # Changelog do Projeto
 
+## 2026-11-28 — Integração e QA real da Wave B2B
+
+Issue #84 integrada à `dev` em `54c6f36` por `0d669f4`, com nove conflitos resolvidos. O QA da versão `c4a3ff7` confirmou adesão com Turnstile real, aprovação única e assinatura ativa, além da separação de Alpha/Beta. A revisão independente aprovou com ressalvas e confirmou a minimização do diretório e das notificações de grafo após correção. [Relatório de QA integrado](../../../UNIFIED-B2B-QA-2026-11-28.md).
+
 ## 2026-11-27 — Refinamentos finais da wave B2B
 
 A Central de solicitações reúne adesão e decisões comerciais para ADMIN. Páginas protegidas apresentam uma mensagem neutra para recursos indisponíveis, e as consultas dependentes aguardam a leitura principal. O frontend descarta dados e refresh da sessão anterior. Os testes focais e a preparação da rodada no Chrome constam no [relatório da wave](../../../UNIFIED-B2B-TENANT-SECURITY.md#refinamentos-finais-de-2026-11-27).
