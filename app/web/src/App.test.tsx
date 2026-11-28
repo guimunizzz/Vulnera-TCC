@@ -128,7 +128,7 @@ describe("Roteamento de App", () => {
     expect(await screen.findByRole("heading", { name: "Solicitar acesso" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Entrar" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("assistant-root")).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Nome" })).toBeRequired();
+    expect(screen.getByRole("textbox", { name: "Nome do responsável" })).toBeRequired();
     expect(screen.getByRole("link", { name: "Vulnera Security — página inicial" })).toBe(logo);
   });
 

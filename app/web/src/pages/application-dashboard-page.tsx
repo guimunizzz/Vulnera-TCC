@@ -152,7 +152,7 @@ export function ApplicationDashboardPage() {
     );
   }
 
-  if (!autorizada) return <Skeleton className="h-64 w-full" />;
+  if (!autorizada) return <Skeleton className="h-[16rem] w-full" />;
 
   return (
     <div className="flex flex-col gap-6">
